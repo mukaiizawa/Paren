@@ -7,6 +7,6 @@
 
 #include <stdio.h>
 
-extern char* lex_do(FILE *fp);
+extern char* lex_start(FILE *fp);
  
 #endif

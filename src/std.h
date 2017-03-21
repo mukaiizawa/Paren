@@ -5,6 +5,6 @@
 #ifndef STD
 #define STD
 
-extern void xerror(char *fmt,...);
+extern void xerror(char *buf);
 
 #endif

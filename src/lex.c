@@ -6,12 +6,17 @@
 #include "ringbuf.h"
 
 static FILE *fp;
-static char* buf;
+static struct ringbuf rb;
 
-char* lex_do(FILE *_fp) {
+void lex_init(FILE *_fp) {
   fp = _fp;
+  ringbuf_reset(&rb);
+}
+
+char* lex_start(FILE *_fp) {
+  lex_init(_fp);
   int c;
-  while((c = getchar()) != EOF)
-    ;
+  while((c = fgetc(fp)) != EOF)
+    fputc(c, stdout);
   return "c";
 }

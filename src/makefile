@@ -23,14 +23,14 @@ link = $(cc) -Wall -O2
 
 all: $(paren)
 
-$(paren): lex.o
-	$(link) -o $@ paren.c lex.o
+$(paren): std.o lex.o ringbuf.o
+	$(link) -o $@ paren.c std.o lex.o ringbuf.o
 
 std.o: std.h std.c
 	$(link) -c std.c -o $@
 
 lex.o: lex.h lex.c ringbuf.h
-	$(link) -c lex.c -o $@
+	$(link) -c lex.c ringbuf.o -o $@
 
 ringbuf.o: ringbuf.h ringbuf.c
 	$(link) -c ringbuf.c -o $@
