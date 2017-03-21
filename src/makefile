@@ -18,5 +18,16 @@ ifeq ($(os), windows)
 	exe = .exe
 endif
 
-paren: paren.c
-	$(cc) -Wall -O2 -o paren$(exe) paren.c
+paren = paren$(exe)
+link = $(cc) -Wall -O2
+
+all: $(paren)
+
+$(paren): lex.o
+	$(link) -o $@ paren.c lex.o
+
+lex.o: lex.h lex.c
+	$(link) -c lex.c -o lex.o
+
+clean:
+	rm -f *.o

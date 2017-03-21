@@ -3,11 +3,10 @@
 */
 
 #include <stdio.h>
-
-static char prompt[2048];
+#include "lex.h"
 
 char* read() {
-  return fgets(prompt, 2048, stdin);
+  return lex_do(stdin);
 }
 
 int main(int argc, char* argv[]) {
