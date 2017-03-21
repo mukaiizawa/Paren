@@ -26,8 +26,14 @@ all: $(paren)
 $(paren): lex.o
 	$(link) -o $@ paren.c lex.o
 
-lex.o: lex.h lex.c
-	$(link) -c lex.c -o lex.o
+std.o: std.h std.c
+	$(link) -c std.c -o $@
+
+lex.o: lex.h lex.c ringbuf.h
+	$(link) -c lex.c -o $@
+
+ringbuf.o: ringbuf.h ringbuf.c
+	$(link) -c ringbuf.c -o $@
 
 clean:
 	rm -f *.o
