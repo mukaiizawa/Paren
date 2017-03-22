@@ -14,8 +14,8 @@ void lex_init(FILE *_fp) {
 }
 
 char* lex_start(FILE *_fp) {
-  lex_init(_fp);
   int c;
+  lex_init(_fp);
   while((c = fgetc(fp)) != EOF)
     fputc(c, stdout);
   return "c";
