@@ -6,7 +6,7 @@
 #include "lex.h"
 
 char* read() {
-  return lex_start(stdin);
+ return lex_start(stdin);
 }
 
 int main(int argc, char* argv[]) {

@@ -16,8 +16,8 @@ endif
 paren = paren$(exe)
 
 all: $(paren)
-$(paren): paren.o lex.o
-	$(CC) -o $@ paren.c lex.o ringbuf.o
-paren.o: paren.c
+$(paren): paren.c lex.o ringbuf.o std.o
+	$(CC) -o $@ paren.c lex.o ringbuf.o std.o
 clean:
 	$(RM) *.o
+include cdep.d
