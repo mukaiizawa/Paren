@@ -9,10 +9,12 @@
 
 typedef struct {
   int pos;
-  FILE fp;
-  char *buf;
-} AheadReader;
+  FILE *fp;
+  char buf[AHDRD_BUFSIZE];
+} Ahdrd;
 
-extern void ahdrd_init(AheadReader* this , FILE *fp);
+extern void ahdrd_init(Ahdrd* this , FILE *fp);
+extern char ahdrd_getch(Ahdrd* this);
+extern char ahdrd_nextch(Ahdrd* this);
 
 #endif

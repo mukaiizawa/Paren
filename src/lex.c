@@ -5,7 +5,7 @@
 #include "lex.h"
 #include "ahdrd.h"
 
-static struct AheadReader ahdrd;
+static Ahdrd ahdrd;
 
 void lex_init(FILE *fp) {
   ahdrd_init(&ahdrd, fp);

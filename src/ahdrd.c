@@ -4,14 +4,14 @@
 
 #include <stdio.h>
 #include "std.h"
+#include "ahdrd.h"
 
-void ahdrd_init(AheadReader* this, FILE *_fp) {
+void ahdrd_init(Ahdrd* this, FILE *_fp) {
   this->pos = 0;
   this->fp = _fp;
-  this->buf = 
 }
 
-char ahdrd_getch(AheadReader* this) {
+char ahdrd_getch(Ahdrd* this) {
   int i = this->pos;
   if (i == 0)
     return fgetc(this->fp);
@@ -21,10 +21,12 @@ char ahdrd_getch(AheadReader* this) {
   }
 }
 
-char ahdrd_nextch(AheadReader* this) {
+char ahdrd_nextch(Ahdrd* this) {
   char c;
   if (this->pos == AHDRD_BUFSIZE)
     xerror("ahdrd_nextch: Buffer over flow.");
+  if (this->buf[this->pos] == EOF)
+    xerror("ahdrd_nextch: Reached EOF.");
   c = fgetc(this->fp);
   this->pos = this->pos + 1;
   this->buf[this->pos] = c;
