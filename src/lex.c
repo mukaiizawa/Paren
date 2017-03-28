@@ -3,20 +3,18 @@
 */
 
 #include "lex.h"
-#include "ringbuf.h"
+#include "ahdrd.h"
 
-static FILE *fp;
-static struct ringbuf rb;
+static struct AheadReader ahdrd;
 
-void lex_init(FILE *_fp) {
-  fp = _fp;
-  ringbuf_reset(&rb);
+void lex_init(FILE *fp) {
+  ahdrd_init(&ahdrd, fp);
 }
 
-char* lex_start(FILE *_fp) {
+char* lex_start(FILE *fp) {
   int c;
-  lex_init(_fp);
-  while((c = fgetc(fp)) != EOF)
+  lex_init(fp);
+  while((c = ahdrd_getch(&ahdrd)) != EOF)
     fputc(c, stdout);
   return "c";
 }
