@@ -32,3 +32,15 @@ char ahdrd_nextch(Ahdrd* this) {
   this->buf[this->pos] = c;
   return c;
 }
+
+char ahdrd_peekch(Ahdrd* this, int n) {
+  char c;
+  if (this->pos == AHDRD_BUFSIZE)
+    xerror("ahdrd_nextch: Buffer over flow.");
+  if (this->buf[this->pos] == EOF)
+    xerror("ahdrd_nextch: Reached EOF.");
+  c = fgetc(this->fp);
+  this->pos = this->pos + 1;
+  this->buf[this->pos] = c;
+  return c;
+}

@@ -13,6 +13,7 @@ int main(int argc, char* argv[]) {
   while (1) {
     fputs(") ", stdout);
     printf("%s", read());
+    fflush(stdout);
   }
   return 0;
 }
