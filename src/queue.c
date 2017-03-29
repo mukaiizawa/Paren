@@ -8,11 +8,11 @@ typedef struct {
     } *top, *tail;
 } Queue;
 
-void put(Queue*, int);
-int get(Queue*);
-void printQueue(Queue*);
+void Queue_put(Queue*, int);
+int Queue_get(Queue*);
+void Queue_print(Queue*);
 
-void put(Queue* q, int n){
+void Queue_put(Queue* q, int n){
   struct node *new_node = malloc(sizeof(*new_node));
   new_node->value = n;
   new_node->next = NULL;
@@ -22,7 +22,7 @@ void put(Queue* q, int n){
     q->tail = q->tail->next = new_node;
 }
 
-int get(Queue* q){
+int Queue_get(Queue* q){
     if(q->top == NULL){
         fprintf(stderr, "queque is empty. can't get\n");
         exit(-1);
@@ -34,7 +34,7 @@ int get(Queue* q){
     return ret_value;
 }
 
-void printQueue(Queue* q){
+void Queue_print(Queue* q){
     struct node *temp = q->top;
     printf("queue:");
     while(temp){
@@ -51,12 +51,12 @@ int main(void){
     for (i = 0; i < 3; i++) {
         n = rand() % 100;
         printf("enqueue %d\n", n);
-        put(&q, n);
-        printQueue(&q);
+        Queue_put(&q, n);
+        Queue_print(&q);
     }
     for(i = 0; i < 3; i++) {
-        printf("dequeue %d\n", get(&q));
-        printQueue(&q);
+        printf("dequeue %d\n", Queue_get(&q));
+        Queue_print(&q);
     }
     return 0;
 }
