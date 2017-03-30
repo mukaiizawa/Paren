@@ -1,8 +1,6 @@
 (require :stdlib *module-stdlib*)
 (require :regex *module-regex*)
 
-(defvar depend nil)
-
 (defun collect-c-files ()
   (remove-if (lambda (path)
                (string/= (pathname-type path) "c"))
@@ -16,8 +14,7 @@
                             (dep (subseq quoted 1 (1- (length quoted)))))
                        (princ (mkstr " " dep))
                        (unless (find dep traversed :test #'string=)
-                         (push dep traversed)
-                         (walk dep traversed)))))))
+                         (walk dep (cons dep traversed))))))))
     (dolist (cfile (collect-c-files))
       (princ (mkstr (pathname-name cfile) ".o: " (file-namestring cfile)))
       (walk cfile nil)
