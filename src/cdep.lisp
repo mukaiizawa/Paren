@@ -16,8 +16,27 @@
                        (unless (find dep traversed :test #'string=)
                          (walk dep (cons dep traversed))))))))
     (dolist (cfile (collect-c-files))
-      (princ (mkstr (pathname-name cfile) ".o: " (file-namestring cfile)))
-      (walk cfile nil)
-      (fresh-line))))
+      (let ((test-file? (match? "_t$" (pathname-name cfile))))
+        (princ (pathname-name cfile))
+        (princ (mkstr (unless test-file? ".o") ": "))
+        (princ (file-namestring cfile))
+        (walk cfile nil)
+        (fresh-line)
+        (when test-file?
+          (princ (mkstr #\tab "$(CC) -o " (pathname-name cfile) "$(exe) "
+                        (pathname-name cfile) ".c "))
+          (walk (mkstr (match?->string "^[^_]*" (pathname-name cfile)) ".c") nil)
+          (fresh-line)
+          (princln (mkstr #\tab (pathname-name cfile) "$(exe)")))))))
 
-(collect-depend)
+(defun main ()
+  (write-to!
+    (with-output-to-string (s)
+      (let ((*standard-output* s))
+        (collect-depend)))
+    "cdep.d"))
+
+(main)
+
+; これを生成したい
+; clang -o queue_t.exe queue_t.c std.o queue.o

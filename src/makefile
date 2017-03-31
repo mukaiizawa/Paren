@@ -24,3 +24,4 @@ include cdep.d
 
 clean:
 	$(RM) *.o
+	$(RM) *.exe
