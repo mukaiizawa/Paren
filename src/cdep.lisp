@@ -16,8 +16,8 @@
                          (walk dep (push dep traversed))))))
                  traversed))
     (dolist (cfile (collect-c-files))
-      (let ((test-file? (match? "_t$" (pathname-name cfile)))
-            (base-name (pathname-name cfile)))
+      (let* ((base-name (pathname-name cfile))
+             (test-file? (match? "_t$" base-name)))
         (princln
           (list->string
             (list*
