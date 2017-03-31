@@ -27,8 +27,7 @@
             " "))
         (when test-file?
           (princln
-            (mkstr #\tab "$(CC) -o " base-name "$(exe) "
-                   base-name ".c "
+            (mkstr #\tab "$(CC) -o " base-name "$(exe) " base-name ".c "
                    (list->string
                      (mapcar (lambda (path)
                                (mkstr (pathname-name path) ".o"))

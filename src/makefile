@@ -27,5 +27,4 @@ $(paren): paren.c lex.o std.o ahdrd.o
 include cdep.d
 
 clean:
-	$(RM) *.o
-	$(RM) *.exe
+	$(RM) *.o *.exe *_t$(exe)
