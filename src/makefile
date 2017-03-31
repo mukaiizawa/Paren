@@ -9,6 +9,10 @@ ifeq ($(filter $(supportos),$(os)),)
 $(error Unsupport os.)
 endif
 
+ifeq ($(os), linux)
+pref = ./
+endif
+
 ifeq ($(os), windows)
 exe = .exe
 endif

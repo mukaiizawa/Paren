@@ -12,22 +12,31 @@
                    (when (match?->string "^#include \".*\"" line)
                      (let* ((quoted (match?->string "\".*\"" line))
                             (dep (subseq quoted 1 (1- (length quoted)))))
-                       (princ (mkstr " " dep))
                        (unless (find dep traversed :test #'string=)
-                         (walk dep (cons dep traversed))))))))
+                         (walk dep (push dep traversed))))))
+                 traversed))
     (dolist (cfile (collect-c-files))
-      (let ((test-file? (match? "_t$" (pathname-name cfile))))
-        (princ (pathname-name cfile))
-        (princ (mkstr (unless test-file? ".o") ": "))
-        (princ (file-namestring cfile))
-        (walk cfile nil)
-        (fresh-line)
+      (let ((test-file? (match? "_t$" (pathname-name cfile)))
+            (base-name (pathname-name cfile)))
+        (princln
+          (list->string
+            (list*
+              (mkstr base-name (unless test-file? ".o") ":")
+              (file-namestring cfile)
+              (walk cfile nil))
+            " "))
         (when test-file?
-          (princ (mkstr #\tab "$(CC) -o " (pathname-name cfile) "$(exe) "
-                        (pathname-name cfile) ".c "))
-          (walk (mkstr (match?->string "^[^_]*" (pathname-name cfile)) ".c") nil)
-          (fresh-line)
-          (princln (mkstr #\tab (pathname-name cfile) "$(exe)")))))))
+          (princln
+            (mkstr #\tab "$(CC) -o " base-name "$(exe) "
+                   base-name ".c "
+                   (list->string
+                     (mapcar (lambda (path)
+                               (mkstr (pathname-name path) ".o"))
+                             (walk (mkstr
+                                     (match?->string "^[^_]*" base-name) ".c")
+                                   nil))
+                     " ")))
+          (princln (mkstr #\tab "$(pref)" base-name "$(exe)")))))))
 
 (defun main ()
   (write-to!
@@ -37,6 +46,3 @@
     "cdep.d"))
 
 (main)
-
-; これを生成したい
-; clang -o queue_t.exe queue_t.c std.o queue.o
