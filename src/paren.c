@@ -9,6 +9,12 @@ char* read() {
  return lex_start(stdin);
 }
 
+char* eval() {
+}
+
+char* print() {
+}
+
 int main(int argc, char* argv[]) {
   while (1) {
     fputs(") ", stdout);

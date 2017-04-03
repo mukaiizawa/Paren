@@ -6,7 +6,6 @@
 #include <stdlib.h>
 
 #include "queue.h"
-#include "std.h"
 
 void Queue_init(Queue* q) {
   q->top = NULL;
@@ -25,8 +24,10 @@ void Queue_enqueue(Queue* q, char* str) {
 }
 
 char* Queue_dequeue(Queue* q) {
-  if (q->top == NULL)
-    xerror("Queue_dequeue: No such element.");
+  if (q->top == NULL) {
+    fprintf(stderr, "Queue_dequeue: No such element.");
+    exit(1);
+  }
   struct Queue_node *temp = q->top;
   q->top = temp->next;
   char* ret_value = temp->val;

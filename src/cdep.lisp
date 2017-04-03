@@ -8,6 +8,8 @@
 
 (defun collect-depend ()
   (labels ((walk (path traversed)
+                 (unless (file-exists? path)
+                   (error "cdep: File not found ~A." path))
                  (dolist (line (read-from path))
                    (when (match?->string "^#include \".*\"" line)
                      (let* ((quoted (match?->string "\".*\"" line))
