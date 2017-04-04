@@ -21,8 +21,8 @@ paren = paren$(exe)
 
 all: $(paren)
 
-$(paren): paren.c lex.o ahdrd.o
-	$(CC) -o $@ paren.c lex.o ahdrd.o
+$(paren): paren.c lex.o
+	$(CC) -o $@ paren.c lex.o
 
 include cdep.d
 

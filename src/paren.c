@@ -3,16 +3,17 @@
 */
 
 #include <stdio.h>
-#include "lex.h"
 
-char* read() {
- return lex_start(stdin);
+char prompt[1000];
+
+char *read() {
+ return fgets(prompt, sizeof(prompt), stdin);
 }
 
-char* eval() {
+char *eval() {
 }
 
-char* print() {
+char *print() {
 }
 
 int main(int argc, char* argv[]) {

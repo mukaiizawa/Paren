@@ -23,7 +23,7 @@
         (princln
           (list->string
             (list*
-              (mkstr base-name (unless test-file? ".o") ":")
+              (mkstr base-name (if test-file? "$(exe)" ".o") ":")
               (file-namestring cfile)
               (walk cfile nil))
             " "))

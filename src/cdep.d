@@ -1,9 +1,7 @@
-ahdrd.o: ahdrd.c ahdrd.h
 ast.o: ast.c ast.h
-lex.o: lex.c ahdrd.h lex.h
-paren.o: paren.c lex.h
-queue.o: queue.c queue.h
-queue_t: queue_t.c queue.h
-	$(CC) -o queue_t$(exe) queue_t.c queue.o
-	$(pref)queue_t$(exe)
+ast_t$(exe): ast_t.c ast.h
+	$(CC) -o ast_t$(exe) ast_t.c ast.o
+	$(pref)ast_t$(exe)
+lex.o: lex.c lex.h
+paren.o: paren.c
 
