@@ -12,7 +12,7 @@ int main(void) {
   node2.val = "2";
   node3.type = STRING;
   node3.val = "3";
-  S_dump(S_cons(&node0, NIL));
-  // S_dump(S_cons(&node0, S_cons(&node1, S_cons(S_cons(&node2, S_cons(&node3, NIL)), NIL))));
+  S_dump(S_consNil(&node0));
+  // S_dump(S_cons(&node0, S_cons(&node1, S_cons(&node2, S_consNil(&node3)))));
   return 0;
 }

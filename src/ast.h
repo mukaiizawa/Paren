@@ -14,6 +14,7 @@
 #define     DOUBLE 6
 #define   CHAR 7
 #define   STRING 8
+#define   NIL 9
 
 #define FIRST(x) x->car
 #define REST(x) x->cdr
@@ -26,10 +27,10 @@ struct S {
   struct S *prev, *car, *cdr;
 };
 
-struct S *NIL = NULL;
-
+extern struct S *S_alloc();
 extern int S_isAtom(struct S *node);
 extern struct S *S_cons(struct S *car, struct S *cdr);
+extern struct S *S_consNil(struct S *car);
 extern void S_dump(struct S *node);
 
 #endif

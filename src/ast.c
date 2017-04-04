@@ -12,21 +12,38 @@ int S_isAtom(struct S *node) {
   return !(node->type == CONS);
 }
 
+int S_isNil(struct S *node) {
+  return node->type == NIL;
+}
+
+struct S *S_alloc() {
+  struct S *p;
+  if ((p = (struct S *)calloc(1, sizeof(struct S))) == NULL) {
+    fprintf(stderr, "S_alloc: Cannot allocate memory.");
+    exit(1);
+  }
+  return p;
+}
+
 struct S *S_cons(struct S *car, struct S *cdr) {
   struct S *prev;
-  if (cdr->type != CONS && cdr != NIL) {
+  if (cdr->type != CONS && !S_isNil(cdr)) {
     fprintf(stderr, "S_cons: Do not allow create cons cell without terminated nil.");
     exit(1);
   }
-  if ((prev = (struct S *)calloc(1, sizeof(struct S))) == NULL) {
-    fprintf(stderr, "S_cons: Cannot allocate memory.");
-    exit(1);
-  }
+  prev = S_alloc();
   prev->type = CONS;
   prev->car = car;
   prev->cdr = cdr;
   car->prev = cdr->prev = prev;
   return  prev;
+}
+
+struct S *S_consNiL(struct S *car) {
+  struct S *nil;
+  nil = S_alloc();
+  nil->type = NIL;
+  return S_cons(car, nil);
 }
 
 void S_dump(struct S *node) {
@@ -36,7 +53,7 @@ void S_dump(struct S *node) {
     return;
   }
   printf("(%s", node->car->val);
-  for (next = node->cdr; next != NIL; next = next->cdr) {
+  for (next = node->cdr; !S_isNil(next); next = next->cdr) {
     if (S_isAtom(next->car))
       printf(" %s", next->car->val);
     else {
