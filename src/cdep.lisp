@@ -6,7 +6,7 @@
                (string/= (pathname-type path) "c"))
              (ls "./" :dir nil)))
 
-(defun collect-depend ()
+(defun collect-depend (path)
   (labels ((walk (path traversed)
                  (unless (file-exists? path)
                    (error "cdep: File not found ~A." path))
@@ -17,34 +17,36 @@
                        (unless (find dep traversed :test #'string=)
                          (walk dep (push dep traversed))))))
                  traversed))
-    (dolist (cfile (collect-c-files))
-      (let* ((base-name (pathname-name cfile))
-             (test-file? (match? "_t$" base-name)))
+    (walk path nil)))
+
+(defun print-depend ()
+  (dolist (file.c (collect-c-files))
+    (let* ((file (pathname-name file.c))
+           (file_t.c? (match? "_t$" file)))
+      (princln
+        (list->string
+          (list*
+            (mkstr file (if file_t.c? "$(exe)" ".o") ":")
+            (file-namestring file.c)
+            (mkstr-if file_t.c?
+              (subseq file 0 (- (length file) 2)) ".o")
+            (collect-depend file.c))
+          " "))
+      (when file_t.c?
         (princln
-          (list->string
-            (list*
-              (mkstr base-name (if test-file? "$(exe)" ".o") ":")
-              (file-namestring cfile)
-              (mkstr-if test-file? (subseq base-name 0 (- (length base-name) 2)) ".o")
-              (walk cfile nil))
-            " "))
-        (when test-file?
-          (princln
-            (mkstr #\tab "$(CC) -o " base-name "$(exe) " base-name ".c "
-                   (list->string
-                     (mapcar (lambda (path)
-                               (mkstr (pathname-name path) ".o"))
-                             (walk (mkstr
-                                     (match?->string "^[^_]*" base-name) ".c")
-                                   nil))
-                     " ")))
-          (princln (mkstr #\tab "$(pref)" base-name "$(exe)")))))))
+          (mkstr #\tab "$(CC) -o " file "$(exe) " file ".c "
+                 (list->string
+                   (mapcar (lambda (path)
+                             (mkstr (pathname-name path) ".o"))
+                           (collect-depend (mkstr (match?->string "^[^_]*" file) ".c")))
+                   " ")))
+        (princln (mkstr #\tab "$(pref)" file "$(exe)"))))))
 
 (defun main ()
   (write-to!
     (with-output-to-string (s)
       (let ((*standard-output* s))
-        (collect-depend)))
+        (print-depend)))
     "cdep.d"))
 
 (main)
