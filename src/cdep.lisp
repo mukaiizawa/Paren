@@ -25,6 +25,7 @@
             (list*
               (mkstr base-name (if test-file? "$(exe)" ".o") ":")
               (file-namestring cfile)
+              (mkstr-if test-file? (subseq base-name 0 (- (length base-name) 2)) ".o")
               (walk cfile nil))
             " "))
         (when test-file?
