@@ -27,8 +27,9 @@ struct S {
   struct S *prev, *car, *cdr;
 };
 
-extern struct S *S_alloc();
 extern int S_isAtom(struct S *node);
+extern int S_isNil(struct S *node);
+extern struct S *S_alloc();
 extern struct S *S_cons(struct S *car, struct S *cdr);
 extern struct S *S_consNil(struct S *car);
 extern void S_dump(struct S *node);

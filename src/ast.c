@@ -39,7 +39,7 @@ struct S *S_cons(struct S *car, struct S *cdr) {
   return  prev;
 }
 
-struct S *S_consNiL(struct S *car) {
+struct S *S_consNil(struct S *car) {
   struct S *nil;
   nil = S_alloc();
   nil->type = NIL;
@@ -52,7 +52,8 @@ void S_dump(struct S *node) {
     printf("%s", node->val);
     return;
   }
-  printf("(%s", node->car->val);
+  printf("(");
+  S_dump(node->car);
   for (next = node->cdr; !S_isNil(next); next = next->cdr) {
     if (S_isAtom(next->car))
       printf(" %s", next->car->val);
