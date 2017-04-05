@@ -12,6 +12,6 @@
 #define PAREN_KEYWORD 2
 #define PAREN_OPERATOR 3
 
-extern char *lex_start(FILE *fp);
+extern char *lex_parse(FILE *fp);
  
 #endif
