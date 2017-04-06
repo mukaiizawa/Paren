@@ -25,24 +25,24 @@ int main(void) {
           S_consNil(node2)),
         S_consNil(node3)));
 
-  printf("\nroot => ");
+  printf("\n) root\n");
   S_dump(root);
-  printf("\n<=> (list (1 2) 3)\n");
+  printf(" ; <=> (list (1 2) 3)\n");
 
-  printf("\n(first root) => ");
+  printf("\n) (first root)\n");
   S_dump(FIRST(root));
-  printf("\n<=> list\n");
+  printf(" ; <=> list\n");
 
-  printf("\n(rest root) => ");
+  printf("\n) (rest root)\n");
   S_dump(REST(root));
-  printf("\n<=> ((1 2) 3)\n");
+  printf(" ; <=> ((1 2) 3)\n");
 
-  printf("\n(second root) => ");
+  printf("\n) (second root)\n");
   S_dump(SECOND(root));
-  printf("\n<=> (1 2)\n");
+  printf(" ; <=> (1 2)\n");
 
-  printf("\n(third root) => ");
+  printf("\n) (third root)\n");
   S_dump(THIRD(root));
-  printf("\n<=> 3\n");
+  printf(" ; <=> 3\n");
   return 0;
 }
