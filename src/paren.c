@@ -4,6 +4,8 @@
 
 #include <stdio.h>
 
+// #include "lex.h"
+
 char prompt[1000];
 
 char *read() {
