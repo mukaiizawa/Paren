@@ -1,23 +1,23 @@
 # makefile
-# make [os = (linux | windows)] [CC = (clang | gcc)]
+# make [os=(linux | windows)] [CC=(clang | gcc)]
 
-supportos = linux windows
-os ?= linux
-CC = clang
+supportos=linux windows
+os ?=linux
+CC=clang
 
 ifeq ($(filter $(supportos),$(os)),)
-$(error Unsupport os.)
+	$(error Unsupport os.)
 endif
 
 ifeq ($(os), linux)
-pref = ./
+	pref=./
 endif
 
 ifeq ($(os), windows)
-exe = .exe
+	exe=.exe
 endif
 
-paren = paren$(exe)
+paren=paren$(exe)
 
 all: $(paren)
 
