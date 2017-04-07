@@ -1,5 +1,5 @@
-#include <string.h>
 #include <stdio.h>
+
 #include "ast.h"
 
 int main(void) {

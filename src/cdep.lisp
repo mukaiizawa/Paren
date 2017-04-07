@@ -7,30 +7,32 @@
              (ls "./" :dir nil)))
 
 (defun collect-depend (path)
-  (labels ((walk (path traversed)
-                 (unless (file-exists? path)
-                   (error "cdep: File not found ~A." path))
-                 (dolist (line (read-from path))
-                   (when (match?->string "^#include \".*\"" line)
-                     (let* ((quoted (match?->string "\".*\"" line))
-                            (dep (subseq quoted 1 (1- (length quoted)))))
-                       (unless (find dep traversed :test #'string=)
-                         (walk dep (push dep traversed))))))
-                 traversed))
-    (walk path nil)))
+  (let ((traversed nil))
+    (funcall (alambda (path)
+               (unless (file-exists? path)
+                 (error "cdep: File not found ~A." path))
+               (dolist (line (read-from path))
+                 (when (match?->string "^#include \".*\"" line)
+                   (let* ((quoted (match?->string "\".*\"" line))
+                          (dep (subseq quoted 1 (1- (length quoted)))))
+                     (unless (find dep traversed :test #'string=)
+                       (push dep traversed)
+                       (self dep))))))
+             path)
+    traversed))
 
 (defun print-depend ()
-  (dolist (file.c (collect-c-files))
-    (let* ((file (pathname-name file.c))
+  (dolist (cpath (collect-c-files))
+    (let* ((file (pathname-name cpath))
            (file_t.c? (match? "_t$" file)))
       (princln
         (list->string
           (list*
             (mkstr file (if file_t.c? "$(exe)" ".o") ":")
-            (file-namestring file.c)
+            (file-namestring cpath)
             (mkstr-if file_t.c?
               (subseq file 0 (- (length file) 2)) ".o")
-            (collect-depend file.c))
+            (collect-depend cpath))
           " "))
       (when file_t.c?
         (princln

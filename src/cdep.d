@@ -1,4 +1,7 @@
-ahdrd.o: ahdrd.c  ringbuf.h
+ahdrd.o: ahdrd.c  ringbuf.h ahdrd.h
+ahdrd_t$(exe): ahdrd_t.c ahdrd.o ringbuf.h ahdrd.h
+	$(CC) -o ahdrd_t$(exe) ahdrd_t.c ringbuf.o ahdrd.o
+	$(pref)ahdrd_t$(exe)
 ast.o: ast.c  ast.h
 ast_t$(exe): ast_t.c ast.o ast.h
 	$(CC) -o ast_t$(exe) ast_t.c ast.o
