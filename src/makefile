@@ -18,11 +18,12 @@ ifeq ($(os), windows)
 endif
 
 paren=paren$(exe)
+objs= paren.c lex.o ast.o ahdrd.o ringbuf.o
 
 all: $(paren)
 
-$(paren): paren.c lex.o
-	$(CC) -o $@ paren.c lex.o
+$(paren): paren.c $(objs)
+	$(CC) -o $@ $(objs)
 
 include cdep.d
 

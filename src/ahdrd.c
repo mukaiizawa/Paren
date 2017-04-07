@@ -4,7 +4,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
+#include <ctype.h>
 
 #include "ahdrd.h"
 
@@ -25,12 +26,15 @@ char *Ahdrd_getToken(struct Ahdrd *ahdrd) {
   return strcpy(str, ahdrd->token);
 }
 
-int Ahdrd_read(struct Ahdrd *ahdrd) {
-  int c;
-  c = (!Ringbuf_isEmpty(&ahdrd->ringbuf))?
+int Ahdrd_skipRead(struct Ahdrd *ahdrd) {
+  return (!Ringbuf_isEmpty(&ahdrd->ringbuf))?
     Ringbuf_get(&ahdrd->ringbuf):
     fgetc(ahdrd->fp);
-  if(c != EOF) {
+}
+
+int Ahdrd_read(struct Ahdrd *ahdrd) {
+  int c;
+  if((c = Ahdrd_skipRead(ahdrd)) != EOF) {
     ahdrd->token[ahdrd->tokenPos] = c;
     ahdrd->tokenPos = ahdrd->tokenPos + 1;
   }
@@ -55,4 +59,12 @@ int Ahdrd_peek(struct Ahdrd *ahdrd, int n) {
     Ringbuf_put(&ahdrd->ringbuf, c);
   }
   return ahdrd->ringbuf.buf[(ahdrd->ringbuf.out + n - 1) % RINGBUF_BUFSIZ];
+}
+
+char* Ahdrd_readKeyword(struct Ahdrd *ahdrd) {
+  int c;
+  Ahdrd_skipRead(ahdrd);    // skip ':'
+  while ((c = Ahdrd_peek(ahdrd, 1)) != EOF && !isspace(c))
+    Ahdrd_read(ahdrd);
+  return Ahdrd_getToken(ahdrd);
 }
