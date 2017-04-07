@@ -1,6 +1,5 @@
 #include <string.h>
 #include <stdio.h>
-#include <assert.h>
 #include "ast.h"
 
 int main(void) {
