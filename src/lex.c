@@ -27,7 +27,7 @@ struct S *Lex_nextToken() {
   struct S *s;
   s = S_alloc();
   int next;
-  while ((next = Ahdrd_peek(&ahdrd, 1)) != EOF) {
+  while ((next = Ahdrd_peek(&ahdrd, 1)) != '\n') {
     switch (next) {
       case ':':
         s->type = KEYWORD;

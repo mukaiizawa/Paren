@@ -3,45 +3,45 @@
 #include "ast.h"
 
 int main(void) {
-  struct S *root, *node0, *node1, *node2, *node3;
-  node0 = S_alloc();
-  node0->type = STRING;
+  struct Ast *root, *node0, *node1, *node2, *node3;
+  node0 = Ast_alloc();
+  node0->type = AST_LEAF;
   node0->val = "list";
-  node1 = S_alloc();
-  node1->type = STRING;
+  node1 = Ast_alloc();
+  node1->type = AST_LEAF;
   node1->val = "1";
-  node2 = S_alloc();
-  node2->type = STRING;
+  node2 = Ast_alloc();
+  node2->type = AST_LEAF;
   node2->val = "2";
-  node3 = S_alloc();
-  node3->type = STRING;
+  node3 = Ast_alloc();
+  node3->type = AST_LEAF;
   node3->val = "3";
-  root = S_cons(
+  root = Ast_cons(
       node0,
-      S_cons(
-        S_cons(
+      Ast_cons(
+        Ast_cons(
           node1,
-          S_consNil(node2)),
-        S_consNil(node3)));
+          Ast_consNil(node2)),
+        Ast_consNil(node3)));
 
   printf("\n) root\n");
-  S_dump(root);
+  Ast_dump(root);
   printf(" ; <=> (list (1 2) 3)\n");
 
   printf("\n) (first root)\n");
-  S_dump(FIRST(root));
+  Ast_dump(FIRST(root));
   printf(" ; <=> list\n");
 
   printf("\n) (rest root)\n");
-  S_dump(REST(root));
+  Ast_dump(REST(root));
   printf(" ; <=> ((1 2) 3)\n");
 
   printf("\n) (second root)\n");
-  S_dump(SECOND(root));
+  Ast_dump(SECOND(root));
   printf(" ; <=> (1 2)\n");
 
   printf("\n) (third root)\n");
-  S_dump(THIRD(root));
+  Ast_dump(THIRD(root));
   printf(" ; <=> 3\n");
   return 0;
 }

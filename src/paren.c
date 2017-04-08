@@ -11,7 +11,7 @@ char prompt[1000];
 
 char *read() {
   S_dump(Lex_parse());
-  return ")";
+  return "";
 }
 
 char *eval() {

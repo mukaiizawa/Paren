@@ -8,58 +8,58 @@
 
 #include "ast.h"
 
-int S_isAtom(struct S *node) {
-  return !(node->type == CONS);
+int Ast_isAtom(struct Ast *node) {
+  return !(node->type == AST_CONS);
 }
 
-int S_isNil(struct S *node) {
-  return node->type == NIL;
+int Ast_isNil(struct Ast *node) {
+  return node->type == AST_NIL;
 }
 
-struct S *S_alloc() {
-  struct S *p;
-  if ((p = (struct S *)calloc(1, sizeof(struct S))) == NULL) {
-    fprintf(stderr, "S_alloc: Cannot allocate memory.");
+struct Ast *Ast_alloc() {
+  struct Ast *p;
+  if ((p = (struct Ast *)calloc(1, sizeof(struct Ast))) == NULL) {
+    fprintf(stderr, "Ast_alloc: Cannot allocate memory.");
     exit(1);
   }
   return p;
 }
 
-struct S *S_cons(struct S *car, struct S *cdr) {
-  struct S *prev;
-  if (cdr->type != CONS && !S_isNil(cdr)) {
-    fprintf(stderr, "S_cons: Do not allow create cons cell without terminated nil.");
+struct Ast *Ast_cons(struct Ast *car, struct Ast *cdr) {
+  struct Ast *prev;
+  if (cdr->type != AST_CONS && !Ast_isNil(cdr)) {
+    fprintf(stderr, "Ast_cons: Do not allow create cons cell without terminated nil.");
     exit(1);
   }
-  prev = S_alloc();
-  prev->type = CONS;
+  prev = Ast_alloc();
+  prev->type = AST_CONS;
   prev->car = car;
   prev->cdr = cdr;
   car->prev = cdr->prev = prev;
   return  prev;
 }
 
-struct S *S_consNil(struct S *car) {
-  struct S *nil;
-  nil = S_alloc();
-  nil->type = NIL;
-  return S_cons(car, nil);
+struct Ast *Ast_consNil(struct Ast *car) {
+  struct Ast *nil;
+  nil = Ast_alloc();
+  nil->type = AST_NIL;
+  return Ast_cons(car, nil);
 }
 
-void S_dump(struct S *node) {
-  struct S *next;
-  if (S_isAtom(node)) {
+void Ast_dump(struct Ast *node) {
+  struct Ast *next;
+  if (Ast_isAtom(node)) {
     printf("%s", node->val);
     return;
   }
   printf("(");
-  S_dump(node->car);
-  for (next = node->cdr; !S_isNil(next); next = next->cdr) {
-    if (S_isAtom(next->car))
+  Ast_dump(node->car);
+  for (next = node->cdr; !Ast_isNil(next); next = next->cdr) {
+    if (Ast_isAtom(next->car))
       printf(" %s", next->car->val);
     else {
       printf(" ");
-      S_dump(next->car);
+      Ast_dump(next->car);
     }
   }
   printf(")");
