@@ -3,6 +3,7 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "lex.h"
 #include "ast.h"
@@ -20,43 +21,40 @@ void Lex_init() {
 }
 
 struct Ast *Lex_parse() {
-  Lex_init();
   return Lex_parseS();
 }
 
 struct Ast *Lex_parseAtom() {
-  struct Ast *s;
-  s = Ast_alloc();
+  struct Ast *atom;
+  atom = Ast_alloc();
   int next;
-  while ((next = Ahdrd_peek(&ahdrd, 1)) != '\n') {
-    switch (next) {
-      case ':':
-        s->type = KEYWORD;
-        s->val = Ahdrd_readKeyword(&ahdrd);
-        return s;
-      case '\'':
-        return s;
-    }
+  Ahdrd_readSpace(&ahdrd);
+  switch (Ahdrd_peek(&ahdrd, 1)) {
+    case ':':
+      atom->type = KEYWORD;
+      atom->val = Ahdrd_readKeyword(&ahdrd);
+      return atom;
+    case '\'':
+      atom->type = CHARACTER;
+      atom->val = Ahdrd_readCharacter(&ahdrd);
+      return atom;
   }
+  fprintf(stderr, "Lex_parseAtom: Illegal token.");
+  exit(1);
 }
 
 struct Ast *Lex_parseS() {
-  struct Ast *prev, *car, *cdr;
-  if (Ahdrd_peek(&ahdrd, 1) != '(')
-    return Ast_consWithNil(Lex_parseAtom());
+  Ahdrd_readSpace(&ahdrd);
+  struct Ast *ast;
+  if (Ahdrd_peek(&ahdrd, 1) == '(') {
+    Ahdrd_skipRead(&ahdrd);    // skip '('
+    ast = Ast_alloc();
+    while (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1) != ')') {
+      ast = Ast_cons(Lex_parseS(), ast);
+    }
+    Ahdrd_skipRead(&ahdrd);    // skip ')'
+    return ast;
+  }
   else
-    // {
-    //   Ahdrd_skipRead(&ahdrd);
-    //   while (Ahdrd_peek(&ahdrd, 1) == ')') {
-    //     car = Lex_parseS();
-    //     if (Ahdrd_peek(&ahdrd, 1) == ')')
-    //       prev = Ast_consWithNil(car);
-    //     else {
-    //       cdr = Lex_parseS();
-    //       prev = Ast_cons(car, cdr);
-    //     }
-    //   }
-    //   Ahdrd_skipRead(&ahdrd);
-    // }
-    return prev;
+    return Lex_parseAtom();
 }

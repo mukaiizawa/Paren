@@ -21,6 +21,8 @@ extern char *Ahdrd_getToken(struct Ahdrd *ahdrd);
 extern int Ahdrd_skipRead(struct Ahdrd *ahdrd);
 extern int Ahdrd_read(struct Ahdrd *ahdrd);
 extern int Ahdrd_peek(struct Ahdrd *ahdrd, int n);
+extern struct Ahdrd *Ahdrd_readSpace(struct Ahdrd *ahdrd);
+extern char *Ahdrd_readCharacter(struct Ahdrd *ahdrd);
 extern char *Ahdrd_readKeyword(struct Ahdrd *ahdrd);
 
 #endif

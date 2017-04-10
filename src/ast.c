@@ -60,5 +60,5 @@ void Ast_dump(struct Ast *node) {
       Ast_dump(next->car);
     }
   }
-  printf(")\n");
+  printf(")");
 }

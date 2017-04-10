@@ -11,13 +11,15 @@ char prompt[1000];
 
 char *read() {
   Ast_dump(Lex_parse());
-  return "";
+  return "read";
 }
 
 char *eval() {
+  return "eval";
 }
 
 char *print() {
+  return "print";
 }
 
 int main(int argc, char* argv[]) {
