@@ -71,10 +71,7 @@ struct Ahdrd *Ahdrd_readSpace(struct Ahdrd *ahdrd) {
 char* Ahdrd_readKeyword(struct Ahdrd *ahdrd) {
   int c;
   Ahdrd_skipRead(ahdrd);    // skip ':'
-  while ((c = Ahdrd_peek(ahdrd, 1)) != EOF
-      && !isspace(c)
-      && c != '('
-      && c != ')')
+  while (!isspace((c = Ahdrd_peek(ahdrd, 1))) && c != '(' && c != ')')
     Ahdrd_read(ahdrd);
   return Ahdrd_getToken(ahdrd);
 }
@@ -83,15 +80,27 @@ char* Ahdrd_readCharacter(struct Ahdrd *ahdrd) {
   int c, readCount;
   Ahdrd_skipRead(ahdrd);    // skip `'`
   readCount = 0;
-  while ((c = Ahdrd_peek(ahdrd, 1)) != EOF && c != '\'') {
+  while ((c = Ahdrd_peek(ahdrd, 1)) != '\'') {
     Ahdrd_read(ahdrd);
-    if (++readCount >= 3) {
+    if (++readCount > 1) {
       fprintf(stderr, "Ahdrd_readCharacter: Illegal token.");
       exit(1);
     }
+    if (c == '\'')
+      Ahdrd_read(ahdrd);
   }
-  if (c == '\'')
-    Ahdrd_read(ahdrd);
   Ahdrd_skipRead(ahdrd);    // skip `'`
+  return Ahdrd_getToken(ahdrd);
+}
+
+char* Ahdrd_readString(struct Ahdrd *ahdrd) {
+  int c;
+  Ahdrd_skipRead(ahdrd);    // skip `"`
+  while ((c = Ahdrd_peek(ahdrd, 1)) != '"') {
+    Ahdrd_read(ahdrd);
+    if (c == '\\')
+      Ahdrd_read(ahdrd);
+  }
+  Ahdrd_skipRead(ahdrd);    // skip `"`
   return Ahdrd_getToken(ahdrd);
 }

@@ -27,20 +27,24 @@ struct Ast *Lex_parse() {
 struct Ast *Lex_parseAtom() {
   struct Ast *atom;
   atom = Ast_alloc();
-  int next;
-  Ahdrd_readSpace(&ahdrd);
-  switch (Ahdrd_peek(&ahdrd, 1)) {
+  switch (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1)) {
     case ':':
       atom->type = KEYWORD;
       atom->val = Ahdrd_readKeyword(&ahdrd);
-      return atom;
+      break;
     case '\'':
       atom->type = CHARACTER;
       atom->val = Ahdrd_readCharacter(&ahdrd);
-      return atom;
+      break;
+    case '"':
+      atom->type = STRING;
+      atom->val = Ahdrd_readString(&ahdrd);
+      break;
+    default:
+      fprintf(stderr, "Lex_parseAtom: Illegal token.");
+      exit(1);
   }
-  fprintf(stderr, "Lex_parseAtom: Illegal token.");
-  exit(1);
+  return atom;
 }
 
 struct Ast *Lex_parseS() {
@@ -53,7 +57,7 @@ struct Ast *Lex_parseS() {
       ast = Ast_cons(Lex_parseS(), ast);
     }
     Ahdrd_skipRead(&ahdrd);    // skip ')'
-    return ast;
+    return Ast_reverse(ast);
   }
   else
     return Lex_parseAtom();

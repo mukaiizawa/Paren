@@ -20,7 +20,7 @@ extern int Ast_isAtom(struct Ast *node);
 extern int Ast_isNil(struct Ast *node);
 extern struct Ast *Ast_alloc();
 extern struct Ast *Ast_cons(struct Ast *car, struct Ast *cdr);
-extern struct Ast *Ast_consWithNil(struct Ast *car);
+extern struct Ast *Ast_reverse(struct Ast *ast);
 extern void Ast_dump(struct Ast *node);
 
 #endif

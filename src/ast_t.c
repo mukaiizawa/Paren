@@ -17,8 +17,8 @@ int main(void) {
       Ast_cons(
         Ast_cons(
           node1,
-          Ast_consWithNil(node2)),
-        Ast_consWithNil(node3)));
+          Ast_cons(node2, Ast_alloc())),
+        Ast_cons(node3, Ast_alloc())));
 
   printf("\n) root\n");
   Ast_dump(root);
