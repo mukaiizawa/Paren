@@ -5,24 +5,20 @@
 int main(void) {
   struct Ast *root, *node0, *node1, *node2, *node3;
   node0 = Ast_alloc();
-  node0->type = AST_LEAF;
   node0->val = "list";
   node1 = Ast_alloc();
-  node1->type = AST_LEAF;
   node1->val = "1";
   node2 = Ast_alloc();
-  node2->type = AST_LEAF;
   node2->val = "2";
   node3 = Ast_alloc();
-  node3->type = AST_LEAF;
   node3->val = "3";
   root = Ast_cons(
       node0,
       Ast_cons(
         Ast_cons(
           node1,
-          Ast_consNil(node2)),
-        Ast_consNil(node3)));
+          Ast_consWithNil(node2)),
+        Ast_consWithNil(node3)));
 
   printf("\n) root\n");
   Ast_dump(root);
