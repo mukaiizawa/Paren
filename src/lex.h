@@ -13,7 +13,7 @@
 #define PAREN_OPERATOR 3
 
 extern void Lex_init();
-extern struct S *Lex_parse();
-extern struct S *Lex_parseS();
+extern struct Ast *Lex_parse();
+extern struct Ast *Lex_parseS();
 
 #endif

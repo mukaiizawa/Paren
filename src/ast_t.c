@@ -22,22 +22,22 @@ int main(void) {
 
   printf("\n) root\n");
   Ast_dump(root);
-  printf(" ; <=> (list (1 2) 3)\n");
+  printf(" ; <=> (list (1 2) 3)");
 
   printf("\n) (first root)\n");
   Ast_dump(FIRST(root));
-  printf(" ; <=> list\n");
+  printf(" ; <=> list");
 
   printf("\n) (rest root)\n");
   Ast_dump(REST(root));
-  printf(" ; <=> ((1 2) 3)\n");
+  printf(" ; <=> ((1 2) 3)");
 
   printf("\n) (second root)\n");
   Ast_dump(SECOND(root));
-  printf(" ; <=> (1 2)\n");
+  printf(" ; <=> (1 2)");
 
   printf("\n) (third root)\n");
   Ast_dump(THIRD(root));
-  printf(" ; <=> 3\n");
+  printf(" ; <=> 3");
   return 0;
 }

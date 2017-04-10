@@ -7,6 +7,7 @@
 #include "lex.h"
 #include "ast.h"
 #include "ahdrd.h"
+#include "pprim.h"
 
 static char buf[10];
 static int ch;
@@ -18,14 +19,14 @@ void Lex_init() {
   Ahdrd_init(&ahdrd, stdin);
 }
 
-struct S *Lex_parse() {
+struct Ast *Lex_parse() {
   Lex_init();
   return Lex_parseS();
 }
 
-struct S *Lex_nextToken() {
-  struct S *s;
-  s = S_alloc();
+struct Ast *Lex_parseAtom() {
+  struct Ast *s;
+  s = Ast_alloc();
   int next;
   while ((next = Ahdrd_peek(&ahdrd, 1)) != '\n') {
     switch (next) {
@@ -39,22 +40,23 @@ struct S *Lex_nextToken() {
   }
 }
 
-struct S *Lex_parseS() {
-  struct S *prev, *car, *cdr;
+struct Ast *Lex_parseS() {
+  struct Ast *prev, *car, *cdr;
   if (Ahdrd_peek(&ahdrd, 1) != '(')
-    return S_consNil(Lex_nextToken());
-  else {
-    Ahdrd_skipRead(&ahdrd);
-    while (Ahdrd_peek(&ahdrd, 1) == ')') {
-      car = Lex_parseS();
-      if (Ahdrd_peek(&ahdrd, 1) == ')')
-        prev = S_consNil(car);
-      else {
-        cdr = Lex_parseS();
-        prev = S_cons(car, cdr);
-      }
-    }
-    Ahdrd_skipRead(&ahdrd);
-  }
-  return prev;
+    return Ast_consWithNil(Lex_parseAtom());
+  else
+    // {
+    //   Ahdrd_skipRead(&ahdrd);
+    //   while (Ahdrd_peek(&ahdrd, 1) == ')') {
+    //     car = Lex_parseS();
+    //     if (Ahdrd_peek(&ahdrd, 1) == ')')
+    //       prev = Ast_consWithNil(car);
+    //     else {
+    //       cdr = Lex_parseS();
+    //       prev = Ast_cons(car, cdr);
+    //     }
+    //   }
+    //   Ahdrd_skipRead(&ahdrd);
+    // }
+    return prev;
 }

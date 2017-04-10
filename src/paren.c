@@ -10,7 +10,7 @@
 char prompt[1000];
 
 char *read() {
-  S_dump(Lex_parse());
+  Ast_dump(Lex_parse());
   return "";
 }
 
