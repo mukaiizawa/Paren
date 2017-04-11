@@ -5,9 +5,12 @@
 #ifndef PPRIM
 #define PPRIM
 
-#define SYMBOL 0
-#define KEYWORD 1
-#define CHARACTER 2
-#define STRING 3
+#define NIL 0
+#define T 1
+
+#define SYMBOL 3
+#define KEYWORD 4
+#define CHARACTER 5
+#define STRING 6
 
 #endif

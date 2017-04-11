@@ -10,10 +10,6 @@
 #include "ahdrd.h"
 #include "pprim.h"
 
-static char buf[10];
-static int ch;
-static int pos;
-
 static struct Ahdrd ahdrd;
 
 void Lex_init() {
