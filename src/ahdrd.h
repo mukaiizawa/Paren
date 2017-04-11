@@ -25,5 +25,7 @@ extern struct Ahdrd *Ahdrd_readSpace(struct Ahdrd *ahdrd);
 extern char *Ahdrd_readCharacter(struct Ahdrd *ahdrd);
 extern char *Ahdrd_readString(struct Ahdrd *ahdrd);
 extern char *Ahdrd_readKeyword(struct Ahdrd *ahdrd);
+extern char *Ahdrd_readSymbol(struct Ahdrd *ahdrd);
+extern int Ahdrd_isNumber(struct Ahdrd *ahdrd);
 
 #endif

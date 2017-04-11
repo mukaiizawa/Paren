@@ -5,7 +5,7 @@
 #ifndef RINGBUF
 #define RINGBUF
 
-#define RINGBUF_BUFSIZ 5
+#define RINGBUF_BUFSIZ 100
 
 struct Ringbuf {
   int in;

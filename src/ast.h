@@ -16,7 +16,7 @@ struct Ast {
   struct Ast *prev, *car, *cdr;
 };
 
-extern int Ast_isAtom(struct Ast *node);
+extern int Ast_isLeaf(struct Ast *node);
 extern int Ast_isNil(struct Ast *node);
 extern struct Ast *Ast_alloc();
 extern struct Ast *Ast_cons(struct Ast *car, struct Ast *cdr);

@@ -104,3 +104,30 @@ char* Ahdrd_readString(struct Ahdrd *ahdrd) {
   Ahdrd_skipRead(ahdrd);    // skip `"`
   return Ahdrd_getToken(ahdrd);
 }
+
+char* Ahdrd_readSymbol(struct Ahdrd *ahdrd) {
+  int c;
+  while (!isspace((c = Ahdrd_peek(ahdrd, 1))) && c != '(' && c != ')')
+    Ahdrd_read(ahdrd);
+  return Ahdrd_getToken(ahdrd);
+}
+
+int Ahdrd_isNumber(struct Ahdrd *ahdrd) {
+  int i, c;
+  i = 1;
+  if (!isdigit((c = Ahdrd_peek(ahdrd, 1))) || c == '0')
+    return 0;
+  while (!isspace((c = Ahdrd_peek(ahdrd, ++i)))
+      && c != '(' && c != ')' && c != '.') {
+    if (!isdigit(c))
+      return 0;
+  }
+  if (c == '.') {
+    while (!isspace((c = Ahdrd_peek(ahdrd, ++i)))
+        && c != '(' && c != ')') {
+      if (!isdigit(c))
+        return 0;
+    }
+  }
+  return 1;
+}

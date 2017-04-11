@@ -21,24 +21,26 @@ struct Ast *Lex_parse() {
 }
 
 struct Ast *Lex_parseAtom() {
+  int c;
   struct Ast *atom;
   atom = Ast_alloc();
-  switch (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1)) {
-    case ':':
-      atom->type = KEYWORD;
-      atom->val = Ahdrd_readKeyword(&ahdrd);
-      break;
-    case '\'':
-      atom->type = CHARACTER;
-      atom->val = Ahdrd_readCharacter(&ahdrd);
-      break;
-    case '"':
-      atom->type = STRING;
-      atom->val = Ahdrd_readString(&ahdrd);
-      break;
-    default:
-      fprintf(stderr, "Lex_parseAtom: Illegal token.");
-      exit(1);
+  if ((c = Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1)) == ':') {
+    atom->type = KEYWORD;
+    atom->val = Ahdrd_readKeyword(&ahdrd);
+  }
+  else if (c == '\'') {
+    atom->type = CHARACTER;
+    atom->val = Ahdrd_readCharacter(&ahdrd);
+  }
+  else if (c == '"') {
+    atom->type = STRING;
+    atom->val = Ahdrd_readString(&ahdrd);
+  }
+  else {
+    atom->type = (Ahdrd_isNumber(&ahdrd))?
+      NUMBER:
+      SYMBOL;
+    atom->val = Ahdrd_readSymbol(&ahdrd);
   }
   return atom;
 }

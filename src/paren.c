@@ -4,31 +4,35 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "lex.h"
 #include "ast.h"
+#include "pprim.h"
 
 struct Ast *read() {
   return Lex_parse();
 }
 
 char *eval(struct Ast *ast) {
-  Ast *cmd *ope;
+  struct Ast *cmd, *ope;
   cmd = ast->car;
   ope = ast->cdr;
   if (Ast_isLeaf(ast))
     return ast->val;
   if (!Ast_isLeaf(cmd))
-    cmd = eval(cmd);
-  if (strcmp(cmd, "+") == 0) {
+    cmd->val = eval(cmd);
+  if (strcmp(cmd->val, "+") == 0) {
     int i;
-    i = 0;
-    while (!Ast_isNil(ope)) {
-      i = i + eval(ope->car);
-      cmd = atoi(ope)
-      ope = ope->cdr;
+    for (i = 0; !Ast_isNil(ope); ope = ope->cdr)
+      i = i + atoi(eval(ope->car));
+    if ((ast->val = (char *)malloc(sizeof(char) * (int)(i / 10 + 2))) == NULL) {
+      fprintf(stderr, "+: Cannot allocate memory.");
+      exit(1);
     }
-    return sprintf(ast->val, 
+    free(ast->val);
+    sprintf(ast->val, "%i", i);
+    return ast->val;
   }
   return "eval";
 }
