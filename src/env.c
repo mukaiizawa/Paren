@@ -1,5 +1,5 @@
 /*
-  environment.
+   environment.
 */
 
 #include <stdio.h>
@@ -7,18 +7,14 @@
 #include <string.h>
 
 struct Env {
-  struct Env *top, *bottom;
   struct EnvNode {
     char *key;
     int type;
     void *val;
-    struct EnvNode *prev, *next;
-  } node;
+    struct EnvNode *next;
+  } *head;
+  struct Env *next;
 };
-
-int Env_isRoot(struct Env *env) {
-  return env->top == env;
-}
 
 int Env_isNil(struct Env *env) {
   return env == NULL;
@@ -28,81 +24,74 @@ int EnvNode_isNil(struct EnvNode *node) {
   return node == NULL;
 }
 
-int *Env_hasNode(struct Env *env) {
-  return env->node;
-}
-
-struct Env *Env_root(struct Env *env) {
-  while (!Env_isRoot(env))
-    env = env->top;
-  return env;
-}
-
-struct Env *Env_last(struct Env *env) {
-  while (!Env_isNil(env))
-    env = env->bottom;
-  return env;
-}
-
-struct Env *Env_add(struct Env *env) {
+struct Env *Env_alloc() {
   struct Env *new;
   if ((new = (struct Env *)calloc(1, sizeof(struct Env))) == NULL) {
-    fprintf(stderr, "Env_add: Cannot allocate memory.");
+    fprintf(stderr, "Env_alloc: Cannot allocate memory.");
     exit(1);
   }
-  env = Env_last(env);
-  env->bottom = new;
-  new->top = env;
-  new->bottom = NULL;
-  return Env_root(env);
+  return new;
 }
 
-struct Env *Env_addNode(struct Env *env, char *key, int type, void *val) {
-  struct EnvNode *node;
-  if ((node = (struct EnvNode *)calloc(1, sizeof(struct EnvNode))) == NULL) {
-    fprintf(stderr, "Env_addNode: Cannot allocate memory.");
+struct EnvNode *EnvNode_alloc() {
+  struct EnvNode *new;
+  if ((new = (struct EnvNode *)calloc(1, sizeof(struct EnvNode))) == NULL) {
+    fprintf(stderr, "EnvNode_alloc: Cannot allocate memory.");
     exit(1);
   }
+  return new;
+}
+
+void Env_init(struct Env *env) {
+  env = Env_alloc();
+  env->next = NULL;
+  env->head = EnvNode_alloc();
+  env->head->next = NULL;
+}
+
+struct Env *Env_push(struct Env *env) {
+  struct Env *new;
+  Env_init(new);
+  new->next = env;
+  return new;
+}
+
+void Env_install(struct Env *env, char *key, int type, void *val) {
+  struct EnvNode *node;
+  node = EnvNode_alloc();
   node->key = key;
   node->type = type;
   node->val = val;
-  env->node->prev = node;
-  node->next = env->node;
-  env->node = node;
-  return env;
+  node->next = env->head->next;
+  env->head->next = node;
 }
 
 struct EnvNode *Env_lookup(struct Env *env, char *key) {
   struct EnvNode *node;
-  env = Env_last(env);
-  while (!Env_isRoot(env)) {
-    while (!EnvNode_isNil(node)) {
+  while (!Env_isNil(env)) {
+    node = env->head;
+    while (!EnvNode_isNil((node = node->next))) {
       if (strcmp(node->key, key) == 0) {
         return node;
       }
     }
-    env = env->top;
+    env = env->next;
   }
   return NULL;
 }
 
-void Env_init(struct Env *env) {
-  env->top = env;
-  env->bottom = NULL;
-  env->node.next = NULL;
-  env->node.prev = env->node;
-}
-
 int main(void) {
-  struct Env env;
-  struct EnvNode *node;
-  Env_init(&env);
-  Env_add(&env);
-  int i = 3;
-  Env_addNode(Env_last(&env), "test", 3, &i);
-  node = Env_lookup(&env, "test");
-  if (node != NULL) {
-    printf("%d", *(int *)node->val);
-  }
+  struct Env *env;
+  struct EnvNode *node = NULL;
+  int i = 200, j = 1000;
+  Env_init(env);
+  Env_install(env, "test", 3, &i);
+  env = Env_push(env);
+  Env_install(env, "tes", 3, &j);
+  node = Env_lookup(env, "test");
+  if (node != NULL)
+    printf("Found %d.", *(int *)node->val);
+  else
+    printf("Not found.");
   return 0;
 }
