@@ -13,23 +13,33 @@ struct Env {
     int type;
     void *val;
     struct EnvNode *prev, *next;
-  } *node;
+  } node;
 };
 
 int Env_isRoot(struct Env *env) {
   return env->top == env;
 }
 
-int Env_isBotommost(struct Env *env) {
-  return env->bottom == NULL;
+int Env_isNil(struct Env *env) {
+  return env == NULL;
 }
 
-int EnvNode_isLast(struct EnvNode *envNode) {
-  return envNode->next == NULL;
+int EnvNode_isNil(struct EnvNode *node) {
+  return node == NULL;
 }
 
-struct Env *Env_bottommost(struct Env *env) {
-  while (!Env_isBotommost(env))
+int *Env_hasNode(struct Env *env) {
+  return env->node;
+}
+
+struct Env *Env_root(struct Env *env) {
+  while (!Env_isRoot(env))
+    env = env->top;
+  return env;
+}
+
+struct Env *Env_last(struct Env *env) {
+  while (!Env_isNil(env))
     env = env->bottom;
   return env;
 }
@@ -40,11 +50,11 @@ struct Env *Env_add(struct Env *env) {
     fprintf(stderr, "Env_add: Cannot allocate memory.");
     exit(1);
   }
-  env = Env_bottommost(env);
+  env = Env_last(env);
   env->bottom = new;
   new->top = env;
   new->bottom = NULL;
-  return new;
+  return Env_root(env);
 }
 
 struct Env *Env_addNode(struct Env *env, char *key, int type, void *val) {
@@ -64,10 +74,9 @@ struct Env *Env_addNode(struct Env *env, char *key, int type, void *val) {
 
 struct EnvNode *Env_lookup(struct Env *env, char *key) {
   struct EnvNode *node;
-  env = Env_bottommost(env);
+  env = Env_last(env);
   while (!Env_isRoot(env)) {
-    node = env->node;
-    while (!EnvNode_isLast(node)) {
+    while (!EnvNode_isNil(node)) {
       if (strcmp(node->key, key) == 0) {
         return node;
       }
@@ -77,12 +86,20 @@ struct EnvNode *Env_lookup(struct Env *env, char *key) {
   return NULL;
 }
 
+void Env_init(struct Env *env) {
+  env->top = env;
+  env->bottom = NULL;
+  env->node.next = NULL;
+  env->node.prev = env->node;
+}
+
 int main(void) {
   struct Env env;
   struct EnvNode *node;
+  Env_init(&env);
   Env_add(&env);
   int i = 3;
-  Env_addNode(&env, "test", 3, &i);
+  Env_addNode(Env_last(&env), "test", 3, &i);
   node = Env_lookup(&env, "test");
   if (node != NULL) {
     printf("%d", *(int *)node->val);
