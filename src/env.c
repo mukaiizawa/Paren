@@ -6,15 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct Env {
-  struct EnvNode {
-    char *key;
-    int type;
-    void *val;
-    struct EnvNode *next;
-  } *head;
-  struct Env *next;
-};
+#include "env.h"
+
+void Env_init(struct Env *env) {
+  env->next = NULL;
+  env->head = NULL;
+  Env_push(env);
+}
 
 int Env_isNil(struct Env *env) {
   return env == NULL;
@@ -42,18 +40,13 @@ struct EnvNode *EnvNode_alloc() {
   return new;
 }
 
-void Env_init(struct Env *env) {
-  env = Env_alloc();
-  env->next = NULL;
-  env->head = EnvNode_alloc();
-  env->head->next = NULL;
-}
-
-struct Env *Env_push(struct Env *env) {
+void Env_push(struct Env *env) {
   struct Env *new;
-  Env_init(new);
-  new->next = env;
-  return new;
+  new = Env_alloc();
+  new->head = EnvNode_alloc();
+  new->head->next = NULL;
+  new->next = env->next;
+  env->next = new;
 }
 
 void Env_install(struct Env *env, char *key, int type, void *val) {
@@ -62,36 +55,19 @@ void Env_install(struct Env *env, char *key, int type, void *val) {
   node->key = key;
   node->type = type;
   node->val = val;
-  node->next = env->head->next;
-  env->head->next = node;
+  node->next = env->next->head->next;
+  env->next->head->next = node;
 }
 
 struct EnvNode *Env_lookup(struct Env *env, char *key) {
   struct EnvNode *node;
-  while (!Env_isNil(env)) {
+  while (!Env_isNil(env = env->next)) {
     node = env->head;
-    while (!EnvNode_isNil((node = node->next))) {
+    while (!EnvNode_isNil(node = node->next)) {
       if (strcmp(node->key, key) == 0) {
         return node;
       }
     }
-    env = env->next;
   }
   return NULL;
-}
-
-int main(void) {
-  struct Env *env;
-  struct EnvNode *node = NULL;
-  int i = 200, j = 1000;
-  Env_init(env);
-  Env_install(env, "test", 3, &i);
-  env = Env_push(env);
-  Env_install(env, "tes", 3, &j);
-  node = Env_lookup(env, "test");
-  if (node != NULL)
-    printf("Found %d.", *(int *)node->val);
-  else
-    printf("Not found.");
-  return 0;
 }
