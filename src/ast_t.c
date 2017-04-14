@@ -1,6 +1,32 @@
 #include <stdio.h>
 
 #include "ast.h"
+#include "prim.h"
+
+void Ast_dump(struct Ast *node) {
+  struct Ast *next;
+  if (Ast_isLeaf(node)) {
+    printf("%s", node->val);
+    return;
+  }
+  printf("(");
+  Ast_dump(node->car);
+  for (next = node->cdr; !Ast_isNil(next); next = next->cdr) {
+    if (Ast_isLeaf(next->car)) {
+      if (node->type == NUMBER)
+        printf(" %f", *(double *)node->val);
+      else if (node->type == CHARACTER)
+        printf(" %c", *(char *)node->val);
+      else 
+        printf(" %s", (char *)node->val);
+    }
+    else {
+      printf(" ");
+      Ast_dump(next->car);
+    }
+  }
+  printf(")");
+}
 
 int main(void) {
   struct Ast *root, *node0, *node1, *node2, *node3;

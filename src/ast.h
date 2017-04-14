@@ -12,7 +12,7 @@
 
 struct Ast {
   int type;
-  char *val;
+  void *val;
   struct Ast *prev, *car, *cdr;
 };
 
@@ -21,6 +21,5 @@ extern int Ast_isNil(struct Ast *node);
 extern struct Ast *Ast_alloc();
 extern struct Ast *Ast_cons(struct Ast *car, struct Ast *cdr);
 extern struct Ast *Ast_reverse(struct Ast *ast);
-extern void Ast_dump(struct Ast *node);
 
 #endif
