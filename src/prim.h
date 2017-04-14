@@ -2,8 +2,8 @@
   paren primitive.
 */
 
-#ifndef PPRIM
-#define PPRIM
+#ifndef PRIM
+#define PRIM
 
 #include "ast.h"
 
@@ -15,7 +15,6 @@
 #define CHARACTER 5
 #define STRING 6
 #define NUMBER 7
-
 
 extern char *Paren_plus(struct Ast *ast);
 
