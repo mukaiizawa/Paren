@@ -6,6 +6,10 @@ ast.o: ast.c  ast.h
 ast_t$(exe): ast_t.c ast.o ast.h
 	$(CC) -o ast_t$(exe) ast_t.c ast.o
 	$(pref)ast_t$(exe)
+env.o: env.c  env.h
+env_t$(exe): env_t.c env.o env.h
+	$(CC) -o env_t$(exe) env_t.c env.o
+	$(pref)env_t$(exe)
 lex.o: lex.c  pprim.h ringbuf.h ahdrd.h ast.h lex.h
 paren.o: paren.c  pprim.h ast.h lex.h
 pprim.o: pprim.c 
