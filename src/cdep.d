@@ -10,9 +10,9 @@ env.o: env.c  env.h
 env_t$(exe): env_t.c env.o env.h
 	$(CC) -o env_t$(exe) env_t.c env.o
 	$(pref)env_t$(exe)
-lex.o: lex.c  pprim.h ringbuf.h ahdrd.h ast.h lex.h
-paren.o: paren.c  pprim.h ast.h lex.h
-pprim.o: pprim.c 
+lex.o: lex.c  prim.h ringbuf.h ahdrd.h ast.h lex.h
+paren.o: paren.c  prim.h ast.h lex.h
+prim.o: prim.c 
 ringbuf.o: ringbuf.c  ringbuf.h
 ringbuf_t$(exe): ringbuf_t.c ringbuf.o ringbuf.h
 	$(CC) -o ringbuf_t$(exe) ringbuf_t.c ringbuf.o

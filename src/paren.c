@@ -8,7 +8,7 @@
 
 #include "lex.h"
 #include "ast.h"
-#include "pprim.h"
+#include "prim.h"
 
 struct Ast *read() {
   return Lex_parse();

@@ -8,7 +8,7 @@
 #include "lex.h"
 #include "ast.h"
 #include "ahdrd.h"
-#include "pprim.h"
+#include "prim.h"
 
 static struct Ahdrd ahdrd;
 
