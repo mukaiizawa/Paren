@@ -8,44 +8,46 @@
 
 #include "lex.h"
 #include "ast.h"
+#include "env.h"
 #include "prim.h"
+
+static struct Env env;
+
+void Paren_init() {
+  Env_init(&env);
+  Prim_init(&env);
+  Lex_init();
+}
 
 struct Ast *read() {
   return Lex_parse();
 }
 
-char *eval(struct Ast *ast) {
+struct Ast *eval(struct Ast *ast) {
   struct Ast *cmd, *ope;
   cmd = ast->car;
   ope = ast->cdr;
   if (Ast_isLeaf(ast))
-    return ast->val;
+    return ast;
   if (!Ast_isLeaf(cmd))
     cmd->val = eval(cmd);
-  if (strcmp(cmd->val, "+") == 0) {
-    int i;
-    for (i = 0; !Ast_isNil(ope); ope = ope->cdr)
-      i = i + atoi(eval(ope->car));
-    if ((ast->val = (char *)malloc(sizeof(char) * (int)(i / 10 + 2))) == NULL) {
-      fprintf(stderr, "+: Cannot allocate memory.");
-      exit(1);
-    }
-    free(ast->val);
-    sprintf(ast->val, "%i", i);
-    return ast->val;
-  }
-  return "eval";
+  return NULL;
 }
 
-char *print() {
-  return "print";
+void print(struct Ast *ast) {
+  if (ast->type == NUMBER)
+    printf(" %f", *(double *)ast->val);
+  else if (ast->type == CHARACTER)
+    printf(" %c", *(char *)ast->val);
+  else 
+    printf(" %s", (char *)ast->val);
 }
 
 int main(int argc, char* argv[]) {
-  Lex_init();
+  Paren_init();
   while (1) {
     fputs(") ", stdout);
-    printf("%s", eval(read()));
+    print(eval(read()));
     fflush(stdout);
   }
   return 0;

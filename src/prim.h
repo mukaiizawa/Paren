@@ -15,7 +15,10 @@
 #define CHARACTER 5
 #define STRING 6
 #define NUMBER 7
+#define FUNCTION 9
 
-extern char *Paren_plus(struct Ast *ast);
+#include "env.h"
+
+extern void Prim_init(struct Env *env);
 
 #endif
