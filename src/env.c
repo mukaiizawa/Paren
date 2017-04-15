@@ -41,6 +41,8 @@ struct EnvNode *EnvNode_alloc() {
 }
 
 void Env_push(struct Env *env) {
+  if (env->head != NULL && env->head->next == NULL)
+    return;
   struct Env *new;
   new = Env_alloc();
   new->head = EnvNode_alloc();
