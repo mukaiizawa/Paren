@@ -10,9 +10,10 @@
 #define SECOND(x) x->cdr->car
 #define THIRD(x) x->cdr->cdr->car
 
+#include "prim.h"
+
 struct Ast {
-  int type;
-  void *val;
+  struct Object *obj;
   struct Ast *prev, *car, *cdr;
 };
 

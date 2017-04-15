@@ -2,8 +2,9 @@
 # make [os=(linux | windows)] [CC=(clang | gcc)]
 
 supportos=linux windows
-os ?=linux
-CC=clang
+os?=linux
+cc?=clang
+CC=$(cc)
 
 ifeq ($(filter $(supportos),$(os)),)
 	$(error Unsupport os.)
@@ -18,7 +19,7 @@ ifeq ($(os), windows)
 endif
 
 paren=paren$(exe)
-objs= paren.c prim.o lex.o ast.o env.o ahdrd.o ringbuf.o
+objs=paren.c prim.o lex.o ast.o env.o ahdrd.o ringbuf.o
 
 all: $(paren)
 

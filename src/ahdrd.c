@@ -76,7 +76,7 @@ char* Ahdrd_readKeyword(struct Ahdrd *ahdrd) {
   return Ahdrd_getToken(ahdrd);
 }
 
-char* Ahdrd_readCharacter(struct Ahdrd *ahdrd) {
+char *Ahdrd_readCharacter(struct Ahdrd *ahdrd) {
   int c, readCount;
   Ahdrd_skipRead(ahdrd);    // skip `'`
   readCount = 0;

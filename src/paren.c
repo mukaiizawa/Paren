@@ -24,23 +24,28 @@ struct Ast *read() {
 }
 
 struct Ast *eval(struct Ast *ast) {
-  struct Ast *cmd, *ope;
-  cmd = ast->car;
-  ope = ast->cdr;
+  struct Ast *first, *rest;
   if (Ast_isLeaf(ast))
     return ast;
-  if (!Ast_isLeaf(cmd))
-    cmd->val = eval(cmd);
+  first = ast->car;
+  rest = ast->cdr;
+  if (!Ast_isLeaf(first))
+    first->obj = eval(first)->obj;
   return NULL;
 }
 
 void print(struct Ast *ast) {
-  if (ast->type == NUMBER)
-    printf(" %f", *(double *)ast->val);
-  else if (ast->type == CHARACTER)
-    printf(" %c", *(char *)ast->val);
-  else 
-    printf(" %s", (char *)ast->val);
+  int type;
+  if ((type = ast->obj->type) == INTEGER)
+    printf(" %d", ast->obj->val.integer);
+  else if (type == DOUBLE)
+    printf(" %f", ast->obj->val.dfloat);
+  else if (type == CHARACTER)
+    printf(" %c", ast->obj->val.character);
+  else if (type == STRING)
+    printf(" %s", ast->obj->val.string);
+  else
+    return;
 }
 
 int main(int argc, char* argv[]) {
