@@ -48,9 +48,8 @@ struct Ast *Lex_parseAtom() {
 }
 
 struct Ast *Lex_parseS() {
-  Ahdrd_readSpace(&ahdrd);
   struct Ast *ast;
-  if (Ahdrd_peek(&ahdrd, 1) == '(') {
+  if (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1) == '(') {
     Ahdrd_skipRead(&ahdrd);    // skip '('
     ast = Ast_alloc();
     while (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1) != ')') {
