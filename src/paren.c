@@ -19,6 +19,8 @@ void Paren_init() {
   Lex_init();
 }
 
+void print(struct Ast *ast);
+
 struct Ast *read() {
   return Lex_parse();
 }
@@ -36,16 +38,25 @@ struct Ast *eval(struct Ast *ast) {
 
 void print(struct Ast *ast) {
   int type;
-  if ((type = ast->obj->type) == INTEGER)
-    printf(" %d", ast->obj->val.integer);
-  else if (type == DOUBLE)
-    printf(" %f", ast->obj->val.dfloat);
-  else if (type == CHARACTER)
-    printf(" %c", ast->obj->val.character);
-  else if (type == STRING)
-    printf(" %s", ast->obj->val.string);
-  else
-    return;
+  if (Ast_isLeaf(ast)) {
+    if ((type = ast->obj->type) == INTEGER)
+      fprintf(stdout, " %d", ast->obj->val.integer);
+    else if (type == DOUBLE)
+      fprintf(stdout, " %f", ast->obj->val.dfloat);
+    else if (type == CHARACTER)
+      fprintf(stdout, " %c", ast->obj->val.character);
+    else if (type == STRING)
+      fprintf(stdout, " %s", ast->obj->val.string);
+    else
+      return;
+  }
+  fprintf(stdout, "(");
+  print(ast->car);
+  for (ast = ast->cdr; !Ast_isNil(ast); ast = ast->cdr) {
+    if (!Ast_isLeaf(ast->car))
+      fprintf(stdout, " ");
+    print(ast->car);
+  }
 }
 
 int main(int argc, char* argv[]) {

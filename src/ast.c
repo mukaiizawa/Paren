@@ -45,3 +45,22 @@ struct Ast *Ast_reverse(struct Ast *ast) {
   }
   return acc;
 }
+
+// void Ast_dump(struct Ast *node) {
+//   struct Ast *next;
+//   if (Ast_isLeaf(node)) {
+//     printf("%s", node->val);
+//     return;
+//   }
+//   printf("(");
+//   Ast_dump(node->car);
+//   for (next = node->cdr; !Ast_isNil(next); next = next->cdr) {
+//     if (Ast_isLeaf(next->car))
+//       printf(" %s", next->car->val);
+//     else {
+//       printf(" ");
+//       Ast_dump(next->car);
+//     }
+//   }
+//   printf(")\n");
+// }
