@@ -12,7 +12,7 @@ struct Env {
     void *val;
     struct EnvNode *next;
   } *head;
-  struct Env *next;
+  struct Env *outer;
 };
 
 extern void Env_init(struct Env *env);

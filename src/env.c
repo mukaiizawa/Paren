@@ -9,7 +9,7 @@
 #include "env.h"
 
 void Env_init(struct Env *env) {
-  env->next = NULL;
+  env->outer = NULL;
   env->head = NULL;
   Env_push(env);
 }
@@ -47,8 +47,8 @@ void Env_push(struct Env *env) {
   new = Env_alloc();
   new->head = EnvNode_alloc();
   new->head->next = NULL;
-  new->next = env->next;
-  env->next = new;
+  new->outer = env->outer;
+  env->outer = new;
 }
 
 void Env_install(struct Env *env, char *key, int type, void *val) {
@@ -57,13 +57,13 @@ void Env_install(struct Env *env, char *key, int type, void *val) {
   node->key = key;
   node->type = type;
   node->val = val;
-  node->next = env->next->head->next;
-  env->next->head->next = node;
+  node->next = env->outer->head->next;
+  env->outer->head->next = node;
 }
 
 struct EnvNode *Env_lookup(struct Env *env, char *key) {
   struct EnvNode *node;
-  while (!Env_isNil(env = env->next)) {
+  while (!Env_isNil(env = env->outer)) {
     node = env->head;
     while (!EnvNode_isNil(node = node->next)) {
       if (strcmp(node->key, key) == 0) {
