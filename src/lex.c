@@ -36,10 +36,12 @@ struct Ast *Lex_parseAtom() {
     atom->type = STRING;
     atom->val = Ahdrd_readString(&ahdrd);
   }
+  else if (Ahdrd_isNumber(&ahdrd)) {
+    atom->type = NUMBER;
+    atom->val = Ahdrd_readSymbol(&ahdrd);
+  }
   else {
-    atom->type = (Ahdrd_isNumber(&ahdrd))?
-      NUMBER:
-      SYMBOL;
+    atom->type = SYMBOL;
     atom->val = Ahdrd_readSymbol(&ahdrd);
   }
   return atom;
