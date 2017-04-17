@@ -33,11 +33,19 @@ struct Ast *eval(struct Ast *ast) {
   rest = ast->cdr;
   if (!Ast_isLeaf(first))
     first = eval(first);
+  if (first->obj->type != FUNCTION) {
+    fprintf(stderr, "eval: '%s' is not a function.\n", asString(first->obj));
+    return NULL;
+  }
+  // Env_lookup();
   return NULL;
 }
 
 void print(struct Ast *ast) {
   int type;
+  if (ast == NULL) {
+    return;
+  }
   if (Ast_isLeaf(ast)) {
     if ((type = ast->obj->type) == INTEGER)
       fprintf(stdout, " %d", ast->obj->val.integer);

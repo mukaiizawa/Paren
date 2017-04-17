@@ -4,6 +4,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <math.h>
 
 #include "prim.h"
 
@@ -40,6 +42,31 @@ struct Object *Object_alloc(int type, void *val) {
 void Prim_init(struct Env *env) {
   i = 100;
   Env_install(env, "i", SYMBOL, &i);
+}
+
+char *asString(struct Object *obj) {
+  static char str[100];
+  if (obj->type == STRING)
+    return obj->val.string;
+  else if (obj->type == KEYWORD)
+    return obj->val.keyword;
+  else if (obj->type == CHARACTER) {
+    str[0] = obj->val.character;
+    str[1] = '\0';
+    return str;
+  }
+  else if (obj->type == SYMBOL)
+    return obj->val.symbol;
+  else if (obj->type == INTEGER) {
+    sprintf(str, "%d", obj->val.integer);
+    return str;
+  }
+  else if (obj->type == DOUBLE) {
+    sprintf(str, "%f", obj->val.dfloat);
+    return str;
+  }
+  else
+    return "asString: unknown type.";
 }
 
 // // +
