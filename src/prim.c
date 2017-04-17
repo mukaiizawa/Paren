@@ -15,6 +15,7 @@ struct Object *Object_alloc(int type, void *val) {
     fprintf(stderr, "Object_alloc: Cannot allocate memory.");
     exit(1);
   }
+  obj->type = type;
   if (type == STRING)
     obj->val.string = (char *)val;
   else if (type == KEYWORD)

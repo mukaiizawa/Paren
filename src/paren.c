@@ -32,7 +32,7 @@ struct Ast *eval(struct Ast *ast) {
   first = ast->car;
   rest = ast->cdr;
   if (!Ast_isLeaf(first))
-    first->obj = eval(first)->obj;
+    first = eval(first);
   return NULL;
 }
 
@@ -47,8 +47,11 @@ void print(struct Ast *ast) {
       fprintf(stdout, " %c", ast->obj->val.character);
     else if (type == STRING)
       fprintf(stdout, " %s", ast->obj->val.string);
-    else
-      return;
+    else {
+      fprintf(stderr, "print: Unknown type.");
+    }
+    fprintf(stdout, "\n");
+    return;
   }
   fprintf(stdout, "(");
   print(ast->car);
@@ -57,6 +60,8 @@ void print(struct Ast *ast) {
       fprintf(stdout, " ");
     print(ast->car);
   }
+  fprintf(stdout, "\n");
+  fflush(stdout);
 }
 
 int main(int argc, char* argv[]) {
@@ -64,7 +69,6 @@ int main(int argc, char* argv[]) {
   while (1) {
     fputs(") ", stdout);
     print(eval(read()));
-    fflush(stdout);
   }
   return 0;
 }
