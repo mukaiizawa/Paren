@@ -8,14 +8,20 @@
 
 #include "ringbuf.h"
 
-void Ringbuf_init(struct Ringbuf *ringbuf) {
+struct Ringbuf *Ringbuf_new() {
+  struct Ringbuf *ringbuf;
+  if ((ringbuf = (struct Ringbuf *)calloc(1, sizeof(struct Ringbuf))) == NULL) {
+    fprintf(stderr, "Ringbuf_new: Cannot allocate memory.");
+    exit(1);
+  }
   ringbuf->in = 0;
   ringbuf->out = 0;
+  return ringbuf;
 }
 
 int Ringbuf_isEmpty(struct Ringbuf *ringbuf) {
   return ringbuf->in == ringbuf->out;
-}
+} 
 
 void Ringbuf_put(struct Ringbuf *ringbuf, int c) {
   int nextIn;

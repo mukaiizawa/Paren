@@ -13,7 +13,7 @@ struct Ringbuf {
   int buf[RINGBUF_BUFSIZ];
 };
 
-extern void Ringbuf_init(struct Ringbuf *ringbuf);
+extern struct Ringbuf *Ringbuf_new();
 extern int Ringbuf_isEmpty(struct Ringbuf *ringbuf);
 extern void Ringbuf_put(struct Ringbuf *ringbuf, int c);
 extern int Ringbuf_get(struct Ringbuf *ringbuf);
