@@ -19,13 +19,11 @@ void Paren_init() {
   Lex_init();
 }
 
-void print(struct Ast *ast);
-
-struct Ast *read() {
+static struct Ast *read() {
   return Lex_parse();
 }
 
-struct Ast *eval(struct Ast *ast) {
+static struct Ast *eval(struct Ast *ast) {
   struct Ast *first, *rest;
   if (Ast_isLeaf(ast))
     return ast;
@@ -41,7 +39,7 @@ struct Ast *eval(struct Ast *ast) {
   return NULL;
 }
 
-void print(struct Ast *ast) {
+static void print(struct Ast *ast) {
   int type;
   if (ast == NULL) {
     return;
