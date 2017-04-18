@@ -10,10 +10,10 @@
 #include "ahdrd.h"
 #include "prim.h"
 
-static struct Ahdrd ahdrd;
+static struct Ahdrd *ahdrd;
 
 void Lex_init() {
-  Ahdrd_init(&ahdrd, stdin);
+  ahdrd = Ahdrd_new(stdin);
 }
 
 struct Ast *Lex_parse() {
@@ -23,39 +23,39 @@ struct Ast *Lex_parse() {
 struct Ast *Lex_parseAtom() {
   int c;
   struct Ast *atom;
-  atom = Ast_alloc();
-  if ((c = Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1)) == ':') {
-    atom->obj = Object_new(KEYWORD, Ahdrd_readKeyword(&ahdrd));
+  atom = Ast_new();
+  if ((c = Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1)) == ':') {
+    atom->obj = Object_new(KEYWORD, Ahdrd_readKeyword(ahdrd));
   }
   else if (c == '\'') {
-    atom->obj = Object_new(CHARACTER, Ahdrd_readCharacter(&ahdrd));
+    atom->obj = Object_new(CHARACTER, Ahdrd_readCharacter(ahdrd));
   }
   else if (c == '"') {
-    atom->obj = Object_new(STRING, Ahdrd_readString(&ahdrd));
+    atom->obj = Object_new(STRING, Ahdrd_readString(ahdrd));
   }
-  else if (Ahdrd_isNumber(&ahdrd)) {
+  else if (Ahdrd_isNumber(ahdrd)) {
     double *d;
-    *d = Ahdrd_readDouble(&ahdrd);
+    *d = Ahdrd_readDouble(ahdrd);
     // TODO: judge int or double.
-    // atom->obj = Object_new(DOUBLE, Ahdrd_readDouble(&ahdrd));
+    // atom->obj = Object_new(DOUBLE, Ahdrd_readDouble(ahdrd));
     atom->obj = Object_new(DOUBLE, NULL);
     atom->obj->val.dfloat = *d;
   }
   else {
-    atom->obj = Object_new(SYMBOL, Ahdrd_readSymbol(&ahdrd));
+    atom->obj = Object_new(SYMBOL, Ahdrd_readSymbol(ahdrd));
   }
   return atom;
 }
 
 struct Ast *Lex_parseS() {
   struct Ast *ast;
-  if (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1) == '(') {
-    Ahdrd_skipRead(&ahdrd);    // skip '('
-    ast = Ast_alloc();
-    while (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1) != ')') {
+  if (Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1) == '(') {
+    Ahdrd_skipRead(ahdrd);    // skip '('
+    ast = Ast_new();
+    while (Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1) != ')') {
       ast = Ast_cons(Lex_parseS(), ast);
     }
-    Ahdrd_skipRead(&ahdrd);    // skip ')'
+    Ahdrd_skipRead(ahdrd);    // skip ')'
     return Ast_reverse(ast);
   }
   else

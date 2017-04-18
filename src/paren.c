@@ -11,11 +11,11 @@
 #include "env.h"
 #include "prim.h"
 
-static struct Env env;
+static struct Env *env;
 
-void Paren_init() {
-  Env_init(&env);
-  Prim_init(&env);
+static void init() {
+  env = Env_new();
+  Prim_init(env);
   Lex_init();
 }
 
@@ -71,7 +71,7 @@ static void print(struct Ast *ast) {
 }
 
 int main(int argc, char* argv[]) {
-  Paren_init();
+  init();
   while (1) {
     fputs(") ", stdout);
     print(eval(read()));

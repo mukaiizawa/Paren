@@ -9,18 +9,12 @@
 
 #include "prim.h"
 
-static struct Object *Object_alloc() {
-  struct Object *obj;
-  if ((obj = (struct Object *)calloc(1, sizeof(struct Object))) == NULL) {
-    fprintf(stderr, "Object_alloc: Cannot allocate memory.");
-    exit(1);
-  }
-  return obj;
-}
-
 struct Object *Object_new(int type, void *val) {
   struct Object *obj;
-  obj = Object_alloc();
+  if ((obj = (struct Object *)calloc(1, sizeof(struct Object))) == NULL) {
+    fprintf(stderr, "Object_new: Cannot allocate memory.");
+    exit(1);
+  }
   obj->type = type;
   if (type == STRING)
     obj->val.string = (char *)val;
@@ -46,7 +40,7 @@ struct Object *Object_new(int type, void *val) {
 void Prim_init(struct Env *env) {
   static int i;
   i = 100;
-  Env_install(env, "i", SYMBOL, &i);
+  // Env_install(env, "i", SYMBOL, &i);
 }
 
 char *asString(struct Object *obj) {
