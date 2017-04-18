@@ -34,8 +34,10 @@ struct Ast *Lex_parseAtom() {
     atom->obj = Object_new(STRING, Ahdrd_readString(&ahdrd));
   }
   else if (Ahdrd_isNumber(&ahdrd)) {
+    double d = Ahdrd_readDouble(&ahdrd);
     // TODO: judge int or double.
-    atom->obj = Object_new(DOUBLE, Ahdrd_readDouble(&ahdrd));
+    // atom->obj = Object_new(DOUBLE, Ahdrd_readDouble(&ahdrd));
+    atom->obj = Object_new(DOUBLE, &d);
   }
   else {
     atom->obj = Object_new(SYMBOL, Ahdrd_readSymbol(&ahdrd));

@@ -113,14 +113,8 @@ char *Ahdrd_readSymbol(struct Ahdrd *ahdrd) {
   return Ahdrd_getToken(ahdrd);
 }
 
-double *Ahdrd_readDouble(struct Ahdrd *ahdrd) {
-  static double *d;
-  // *d = atof("3.3");
-  // str = Ahdrd_readSymbol(ahdrd);
-  // printf("%s", str);
-  // *val = atof();
-  *d = 3.3;
-  return d;
+double Ahdrd_readDouble(struct Ahdrd *ahdrd) {
+  return 3.3;
 }
 
 int Ahdrd_isNumber(struct Ahdrd *ahdrd) {
