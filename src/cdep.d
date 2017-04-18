@@ -6,9 +6,9 @@ ast.o: ast.c  env.h prim.h ast.h
 ast_t$(exe): ast_t.c ast.o env.h prim.h ast.h
 	$(CC) -o ast_t$(exe) ast_t.c env.o prim.o ast.o
 	$(pref)ast_t$(exe)
-env.o: env.c  env.h
-env_t$(exe): env_t.c env.o env.h
-	$(CC) -o env_t$(exe) env_t.c env.o
+env.o: env.c  env.h ast.h prim.h
+env_t$(exe): env_t.c env.o ast.h prim.h env.h
+	$(CC) -o env_t$(exe) env_t.c env.o ast.o prim.o
 	$(pref)env_t$(exe)
 lex.o: lex.c  ringbuf.h ahdrd.h env.h prim.h ast.h lex.h
 paren.o: paren.c  env.h prim.h ast.h lex.h

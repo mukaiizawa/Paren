@@ -32,7 +32,7 @@ int EnvNode_isNil(struct EnvNode *node) {
   return node == NULL;
 }
 
-struct EnvNode *EnvNode_alloc() {
+static struct EnvNode *EnvNode_alloc() {
   struct EnvNode *new;
   if ((new = (struct EnvNode *)calloc(1, sizeof(struct EnvNode))) == NULL) {
     fprintf(stderr, "EnvNode_alloc: Cannot allocate memory.");
@@ -52,10 +52,11 @@ void Env_push(struct Env *env) {
   env->outer = new;
 }
 
-void Env_install(struct Env *env, struct Object *obj) {
+void Env_install(struct Env *env, char *key, struct Object *obj) {
   struct EnvNode *node;
   node = EnvNode_alloc();
   node->obj = obj;
+  node->key = key;
   node->next = env->outer->head->next;
   env->outer->head->next = node;
 }
