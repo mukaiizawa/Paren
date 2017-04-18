@@ -9,14 +9,18 @@
 
 #include "prim.h"
 
-static int i;
-
-struct Object *Object_alloc(int type, void *val) {
+static struct Object *Object_alloc() {
   struct Object *obj;
   if ((obj = (struct Object *)calloc(1, sizeof(struct Object))) == NULL) {
     fprintf(stderr, "Object_alloc: Cannot allocate memory.");
     exit(1);
   }
+  return obj;
+}
+
+struct Object *Object_new(int type, void *val) {
+  struct Object *obj;
+  obj = Object_alloc();
   obj->type = type;
   if (type == STRING)
     obj->val.string = (char *)val;
@@ -27,19 +31,20 @@ struct Object *Object_alloc(int type, void *val) {
   else if (type == SYMBOL)
     obj->val.symbol = (char *)val;
   else if (type == INTEGER)
-    obj->val.integer = *(int *)val;
+    obj->val.integer = *((int *)val);
   else if (type == DOUBLE)
-    obj->val.dfloat = *(double *)val;
+    obj->val.dfloat = *((double *)val);
   else  if (type == FUNCTION)
     obj->val.function = (struct Ast *)val;
   else {
-    fprintf(stderr, "Object_alloc: Unknown type.");
+    fprintf(stderr, "Object_new: Illegal type.");
     exit(1);
   }
   return obj;
 }
 
 void Prim_init(struct Env *env) {
+  static int i;
   i = 100;
   Env_install(env, "i", SYMBOL, &i);
 }

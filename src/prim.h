@@ -32,7 +32,7 @@ struct Object {
   } val;
 }; 
 
-extern struct Object *Object_alloc(int type, void *val);
+extern struct Object *Object_new(int type, void *val);
 extern void Prim_init(struct Env *env);
 extern char *asString(struct Object *obj);
 

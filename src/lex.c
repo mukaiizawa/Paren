@@ -25,20 +25,20 @@ struct Ast *Lex_parseAtom() {
   struct Ast *atom;
   atom = Ast_alloc();
   if ((c = Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1)) == ':') {
-    atom->obj = Object_alloc(KEYWORD, Ahdrd_readKeyword(&ahdrd));
+    atom->obj = Object_new(KEYWORD, Ahdrd_readKeyword(&ahdrd));
   }
   else if (c == '\'') {
-    atom->obj = Object_alloc(CHARACTER, Ahdrd_readCharacter(&ahdrd));
+    atom->obj = Object_new(CHARACTER, Ahdrd_readCharacter(&ahdrd));
   }
   else if (c == '"') {
-    atom->obj = Object_alloc(STRING, Ahdrd_readString(&ahdrd));
+    atom->obj = Object_new(STRING, Ahdrd_readString(&ahdrd));
   }
   else if (Ahdrd_isNumber(&ahdrd)) {
     // TODO: judge int or double.
-    atom->obj = Object_alloc(DOUBLE, Ahdrd_readSymbol(&ahdrd));
+    atom->obj = Object_new(DOUBLE, Ahdrd_readDouble(&ahdrd));
   }
   else {
-    atom->obj = Object_alloc(SYMBOL, Ahdrd_readSymbol(&ahdrd));
+    atom->obj = Object_new(SYMBOL, Ahdrd_readSymbol(&ahdrd));
   }
   return atom;
 }

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "ahdrd.h"
 
@@ -68,7 +69,7 @@ struct Ahdrd *Ahdrd_readSpace(struct Ahdrd *ahdrd) {
   return ahdrd;
 }
 
-char* Ahdrd_readKeyword(struct Ahdrd *ahdrd) {
+char *Ahdrd_readKeyword(struct Ahdrd *ahdrd) {
   int c;
   Ahdrd_skipRead(ahdrd);    // skip ':'
   while (!isspace((c = Ahdrd_peek(ahdrd, 1))) && c != '(' && c != ')')
@@ -93,7 +94,7 @@ char *Ahdrd_readCharacter(struct Ahdrd *ahdrd) {
   return Ahdrd_getToken(ahdrd);
 }
 
-char* Ahdrd_readString(struct Ahdrd *ahdrd) {
+char *Ahdrd_readString(struct Ahdrd *ahdrd) {
   int c;
   Ahdrd_skipRead(ahdrd);    // skip `"`
   while ((c = Ahdrd_peek(ahdrd, 1)) != '"') {
@@ -105,11 +106,21 @@ char* Ahdrd_readString(struct Ahdrd *ahdrd) {
   return Ahdrd_getToken(ahdrd);
 }
 
-char* Ahdrd_readSymbol(struct Ahdrd *ahdrd) {
+char *Ahdrd_readSymbol(struct Ahdrd *ahdrd) {
   int c;
   while (!isspace((c = Ahdrd_peek(ahdrd, 1))) && c != '(' && c != ')')
     Ahdrd_read(ahdrd);
   return Ahdrd_getToken(ahdrd);
+}
+
+double *Ahdrd_readDouble(struct Ahdrd *ahdrd) {
+  static double *d;
+  // *d = atof("3.3");
+  // str = Ahdrd_readSymbol(ahdrd);
+  // printf("%s", str);
+  // *val = atof();
+  *d = 3.3;
+  return d;
 }
 
 int Ahdrd_isNumber(struct Ahdrd *ahdrd) {
