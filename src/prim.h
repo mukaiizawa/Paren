@@ -17,7 +17,7 @@
 #define STRING 4
 #define FUNCTION 6
 #define INTEGER 7
-#define DOUBLE 7
+#define DOUBLE 8
 
 struct Object {
   int type;

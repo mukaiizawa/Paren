@@ -53,6 +53,8 @@ static void print(struct Ast *ast) {
       fprintf(stdout, " %c", ast->obj->val.character);
     else if (type == STRING)
       fprintf(stdout, " %s", ast->obj->val.string);
+    else if (type == SYMBOL)
+      fprintf(stdout, " %s", ast->obj->val.symbol);
     else {
       fprintf(stderr, "print: Unknown type.");
     }

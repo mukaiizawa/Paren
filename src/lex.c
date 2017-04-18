@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lex.h"
 #include "ast.h"
@@ -34,12 +35,10 @@ struct Ast *Lex_parseAtom() {
     atom->obj = Object_new(STRING, Ahdrd_readString(ahdrd));
   }
   else if (Ahdrd_isNumber(ahdrd)) {
-    double *d;
-    *d = Ahdrd_readDouble(ahdrd);
-    // TODO: judge int or double.
-    // atom->obj = Object_new(DOUBLE, Ahdrd_readDouble(ahdrd));
-    atom->obj = Object_new(DOUBLE, NULL);
-    atom->obj->val.dfloat = *d;
+    char *token;
+    atom->obj =  (strchr((token = Ahdrd_readNumber(ahdrd)), '.') != NULL)?
+      Object_new(DOUBLE, token):
+      Object_new(INTEGER, token);
   }
   else {
     atom->obj = Object_new(SYMBOL, Ahdrd_readSymbol(ahdrd));

@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <math.h>
 
 #include "ahdrd.h"
 
@@ -119,8 +118,8 @@ char *Ahdrd_readSymbol(struct Ahdrd *ahdrd) {
   return Ahdrd_getToken(ahdrd);
 }
 
-double Ahdrd_readDouble(struct Ahdrd *ahdrd) {
-  return 3.3;
+char *Ahdrd_readNumber(struct Ahdrd *ahdrd) {
+  return Ahdrd_readSymbol(ahdrd);
 }
 
 int Ahdrd_isNumber(struct Ahdrd *ahdrd) {
