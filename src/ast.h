@@ -17,9 +17,10 @@ struct Ast {
   struct Ast *prev, *car, *cdr;
 };
 
+extern struct Ast *Ast_new();
 extern int Ast_isLeaf(struct Ast *node);
 extern int Ast_isNil(struct Ast *node);
-extern struct Ast *Ast_alloc();
+// extern struct Ast *Ast_alloc();
 extern struct Ast *Ast_cons(struct Ast *car, struct Ast *cdr);
 extern struct Ast *Ast_reverse(struct Ast *ast);
 

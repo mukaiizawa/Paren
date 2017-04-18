@@ -10,10 +10,16 @@
 
 #include "ahdrd.h"
 
-void Ahdrd_init(struct Ahdrd *ahdrd, FILE *_fp) {
+struct Ahdrd *Ahdrd_new(FILE *_fp) {
+  struct Ahdrd *ahdrd;
+  if ((ahdrd = (struct Ahdrd *)calloc(1, sizeof(struct Ahdrd))) == NULL) {
+    fprintf(stderr, "Ahdrd_new: Cannot allocate memory.");
+    exit(1);
+  }
   ahdrd->fp = _fp;
   ahdrd->tokenPos = 0;
-  Ringbuf_init(&ahdrd->ringbuf);
+  ahdrd->ringbuf = Ringbuf_new();
+  return ahdrd;
 }
 
 char *Ahdrd_getToken(struct Ahdrd *ahdrd) {
@@ -28,8 +34,8 @@ char *Ahdrd_getToken(struct Ahdrd *ahdrd) {
 }
 
 int Ahdrd_skipRead(struct Ahdrd *ahdrd) {
-  return (!Ringbuf_isEmpty(&ahdrd->ringbuf))?
-    Ringbuf_get(&ahdrd->ringbuf):
+  return (!Ringbuf_isEmpty(ahdrd->ringbuf))?
+    Ringbuf_get(ahdrd->ringbuf):
     fgetc(ahdrd->fp);
 }
 
@@ -52,14 +58,14 @@ int Ahdrd_peek(struct Ahdrd *ahdrd, int n) {
     fprintf(stderr, "Ahdrd_peek: Buffer over flow.");
     exit(1);
   }
-  while (n > Ringbuf_size(&ahdrd->ringbuf)) {
-    if((c = fgetc(ahdrd->fp)) == EOF && n > Ringbuf_size(&ahdrd->ringbuf) + 1) {
+  while (n > Ringbuf_size(ahdrd->ringbuf)) {
+    if((c = fgetc(ahdrd->fp)) == EOF && n > Ringbuf_size(ahdrd->ringbuf) + 1) {
       fprintf(stderr, "Ahdrd_peek: Reach EOF.");
       exit(1);
     }
-    Ringbuf_put(&ahdrd->ringbuf, c);
+    Ringbuf_put(ahdrd->ringbuf, c);
   }
-  return ahdrd->ringbuf.buf[(ahdrd->ringbuf.out + n - 1) % RINGBUF_BUFSIZ];
+  return ahdrd->ringbuf->buf[(ahdrd->ringbuf->out + n - 1) % RINGBUF_BUFSIZ];
 }
 
 struct Ahdrd *Ahdrd_readSpace(struct Ahdrd *ahdrd) {

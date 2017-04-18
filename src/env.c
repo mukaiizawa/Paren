@@ -6,7 +6,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "prim.h"
 #include "env.h"
+
+struct Env *Env_new() {
+  struct Env *env;
+  if ((env = (struct Env *)calloc(1, sizeof(struct Env))) == NULL) {
+    fprintf(stderr, "Env_new: Cannot allocate memory.");
+    exit(1);
+  }
+  return env;
+}
 
 void Env_init(struct Env *env) {
   env->outer = NULL;
@@ -22,15 +32,6 @@ int EnvNode_isNil(struct EnvNode *node) {
   return node == NULL;
 }
 
-struct Env *Env_alloc() {
-  struct Env *new;
-  if ((new = (struct Env *)calloc(1, sizeof(struct Env))) == NULL) {
-    fprintf(stderr, "Env_alloc: Cannot allocate memory.");
-    exit(1);
-  }
-  return new;
-}
-
 struct EnvNode *EnvNode_alloc() {
   struct EnvNode *new;
   if ((new = (struct EnvNode *)calloc(1, sizeof(struct EnvNode))) == NULL) {
@@ -44,7 +45,7 @@ void Env_push(struct Env *env) {
   if (env->head != NULL && env->head->next == NULL)
     return;
   struct Env *new;
-  new = Env_alloc();
+  new = Env_new();
   new->head = EnvNode_alloc();
   new->head->next = NULL;
   new->outer = env->outer;

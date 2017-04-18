@@ -6,15 +6,15 @@
 
 // assume input from stdin with '012345'
 int main(void) {
-  struct Ahdrd ahdrd;
-  Ahdrd_init(&ahdrd, stdin);
-  assert(Ahdrd_read(&ahdrd) == '0');
-  assert(Ahdrd_peek(&ahdrd, 1) == '1');
-  assert(Ahdrd_peek(&ahdrd, 2) == '2');
-  assert(strcmp(Ahdrd_getToken(&ahdrd), "0") == 0);
-  assert(Ahdrd_read(&ahdrd) == '1');
-  assert(Ahdrd_read(&ahdrd) == '2');
-  assert(Ahdrd_read(&ahdrd) == '3');
-  assert(strcmp(Ahdrd_getToken(&ahdrd), "123") == 0);
+  struct Ahdrd *ahdrd;
+  ahdrd = Ahdrd_new(stdin);
+  assert(Ahdrd_read(ahdrd) == '0');
+  assert(Ahdrd_peek(ahdrd, 1) == '1');
+  assert(Ahdrd_peek(ahdrd, 2) == '2');
+  assert(strcmp(Ahdrd_getToken(ahdrd), "0") == 0);
+  assert(Ahdrd_read(ahdrd) == '1');
+  assert(Ahdrd_read(ahdrd) == '2');
+  assert(Ahdrd_read(ahdrd) == '3');
+  assert(strcmp(Ahdrd_getToken(ahdrd), "123") == 0);
   return 0;
 }

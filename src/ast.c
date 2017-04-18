@@ -15,10 +15,10 @@ int Ast_isNil(struct Ast *node) {
   return node->car == node;
 }
 
-struct Ast *Ast_alloc() {
+struct Ast *Ast_new() {
   struct Ast *node;
   if ((node = (struct Ast *)calloc(1, sizeof(struct Ast))) == NULL) {
-    fprintf(stderr, "Ast_alloc: Cannot allocate memory.");
+    fprintf(stderr, "Ast_new: Cannot allocate memory.");
     exit(1);
   }
   return node->car = node->cdr = node->prev = node;
@@ -30,7 +30,7 @@ struct Ast *Ast_cons(struct Ast *car, struct Ast *cdr) {
     fprintf(stderr, "Ast_cons: Do not allow create cons cell without terminated nil.");
     exit(1);
   }
-  prev = Ast_alloc();
+  prev = Ast_new();
   prev->car = car;
   prev->cdr = cdr;
   car->prev = cdr->prev = prev;
@@ -39,28 +39,9 @@ struct Ast *Ast_cons(struct Ast *car, struct Ast *cdr) {
 
 struct Ast *Ast_reverse(struct Ast *ast) {
   struct Ast *acc;
-  acc = Ast_alloc();
+  acc = Ast_new();
   for (; !Ast_isNil(ast); ast = REST(ast)) {
     acc = Ast_cons(FIRST(ast), acc);
   }
   return acc;
 }
-
-// void Ast_dump(struct Ast *node) {
-//   struct Ast *next;
-//   if (Ast_isLeaf(node)) {
-//     printf("%s", node->val);
-//     return;
-//   }
-//   printf("(");
-//   Ast_dump(node->car);
-//   for (next = node->cdr; !Ast_isNil(next); next = next->cdr) {
-//     if (Ast_isLeaf(next->car))
-//       printf(" %s", next->car->val);
-//     else {
-//       printf(" ");
-//       Ast_dump(next->car);
-//     }
-//   }
-//   printf(")\n");
-// }

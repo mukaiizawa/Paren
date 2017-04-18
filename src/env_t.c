@@ -3,39 +3,40 @@
 
 #include "env.h"
 
-static struct Env env;
-struct EnvNode *node;
-
 int main(void) {
+  struct Env *env;
+  struct EnvNode *node;
   int i = 1, j = 2, k = 3;
-  Env_init(&env);
+
+  env = Env_new();
+  Env_init(env);
 
   // not found.
-  node = Env_lookup(&env, "i");
+  node = Env_lookup(env, "i");
   assert(node == NULL);
 
   // found i.
-  Env_install(&env, "i", 0, &i);
-  node = Env_lookup(&env, "i");
+  Env_install(env, "i", 0, &i);
+  node = Env_lookup(env, "i");
   assert(node != NULL && (*(int *)node->val == 1));
 
   // found i.
-  Env_install(&env, "j", 0, &j);
-  node = Env_lookup(&env, "i");
+  Env_install(env, "j", 0, &j);
+  node = Env_lookup(env, "i");
   assert(node != NULL && (*(int *)node->val == 1));
 
   // create next generation.
-  Env_push(&env);
+  Env_push(env);
 
   // install k.
-  Env_install(&env, "k", 0, &k);
-  node = Env_lookup(&env, "k");
+  Env_install(env, "k", 0, &k);
+  node = Env_lookup(env, "k");
   assert(node != NULL && (*(int *)node->val == 3));
 
   // update i.
   i = 10;
-  Env_install(&env, "i", 0, &i);
-  node = Env_lookup(&env, "i");
+  Env_install(env, "i", 0, &i);
+  node = Env_lookup(env, "i");
   assert(node != NULL && (*(int *)node->val == 10));
 
   return 0;
