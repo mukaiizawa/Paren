@@ -31,9 +31,9 @@ struct Object *Object_new(int type, void *val) {
   else if (type == SYMBOL)
     obj->val.symbol = (char *)val;
   else if (type == INTEGER)
-    obj->val.integer = *((int *)val);
+    obj->val.integer = *(int *)val;
   else if (type == DOUBLE)
-    obj->val.dfloat = *((double *)val);
+    obj->val.dfloat = *(double *)val;
   else  if (type == FUNCTION)
     obj->val.function = (struct Ast *)val;
   else {
