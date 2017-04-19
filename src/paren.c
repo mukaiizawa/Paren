@@ -15,6 +15,7 @@ static struct Env *env;
 
 static void init() {
   env = Env_new();
+  Env_init(env);
   Prim_init(env);
   Lex_init();
 }
@@ -32,7 +33,7 @@ static struct Ast *eval(struct Ast *ast) {
   if (!Ast_isLeaf(first))
     first = eval(first);
   if (first->obj->type != FUNCTION) {
-    fprintf(stderr, "eval: '%s' is not a function.\n", asString(first->obj));
+    fprintf(stderr, "eval: '%s' is not a function.\n", asString(first->obj)->val.string);
     return NULL;
   }
   // Env_lookup();
@@ -45,20 +46,7 @@ static void print(struct Ast *ast) {
     return;
   }
   if (Ast_isLeaf(ast)) {
-    if ((type = ast->obj->type) == INTEGER)
-      fprintf(stdout, " %d", ast->obj->val.integer);
-    else if (type == DOUBLE)
-      fprintf(stdout, " %f", ast->obj->val.dfloat);
-    else if (type == CHARACTER)
-      fprintf(stdout, " %c", ast->obj->val.character);
-    else if (type == STRING)
-      fprintf(stdout, " %s", ast->obj->val.string);
-    else if (type == SYMBOL)
-      fprintf(stdout, " %s", ast->obj->val.symbol);
-    else {
-      fprintf(stderr, "print: Unknown type.");
-    }
-    fprintf(stdout, "\n");
+    fprintf(stdout, "%s\n", asString(ast->obj)->val.string);
     return;
   }
   fprintf(stdout, "(");

@@ -34,6 +34,6 @@ struct Object {
 
 extern struct Object *Object_new(int type, void *val);
 extern void Prim_init(struct Env *env);
-extern char *asString(struct Object *obj);
+extern struct Object *asString(struct Object *obj);
 
 #endif

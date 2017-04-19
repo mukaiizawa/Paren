@@ -43,29 +43,31 @@ void Prim_init(struct Env *env) {
   // Env_install(env, "i", SYMBOL, &i);
 }
 
-char *asString(struct Object *obj) {
+struct Object *asString(struct Object *obj) {
   static char str[100];
   if (obj->type == STRING)
-    return obj->val.string;
+    return obj;
   else if (obj->type == KEYWORD)
-    return obj->val.keyword;
+    return Object_new(STRING, obj->val.keyword);
   else if (obj->type == CHARACTER) {
     str[0] = obj->val.character;
     str[1] = '\0';
-    return str;
+    return Object_new(STRING, str);
   }
   else if (obj->type == SYMBOL)
-    return obj->val.symbol;
+    return Object_new(STRING, obj->val.symbol);
   else if (obj->type == INTEGER) {
     sprintf(str, "%d", obj->val.integer);
-    return str;
+    return Object_new(STRING, str);
   }
   else if (obj->type == DOUBLE) {
     sprintf(str, "%f", obj->val.dfloat);
-    return str;
+    return Object_new(STRING, str);
   }
-  else
-    return "asString: unknown type.";
+  else {
+    fprintf(stderr, "asString: Illega argument.");
+    exit(1);
+  }
 }
 
 // // +
