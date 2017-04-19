@@ -9,6 +9,7 @@
 
 #include "prim.h"
 
+// TODO: cannot set val.string because of object.val is union.
 struct Object *Object_new(int type, void *val) {
   struct Object *obj;
   if ((obj = (struct Object *)calloc(1, sizeof(struct Object))) == NULL) {
@@ -16,9 +17,8 @@ struct Object *Object_new(int type, void *val) {
     exit(1);
   }
   obj->type = type;
-  if (type == STRING)
-    obj->val.string = (char *)val;
-  else if (type == KEYWORD)
+  obj->val.string = (char *)val;
+  if (type == KEYWORD)
     obj->val.keyword = (char *)val;
   else if (type == CHARACTER)
     obj->val.character = ((char *)val)[0];
@@ -30,7 +30,7 @@ struct Object *Object_new(int type, void *val) {
     obj->val.dfloat = atof((char *)val);
   else  if (type == FUNCTION)
     obj->val.function = (struct Ast *)val;
-  else {
+  else if (type != STRING) {
     fprintf(stderr, "Object_new: Illegal type.");
     exit(1);
   }
@@ -44,30 +44,8 @@ void Prim_init(struct Env *env) {
 }
 
 struct Object *asString(struct Object *obj) {
-  static char str[100];
-  if (obj->type == STRING)
-    return obj;
-  else if (obj->type == KEYWORD)
-    return Object_new(STRING, obj->val.keyword);
-  else if (obj->type == CHARACTER) {
-    str[0] = obj->val.character;
-    str[1] = '\0';
-    return Object_new(STRING, str);
-  }
-  else if (obj->type == SYMBOL)
-    return Object_new(STRING, obj->val.symbol);
-  else if (obj->type == INTEGER) {
-    sprintf(str, "%d", obj->val.integer);
-    return Object_new(STRING, str);
-  }
-  else if (obj->type == DOUBLE) {
-    sprintf(str, "%f", obj->val.dfloat);
-    return Object_new(STRING, str);
-  }
-  else {
-    fprintf(stderr, "asString: Illega argument.");
-    exit(1);
-  }
+  obj->type = STRING;
+  return obj;
 }
 
 // // +
