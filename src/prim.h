@@ -2,38 +2,40 @@
   paren primitive.
 */
 
-#ifndef PRIM
-#define PRIM
+#ifndef IS_LOADED_PRIM
+#define IS_LOADED_PRIM
 
-#include "ast.h"
-#include "env.h"
+enum Type {
+  Symbol,
+  Keyword,
+  String,
+  Character,
+  Number,
+  Function,
+  Error,
+  Cons,
+  Nil
+};
 
-#define NIL 0
-#define T 1
-
-#define SYMBOL 1
-#define KEYWORD 2
-#define CHARACTER 3
-#define STRING 4
-#define FUNCTION 6
-#define INTEGER 7
-#define DOUBLE 8
-
-struct Object {
-  int type;
-  union {
-    char *symbol;
-    char *keyword;
-    char character;
+union S {
+  struct {
+    Type type;
+    union S *prev, *car, *cdr;
+  } Cons;
+  struct {
+    Type type;
+    struct S *prev;
     char *string;
-    int integer;
-    double dfloat;
-    struct Ast *function;
-  } val;
-}; 
+    char character;
+    double number;
+  } Atom;
+};
 
-extern struct Object *Object_new(int type, void *val);
-extern void Prim_init(struct Env *env);
-extern struct Object *asString(struct Object *obj);
+extern struct S *S_newSymbol(char *val);
+extern struct S *S_newKeyword(char *str);
+extern struct S *S_newString(char *str);
+extern struct S *S_newCharacter(char *str);
+extern struct S *S_newNumber(char *str);
+extern struct S *asString(struct S *obj);
 
 #endif

@@ -7,14 +7,6 @@
 
 #include "ast.h"
 
-int Ast_isLeaf(struct Ast *node) {
-  return node->cdr == node;
-}
-
-int Ast_isNil(struct Ast *node) {
-  return node->car == node;
-}
-
 struct Ast *Ast_new() {
   struct Ast *node;
   if ((node = (struct Ast *)calloc(1, sizeof(struct Ast))) == NULL) {
@@ -22,19 +14,6 @@ struct Ast *Ast_new() {
     exit(1);
   }
   return node->car = node->cdr = node->prev = node;
-}
-
-struct Ast *Ast_cons(struct Ast *car, struct Ast *cdr) {
-  struct Ast *prev;
-  if (Ast_isLeaf(cdr) && !Ast_isNil(cdr)) {
-    fprintf(stderr, "Ast_cons: Do not allow create cons cell without terminated nil.");
-    exit(1);
-  }
-  prev = Ast_new();
-  prev->car = car;
-  prev->cdr = cdr;
-  car->prev = cdr->prev = prev;
-  return prev;
 }
 
 struct Ast *Ast_reverse(struct Ast *ast) {
