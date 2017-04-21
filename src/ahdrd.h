@@ -9,24 +9,24 @@
 
 #define AHDRD_TOKEN_SIZE 2000
 
-struct Ahdrd {
+typedef struct {
   FILE *fp;
   int tokenPos;
   char token[AHDRD_TOKEN_SIZE];
-  struct Ringbuf *ringbuf;
-};
+  Ringbuf *ringbuf;
+} Ahdrd;
 
-extern struct Ahdrd *Ahdrd_new(FILE *_fp);
-extern char *Ahdrd_getToken(struct Ahdrd *ahdrd);
-extern int Ahdrd_skipRead(struct Ahdrd *ahdrd);
-extern int Ahdrd_read(struct Ahdrd *ahdrd);
-extern int Ahdrd_peek(struct Ahdrd *ahdrd, int n);
-extern struct Ahdrd *Ahdrd_readSpace(struct Ahdrd *ahdrd);
-extern char *Ahdrd_readCharacter(struct Ahdrd *ahdrd);
-extern char *Ahdrd_readString(struct Ahdrd *ahdrd);
-extern char *Ahdrd_readKeyword(struct Ahdrd *ahdrd);
-extern char *Ahdrd_readSymbol(struct Ahdrd *ahdrd);
-extern char *Ahdrd_readNumber(struct Ahdrd *ahdrd);
-extern int Ahdrd_isNumber(struct Ahdrd *ahdrd);
+extern Ahdrd *Ahdrd_new(FILE *_fp);
+extern char *Ahdrd_getToken(Ahdrd *ahdrd);
+extern int Ahdrd_skipRead(Ahdrd *ahdrd);
+extern int Ahdrd_read(Ahdrd *ahdrd);
+extern int Ahdrd_peek(Ahdrd *ahdrd, int n);
+extern Ahdrd *Ahdrd_readSpace(Ahdrd *ahdrd);
+extern char *Ahdrd_readCharacter(Ahdrd *ahdrd);
+extern char *Ahdrd_readString(Ahdrd *ahdrd);
+extern char *Ahdrd_readKeyword(Ahdrd *ahdrd);
+extern char *Ahdrd_readSymbol(Ahdrd *ahdrd);
+extern char *Ahdrd_readNumber(Ahdrd *ahdrd);
+extern int Ahdrd_isNumber(Ahdrd *ahdrd);
 
 #endif

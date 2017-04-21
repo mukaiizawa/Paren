@@ -9,9 +9,9 @@
 
 #include "ahdrd.h"
 
-struct Ahdrd *Ahdrd_new(FILE *_fp) {
-  struct Ahdrd *ahdrd;
-  if ((ahdrd = (struct Ahdrd *)calloc(1, sizeof(struct Ahdrd))) == NULL) {
+Ahdrd *Ahdrd_new(FILE *_fp) {
+  Ahdrd *ahdrd;
+  if ((ahdrd = (Ahdrd *)calloc(1, sizeof(Ahdrd))) == NULL) {
     fprintf(stderr, "Ahdrd_new: Cannot allocate memory.");
     exit(1);
   }
@@ -21,7 +21,7 @@ struct Ahdrd *Ahdrd_new(FILE *_fp) {
   return ahdrd;
 }
 
-char *Ahdrd_getToken(struct Ahdrd *ahdrd) {
+char *Ahdrd_getToken(Ahdrd *ahdrd) {
   char *str;
   ahdrd->token[ahdrd->tokenPos] = '\0';
   if ((str = (char *)malloc(strlen(ahdrd->token) + 1)) == NULL) {
@@ -32,13 +32,13 @@ char *Ahdrd_getToken(struct Ahdrd *ahdrd) {
   return strcpy(str, ahdrd->token);
 }
 
-int Ahdrd_skipRead(struct Ahdrd *ahdrd) {
+int Ahdrd_skipRead(Ahdrd *ahdrd) {
   return (!Ringbuf_isEmpty(ahdrd->ringbuf))?
     Ringbuf_get(ahdrd->ringbuf):
     fgetc(ahdrd->fp);
 }
 
-int Ahdrd_read(struct Ahdrd *ahdrd) {
+int Ahdrd_read(Ahdrd *ahdrd) {
   int c;
   if((c = Ahdrd_skipRead(ahdrd)) != EOF) {
     ahdrd->token[ahdrd->tokenPos] = c;
@@ -47,7 +47,7 @@ int Ahdrd_read(struct Ahdrd *ahdrd) {
   return c;
 }
 
-int Ahdrd_peek(struct Ahdrd *ahdrd, int n) {
+int Ahdrd_peek(Ahdrd *ahdrd, int n) {
   int c;
   if (n <= 0) {
     fprintf(stderr, "Ahdrd_peek: Illegal argument.");
@@ -67,14 +67,14 @@ int Ahdrd_peek(struct Ahdrd *ahdrd, int n) {
   return ahdrd->ringbuf->buf[(ahdrd->ringbuf->out + n - 1) % RINGBUF_BUFSIZ];
 }
 
-struct Ahdrd *Ahdrd_readSpace(struct Ahdrd *ahdrd) {
+Ahdrd *Ahdrd_readSpace(Ahdrd *ahdrd) {
   int c;
   while ((c = Ahdrd_peek(ahdrd, 1)) != EOF && isspace(c))
     Ahdrd_skipRead(ahdrd);
   return ahdrd;
 }
 
-char *Ahdrd_readKeyword(struct Ahdrd *ahdrd) {
+char *Ahdrd_readKeyword(Ahdrd *ahdrd) {
   int c;
   Ahdrd_skipRead(ahdrd);    // skip ':'
   while (!isspace((c = Ahdrd_peek(ahdrd, 1))) && c != '(' && c != ')')
@@ -82,7 +82,7 @@ char *Ahdrd_readKeyword(struct Ahdrd *ahdrd) {
   return Ahdrd_getToken(ahdrd);
 }
 
-char *Ahdrd_readCharacter(struct Ahdrd *ahdrd) {
+char *Ahdrd_readCharacter(Ahdrd *ahdrd) {
   int c, readCount;
   Ahdrd_skipRead(ahdrd);    // skip `'`
   readCount = 0;
@@ -99,7 +99,7 @@ char *Ahdrd_readCharacter(struct Ahdrd *ahdrd) {
   return Ahdrd_getToken(ahdrd);
 }
 
-char *Ahdrd_readString(struct Ahdrd *ahdrd) {
+char *Ahdrd_readString(Ahdrd *ahdrd) {
   int c;
   Ahdrd_skipRead(ahdrd);    // skip `"`
   while ((c = Ahdrd_peek(ahdrd, 1)) != '"') {
@@ -111,18 +111,18 @@ char *Ahdrd_readString(struct Ahdrd *ahdrd) {
   return Ahdrd_getToken(ahdrd);
 }
 
-char *Ahdrd_readSymbol(struct Ahdrd *ahdrd) {
+char *Ahdrd_readSymbol(Ahdrd *ahdrd) {
   int c;
   while (!isspace((c = Ahdrd_peek(ahdrd, 1))) && c != '(' && c != ')')
     Ahdrd_read(ahdrd);
   return Ahdrd_getToken(ahdrd);
 }
 
-char *Ahdrd_readNumber(struct Ahdrd *ahdrd) {
+char *Ahdrd_readNumber(Ahdrd *ahdrd) {
   return Ahdrd_readSymbol(ahdrd);
 }
 
-int Ahdrd_isNumber(struct Ahdrd *ahdrd) {
+int Ahdrd_isNumber(Ahdrd *ahdrd) {
   int i, c;
   i = 1;
   if (!isdigit((c = Ahdrd_peek(ahdrd, 1))) || c == '0')

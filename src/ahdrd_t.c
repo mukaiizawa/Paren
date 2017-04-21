@@ -6,7 +6,7 @@
 
 // assume input from stdin with '012345'
 int main(void) {
-  struct Ahdrd *ahdrd;
+  Ahdrd *ahdrd;
   ahdrd = Ahdrd_new(stdin);
   assert(Ahdrd_read(ahdrd) == '0');
   assert(Ahdrd_peek(ahdrd, 1) == '1');
