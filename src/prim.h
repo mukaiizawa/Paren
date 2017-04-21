@@ -21,14 +21,14 @@ typedef union S {
     Type type;
     union S *prev;
     union S *car, *cdr;
-  } *Cons;
+  } Cons;
   struct Atom {
     Type type;
     union S *prev;
     char *string;
     char character;
     double number;
-  } *Atom;
+  } Atom;
 } S;
 
 #include "env.h"

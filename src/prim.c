@@ -25,39 +25,39 @@ static S *S_alloc() {
 static S *toParenBoolean(int i) {
   S *boolean;
   boolean = S_alloc();
-  boolean->Atom->type = Symbol;
-  boolean->Atom->string = (i)?
+  boolean->Atom.type = Symbol;
+  boolean->Atom.string = (i)?
     "t":
     "nil";
   return boolean;
 }
 
 static int toCBoolean(S *expr) {
-  return !(expr->Atom->type == Symbol && strcmp(expr->Atom->string, nil) == 0);
+  return !(expr->Atom.type == Symbol && strcmp(expr->Atom.string, nil) == 0);
 }
 
 static int isAtomC(S *expr) {
-  return expr->Atom->type != Cons;
+  return expr->Atom.type != Cons;
 }
 
 static int isNilC(S *expr) {
-  return expr->Atom->type == Symbol && strcmp(expr->Atom->string, nil) == 0;
+  return expr->Atom.type == Symbol && strcmp(expr->Atom.string, nil) == 0;
 }
 
 S *S_newExpr(Type type, char* str) {
   S *expr;
   expr = S_alloc();
-  expr->Atom->type = type;
-  expr->Atom->string = str;
+  expr->Atom.type = type;
+  expr->Atom.string = str;
   switch (type) {
     case Symbol:
     case Keyword:
       break;
     case Character:
-      expr->Atom->character = str[0];
+      expr->Atom.character = str[0];
       break;
     case Number:
-      expr->Atom->number = atof(str);
+      expr->Atom.number = atof(str);
       break;
     case Function:
     case Error:
@@ -80,11 +80,11 @@ S *eval(S *expr, Env *env) {
   S *car, *cdr;
   if (isAtomC(expr))
     return expr;
-  car = expr->Cons->car;
-  cdr = expr->Cons->cdr;
+  car = expr->Cons.car;
+  cdr = expr->Cons.cdr;
   if (!isAtomC(car))
     car = eval(car, env);
-  // if (car->Atom->type != Function) {
+  // if (car->Atom.type != Function) {
   //   fprintf(stderr, "eval: '%s' is not a function.\n", asString(first->obj)->val.string);
   //   return S_newNil();
   // }
@@ -95,15 +95,15 @@ S *eval(S *expr, Env *env) {
 void print(S *expr) {
   int type;
   if (isAtomC(expr)) {
-    fprintf(stdout, "%s\n", expr->Atom->string);
+    fprintf(stdout, "%s\n", expr->Atom.string);
     return;
   }
   fprintf(stdout, "(");
-  print(expr->Cons->car);
-  for (expr = expr->Cons->cdr; !isNilC(expr); expr = expr->Cons->cdr) {
-    if (!isAtomC(expr->Cons->car))
+  print(expr->Cons.car);
+  for (expr = expr->Cons.cdr; !isNilC(expr); expr = expr->Cons.cdr) {
+    if (!isAtomC(expr->Cons.car))
       fprintf(stdout, " ");
-    print(expr->Cons->car);
+    print(expr->Cons.car);
   }
   fprintf(stdout, "\n");
   fflush(stdout);
@@ -124,9 +124,9 @@ S *cons(S *car, S *cdr) {
     exit(1);
   }
   prev = S_alloc();
-  prev->Cons->car = car;
-  prev->Cons->cdr = cdr;
-  car->Cons->prev = cdr->Cons->prev = prev;
+  prev->Cons.car = car;
+  prev->Cons.cdr = cdr;
+  car->Cons.prev = cdr->Cons.prev = prev;
   return prev;
 }
 
@@ -134,8 +134,8 @@ S *reverse(S *expr) {
   S *root;
   root = S_newNil();
   while (!isNilC(expr)) {
-    root = cons(expr->Cons->car, root);
-    expr = expr->Cons->cdr;
+    root = cons(expr->Cons.car, root);
+    expr = expr->Cons.cdr;
   }
   return root;
 }
@@ -143,7 +143,7 @@ S *reverse(S *expr) {
 S *asString(S *expr) {
   S *new;
   new = S_alloc();
-  new->Atom->type = String;
-  new->Atom->string = expr->Atom->string;
+  new->Atom.type = String;
+  new->Atom.string = expr->Atom.string;
   return new;
 }
