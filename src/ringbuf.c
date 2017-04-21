@@ -8,9 +8,9 @@
 
 #include "ringbuf.h"
 
-struct Ringbuf *Ringbuf_new() {
-  struct Ringbuf *ringbuf;
-  if ((ringbuf = (struct Ringbuf *)calloc(1, sizeof(struct Ringbuf))) == NULL) {
+Ringbuf *Ringbuf_new() {
+  Ringbuf *ringbuf;
+  if ((ringbuf = (Ringbuf *)calloc(1, sizeof(Ringbuf))) == NULL) {
     fprintf(stderr, "Ringbuf_new: Cannot allocate memory.");
     exit(1);
   }
@@ -19,11 +19,11 @@ struct Ringbuf *Ringbuf_new() {
   return ringbuf;
 }
 
-int Ringbuf_isEmpty(struct Ringbuf *ringbuf) {
+int Ringbuf_isEmpty(Ringbuf *ringbuf) {
   return ringbuf->in == ringbuf->out;
 } 
 
-void Ringbuf_put(struct Ringbuf *ringbuf, int c) {
+void Ringbuf_put(Ringbuf *ringbuf, int c) {
   int nextIn;
   nextIn = (ringbuf->in + 1) % RINGBUF_BUFSIZ;
   if (nextIn == ringbuf->out) {
@@ -34,7 +34,7 @@ void Ringbuf_put(struct Ringbuf *ringbuf, int c) {
   ringbuf->in = nextIn;
 }
 
-int Ringbuf_get(struct Ringbuf *ringbuf) {
+int Ringbuf_get(Ringbuf *ringbuf) {
   int c;
   if (Ringbuf_isEmpty(ringbuf)) {
     fprintf(stderr, "Ringbuf_get: Buffer empty.");
@@ -45,13 +45,13 @@ int Ringbuf_get(struct Ringbuf *ringbuf) {
   return c;
 }
 
-int Ringbuf_size(struct Ringbuf *ringbuf) {
+int Ringbuf_size(Ringbuf *ringbuf) {
   return (ringbuf->out <= ringbuf->in)?
     ringbuf->in - ringbuf->out:
     RINGBUF_BUFSIZ - ringbuf->out - ringbuf->in;
 }
 
-void Ringbuf_dump(struct Ringbuf *ringbuf) {
+void Ringbuf_dump(Ringbuf *ringbuf) {
   int i;
   printf("ringbuf[");
   for (i = ringbuf->out; i != ringbuf->in; i++) {

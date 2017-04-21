@@ -3,7 +3,7 @@
 #include "ringbuf.h"
 
 int main(void) {
-  struct Ringbuf *ringbuf;
+  Ringbuf *ringbuf;
   ringbuf = Ringbuf_new();
   assert(Ringbuf_isEmpty(ringbuf));
   assert(Ringbuf_size(ringbuf) == 0);
