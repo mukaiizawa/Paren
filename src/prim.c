@@ -36,67 +36,53 @@ static int toCBoolean(S *expr) {
   return !(expr->Atom->type == Symbol && strcmp(expr->Atom->string, nil) == 0);
 }
 
+static int isAtomC(S *expr) {
+  return expr->Atom->type != Cons;
+}
+
+static int isNilC(S *expr) {
+  return expr->Atom->type == Symbol && strcmp(expr->Atom->string, nil) == 0;
+}
+
+S *S_newExpr(Type type, char* str) {
+  S *expr;
+  expr = S_alloc();
+  expr->Atom->type = type;
+  expr->Atom->string = str;
+  switch (type) {
+    case Symbol:
+    case Keyword:
+      break;
+    case Character:
+      expr->Atom->character = str[0];
+      break;
+    case Number:
+      expr->Atom->number = atof(str);
+      break;
+    case Function:
+    case Error:
+    case Cons:
+    default:
+      break;
+  }
+  return expr;
+}
+
 S *S_newNil() {
-  S *expr;
-  expr = S_alloc();
-  expr->Atom->type = Symbol;
-  expr->Atom->string = nil;
-  return expr;
-}
-
-S *S_newSymbol(char *str) {
-  S *expr;
-  expr = S_alloc();
-  expr->Atom->type = Symbol;
-  expr->Atom->string = str;
-  return expr;
-}
-
-S *S_newKeyword(char *str) {
-  S *expr;
-  expr = S_alloc();
-  expr->Atom->type = Keyword;
-  expr->Atom->string = str;
-  return expr;
-}
-
-S *S_newString(char *str) {
-  S *expr;
-  expr = S_alloc();
-  expr->Atom->type = String;
-  expr->Atom->string = str;
-  return expr;
-}
-
-S *S_newCharacter(char *str) {
-  S *expr;
-  expr = S_alloc();
-  expr->Atom->type = Character;
-  expr->Atom->string = str;
-  expr->Atom->character = str[0];
-  return expr;
-}
-
-S *S_newNumber(char *str) {
-  S *expr;
-  expr = S_alloc();
-  expr->Atom->type = Number;
-  expr->Atom->string = str;
-  expr->Atom->string = str;
-  return expr;
+  return S_newExpr(Symbol, nil);
 }
 
 S *read() {
-  return Lex_parseS();
+  return Lex_parseExpr();
 }
 
 S *eval(S *expr, Env *env) {
   S *car, *cdr;
-  if (isAtom(expr))
+  if (isAtomC(expr))
     return expr;
   car = expr->Cons->car;
   cdr = expr->Cons->cdr;
-  if (!isAtom(car))
+  if (!isAtomC(car))
     car = eval(car, env);
   // if (car->Atom->type != Function) {
   //   fprintf(stderr, "eval: '%s' is not a function.\n", asString(first->obj)->val.string);
@@ -108,14 +94,14 @@ S *eval(S *expr, Env *env) {
 
 void print(S *expr) {
   int type;
-  if (isAtom(expr)) {
+  if (isAtomC(expr)) {
     fprintf(stdout, "%s\n", expr->Atom->string);
     return;
   }
   fprintf(stdout, "(");
   print(expr->Cons->car);
-  for (expr = expr->Cons->cdr; !toCBoolean(isNil(expr)); expr = expr->Cons->cdr) {
-    if (!isAtom(expr->Cons->car))
+  for (expr = expr->Cons->cdr; !isNilC(expr); expr = expr->Cons->cdr) {
+    if (!isAtomC(expr->Cons->car))
       fprintf(stdout, " ");
     print(expr->Cons->car);
   }
@@ -124,17 +110,16 @@ void print(S *expr) {
 }
 
 S *isAtom(S *expr) {
-  return toParenBoolean(expr->Atom->type != Cons);
+  return toParenBoolean(isAtomC(expr));
 }
 
 S *isNil(S *expr) {
-  return toParenBoolean(
-      (expr->Atom->type == Symbol && strcmp(expr->Atom->string, nil) == 0));
+  return toParenBoolean(isNilC(expr));
 }
 
 S *cons(S *car, S *cdr) {
   S *prev;
-  if (isAtom(cdr) && !isNil(cdr)) {
+  if (isAtomC(cdr) && !isNilC(cdr)) {
     fprintf(stderr, "Cons: Do not allow create cons cell without terminated nil.");
     exit(1);
   }
@@ -148,17 +133,17 @@ S *cons(S *car, S *cdr) {
 S *reverse(S *expr) {
   S *root;
   root = S_newNil();
-  while (!toCBoolean(isNil(expr))) {
+  while (!isNilC(expr)) {
     root = cons(expr->Cons->car, root);
     expr = expr->Cons->cdr;
   }
   return root;
 }
 
-S *asString(S *s) {
+S *asString(S *expr) {
   S *new;
   new = S_alloc();
   new->Atom->type = String;
-  new->Atom->string = s->Atom->string;
+  new->Atom->string = expr->Atom->string;
   return new;
 }
