@@ -52,10 +52,10 @@ void Env_push(struct Env *env) {
   env->outer = new;
 }
 
-void Env_install(struct Env *env, char *key, struct Object *obj) {
+void Env_install(struct Env *env, char *key, S *expr) {
   struct EnvNode *node;
   node = EnvNode_alloc();
-  node->obj = obj;
+  node->expr = expr;
   node->key = key;
   node->next = env->outer->head->next;
   env->outer->head->next = node;

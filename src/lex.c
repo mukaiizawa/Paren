@@ -16,9 +16,9 @@ void Lex_init() {
   ahdrd = Ahdrd_new(stdin);
 }
 
-struct S *Lex_parseAtom() {
+S *Lex_parseAtom() {
   int c;
-  struct S *atom;
+  S *atom;
   if ((c = Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1)) == ':')
     return S_newKeyword(Ahdrd_readKeyword(ahdrd));
   else if (c == '\'')
@@ -31,16 +31,15 @@ struct S *Lex_parseAtom() {
     return S_newSymbol(Ahdrd_readSymbol(ahdrd));
 }
 
-struct S *Lex_parseS() {
-  struct S *s;
+S *Lex_parseS() {
+  S *expr;
   if (Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1) == '(') {
     Ahdrd_skipRead(ahdrd);    // skip '('
-    s = S_new();
     while (Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1) != ')') {
-      s = S_cons(Lex_parseS(), s);
+      expr = cons(Lex_parseS(), expr);
     }
     Ahdrd_skipRead(ahdrd);    // skip ')'
-    return S_reverse(s);
+    return reverse(expr);
   }
   else
     return Lex_parseAtom();

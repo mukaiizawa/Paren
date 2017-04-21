@@ -15,7 +15,7 @@ static struct Env *env;
 static void init() {
   env = Env_new();
   Env_init(env);
-  Prim_init(env);
+  // Prim_init(env);
   Lex_init();
 }
 
@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
   init();
   while (1) {
     fputs(") ", stdout);
-    print(eval(read()));
+    print(eval(read(), env));
   }
   return 0;
 }

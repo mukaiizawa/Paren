@@ -19,7 +19,7 @@ ifeq ($(os), windows)
 endif
 
 paren=paren$(exe)
-objs=paren.c prim.o lex.o ast.o env.o ahdrd.o ringbuf.o
+objs=paren.c prim.o lex.o env.o ahdrd.o ringbuf.o
 
 all: $(paren)
 

@@ -11,129 +11,154 @@
 #include "prim.h"
 #include "lex.h"
 
-defalloc(S);
+static char *nil = "nil";
 
-struct S *read() {
+static S *S_alloc() {
+  S *expr;
+  if ((expr = (S *)calloc(1, sizeof(S))) == NULL) {
+    fprintf(stderr, "S_alloc: Cannot allocate memory.");
+    exit(1);
+  }
+  return expr;
+}
+
+static S *toParenBoolean(int i) {
+  S *boolean;
+  boolean = S_alloc();
+  boolean->Atom->type = Symbol;
+  boolean->Atom->string = (i)?
+    "t":
+    "nil";
+  return boolean;
+}
+
+static int toCBoolean(S *expr) {
+  return !(expr->Atom->type == Symbol && strcmp(expr->Atom->string, nil) == 0);
+}
+
+S *S_newNil() {
+  S *expr;
+  expr = S_alloc();
+  expr->Atom->type = Symbol;
+  expr->Atom->string = nil;
+  return expr;
+}
+
+S *S_newSymbol(char *str) {
+  S *expr;
+  expr = S_alloc();
+  expr->Atom->type = Symbol;
+  expr->Atom->string = str;
+  return expr;
+}
+
+S *S_newKeyword(char *str) {
+  S *expr;
+  expr = S_alloc();
+  expr->Atom->type = Keyword;
+  expr->Atom->string = str;
+  return expr;
+}
+
+S *S_newString(char *str) {
+  S *expr;
+  expr = S_alloc();
+  expr->Atom->type = String;
+  expr->Atom->string = str;
+  return expr;
+}
+
+S *S_newCharacter(char *str) {
+  S *expr;
+  expr = S_alloc();
+  expr->Atom->type = Character;
+  expr->Atom->string = str;
+  expr->Atom->character = str[0];
+  return expr;
+}
+
+S *S_newNumber(char *str) {
+  S *expr;
+  expr = S_alloc();
+  expr->Atom->type = Number;
+  expr->Atom->string = str;
+  expr->Atom->string = str;
+  return expr;
+}
+
+S *read() {
   return Lex_parseS();
 }
 
-struct S *eval(struct S *ast) {
-  struct S *first, *rest;
-  if (S_isLeaf(ast))
-    return ast;
-  first = ast->car;
-  rest = ast->cdr;
-  if (!S_isLeaf(first))
-    first = eval(first);
-  if (first->obj->type != FUNCTION) {
-    fprintf(stderr, "eval: '%s' is not a function.\n", asString(first->obj)->val.string);
-    return NULL;
-  }
+S *eval(S *expr, Env *env) {
+  S *car, *cdr;
+  if (isAtom(expr))
+    return expr;
+  car = expr->Cons->car;
+  cdr = expr->Cons->cdr;
+  if (!isAtom(car))
+    car = eval(car, env);
+  // if (car->Atom->type != Function) {
+  //   fprintf(stderr, "eval: '%s' is not a function.\n", asString(first->obj)->val.string);
+  //   return S_newNil();
+  // }
   // Env_lookup();
   return NULL;
 }
 
-void print(struct S *ast) {
+void print(S *expr) {
   int type;
-  if (ast == NULL) {
-    return;
-  }
-  if (S_isLeaf(ast)) {
-    fprintf(stdout, "%s\n", asString(ast->obj)->val.string);
+  if (isAtom(expr)) {
+    fprintf(stdout, "%s\n", expr->Atom->string);
     return;
   }
   fprintf(stdout, "(");
-  print(ast->car);
-  for (ast = ast->cdr; !S_isNil(ast); ast = ast->cdr) {
-    if (!S_isLeaf(ast->car))
+  print(expr->Cons->car);
+  for (expr = expr->Cons->cdr; !toCBoolean(isNil(expr)); expr = expr->Cons->cdr) {
+    if (!isAtom(expr->Cons->car))
       fprintf(stdout, " ");
-    print(ast->car);
+    print(expr->Cons->car);
   }
   fprintf(stdout, "\n");
   fflush(stdout);
 }
 
-int isAtom(struct S *s) {
-  return s->Atom.type !=Cons;
+S *isAtom(S *expr) {
+  return toParenBoolean(expr->Atom->type != Cons);
 }
 
-int isNil(struct S *s) {
-  return s->Atom.type == Nil;
+S *isNil(S *expr) {
+  return toParenBoolean(
+      (expr->Atom->type == Symbol && strcmp(expr->Atom->string, nil) == 0));
 }
 
-struct S *cons(struct S *car, struct S *cdr) {
-  struct S *prev;
+S *cons(S *car, S *cdr) {
+  S *prev;
   if (isAtom(cdr) && !isNil(cdr)) {
     fprintf(stderr, "Cons: Do not allow create cons cell without terminated nil.");
     exit(1);
   }
   prev = S_alloc();
-  prev->Cons->car = car->Cons;
-  prev->Cons->cdr = cdr->Cons;
-  car->Cons->prev = cdr->Cons->prev = prev->Cons;
+  prev->Cons->car = car;
+  prev->Cons->cdr = cdr;
+  car->Cons->prev = cdr->Cons->prev = prev;
   return prev;
 }
 
-struct S *S_newNil() {
-  struct S *s;
-  s = S_alloc();
-  s->Cons.type = Nil;
-  return s;
+S *reverse(S *expr) {
+  S *root;
+  root = S_newNil();
+  while (!toCBoolean(isNil(expr))) {
+    root = cons(expr->Cons->car, root);
+    expr = expr->Cons->cdr;
+  }
+  return root;
 }
 
-struct S *S_newNil() {
-  struct S *s;
-  s = S_alloc();
-  s->Cons.type = Nil;
-  return s;
-}
-
-struct S *S_newSymbol(char *str) {
-  struct S *s;
-  s = S_alloc();
-  s->Atom.type = Symbol;
-  s->Atom.string = str;
-  return s;
-}
-
-struct S *S_newKeyword(char *str) {
-  struct S *s;
-  s = S_alloc();
-  s->Atom.type = Keyword;
-  s->Atom.string = str;
-  return s;
-}
-
-struct S *S_newString(char *str) {
-  struct S *s;
-  s = S_alloc();
-  s->Atom.type = String;
-  s->Atom.string = str;
-  return s;
-}
-
-struct S *S_newCharacter(char *str) {
-  struct S *s;
-  s = S_alloc();
-  s->Atom.type = Character;
-  s->Atom.string = str;
-  s->Atom.character = str[0];
-  return s;
-}
-
-struct S *S_newNumber(char *str) {
-  struct S *s;
-  s = S_alloc();
-  s->Atom.type = Number;
-  s->Atom.string = str;
-  s->Atom.string = str;
-  return s;
-}
-
-struct S *asString(struct S *s) {
-  struct S *new;
+S *asString(S *s) {
+  S *new;
   new = S_alloc();
-  new->Atom.type = STRING;
-  new->Atom.string = s.Atom.string;
+  new->Atom->type = String;
+  new->Atom->string = s->Atom->string;
   return new;
 }

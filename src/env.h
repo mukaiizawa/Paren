@@ -7,21 +7,21 @@
 
 #include "prim.h"
 
-struct Env {
+typedef struct Env {
   struct EnvNode {
     char *key;
-    struct Object *obj;
+    S *expr;
     struct EnvNode *next;
   } *head;
   struct Env *outer;
-};
+} Env;
 
-extern struct Env *Env_new();
-extern void Env_init(struct Env *env);
-extern int Env_isNil(struct Env *env);
+extern Env *Env_new();
+extern void Env_init(Env *env);
+extern int Env_isNil(Env *env);
 extern int EnvNode_isNil(struct EnvNode *node);
-extern void Env_push(struct Env *env);
-extern void Env_install(struct Env *env, char *key, struct Object *obj);
-extern struct EnvNode *Env_lookup(struct Env *env, char *key);
+extern void Env_push(Env *env);
+extern void Env_install(Env *env, char *key, S *expr);
+extern struct EnvNode *Env_lookup(Env *env, char *key);
 
 #endif
