@@ -84,12 +84,17 @@ S *eval(S *expr, Env *env) {
   cdr = expr->Cons.cdr;
   if (!isAtomC(car))
     car = eval(car, env);
-  // if (car->Atom.type != Function) {
-  //   fprintf(stderr, "eval: '%s' is not a function.\n", asString(first->obj)->val.string);
-  //   return S_newNil();
-  // }
-  // Env_lookup();
-  return NULL;
+  if (car->Atom.type == Symbol) {
+    struct EnvNode *node;
+    if((node = Env_lookup(env, car->Atom.string)) == NULL)
+      return S_newExpr(Error, "eval: variable has no value.");
+    else
+      car = node->expr;
+  }
+  if (car->Atom.type != Function) {
+    return S_newExpr(Error, "eval: undefined function.");
+  }
+  return S_newNil();    // to apply function
 }
 
 void print(S *expr) {
