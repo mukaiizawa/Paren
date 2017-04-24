@@ -34,6 +34,7 @@ static S *Lex_parseAtom() {
 S *Lex_parseExpr() {
   S *expr;
   if (Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1) == '(') {
+    expr = S_newNil();
     Ahdrd_skipRead(ahdrd);    // skip '('
     while (Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1) != ')') {
       expr = cons(Lex_parseExpr(), expr);

@@ -43,6 +43,7 @@ extern S *isAtom(S *expr);
 extern S *isNil(S *expr);
 extern S *cons(S *car, S *cdr);
 extern S *reverse(S *expr);
-extern S *asString(S *obj);
+extern S *asString(S *expr);
+extern S *plus(S *expr);
 
 #endif

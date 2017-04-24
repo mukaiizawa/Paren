@@ -13,6 +13,9 @@
 
 static char *nil = "nil";
 
+// void init_prim(Env *env) {
+// }
+
 static S *S_alloc() {
   S *expr;
   if ((expr = (S *)calloc(1, sizeof(S))) == NULL) {
@@ -91,6 +94,8 @@ S *eval(S *expr, Env *env) {
     else
       car = node->expr;
   }
+  if (1)
+    return plus(expr->Cons.cdr);
   if (car->Atom.type != Function) {
     return S_newExpr(Error, "eval: undefined function.");
   }
@@ -129,6 +134,7 @@ S *cons(S *car, S *cdr) {
     exit(1);
   }
   prev = S_alloc();
+  prev->Cons.type = Cons;
   prev->Cons.car = car;
   prev->Cons.cdr = cdr;
   car->Cons.prev = cdr->Cons.prev = prev;
@@ -143,6 +149,23 @@ S *reverse(S *expr) {
     expr = expr->Cons.cdr;
   }
   return root;
+}
+
+S *plus(S *args) {
+  S *sum, *car, *cdr;
+  sum = S_newExpr(Number, "0");
+  cdr = args;
+  while (!isNilC(args)) {
+    car = args->Cons.car;
+    cdr = args->Cons.cdr;
+    args = args->Cons.cdr;
+    if (car->Atom.type != Number) {
+      return S_newNil();    // TODO: create error.
+    }
+    printf("%f\n", car->Atom.number);
+    sum->Atom.number = sum->Atom.number + car->Atom.number;
+  }
+  return sum;
 }
 
 S *asString(S *expr) {
