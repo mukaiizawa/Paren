@@ -1,45 +1,47 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "env.h"
+#include "lex.h"
+#include "prim.h"
 
 int main(void) {
-  struct Env *env;
-  struct EnvNode *node;
-  struct Object *obj;
+  Env *env;
+  S *expr;
   int i = 1, j = 2, k = 3;
 
   env = Env_new();
   Env_init(env);
 
   // not found.
-  node = Env_lookup(env, "i");
-  assert(node == NULL);
+  expr = Env_lookup(env, "i");
+  assert(expr == NULL);
 
   // found i.
-  obj = Object_new(INTEGER, "1");
-  Env_install(env, "i", obj);
-  node = Env_lookup(env, "i");
-  assert(node != NULL && node->obj->val.integer == 1);
+  expr = S_newExpr(Number, "1");
+  Env_install(env, "i", expr);
+  expr = Env_lookup(env, "i");
+  assert(expr != NULL && expr->Atom.number == 1);
 
-  // // found i.
-  // Env_install(env, "j", 0, &j);
-  // node = Env_lookup(env, "i");
-  // assert(node != NULL && (*(int *)node->val == 1));
-  //
-  // // create next generation.
-  // Env_push(env);
-  //
-  // // install k.
-  // Env_install(env, "k", 0, &k);
-  // node = Env_lookup(env, "k");
-  // assert(node != NULL && (*(int *)node->val == 3));
-  //
-  // // update i.
-  // i = 10;
-  // Env_install(env, "i", 0, &i);
-  // node = Env_lookup(env, "i");
-  // assert(node != NULL && (*(int *)node->val == 10));
+  // found i.
+  expr = S_newExpr(Number, "2");
+  Env_install(env, "j", expr);
+  expr = Env_lookup(env, "i");
+  assert(expr != NULL && expr->Atom.number == 1);
+
+  // create next generation.
+  Env_push(env);
+
+  // install k.
+  expr = S_newExpr(Number, "3");
+  Env_install(env, "k", expr);
+  expr = Env_lookup(env, "k");
+  assert(expr != NULL && expr->Atom.number == 3);
+
+  // install new i.
+  expr = S_newExpr(Number, "10");
+  Env_install(env, "i", expr);
+  expr = Env_lookup(env, "i");
+  assert(expr != NULL && expr->Atom.number == 10);
 
   return 0;
 }
