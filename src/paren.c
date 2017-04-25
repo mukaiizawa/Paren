@@ -15,7 +15,7 @@ static struct Env *env;
 static void init() {
   env = Env_new();
   Env_init(env);
-  // Prim_init(env);
+  Prim_init(env);
   Lex_init();
 }
 

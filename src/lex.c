@@ -18,7 +18,6 @@ void Lex_init() {
 
 static S *Lex_parseAtom() {
   int c;
-  S *atom;
   if ((c = Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1)) == ':')
     return S_newExpr(Keyword, Ahdrd_readKeyword(ahdrd));
   else if (c == '\'')
@@ -28,7 +27,7 @@ static S *Lex_parseAtom() {
   else if (Ahdrd_isNumber(ahdrd))
     return S_newExpr(Number, Ahdrd_readNumber(ahdrd));
   else
-    return S_newExpr(Number, Ahdrd_readSymbol(ahdrd));
+    return S_newExpr(Symbol, Ahdrd_readSymbol(ahdrd));
 }
 
 S *Lex_parseExpr() {

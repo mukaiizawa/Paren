@@ -33,6 +33,7 @@ typedef union S {
 
 #include "env.h"
 
+extern void Prim_init(Env *env);
 extern S *S_newExpr(Type type, char *str);
 extern S *S_newNil();
 

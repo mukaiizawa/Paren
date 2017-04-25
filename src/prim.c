@@ -13,8 +13,10 @@
 
 static char *nil = "nil";
 
-// void init_prim(Env *env) {
-// }
+void Prim_init(Env *env) {
+  Env_install(env, "PI", S_newExpr(Number, "3.14159265358979323846"));
+  Env_install(env, "+", S_newExpr(Function, "3.1415926"));
+}
 
 static S *S_alloc() {
   S *expr;
@@ -82,18 +84,13 @@ S *read() {
 S *eval(S *expr, Env *env) {
   S *car, *cdr;
   if (isAtomC(expr))
-    return expr;
+    return (expr->Atom.type != Symbol)?
+      expr:
+      Env_lookup(env, expr->Atom.string);
   car = expr->Cons.car;
   cdr = expr->Cons.cdr;
   if (!isAtomC(car))
     car = eval(car, env);
-  if (car->Atom.type == Symbol) {
-    struct EnvNode *node;
-    if((node = Env_lookup(env, car->Atom.string)) == NULL)
-      return S_newExpr(Error, "eval: variable has no value.");
-    else
-      car = node->expr;
-  }
   if (1)
     return plus(expr->Cons.cdr);
   if (car->Atom.type != Function) {
@@ -105,7 +102,10 @@ S *eval(S *expr, Env *env) {
 void print(S *expr) {
   int type;
   if (isAtomC(expr)) {
-    fprintf(stdout, "%s\n", expr->Atom.string);
+    if (expr->Atom.type == Number)
+      fprintf(stdout, "%f\n", expr->Atom.number);
+    else 
+      fprintf(stdout, "%s\n", expr->Atom.string);
     return;
   }
   fprintf(stdout, "(");
@@ -162,8 +162,7 @@ S *plus(S *args) {
     if (car->Atom.type != Number) {
       return S_newNil();    // TODO: create error.
     }
-    printf("%f\n", car->Atom.number);
-    sum->Atom.number = sum->Atom.number + car->Atom.number;
+    sum->Atom.number += car->Atom.number;
   }
   return sum;
 }

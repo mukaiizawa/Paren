@@ -42,14 +42,16 @@ static struct EnvNode *EnvNode_alloc() {
 }
 
 void Env_push(struct Env *env) {
-  if (env->head != NULL && env->head->next == NULL)
-    return;
   struct Env *new;
   new = Env_new();
   new->head = EnvNode_alloc();
   new->head->next = NULL;
   new->outer = env->outer;
   env->outer = new;
+}
+
+void Env_pop(struct Env *env) {
+  // TODO
 }
 
 void Env_install(struct Env *env, char *key, S *expr) {
@@ -61,15 +63,15 @@ void Env_install(struct Env *env, char *key, S *expr) {
   env->outer->head->next = node;
 }
 
-struct EnvNode *Env_lookup(struct Env *env, char *key) {
+S *Env_lookup(struct Env *env, char *key) {
   struct EnvNode *node;
   while (!Env_isNil(env = env->outer)) {
     node = env->head;
     while (!EnvNode_isNil(node = node->next)) {
       if (strcmp(node->key, key) == 0) {
-        return node;
+        return node->expr;
       }
     }
   }
-  return NULL;
+   return S_newExpr(String, "eval: variable has no value.");
 }
