@@ -2,8 +2,8 @@
   environment.
 */
 
-#ifndef ENV
-#define ENV
+#ifndef IS_LOADED_ENV
+#define IS_LOADED_ENV
 
 #include "prim.h"
 
