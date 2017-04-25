@@ -124,8 +124,9 @@ char *Ahdrd_readNumber(Ahdrd *ahdrd) {
 
 int Ahdrd_isNumber(Ahdrd *ahdrd) {
   int i, c;
-  i = 1;
-  if (!isdigit((c = Ahdrd_peek(ahdrd, 1))) || c == '0')
+  i = 0;
+  if ((!isdigit((c = Ahdrd_peek(ahdrd, ++i)))
+        && c != '+' && c != '-') || c == '0')
     return 0;
   while (!isspace((c = Ahdrd_peek(ahdrd, ++i)))
       && c != '(' && c != ')' && c != '.') {
