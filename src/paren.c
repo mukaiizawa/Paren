@@ -22,8 +22,9 @@ static void init() {
 int main(int argc, char* argv[]) {
   init();
   while (1) {
-    fputs(") ", stdout);
+    fprintf(stdout, ") ");
     print(eval(read(), env));
+    fprintf(stdout, "\n");
   }
   return 0;
 }

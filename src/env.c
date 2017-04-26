@@ -73,5 +73,5 @@ S *Env_lookup(struct Env *env, char *key) {
       }
     }
   }
-   return S_newExpr(String, "eval: variable has no value.");
+   return S_new(Error, "eval: variable has no value.");
 }

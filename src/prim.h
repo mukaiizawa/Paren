@@ -6,45 +6,67 @@
 #define IS_LOADED_PRIM
 
 typedef enum {
+  Cons,
   Symbol,
   Keyword,
   String,
   Character,
   Number,
   Function,
-  Error,
-  Cons
+  Error
 } Type;
 
 typedef union S {
-  struct Cons {
+  struct {
     Type type;
-    union S *prev;
     union S *car, *cdr;
   } Cons;
-  struct Atom {
+  struct {
     Type type;
-    union S *prev;
-    char *string;
-    char character;
-    double number;
-  } Atom;
+    char *val;
+  } Symbol;
+  struct {
+    Type type;
+    char *val;
+  } Keyword;
+  struct {
+    Type type;
+    char *val;
+  } String;
+  struct {
+    Type type;
+    char val;
+  } Character;
+  struct {
+    Type type;
+    double val;
+  } Number;
+  struct {
+    Type type;
+    void *val;
+  } Function;
+  struct {
+    Type type;
+    char *val;
+  } Error;
 } S;
 
 #include "env.h"
 
+extern S *nil;
+extern S *t;
+
 extern void Prim_init(Env *env);
-extern S *S_newExpr(Type type, char *str);
-extern S *S_newNil();
+extern S *S_new(Type type, char *str);
 
 extern S *read();
 extern S *eval(S *s, Env *env);
-extern void print(S *s);
-extern S *isAtom(S *expr);
+extern S *print(S *s);
 extern S *isNil(S *expr);
+extern S *isAtom(S *expr);
 extern S *cons(S *car, S *cdr);
 extern S *reverse(S *expr);
-extern S *asString(S *expr);
+// extern S *asString(S *expr);
 extern S *plus(S *expr);
 
 #endif

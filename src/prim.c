@@ -11,11 +11,15 @@
 #include "prim.h"
 #include "lex.h"
 
-static char *nil = "nil";
+S *nil;
+S *t;
 
 void Prim_init(Env *env) {
-  Env_install(env, "PI", S_newExpr(Number, "3.14159265358979323846"));
-  Env_install(env, "+", S_newExpr(Function, "3.1415926"));
+  nil = S_new(Symbol, "nil");
+  t = S_new(Symbol, "t");
+  Env_install(env, "nil", nil);
+  Env_install(env, "t", t);
+  Env_install(env, "PI", S_new(Symbol, "3.1415926"));
 }
 
 static S *S_alloc() {
@@ -27,54 +31,54 @@ static S *S_alloc() {
   return expr;
 }
 
-static S *toParenBoolean(int i) {
-  S *boolean;
-  boolean = S_alloc();
-  boolean->Atom.type = Symbol;
-  boolean->Atom.string = (i)?
-    "t":
-    "nil";
-  return boolean;
+static S *toParenBoolean(int b) {
+  return b? t: nil;
 }
 
 static int toCBoolean(S *expr) {
-  return !(expr->Atom.type == Symbol && strcmp(expr->Atom.string, nil) == 0);
+  return expr != nil;
 }
 
 static int isAtomC(S *expr) {
-  return expr->Atom.type != Cons;
+  return expr->Cons.type != Cons;
 }
 
 static int isNilC(S *expr) {
-  return expr->Atom.type == Symbol && strcmp(expr->Atom.string, nil) == 0;
+  return expr == nil;
 }
 
-S *S_newExpr(Type type, char* str) {
+S *S_new(Type type, char* str) {
   S *expr;
   expr = S_alloc();
-  expr->Atom.type = type;
-  expr->Atom.string = str;
+  expr->Cons.type = type;
   switch (type) {
     case Symbol:
+      expr->Symbol.val = str;
+      break;
     case Keyword:
+      expr->Keyword.val = str;
+      break;
+    case String:
+      expr->String.val = str;
       break;
     case Character:
-      expr->Atom.character = str[0];
+      expr->Character.val = str[0];
       break;
     case Number:
-      expr->Atom.number = atof(str);
+      expr->Number.val = atof(str);
+      free(str);
       break;
     case Function:
-    case Error:
+      break;
     case Cons:
+      break;
+    case Error:
+      expr->Error.val = str;
+      break;
     default:
       break;
   }
   return expr;
-}
-
-S *S_newNil() {
-  return S_newExpr(Symbol, nil);
 }
 
 S *read() {
@@ -84,39 +88,39 @@ S *read() {
 S *eval(S *expr, Env *env) {
   S *car, *cdr;
   if (isAtomC(expr))
-    return (expr->Atom.type != Symbol)?
-      expr:
-      Env_lookup(env, expr->Atom.string);
-  car = expr->Cons.car;
+    return (expr->Cons.type == Symbol)?
+      Env_lookup(env, expr->Symbol.val):
+      expr;
+  car = eval(expr->Cons.car, env);
   cdr = expr->Cons.cdr;
-  if (!isAtomC(car))
-    car = eval(car, env);
-  if (1)
-    return plus(expr->Cons.cdr);
-  if (car->Atom.type != Function) {
-    return S_newExpr(Error, "eval: undefined function.");
+  return plus(cdr);
+  if (car->Cons.type != Function) {
+    return S_new(Error, "eval: undefined function.");
   }
-  return S_newNil();    // to apply function
+  return nil; // TODO: to apply function.
 }
 
-void print(S *expr) {
+S *print(S *expr) {
   int type;
   if (isAtomC(expr)) {
-    if (expr->Atom.type == Number)
-      fprintf(stdout, "%f\n", expr->Atom.number);
-    else 
-      fprintf(stdout, "%s\n", expr->Atom.string);
-    return;
+    if (expr->Cons.type == Number)
+      fprintf(stdout, "%f", expr->Number.val);
+    else if (expr->Cons.type == Character)
+      fprintf(stdout, "%c", expr->Character.val);
+    else
+      fprintf(stdout, "%s", expr->String.val);
   }
-  fprintf(stdout, "(");
-  print(expr->Cons.car);
-  for (expr = expr->Cons.cdr; !isNilC(expr); expr = expr->Cons.cdr) {
-    if (!isAtomC(expr->Cons.car))
-      fprintf(stdout, " ");
+  else {
+    fprintf(stdout, "(");
     print(expr->Cons.car);
+    for (expr = expr->Cons.cdr; !isNilC(expr); expr = expr->Cons.cdr) {
+      fprintf(stdout, isAtomC(expr->Cons.car)? " ": "");
+      print(expr->Cons.car);
+    }
+    fprintf(stdout, ")");
   }
-  fprintf(stdout, "\n");
   fflush(stdout);
+  return expr;
 }
 
 S *isAtom(S *expr) {
@@ -137,13 +141,12 @@ S *cons(S *car, S *cdr) {
   prev->Cons.type = Cons;
   prev->Cons.car = car;
   prev->Cons.cdr = cdr;
-  car->Cons.prev = cdr->Cons.prev = prev;
   return prev;
 }
 
 S *reverse(S *expr) {
   S *root;
-  root = S_newNil();
+  root = nil;
   while (!isNilC(expr)) {
     root = cons(expr->Cons.car, root);
     expr = expr->Cons.cdr;
@@ -152,25 +155,24 @@ S *reverse(S *expr) {
 }
 
 S *plus(S *args) {
-  S *sum, *car, *cdr;
-  sum = S_newExpr(Number, "0");
-  cdr = args;
+  S *sum, *car;
+  sum = S_alloc();
+  sum->Number.type = Number;
   while (!isNilC(args)) {
     car = args->Cons.car;
-    cdr = args->Cons.cdr;
     args = args->Cons.cdr;
-    if (car->Atom.type != Number) {
-      return S_newNil();    // TODO: create error.
+    if (car->Cons.type != Number) {
+      return S_new(Error, "+: illegal number.");
     }
-    sum->Atom.number += car->Atom.number;
+    sum->Number.val += car->Number.val;
   }
   return sum;
 }
 
-S *asString(S *expr) {
-  S *new;
-  new = S_alloc();
-  new->Atom.type = String;
-  new->Atom.string = expr->Atom.string;
-  return new;
-}
+// S *asString(S *expr) {
+//   S *new;
+//   new = S_alloc();
+//   new->Cons.type = String;
+//   new->string = expr->string;
+//   return new;
+// }
