@@ -16,23 +16,24 @@ void Lex_init() {
   ahdrd = Ahdrd_new(stdin);
 }
 
+// TODO: free memory.
 static S *Lex_parseAtom() {
   int c;
+  char *token;
+  S expr;
   if ((c = Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1)) == ':')
-    return S_new(Keyword, Ahdrd_readKeyword(ahdrd));
+    return Keyword_new(Ahdrd_readKeyword(ahdrd));
   else if (c == '\'')
-    return S_new(Character, Ahdrd_readCharacter(ahdrd));
+    return Character_new(Ahdrd_readCharacter(ahdrd)[0]);
   else if (c == '"')
-    return S_new(String, Ahdrd_readString(ahdrd));
+    return String_new(Ahdrd_readString(ahdrd));
   else if (Ahdrd_isNumber(ahdrd))
-    return S_new(Number, Ahdrd_readNumber(ahdrd));
-  else {
-    char* symbolName;
+    return Number_new(atof(Ahdrd_readNumber(ahdrd)));
+  else
     return
-      strcmp((symbolName = Ahdrd_readSymbol(ahdrd)), "t") == 0? t:
-      strcmp(symbolName, "nil") == 0? nil:
-      S_new(Symbol, symbolName);
-  }
+      strcmp((token = Ahdrd_readSymbol(ahdrd)), "t") == 0? t:
+      strcmp(token, "nil") == 0? nil:
+      Symbol_new(token);
 }
 
 S *Lex_parseExpr() {
@@ -41,7 +42,7 @@ S *Lex_parseExpr() {
     expr = nil;
     Ahdrd_skipRead(ahdrd);    // skip '('
     while (Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1) != ')') {
-      expr = cons(Lex_parseExpr(), expr);
+      expr = Cons_new(Lex_parseExpr(), expr);
     }
     Ahdrd_skipRead(ahdrd);    // skip ')'
     return reverse(expr);
