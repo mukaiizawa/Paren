@@ -18,18 +18,18 @@ struct Env *Env_new() {
   return env;
 }
 
+static int Env_isNil(struct Env *env) {
+  return env == NULL;
+}
+
+static int EnvNode_isNil(struct EnvNode *node) {
+  return node == NULL;
+}
+
 void Env_init(struct Env *env) {
   env->outer = NULL;
   env->head = NULL;
   Env_push(env);
-}
-
-int Env_isNil(struct Env *env) {
-  return env == NULL;
-}
-
-int EnvNode_isNil(struct EnvNode *node) {
-  return node == NULL;
 }
 
 static struct EnvNode *EnvNode_alloc() {
@@ -54,10 +54,10 @@ void Env_pop(struct Env *env) {
   // TODO
 }
 
-void Env_install(struct Env *env, char *key, S *expr) {
+void Env_install(struct Env *env, char *key, S *val) {
   struct EnvNode *node;
   node = EnvNode_alloc();
-  node->expr = expr;
+  node->val = val;
   node->key = key;
   node->next = env->outer->head->next;
   env->outer->head->next = node;
@@ -69,7 +69,7 @@ S *Env_lookup(struct Env *env, char *key) {
     node = env->head;
     while (!EnvNode_isNil(node = node->next)) {
       if (strcmp(node->key, key) == 0) {
-        return node->expr;
+        return node->val;
       }
     }
   }

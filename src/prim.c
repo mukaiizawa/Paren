@@ -35,10 +35,6 @@ static S *toParenBoolean(int b) {
   return b? t: nil;
 }
 
-static int toCBoolean(S *expr) {
-  return expr != nil;
-}
-
 static int isAtomC(S *expr) {
   return expr->Cons.type != Cons;
 }
