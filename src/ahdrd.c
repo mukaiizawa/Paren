@@ -140,5 +140,7 @@ int Ahdrd_isNumber(Ahdrd *ahdrd) {
         return 0;
     }
   }
+  if (((c = Ahdrd_peek(ahdrd, 1)) == '0' || c == '+' || c == '-') && i == 2)
+    return 0;
   return 1;
 }
