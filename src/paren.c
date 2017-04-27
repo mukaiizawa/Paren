@@ -25,12 +25,12 @@ S *Paren_read() {
 
 S *Paren_eval(S *expr, Env *env) {
   S *root, *cmd, *args;
-  if (isAtomC(expr))
+  if (S_isAtom(expr))
     return (expr->Symbol.type == Symbol)?
       Env_lookup(env, expr->Symbol.val):
       expr;
   root = expr;
-  while (!isNilC(expr)) {
+  while (!S_isNil(expr)) {
     expr->Cons.car = Paren_eval(expr->Cons.car, env);
     expr = expr->Cons.cdr;
   }
@@ -51,7 +51,7 @@ S *Paren_eval(S *expr, Env *env) {
 
 S *Paren_print(S *expr) {
   int type;
-  if (isAtomC(expr)) {
+  if (S_isAtom(expr)) {
     if (expr->Cons.type == Number)
       fprintf(stdout, "%f", expr->Number.val);
     else if (expr->Cons.type == Character)
@@ -64,8 +64,8 @@ S *Paren_print(S *expr) {
   else {
     fprintf(stdout, "(");
     Paren_print(expr->Cons.car);
-    for (expr = expr->Cons.cdr; !isNilC(expr); expr = expr->Cons.cdr) {
-      fprintf(stdout, isAtomC(expr->Cons.car)? " ": "");
+    for (expr = expr->Cons.cdr; !S_isNil(expr); expr = expr->Cons.cdr) {
+      fprintf(stdout, S_isAtom(expr->Cons.car)? " ": "");
       Paren_print(expr->Cons.car);
     }
     fprintf(stdout, ")");

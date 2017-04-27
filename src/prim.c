@@ -13,12 +13,17 @@
 
 S *nil;
 S *t;
-S *OUT;
+S *out;
+S *in;
 
 void Prim_init(Env *env) {
   nil = Symbol_new("nil");
   t = Symbol_new("t");
-  OUT = Stream_new(stdout);
+  out = Stream_new(stdout);
+  in = Stream_new(stdin);
+  Env_install(env, "list", Function_new(list, NULL));
+  Env_install(env, "car", Function_new(cons, NULL));
+  Env_install(env, "cdr", Function_new(cons, NULL));
   Env_install(env, "cons", Function_new(cons, NULL));
   Env_install(env, "length", Function_new(length, NULL));
   Env_install(env, "nil", nil);
@@ -35,21 +40,29 @@ static S *S_alloc() {
   return expr;
 }
 
-static S *toParenBoolean(int b) {
-  return b? t: nil;
+static int S_length(S *expr) {
+  int count;
+  count = 1;
+  if (expr->Cons.type != Cons)
+    return count;
+  else {
+    while (!S_isNil(expr = expr->Cons.cdr))
+      count++;
+    return count;
+  }
 }
 
-int isAtomC(S *expr) {
+int S_isAtom(S *expr) {
   return expr->Cons.type != Cons;
 }
 
-int isNilC(S *expr) {
+int S_isNil(S *expr) {
   return expr == nil;
 }
 
 S *Cons_new(S *car, S *cdr) {
   S *prev;
-  if (isAtomC(cdr) && !isNilC(cdr)) {
+  if (S_isAtom(cdr) && !S_isNil(cdr)) {
     fprintf(stderr, "Cons: Do not allow create cons cell without terminated nil.");
     exit(1);
   }
@@ -129,7 +142,7 @@ static struct MapNode *MapNode_alloc() {
 static S *Map_put(S *expr) {
   S *obj, *key, *val;
   struct MapNode *node;
-  if (length(expr)->Number.val != 3)
+  if (S_length(expr) != 3)
     return Error_new("Map.put: Illegal argument exception.");
   node = MapNode_alloc();
   obj = first(expr);
@@ -137,6 +150,19 @@ static S *Map_put(S *expr) {
   val = third(expr);
   node->next = obj->Map.head->next;
   obj->Map.head = node;
+  return obj;
+}
+
+static S *Map_get(S *expr) {
+  S *obj, *key;
+  struct MapNode *node;
+  if (S_length(expr) != 2)
+    return Error_new("Map.put: Illegal argument exception.");
+  obj = first(expr);
+  key = second(expr);
+  node = obj->Map.head;
+  while ((node = node->next) != NULL) {
+  }
   return obj;
 }
 
@@ -156,27 +182,14 @@ S *Error_new(char *str) {
   return expr;
 }
 
-static S *Map_get(S *expr) {
-  S *obj, *key;
-  struct MapNode *node;
-  if (length(expr)->Number.val != 2)
-    return Error_new("Map.put: Illegal argument exception.");
-  obj = first(expr);
-  key = second(expr);
-  node = obj->Map.head;
-  while ((node = node->next) != NULL) {
-  }
-  return obj;
-}
-
 S *car(S *expr) {
-  if (length(expr)->Number.val != 1)
+  if (S_length(expr) != 1)
     return Error_new("car: Illegal argument exception.");
   return expr->Cons.car;
 }
 
 S *cdr(S *expr) {
-  if (length(expr)->Number.val != 1)
+  if (S_length(expr) != 1)
     return Error_new("car: Illegal argument exception.");
   return expr->Cons.cdr;
 }
@@ -194,27 +207,27 @@ S *third(S *expr) {
 }
 
 S *isAtom(S *expr) {
-  return toParenBoolean(isAtomC(expr));
+  return S_isAtom(expr)? t: nil;
 }
 
 S *isNil(S *expr) {
-  return toParenBoolean(isNilC(expr));
+  return S_isNil(expr)? t: nil;
 }
 
 S *length(S *expr) {
-  if (expr->Cons.type != Cons)
-    return Error_new("length: cannot apply");
-  else {
-    int count;
-    for (count = 0; !isNilC(expr); expr = expr->Cons.cdr)
-      count++;
-    return Number_new((double) count);
-  }
+  int count;
+  count = 0;
+  if (S_isNil(expr))
+    return Number_new(count);
+  else if (expr->Cons.type == Cons)
+    return Number_new(S_length(expr->Cons.car));
+  else
+    return Error_new("length: cannnot apply.");
 }
 
 S *cons(S *expr) {
   S *prev;
-  if (length(expr)->Number.val != 2)
+  if (S_length(expr) != 2)
     return Error_new("cons: Illegal argument exception.");
   prev = S_alloc();
   prev->Cons.type = Cons;
@@ -223,24 +236,18 @@ S *cons(S *expr) {
   return prev;
 }
 
-// S *list(S *expr) {
-//   S *acc;
-//   acc = nil;
-//   while (isNilC(expr)) {
-//     acc = cons(first(expr), acc);
-//     expr = expr->Cons->cdr;
-//   }
-//   return reverse(acc);
-// }
+S *list(S *expr) {
+  return expr;
+}
 
 S *reverse(S *expr) {
   S *root;
-  if (isNilC(expr))
+  if (S_isNil(expr))
     return nil;
   if (expr->Cons.type != Cons)
     return Error_new("reverse: Illegal argument exception.");
   root = nil;
-  while (!isNilC(expr)) {
+  while (!S_isNil(expr)) {
     root = Cons_new(expr->Cons.car, root);
     expr = expr->Cons.cdr;
   }
@@ -302,7 +309,7 @@ S *dump(S *expr) {
 //   sum = S_alloc();
 //   sum->Number.type = Number;
 //   sum->Number.val = 0;
-//   while (!isNilC(args)) {
+//   while (!S_isNil(args)) {
 //     car = args->Cons.car;
 //     args = args->Cons.cdr;
 //     if (car->Cons.type != Number) {
