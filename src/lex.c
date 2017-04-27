@@ -20,7 +20,6 @@ void Lex_init() {
 static S *Lex_parseAtom() {
   int c;
   char *token;
-  S expr;
   if ((c = Ahdrd_peek(Ahdrd_readSpace(ahdrd), 1)) == ':')
     return Keyword_new(Ahdrd_readKeyword(ahdrd));
   else if (c == '\'')

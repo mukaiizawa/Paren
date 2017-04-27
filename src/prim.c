@@ -47,6 +47,19 @@ int isNilC(S *expr) {
   return expr == nil;
 }
 
+S *Cons_new(S *car, S *cdr) {
+  S *prev;
+  if (isAtomC(cdr) && !isNilC(cdr)) {
+    fprintf(stderr, "Cons: Do not allow create cons cell without terminated nil.");
+    exit(1);
+  }
+  prev = S_alloc();
+  prev->Cons.type = Cons;
+  prev->Cons.car = car;
+  prev->Cons.cdr = cdr;
+  return prev;
+}
+
 S *Symbol_new(char *val) {
   S *expr;
   expr = S_alloc();
@@ -127,32 +140,6 @@ static S *Map_put(S *expr) {
   return obj;
 }
 
-static S *Map_get(S *expr) {
-  S *obj, *key;
-  struct MapNode *node;
-  if (length(expr)->Number.val != 2)
-    return Error_new("Map.put: Illegal argument exception.");
-  obj = first(expr);
-  key = second(expr);
-  node = obj->Map.head;
-  while ((node = node->next) != NULL) {
-  }
-  return obj;
-}
-
-S *Cons_new(S *car, S *cdr) {
-  S *prev;
-  if (isAtomC(cdr) && !isNilC(cdr)) {
-    fprintf(stderr, "Cons: Do not allow create cons cell without terminated nil.");
-    exit(1);
-  }
-  prev = S_alloc();
-  prev->Cons.type = Cons;
-  prev->Cons.car = car;
-  prev->Cons.cdr = cdr;
-  return prev;
-}
-
 S *newMap() {
   S *expr;
   expr = S_alloc();
@@ -167,6 +154,19 @@ S *Error_new(char *str) {
   expr->Error.type = Error;
   expr->Error.val = str;
   return expr;
+}
+
+static S *Map_get(S *expr) {
+  S *obj, *key;
+  struct MapNode *node;
+  if (length(expr)->Number.val != 2)
+    return Error_new("Map.put: Illegal argument exception.");
+  obj = first(expr);
+  key = second(expr);
+  node = obj->Map.head;
+  while ((node = node->next) != NULL) {
+  }
+  return obj;
 }
 
 S *car(S *expr) {
@@ -213,13 +213,13 @@ S *length(S *expr) {
 }
 
 S *cons(S *expr) {
-  S *prev, *car, *cdr;
+  S *prev;
   if (length(expr)->Number.val != 2)
     return Error_new("cons: Illegal argument exception.");
   prev = S_alloc();
   prev->Cons.type = Cons;
-  prev->Cons.car = car;
-  prev->Cons.cdr = cdr;
+  prev->Cons.car = expr->Cons.car;
+  prev->Cons.cdr = (expr->Cons.cdr)->Cons.car;
   return prev;
 }
 
@@ -235,6 +235,8 @@ S *cons(S *expr) {
 
 S *reverse(S *expr) {
   S *root;
+  if (isNilC(expr))
+    return nil;
   if (expr->Cons.type != Cons)
     return Error_new("reverse: Illegal argument exception.");
   root = nil;
@@ -243,6 +245,56 @@ S *reverse(S *expr) {
     expr = expr->Cons.cdr;
   }
   return root;
+}
+
+static char *typeString[10] = {
+  "Cons",
+  "Map",
+  "Symbol",
+  "Keyword",
+  "String",
+  "Character",
+  "Number",
+  "Function",
+  "Stream",
+  "Error"
+};
+
+S *dump(S *expr) {
+  printf("address: %d\n", (int)expr);
+  printf("type: %s\n", typeString[expr->Cons.type]);
+  switch (expr->Cons.type) {
+    case Cons:
+      printf("car: %d\n", (int)expr->Cons.car);
+      printf("cdr: %d\n", (int)expr->Cons.cdr);
+      break;
+    case Map:
+      break;
+    case Symbol:
+      printf("name: %s\n", expr->Symbol.val);
+      break;
+    case Keyword:
+      printf("name: %s\n", expr->Keyword.val);
+      break;
+    case String:
+      printf("value: %s\n", expr->String.val);
+      break;
+    case Character:
+      printf("value: %c\n", expr->Character.val);
+      break;
+    case Number:
+      printf("value: %f\n", expr->Number.val);
+      break;
+    case Function:
+      break;
+    case Stream:
+      break;
+    case Error:
+      break;
+    default:
+      break;
+  }
+  return expr;
 }
 
 // S *plus(S *args) {

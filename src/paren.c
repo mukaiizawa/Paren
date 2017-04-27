@@ -24,18 +24,20 @@ S *Paren_read() {
 }
 
 S *Paren_eval(S *expr, Env *env) {
-  S *cmd, *args;
+  S *root, *cmd, *args;
   if (isAtomC(expr))
-    return (expr->Cons.type == Symbol)?
+    return (expr->Symbol.type == Symbol)?
       Env_lookup(env, expr->Symbol.val):
       expr;
-  cmd = Paren_eval(expr->Cons.car, env);
-  if (cmd->Cons.type != Function) {
-    return Error_new("eval: undefined function.");
+  root = expr;
+  while (!isNilC(expr)) {
+    expr->Cons.car = Paren_eval(expr->Cons.car, env);
+    expr = expr->Cons.cdr;
   }
-  args = expr;
-  while (!isNilC(args = args->Cons.cdr)) {
-    args->Cons.car = Paren_eval(args->Cons.car, env);
+  cmd = root->Cons.car;
+  args = root->Cons.cdr;
+  if (cmd->Function.type != Function) {
+    return Error_new("eval: undefined function.");
   }
   // invoke primitive function.
   if (cmd->Function.f != NULL) {

@@ -99,5 +99,6 @@ extern S *length(S *expr);
 extern S *reverse(S *expr);
 // extern S *plus(S *expr);
 // extern S *asString(S *expr);
+extern S *dump(S *expr);
 
 #endif
