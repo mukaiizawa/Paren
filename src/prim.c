@@ -19,6 +19,8 @@ void Prim_init(Env *env) {
   nil = Symbol_new("nil");
   t = Symbol_new("t");
   OUT = Stream_new(stdout);
+  Env_install(env, "cons", Function_new(cons, NULL));
+  Env_install(env, "length", Function_new(length, NULL));
   Env_install(env, "nil", nil);
   Env_install(env, "t", t);
   Env_install(env, "OUT", OUT);
@@ -82,6 +84,15 @@ S *Number_new(double val) {
   expr = S_alloc();
   expr->Number.type = Number;
   expr->Number.val = val;
+  return expr;
+}
+
+S *Function_new(S *f(S *), S *args) {
+  S *expr;
+  expr = S_alloc();
+  expr->Function.type = Function;
+  expr->Function.f = f;
+  expr->Function.args = args;
   return expr;
 }
 
@@ -203,7 +214,7 @@ S *length(S *expr) {
 
 S *cons(S *expr) {
   S *prev, *car, *cdr;
-  if (length(expr)->Number.val != 3)
+  if (length(expr)->Number.val != 2)
     return Error_new("cons: Illegal argument exception.");
   prev = S_alloc();
   prev->Cons.type = Cons;
@@ -212,9 +223,19 @@ S *cons(S *expr) {
   return prev;
 }
 
+// S *list(S *expr) {
+//   S *acc;
+//   acc = nil;
+//   while (isNilC(expr)) {
+//     acc = cons(first(expr), acc);
+//     expr = expr->Cons->cdr;
+//   }
+//   return reverse(acc);
+// }
+
 S *reverse(S *expr) {
   S *root;
-  if (length(expr)->Number.val != 1)
+  if (expr->Cons.type != Cons)
     return Error_new("reverse: Illegal argument exception.");
   root = nil;
   while (!isNilC(expr)) {

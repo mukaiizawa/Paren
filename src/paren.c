@@ -24,17 +24,27 @@ S *Paren_read() {
 }
 
 S *Paren_eval(S *expr, Env *env) {
-  S *car, *cdr;
+  S *cmd, *args;
   if (isAtomC(expr))
     return (expr->Cons.type == Symbol)?
       Env_lookup(env, expr->Symbol.val):
       expr;
-  car = Paren_eval(expr->Cons.car, env);
-  cdr = expr->Cons.cdr;
-  if (car->Cons.type != Function) {
-    return Error_new("Paren_eval: undefined function.");
+  cmd = Paren_eval(expr->Cons.car, env);
+  if (cmd->Cons.type != Function) {
+    return Error_new("eval: undefined function.");
   }
-  return nil; // TODO: to apply function.
+  args = expr;
+  while (!isNilC(args = args->Cons.cdr)) {
+    args->Cons.car = Paren_eval(args->Cons.car, env);
+  }
+  // invoke primitive function.
+  if (cmd->Function.f != NULL) {
+    return (cmd->Function.f)(args);
+  }
+  // invoke user define function.
+  else {
+    return nil;    // TODO: apply user defined function.
+  }
 }
 
 S *Paren_print(S *expr) {
@@ -44,6 +54,8 @@ S *Paren_print(S *expr) {
       fprintf(stdout, "%f", expr->Number.val);
     else if (expr->Cons.type == Character)
       fprintf(stdout, "%c", expr->Character.val);
+    else if (expr->Cons.type == Function)
+      fprintf(stdout, "%d", expr->Cons.type);
     else
       fprintf(stdout, "%s", expr->String.val);
   }

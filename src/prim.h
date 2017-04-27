@@ -53,7 +53,8 @@ typedef union S {
   } Number;
   struct {
     Type type;
-    void *val;
+    union S *args;
+    union S *(* f)(union S *);
   } Function;
   struct {
     Type type;
@@ -76,7 +77,7 @@ extern S *Keyword_new(char *val);
 extern S *String_new(char *val);
 extern S *Character_new(char val);
 extern S *Number_new(double val);
-// extern S *Function_new(char *val);
+extern S *Function_new(S *f(S *), S *args);
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
 extern int isAtomC(S *expr);
@@ -93,6 +94,7 @@ extern S *third(S *expr);
 extern S *isNil(S *expr);
 extern S *isAtom(S *expr);
 extern S *cons(S *expr);
+// extern S *list(S *expr);
 extern S *length(S *expr);
 extern S *reverse(S *expr);
 // extern S *plus(S *expr);
