@@ -21,14 +21,16 @@ void Prim_init(Env *env) {
   t = Symbol_new("t");
   out = Stream_new(stdout);
   in = Stream_new(stdin);
+  Env_install(env, "dump", Function_new(dump, NULL));
   Env_install(env, "list", Function_new(list, NULL));
-  Env_install(env, "car", Function_new(cons, NULL));
-  Env_install(env, "cdr", Function_new(cons, NULL));
+  Env_install(env, "car", Function_new(car, NULL));
+  Env_install(env, "cdr", Function_new(cdr, NULL));
   Env_install(env, "cons", Function_new(cons, NULL));
   Env_install(env, "length", Function_new(length, NULL));
   Env_install(env, "nil", nil);
   Env_install(env, "t", t);
-  Env_install(env, "OUT", OUT);
+  Env_install(env, "stdin", in);
+  Env_install(env, "stdout", out);
 }
 
 static S *S_alloc() {
@@ -185,13 +187,21 @@ S *Error_new(char *str) {
 S *car(S *expr) {
   if (S_length(expr) != 1)
     return Error_new("car: Illegal argument exception.");
-  return expr->Cons.car;
+  if (S_isNil(expr->Cons.car))
+    return nil;
+  if ((expr->Cons.car)->Cons.type != Cons)
+    return Error_new("car: not a list.");
+  return (expr->Cons.car)->Cons.car;
 }
 
 S *cdr(S *expr) {
   if (S_length(expr) != 1)
-    return Error_new("car: Illegal argument exception.");
-  return expr->Cons.cdr;
+    return Error_new("cdr: Illegal argument exception.");
+  if (S_isNil(expr->Cons.car))
+    return nil;
+  if ((expr->Cons.car)->Cons.type != Cons)
+    return Error_new("cdr: not a list.");
+  return (expr->Cons.car)->Cons.cdr;
 }
 
 S *first(S *expr) {
@@ -228,6 +238,8 @@ S *length(S *expr) {
 S *cons(S *expr) {
   S *prev;
   if (S_length(expr) != 2)
+    return Error_new("cons: Illegal argument exception.");
+  if (((expr->Cons.cdr)->Cons.car)->Cons.type != Cons && !S_isNil((expr->Cons.cdr)->Cons.car))
     return Error_new("cons: Illegal argument exception.");
   prev = S_alloc();
   prev->Cons.type = Cons;
