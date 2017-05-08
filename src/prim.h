@@ -18,6 +18,8 @@ typedef enum {
   Error
 } Type;
 
+extern char *TypeString[10];
+
 typedef union S {
   struct {
     Type type;
@@ -75,6 +77,14 @@ typedef union S {
 
 extern void Prim_init(Env *env);
 
+// global variable
+extern S *t;
+extern S *nil;
+extern S *in;
+extern S *out;
+extern S *err;
+
+// constructer
 extern S *Cons_new(S *car, S *cdr);
 extern S *Map_new(S *car, S *cdr);
 extern S *Symbol_new(char *val);
@@ -86,21 +96,10 @@ extern S *Function_new(S *f(S *), S *args);
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
 
+// method
 extern S *S_reverse(S *expr);
+extern int S_length(S *expr);
 extern int S_isAtom(S *expr);
 extern int S_isNil(S *expr);
-
-extern S *t;
-extern S *nil;
-extern S *in;
-extern S *out;
-extern S *err;
-
-extern S *isNil(S *expr);
-extern S *isAtom(S *expr);
-extern S *list(S *expr);
-extern S *length(S *expr);
-// extern S *asString(S *expr);
-extern S *dump(S *expr);
 
 #endif

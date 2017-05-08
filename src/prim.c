@@ -18,6 +18,19 @@ S *in;
 S *out;
 S *err;
 
+char *TypeString[10] = {
+  "Cons",
+  "Map",
+  "Symbol",
+  "Keyword",
+  "String",
+  "Character",
+  "Number",
+  "Function",
+  "Stream",
+  "Error"
+};
+
 static S *S_alloc() {
   S *expr;
   if ((expr = (S *)calloc(1, sizeof(S))) == NULL) {
@@ -36,7 +49,100 @@ static struct MapNode *MapNode_alloc() {
   return mapNode;
 }
 
-static int S_length(S *expr) {
+static S *Function_isNil(S *expr) {
+  return S_isNil(expr)? t: nil;
+}
+
+static S *Function_isAtom(S *expr) {
+  return S_isAtom(expr)? t: nil;
+}
+
+static S *Function_car(S *expr) {
+  if (S_length(expr) != 1)
+    return Error_new("car: Illegal argument exception.");
+  if (S_isNil(FIRST(expr)))
+    return nil;
+  if (FIRST(expr)->Cons.type != Cons)
+    return Error_new("car: not a list.");
+  return FIRST(FIRST(expr));
+}
+
+static S *Function_cdr(S *expr) {
+  if (S_length(expr) != 1)
+    return Error_new("cdr: Illegal argument exception.");
+  if (S_isNil(FIRST(expr)))
+    return nil;
+  if (FIRST(expr)->Cons.type != Cons)
+    return Error_new("cdr: not a list.");
+  return SECOND(expr);
+}
+
+static S *Function_cons(S *expr) {
+  S *prev;
+  if (S_length(expr) != 2)
+    return Error_new("cons: Illegal argument exception.");
+  if (SECOND(expr)->Cons.type != Cons && !S_isNil(SECOND(expr)))
+    return Error_new("cons: Illegal argument exception.");
+  prev = S_alloc();
+  prev->Cons.type = Cons;
+  FIRST(prev) = FIRST(expr);
+  REST(prev) = SECOND(expr);
+  return prev;
+}
+
+static S *Function_list(S *expr) {
+  return expr;
+}
+
+static S *Function_length(S *expr) {
+  int count;
+  count = 0;
+  if (S_isNil(expr))
+    return Number_new(count);
+  else if (expr->Cons.type == Cons)
+    return Number_new(S_length(FIRST(expr)));
+  else
+    return Error_new("length: cannnot apply.");
+}
+
+static S *Function_desc(S *expr) {
+  printf("address: %d\n", (int)expr);
+  printf("type: %s\n", TypeString[expr->Cons.type]);
+  switch (expr->Cons.type) {
+    case Cons:
+      printf("car: %d\n", (int)FIRST(expr));
+      printf("cdr: %d\n", (int)REST(expr));
+      break;
+    case Map:
+      break;
+    case Symbol:
+      printf("name: %s\n", expr->Symbol.val);
+      break;
+    case Keyword:
+      printf("name: %s\n", expr->Keyword.val);
+      break;
+    case String:
+      printf("value: %s\n", expr->String.val);
+      break;
+    case Character:
+      printf("value: %c\n", expr->Character.val);
+      break;
+    case Number:
+      printf("value: %f\n", expr->Number.val);
+      break;
+    case Function:
+      break;
+    case Stream:
+      break;
+    case Error:
+      break;
+    default:
+      break;
+  }
+  return expr;
+}
+
+int S_length(S *expr) {
   int count;
   count = 1;
   if (expr->Cons.type != Cons)
@@ -46,6 +152,19 @@ static int S_length(S *expr) {
       count++;
     return count;
   }
+}
+
+S *S_reverse(S *expr) {
+  S *root;
+  if (S_isNil(expr))
+    return nil;
+  assert(expr->Cons.type == Cons);
+  root = nil;
+  while (!S_isNil(expr)) {
+    root = Cons_new(FIRST(expr), root);
+    expr = REST(expr);
+  }
+  return root;
 }
 
 int S_isAtom(S *expr) {
@@ -169,125 +288,6 @@ S *Error_new(char *str) {
   return expr;
 }
 
-S *Function_car(S *expr) {
-  if (S_length(expr) != 1)
-    return Error_new("car: Illegal argument exception.");
-  if (S_isNil(FIRST(expr)))
-    return nil;
-  if (FIRST(expr)->Cons.type != Cons)
-    return Error_new("car: not a list.");
-  return FIRST(FIRST(expr));
-}
-
-S *Function_cdr(S *expr) {
-  if (S_length(expr) != 1)
-    return Error_new("cdr: Illegal argument exception.");
-  if (S_isNil(FIRST(expr)))
-    return nil;
-  if (FIRST(expr)->Cons.type != Cons)
-    return Error_new("cdr: not a list.");
-  return SECOND(expr);
-}
-
-S *isAtom(S *expr) {
-  return S_isAtom(expr)? t: nil;
-}
-
-S *isNil(S *expr) {
-  return S_isNil(expr)? t: nil;
-}
-
-S *Function_length(S *expr) {
-  int count;
-  count = 0;
-  if (S_isNil(expr))
-    return Number_new(count);
-  else if (expr->Cons.type == Cons)
-    return Number_new(S_length(FIRST(expr)));
-  else
-    return Error_new("length: cannnot apply.");
-}
-
-S *Function_cons(S *expr) {
-  S *prev;
-  if (S_length(expr) != 2)
-    return Error_new("cons: Illegal argument exception.");
-  if (SECOND(expr)->Cons.type != Cons && !S_isNil(SECOND(expr)))
-    return Error_new("cons: Illegal argument exception.");
-  prev = S_alloc();
-  prev->Cons.type = Cons;
-  FIRST(prev) = FIRST(expr);
-  REST(prev) = SECOND(expr);
-  return prev;
-}
-
-S *Function_list(S *expr) {
-  return expr;
-}
-
-S *S_reverse(S *expr) {
-  S *root;
-  if (S_isNil(expr))
-    return nil;
-  assert(expr->Cons.type == Cons);
-  root = nil;
-  while (!S_isNil(expr)) {
-    root = Cons_new(FIRST(expr), root);
-    expr = REST(expr);
-  }
-  return root;
-}
-
-static char *typeString[10] = {
-  "Cons",
-  "Map",
-  "Symbol",
-  "Keyword",
-  "String",
-  "Character",
-  "Number",
-  "Function",
-  "Stream",
-  "Error"
-};
-
-S *Function_desc(S *expr) {
-  printf("address: %d\n", (int)expr);
-  printf("type: %s\n", typeString[expr->Cons.type]);
-  switch (expr->Cons.type) {
-    case Cons:
-      printf("car: %d\n", (int)FIRST(expr));
-      printf("cdr: %d\n", (int)REST(expr));
-      break;
-    case Map:
-      break;
-    case Symbol:
-      printf("name: %s\n", expr->Symbol.val);
-      break;
-    case Keyword:
-      printf("name: %s\n", expr->Keyword.val);
-      break;
-    case String:
-      printf("value: %s\n", expr->String.val);
-      break;
-    case Character:
-      printf("value: %c\n", expr->Character.val);
-      break;
-    case Number:
-      printf("value: %f\n", expr->Number.val);
-      break;
-    case Function:
-      break;
-    case Stream:
-      break;
-    case Error:
-      break;
-    default:
-      break;
-  }
-  return expr;
-}
-
 // S *plus(S *args) {
 //   S *sum, *car;
 //   sum = S_alloc();
@@ -323,10 +323,12 @@ void Prim_init(Env *env) {
   Env_install(env, "stdin", in);
   Env_install(env, "stdout", out);
   Env_install(env, "stderr", err);
-  Env_install(env, "desc", Function_new(Function_desc, NULL));
-  Env_install(env, "list", Function_new(Function_list, NULL));
+  Env_install(env, "null?", Function_new(Function_isNil, NULL));
+  Env_install(env, "atom?", Function_new(Function_isAtom, NULL));
   Env_install(env, "car", Function_new(Function_car, NULL));
   Env_install(env, "cdr", Function_new(Function_cdr, NULL));
   Env_install(env, "cons", Function_new(Function_cons, NULL));
+  Env_install(env, "list", Function_new(Function_list, NULL));
   Env_install(env, "length", Function_new(Function_length, NULL));
+  Env_install(env, "desc", Function_new(Function_desc, NULL));
 }
