@@ -23,26 +23,14 @@
 
 (defun print-depend ()
   (dolist (cpath (collect-c-files))
-    (let* ((file (pathname-name cpath))
-           (file_t.c? (match? "_t$" file)))
+    (let ((file (pathname-name cpath)))
       (princln
         (list->string
           (list*
-            (mkstr file (if file_t.c? "$(exe)" ".o") ":")
+            (mkstr file ".o:")
             (file-namestring cpath)
-            (mkstr-if file_t.c?
-              (subseq file 0 (- (length file) 2)) ".o")
             (collect-depend cpath))
-          " "))
-      (when file_t.c?
-        (princln
-          (mkstr #\tab "$(CC) -o " file "$(exe) " file ".c "
-                 (list->string
-                   (mapcar (lambda (path)
-                             (mkstr (pathname-name path) ".o"))
-                           (collect-depend (mkstr (match?->string "^[^_]*" file) ".c")))
-                   " ")))
-        (princln (mkstr #\tab "$(pref)" file "$(exe)"))))))
+          " ")))))
 
 (defun main ()
   (write-to!

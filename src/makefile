@@ -29,4 +29,4 @@ $(paren): paren.c $(objs)
 include cdep.d
 
 clean:
-	$(RM) *.o *.exe *_t$(exe)
+	$(RM) *.o *.exe
