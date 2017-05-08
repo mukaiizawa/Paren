@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include <math.h>
 
 #include "macro.h"
@@ -17,25 +18,6 @@ S *in;
 S *out;
 S *err;
 
-void Prim_init(Env *env) {
-  t = Symbol_new("t");
-  nil = Symbol_new("nil");
-  in = Stream_new(stdin);
-  out = Stream_new(stdout);
-  err = Stream_new(stderr);
-  Env_install(env, "t", t);
-  Env_install(env, "nil", nil);
-  Env_install(env, "stdin", in);
-  Env_install(env, "stdout", out);
-  Env_install(env, "stderr", err);
-  Env_install(env, "dump", Function_new(dump, NULL));
-  Env_install(env, "list", Function_new(list, NULL));
-  Env_install(env, "car", Function_new(car, NULL));
-  Env_install(env, "cdr", Function_new(cdr, NULL));
-  Env_install(env, "cons", Function_new(cons, NULL));
-  Env_install(env, "length", Function_new(length, NULL));
-}
-
 static S *S_alloc() {
   S *expr;
   if ((expr = (S *)calloc(1, sizeof(S))) == NULL) {
@@ -43,6 +25,15 @@ static S *S_alloc() {
     exit(1);
   }
   return expr;
+}
+
+static struct MapNode *MapNode_alloc() {
+  struct MapNode *mapNode;
+  if ((mapNode = (struct MapNode *)calloc(1, sizeof(struct MapNode))) == NULL) {
+    fprintf(stderr, "S_alloc: Cannot allocate memory.");
+    exit(1);
+  }
+  return mapNode;
 }
 
 static int S_length(S *expr) {
@@ -76,6 +67,14 @@ S *Cons_new(S *car, S *cdr) {
   prev->Cons.car = car;
   prev->Cons.cdr = cdr;
   return prev;
+}
+
+S *Map_new(S *car, S *cdr) {
+  S *expr;
+  expr = S_alloc();
+  expr->Map.type = Map;
+  expr->Map.head = MapNode_alloc();
+  return expr;
 }
 
 S *Symbol_new(char *val) {
@@ -135,49 +134,32 @@ S *Stream_new(FILE *stream) {
   return expr;
 }
 
-static struct MapNode *MapNode_alloc() {
-  struct MapNode *mapNode;
-  if ((mapNode = (struct MapNode *)calloc(1, sizeof(struct MapNode))) == NULL) {
-    fprintf(stderr, "S_alloc: Cannot allocate memory.");
-    exit(1);
-  }
-  return mapNode;
-}
+// static S *Map_put(S *expr) {
+//   S *obj, *key, *val;
+//   struct MapNode *node;
+//   if (S_length(expr) != 3)
+//     return Error_new("Map.put: Illegal argument exception.");
+//   node = MapNode_alloc();
+//   obj = first(expr);
+//   key = second(expr);
+//   val = third(expr);
+//   node->next = obj->Map.head->next;
+//   obj->Map.head = node;
+//   return obj;
+// }
 
-static S *Map_put(S *expr) {
-  S *obj, *key, *val;
-  struct MapNode *node;
-  if (S_length(expr) != 3)
-    return Error_new("Map.put: Illegal argument exception.");
-  node = MapNode_alloc();
-  obj = first(expr);
-  key = second(expr);
-  val = third(expr);
-  node->next = obj->Map.head->next;
-  obj->Map.head = node;
-  return obj;
-}
-
-static S *Map_get(S *expr) {
-  S *obj, *key;
-  struct MapNode *node;
-  if (S_length(expr) != 2)
-    return Error_new("Map.put: Illegal argument exception.");
-  obj = first(expr);
-  key = second(expr);
-  node = obj->Map.head;
-  while ((node = node->next) != NULL) {
-  }
-  return obj;
-}
-
-S *newMap() {
-  S *expr;
-  expr = S_alloc();
-  expr->Map.type = Map;
-  expr->Map.head = MapNode_alloc();
-  return expr;
-}
+// static S *Map_get(S *expr) {
+//   S *obj, *key;
+//   struct MapNode *node;
+//   if (S_length(expr) != 2)
+//     return Error_new("Map.put: Illegal argument exception.");
+//   obj = first(expr);
+//   key = second(expr);
+//   node = obj->Map.head;
+//   while ((node = node->next) != NULL) {
+//   }
+//   return obj;
+// }
 
 S *Error_new(char *str) {
   S *expr;
@@ -205,18 +187,6 @@ S *cdr(S *expr) {
   if ((expr->Cons.car)->Cons.type != Cons)
     return Error_new("cdr: not a list.");
   return (expr->Cons.car)->Cons.cdr;
-}
-
-S *first(S *expr) {
-  return car(expr);
-}
-
-S *second(S *expr) {
-  return car(cdr(expr));
-}
-
-S *third(S *expr) {
-  return car(cdr(cdr(expr)));
 }
 
 S *isAtom(S *expr) {
@@ -255,12 +225,11 @@ S *list(S *expr) {
   return expr;
 }
 
-S *reverse(S *expr) {
+S *S_reverse(S *expr) {
   S *root;
   if (S_isNil(expr))
     return nil;
-  if (expr->Cons.type != Cons)
-    return Error_new("reverse: Illegal argument exception.");
+  assert(expr->Cons.type != Cons);
   root = nil;
   while (!S_isNil(expr)) {
     root = Cons_new(expr->Cons.car, root);
@@ -342,3 +311,22 @@ S *dump(S *expr) {
 //   new->string = expr->string;
 //   return new;
 // }
+
+void Prim_init(Env *env) {
+  t = Symbol_new("t");
+  nil = Symbol_new("nil");
+  in = Stream_new(stdin);
+  out = Stream_new(stdout);
+  err = Stream_new(stderr);
+  Env_install(env, "t", t);
+  Env_install(env, "nil", nil);
+  Env_install(env, "stdin", in);
+  Env_install(env, "stdout", out);
+  Env_install(env, "stderr", err);
+  Env_install(env, "dump", Function_new(dump, NULL));
+  Env_install(env, "list", Function_new(list, NULL));
+  Env_install(env, "car", Function_new(car, NULL));
+  Env_install(env, "cdr", Function_new(cdr, NULL));
+  Env_install(env, "cons", Function_new(cons, NULL));
+  Env_install(env, "length", Function_new(length, NULL));
+}

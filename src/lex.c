@@ -44,7 +44,7 @@ S *Lex_parseExpr() {
       expr = Cons_new(Lex_parseExpr(), expr);
     }
     Ahdrd_skipRead(ahdrd);    // skip ')'
-    return reverse(expr);
+    return S_reverse(expr);
   }
   else
     return Lex_parseAtom();

@@ -71,7 +71,7 @@ typedef union S {
 extern void Prim_init(Env *env);
 
 extern S *Cons_new(S *car, S *cdr);
-// extern S *Map_new(S *car, S *cdr);
+extern S *Map_new(S *car, S *cdr);
 extern S *Symbol_new(char *val);
 extern S *Keyword_new(char *val);
 extern S *String_new(char *val);
@@ -80,6 +80,8 @@ extern S *Number_new(double val);
 extern S *Function_new(S *f(S *), S *args);
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
+
+extern S *S_reverse(S *expr);
 extern int S_isAtom(S *expr);
 extern int S_isNil(S *expr);
 
@@ -89,18 +91,11 @@ extern S *in;
 extern S *out;
 extern S *err;
 
-extern S *car(S *expr);
-extern S *cdr(S *expr);
-extern S *first(S *expr);
-extern S *second(S *expr);
-extern S *third(S *expr);
 extern S *isNil(S *expr);
 extern S *isAtom(S *expr);
 extern S *cons(S *expr);
 extern S *list(S *expr);
 extern S *length(S *expr);
-extern S *reverse(S *expr);
-// extern S *plus(S *expr);
 // extern S *asString(S *expr);
 extern S *dump(S *expr);
 
