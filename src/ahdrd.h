@@ -2,8 +2,8 @@
   ahead reader.
 */
 
-#ifndef AHDRD
-#define AHDRD
+#ifndef IS_LOADED_AHDRD
+#define IS_LOADED_AHDRD
 
 #include "ringbuf.h"
 

@@ -2,8 +2,8 @@
   ring buffer.
 */
 
-#ifndef RINGBUF
-#define RINGBUF
+#ifndef IS_LOADED_RINGBUF
+#define IS_LOADED_RINGBUF
 
 #define RINGBUF_BUFSIZ 100
 

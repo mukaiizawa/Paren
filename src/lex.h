@@ -2,8 +2,8 @@
   lexical analysis.
 */
 
-#ifndef LEX
-#define LEX
+#ifndef IS_LOADED_LEX
+#define IS_LOADED_LEX
 
 #include <stdio.h>
 
