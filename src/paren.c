@@ -3,6 +3,7 @@
 */
 
 #include <stdio.h>
+#include <math.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -52,8 +53,14 @@ S *Paren_eval(S *expr, Env *env) {
 S *Paren_print(S *expr) {
   int type;
   if (S_isAtom(expr)) {
-    if (expr->Cons.type == Number)
-      fprintf(stdout, "%f", expr->Number.val);
+    if (expr->Cons.type == Number) {
+      double intptr, fraction;
+      fraction = modf(expr->Number.val, &intptr);
+      if (fraction == 0)
+        fprintf(stdout, "%d", (int)intptr);
+      else
+        fprintf(stdout, "%f", expr->Number.val);
+    }
     else if (expr->Cons.type == Character)
       fprintf(stdout, "%c", expr->Character.val);
     else if (expr->Cons.type == Function)
