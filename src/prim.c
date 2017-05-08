@@ -11,26 +11,29 @@
 #include "prim.h"
 #include "lex.h"
 
-S *nil;
 S *t;
-S *out;
+S *nil;
 S *in;
+S *out;
+S *err;
 
 void Prim_init(Env *env) {
-  nil = Symbol_new("nil");
   t = Symbol_new("t");
-  out = Stream_new(stdout);
+  nil = Symbol_new("nil");
   in = Stream_new(stdin);
+  out = Stream_new(stdout);
+  err = Stream_new(stderr);
+  Env_install(env, "t", t);
+  Env_install(env, "nil", nil);
+  Env_install(env, "stdin", in);
+  Env_install(env, "stdout", out);
+  Env_install(env, "stderr", err);
   Env_install(env, "dump", Function_new(dump, NULL));
   Env_install(env, "list", Function_new(list, NULL));
   Env_install(env, "car", Function_new(car, NULL));
   Env_install(env, "cdr", Function_new(cdr, NULL));
   Env_install(env, "cons", Function_new(cons, NULL));
   Env_install(env, "length", Function_new(length, NULL));
-  Env_install(env, "nil", nil);
-  Env_install(env, "t", t);
-  Env_install(env, "stdin", in);
-  Env_install(env, "stdout", out);
 }
 
 static S *S_alloc() {

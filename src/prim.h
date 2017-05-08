@@ -85,6 +85,9 @@ extern int S_isNil(S *expr);
 
 extern S *t;
 extern S *nil;
+extern S *in;
+extern S *out;
+extern S *err;
 
 extern S *car(S *expr);
 extern S *cdr(S *expr);
