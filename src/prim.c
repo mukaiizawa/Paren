@@ -42,7 +42,7 @@ static int S_length(S *expr) {
   if (expr->Cons.type != Cons)
     return count;
   else {
-    while (!S_isNil(expr = expr->Cons.cdr))
+    while (!S_isNil(expr = REST(expr)))
       count++;
     return count;
   }
@@ -64,8 +64,8 @@ S *Cons_new(S *car, S *cdr) {
   }
   prev = S_alloc();
   prev->Cons.type = Cons;
-  prev->Cons.car = car;
-  prev->Cons.cdr = cdr;
+  FIRST(prev) = car;
+  REST(prev) = cdr;
   return prev;
 }
 
@@ -169,24 +169,24 @@ S *Error_new(char *str) {
   return expr;
 }
 
-S *car(S *expr) {
+S *Function_car(S *expr) {
   if (S_length(expr) != 1)
     return Error_new("car: Illegal argument exception.");
-  if (S_isNil(expr->Cons.car))
+  if (S_isNil(FIRST(expr)))
     return nil;
-  if ((expr->Cons.car)->Cons.type != Cons)
+  if (FIRST(expr)->Cons.type != Cons)
     return Error_new("car: not a list.");
-  return (expr->Cons.car)->Cons.car;
+  return FIRST(FIRST(expr));
 }
 
-S *cdr(S *expr) {
+S *Function_cdr(S *expr) {
   if (S_length(expr) != 1)
     return Error_new("cdr: Illegal argument exception.");
-  if (S_isNil(expr->Cons.car))
+  if (S_isNil(FIRST(expr)))
     return nil;
-  if ((expr->Cons.car)->Cons.type != Cons)
+  if (FIRST(expr)->Cons.type != Cons)
     return Error_new("cdr: not a list.");
-  return (expr->Cons.car)->Cons.cdr;
+  return SECOND(expr);
 }
 
 S *isAtom(S *expr) {
@@ -197,31 +197,31 @@ S *isNil(S *expr) {
   return S_isNil(expr)? t: nil;
 }
 
-S *length(S *expr) {
+S *Function_length(S *expr) {
   int count;
   count = 0;
   if (S_isNil(expr))
     return Number_new(count);
   else if (expr->Cons.type == Cons)
-    return Number_new(S_length(expr->Cons.car));
+    return Number_new(S_length(FIRST(expr)));
   else
     return Error_new("length: cannnot apply.");
 }
 
-S *cons(S *expr) {
+S *Function_cons(S *expr) {
   S *prev;
   if (S_length(expr) != 2)
     return Error_new("cons: Illegal argument exception.");
-  if (((expr->Cons.cdr)->Cons.car)->Cons.type != Cons && !S_isNil((expr->Cons.cdr)->Cons.car))
+  if (SECOND(expr)->Cons.type != Cons && !S_isNil(SECOND(expr)))
     return Error_new("cons: Illegal argument exception.");
   prev = S_alloc();
   prev->Cons.type = Cons;
-  prev->Cons.car = expr->Cons.car;
-  prev->Cons.cdr = (expr->Cons.cdr)->Cons.car;
+  FIRST(prev) = FIRST(expr);
+  REST(prev) = SECOND(expr);
   return prev;
 }
 
-S *list(S *expr) {
+S *Function_list(S *expr) {
   return expr;
 }
 
@@ -229,11 +229,11 @@ S *S_reverse(S *expr) {
   S *root;
   if (S_isNil(expr))
     return nil;
-  assert(expr->Cons.type != Cons);
+  assert(expr->Cons.type == Cons);
   root = nil;
   while (!S_isNil(expr)) {
-    root = Cons_new(expr->Cons.car, root);
-    expr = expr->Cons.cdr;
+    root = Cons_new(FIRST(expr), root);
+    expr = REST(expr);
   }
   return root;
 }
@@ -251,13 +251,13 @@ static char *typeString[10] = {
   "Error"
 };
 
-S *dump(S *expr) {
+S *Function_desc(S *expr) {
   printf("address: %d\n", (int)expr);
   printf("type: %s\n", typeString[expr->Cons.type]);
   switch (expr->Cons.type) {
     case Cons:
-      printf("car: %d\n", (int)expr->Cons.car);
-      printf("cdr: %d\n", (int)expr->Cons.cdr);
+      printf("car: %d\n", (int)FIRST(expr));
+      printf("cdr: %d\n", (int)REST(expr));
       break;
     case Map:
       break;
@@ -323,10 +323,10 @@ void Prim_init(Env *env) {
   Env_install(env, "stdin", in);
   Env_install(env, "stdout", out);
   Env_install(env, "stderr", err);
-  Env_install(env, "dump", Function_new(dump, NULL));
-  Env_install(env, "list", Function_new(list, NULL));
-  Env_install(env, "car", Function_new(car, NULL));
-  Env_install(env, "cdr", Function_new(cdr, NULL));
-  Env_install(env, "cons", Function_new(cons, NULL));
-  Env_install(env, "length", Function_new(length, NULL));
+  Env_install(env, "desc", Function_new(Function_desc, NULL));
+  Env_install(env, "list", Function_new(Function_list, NULL));
+  Env_install(env, "car", Function_new(Function_car, NULL));
+  Env_install(env, "cdr", Function_new(Function_cdr, NULL));
+  Env_install(env, "cons", Function_new(Function_cons, NULL));
+  Env_install(env, "length", Function_new(Function_length, NULL));
 }

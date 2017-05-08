@@ -68,6 +68,11 @@ typedef union S {
 
 #include "env.h"
 
+#define FIRST(expr) (expr->Cons.car)
+#define SECOND(expr) ((expr->Cons.cdr)->Cons.car)
+#define THIRD(expr) (((expr->Cons.cdr)->Cons.cdr)->Cons.car)
+#define REST(expr) (expr->Cons.cdr)
+
 extern void Prim_init(Env *env);
 
 extern S *Cons_new(S *car, S *cdr);
@@ -93,7 +98,6 @@ extern S *err;
 
 extern S *isNil(S *expr);
 extern S *isAtom(S *expr);
-extern S *cons(S *expr);
 extern S *list(S *expr);
 extern S *length(S *expr);
 // extern S *asString(S *expr);
