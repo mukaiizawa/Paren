@@ -8,8 +8,9 @@
 
 #include "sexpr.h"
 #include "prim.h"
-#include "lex.h"
+#include "ringbuf.h"
 #include "ahdrd.h"
+#include "lex.h"
 
 static Ahdrd *ahdrd;
 

@@ -10,6 +10,8 @@
 #define SECOND(expr) ((expr->Cons.cdr)->Cons.car)
 #define THIRD(expr) (((expr->Cons.cdr)->Cons.cdr)->Cons.car)
 #define REST(expr) (expr->Cons.cdr)
+#define ATOMP(expr) (expr->Cons.type != Cons)
+#define NILP(expr) (expr == nil)
 
 typedef enum {
   Cons,

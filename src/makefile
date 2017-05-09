@@ -19,12 +19,12 @@ ifeq ($(os), windows)
 endif
 
 paren=paren$(exe)
-objs=paren.c prim.o lex.o env.o ahdrd.o ringbuf.o
+objs=paren.c sexpr.o prim.o lex.o env.o ahdrd.o ringbuf.o
 
 all: $(paren)
 
 $(paren): paren.c $(objs)
-	$(CC) -o $@ $(objs)
+	$(CC) -Wall -o $@ $(objs)
 
 include cdep.d
 

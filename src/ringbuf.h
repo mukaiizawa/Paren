@@ -2,9 +2,6 @@
   ring buffer.
 */
 
-#ifndef IS_LOADED_RINGBUF
-#define IS_LOADED_RINGBUF
-
 #define RINGBUF_BUFSIZ 100
 
 typedef struct {
@@ -19,5 +16,3 @@ extern void Ringbuf_put(Ringbuf *ringbuf, int c);
 extern int Ringbuf_get(Ringbuf *ringbuf);
 extern int Ringbuf_size(Ringbuf *ringbuf);
 extern void Ringbuf_dump(Ringbuf *ringbuf);
-
-#endif

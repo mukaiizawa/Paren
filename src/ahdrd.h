@@ -2,11 +2,6 @@
   ahead reader.
 */
 
-#ifndef IS_LOADED_AHDRD
-#define IS_LOADED_AHDRD
-
-#include "ringbuf.h"
-
 #define AHDRD_TOKEN_SIZE 2000
 
 typedef struct {
@@ -28,5 +23,3 @@ extern char *Ahdrd_readKeyword(Ahdrd *ahdrd);
 extern char *Ahdrd_readSymbol(Ahdrd *ahdrd);
 extern char *Ahdrd_readNumber(Ahdrd *ahdrd);
 extern int Ahdrd_isNumber(Ahdrd *ahdrd);
-
-#endif
