@@ -1,5 +1,5 @@
 /*
-   environment.
+   paren environment.
 */
 
 #include <stdio.h>
@@ -23,7 +23,7 @@ static int Env_isNil(struct Env *env) {
   return env == NULL;
 }
 
-static int EnvNode_isNil(struct EnvNode *node) {
+static int Env_isEmpty(struct EnvNode *nodde) {
   return node == NULL;
 }
 
@@ -68,7 +68,7 @@ S *Env_lookup(struct Env *env, char *key) {
   struct EnvNode *node;
   while (!Env_isNil(env = env->outer)) {
     node = env->head;
-    while (!EnvNode_isNil(node = node->next)) {
+    while (!Env_isEmpty(node = node->next)) {
       if (strcmp(node->key, key) == 0) {
         return node->val;
       }

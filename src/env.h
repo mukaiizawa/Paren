@@ -1,22 +1,22 @@
 /*
-  environment.
+  paren environment.
 */
 
-typedef struct Env {
-  struct EnvNode {
-    char *key;
-    S *val;
-    struct EnvNode *next;
-  } *head;
-  struct Env *outer;
-} Env;
-
-// TODO: Map型を完成させる。
 // typedef struct Env {
-//   S *outer, *map;
+//   struct EnvNode {
+//     char *key;
+//     S *val;
+//     struct EnvNode *next;
+//   } *head;
+//   struct Env *outer;
 // } Env;
 
-extern Env *Env_new();
+typedef struct Env {
+  struct Env *outer;
+  S *map;
+} Env;
+
+// extern Env *Env_new();
 extern void Env_init(Env *env);
 extern void Env_push(Env *env);
 extern void Env_pop(Env *env);
