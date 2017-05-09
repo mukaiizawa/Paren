@@ -11,8 +11,6 @@
 #include "sexpr.h"
 #include "prim.h"
 
-S *t;
-S *nil;
 S *in;
 S *out;
 S *err;

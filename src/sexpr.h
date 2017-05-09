@@ -72,6 +72,9 @@ typedef union S {
   } Error;
 } S;
 
+extern S *t;
+extern S *nil;
+
 extern S *Cons_new(S *car, S *cdr);
 extern S *Map_new(S *car, S *cdr);
 extern S *Symbol_new(char *val);

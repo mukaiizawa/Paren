@@ -5,8 +5,6 @@
 extern void Prim_init(S *env);
 
 // global variable
-extern S *t;
-extern S *nil;
 extern S *in;
 extern S *out;
 extern S *err;

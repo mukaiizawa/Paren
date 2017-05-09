@@ -7,8 +7,8 @@
 
 #include "sexpr.h"
 
-extern S *t;
-extern S *nil;
+S *t;
+S *nil;
 
 char *TypeString[10] = {
   "Cons",

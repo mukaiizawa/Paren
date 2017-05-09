@@ -11,6 +11,11 @@ typedef struct Env {
   struct Env *outer;
 } Env;
 
+// TODO: Map型を完成させる。
+// typedef struct Env {
+//   S *outer, *map;
+// } Env;
+
 extern Env *Env_new();
 extern void Env_init(Env *env);
 extern void Env_push(Env *env);
