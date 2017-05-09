@@ -8,7 +8,7 @@
 #include <assert.h>
 #include <math.h>
 
-#include "macro.h"
+#include "sexpr.h"
 #include "prim.h"
 #include "lex.h"
 
@@ -17,19 +17,6 @@ S *nil;
 S *in;
 S *out;
 S *err;
-
-char *TypeString[10] = {
-  "Cons",
-  "Map",
-  "Symbol",
-  "Keyword",
-  "String",
-  "Character",
-  "Number",
-  "Function",
-  "Stream",
-  "Error"
-};
 
 static S *S_alloc() {
   S *expr;
@@ -146,11 +133,12 @@ S *S_read() {
   return Lex_parseExpr();
 }
 
-S *S_eval(S *expr, Env *env) {
+S *S_eval(S *expr, S *env) {
   S *root, *cmd, *args;
   if (S_isAtom(expr))
     return (expr->Symbol.type == Symbol)?
-      Env_lookup(env, expr->Symbol.val):
+      // Map_lookup(env, expr->Symbol.val)
+      expr:
       expr;
   root = expr;
   while (!S_isNil(expr)) {
@@ -373,23 +361,23 @@ S *Error_new(char *str) {
 //   return new;
 // }
 
-void Prim_init(Env *env) {
+void Prim_init(S *env) {
   t = Symbol_new("t");
   nil = Symbol_new("nil");
   in = Stream_new(stdin);
   out = Stream_new(stdout);
   err = Stream_new(stderr);
-  Env_install(env, "t", t);
-  Env_install(env, "nil", nil);
-  Env_install(env, "stdin", in);
-  Env_install(env, "stdout", out);
-  Env_install(env, "stderr", err);
-  Env_install(env, "null?", Function_new(Function_isNil, NULL));
-  Env_install(env, "atom?", Function_new(Function_isAtom, NULL));
-  Env_install(env, "car", Function_new(Function_car, NULL));
-  Env_install(env, "cdr", Function_new(Function_cdr, NULL));
-  Env_install(env, "cons", Function_new(Function_cons, NULL));
-  Env_install(env, "list", Function_new(Function_list, NULL));
-  Env_install(env, "length", Function_new(Function_length, NULL));
-  Env_install(env, "desc", Function_new(Function_desc, NULL));
+  // Map_install(env, "t", t);
+  // Map_install(env, "nil", nil);
+  // Map_install(env, "stdin", in);
+  // Map_install(env, "stdout", out);
+  // Map_install(env, "stderr", err);
+  // Map_install(env, "null?", Function_new(Function_isNil, NULL));
+  // Map_install(env, "atom?", Function_new(Function_isAtom, NULL));
+  // Map_install(env, "car", Function_new(Function_car, NULL));
+  // Map_install(env, "cdr", Function_new(Function_cdr, NULL));
+  // Map_install(env, "cons", Function_new(Function_cons, NULL));
+  // Map_install(env, "list", Function_new(Function_list, NULL));
+  // Map_install(env, "length", Function_new(Function_length, NULL));
+  // Map_install(env, "desc", Function_new(Function_desc, NULL));
 }

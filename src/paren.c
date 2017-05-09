@@ -7,16 +7,17 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "sexpr.h"
+#include "prim.h"
 #include "lex.h"
 #include "env.h"
-#include "prim.h"
 
-static struct Env *env;
+static S *env;
 
 static void init() {
-  env = Env_new();
-  Env_init(env);
-  Prim_init(env);
+  // env = Env_new();
+  // Env_init(env);
+  // Prim_init(env);
   Lex_init();
 }
 

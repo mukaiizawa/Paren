@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "sexpr.h"
 #include "prim.h"
 #include "env.h"
 
