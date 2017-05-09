@@ -2,14 +2,10 @@
   s-expression.
 */
 
-#ifndef IS_LOADED_SEXPR
-#define IS_LOADED_SEXPR
-
-// TODO: define second, third with first, rest.
 #define FIRST(expr) (expr->Cons.car)
-#define SECOND(expr) ((expr->Cons.cdr)->Cons.car)
-#define THIRD(expr) (((expr->Cons.cdr)->Cons.cdr)->Cons.car)
 #define REST(expr) (expr->Cons.cdr)
+#define SECOND(expr) FIRST(REST(expr))
+#define THIRD(expr) FIRST(REST(REST(expr)))
 #define ATOMP(expr) (expr->Cons.type != Cons)
 #define NILP(expr) (expr == nil)
 
@@ -86,5 +82,3 @@ extern S *Number_new(double val);
 extern S *Function_new(S *f(S *), S *args);
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
-
-#endif

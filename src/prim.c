@@ -10,7 +10,6 @@
 
 #include "sexpr.h"
 #include "prim.h"
-#include "lex.h"
 
 S *t;
 S *nil;
@@ -105,6 +104,8 @@ static S *Function_desc(S *expr) {
   }
   return expr;
 }
+
+extern S *Lex_parseExpr();
 
 S *S_read() {
   return Lex_parseExpr();

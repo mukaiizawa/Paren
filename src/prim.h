@@ -2,9 +2,6 @@
   paren primitive.
 */
 
-#ifndef IS_LOADED_PRIM
-#define IS_LOADED_PRIM
-
 extern void Prim_init(S *env);
 
 // global variable
@@ -22,5 +19,3 @@ extern S *S_reverse(S *expr);
 extern int S_length(S *expr);
 extern int S_isAtom(S *expr);
 extern int S_isNil(S *expr);
-
-#endif
