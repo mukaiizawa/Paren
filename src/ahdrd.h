@@ -12,7 +12,6 @@ typedef struct {
 } Ahdrd;
 
 extern Ahdrd *Ahdrd_new(FILE *_fp);
-extern char *Ahdrd_getToken(Ahdrd *ahdrd);
 extern int Ahdrd_skipRead(Ahdrd *ahdrd);
 extern int Ahdrd_read(Ahdrd *ahdrd);
 extern int Ahdrd_peek(Ahdrd *ahdrd, int n);

@@ -10,19 +10,19 @@
 #include "ringbuf.h"
 #include "ahdrd.h"
 
-Ahdrd *Ahdrd_new(FILE *_fp) {
+Ahdrd *Ahdrd_new(FILE *fp) {
   Ahdrd *ahdrd;
-  if ((ahdrd = (Ahdrd *)calloc(1, sizeof(Ahdrd))) == NULL) {
+  if ((ahdrd = (Ahdrd *)malloc(sizeof(Ahdrd))) == NULL) {
     fprintf(stderr, "Ahdrd_new: Cannot allocate memory.");
     exit(1);
   }
-  ahdrd->fp = _fp;
+  ahdrd->fp = fp;
   ahdrd->tokenPos = 0;
   ahdrd->ringbuf = Ringbuf_new();
   return ahdrd;
 }
 
-char *Ahdrd_getToken(Ahdrd *ahdrd) {
+static char *Ahdrd_getToken(Ahdrd *ahdrd) {
   char *str;
   ahdrd->token[ahdrd->tokenPos] = '\0';
   if ((str = (char *)malloc(strlen(ahdrd->token) + 1)) == NULL) {
