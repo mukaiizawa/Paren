@@ -87,8 +87,5 @@ extern S *Function_new(S *f(S *), S *args);
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
 
-extern S *S_read();
-extern S *S_eval(S *expr, S *env);
-extern S *S_print(S *expr);
 extern S *S_reverse(S *expr);
 extern int S_length(S *expr);
