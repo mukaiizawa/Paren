@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define sentinel (&sentinelNode)
+
 typedef struct Splay {
   int size;
   struct SplayNode {
@@ -14,8 +16,6 @@ typedef struct Splay {
     struct SplayNode *left, *right;
   } *root;
 } Splay;
-
-#define sentinel (&sentinelNode)
 
 static struct SplayNode sentinelNode;
 
@@ -96,8 +96,10 @@ void Splay_init(Splay *splay) {
 void *Splay_get(Splay *splay, char *key) {
   struct SplayNode *node;
   node = Splay_balance(splay, key);
-  if (node == sentinel)
+  if (node == sentinel) {
+    resume
     return NULL;
+  }
   splay->root = node;
   return node->val;
 }
@@ -118,12 +120,15 @@ void Splay_put(Splay *splay, char *key, void *val) {
   splay->root->val = val;
 }
 
+void Splay_resume(Splay *splay) {
+}
+
 int Splay_size(Splay *splay) {
   return splay->size;
 }
 
-// void Splay_remove(Splay *splay, char *key) {
-// }
+void Splay_remove(Splay *splay, char *key) {
+}
 
 void dump(struct SplayNode *node, int d) {
   int i;
@@ -133,11 +138,9 @@ void dump(struct SplayNode *node, int d) {
     printf("    ");
   printf("%s\n", (char *)node->val);
   if (node->left != sentinel) {
-    printf("<");
     dump(node->left, d + 1);
   }
   if (node->right != sentinel) {
-    printf(">");
     dump(node->right, d + 1);
   }
 }
