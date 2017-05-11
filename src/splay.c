@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct Splay {
   int size;
@@ -14,54 +15,148 @@ typedef struct Splay {
   } *root;
 } Splay;
 
+#define sentinel (&sentinelNode)
+
+static struct SplayNode sentinelNode;
+
 static struct SplayNode *SplayNode_new() {
   struct SplayNode *node;
   if ((node = (struct SplayNode *)malloc(sizeof(struct SplayNode))) == NULL) {
     fprintf(stderr, "SplayNode_new: Cannot allocate memory.");
     exit(1);
   }
+  node->left = node->right = sentinel;
   return node;
 }
 
-static SplayNode *Splay_balance(Splay *splay, char *key) {
-  static struct SplayNode root;
-  root.right = NULL;
-  root.left = NULL;
-  return &root;
+static struct SplayNode *Splaynode_rotR(struct SplayNode *node) {
+  struct SplayNode *root;
+  root = node->left;
+  node->left = root->right;
+  root->right = node;
+  return root;
+}
+
+static struct SplayNode *Splaynode_rotL(struct SplayNode *node) {
+  struct SplayNode *root;
+  root = node->right;
+  node->right = root->left;
+  root->left = node;
+  return root;
+}
+
+static struct SplayNode *Splaynode_rotRR(struct SplayNode *node) {
+  return Splaynode_rotR(Splaynode_rotR(node));
+}
+
+static struct SplayNode *Splaynode_rotLL(struct SplayNode *node) {
+  return Splaynode_rotL(Splaynode_rotL(node));
+}
+
+static struct SplayNode *Splaynode_rotLR(struct SplayNode *node) {
+  node->left = Splaynode_rotL(node->left); 
+  return Splaynode_rotR(node);
+}
+
+static struct SplayNode *Splaynode_rotRL(struct SplayNode *node) {
+  node->right = Splaynode_rotR(node->right); 
+  return Splaynode_rotL(node);
+}
+
+static struct SplayNode *Splay_balance(Splay *splay, char *key) {
+  int i;
+  struct SplayNode *root, *work;
+  sentinel->key = key;
+  sentinel->right = sentinel->left = sentinel;
+  root = splay->root;
+  while ((i = strcmp(key, root->key)) != 0) {
+    if (i < 0) {
+      if ((i = strcmp(key, root->left->key)) == 0)
+        return Splaynode_rotR(root);
+      root = (i < 0)?
+        Splaynode_rotRR(root):
+        Splaynode_rotLR(root);
+    }
+    else {
+      if ((i = strcmp(key, root->right->key)) == 0)
+        return Splaynode_rotL(root);
+      root = (i > 0)?
+        Splaynode_rotLL(root):
+        Splaynode_rotRL(root);
+    }
+  }
+  return root;
 }
 
 void Splay_init(Splay *splay) {
   splay->size = 0;
-  splay->root = NULL;
+  splay->root = sentinel;
 }
 
 void *Splay_get(Splay *splay, char *key) {
   struct SplayNode *node;
   node = Splay_balance(splay, key);
-  return node;
+  if (node == sentinel)
+    return NULL;
+  splay->root = node;
+  return node->val;
 }
 
 void Splay_put(Splay *splay, char *key, void *val) {
   struct SplayNode *node;
-  node = SplayNode_new();
-  splay->root = balance(splay, key);
-  node->key = key;
-  node->val = val;
-  node->left = splay->root->left;
-  node->right = splay->root->right;
-  splay->size++;
-  splay->root = node;
+  node =  Splay_balance(splay, key);
+  if (node != sentinel) {
+    splay->root = node;
+  }
+  else {
+    splay->size++;
+    splay->root = SplayNode_new();
+    splay->root->key = key;
+    splay->root->left = node->left;
+    splay->root->right = node->right;
+  }
+  splay->root->val = val;
 }
 
-void Splay_size(Splay *splay) {
+int Splay_size(Splay *splay) {
   return splay->size;
 }
 
-void Splay_remove(Splay *splay, char *key) {
+// void Splay_remove(Splay *splay, char *key) {
+// }
+
+void dump(struct SplayNode *node, int d) {
+  int i;
+  if (node == sentinel)
+    return;
+  for (i = 0; i < d; i++)
+    printf("    ");
+  printf("%s\n", (char *)node->val);
+  if (node->left != sentinel) {
+    printf("<");
+    dump(node->left, d + 1);
+  }
+  if (node->right != sentinel) {
+    printf(">");
+    dump(node->right, d + 1);
+  }
 }
 
 int main(){
   Splay s;
   Splay_init(&s);
+  Splay_put(&s, "1", "1");
+  Splay_put(&s, "2", "2");
+  Splay_put(&s, "3", "3");
+  Splay_put(&s, "4", "4");
+  Splay_put(&s, "5", "5");
+  printf("%s\n", (char *)Splay_get(&s, "4"));
+  dump(s.root, 0);
+  printf("%s\n", (char *)Splay_get(&s, "8"));
+  dump(s.root, 0);
+  printf("%s\n", (char *)Splay_get(&s, "1"));
+  dump(s.root, 0);
+  printf("%s\n", (char *)Splay_get(&s, "5"));
+  dump(s.root, 0);
   return 0;
 }
