@@ -8,10 +8,10 @@ typedef struct {
   FILE *fp;
   int tokenPos;
   char token[AHDRD_TOKEN_SIZE];
-  Ringbuf *ringbuf;
+  Ringbuf ringbuf;
 } Ahdrd;
 
-extern Ahdrd *Ahdrd_new(FILE *_fp);
+extern void Ahdrd_init(Ahdrd *ahdrd, FILE *fp);
 extern int Ahdrd_skipRead(Ahdrd *ahdrd);
 extern int Ahdrd_read(Ahdrd *ahdrd);
 extern int Ahdrd_peek(Ahdrd *ahdrd, int n);

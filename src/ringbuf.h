@@ -10,7 +10,7 @@ typedef struct {
   int buf[RINGBUF_BUFSIZ];
 } Ringbuf;
 
-extern Ringbuf *Ringbuf_new();
+extern void Ringbuf_init(Ringbuf *ringbuf);
 extern int Ringbuf_isEmpty(Ringbuf *ringbuf);
 extern void Ringbuf_put(Ringbuf *ringbuf, int c);
 extern int Ringbuf_get(Ringbuf *ringbuf);

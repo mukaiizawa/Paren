@@ -8,15 +8,9 @@
 
 #include "ringbuf.h"
 
-Ringbuf *Ringbuf_new() {
-  Ringbuf *ringbuf;
-  if ((ringbuf = (Ringbuf *)calloc(1, sizeof(Ringbuf))) == NULL) {
-    fprintf(stderr, "Ringbuf_new: Cannot allocate memory.");
-    exit(1);
-  }
+void Ringbuf_init(Ringbuf *ringbuf) {
   ringbuf->in = 0;
   ringbuf->out = 0;
-  return ringbuf;
 }
 
 int Ringbuf_isEmpty(Ringbuf *ringbuf) {
