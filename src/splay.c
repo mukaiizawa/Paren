@@ -99,9 +99,21 @@ static void Splay_rebuild(Splay *splay) {
   splay->root = newRoot;
 }
 
+static void SplayNode_freeRec(struct SplayNode *node) {
+  if (node != sentinel) {
+    SplayNode_freeRec(node->left);
+    SplayNode_freeRec(node->right);
+    free(node);
+  }
+}
+
 void Splay_init(Splay *splay) {
   splay->size = 0;
   splay->root = sentinel;
+}
+
+int Splay_size(Splay *splay) {
+  return splay->size;
 }
 
 void *Splay_get(Splay *splay, char *key) {
@@ -134,11 +146,11 @@ void Splay_remove(Splay *splay, char *key) {
   rmNode = splay->root;
   assert(rmNode != sentinel);
   Splay_rebuild(splay);
-  free(rmNode);
+  SplayNode_freeRec(rmNode);
 }
 
-int Splay_size(Splay *splay) {
-  return splay->size;
+void Splay_free(Splay *splay) {
+  SplayNode_freeRec(splay->root);
 }
 
 void Splay_dump(struct SplayNode *node, int d) {
