@@ -63,7 +63,7 @@ static struct SplayNode *Splaynode_rotRL(struct SplayNode *node) {
   return Splaynode_rotL(node);
 }
 
-static struct SplayNode *Splay_balance(Splay *splay, char *key) {
+static void Splay_balance(Splay *splay, char *key) {
   int i;
   struct SplayNode *root, *work;
   sentinel->key = key;
@@ -71,21 +71,40 @@ static struct SplayNode *Splay_balance(Splay *splay, char *key) {
   root = splay->root;
   while ((i = strcmp(key, root->key)) != 0) {
     if (i < 0) {
-      if ((i = strcmp(key, root->left->key)) == 0)
-        return Splaynode_rotR(root);
+      if ((i = strcmp(key, root->left->key)) == 0) {
+        root = Splaynode_rotR(root);
+        break;
+      }
       root = (i < 0)?
         Splaynode_rotRR(root):
         Splaynode_rotLR(root);
     }
     else {
-      if ((i = strcmp(key, root->right->key)) == 0)
-        return Splaynode_rotL(root);
+      if ((i = strcmp(key, root->right->key)) == 0) {
+        root = Splaynode_rotL(root);
+        break;
+      }
       root = (i > 0)?
         Splaynode_rotLL(root):
         Splaynode_rotRL(root);
     }
   }
-  return root;
+  splay->root = root;
+}
+
+static void Splay_rebuild(Splay *splay) {
+  struct SplayNode *root, *newRoot;
+  if ((root = splay->root)->right == sentinel)
+    splay->root = root->left;
+  else if ((newRoot = root->left) == sentinel)
+    splay->root = root->right;
+  else {
+    while (newRoot->right != sentinel)
+      newRoot = newRoot->right;
+    newRoot->right = root->right;
+    newRoot->left = root->left;
+    splay->root = newRoot;
+  }
 }
 
 void Splay_init(Splay *splay) {
@@ -94,33 +113,26 @@ void Splay_init(Splay *splay) {
 }
 
 void *Splay_get(Splay *splay, char *key) {
-  struct SplayNode *node;
-  node = Splay_balance(splay, key);
-  if (node == sentinel) {
-    resume
-    return NULL;
+  Splay_balance(splay, key);
+  if (splay->root != sentinel) {
+    return splay->root->val;
   }
-  splay->root = node;
-  return node->val;
+  Splay_rebuild(splay);
+  return NULL;
 }
 
 void Splay_put(Splay *splay, char *key, void *val) {
-  struct SplayNode *node;
-  node =  Splay_balance(splay, key);
-  if (node != sentinel) {
-    splay->root = node;
-  }
-  else {
+  Splay_balance(splay, key);
+  if (splay->root == sentinel) {
+    struct SplayNode *newNode;
     splay->size++;
-    splay->root = SplayNode_new();
-    splay->root->key = key;
-    splay->root->left = node->left;
-    splay->root->right = node->right;
+    newNode = SplayNode_new();
+    newNode->key = key;
+    newNode->left = splay->root->left;
+    newNode->right = splay->root->right;
+    splay->root = newNode;
   }
   splay->root->val = val;
-}
-
-void Splay_resume(Splay *splay) {
 }
 
 int Splay_size(Splay *splay) {
@@ -153,13 +165,13 @@ int main(){
   Splay_put(&s, "3", "3");
   Splay_put(&s, "4", "4");
   Splay_put(&s, "5", "5");
-  printf("%s\n", (char *)Splay_get(&s, "4"));
+  printf("get%s\n", (char *)Splay_get(&s, "4"));
   dump(s.root, 0);
-  printf("%s\n", (char *)Splay_get(&s, "8"));
+  printf("get%s\n", (char *)Splay_get(&s, "8"));
   dump(s.root, 0);
-  printf("%s\n", (char *)Splay_get(&s, "1"));
+  printf("get%s\n", (char *)Splay_get(&s, "1"));
   dump(s.root, 0);
-  printf("%s\n", (char *)Splay_get(&s, "5"));
+  printf("get%s\n", (char *)Splay_get(&s, "5"));
   dump(s.root, 0);
   return 0;
 }
