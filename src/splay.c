@@ -133,9 +133,8 @@ int Splay_size(Splay *splay) {
 
 void *Splay_get(Splay *splay, char *key) {
   Splay_balance(splay, key);
-  if (splay->root != sentinel) {
+  if (splay->root != sentinel)
     return splay->root->val;
-  }
   Splay_rebuild(splay);
   return NULL;
 }
