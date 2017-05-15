@@ -65,19 +65,15 @@ static struct SplayNode *Splay_balance(Splay *splay, char *key) {
   newRoot = splay->root;
   while ((cmp = strcmp(key, newRoot->key)) != 0) {
     if (cmp < 0) {
-      if ((cmp = strcmp(key, newRoot->left->key)) == 0) {
-        newRoot = Splaynode_rotR(newRoot);
-        break;
-      }
+      if ((cmp = strcmp(key, newRoot->left->key)) == 0)
+        return splay->root = Splaynode_rotR(newRoot);
       newRoot = (cmp < 0)?
         Splaynode_rotRR(newRoot):
         Splaynode_rotLR(newRoot);
     }
     else {
-      if ((cmp = strcmp(key, newRoot->right->key)) == 0) {
-        newRoot = Splaynode_rotL(newRoot);
-        break;
-      }
+      if ((cmp = strcmp(key, newRoot->right->key)) == 0)
+        return splay->root = Splaynode_rotL(newRoot);
       newRoot = (cmp > 0)?
         Splaynode_rotLL(newRoot):
         Splaynode_rotRL(newRoot);
