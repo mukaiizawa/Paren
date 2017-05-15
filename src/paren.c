@@ -56,25 +56,27 @@ S *S_print(S *expr) {
       double intptr, fraction;
       fraction = modf(expr->Number.val, &intptr);
       if (fraction == 0)
-        fprintf(stdout, "%d", (int)intptr);
+        printf("%d", (int)intptr);
       else
-        fprintf(stdout, "%f", expr->Number.val);
+        printf("%f", expr->Number.val);
     }
     else if (expr->Cons.type == Character)
-      fprintf(stdout, "%c", expr->Character.val);
+      printf("%c", expr->Character.val);
     else if (expr->Cons.type == Function)
-      fprintf(stdout, "%d", expr->Cons.type);
+      printf("%d", expr->Cons.type);
+    else if (expr->Cons.type == Keyword)
+      printf(":%s", expr->Keyword.val);
     else
-      fprintf(stdout, "%s", expr->String.val);
+      printf("%s", expr->String.val);
   }
   else {
-    fprintf(stdout, "(");
+    printf("(");
     S_print(expr->Cons.car);
     for (expr = expr->Cons.cdr; !NILP(expr); expr = expr->Cons.cdr) {
-      fprintf(stdout, ATOMP(expr->Cons.car)? " ": "");
+      printf(ATOMP(expr->Cons.car)? " ": "");
       S_print(expr->Cons.car);
     }
-    fprintf(stdout, ")");
+    printf(")");
   }
   fflush(stdout);
   return expr;
@@ -83,9 +85,9 @@ S *S_print(S *expr) {
 int main(int argc, char* argv[]) {
   init();
   while (1) {
-    fprintf(stdout, ") ");
+    printf(") ");
     S_print(S_eval(S_read(), &env));
-    fprintf(stdout, "\n");
+    printf("\n");
   }
   return 0;
 }

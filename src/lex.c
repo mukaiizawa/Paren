@@ -61,6 +61,5 @@ S *Lex_parseExpr() {
     Ahdrd_skipRead(&ahdrd);    // skip ')'
     return S_reverse(expr);
   }
-  else
-    return Lex_parseAtom();
+  return Lex_parseAtom();
 }
