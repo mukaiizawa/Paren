@@ -28,7 +28,7 @@ S *S_eval(S *expr, Env *env) {
   S *root, *cmd, *args;
   if (ATOMP(expr))
     return (expr->Symbol.type == Symbol)?
-      Env_get(env, expr->Symbol.val):
+      (S *)Env_get(env, expr->Symbol.val, Error_new("eval: undefined variable.")):
       expr;
   root = expr;
   while (!NILP(expr)) {

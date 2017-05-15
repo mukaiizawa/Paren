@@ -43,14 +43,14 @@ void Env_pop(Env *env) {
   EnvNode_free(node);
 }
 
-void *Env_get(Env *env, char *key) {
+void *Env_get(Env *env, char *key, void *orElse) {
   struct EnvNode *node;
   void *val;
   for (node = env->root; node != NULL; node = node->outer) {
     if ((val = Splay_get(&node->map, key)) != NULL)
       return val;
   }
-  return NULL;
+  return orElse;
 }
 
 void Env_put(Env *env, char *key, void *val) {
