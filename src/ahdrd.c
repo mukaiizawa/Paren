@@ -7,7 +7,6 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "ringbuf.h"
 #include "ahdrd.h"
 
 void Ahdrd_init(Ahdrd *ahdrd, FILE *fp) {

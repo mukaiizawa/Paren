@@ -6,10 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "sexpr.h"
 #include "prim.h"
-#include "ringbuf.h"
-#include "ahdrd.h"
 #include "lex.h"
 
 static Ahdrd ahdrd;

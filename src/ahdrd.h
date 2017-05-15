@@ -4,6 +4,8 @@
 
 #define AHDRD_TOKEN_SIZE 2000
 
+#include "ringbuf.h"
+
 typedef struct {
   FILE *fp;
   int tokenPos;
