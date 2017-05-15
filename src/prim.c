@@ -135,11 +135,9 @@ static int S_length(S *expr) {
   count = 1;
   if (expr->Cons.type != Cons)
     return count;
-  else {
-    while (!NILP((expr = REST(expr))))    // safe?
-      count++;
-    return count;
-  }
+  while (!NILP((expr = REST(expr))))    // safe?
+    count++;
+  return count;
 }
 
 static S *Function_isNil(S *expr) {
@@ -167,7 +165,7 @@ static S *Function_cdr(S *expr) {
     return nil;
   if (FIRST(expr)->Cons.type != Cons)
     return Error_new("cdr: not a list.");
-  return SECOND(expr);
+  return SECOND(FIRST(expr));
 }
 
 static S *Function_cons(S *expr) {

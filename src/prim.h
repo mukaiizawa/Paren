@@ -7,7 +7,7 @@
 #define SECOND(expr) FIRST(REST(expr))
 #define THIRD(expr) FIRST(REST(REST(expr)))
 #define ATOMP(expr) (expr->Cons.type != Cons)
-#define NILP(expr) (expr == nil)
+#define NILP(expr) ((expr) == nil)
 
 typedef enum {
   Cons,
