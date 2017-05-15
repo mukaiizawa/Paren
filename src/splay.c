@@ -114,12 +114,8 @@ static void Splay_dump(struct SplayNode *node, int d) {
   for (i = 0; i < d; i++)
     printf("    ");
   printf("%s\n", (char *)node->val);
-  if (node->left != sentinel) {
-    Splay_dump(node->left, d + 1);
-  }
-  if (node->right != sentinel) {
-    Splay_dump(node->right, d + 1);
-  }
+  Splay_dump(node->left, d + 1);
+  Splay_dump(node->right, d + 1);
 }
 
 void Splay_init(Splay *splay) {
