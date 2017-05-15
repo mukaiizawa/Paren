@@ -5,7 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
+#include "splay.h"
+#include "env.h"
 #include "prim.h"
 #include "lex.h"
 
@@ -13,6 +16,19 @@ static Ahdrd ahdrd;
 
 void Lex_init() {
   Ahdrd_init(&ahdrd, stdin);
+}
+
+static S *S_reverse(S *expr) {
+  S *root;
+  if (NILP(expr))
+    return nil;
+  assert(expr->Cons.type == Cons);
+  root = nil;
+  while (!NILP(expr)) {
+    root = Cons_new(FIRST(expr), root);
+    expr = REST(expr);
+  }
+  return root;
 }
 
 // TODO: free memory.

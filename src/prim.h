@@ -31,11 +31,7 @@ typedef union S {
   } Cons;
   struct {
     Type type;
-    struct MapNode {
-      union S *key;
-      union S *val;
-      struct MapNode *next;
-    } *head;
+    Splay map;
   } Map;
   struct {
     Type type;
@@ -76,7 +72,7 @@ extern S *t;
 extern S *nil;
 
 extern S *Cons_new(S *car, S *cdr);
-extern S *Map_new(S *car, S *cdr);
+extern S *Map_new();
 extern S *Symbol_new(char *val);
 extern S *Keyword_new(char *val);
 extern S *String_new(char *val);
@@ -86,7 +82,4 @@ extern S *Function_new(S *f(S *), S *args);
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
 
-extern S *S_reverse(S *expr);
-extern int S_length(S *expr);
-
-extern void Prim_init(S *env);
+extern void Prim_init(Env *env);

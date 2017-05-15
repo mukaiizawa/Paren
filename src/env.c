@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include "splay.h"
-#include "prim.h"
 #include "env.h"
 
 static struct EnvNode *EnvNode_new() {
@@ -44,17 +43,17 @@ void Env_pop(Env *env) {
   EnvNode_free(node);
 }
 
-S *Env_get(Env *env, char *key) {
+void *Env_get(Env *env, char *key) {
   struct EnvNode *node;
   void *val;
   for (node = env->root; node != NULL; node = node->outer) {
     if ((val = Splay_get(&node->map, key)) != NULL)
-      return (S *)val;
+      return val;
   }
   return NULL;
 }
 
-void Env_put(Env *env, char *key, S *val) {
+void Env_put(Env *env, char *key, void *val) {
   Splay_put(&env->root->map, key, val);
 }
 

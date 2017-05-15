@@ -9,6 +9,7 @@
 #include <assert.h>
 
 #include "splay.h"
+#include "env.h"
 #include "prim.h"
 
 S *t;
@@ -16,57 +17,6 @@ S *nil;
 S *in;
 S *out;
 S *err;
-
-// static S *Map_put(S *expr) {
-//   S *obj, *key, *val;
-//   struct MapNode *node;
-//   if (S_length(expr) != 3)
-//     return Error_new("Map.put: Illegal argument exception.");
-//   node = MapNode_alloc();
-//   obj = first(expr);
-//   key = second(expr);
-//   val = third(expr);
-//   node->next = obj->Map.head->next;
-//   obj->Map.head = node;
-//   return obj;
-// }
-
-// static S *Map_get(S *expr) {
-//   S *obj, *key;
-//   struct MapNode *node;
-//   if (S_length(expr) != 2)
-//     return Error_new("Map.put: Illegal argument exception.");
-//   obj = first(expr);
-//   key = second(expr);
-//   node = obj->Map.head;
-//   while ((node = node->next) != NULL) {
-//   }
-//   return obj;
-// }
-
-// S *plus(S *args) {
-//   S *sum, *car;
-//   sum = S_alloc();
-//   sum->Number.type = Number;
-//   sum->Number.val = 0;
-//   while (!NILP(args)) {
-//     car = args->Cons.car;
-//     args = args->Cons.cdr;
-//     if (car->Cons.type != Number) {
-//       return S_new(Error, "+: illegal number.");
-//     }
-//     sum->Number.val += car->Number.val;
-//   }
-//   return sum;
-// }
-
-// S *asString(S *expr) {
-//   S *new;
-//   new = S_alloc();
-//   new->Cons.type = String;
-//   new->string = expr->string;
-//   return new;
-// }
 
 static char *TYPE_STRING[10] = {
   "Cons",
@@ -107,20 +57,11 @@ S *Cons_new(S *car, S *cdr) {
   return prev;
 }
 
-static struct MapNode *MapNode_alloc() {
-  struct MapNode *mapNode;
-  if ((mapNode = (struct MapNode *)calloc(1, sizeof(struct MapNode))) == NULL) {
-    fprintf(stderr, "MapNode_alloc: Cannot allocate memory.");
-    exit(1);
-  }
-  return mapNode;
-}
-
-S *Map_new(S *car, S *cdr) {
+S *Map_new() {
   S *expr;
   expr = S_alloc();
   expr->Map.type = Map;
-  expr->Map.head = MapNode_alloc();
+  Splay_init(&expr->Map.map);
   return expr;
 }
 
@@ -189,7 +130,7 @@ S *Error_new(char *str) {
   return expr;
 }
 
-int S_length(S *expr) {
+static int S_length(S *expr) {
   int count;
   count = 1;
   if (expr->Cons.type != Cons)
@@ -199,19 +140,6 @@ int S_length(S *expr) {
       count++;
     return count;
   }
-}
-
-S *S_reverse(S *expr) {
-  S *root;
-  if (NILP(expr))
-    return nil;
-  assert(expr->Cons.type == Cons);
-  root = nil;
-  while (!NILP(expr)) {
-    root = Cons_new(FIRST(expr), root);
-    expr = REST(expr);
-  }
-  return root;
 }
 
 static S *Function_isNil(S *expr) {
@@ -302,23 +230,23 @@ static S *Function_desc(S *expr) {
   return expr;
 }
 
-void Prim_init(S *env) {
+void Prim_init(Env *env) {
   t = Symbol_new("t");
   nil = Symbol_new("nil");
   in = Stream_new(stdin);
   out = Stream_new(stdout);
   err = Stream_new(stderr);
-  // Env_install(env, "t", t);
-  // Env_install(env, "nil", nil);
-  // Map_install(env, "stdin", in);
-  // Map_install(env, "stdout", out);
-  // Map_install(env, "stderr", err);
-  // Map_install(env, "null?", Function_new(Function_isNil, NULL));
-  // Map_install(env, "atom?", Function_new(Function_isAtom, NULL));
-  // Map_install(env, "car", Function_new(Function_car, NULL));
-  // Map_install(env, "cdr", Function_new(Function_cdr, NULL));
-  // Map_install(env, "cons", Function_new(Function_cons, NULL));
-  // Map_install(env, "list", Function_new(Function_list, NULL));
-  // Map_install(env, "length", Function_new(Function_length, NULL));
-  // Map_install(env, "desc", Function_new(Function_desc, NULL));
+  Env_put(env, "t", t);
+  Env_put(env, "nil", nil);
+  Env_put(env, "stdin", in);
+  Env_put(env, "stdout", out);
+  Env_put(env, "stderr", err);
+  Env_put(env, "null?", Function_new(Function_isNil, NULL));
+  Env_put(env, "atom?", Function_new(Function_isAtom, NULL));
+  Env_put(env, "car", Function_new(Function_car, NULL));
+  Env_put(env, "cdr", Function_new(Function_cdr, NULL));
+  Env_put(env, "cons", Function_new(Function_cons, NULL));
+  Env_put(env, "list", Function_new(Function_list, NULL));
+  Env_put(env, "length", Function_new(Function_length, NULL));
+  Env_put(env, "desc", Function_new(Function_desc, NULL));
 }

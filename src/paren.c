@@ -7,17 +7,16 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "prim.h"
-#include "lex.h"
 #include "splay.h"
 #include "env.h"
+#include "prim.h"
+#include "lex.h"
 
-static S env;
+static Env env;
 
 static void init() {
-  // &env = Env_new();
-  // Env_init(&env);
-  // Prim_init(&env);
+  Env_init(&env);
+  Prim_init(&env);
   Lex_init();
 }
 
@@ -25,12 +24,11 @@ S *S_read() {
   return Lex_parseExpr();
 }
 
-S *S_eval(S *expr, S *env) {
+S *S_eval(S *expr, Env *env) {
   S *root, *cmd, *args;
   if (ATOMP(expr))
     return (expr->Symbol.type == Symbol)?
-      // Map_lookup(env, expr->Symbol.val)
-      expr:
+      Env_get(env, expr->Symbol.val):
       expr;
   root = expr;
   while (!NILP(expr)) {
