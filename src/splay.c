@@ -107,6 +107,21 @@ static void SplayNode_freeRec(struct SplayNode *node) {
   }
 }
 
+static void Splay_dump(struct SplayNode *node, int d) {
+  int i;
+  if (node == sentinel)
+    return;
+  for (i = 0; i < d; i++)
+    printf("    ");
+  printf("%s\n", (char *)node->val);
+  if (node->left != sentinel) {
+    Splay_dump(node->left, d + 1);
+  }
+  if (node->right != sentinel) {
+    Splay_dump(node->right, d + 1);
+  }
+}
+
 void Splay_init(Splay *splay) {
   splay->size = 0;
   splay->root = sentinel;
@@ -151,19 +166,4 @@ void Splay_remove(Splay *splay, char *key) {
 
 void Splay_free(Splay *splay) {
   SplayNode_freeRec(splay->root);
-}
-
-void Splay_dump(struct SplayNode *node, int d) {
-  int i;
-  if (node == sentinel)
-    return;
-  for (i = 0; i < d; i++)
-    printf("    ");
-  printf("%s\n", (char *)node->val);
-  if (node->left != sentinel) {
-    Splay_dump(node->left, d + 1);
-  }
-  if (node->right != sentinel) {
-    Splay_dump(node->right, d + 1);
-  }
 }

@@ -17,4 +17,3 @@ extern void *Splay_get(Splay *splay, char *key);
 extern void Splay_put(Splay *splay, char *key, void *val);
 extern void Splay_remove(Splay *splay, char *key);
 extern void Splay_free(Splay *splay);
-extern void Splay_dump(struct SplayNode *node, int d);
