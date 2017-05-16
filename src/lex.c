@@ -22,7 +22,7 @@ static S *S_reverse(S *expr) {
   S *root;
   if (NILP(expr))
     return nil;
-  assert(expr->Cons.type == Cons);
+  assert(S_isType(expr, Cons));
   root = nil;
   while (!NILP(expr)) {
     root = Cons_new(FIRST(expr), root);
@@ -95,7 +95,7 @@ S *Lex_parseExpr() {
     acc = nil;
     Ahdrd_skipRead(&ahdrd);    // skip '('
     while (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1) != ')') {
-      if ((expr = Lex_parseExpr())->Error.type == Error)
+      if (S_isType((expr = Lex_parseExpr()), Error))
         return expr;
       acc = Cons_new(expr, acc);
     }

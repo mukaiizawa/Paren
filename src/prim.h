@@ -74,6 +74,7 @@ typedef union S {
 } S;
 
 extern int LENGTH(S *expr);
+extern int S_isType(S *expr, Type t);
 
 extern S *t;
 extern S *nil;

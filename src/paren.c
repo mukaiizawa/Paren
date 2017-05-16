@@ -38,23 +38,24 @@ static void Paren_init() {
   Lex_init();
 }
 
-S *S_read() {
-  return Lex_parseExpr();
-}
-
 extern S *S_print(S *expr);
-S *S_errorHandler(S *expr) {
+
+static S *S_errorHandler(S *expr) {
   S_print(expr);
   exit(1);
+}
+
+S *S_read() {
+  return Lex_parseExpr();
 }
 
 S *S_eval(S *expr, Env *env) {
   S *root, *cmd, *args;
   if (ATOMP(expr)) {
-    root = (expr->Symbol.type == Symbol)?
+    root = S_isType(expr, Symbol)?
       (S *)Env_get(env, expr->Symbol.val, Error_new("eval: undefined variable.")):
       expr;
-    return (root->Error.type == Error)?
+    return S_isType(root, Error)?
       S_errorHandler(expr):
       expr;
   }
@@ -82,7 +83,7 @@ S *S_eval(S *expr, Env *env) {
 
 S *S_print(S *expr) {
   if (ATOMP(expr)) {
-    if (expr->Cons.type == Number) {
+    if (S_isType(expr, Number)) {
       double intptr, fraction;
       fraction = modf(expr->Number.val, &intptr);
       if (fraction == 0)
@@ -90,11 +91,11 @@ S *S_print(S *expr) {
       else
         printf("%f", expr->Number.val);
     }
-    else if (expr->Cons.type == Character)
+    else if (S_isType(expr, Character))
       printf("%c", expr->Character.val);
-    else if (expr->Cons.type == Function)
+    else if (S_isType(expr, Function))
       printf("%d", expr->Cons.type);
-    else if (expr->Cons.type == Keyword)
+    else if (S_isType(expr, Keyword))
       printf(":%s", expr->Keyword.val);
     else
       printf("%s", expr->String.val);

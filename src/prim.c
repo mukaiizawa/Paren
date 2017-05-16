@@ -32,6 +32,10 @@ static char *TYPE_STRING[10] = {
   "Error"
 };
 
+int S_isType(S *expr, Type t) {
+  return expr->Cons.type == t;
+};
+
 char *Type_asString(Type type) {
   return TYPE_STRING[type];
 };
@@ -198,7 +202,7 @@ static S *Function_length(S *expr) {
   count = 0;
   if (NILP(expr))
     return Number_new(count);
-  else if (expr->Cons.type == Cons)
+  else if (S_isType(expr, Cons))
     return Number_new(LENGTH(FIRST(expr)));
   else
     return Error_new("length: cannnot apply.");
