@@ -19,10 +19,8 @@ void Ahdrd_init(Ahdrd *ahdrd, FILE *fp) {
 static char *Ahdrd_getToken(Ahdrd *ahdrd) {
   char *str;
   ahdrd->token[ahdrd->tokenPos] = '\0';
-  if ((str = (char *)malloc(strlen(ahdrd->token) + 1)) == NULL) {
-    fprintf(stderr, "Ahdrd_getToken: Cannot allocate memory.");
-    exit(1);
-  }
+  str = (char *)malloc(strlen(ahdrd->token) + 1);
+  assert(str != NULL);
   ahdrd->tokenPos = 0;
   return strcpy(str, ahdrd->token);
 }
@@ -44,12 +42,10 @@ int Ahdrd_read(Ahdrd *ahdrd) {
 
 int Ahdrd_peek(Ahdrd *ahdrd, int n) {
   int c;
-  assert(0 < n && n < Ringbuf_size);
+  assert(0 < n && n < RINGBUF_BUFSIZ);
   while (n > Ringbuf_size(&ahdrd->ringbuf)) {
-    if((c = fgetc(ahdrd->fp)) == EOF && n > Ringbuf_size(&ahdrd->ringbuf) + 1) {
-      fprintf(stderr, "Ahdrd_peek: Reach EOF.");
-      exit(1);
-    }
+    c = fgetc(ahdrd->fp);
+    assert(c != EOF || n <= Ringbuf_size(&ahdrd->ringbuf) + 1);
     Ringbuf_put(&ahdrd->ringbuf, c);
   }
   return ahdrd->ringbuf.buf[(ahdrd->ringbuf.out + n - 1) % RINGBUF_BUFSIZ];
@@ -64,39 +60,33 @@ Ahdrd *Ahdrd_readSpace(Ahdrd *ahdrd) {
 
 char *Ahdrd_readKeyword(Ahdrd *ahdrd) {
   int c;
+  char *token;
   Ahdrd_skipRead(ahdrd);    // skip ':'
   while (!isspace((c = Ahdrd_peek(ahdrd, 1))) && c != '(' && c != ')')
     Ahdrd_read(ahdrd);
   return Ahdrd_getToken(ahdrd);
 }
 
-char *Ahdrd_readCharacter(Ahdrd *ahdrd) {
-  int c, readCount;
-  Ahdrd_skipRead(ahdrd);    // skip `'`
-  readCount = 0;
-  while ((c = Ahdrd_peek(ahdrd, 1)) != '\'') {
-    Ahdrd_read(ahdrd);
-    if (++readCount > 1) {
-      fprintf(stderr, "Ahdrd_readCharacter: Illegal token.");
-      exit(1);
-    }
-    if (c == '\'')
-      Ahdrd_read(ahdrd);
-  }
-  Ahdrd_skipRead(ahdrd);    // skip `'`
-  return Ahdrd_getToken(ahdrd);
-}
-
-char *Ahdrd_readString(Ahdrd *ahdrd) {
+static char *Ahdrd_readSurrounded(Ahdrd *ahdrd, char s) {
   int c;
-  Ahdrd_skipRead(ahdrd);    // skip `"`
-  while ((c = Ahdrd_peek(ahdrd, 1)) != '"') {
+  Ahdrd_skipRead(ahdrd);    // skip surround start
+  while ((c = Ahdrd_peek(ahdrd, 1)) != s) {
+    if (c == EOF)
+      return NULL;
     Ahdrd_read(ahdrd);
     if (c == '\\')
       Ahdrd_read(ahdrd);
   }
-  Ahdrd_skipRead(ahdrd);    // skip `"`
+  Ahdrd_skipRead(ahdrd);    // skip surround end
   return Ahdrd_getToken(ahdrd);
+}
+
+char *Ahdrd_readCharacter(Ahdrd *ahdrd) {
+  return Ahdrd_readSurrounded(ahdrd, '\'');
+}
+
+char *Ahdrd_readString(Ahdrd *ahdrd) {
+  return Ahdrd_readSurrounded(ahdrd, '"');
 }
 
 char *Ahdrd_readSymbol(Ahdrd *ahdrd) {

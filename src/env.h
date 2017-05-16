@@ -9,7 +9,7 @@ typedef struct Env {
   } *root;
 } Env;
 
-extern void Env_init(Env *env);
+extern Env *Env_init(Env *env);
 extern void Env_push(Env *env);
 extern void Env_pop(Env *env);
 extern void *Env_get(Env *env, char *key, void *orElse);

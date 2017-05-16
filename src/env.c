@@ -25,8 +25,9 @@ static void EnvNode_free(struct EnvNode *node) {
   free(node);
 }
 
-void Env_init(Env *env) {
+Env *Env_init(Env *env) {
   env->root = EnvNode_new();
+  return env;
 }
 
 void Env_push(Env *env) {

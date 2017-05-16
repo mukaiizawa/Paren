@@ -27,6 +27,7 @@ static char *TYPE_STRING[10] = {
   "Character",
   "Number",
   "Function",
+  // "Special",
   "Stream",
   "Error"
 };
@@ -75,6 +76,8 @@ S *Symbol_new(char *val) {
 
 S *Keyword_new(char *val) {
   S *expr;
+  if (strlen(val) == 0)
+    return Error_new("Illegal Keyword.");
   expr = S_alloc();
   expr->Keyword.type = Keyword;
   expr->Keyword.val = val;
@@ -91,6 +94,8 @@ S *String_new(char *val) {
 
 S *Character_new(char val) {
   S *expr;
+  if (val == '\0')
+    return Error_new("Illegal character.");
   expr = S_alloc();
   expr->Character.type = Character;
   expr->Character.val = val;
@@ -114,6 +119,14 @@ S *Function_new(S *f(S *), S *args) {
   return expr;
 }
 
+S *Special_new(S *f(S *)) {
+  S *expr;
+  expr = S_alloc();
+  expr->Special.type = Special;
+  expr->Special.f = f;
+  return expr;
+}
+
 S *Stream_new(FILE *stream) {
   S *expr;
   expr = S_alloc();
@@ -130,12 +143,12 @@ S *Error_new(char *str) {
   return expr;
 }
 
-static int S_length(S *expr) {
+int LENGTH(S *expr) {
   int count;
   count = 1;
   if (expr->Cons.type != Cons)
     return count;
-  while (!NILP((expr = REST(expr))))    // safe?
+  while (!NILP((expr = REST(expr))))
     count++;
   return count;
 }
@@ -149,7 +162,7 @@ static S *Function_isAtom(S *expr) {
 }
 
 static S *Function_car(S *expr) {
-  if (S_length(expr) != 1)
+  if (LENGTH(expr) != 1)
     return Error_new("car: Illegal argument exception.");
   if (NILP(FIRST(expr)))
     return nil;
@@ -159,7 +172,7 @@ static S *Function_car(S *expr) {
 }
 
 static S *Function_cdr(S *expr) {
-  if (S_length(expr) != 1)
+  if (LENGTH(expr) != 1)
     return Error_new("cdr: Illegal argument exception.");
   if (NILP(FIRST(expr)))
     return nil;
@@ -169,7 +182,7 @@ static S *Function_cdr(S *expr) {
 }
 
 static S *Function_cons(S *expr) {
-  if (S_length(expr) != 2)
+  if (LENGTH(expr) != 2)
     return Error_new("cons: Illegal argument exception.");
   if (SECOND(expr)->Cons.type != Cons && !NILP(SECOND(expr)))
     return Error_new("cons: Illegal argument exception.");
@@ -186,7 +199,7 @@ static S *Function_length(S *expr) {
   if (NILP(expr))
     return Number_new(count);
   else if (expr->Cons.type == Cons)
-    return Number_new(S_length(FIRST(expr)));
+    return Number_new(LENGTH(FIRST(expr)));
   else
     return Error_new("length: cannnot apply.");
 }
@@ -228,7 +241,7 @@ static S *Function_desc(S *expr) {
   return expr;
 }
 
-void Prim_init(Env *env) {
+void Prim_initSymbolTable(Env *env) {
   t = Symbol_new("t");
   nil = Symbol_new("nil");
   in = Stream_new(stdin);

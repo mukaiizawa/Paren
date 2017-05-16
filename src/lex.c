@@ -31,14 +31,37 @@ static S *S_reverse(S *expr) {
   return root;
 }
 
-// TODO: free memory.
+static S *Lex_eofError() {
+  return Error_new("Error: reach eof.");
+}
+
+static S *Lex_parseCharacter() {
+  int n;
+  char c, *token;
+  if ((token = Ahdrd_readCharacter(&ahdrd)) == NULL)
+    return Lex_eofError();
+  if ((n = strlen(token)) == 1)
+    c = token[0];
+  else if (n == 2 && token[0] == '\\') {
+    switch (token[1]) {
+      case 'n': c = '\n'; break;
+      case 't': c = '\t'; break;
+      default: c = token[1];
+    }
+  }
+  else
+    c = '\0';
+  free(token);
+  return Character_new(c);
+}
+
 static S *Lex_parseAtom() {
   int c;
   char *token;
   if ((c = Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1)) == ':')
     return Keyword_new(Ahdrd_readKeyword(&ahdrd));
-  else if (c == '\'')
-    return Character_new(Ahdrd_readCharacter(&ahdrd)[0]);
+  else if (c == '\'') 
+    return Lex_parseCharacter();
   else if (c == '"')
     return String_new(Ahdrd_readString(&ahdrd));
   else if (Ahdrd_isNumber(&ahdrd))
@@ -51,15 +74,17 @@ static S *Lex_parseAtom() {
 }
 
 S *Lex_parseExpr() {
-  S *expr;
+  S *acc, *expr;
   if (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1) == '(') {
-    expr = nil;
+    acc = nil;
     Ahdrd_skipRead(&ahdrd);    // skip '('
     while (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1) != ')') {
-      expr = Cons_new(Lex_parseExpr(), expr);
+      if ((expr = Lex_parseExpr())->Error.type == Error)
+        return expr;
+      acc = Cons_new(expr, acc);
     }
     Ahdrd_skipRead(&ahdrd);    // skip ')'
-    return S_reverse(expr);
+    return S_reverse(acc);
   }
   return Lex_parseAtom();
 }

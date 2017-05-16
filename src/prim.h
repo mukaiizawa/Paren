@@ -18,6 +18,7 @@ typedef enum {
   Character,
   Number,
   Function,
+  Special,
   Stream,
   Error
 } Type;
@@ -55,9 +56,13 @@ typedef union S {
   } Number;
   struct {
     Type type;
-    union S *args;
     union S *(* f)(union S *);
+    union S *args;
   } Function;
+  struct {
+    Type type;
+    union S *(* f)(union S *);
+  } Special;
   struct {
     Type type;
     FILE *stream;
@@ -67,6 +72,8 @@ typedef union S {
     char *val;
   } Error;
 } S;
+
+extern int LENGTH(S *expr);
 
 extern S *t;
 extern S *nil;
@@ -79,7 +86,8 @@ extern S *String_new(char *val);
 extern S *Character_new(char val);
 extern S *Number_new(double val);
 extern S *Function_new(S *f(S *), S *args);
+extern S *Special_new(S *f(S *));
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
 
-extern void Prim_init(Env *env);
+extern void Prim_initSymbolTable(Env *env);

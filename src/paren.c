@@ -12,11 +12,29 @@
 #include "prim.h"
 #include "lex.h"
 
+// static Splay specialTable;
 static Env env;
 
-static void init() {
-  Env_init(&env);
-  Prim_init(&env);
+// static S *Special_if(S *expr) {
+//   int n;
+//   if ((n = LENGTH(expr)) <= 1 || n > 3)
+//     Error_new("if: Illegal argument exception.");
+//   if(NILP(S_eval(FIRST(expr))))
+//     return (n == 2)?
+//       nil:
+//       S_eval(THIRD(expr));
+//   return S_eval(SECOND(expr));
+// }
+
+// static S *Special_quote(S *expr) {
+//   return expr;
+// }
+
+static void Paren_init() {
+  // Splay_init(&specialTable);
+  // Splay_put(&specialTable, "if", Special_new(Special_if));
+  // Splay_put(&specialTable, "quote", Special_new(Special_quote));
+  Prim_initSymbolTable(Env_init(&env));
   Lex_init();
 }
 
@@ -24,12 +42,24 @@ S *S_read() {
   return Lex_parseExpr();
 }
 
+extern S *S_print(S *expr);
+S *S_errorHandler(S *expr) {
+  S_print(expr);
+  exit(1);
+}
+
 S *S_eval(S *expr, Env *env) {
   S *root, *cmd, *args;
-  if (ATOMP(expr))
-    return (expr->Symbol.type == Symbol)?
+  if (ATOMP(expr)) {
+    root = (expr->Symbol.type == Symbol)?
       (S *)Env_get(env, expr->Symbol.val, Error_new("eval: undefined variable.")):
       expr;
+    return (root->Error.type == Error)?
+      S_errorHandler(expr):
+      expr;
+  }
+  // if ((S *)(cmd = Splay_get(FIRST(expr)->Symbol.val)) != NULL)
+  //   return (cmd->Function.f)(expr);
   root = expr;
   while (!NILP(expr)) {
     expr->Cons.car = S_eval(expr->Cons.car, env);
@@ -83,7 +113,7 @@ S *S_print(S *expr) {
 }
 
 int main(int argc, char* argv[]) {
-  init();
+  Paren_init();
   while (1) {
     printf(") ");
     S_print(S_eval(S_read(), &env));
