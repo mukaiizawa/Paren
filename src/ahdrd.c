@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 
 #include "ahdrd.h"
 
@@ -43,14 +44,7 @@ int Ahdrd_read(Ahdrd *ahdrd) {
 
 int Ahdrd_peek(Ahdrd *ahdrd, int n) {
   int c;
-  if (n <= 0) {
-    fprintf(stderr, "Ahdrd_peek: Illegal argument.");
-    exit(1);
-  }
-  if (n >= RINGBUF_BUFSIZ) {
-    fprintf(stderr, "Ahdrd_peek: Buffer over flow.");
-    exit(1);
-  }
+  assert(0 < n && n < Ringbuf_size);
   while (n > Ringbuf_size(&ahdrd->ringbuf)) {
     if((c = fgetc(ahdrd->fp)) == EOF && n > Ringbuf_size(&ahdrd->ringbuf) + 1) {
       fprintf(stderr, "Ahdrd_peek: Reach EOF.");
