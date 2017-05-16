@@ -32,7 +32,11 @@ static S *S_reverse(S *expr) {
 }
 
 static S *Lex_eofError() {
-  return Error_new("Error: reach eof.");
+  return Error_new("Error: reached eof.");
+}
+
+static S *Lex_parseKeyword() {
+  return Keyword_new(Ahdrd_readKeyword(&ahdrd));
 }
 
 static S *Lex_parseCharacter() {
@@ -55,22 +59,34 @@ static S *Lex_parseCharacter() {
   return Character_new(c);
 }
 
+static S *Lex_parseString() {
+  return String_new(Ahdrd_readString(&ahdrd));
+}
+
+static S *Lex_parseNumber() {
+  return Number_new(atof(Ahdrd_readNumber(&ahdrd)));
+}
+
+static S *Lex_parseSymbol() {
+  char *token;
+  return
+    strcmp((token = Ahdrd_readSymbol(&ahdrd)), "t") == 0? t:
+    strcmp(token, "nil") == 0? nil:
+    Symbol_new(token);
+}
+
 static S *Lex_parseAtom() {
   int c;
-  char *token;
   if ((c = Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1)) == ':')
-    return Keyword_new(Ahdrd_readKeyword(&ahdrd));
+    return Lex_parseKeyword();
   else if (c == '\'') 
     return Lex_parseCharacter();
   else if (c == '"')
-    return String_new(Ahdrd_readString(&ahdrd));
+    return Lex_parseString();
   else if (Ahdrd_isNumber(&ahdrd))
-    return Number_new(atof(Ahdrd_readNumber(&ahdrd)));
+    return Lex_parseNumber();
   else
-    return
-      strcmp((token = Ahdrd_readSymbol(&ahdrd)), "t") == 0? t:
-      strcmp(token, "nil") == 0? nil:
-      Symbol_new(token);
+    return Lex_parseSymbol();
 }
 
 S *Lex_parseExpr() {
