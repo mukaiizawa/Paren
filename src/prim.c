@@ -285,6 +285,21 @@ static S *Special_with(S *expr, Env *env) {
   return result;
 }
 
+static S *Special_assign(S *expr, Env *env) {
+  S *var, *val;
+  if (!(LENGTH(expr) % 2 == 0))
+    return Error_new("<-: Arguments must be even number.");
+  for (; !NILP(expr); expr = REST(REST(expr))) {
+    var = FIRST(expr);
+    if (!S_isType(var, Symbol))
+      return Error_new("<-: variable must be symbol.");
+    if ((val = (S *)Env_get(env, var->Symbol.val, NULL)) == NULL)
+      return Error_new("<-: undefined variable.");
+    Env_put(env, var->Symbol.val, val = S_eval(SECOND(expr), env));
+  }
+  return val;
+}
+
 static S *S_errorHandler(S *expr) {
   S_print(expr);
   exit(1);
@@ -362,8 +377,9 @@ S *S_print(S *expr) {
 void Prim_init(Env *env) {
   Env_putSpecial(env, "if", Special_new(Special_if));
   Env_putSpecial(env, "quote", Special_new(Special_quote));
-  Env_putSpecial(env, "with", Special_new(Special_with));
   Env_putSpecial(env, "progn", Special_new(Special_progn));
+  Env_putSpecial(env, "with", Special_new(Special_with));
+  Env_putSpecial(env, "<-", Special_new(Special_assign));
   Env_put(env, "t", (t = Symbol_new("t")));
   Env_put(env, "nil", (nil = Symbol_new("nil")));
   Env_put(env, "stdin", (in = Stream_new(stdin)));
