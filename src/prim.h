@@ -61,7 +61,7 @@ typedef union S {
   } Function;
   struct {
     Type type;
-    union S *(* f)(union S *);
+    union S *(* f)(union S *, Env *env);
   } Special;
   struct {
     Type type;
@@ -87,8 +87,12 @@ extern S *String_new(char *val);
 extern S *Character_new(char val);
 extern S *Number_new(double val);
 extern S *Function_new(S *f(S *), S *args);
-extern S *Special_new(S *f(S *));
+extern S *Special_new(S *f(S *, Env *));
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
 
-extern void Prim_initSymbolTable(Env *env);
+extern S *S_read();
+extern S *S_eval(S *expr, Env *env);
+extern S *S_print(S *expr);
+
+extern void Prim_init(Env *env);

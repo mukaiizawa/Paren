@@ -18,7 +18,7 @@ S *in;
 S *out;
 S *err;
 
-static char *TYPE_STRING[10] = {
+static char *TYPE_STRING[11] = {
   "Cons",
   "Map",
   "Symbol",
@@ -27,7 +27,7 @@ static char *TYPE_STRING[10] = {
   "Character",
   "Number",
   "Function",
-  // "Special",
+  "Special",
   "Stream",
   "Error"
 };
@@ -123,7 +123,7 @@ S *Function_new(S *f(S *), S *args) {
   return expr;
 }
 
-S *Special_new(S *f(S *)) {
+S *Special_new(S *f(S *, Env *env)) {
   S *expr;
   expr = S_alloc();
   expr->Special.type = Special;
@@ -150,8 +150,8 @@ S *Error_new(char *str) {
 int LENGTH(S *expr) {
   int count;
   count = 1;
-  if (expr->Cons.type != Cons)
-    return count;
+  if(expr == nil) return 0;
+  if (ATOMP(expr)) return 1;
   while (!NILP((expr = REST(expr))))
     count++;
   return count;
@@ -182,7 +182,7 @@ static S *Function_cdr(S *expr) {
     return nil;
   if (FIRST(expr)->Cons.type != Cons)
     return Error_new("cdr: not a list.");
-  return SECOND(FIRST(expr));
+  return REST(FIRST(expr));
 }
 
 static S *Function_cons(S *expr) {
@@ -245,18 +245,108 @@ static S *Function_desc(S *expr) {
   return expr;
 }
 
-void Prim_initSymbolTable(Env *env) {
-  t = Symbol_new("t");
-  nil = Symbol_new("nil");
-  in = Stream_new(stdin);
-  out = Stream_new(stdout);
-  err = Stream_new(stderr);
-  Env_put(env, "t", t);
-  Env_put(env, "nil", nil);
-  Env_put(env, "stdin", in);
-  Env_put(env, "stdout", out);
-  Env_put(env, "stderr", err);
-  Env_put(env, "null?", Function_new(Function_isNil, NULL));
+static S *Special_if(S *expr, Env *env) {
+  int n;
+  if ((n = LENGTH(expr)) <= 1 || n > 3)
+    return Error_new("if: Illegal argument exception.");
+  if(NILP(S_eval(FIRST(expr), env)))
+    return (n == 2)?
+      nil:
+      S_eval(THIRD(expr), env);
+  return S_eval(SECOND(expr), env);
+}
+
+static S *Special_quote(S *expr, Env *env) {
+  if (LENGTH(expr) != 1)
+    return Error_new("quote: Illegal argument exception.");
+  return FIRST(expr);
+}
+
+static S *S_errorHandler(S *expr) {
+  S_print(expr);
+  exit(1);
+}
+
+extern S *Lex_parseExpr();
+
+S *S_read() {
+  return Lex_parseExpr();
+}
+
+S *S_eval(S *expr, Env *env) {
+  S *root, *cmd, *args;
+  if (ATOMP(expr)) {
+    root = S_isType(expr, Symbol)?
+      (S *)Env_get(env, expr->Symbol.val, Error_new("eval: undefined variable.")):
+      expr;
+    return S_isType(root, Error)?
+      S_errorHandler(expr):
+      root;
+  }
+  if ((S *)(cmd = Env_getSpecial(env, FIRST(expr)->Symbol.val)) != NULL)
+    return (cmd->Special.f)(REST(expr), env);
+  root = expr;
+  while (!NILP(expr)) {
+    expr->Cons.car = S_eval(expr->Cons.car, env);
+    expr = expr->Cons.cdr;
+  }
+  cmd = root->Cons.car;
+  args = root->Cons.cdr;
+  if (cmd->Function.type != Function) {
+    return Error_new("eval: undefined function.");
+  }
+  // invoke primitive function.
+  if (cmd->Function.f != NULL)
+    return (cmd->Function.f)(args);
+  // invoke user defined function.
+  else {
+    return nil;    // TODO: apply user defined function.
+  }
+}
+
+S *S_print(S *expr) {
+  if (ATOMP(expr)) {
+    if (S_isType(expr, Number)) {
+      double intptr, fraction;
+      fraction = modf(expr->Number.val, &intptr);
+      if (fraction == 0)
+        printf("%d", (int)intptr);
+      else
+        printf("%f", expr->Number.val);
+    }
+    else if (S_isType(expr, Character))
+      printf("%c", expr->Character.val);
+    else if (S_isType(expr, Function))
+      printf("%d", expr->Cons.type);
+    else if (S_isType(expr, Keyword))
+      printf(":%s", expr->Keyword.val);
+    else
+      printf("%s", expr->String.val);
+  }
+  else {
+    printf("(");
+    S_print(expr->Cons.car);
+    for (expr = expr->Cons.cdr; !NILP(expr); expr = expr->Cons.cdr) {
+      if (ATOMP(expr->Cons.car)) printf(" ");
+      S_print(expr->Cons.car);
+    }
+    printf(")");
+  }
+  fflush(stdout);
+  return expr;
+}
+
+void Prim_init(Env *env) {
+  Env_putSpecial(env, "if", Special_new(Special_if));
+  Env_putSpecial(env, "quote", Special_new(Special_quote));
+  Env_put(env, "t", (t = Symbol_new("t")));
+  Env_put(env, "nil", (nil = Symbol_new("nil")));
+  Env_put(env, "stdin", (in = Stream_new(stdin)));
+  Env_put(env, "stdout", (out = Stream_new(stdout)));
+  Env_put(env, "stderr", (err = Stream_new(stderr)));
+  Env_put(env, "pi", Number_new(3.14159265358979323846));
+  Env_put(env, "nil", (nil = Symbol_new("nil")));
+  Env_put(env, "nil?", Function_new(Function_isNil, NULL));
   Env_put(env, "atom?", Function_new(Function_isAtom, NULL));
   Env_put(env, "car", Function_new(Function_car, NULL));
   Env_put(env, "cdr", Function_new(Function_cdr, NULL));

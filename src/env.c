@@ -25,9 +25,9 @@ static void EnvNode_free(struct EnvNode *node) {
   free(node);
 }
 
-Env *Env_init(Env *env) {
+void Env_init(Env *env) {
   env->root = EnvNode_new();
-  return env;
+  Splay_init(&env->special);
 }
 
 void Env_push(Env *env) {
@@ -56,6 +56,14 @@ void *Env_get(Env *env, char *key, void *orElse) {
 
 void Env_put(Env *env, char *key, void *val) {
   Splay_put(&env->root->map, key, val);
+}
+
+void *Env_getSpecial(Env *env, char *key) {
+  return Splay_get(&env->special, key);
+}
+
+void Env_putSpecial(Env *env, char *key, void *val) {
+  Splay_put(&env->special, key, val);
 }
 
 void Env_free(Env *env) {

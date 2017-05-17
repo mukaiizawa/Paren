@@ -24,7 +24,7 @@ objs=paren.c prim.o lex.o env.o splay.o ahdrd.o ringbuf.o
 all: $(paren)
 
 $(paren): paren.c $(objs)
-	$(CC) -Wall -o $@ $(objs)
+	$(CC) -Wall -g -o $@ $(objs)
 
 include cdep.d
 

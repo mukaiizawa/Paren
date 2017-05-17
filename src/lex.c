@@ -64,7 +64,12 @@ static S *Lex_parseString() {
 }
 
 static S *Lex_parseNumber() {
-  return Number_new(atof(Ahdrd_readNumber(&ahdrd)));
+  char *token;
+  double n;
+  token = Ahdrd_readNumber(&ahdrd);
+  n = atof(token);
+  free(token);
+  return Number_new(n);
 }
 
 static S *Lex_parseSymbol() {
