@@ -149,11 +149,10 @@ S *Error_new(char *str) {
 
 int LENGTH(S *expr) {
   int count;
-  count = 1;
   if(expr == nil) return 0;
   if (ATOMP(expr)) return 1;
-  while (!NILP((expr = REST(expr))))
-    count++;
+  count = 1;
+  while (!NILP((expr = REST(expr)))) count++;
   return count;
 }
 
@@ -272,16 +271,16 @@ static S *Special_progn(S *expr, Env *env) {
 static S *Special_with(S *expr, Env *env) {
   S *var, *result;
   if (LENGTH(expr) < 1)
-    Error_new("with: Illegal argument exception.");
+    return Error_new("with: Illegal argument exception.");
   if (!S_isType(FIRST(expr), Cons))
-    Error_new("with: First expression must be list.");
+    return Error_new("with: First expression must be list.");
   Env_push(env);
   for (var = FIRST(expr); !NILP(var); var = REST(var)) {
     if (!S_isType(FIRST(var), Symbol))
-      return Error_new("with: is not a symbol.");
+      return Error_new("with: variable is not a symbol.");
     Env_put(env, FIRST(var)->Symbol.val, nil);
   }
-  result = Special_progn(Cons_new(REST(expr), nil), env);
+  result = Special_progn(REST(expr), env);
   Env_pop(env);
   return result;
 }
