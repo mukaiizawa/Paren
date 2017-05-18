@@ -278,7 +278,7 @@ static S *Special_with(S *expr, Env *env) {
   for (var = FIRST(expr); !NILP(var); var = REST(var)) {
     if (!S_isType(FIRST(var), Symbol))
       return Error_new("with: variable is not a symbol.");
-    Env_put(env, FIRST(var)->Symbol.val, nil);
+    Env_putSymbol(env, FIRST(var)->Symbol.val, nil);
   }
   result = Special_progn(REST(expr), env);
   Env_pop(env);
@@ -293,9 +293,22 @@ static S *Special_assign(S *expr, Env *env) {
     var = FIRST(expr);
     if (!S_isType(var, Symbol))
       return Error_new("<-: variable must be symbol.");
-    if ((val = (S *)Env_get(env, var->Symbol.val, NULL)) == NULL)
+    if ((val = (S *)Env_getSymbol(env, var->Symbol.val, NULL)) == NULL)
       return Error_new("<-: undefined variable.");
-    Env_put(env, var->Symbol.val, val = S_eval(SECOND(expr), env));
+    Env_putSymbol(env, var->Symbol.val, val = S_eval(SECOND(expr), env));
+  }
+  return val;
+}
+
+static S *Special_defvar(S *expr, Env *env) {
+  S *var, *val;
+  if (!(LENGTH(expr) % 2 == 0))
+    return Error_new("defvar: Arguments must be even number.");
+  for (; !NILP(expr); expr = REST(REST(expr))) {
+    var = FIRST(expr);
+    if (!S_isType(var, Symbol))
+      return Error_new("defvar: variable must be symbol.");
+    Env_putSymbol(env, var->Symbol.val, val = S_eval(SECOND(expr), env));
   }
   return val;
 }
@@ -315,7 +328,7 @@ S *S_eval(S *expr, Env *env) {
   S *root, *cmd, *args;
   if (ATOMP(expr)) {
     if (S_isType(expr, Symbol))
-      expr = (S *)Env_get(env, expr->Symbol.val
+      expr = (S *)Env_getSymbol(env, expr->Symbol.val
           , Error_new("eval: undefined variable."));
     return S_isType(expr, Error)?
       S_errorHandler(expr):
@@ -380,19 +393,20 @@ void Prim_init(Env *env) {
   Env_putSpecial(env, "progn", Special_new(Special_progn));
   Env_putSpecial(env, "with", Special_new(Special_with));
   Env_putSpecial(env, "<-", Special_new(Special_assign));
-  Env_put(env, "t", (t = Symbol_new("t")));
-  Env_put(env, "nil", (nil = Symbol_new("nil")));
-  Env_put(env, "stdin", (in = Stream_new(stdin)));
-  Env_put(env, "stdout", (out = Stream_new(stdout)));
-  Env_put(env, "stderr", (err = Stream_new(stderr)));
-  Env_put(env, "pi", Number_new(3.14159265358979323846));
-  Env_put(env, "nil", (nil = Symbol_new("nil")));
-  Env_put(env, "nil?", Function_new(Function_isNil, NULL));
-  Env_put(env, "atom?", Function_new(Function_isAtom, NULL));
-  Env_put(env, "car", Function_new(Function_car, NULL));
-  Env_put(env, "cdr", Function_new(Function_cdr, NULL));
-  Env_put(env, "cons", Function_new(Function_cons, NULL));
-  Env_put(env, "list", Function_new(Function_list, NULL));
-  Env_put(env, "length", Function_new(Function_length, NULL));
-  Env_put(env, "desc", Function_new(Function_desc, NULL));
+  Env_putSpecial(env, "defvar", Special_new(Special_defvar));
+  Env_putSymbol(env, "t", (t = Symbol_new("t")));
+  Env_putSymbol(env, "nil", (nil = Symbol_new("nil")));
+  Env_putSymbol(env, "stdin", (in = Stream_new(stdin)));
+  Env_putSymbol(env, "stdout", (out = Stream_new(stdout)));
+  Env_putSymbol(env, "stderr", (err = Stream_new(stderr)));
+  Env_putSymbol(env, "pi", Number_new(3.14159265358979323846));
+  Env_putSymbol(env, "nil", (nil = Symbol_new("nil")));
+  Env_putSymbol(env, "nil?", Function_new(Function_isNil, NULL));
+  Env_putSymbol(env, "atom?", Function_new(Function_isAtom, NULL));
+  Env_putSymbol(env, "car", Function_new(Function_car, NULL));
+  Env_putSymbol(env, "cdr", Function_new(Function_cdr, NULL));
+  Env_putSymbol(env, "cons", Function_new(Function_cons, NULL));
+  Env_putSymbol(env, "list", Function_new(Function_list, NULL));
+  Env_putSymbol(env, "length", Function_new(Function_length, NULL));
+  Env_putSymbol(env, "desc", Function_new(Function_desc, NULL));
 }

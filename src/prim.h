@@ -49,6 +49,7 @@ typedef union S {
   } Number;
   struct {
     Type type;
+    Type argType;
     union S *(* f)(union S *);
     union S *args;
   } Function;

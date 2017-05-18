@@ -16,18 +16,19 @@ static struct EnvNode *EnvNode_new() {
     exit(1);
   }
   node->outer = NULL;
-  Splay_init(&node->map);
+  Splay_init(&node->symbol);
   return node;
 }
 
 static void EnvNode_free(struct EnvNode *node) {
-  Splay_free(&node->map);
+  Splay_free(&node->symbol);
   free(node);
 }
 
 void Env_init(Env *env) {
   env->root = EnvNode_new();
   Splay_init(&env->special);
+  Splay_init(&env->function);
 }
 
 void Env_push(Env *env) {
@@ -44,18 +45,18 @@ void Env_pop(Env *env) {
   EnvNode_free(node);
 }
 
-void *Env_get(Env *env, char *key, void *orElse) {
+void *Env_getSymbol(Env *env, char *key, void *orElse) {
   struct EnvNode *node;
   void *val;
   for (node = env->root; node != NULL; node = node->outer) {
-    if ((val = Splay_get(&node->map, key)) != NULL)
+    if ((val = Splay_get(&node->symbol, key)) != NULL)
       return val;
   }
   return orElse;
 }
 
-void Env_put(Env *env, char *key, void *val) {
-  Splay_put(&env->root->map, key, val);
+void Env_putSymbol(Env *env, char *key, void *val) {
+  Splay_put(&env->root->symbol, key, val);
 }
 
 void *Env_getSpecial(Env *env, char *key) {
@@ -63,6 +64,14 @@ void *Env_getSpecial(Env *env, char *key) {
 }
 
 void Env_putSpecial(Env *env, char *key, void *val) {
+  Splay_put(&env->special, key, val);
+}
+
+void *Env_getFunction(Env *env, char *key) {
+  return Splay_get(&env->special, key);
+}
+
+void Env_putFunction(Env *env, char *key, void *val) {
   Splay_put(&env->special, key, val);
 }
 
