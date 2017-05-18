@@ -314,12 +314,12 @@ S *S_read() {
 S *S_eval(S *expr, Env *env) {
   S *root, *cmd, *args;
   if (ATOMP(expr)) {
-    root = S_isType(expr, Symbol)?
-      (S *)Env_get(env, expr->Symbol.val, Error_new("eval: undefined variable.")):
-      expr;
-    return S_isType(root, Error)?
+    if (S_isType(expr, Symbol))
+      expr = (S *)Env_get(env, expr->Symbol.val
+          , Error_new("eval: undefined variable."));
+    return S_isType(expr, Error)?
       S_errorHandler(expr):
-      root;
+      expr;
   }
   if ((S *)(cmd = Env_getSpecial(env, FIRST(expr)->Symbol.val)) != NULL)
     return (cmd->Special.f)(REST(expr), env);
