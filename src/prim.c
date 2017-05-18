@@ -18,9 +18,10 @@ S *in;
 S *out;
 S *err;
 
-static char *TYPE_STRING[11] = {
+static char *TYPE_STRING[12] = {
   "Cons",
   "Map",
+  "Structure",
   "Symbol",
   "Keyword",
   "String",
@@ -66,6 +67,14 @@ S *Map_new() {
   S *expr;
   expr = S_alloc();
   expr->Map.type = Map;
+  Splay_init(&expr->Map.map);
+  return expr;
+}
+
+S *Structure_new(char *name) {
+  S *expr;
+  expr = S_alloc();
+  expr->Structure.type = Structure;
   Splay_init(&expr->Map.map);
   return expr;
 }
@@ -313,18 +322,19 @@ static S *Special_defVar(S *expr, Env *env) {
   return val;
 }
 
-static S *Special_defType(S *expr, Env *env) {
-  S *args;
-  if ((LENGTH(expr) == 0))
-    return Error_new("defType: required one or more argument but no argument.");
-  if (!S_isType(FIRST(expr), Keyword))
-    return Error_new("defType: arguments must be keyword.");
-  if ((S *)Env_getType(env, FIRST(expr)->Keyword.val) != NULL)
-    return Error_new("defType: cannnot define already exist type.");
-  for (args = REST(expr); !NILP(args); args = REST(args))
-    if ((S *)Env_getType(env, FIRST(args)->Keyword.val) == NULL)
-      return Error_new("defType: undefined type.");
-  Env_putType(env, FIRST(expr)->Keyword.val, REST(expr));
+// (defStruct Point () x y)
+static S *Special_defStruct(S *expr, Env *env) {
+  // S *type, *vars;
+  // if ((LENGTH(expr) < 2))
+  //   return Error_new("defType: required one or more argument but no argument.");
+  // if (!S_isType(FIRST(expr), Keyword))
+  //   return Error_new("defType: arguments must be keyword.");
+  // if ((S *)Env_getType(env, FIRST(expr)->Keyword.val) != NULL)
+  //   return Error_new("defType: cannnot define already exist type.");
+  // for (args = REST(expr); !NILP(args); args = REST(args))
+  //   if ((S *)Env_getType(env, FIRST(args)->Keyword.val) == NULL)
+  //     return Error_new("defType: undefined type.");
+  // Env_putType(env, FIRST(expr)->Keyword.val, REST(expr));
   return FIRST(expr);
 }
 
@@ -409,7 +419,7 @@ void Prim_init(Env *env) {
   Env_putSpecial(env, "with", Special_new(Special_with));
   Env_putSpecial(env, "<-", Special_new(Special_assign));
   Env_putSpecial(env, "defVar", Special_new(Special_defVar));
-  Env_putSpecial(env, "defType", Special_new(Special_defType));
+  // Env_putSpecial(env, "defStruct", Special_new(Special_defStruct));
   Env_putSymbol(env, "t", (t = Symbol_new("t")));
   Env_putSymbol(env, "nil", (nil = Symbol_new("nil")));
   Env_putSymbol(env, "stdin", (in = Stream_new(stdin)));
@@ -425,8 +435,5 @@ void Prim_init(Env *env) {
   Env_putSymbol(env, "list", Function_new(Function_list, NULL));
   Env_putSymbol(env, "length", Function_new(Function_length, NULL));
   Env_putSymbol(env, "desc", Function_new(Function_desc, NULL));
-  Env_putType(env, "T", nil);
-  Env_putType(env, "Cons", Cons_new(t, nil));
-  Env_putType(env, "Map", Cons_new(t, nil));
-  Env_putType(env, "Symbol", Cons_new(t, nil));
+  Env_putType(env, "Object", nil);
 }

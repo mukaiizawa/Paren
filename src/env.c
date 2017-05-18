@@ -30,6 +30,7 @@ void Env_init(Env *env) {
   Splay_init(&env->type);
   Splay_init(&env->special);
   Splay_init(&env->function);
+  Splay_init(&env->structure);
 }
 
 void Env_push(Env *env) {

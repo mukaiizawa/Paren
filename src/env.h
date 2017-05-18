@@ -10,6 +10,7 @@ typedef struct Env {
   Splay type;
   Splay special;
   Splay function;
+  Splay structure;
 } Env;
 
 extern void Env_init(Env *env);

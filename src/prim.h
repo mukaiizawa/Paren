@@ -5,6 +5,7 @@
 typedef enum {
   Cons,
   Map,
+  Structure,
   Symbol,
   Keyword,
   String,
@@ -27,6 +28,11 @@ typedef union S {
     Type type;
     Splay map;
   } Map;
+  struct {
+    Type type;
+    char *name;
+    Splay values;
+  } Structure;
   struct {
     Type type;
     char *val;
