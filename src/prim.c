@@ -300,7 +300,7 @@ static S *Special_assign(S *expr, Env *env) {
   return val;
 }
 
-static S *Special_defvar(S *expr, Env *env) {
+static S *Special_defVar(S *expr, Env *env) {
   S *var, *val;
   if (!(LENGTH(expr) % 2 == 0))
     return Error_new("defvar: Arguments must be even number.");
@@ -311,6 +311,21 @@ static S *Special_defvar(S *expr, Env *env) {
     Env_putSymbol(env, var->Symbol.val, val = S_eval(SECOND(expr), env));
   }
   return val;
+}
+
+static S *Special_defType(S *expr, Env *env) {
+  S *args;
+  if ((LENGTH(expr) == 0))
+    return Error_new("defType: required one or more argument but no argument.");
+  if (!S_isType(FIRST(expr), Keyword))
+    return Error_new("defType: arguments must be keyword.");
+  if ((S *)Env_getType(env, FIRST(expr)->Keyword.val) != NULL)
+    return Error_new("defType: cannnot define already exist type.");
+  for (args = REST(expr); !NILP(args); args = REST(args))
+    if ((S *)Env_getType(env, FIRST(args)->Keyword.val) == NULL)
+      return Error_new("defType: undefined type.");
+  Env_putType(env, FIRST(expr)->Keyword.val, REST(expr));
+  return FIRST(expr);
 }
 
 static S *S_errorHandler(S *expr) {
@@ -393,7 +408,8 @@ void Prim_init(Env *env) {
   Env_putSpecial(env, "progn", Special_new(Special_progn));
   Env_putSpecial(env, "with", Special_new(Special_with));
   Env_putSpecial(env, "<-", Special_new(Special_assign));
-  Env_putSpecial(env, "defvar", Special_new(Special_defvar));
+  Env_putSpecial(env, "defVar", Special_new(Special_defVar));
+  Env_putSpecial(env, "defType", Special_new(Special_defType));
   Env_putSymbol(env, "t", (t = Symbol_new("t")));
   Env_putSymbol(env, "nil", (nil = Symbol_new("nil")));
   Env_putSymbol(env, "stdin", (in = Stream_new(stdin)));
@@ -409,4 +425,8 @@ void Prim_init(Env *env) {
   Env_putSymbol(env, "list", Function_new(Function_list, NULL));
   Env_putSymbol(env, "length", Function_new(Function_length, NULL));
   Env_putSymbol(env, "desc", Function_new(Function_desc, NULL));
+  Env_putType(env, "T", nil);
+  Env_putType(env, "Cons", Cons_new(t, nil));
+  Env_putType(env, "Map", Cons_new(t, nil));
+  Env_putType(env, "Symbol", Cons_new(t, nil));
 }
