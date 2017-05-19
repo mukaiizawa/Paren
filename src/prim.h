@@ -4,7 +4,6 @@
 
 typedef enum {
   Cons,
-  Map,
   Structure,
   Symbol,
   Keyword,
@@ -26,12 +25,8 @@ typedef union S {
   } Cons;
   struct {
     Type type;
-    Splay map;
-  } Map;
-  struct {
-    Type type;
     char *name;
-    Splay values;
+    Splay vars;
   } Structure;
   struct {
     Type type;
@@ -55,8 +50,14 @@ typedef union S {
   } Number;
   struct {
     Type type;
-    Type argType;
-    union S *(* f)(union S *);
+    int isPrim;
+    union fn {
+      struct {
+        union S *(* f)(union S *);
+      } prim;
+      struct {
+      } defined;
+    } fn;
     union S *args;
   } Function;
   struct {

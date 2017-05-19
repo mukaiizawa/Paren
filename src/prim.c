@@ -18,9 +18,8 @@ S *in;
 S *out;
 S *err;
 
-static char *TYPE_STRING[12] = {
+static char *TYPE_STRING[11] = {
   "Cons",
-  "Map",
   "Structure",
   "Symbol",
   "Keyword",
@@ -63,19 +62,12 @@ S *Cons_new(S *car, S *cdr) {
   return prev;
 }
 
-S *Map_new() {
-  S *expr;
-  expr = S_alloc();
-  expr->Map.type = Map;
-  Splay_init(&expr->Map.map);
-  return expr;
-}
-
 S *Structure_new(char *name) {
   S *expr;
   expr = S_alloc();
   expr->Structure.type = Structure;
-  Splay_init(&expr->Map.map);
+  expr->Structure.name = name;
+  Splay_init(&expr->Structure.vars);
   return expr;
 }
 
@@ -224,7 +216,7 @@ static S *Function_desc(S *expr) {
       printf("car: %d\n", (int)FIRST(expr));
       printf("cdr: %d\n", (int)REST(expr));
       break;
-    case Map:
+    case Structure:
       break;
     case Symbol:
       printf("name: %s\n", expr->Symbol.val);
@@ -322,21 +314,27 @@ static S *Special_defVar(S *expr, Env *env) {
   return val;
 }
 
-// (defStruct Point () x y)
-static S *Special_defStruct(S *expr, Env *env) {
-  // S *type, *vars;
-  // if ((LENGTH(expr) < 2))
-  //   return Error_new("defType: required one or more argument but no argument.");
-  // if (!S_isType(FIRST(expr), Keyword))
-  //   return Error_new("defType: arguments must be keyword.");
-  // if ((S *)Env_getType(env, FIRST(expr)->Keyword.val) != NULL)
-  //   return Error_new("defType: cannnot define already exist type.");
-  // for (args = REST(expr); !NILP(args); args = REST(args))
-  //   if ((S *)Env_getType(env, FIRST(args)->Keyword.val) == NULL)
-  //     return Error_new("defType: undefined type.");
-  // Env_putType(env, FIRST(expr)->Keyword.val, REST(expr));
-  return FIRST(expr);
+// (lambda (Object o String... s) body)
+static S *Special_lambda(S *expr, Env *env) {
+  return NULL;
 }
+
+// (defStruct Point (Object) x y)
+// (new Point :x 30 :y 20)
+// static S *Special_defStruct(S *expr, Env *env) {
+//   S *type, *vars;
+//   if ((LENGTH(expr) < 2))
+//     return Error_new("defType: required one or more argument but no argument.");
+//   if (!S_isType(FIRST(expr), Keyword))
+//     return Error_new("defType: arguments must be keyword.");
+//   if ((S *)Env_getType(env, FIRST(expr)->Keyword.val) != NULL)
+//     return Error_new("defType: cannnot define already exist type.");
+//   for (args = REST(expr); !NILP(args); args = REST(args))
+//     if ((S *)Env_getType(env, FIRST(args)->Keyword.val) == NULL)
+//       return Error_new("defType: undefined type.");
+//   Env_putType(env, FIRST(expr)->Keyword.val, REST(expr));
+//   return FIRST(expr);
+// }
 
 static S *S_errorHandler(S *expr) {
   S_print(expr);
