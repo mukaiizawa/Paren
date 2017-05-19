@@ -18,9 +18,8 @@ S *in;
 S *out;
 S *err;
 
-static char *TYPE_STRING[11] = {
+static char *TYPE_STRING[10] = {
   "Cons",
-  "Structure",
   "Symbol",
   "Keyword",
   "String",
@@ -60,15 +59,6 @@ S *Cons_new(S *car, S *cdr) {
   FIRST(prev) = car;
   REST(prev) = cdr;
   return prev;
-}
-
-S *Structure_new(char *name) {
-  S *expr;
-  expr = S_alloc();
-  expr->Structure.type = Structure;
-  expr->Structure.name = name;
-  Splay_init(&expr->Structure.vars);
-  return expr;
 }
 
 S *Symbol_new(char *val) {
@@ -215,8 +205,6 @@ static S *Function_desc(S *expr) {
     case Cons:
       printf("car: %d\n", (int)FIRST(expr));
       printf("cdr: %d\n", (int)REST(expr));
-      break;
-    case Structure:
       break;
     case Symbol:
       printf("name: %s\n", expr->Symbol.val);
