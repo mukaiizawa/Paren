@@ -50,10 +50,9 @@ void Env_pop(Env *env) {
 void *Env_getSymbol(Env *env, char *key, void *orElse) {
   struct EnvNode *node;
   void *val;
-  for (node = env->root; node != NULL; node = node->outer) {
+  for (node = env->root; node != NULL; node = node->outer)
     if ((val = Splay_get(&node->symbol, key)) != NULL)
       return val;
-  }
   return orElse;
 }
 
