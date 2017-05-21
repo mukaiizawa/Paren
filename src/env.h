@@ -9,7 +9,6 @@ typedef struct Env {
   } *root;
   Splay type;
   Splay special;
-  Splay function;
   Splay structure;
 } Env;
 

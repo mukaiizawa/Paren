@@ -1,10 +1,10 @@
 /*
-  paren primitive.
-*/
+   paren primitive.
+   */
 
 typedef enum {
   Cons,
-  Structure,
+  Type,
   Symbol,
   Keyword,
   String,
@@ -14,62 +14,60 @@ typedef enum {
   Special,
   Stream,
   Error
-} Type;
+} ParenType;
 
-extern char *Type_asString(Type type);
+extern char *Type_asString(ParenType type);
 
 typedef union S {
   struct {
-    Type type;
+    ParenType type;
     union S *car, *cdr;
   } Cons;
   struct {
-    Type type;
+    ParenType type;
+    union S *car, *cdr;
+  } Type;
+  struct {
+    ParenType type;
     char *name;
     Splay vars;
   } Structure;
   struct {
-    Type type;
+    ParenType type;
     char *val;
   } Symbol;
   struct {
-    Type type;
+    ParenType type;
     char *val;
   } Keyword;
   struct {
-    Type type;
+    ParenType type;
     char *val;
   } String;
   struct {
-    Type type;
+    ParenType type;
     char val;
   } Character;
   struct {
-    Type type;
+    ParenType type;
     double val;
   } Number;
   struct {
-    Type type;
-    int isPrim;
-    union fn {
-      struct {
-        union S *(* f)(union S *);
-      } prim;
-      struct {
-      } defined;
-    } fn;
-    union S *args;
-  } Function;
-  struct {
-    Type type;
+    ParenType type;
     union S *(* f)(union S *, Env *env);
   } Special;
   struct {
-    Type type;
+    ParenType type;
+    union S *signature;
+    union S *body;
+    union S *(* prim)(union S *);
+  } Function;
+  struct {
+    ParenType type;
     FILE *stream;
   } Stream;
   struct {
-    Type type;
+    ParenType type;
     char *val;
   } Error;
 } S;
@@ -81,7 +79,7 @@ typedef union S {
 #define ATOMP(expr) (expr->Cons.type != Cons)
 #define NILP(expr) ((expr) == nil)
 extern int LENGTH(S *expr);
-extern int S_isType(S *expr, Type t);
+extern int S_isType(S *expr, ParenType t);
 
 extern S *t;
 extern S *nil;
@@ -93,7 +91,7 @@ extern S *Keyword_new(char *val);
 extern S *String_new(char *val);
 extern S *Character_new(char val);
 extern S *Number_new(double val);
-extern S *Function_new(S *f(S *), S *args);
+extern S *Function_new(S *signature, S *body, S *prim(S *));
 extern S *Special_new(S *f(S *, Env *));
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);

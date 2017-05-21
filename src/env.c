@@ -29,7 +29,6 @@ void Env_init(Env *env) {
   env->root = EnvNode_new();
   Splay_init(&env->type);
   Splay_init(&env->special);
-  Splay_init(&env->function);
   Splay_init(&env->structure);
 }
 
@@ -76,13 +75,13 @@ void Env_putSpecial(Env *env, char *key, void *val) {
   Splay_put(&env->special, key, val);
 }
 
-void *Env_getFunction(Env *env, char *key) {
-  return Splay_get(&env->function, key);
-}
+// void *Env_getFunction(Env *env, char *key) {
+//   return Splay_get(&env->function, key);
+// }
 
-void Env_putFunction(Env *env, char *key, void *val) {
-  Splay_put(&env->function, key, val);
-}
+// void Env_putFunction(Env *env, char *key, void *val) {
+//   Splay_put(&env->function, key, val);
+// }
 
 void Env_free(Env *env) {
   struct EnvNode *node, *outer;

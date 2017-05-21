@@ -18,8 +18,9 @@ S *in;
 S *out;
 S *err;
 
-static char *TYPE_STRING[10] = {
+static char *PARENTYPE_STRING[11] = {
   "Cons",
+  "Type",
   "Symbol",
   "Keyword",
   "String",
@@ -31,12 +32,12 @@ static char *TYPE_STRING[10] = {
   "Error"
 };
 
-int S_isType(S *expr, Type t) {
+int S_isType(S *expr, ParenType t) {
   return expr->Cons.type == t;
 };
 
-char *Type_asString(Type type) {
-  return TYPE_STRING[type];
+char *ParenType_asString(ParenType type) {
+  return PARENTYPE_STRING[type];
 };
 
 static S *S_alloc() {
@@ -105,12 +106,13 @@ S *Number_new(double val) {
   return expr;
 }
 
-S *Function_new(S *f(S *), S *args) {
+S *Function_new(S *signature, S *body, S *prim(S *)) {
   S *expr;
   expr = S_alloc();
   expr->Function.type = Function;
-  expr->Function.f = f;
-  expr->Function.args = args;
+  expr->Function.signature = signature;
+  expr->Function.body = body;
+  expr->Function.prim = prim;
   return expr;
 }
 
@@ -147,6 +149,7 @@ int LENGTH(S *expr) {
   return count;
 }
 
+// nil? Object o
 static S *Function_isNil(S *expr) {
   return NILP(expr)? t: nil;
 }
@@ -200,7 +203,7 @@ static S *Function_length(S *expr) {
 
 static S *Function_desc(S *expr) {
   printf("address: %d\n", (int)expr);
-  printf("type: %s\n", Type_asString(expr->Cons.type));
+  printf("type: %s\n", ParenType_asString(expr->Cons.type));
   switch (expr->Cons.type) {
     case Cons:
       printf("car: %d\n", (int)FIRST(expr));
@@ -257,17 +260,17 @@ static S *Special_progn(S *expr, Env *env) {
   return S_eval(FIRST(result), env);
 }
 
-static S *Special_with(S *expr, Env *env) {
-  S *var, *result;
-  if (LENGTH(expr) < 1)
-    return Error_new("with: Illegal argument exception.");
+static S *Special_let(S *expr, Env *env) {
+  S *varVal, *result;
+  if (!(LENGTH(expr) % 2 == 0))
+    return Error_new("let: Arguments must be even number.");
   if (!S_isType(FIRST(expr), Cons))
-    return Error_new("with: First expression must be list.");
+    return Error_new("let: First expression must be list.");
   Env_push(env);
-  for (var = FIRST(expr); !NILP(var); var = REST(var)) {
-    if (!S_isType(FIRST(var), Symbol))
-      return Error_new("with: variable is not a symbol.");
-    Env_putSymbol(env, FIRST(var)->Symbol.val, nil);
+  for (varVal = FIRST(expr); !NILP(varVal); varVal = REST(REST(varVal))) {
+    if (!S_isType(FIRST(varVal), Symbol))
+      return Error_new("let: variable is not a symbol.");
+    Env_putSymbol(env, FIRST(varVal)->Symbol.val, S_eval(SECOND(varVal), env));
   }
   result = Special_progn(REST(expr), env);
   Env_pop(env);
@@ -357,13 +360,14 @@ S *S_eval(S *expr, Env *env) {
   if (cmd->Function.type != Function) {
     return Error_new("eval: undefined function.");
   }
-  // invoke primitive function.
-  if (cmd->Function.f != NULL)
-    return (cmd->Function.f)(args);
-  // invoke user defined function.
-  else {
-    return nil;    // TODO: apply user defined function.
-  }
+  // // invoke primitive function.
+  // if (cmd->Function.f != NULL)
+  //   return (cmd->Function.f)(args);
+  // // invoke user defined function.
+  // else {
+  //   return nil;    // TODO: apply user defined function.
+  // }
+  return nil;
 }
 
 S *S_print(S *expr) {
@@ -399,13 +403,16 @@ S *S_print(S *expr) {
 }
 
 void Prim_init(Env *env) {
+  // init special forms.
   Env_putSpecial(env, "if", Special_new(Special_if));
   Env_putSpecial(env, "quote", Special_new(Special_quote));
   Env_putSpecial(env, "progn", Special_new(Special_progn));
-  Env_putSpecial(env, "with", Special_new(Special_with));
+  Env_putSpecial(env, "let", Special_new(Special_let));
   Env_putSpecial(env, "<-", Special_new(Special_assign));
   Env_putSpecial(env, "defVar", Special_new(Special_defVar));
   // Env_putSpecial(env, "defStruct", Special_new(Special_defStruct));
+
+  // init global symbols.
   Env_putSymbol(env, "t", (t = Symbol_new("t")));
   Env_putSymbol(env, "nil", (nil = Symbol_new("nil")));
   Env_putSymbol(env, "stdin", (in = Stream_new(stdin)));
@@ -413,13 +420,19 @@ void Prim_init(Env *env) {
   Env_putSymbol(env, "stderr", (err = Stream_new(stderr)));
   Env_putSymbol(env, "pi", Number_new(3.14159265358979323846));
   Env_putSymbol(env, "nil", (nil = Symbol_new("nil")));
-  Env_putSymbol(env, "nil?", Function_new(Function_isNil, NULL));
-  Env_putSymbol(env, "atom?", Function_new(Function_isAtom, NULL));
-  Env_putSymbol(env, "car", Function_new(Function_car, NULL));
-  Env_putSymbol(env, "cdr", Function_new(Function_cdr, NULL));
-  Env_putSymbol(env, "cons", Function_new(Function_cons, NULL));
-  Env_putSymbol(env, "list", Function_new(Function_list, NULL));
-  Env_putSymbol(env, "length", Function_new(Function_length, NULL));
-  Env_putSymbol(env, "desc", Function_new(Function_desc, NULL));
+
+  // init types.
   Env_putType(env, "Object", nil);
+
+  // init function signatures.
+
+  // init functions.
+  // Env_putSymbol(env, "nil?", Function_new(Function_isNil, NULL));
+  // Env_putSymbol(env, "atom?", Function_new(Function_isAtom, NULL));
+  // Env_putSymbol(env, "car", Function_new(Function_car, NULL));
+  // Env_putSymbol(env, "cdr", Function_new(Function_cdr, NULL));
+  // Env_putSymbol(env, "cons", Function_new(Function_cons, NULL));
+  // Env_putSymbol(env, "list", Function_new(Function_list, NULL));
+  // Env_putSymbol(env, "length", Function_new(Function_length, NULL));
+  // Env_putSymbol(env, "desc", Function_new(Function_desc, NULL));
 }
