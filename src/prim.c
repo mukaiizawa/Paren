@@ -14,9 +14,6 @@
 
 S *t;
 S *nil;
-S *in;
-S *out;
-S *err;
 
 static char *PARENTYPE_STRING[11] = {
   "Cons",
@@ -60,6 +57,15 @@ S *Cons_new(S *car, S *cdr) {
   FIRST(prev) = car;
   REST(prev) = cdr;
   return prev;
+}
+
+S *Type_new(char *val, S* super) {
+  S *expr;
+  expr = S_alloc();
+  expr->Type.type = Type;
+  expr->Type.val = val;
+  expr->Type.super = super;
+  return expr;
 }
 
 S *Symbol_new(char *val) {
@@ -106,11 +112,12 @@ S *Number_new(double val) {
   return expr;
 }
 
-S *Function_new(S *signature, S *body, S *prim(S *)) {
+S *Function_new(S *signature, S *args, S *body, S *prim(S *)) {
   S *expr;
   expr = S_alloc();
   expr->Function.type = Function;
   expr->Function.signature = signature;
+  expr->Function.args = args;
   expr->Function.body = body;
   expr->Function.prim = prim;
   return expr;
@@ -305,10 +312,10 @@ static S *Special_defVar(S *expr, Env *env) {
   return val;
 }
 
-// (lambda (Object o String... s) body)
-static S *Special_lambda(S *expr, Env *env) {
-  return NULL;
-}
+// // (fn (Object o String... s) body)
+// static S *Special_fn(S *expr, Env *env) {
+//   return NULL;
+// }
 
 // (defStruct Point (Object) x y)
 // (new Point :x 30 :y 20)
@@ -402,6 +409,9 @@ S *S_print(S *expr) {
   return expr;
 }
 
+// primitive types
+S *Type_Object;
+
 void Prim_init(Env *env) {
   // init special forms.
   Env_putSpecial(env, "if", Special_new(Special_if));
@@ -415,19 +425,17 @@ void Prim_init(Env *env) {
   // init global symbols.
   Env_putSymbol(env, "t", (t = Symbol_new("t")));
   Env_putSymbol(env, "nil", (nil = Symbol_new("nil")));
-  Env_putSymbol(env, "stdin", (in = Stream_new(stdin)));
-  Env_putSymbol(env, "stdout", (out = Stream_new(stdout)));
-  Env_putSymbol(env, "stderr", (err = Stream_new(stderr)));
+  Env_putSymbol(env, "stdin", Stream_new(stdin));
+  Env_putSymbol(env, "stdout", Stream_new(stdout));
+  Env_putSymbol(env, "stderr", Stream_new(stderr));
   Env_putSymbol(env, "pi", Number_new(3.14159265358979323846));
-  Env_putSymbol(env, "nil", (nil = Symbol_new("nil")));
 
   // init types.
-  Env_putType(env, "Object", nil);
-
-  // init function signatures.
+  Env_putType(env, "Object", Type_Object = Type_new("Object", nil));
 
   // init functions.
-  // Env_putSymbol(env, "nil?", Function_new(Function_isNil, NULL));
+  Env_putSymbol(env, "nil?"
+      , Function_new(Cons_new(Type_Object, nil), NULL, NULL, Function_isNil));
   // Env_putSymbol(env, "atom?", Function_new(Function_isAtom, NULL));
   // Env_putSymbol(env, "car", Function_new(Function_car, NULL));
   // Env_putSymbol(env, "cdr", Function_new(Function_cdr, NULL));

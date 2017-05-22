@@ -25,7 +25,8 @@ typedef union S {
   } Cons;
   struct {
     ParenType type;
-    union S *car, *cdr;
+    char *val;
+    union S *super;
   } Type;
   struct {
     ParenType type;
@@ -59,6 +60,7 @@ typedef union S {
   struct {
     ParenType type;
     union S *signature;
+    union S *args;
     union S *body;
     union S *(* prim)(union S *);
   } Function;
@@ -85,13 +87,13 @@ extern S *t;
 extern S *nil;
 
 extern S *Cons_new(S *car, S *cdr);
-extern S *Map_new();
+extern S *Type_new(char *val, S* super);
 extern S *Symbol_new(char *val);
 extern S *Keyword_new(char *val);
 extern S *String_new(char *val);
 extern S *Character_new(char val);
 extern S *Number_new(double val);
-extern S *Function_new(S *signature, S *body, S *prim(S *));
+extern S *Function_new(S *signature, S *args, S *body, S *prim(S *));
 extern S *Special_new(S *f(S *, Env *));
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
