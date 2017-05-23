@@ -75,14 +75,6 @@ void Env_putSpecial(Env *env, char *key, void *val) {
   Splay_put(&env->special, key, val);
 }
 
-// void *Env_getFunction(Env *env, char *key) {
-//   return Splay_get(&env->function, key);
-// }
-
-// void Env_putFunction(Env *env, char *key, void *val) {
-//   Splay_put(&env->function, key, val);
-// }
-
 void Env_free(Env *env) {
   struct EnvNode *node, *outer;
   node = env->root;

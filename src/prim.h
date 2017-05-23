@@ -55,11 +55,11 @@ typedef union S {
   } Number;
   struct {
     ParenType type;
-    union S *(* f)(union S *, Env *env);
+    union S *(* fn)(union S *, Env *env);
   } Special;
   struct {
     ParenType type;
-    struct Generics {
+    struct Generic {
       union S *signature;
       union S *args;
       union S *body;

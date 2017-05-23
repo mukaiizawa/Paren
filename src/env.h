@@ -21,6 +21,4 @@ extern void *Env_getType(Env *env, char *key);
 extern void Env_putType(Env *env, char *key, void *val);
 extern void *Env_getSpecial(Env *env, char *key);
 extern void Env_putSpecial(Env *env, char *key, void *val);
-extern void *Env_getFunction(Env *env, char *key);
-extern void Env_putFunction(Env *env, char *key, void *val);
 extern void Env_free(Env *env);

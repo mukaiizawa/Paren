@@ -46,9 +46,9 @@ static S *S_alloc() {
   return expr;
 }
 
-static struct Generics *Generics_alloc() {
-  struct Generics *g;
-  if ((g = (struct Generics *)malloc(sizeof(struct Generics))) == NULL) {
+static struct Generic *Generics_alloc() {
+  struct Generic *g;
+  if ((g = (struct Generic *)malloc(sizeof(struct Generic))) == NULL) {
     fprintf(stderr, "Generics_alloc: Cannot allocate memory.");
     exit(1);
   }
@@ -57,10 +57,7 @@ static struct Generics *Generics_alloc() {
 
 S *Cons_new(S *car, S *cdr) {
   S *prev;
-  if (ATOMP(cdr) && !NILP(cdr)) {
-    fprintf(stderr, "Cons: Do not allow create cons cell without terminated nil.");
-    exit(1);
-  }
+  assert(!ATOMP(cdr) || NILP(cdr));
   prev = S_alloc();
   prev->Cons.type = Cons;
   FIRST(prev) = car;
@@ -121,33 +118,41 @@ S *Number_new(double val) {
   return expr;
 }
 
-static struct Generics *Function_addGenerics(
-    S *function, S *signature, S *args, S *body, S *prim(S *))
+// TODO: 総称関数のマッチ判定処理
+static struct Generic *Function_lookupGenerics(S *fn, S *signature) {
+  struct Generic *generic;
+  return generic;
+}
+
+// TODO: 同一シグネチャが存在する場合は入れ替え
+static void Function_addGenerics(
+    S *fn, S *signature, S *args, S *body, S *prim(S *))
 {
-  struct Generics *g;
-  assert(S_isType(function, Function));
+  struct Generic *g;
+  assert(S_isType(fn, Function));
   g = Generics_alloc();
   g->signature = signature;
   g->args = args;
   g->body = body;
   g->prim = prim;
-  return g;
+  g->next = fn->Function.generics;
+  fn->Function.generics = g;
 }
 
 S *Function_new(S *signature, S *args, S *body, S *prim(S *)) {
   S *expr;
-  struct Generics *generics;
   expr = S_alloc();
   expr->Function.type = Function;
+  expr->Function.generics = NULL;
   Function_addGenerics(expr, signature, args, body, prim);
   return expr;
 }
 
-S *Special_new(S *f(S *, Env *env)) {
+S *Special_new(S *fn(S *, Env *env)) {
   S *expr;
   expr = S_alloc();
   expr->Special.type = Special;
-  expr->Special.f = f;
+  expr->Special.fn = fn;
   return expr;
 }
 
@@ -262,15 +267,16 @@ static S *Function_desc(S *expr) {
   return expr;
 }
 
-static S *Special_if(S *expr, Env *env) {
-  int n;
-  if ((n = LENGTH(expr)) <= 1 || n > 3)
-    return Error_new("if: Illegal argument exception.");
-  if(NILP(S_eval(FIRST(expr), env)))
-    return (n == 2)?
-      nil:
-      S_eval(THIRD(expr), env);
-  return S_eval(SECOND(expr), env);
+static S *Special_ifElse(S *expr, Env *env) {
+  if (LENGTH(expr) < 2)
+    return Error_new("ifElse: Illegal argument exception.");
+  while (!NILP(REST(expr))) {
+    if (!NILP(S_eval(FIRST(expr), env)))
+      return S_eval(SECOND(expr), env);
+    if (NILP(expr = REST(expr)) || NILP(expr = REST(expr)))
+      return nil;
+  }
+  return S_eval(FIRST(expr), env);
 }
 
 static S *Special_quote(S *expr, Env *env) {
@@ -358,7 +364,7 @@ S *S_eval(S *expr, Env *env) {
       expr;
   }
   if ((S *)(cmd = Env_getSpecial(env, FIRST(expr)->Symbol.val)) != NULL)
-    return (cmd->Special.f)(REST(expr), env);
+    return (cmd->Special.fn)(REST(expr), env);
   root = expr;
   while (!NILP(expr)) {
     expr->Cons.car = S_eval(expr->Cons.car, env);
@@ -370,8 +376,8 @@ S *S_eval(S *expr, Env *env) {
     return Error_new("eval: undefined function.");
   }
   // // invoke primitive function.
-  // if (cmd->Function.f != NULL)
-  //   return (cmd->Function.f)(args);
+  // if (cmd->Function.fn != NULL)
+  //   return (cmd->Function.fn)(args);
   // // invoke user defined function.
   // else {
   //   return nil;    // TODO: apply user defined function.
@@ -410,7 +416,7 @@ S *Type_Object;
 
 void Prim_init(Env *env) {
   // init special forms.
-  Env_putSpecial(env, "if", Special_new(Special_if));
+  Env_putSpecial(env, "ifElse", Special_new(Special_ifElse));
   Env_putSpecial(env, "quote", Special_new(Special_quote));
   Env_putSpecial(env, "progn", Special_new(Special_progn));
   Env_putSpecial(env, "let", Special_new(Special_let));
