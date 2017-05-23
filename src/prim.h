@@ -59,10 +59,13 @@ typedef union S {
   } Special;
   struct {
     ParenType type;
-    union S *signature;
-    union S *args;
-    union S *body;
-    union S *(* prim)(union S *);
+    struct Generics {
+      union S *signature;
+      union S *args;
+      union S *body;
+      union S *(* prim)(union S *);
+      struct Generic *next;
+    } *generics;
   } Function;
   struct {
     ParenType type;

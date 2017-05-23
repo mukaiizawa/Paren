@@ -39,11 +39,20 @@ char *ParenType_asString(ParenType type) {
 
 static S *S_alloc() {
   S *expr;
-  if ((expr = (S *)calloc(1, sizeof(S))) == NULL) {
+  if ((expr = (S *)malloc(sizeof(S))) == NULL) {
     fprintf(stderr, "S_alloc: Cannot allocate memory.");
     exit(1);
   }
   return expr;
+}
+
+static struct Generics *Generics_alloc() {
+  struct Generics *g;
+  if ((g = (struct Generics *)malloc(sizeof(struct Generics))) == NULL) {
+    fprintf(stderr, "Generics_alloc: Cannot allocate memory.");
+    exit(1);
+  }
+  return g;
 }
 
 S *Cons_new(S *car, S *cdr) {
@@ -112,14 +121,25 @@ S *Number_new(double val) {
   return expr;
 }
 
+static struct Generics *Function_addGenerics(
+    S *function, S *signature, S *args, S *body, S *prim(S *))
+{
+  struct Generics *g;
+  assert(S_isType(function, Function));
+  g = Generics_alloc();
+  g->signature = signature;
+  g->args = args;
+  g->body = body;
+  g->prim = prim;
+  return g;
+}
+
 S *Function_new(S *signature, S *args, S *body, S *prim(S *)) {
   S *expr;
+  struct Generics *generics;
   expr = S_alloc();
   expr->Function.type = Function;
-  expr->Function.signature = signature;
-  expr->Function.args = args;
-  expr->Function.body = body;
-  expr->Function.prim = prim;
+  Function_addGenerics(expr, signature, args, body, prim);
   return expr;
 }
 
@@ -198,16 +218,15 @@ static S *Function_list(S *expr) {
 }
 
 static S *Function_length(S *expr) {
-  int count;
-  count = 0;
   if (NILP(expr))
-    return Number_new(count);
+    return Number_new(0);
   else if (S_isType(expr, Cons))
     return Number_new(LENGTH(FIRST(expr)));
   else
-    return Error_new("length: cannnot apply.");
+    return Error_new("length: Cannot apply.");
 }
 
+// TODO:
 static S *Function_desc(S *expr) {
   printf("address: %d\n", (int)expr);
   printf("type: %s\n", ParenType_asString(expr->Cons.type));
@@ -317,23 +336,6 @@ static S *Special_defVar(S *expr, Env *env) {
 //   return NULL;
 // }
 
-// (defStruct Point (Object) x y)
-// (new Point :x 30 :y 20)
-// static S *Special_defStruct(S *expr, Env *env) {
-//   S *type, *vars;
-//   if ((LENGTH(expr) < 2))
-//     return Error_new("defType: required one or more argument but no argument.");
-//   if (!S_isType(FIRST(expr), Keyword))
-//     return Error_new("defType: arguments must be keyword.");
-//   if ((S *)Env_getType(env, FIRST(expr)->Keyword.val) != NULL)
-//     return Error_new("defType: cannnot define already exist type.");
-//   for (args = REST(expr); !NILP(args); args = REST(args))
-//     if ((S *)Env_getType(env, FIRST(args)->Keyword.val) == NULL)
-//       return Error_new("defType: undefined type.");
-//   Env_putType(env, FIRST(expr)->Keyword.val, REST(expr));
-//   return FIRST(expr);
-// }
-
 static S *S_errorHandler(S *expr) {
   S_print(expr);
   exit(1);
@@ -382,19 +384,13 @@ S *S_print(S *expr) {
     if (S_isType(expr, Number)) {
       double intptr, fraction;
       fraction = modf(expr->Number.val, &intptr);
-      if (fraction == 0)
-        printf("%d", (int)intptr);
-      else
-        printf("%f", expr->Number.val);
+      if (fraction == 0) printf("%d", (int)intptr);
+      else printf("%f", expr->Number.val);
     }
-    else if (S_isType(expr, Character))
-      printf("%c", expr->Character.val);
-    else if (S_isType(expr, Function))
-      printf("%d", expr->Cons.type);
-    else if (S_isType(expr, Keyword))
-      printf(":%s", expr->Keyword.val);
-    else
-      printf("%s", expr->String.val);
+    else if (S_isType(expr, Character)) printf("%c", expr->Character.val);
+    else if (S_isType(expr, Function)) printf("%d", expr->Function.type);
+    else if (S_isType(expr, Keyword)) printf(":%s", expr->Keyword.val);
+    else printf("%s", expr->String.val);
   }
   else {
     printf("(");
