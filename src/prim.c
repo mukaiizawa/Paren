@@ -15,22 +15,23 @@
 S *t;
 S *nil;
 
-static char *PARENTYPE_STRING[11] = {
-  "Cons",
-  "Type",
-  "Symbol",
-  "Keyword",
-  "String",
-  "Character",
-  "Number",
-  "Function",
-  "Special",
-  "Stream",
-  "Error"
-};
+/*
+ * 型はすべて環境に登録されていて、
+ * 型の比較はアドレス比較で済むようにする。
+ */
+S *Cons;
+S *Symbol;
+S *Keyword;
+S *String;
+S *Char;
+S *Number;
+S *Function;
+S *Special;
+S *Stream;
+S *Error;
 
-int S_isType(S *expr, ParenType t) {
-  return expr->Cons.type == t;
+int TYPEP(S *expr, S *type) {
+  return expr->Type.type == type;
 };
 
 int LENGTH(S *expr) {
@@ -41,10 +42,6 @@ int LENGTH(S *expr) {
   while (!NILP((expr = REST(expr)))) count++;
   return count;
 }
-
-char *ParenType_asString(ParenType type) {
-  return PARENTYPE_STRING[type];
-};
 
 static S *S_alloc() {
   S *expr;
@@ -74,15 +71,6 @@ S *Cons_new(S *car, S *cdr) {
   return prev;
 }
 
-S *Type_new(char *val, S* super) {
-  S *expr;
-  expr = S_alloc();
-  expr->Type.type = Type;
-  expr->Type.val = val;
-  expr->Type.super = super;
-  return expr;
-}
-
 S *Symbol_new(char *val) {
   S *expr;
   expr = S_alloc();
@@ -109,13 +97,13 @@ S *String_new(char *val) {
   return expr;
 }
 
-S *Character_new(char val) {
+S *Char_new(char val) {
   S *expr;
   if (val == '\0')
     return Error_new("Illegal character.");
   expr = S_alloc();
-  expr->Character.type = Character;
-  expr->Character.val = val;
+  expr->Char.type = Char;
+  expr->Char.val = val;
   return expr;
 }
 
@@ -128,19 +116,17 @@ S *Number_new(double val) {
 }
 
 // TODO: 総称関数のマッチ判定処理
-static struct Generic *Function_lookupGenerics(S *fn, S *signature) {
+static struct Generic *Function_lookupGenerics(S *fn, S *type) {
   struct Generic *generic;
   return generic;
 }
 
-// TODO: 同一シグネチャが存在する場合は入れ替え
-static void Function_addGenerics(
-    S *fn, S *signature, S *args, S *body, S *prim(S *))
-{
+static void Function_addGenerics(S *fn, S *type, S *args, S *body, S *prim(S *)) {
   struct Generic *g;
-  assert(S_isType(fn, Function));
-  g = Generics_alloc();
-  g->signature = signature;
+  assert(TYPEP(fn, Function));
+  if ((g = Function_lookupGenerics(fn, type)) == NULL)
+    g = Generics_alloc();
+  g->type = type;
   g->args = args;
   g->body = body;
   g->prim = prim;
@@ -225,47 +211,47 @@ static S *Function_list(S *expr) {
 static S *Function_length(S *expr) {
   if (NILP(expr))
     return Number_new(0);
-  else if (S_isType(expr, Cons))
+  else if (TYPEP(expr, Cons))
     return Number_new(LENGTH(FIRST(expr)));
   else
     return Error_new("length: Cannot apply.");
 }
 
-// TODO:
-static S *Function_desc(S *expr) {
-  printf("address: %d\n", (int)expr);
-  printf("type: %s\n", ParenType_asString(expr->Cons.type));
-  switch (expr->Cons.type) {
-    case Cons:
-      printf("car: %d\n", (int)FIRST(expr));
-      printf("cdr: %d\n", (int)REST(expr));
-      break;
-    case Symbol:
-      printf("name: %s\n", expr->Symbol.val);
-      break;
-    case Keyword:
-      printf("name: %s\n", expr->Keyword.val);
-      break;
-    case String:
-      printf("value: %s\n", expr->String.val);
-      break;
-    case Character:
-      printf("value: %c\n", expr->Character.val);
-      break;
-    case Number:
-      printf("value: %f\n", expr->Number.val);
-      break;
-    case Function:
-      break;
-    case Stream:
-      break;
-    case Error:
-      break;
-    default:
-      break;
-  }
-  return expr;
-}
+// // TODO:
+// static S *Function_desc(S *expr) {
+//   printf("address: %d\n", (int)expr);
+//   printf("type: %s\n", expr->Cons.type->Keyword.val);
+//   switch (expr->Cons.type) {
+//     case Cons:
+//       printf("car: %d\n", (int)FIRST(expr));
+//       printf("cdr: %d\n", (int)REST(expr));
+//       break;
+//     case Symbol:
+//       printf("name: %s\n", expr->Symbol.val);
+//       break;
+//     case Keyword:
+//       printf("name: %s\n", expr->Keyword.val);
+//       break;
+//     case String:
+//       printf("value: %s\n", expr->String.val);
+//       break;
+//     case Char:
+//       printf("value: %c\n", expr->Char.val);
+//       break;
+//     case Number:
+//       printf("value: %f\n", expr->Number.val);
+//       break;
+//     case Function:
+//       break;
+//     case Stream:
+//       break;
+//     case Error:
+//       break;
+//     default:
+//       break;
+//   }
+//   return expr;
+// }
 
 static S *Special_ifElse(S *expr, Env *env) {
   if (LENGTH(expr) < 2)
@@ -296,11 +282,11 @@ static S *Special_let(S *expr, Env *env) {
   S *varVal, *result;
   if (!(LENGTH(expr) % 2 == 0))
     return Error_new("let: Arguments must be even number.");
-  if (!S_isType(FIRST(expr), Cons))
+  if (!TYPEP(FIRST(expr), Cons))
     return Error_new("let: First expression must be list.");
   Env_push(env);
   for (varVal = FIRST(expr); !NILP(varVal); varVal = REST(REST(varVal))) {
-    if (!S_isType(FIRST(varVal), Symbol))
+    if (!TYPEP(FIRST(varVal), Symbol))
       return Error_new("let: variable is not a symbol.");
     Env_putSymbol(env, FIRST(varVal)->Symbol.val, S_eval(SECOND(varVal), env));
   }
@@ -315,7 +301,7 @@ static S *Special_assign(S *expr, Env *env) {
     return Error_new("<-: Arguments must be even number.");
   for (; !NILP(expr); expr = REST(REST(expr))) {
     var = FIRST(expr);
-    if (!S_isType(var, Symbol))
+    if (!TYPEP(var, Symbol))
       return Error_new("<-: variable must be symbol.");
     if ((val = (S *)Env_getSymbol(env, var->Symbol.val, NULL)) == NULL)
       return Error_new("<-: undefined variable.");
@@ -330,7 +316,7 @@ static S *Special_defVar(S *expr, Env *env) {
     return Error_new("defvar: Arguments must be even number.");
   for (; !NILP(expr); expr = REST(REST(expr))) {
     var = FIRST(expr);
-    if (!S_isType(var, Symbol))
+    if (!TYPEP(var, Symbol))
       return Error_new("defvar: variable must be symbol.");
     Env_putSymbol(env, var->Symbol.val, val = S_eval(SECOND(expr), env));
   }
@@ -356,10 +342,10 @@ S *S_read() {
 S *S_eval(S *expr, Env *env) {
   S *root, *cmd, *args;
   if (ATOMP(expr)) {
-    if (S_isType(expr, Symbol))
+    if (TYPEP(expr, Symbol))
       expr = (S *)Env_getSymbol(env, expr->Symbol.val
           , Error_new("eval: undefined variable."));
-    return S_isType(expr, Error)?
+    return TYPEP(expr, Error)?
       S_errorHandler(expr):
       expr;
   }
@@ -387,15 +373,15 @@ S *S_eval(S *expr, Env *env) {
 
 S *S_print(S *expr) {
   if (ATOMP(expr)) {
-    if (S_isType(expr, Number)) {
+    if (TYPEP(expr, Number)) {
       double intptr, fraction;
       fraction = modf(expr->Number.val, &intptr);
       if (fraction == 0) printf("%d", (int)intptr);
       else printf("%f", expr->Number.val);
     }
-    else if (S_isType(expr, Character)) printf("%c", expr->Character.val);
-    else if (S_isType(expr, Function)) printf("%d", expr->Function.type);
-    else if (S_isType(expr, Keyword)) printf(":%s", expr->Keyword.val);
+    else if (TYPEP(expr, Char)) printf("%c", expr->Char.val);
+    else if (TYPEP(expr, Function)) printf("%d", expr->Function.type);
+    else if (TYPEP(expr, Keyword)) printf(":%s", expr->Keyword.val);
     else printf("%s", expr->String.val);
   }
   else {
@@ -415,6 +401,18 @@ S *S_print(S *expr) {
 S *Type_Object;
 
 void Prim_init(Env *env) {
+  // init ptimitive types
+  Cons = Keyword_new("Cons");
+  Symbol = Keyword_new("Symbol");
+  Keyword = Keyword_new("Keyword");
+  Char = Keyword_new("String");
+  Char = Keyword_new("Char");
+  Number = Keyword_new("Number");
+  Function = Keyword_new("Function");
+  Special = Keyword_new("Special");
+  Stream = Keyword_new("Stream");
+  Error = Keyword_new("Error");
+
   // init special forms.
   Env_putSpecial(env, "ifElse", Special_new(Special_ifElse));
   Env_putSpecial(env, "quote", Special_new(Special_quote));
@@ -431,9 +429,6 @@ void Prim_init(Env *env) {
   Env_putSymbol(env, "stdout", Stream_new(stdout));
   Env_putSymbol(env, "stderr", Stream_new(stderr));
   Env_putSymbol(env, "pi", Number_new(3.14159265358979323846));
-
-  // init types.
-  Env_putType(env, "Object", Type_Object = Type_new("Object", nil));
 
   // init functions.
   Env_putSymbol(env, "nil?"

@@ -59,13 +59,13 @@ parenでは、組み込み以外のリードマクロの定義は許さない。
 - unless
 ### defun
 `defun`は関数を定義するときにのシンタックスシュガーとなる。
-    (defun double (Number n)
+    (defun double (:Number n)
         (* n n))
     <=> 
     (progn
         (def double)
         (<- double
-            (fn (Number n)
+            (fn (:Number n)
               (* n n))))
 `defun`は展開されると関数を定義するフォーム群に展開される。
 仮にdefunがマクロ/スペシャルフォームでなく、
@@ -169,23 +169,23 @@ C言語系の言語同様に、`break`、`continue`フォームもサポート�
 `quote`はS式`expr`の評価を見送り、`expr`そのものを返す。
 その利用頻度から構文糖であるバッククォートリードマクロが定義されている。
 ## fn(無名関数生成)
-    (fn (:Type1 arg1 :Type2 arg2 ... :TypeN argN)
+    (fn (:Type1 arg1 arg2 ... argN)
          expr1
          expr2
          ...
          exprN)
 `fn`は無名関数を定義する。
 引数は引数の型、引数名をペアにして指定する。
-引数の型を省略した場合は型階層最上位である、
-Object型を指定したと見做される。
-したがって次の例は同じ結果を生む。
-    (map (fn (:Object o)
-             (hash o))
-         (list 1 '2' "3"))
-    <=>
+引数の型を省略した場合は任意の型を表す。
+したがって次のように、総称関数として定義しないときは省略する。
     (map (fn (o)
              (hash o))
          (list 1 '2' "3"))
 このルールにより、従来のように高階関数を用いることができる。
+
+# 関数
+parenの関数のシグネチャは次の2つで決まる。
+1. メソッド名称
+2. 第一引数の型
 
 |#

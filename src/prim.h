@@ -2,65 +2,48 @@
    paren primitive.
    */
 
-typedef enum {
-  Cons,
-  Type,
-  Symbol,
-  Keyword,
-  String,
-  Character,
-  Number,
-  Function,
-  Special,
-  Stream,
-  Error
-} ParenType;
-
-extern char *Type_asString(ParenType type);
-
 typedef union S {
   struct {
-    ParenType type;
+    union S *type;
     union S *car, *cdr;
   } Cons;
   struct {
-    ParenType type;
+    union S *type;
     char *val;
-    union S *super;
   } Type;
   struct {
-    ParenType type;
+    union S *type;
     char *name;
     Splay vars;
   } Structure;
   struct {
-    ParenType type;
+    union S *type;
     char *val;
   } Symbol;
   struct {
-    ParenType type;
+    union S *type;
     char *val;
   } Keyword;
   struct {
-    ParenType type;
+    union S *type;
     char *val;
   } String;
   struct {
-    ParenType type;
+    union S *type;
     char val;
-  } Character;
+  } Char;
   struct {
-    ParenType type;
+    union S *type;
     double val;
   } Number;
   struct {
-    ParenType type;
+    union S *type;
     union S *(* fn)(union S *, Env *env);
   } Special;
   struct {
-    ParenType type;
+    union S *type;
     struct Generic {
-      union S *signature;
+      union S *type;
       union S *args;
       union S *body;
       union S *(* prim)(union S *);
@@ -68,11 +51,11 @@ typedef union S {
     } *generics;
   } Function;
   struct {
-    ParenType type;
+    union S *type;
     FILE *stream;
   } Stream;
   struct {
-    ParenType type;
+    union S *type;
     char *val;
   } Error;
 } S;
@@ -84,17 +67,27 @@ typedef union S {
 #define ATOMP(expr) (expr->Cons.type != Cons)
 #define NILP(expr) ((expr) == nil)
 extern int LENGTH(S *expr);
-extern int S_isType(S *expr, ParenType t);
+extern int TYPEP(S *expr, S *type);
 
 extern S *t;
 extern S *nil;
+
+extern S *Cons;
+extern S *Symbol;
+extern S *Keyword;
+extern S *Char;
+extern S *Number;
+extern S *Function;
+extern S *Special;
+extern S *Stream;
+extern S *Error;
 
 extern S *Cons_new(S *car, S *cdr);
 extern S *Type_new(char *val, S* super);
 extern S *Symbol_new(char *val);
 extern S *Keyword_new(char *val);
 extern S *String_new(char *val);
-extern S *Character_new(char val);
+extern S *Char_new(char val);
 extern S *Number_new(double val);
 extern S *Function_new(S *signature, S *args, S *body, S *prim(S *));
 extern S *Special_new(S *f(S *, Env *));

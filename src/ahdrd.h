@@ -18,7 +18,7 @@ extern int Ahdrd_skipRead(Ahdrd *ahdrd);
 extern int Ahdrd_read(Ahdrd *ahdrd);
 extern int Ahdrd_peek(Ahdrd *ahdrd, int n);
 extern Ahdrd *Ahdrd_readSpace(Ahdrd *ahdrd);
-extern char *Ahdrd_readCharacter(Ahdrd *ahdrd);
+extern char *Ahdrd_readChar(Ahdrd *ahdrd);
 extern char *Ahdrd_readString(Ahdrd *ahdrd);
 extern char *Ahdrd_readKeyword(Ahdrd *ahdrd);
 extern char *Ahdrd_readSymbol(Ahdrd *ahdrd);

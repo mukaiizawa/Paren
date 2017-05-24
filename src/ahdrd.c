@@ -99,7 +99,7 @@ static char *Ahdrd_readSurrounded(Ahdrd *ahdrd, char s) {
   return Ahdrd_getToken(ahdrd);
 }
 
-char *Ahdrd_readCharacter(Ahdrd *ahdrd) {
+char *Ahdrd_readChar(Ahdrd *ahdrd) {
   return Ahdrd_readSurrounded(ahdrd, '\'');
 }
 

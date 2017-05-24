@@ -22,7 +22,7 @@ static S *S_reverse(S *expr) {
   S *root;
   if (NILP(expr))
     return nil;
-  assert(S_isType(expr, Cons));
+  assert(TYPEP(expr, Cons));
   root = nil;
   while (!NILP(expr)) {
     root = Cons_new(FIRST(expr), root);
@@ -39,10 +39,10 @@ static S *Lex_parseKeyword() {
   return Keyword_new(Ahdrd_readKeyword(&ahdrd));
 }
 
-static S *Lex_parseCharacter() {
+static S *Lex_parseChar() {
   int n;
   char c, *token;
-  if ((token = Ahdrd_readCharacter(&ahdrd)) == NULL)
+  if ((token = Ahdrd_readChar(&ahdrd)) == NULL)
     return Lex_eofError();
   if ((n = strlen(token)) == 1)
     c = token[0];
@@ -56,7 +56,7 @@ static S *Lex_parseCharacter() {
   else
     c = '\0';
   free(token);
-  return Character_new(c);
+  return Char_new(c);
 }
 
 static S *Lex_parseString() {
@@ -85,7 +85,7 @@ static S *Lex_parseAtom() {
   if ((c = Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1)) == ':')
     return Lex_parseKeyword();
   else if (c == '\'') 
-    return Lex_parseCharacter();
+    return Lex_parseChar();
   else if (c == '"')
     return Lex_parseString();
   else if (Ahdrd_isNumber(&ahdrd))
@@ -100,7 +100,7 @@ S *Lex_parseExpr() {
     acc = nil;
     Ahdrd_skipRead(&ahdrd);    // skip '('
     while (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1) != ')') {
-      if (S_isType((expr = Lex_parseExpr()), Error))
+      if (TYPEP((expr = Lex_parseExpr()), Error))
         return expr;
       acc = Cons_new(expr, acc);
     }
