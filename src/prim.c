@@ -33,6 +33,15 @@ int S_isType(S *expr, ParenType t) {
   return expr->Cons.type == t;
 };
 
+int LENGTH(S *expr) {
+  int count;
+  if(expr == nil) return 0;
+  if (ATOMP(expr)) return 1;
+  count = 1;
+  while (!NILP((expr = REST(expr)))) count++;
+  return count;
+}
+
 char *ParenType_asString(ParenType type) {
   return PARENTYPE_STRING[type];
 };
@@ -170,15 +179,6 @@ S *Error_new(char *str) {
   expr->Error.type = Error;
   expr->Error.val = str;
   return expr;
-}
-
-int LENGTH(S *expr) {
-  int count;
-  if(expr == nil) return 0;
-  if (ATOMP(expr)) return 1;
-  count = 1;
-  while (!NILP((expr = REST(expr)))) count++;
-  return count;
 }
 
 // nil? Object o
