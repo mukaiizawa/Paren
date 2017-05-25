@@ -28,7 +28,7 @@ static void EnvNode_free(struct EnvNode *node) {
 void Env_init(Env *env) {
   env->root = EnvNode_new();
   Splay_init(&env->special);
-  Splay_init(&env->type);
+  Splay_init(&env->keyword);
 }
 
 void Env_push(Env *env) {
@@ -45,13 +45,13 @@ void Env_pop(Env *env) {
   EnvNode_free(node);
 }
 
-void *Env_getSymbol(Env *env, char *key, void *orElse) {
+void *Env_getSymbol(Env *env, char *key) {
   struct EnvNode *node;
   void *val;
   for (node = env->root; node != NULL; node = node->outer)
     if ((val = Splay_get(&node->symbol, key)) != NULL)
       return val;
-  return orElse;
+  return NULL;
 }
 
 void Env_putSymbol(Env *env, char *key, void *val) {
@@ -66,6 +66,15 @@ void Env_putSpecial(Env *env, char *key, void *val) {
   Splay_put(&env->special, key, val);
 }
 
+void *Env_getKeyword(Env *env, char *key) {
+  return Splay_get(&env->keyword, key);
+}
+
+void Env_putKeyword(Env *env, char *key, void *val) {
+  if (Splay_get(&env->keyword, key) != NULL) return;
+  Splay_put(&env->keyword, key, val);
+}
+
 void Env_free(Env *env) {
   struct EnvNode *node, *outer;
   node = env->root;
@@ -74,4 +83,6 @@ void Env_free(Env *env) {
     EnvNode_free(node);
     node = outer;
   }
+  Splay_free(&env->special);
+  Splay_free(&env->keyword);
 }

@@ -15,9 +15,9 @@
 static Env env;
 
 static void Paren_init() {
-  Lex_init();
   Env_init(&env);
   Prim_init(&env);
+  Lex_init(&env);
 }
 
 int main(int argc, char* argv[]) {

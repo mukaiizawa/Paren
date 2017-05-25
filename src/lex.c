@@ -13,9 +13,11 @@
 #include "lex.h"
 
 static Ahdrd ahdrd;
+static Env *env;
 
-void Lex_init() {
+void Lex_init(Env *_env) {
   Ahdrd_init(&ahdrd, stdin);
+  env = _env;
 }
 
 static S *S_reverse(S *expr) {
@@ -36,7 +38,14 @@ static S *Lex_eofError() {
 }
 
 static S *Lex_parseKeyword() {
-  return Keyword_new(Ahdrd_readKeyword(&ahdrd));
+  char *token;
+  S *keyword;
+  token = Ahdrd_readKeyword(&ahdrd);
+  if ((keyword = (S *)Env_getKeyword(env, token)) != NULL) {
+    free(token);
+    return keyword;
+  }
+  return Keyword_new(token);
 }
 
 static S *Lex_parseChar() {
@@ -74,10 +83,14 @@ static S *Lex_parseNumber() {
 
 static S *Lex_parseSymbol() {
   char *token;
-  return
-    strcmp((token = Ahdrd_readSymbol(&ahdrd)), "t") == 0? t:
-    strcmp(token, "nil") == 0? nil:
-    Symbol_new(token);
+  S *sym;
+  token = Ahdrd_readSymbol(&ahdrd);
+  if ((sym = (S *)Env_getSymbol(env, token)) != NULL) {
+    free(token);
+    return sym;
+  }
+  else
+    return Symbol_new(token);
 }
 
 static S *Lex_parseAtom() {

@@ -60,11 +60,11 @@ typedef union S {
   } Error;
 } S;
 
-#define FIRST(expr) (expr->Cons.car)
-#define REST(expr) (expr->Cons.cdr)
+#define FIRST(expr) ((expr)->Cons.car)
+#define REST(expr) ((expr)->Cons.cdr)
 #define SECOND(expr) FIRST(REST(expr))
 #define THIRD(expr) FIRST(REST(REST(expr)))
-#define ATOMP(expr) (expr->Cons.type != Cons)
+#define ATOMP(expr) ((expr)->Cons.type != Cons)
 #define NILP(expr) ((expr) == nil)
 extern int LENGTH(S *expr);
 extern int TYPEP(S *expr, S *type);
@@ -89,7 +89,7 @@ extern S *Keyword_new(char *val);
 extern S *String_new(char *val);
 extern S *Char_new(char val);
 extern S *Number_new(double val);
-extern S *Function_new(S *signature, S *args, S *body, S *prim(S *));
+extern S *Function_new(S *type, S *args, S *body, S *prim(S *));
 extern S *Special_new(S *f(S *, Env *));
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);

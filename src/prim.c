@@ -134,12 +134,12 @@ static void Function_addGenerics(S *fn, S *type, S *args, S *body, S *prim(S *))
   fn->Function.generics = g;
 }
 
-S *Function_new(S *signature, S *args, S *body, S *prim(S *)) {
+S *Function_new(S *type, S *args, S *body, S *prim(S *)) {
   S *expr;
   expr = S_alloc();
   expr->Function.type = Function;
   expr->Function.generics = NULL;
-  Function_addGenerics(expr, signature, args, body, prim);
+  Function_addGenerics(expr, type, args, body, prim);
   return expr;
 }
 
@@ -253,6 +253,8 @@ static S *Function_length(S *expr) {
 //   return expr;
 // }
 
+// special forms
+
 static S *Special_ifElse(S *expr, Env *env) {
   if (LENGTH(expr) < 2)
     return Error_new("ifElse: Illegal argument exception.");
@@ -279,17 +281,15 @@ static S *Special_progn(S *expr, Env *env) {
 }
 
 static S *Special_let(S *expr, Env *env) {
-  S *varVal, *result;
-  if (!(LENGTH(expr) % 2 == 0))
-    return Error_new("let: Arguments must be even number.");
-  if (!TYPEP(FIRST(expr), Cons))
-    return Error_new("let: First expression must be list.");
-  Env_push(env);
-  for (varVal = FIRST(expr); !NILP(varVal); varVal = REST(REST(varVal))) {
-    if (!TYPEP(FIRST(varVal), Symbol))
+  S *args, *cons, *result;
+  if (LENGTH(expr) < 2 || ATOMP((args = FIRST(expr))) || (LENGTH(args) % 2) != 0)
+    return Error_new("let: Illegal argument.");
+  for (cons = args; !NILP(cons); cons = REST(REST(cons)))
+    if (!TYPEP(FIRST(cons), Symbol))
       return Error_new("let: variable is not a symbol.");
-    Env_putSymbol(env, FIRST(varVal)->Symbol.val, S_eval(SECOND(varVal), env));
-  }
+  Env_push(env);
+  for (cons = args; !NILP(cons); cons = REST(REST(cons)))
+    Env_putSymbol(env, FIRST(cons)->Symbol.val, S_eval(SECOND(cons), env));
   result = Special_progn(REST(expr), env);
   Env_pop(env);
   return result;
@@ -303,30 +303,37 @@ static S *Special_assign(S *expr, Env *env) {
     var = FIRST(expr);
     if (!TYPEP(var, Symbol))
       return Error_new("<-: variable must be symbol.");
-    if ((val = (S *)Env_getSymbol(env, var->Symbol.val, NULL)) == NULL)
+    if ((val = (S *)Env_getSymbol(env, var->Symbol.val)) == NULL)
       return Error_new("<-: undefined variable.");
     Env_putSymbol(env, var->Symbol.val, val = S_eval(SECOND(expr), env));
   }
   return val;
 }
 
-static S *Special_defVar(S *expr, Env *env) {
-  S *var, *val;
-  if (!(LENGTH(expr) % 2 == 0))
-    return Error_new("defvar: Arguments must be even number.");
-  for (; !NILP(expr); expr = REST(REST(expr))) {
-    var = FIRST(expr);
-    if (!TYPEP(var, Symbol))
-      return Error_new("defvar: variable must be symbol.");
-    Env_putSymbol(env, var->Symbol.val, val = S_eval(SECOND(expr), env));
+static S *Special_def(S *expr, Env *env) {
+  S *cons, *var;
+  for (cons = expr; !NILP(cons); cons = REST(cons)) {
+    if (!TYPEP(var = FIRST(cons), Symbol))
+      return Error_new("def: variable must be symbol.");
+    if (Env_getSymbol(env, var->Symbol.val) != NULL)
+      return Error_new("def: variable already defined.");
   }
-  return val;
+  for (cons = expr; !NILP(cons); cons = REST(cons)) {
+    Env_putSymbol(env, FIRST(cons)->Symbol.val, nil);
+  }
+  return nil;
 }
 
-// // (fn (Object o String... s) body)
-// static S *Special_fn(S *expr, Env *env) {
-//   return NULL;
-// }
+// (fn (:Number x y) body)
+// (defun double (:Number x y) (* x y))
+static S *Special_fn(S *expr, Env *env) {
+  // S *args, *cons;
+  // if (!(LENGTH(expr) >= 1) || ATOMP(args = FIRST(expr)))
+  //   return Error_new("fn: Illegal argument.");
+  // for (cons = ) {
+  // }
+  return NULL;
+}
 
 static S *S_errorHandler(S *expr) {
   S_print(expr);
@@ -343,8 +350,8 @@ S *S_eval(S *expr, Env *env) {
   S *root, *cmd, *args;
   if (ATOMP(expr)) {
     if (TYPEP(expr, Symbol))
-      expr = (S *)Env_getSymbol(env, expr->Symbol.val
-          , Error_new("eval: undefined variable."));
+      if ((expr = (S *)Env_getSymbol(env, expr->Symbol.val)) == NULL)
+        expr =  Error_new("eval: undefined variable.");
     return TYPEP(expr, Error)?
       S_errorHandler(expr):
       expr;
@@ -380,7 +387,7 @@ S *S_print(S *expr) {
       else printf("%f", expr->Number.val);
     }
     else if (TYPEP(expr, Char)) printf("%c", expr->Char.val);
-    else if (TYPEP(expr, Function)) printf("%d", expr->Function.type);
+    // else if (TYPEP(expr, Function)) printf("%d", expr->Function.type);
     else if (TYPEP(expr, Keyword)) printf(":%s", expr->Keyword.val);
     else printf("%s", expr->String.val);
   }
@@ -397,15 +404,13 @@ S *S_print(S *expr) {
   return expr;
 }
 
-// primitive types
-S *Type_Object;
-
 void Prim_init(Env *env) {
+
   // init ptimitive types
   Cons = Keyword_new("Cons");
   Symbol = Keyword_new("Symbol");
   Keyword = Keyword_new("Keyword");
-  Char = Keyword_new("String");
+  String = Keyword_new("String");
   Char = Keyword_new("Char");
   Number = Keyword_new("Number");
   Function = Keyword_new("Function");
@@ -419,8 +424,8 @@ void Prim_init(Env *env) {
   Env_putSpecial(env, "progn", Special_new(Special_progn));
   Env_putSpecial(env, "let", Special_new(Special_let));
   Env_putSpecial(env, "<-", Special_new(Special_assign));
-  Env_putSpecial(env, "defVar", Special_new(Special_defVar));
-  // Env_putSpecial(env, "defStruct", Special_new(Special_defStruct));
+  Env_putSpecial(env, "def", Special_new(Special_def));
+  Env_putSpecial(env, "fn", Special_new(Special_fn));
 
   // init global symbols.
   Env_putSymbol(env, "t", (t = Symbol_new("t")));
@@ -431,8 +436,8 @@ void Prim_init(Env *env) {
   Env_putSymbol(env, "pi", Number_new(3.14159265358979323846));
 
   // init functions.
-  Env_putSymbol(env, "nil?"
-      , Function_new(Cons_new(Type_Object, nil), NULL, NULL, Function_isNil));
+  // Env_putSymbol(env, "nil?"
+  //     , Function_new(Cons_new(Type_Object, nil), NULL, NULL, Function_isNil));
   // Env_putSymbol(env, "atom?", Function_new(Function_isAtom, NULL));
   // Env_putSymbol(env, "car", Function_new(Function_car, NULL));
   // Env_putSymbol(env, "cdr", Function_new(Function_cdr, NULL));
