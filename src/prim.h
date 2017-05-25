@@ -5,12 +5,11 @@
 typedef union S {
   struct {
     union S *type;
-    union S *car, *cdr;
-  } Cons;
+  } Type;
   struct {
     union S *type;
-    char *val;
-  } Type;
+    union S *car, *cdr;
+  } Cons;
   struct {
     union S *type;
     char *name;
@@ -83,7 +82,6 @@ extern S *Stream;
 extern S *Error;
 
 extern S *Cons_new(S *car, S *cdr);
-extern S *Type_new(char *val, S* super);
 extern S *Symbol_new(char *val);
 extern S *Keyword_new(char *val);
 extern S *String_new(char *val);

@@ -118,7 +118,8 @@ S *Number_new(double val) {
 // TODO: 総称関数のマッチ判定処理
 static struct Generic *Function_lookupGenerics(S *fn, S *type) {
   struct Generic *generic;
-  return generic;
+  assert(TYPEP(fn, Function));
+  return fn->Function.generics;
 }
 
 static void Function_addGenerics(S *fn, S *type, S *args, S *body, S *prim(S *)) {
@@ -296,16 +297,17 @@ static S *Special_let(S *expr, Env *env) {
 }
 
 static S *Special_assign(S *expr, Env *env) {
-  S *var, *val;
-  if (!(LENGTH(expr) % 2 == 0))
-    return Error_new("<-: Arguments must be even number.");
-  for (; !NILP(expr); expr = REST(REST(expr))) {
-    var = FIRST(expr);
-    if (!TYPEP(var, Symbol))
+  S *cons, *var, *val;
+  if (LENGTH(expr) < 2 || ATOMP(expr) || (LENGTH(expr) % 2) != 0)
+    return Error_new("<-: Illegal argument.");
+  for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
+    if (!TYPEP(var = FIRST(cons), Symbol))
       return Error_new("<-: variable must be symbol.");
-    if ((val = (S *)Env_getSymbol(env, var->Symbol.val)) == NULL)
+    if ((S *)Env_getSymbol(env, var->Symbol.val) == NULL)
       return Error_new("<-: undefined variable.");
-    Env_putSymbol(env, var->Symbol.val, val = S_eval(SECOND(expr), env));
+  }
+  for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
+    Env_putSymbol(env, FIRST(cons)->Symbol.val, val = S_eval(SECOND(cons), env));
   }
   return val;
 }
@@ -324,15 +326,13 @@ static S *Special_def(S *expr, Env *env) {
   return nil;
 }
 
-// (fn (:Number x y) body)
-// (defun double (:Number x y) (* x y))
 static S *Special_fn(S *expr, Env *env) {
-  // S *args, *cons;
-  // if (!(LENGTH(expr) >= 1) || ATOMP(args = FIRST(expr)))
-  //   return Error_new("fn: Illegal argument.");
-  // for (cons = ) {
-  // }
-  return NULL;
+  S *args, *type;
+  if (LENGTH(expr) <= 1 || ATOMP(args = FIRST(expr)))
+    return Error_new("fn: Illegal argument.");
+  if (TYPEP(type = FIRST(args), Keyword)) args = REST(args);
+  else type = nil;
+  return Function_new(type, args, REST(expr), NULL);
 }
 
 static S *S_errorHandler(S *expr) {
@@ -346,8 +346,24 @@ S *S_read() {
   return Lex_parseExpr();
 }
 
+static S *S_apply(S *fn, S *args, Env *env) {
+  struct Generic *generic;
+  S *type, *fnArgs, *letArgs;
+  type = FIRST(args)->Type.type;
+  if ((generic = Function_lookupGenerics(fn, type)) == NULL)
+    return Error_new("eval: method not found.");
+  letArgs = nil;
+  fnArgs = generic->args;
+  while (!NILP(fnArgs)) {
+    letArgs = Cons_new(FIRST(fnArgs), Cons_new(FIRST(args), letArgs));
+    fnArgs = REST(fnArgs);
+    args = REST(args);
+  }
+  return Special_let(Cons_new(letArgs, generic->body), env);
+}
+
 S *S_eval(S *expr, Env *env) {
-  S *root, *cmd, *args;
+  S *root, *fn, *args;
   if (ATOMP(expr)) {
     if (TYPEP(expr, Symbol))
       if ((expr = (S *)Env_getSymbol(env, expr->Symbol.val)) == NULL)
@@ -356,26 +372,19 @@ S *S_eval(S *expr, Env *env) {
       S_errorHandler(expr):
       expr;
   }
-  if ((S *)(cmd = Env_getSpecial(env, FIRST(expr)->Symbol.val)) != NULL)
-    return (cmd->Special.fn)(REST(expr), env);
+  if ((S *)(fn = Env_getSpecial(env, FIRST(expr)->Symbol.val)) != NULL)
+    return (fn->Special.fn)(REST(expr), env);
   root = expr;
   while (!NILP(expr)) {
     expr->Cons.car = S_eval(expr->Cons.car, env);
     expr = expr->Cons.cdr;
   }
-  cmd = root->Cons.car;
+  fn = root->Cons.car;
   args = root->Cons.cdr;
-  if (cmd->Function.type != Function) {
+  if (fn->Function.type != Function) {
     return Error_new("eval: undefined function.");
   }
-  // // invoke primitive function.
-  // if (cmd->Function.fn != NULL)
-  //   return (cmd->Function.fn)(args);
-  // // invoke user defined function.
-  // else {
-  //   return nil;    // TODO: apply user defined function.
-  // }
-  return nil;
+  return S_apply(fn, args, env);
 }
 
 S *S_print(S *expr) {
@@ -436,8 +445,7 @@ void Prim_init(Env *env) {
   Env_putSymbol(env, "pi", Number_new(3.14159265358979323846));
 
   // init functions.
-  // Env_putSymbol(env, "nil?"
-  //     , Function_new(Cons_new(Type_Object, nil), NULL, NULL, Function_isNil));
+  // Env_putSymbol(env, "nil?", Function_new(Function_isNil, NULL));
   // Env_putSymbol(env, "atom?", Function_new(Function_isAtom, NULL));
   // Env_putSymbol(env, "car", Function_new(Function_car, NULL));
   // Env_putSymbol(env, "cdr", Function_new(Function_cdr, NULL));
