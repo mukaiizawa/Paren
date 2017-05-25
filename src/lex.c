@@ -82,15 +82,7 @@ static S *Lex_parseNumber() {
 }
 
 static S *Lex_parseSymbol() {
-  char *token;
-  S *sym;
-  token = Ahdrd_readSymbol(&ahdrd);
-  if ((sym = (S *)Env_getSymbol(env, token)) != NULL) {
-    free(token);
-    return sym;
-  }
-  else
-    return Symbol_new(token);
+  return Symbol_new(Ahdrd_readSymbol(&ahdrd));
 }
 
 static S *Lex_parseAtom() {

@@ -16,10 +16,8 @@
 S *t;
 S *nil;
 
-/*
- * 型はすべて環境に登録されていて、
- * 型の比較はアドレス比較で済むようにする。
- */
+// primitive types.
+
 S *Cons;
 S *Symbol;
 S *Keyword;
@@ -37,7 +35,7 @@ int TYPEP(S *expr, S *type) {
 
 int LENGTH(S *expr) {
   int count;
-  if(expr == nil) return 0;
+  if(NILP(expr)) return 0;
   if (ATOMP(expr)) return 1;
   count = 1;
   while (!NILP(expr = REST(expr))) count++;
@@ -164,7 +162,8 @@ S *Error_new(char *str) {
   return expr;
 }
 
-// nil? Object o
+// primitive functions.
+
 static S *Function_isNil(S *expr) {
   return NILP(expr)? t: nil;
 }
@@ -214,7 +213,7 @@ static S *Function_length(S *expr) {
     return Error_new("length: Cannot apply.");
 }
 
-// // TODO:
+// // TODO: {{{
 // static S *Function_desc(S *expr) {
 //   printf("address: %d\n", (int)expr);
 //   printf("type: %s\n", expr->Cons.type->Keyword.val);
@@ -249,6 +248,7 @@ static S *Function_length(S *expr) {
 //   }
 //   return expr;
 // }
+// }}}
 
 // special forms
 
@@ -272,18 +272,21 @@ static S *Special_quote(S *expr, Env *env) {
 
 static S *Special_progn(S *expr, Env *env) {
   S *result;
-  for (result = expr; !NILP(REST(result)); result = REST(result))
-    S_eval(FIRST(result), env);
-  return S_eval(FIRST(result), env);
+  while (!NILP(expr)) {
+    result = S_eval(FIRST(expr), env);
+    expr = REST(expr);
+  }
+  return result;
 }
 
 static S *Special_let(S *expr, Env *env) {
   S *args, *cons, *result;
-  if (LENGTH(expr) < 2 || ATOMP((args = FIRST(expr))) || (LENGTH(args) % 2) != 0)
+  if (!NILP(args = FIRST(expr)) && (ATOMP(args) || (LENGTH(args) % 2) != 0))
     return Error_new("let: Illegal argument.");
   for (cons = args; !NILP(cons); cons = REST(REST(cons)))
     if (!TYPEP(FIRST(cons), Symbol))
       return Error_new("let: variable is not a symbol.");
+  if (LENGTH(expr) == 1) return nil;
   Env_push(env);
   for (cons = args; !NILP(cons); cons = REST(REST(cons)))
     Env_putSymbol(env, FIRST(cons)->Symbol.name, S_eval(SECOND(cons), env));
@@ -294,7 +297,7 @@ static S *Special_let(S *expr, Env *env) {
 
 static S *Special_assign(S *expr, Env *env) {
   S *cons, *var, *val;
-  if (LENGTH(expr) < 2 || ATOMP(expr) || (LENGTH(expr) % 2) != 0)
+  if ((LENGTH(expr) % 2) != 0)
     return Error_new("<-: Illegal argument.");
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
     if (!TYPEP(var = FIRST(cons), Symbol))
@@ -303,9 +306,7 @@ static S *Special_assign(S *expr, Env *env) {
       return Error_new("<-: undefined variable.");
   }
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
-    val = S_eval(SECOND(cons), env);
-    printf("val: %p \n", val);
-    Env_putSymbol(env, FIRST(cons)->Symbol.name, val);
+    Env_putSymbol(env, FIRST(cons)->Symbol.name, val = S_eval(SECOND(cons), env));
   }
   return val;
 }
@@ -317,11 +318,9 @@ static S *Special_def(S *expr, Env *env) {
       return Error_new("def: variable must be symbol.");
     if (Env_getSymbol(env, var->Symbol.name) != NULL)
       return Error_new("def: variable already defined.");
-    printf("%p\n", var);
   }
-  for (cons = expr; !NILP(cons); cons = REST(cons)) {
+  for (cons = expr; !NILP(cons); cons = REST(cons))
     Env_putSymbol(env, FIRST(cons)->Symbol.name, nil);
-  }
   return nil;
 }
 
@@ -362,19 +361,18 @@ static S *S_apply(S *fn, S *args, Env *env) {
 }
 
 S *S_eval(S *expr, Env *env) {
-  S *root, *fn, *args;
+  S *root, *fn, *args, *result;
   // atom
   if (ATOMP(expr)) {
     if (TYPEP(expr, Symbol))
       if ((expr = Env_getSymbol(env, expr->Symbol.name)) == NULL)
         expr =  Error_new("eval: undefined variable.");
-    return TYPEP(expr, Error)?
-      S_errorHandler(expr):
-      expr;
+    result = expr;
   }
   // special form
-  else if ((fn = Env_getSpecial(env, FIRST(expr)->Symbol.name)) != NULL)
-    return (fn->Special.fn)(REST(expr), env);
+  else if (TYPEP(FIRST(expr), Symbol)
+      && (fn = Env_getSpecial(env, FIRST(expr)->Symbol.name)) != NULL)
+    result = (fn->Special.fn)(REST(expr), env);
   // function
   else {
     root = expr;
@@ -384,11 +382,13 @@ S *S_eval(S *expr, Env *env) {
     }
     fn = FIRST(root);
     args = REST(root);
-    if (fn->Function.type != Function) {
+    if (fn->Function.type != Function)
       return Error_new("eval: undefined function.");
-    }
-    return S_apply(fn, args, env);
+    result = S_apply(fn, args, env);
   }
+  return TYPEP(result, Error)?
+    S_errorHandler(result):
+    result;
 }
 
 S *S_print(S *expr) {
@@ -402,6 +402,7 @@ S *S_print(S *expr) {
     else if (TYPEP(expr, Char)) printf("%c", expr->Char.val);
     else if (TYPEP(expr, Function)) printf("<Function: %p>", expr);
     else if (TYPEP(expr, Keyword)) printf(":%s", expr->Keyword.val);
+    else if (TYPEP(expr, Symbol)) printf("%s", expr->Symbol.name);
     else printf("%s", expr->String.val);
   }
   else {
