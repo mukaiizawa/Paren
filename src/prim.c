@@ -40,7 +40,7 @@ int LENGTH(S *expr) {
   if(expr == nil) return 0;
   if (ATOMP(expr)) return 1;
   count = 1;
-  while (!NILP((expr = REST(expr)))) count++;
+  while (!NILP(expr = REST(expr))) count++;
   return count;
 }
 
@@ -67,11 +67,11 @@ S *Cons_new(S *car, S *cdr) {
   return prev;
 }
 
-S *Symbol_new(char *val) {
+S *Symbol_new(char *name) {
   S *expr;
   expr = S_alloc();
   expr->Symbol.type = Symbol;
-  expr->Symbol.val = val;
+  expr->Symbol.name = name;
   return expr;
 }
 
@@ -224,7 +224,7 @@ static S *Function_length(S *expr) {
 //       printf("cdr: %d\n", (int)REST(expr));
 //       break;
 //     case Symbol:
-//       printf("name: %s\n", expr->Symbol.val);
+//       printf("name: %s\n", expr->Symbol.name);
 //       break;
 //     case Keyword:
 //       printf("name: %s\n", expr->Keyword.val);
@@ -286,7 +286,7 @@ static S *Special_let(S *expr, Env *env) {
       return Error_new("let: variable is not a symbol.");
   Env_push(env);
   for (cons = args; !NILP(cons); cons = REST(REST(cons)))
-    Env_putSymbol(env, FIRST(cons)->Symbol.val, S_eval(SECOND(cons), env));
+    Env_putSymbol(env, FIRST(cons)->Symbol.name, S_eval(SECOND(cons), env));
   result = Special_progn(REST(expr), env);
   Env_pop(env);
   return result;
@@ -299,11 +299,11 @@ static S *Special_assign(S *expr, Env *env) {
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
     if (!TYPEP(var = FIRST(cons), Symbol))
       return Error_new("<-: variable must be symbol.");
-    if ((S *)Env_getSymbol(env, var->Symbol.val) == NULL)
+    if ((S *)Env_getSymbol(env, var->Symbol.name) == NULL)
       return Error_new("<-: undefined variable.");
   }
   for (cons = expr; !NILP(cons); cons = REST(REST(cons)))
-    Env_putSymbol(env, FIRST(cons)->Symbol.val, val = S_eval(SECOND(cons), env));
+    Env_putSymbol(env, FIRST(cons)->Symbol.name, val = S_eval(SECOND(cons), env));
   return val;
 }
 
@@ -312,11 +312,11 @@ static S *Special_def(S *expr, Env *env) {
   for (cons = expr; !NILP(cons); cons = REST(cons)) {
     if (!TYPEP(var = FIRST(cons), Symbol))
       return Error_new("def: variable must be symbol.");
-    if (Env_getSymbol(env, var->Symbol.val) != NULL)
+    if (Env_getSymbol(env, var->Symbol.name) != NULL)
       return Error_new("def: variable already defined.");
   }
   for (cons = expr; !NILP(cons); cons = REST(cons)) {
-    Env_putSymbol(env, FIRST(cons)->Symbol.val, nil);
+    Env_putSymbol(env, FIRST(cons)->Symbol.name, nil);
   }
   return nil;
 }
@@ -362,14 +362,14 @@ S *S_eval(S *expr, Env *env) {
   // atom
   if (ATOMP(expr)) {
     if (TYPEP(expr, Symbol))
-      if ((expr = Env_getSymbol(env, expr->Symbol.val)) == NULL)
+      if ((expr = Env_getSymbol(env, expr->Symbol.name)) == NULL)
         expr =  Error_new("eval: undefined variable.");
     return TYPEP(expr, Error)?
       S_errorHandler(expr):
       expr;
   }
   // special form
-  else if ((fn = Env_getSpecial(env, FIRST(expr)->Symbol.val)) != NULL)
+  else if ((fn = Env_getSpecial(env, FIRST(expr)->Symbol.name)) != NULL)
     return (fn->Special.fn)(REST(expr), env);
   // function
   else {

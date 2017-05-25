@@ -17,7 +17,7 @@ typedef union S {
   } Structure;
   struct {
     union S *type;
-    char *val;
+    char *name;
   } Symbol;
   struct {
     union S *type;
@@ -82,7 +82,7 @@ extern S *Stream;
 extern S *Error;
 
 extern S *Cons_new(S *car, S *cdr);
-extern S *Symbol_new(char *val);
+extern S *Symbol_new(char *name);
 extern S *Keyword_new(char *val);
 extern S *String_new(char *val);
 extern S *Char_new(char val);
