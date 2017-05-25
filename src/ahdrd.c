@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "std.h"
 #include "ahdrd.h"
 
 void Ahdrd_init(Ahdrd *ahdrd, FILE *fp) {
@@ -19,7 +20,7 @@ void Ahdrd_init(Ahdrd *ahdrd, FILE *fp) {
 static char *Ahdrd_getToken(Ahdrd *ahdrd) {
   char *str;
   ahdrd->token[ahdrd->tokenPos] = '\0';
-  str = (char *)malloc(strlen(ahdrd->token) + 1);
+  str = xmalloc(strlen(ahdrd->token) + 1);
   assert(str != NULL);
   ahdrd->tokenPos = 0;
   return strcpy(str, ahdrd->token);

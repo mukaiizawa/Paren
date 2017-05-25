@@ -6,15 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "std.h"
 #include "splay.h"
 #include "env.h"
 
 static struct EnvNode *EnvNode_new() {
   struct EnvNode *node;
-  if ((node = (struct EnvNode *)malloc(sizeof(struct EnvNode))) == NULL) {
-    fprintf(stderr, "EnvNode_new: Cannot allocate memory.");
-    exit(1);
-  }
+  node = xmalloc(sizeof(struct EnvNode));
   node->outer = NULL;
   Splay_init(&node->symbol);
   return node;

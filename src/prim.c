@@ -302,8 +302,11 @@ static S *Special_assign(S *expr, Env *env) {
     if ((S *)Env_getSymbol(env, var->Symbol.name) == NULL)
       return Error_new("<-: undefined variable.");
   }
-  for (cons = expr; !NILP(cons); cons = REST(REST(cons)))
-    Env_putSymbol(env, FIRST(cons)->Symbol.name, val = S_eval(SECOND(cons), env));
+  for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
+    val = S_eval(SECOND(cons), env);
+    printf("val: %p \n", val);
+    Env_putSymbol(env, FIRST(cons)->Symbol.name, val);
+  }
   return val;
 }
 
@@ -314,6 +317,7 @@ static S *Special_def(S *expr, Env *env) {
       return Error_new("def: variable must be symbol.");
     if (Env_getSymbol(env, var->Symbol.name) != NULL)
       return Error_new("def: variable already defined.");
+    printf("%p\n", var);
   }
   for (cons = expr; !NILP(cons); cons = REST(cons)) {
     Env_putSymbol(env, FIRST(cons)->Symbol.name, nil);
