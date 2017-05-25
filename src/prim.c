@@ -46,15 +46,6 @@ static S *S_alloc() {
   return xmalloc(sizeof(S));
 }
 
-static struct Generic *Generics_alloc() {
-  struct Generic *g;
-  if ((g = (struct Generic *)malloc(sizeof(struct Generic))) == NULL) {
-    fprintf(stderr, "Generics_alloc: Cannot allocate memory.");
-    exit(1);
-  }
-  return g;
-}
-
 S *Cons_new(S *car, S *cdr) {
   S *prev;
   assert(!ATOMP(cdr) || NILP(cdr));
@@ -109,32 +100,49 @@ S *Number_new(double val) {
   return expr;
 }
 
-// TODO: 総称関数のマッチ判定処理
 static struct Generic *Function_lookupGenerics(S *fn, S *type) {
-  struct Generic *generic;
-  assert(TYPEP(fn, Function));
-  return fn->Function.generics;
-}
-
-static void Function_addGenerics(S *fn, S *type, S *args, S *body, S *prim(S *)) {
   struct Generic *g;
   assert(TYPEP(fn, Function));
-  if ((g = Function_lookupGenerics(fn, type)) == NULL)
-    g = Generics_alloc();
+  for (g = fn->Function.generics; g != NULL; g = g->next)
+    if (g->type == type) return g;
+  for (g = fn->Function.generics; g != NULL; g = g->next)
+    if (g->type == nil) return g;
+  return NULL;
+}
+
+static void Function_addGeneric(S *fn, S *type, S *args, S *body, S *prim(S *)) {
+  struct Generic *g;
+  g = xmalloc(sizeof(struct Generic));
   g->type = type;
   g->args = args;
   g->body = body;
   g->prim = prim;
-  g->next = fn->Function.generics;
+  g ->next = fn->Function.generics;
   fn->Function.generics = g;
+}
+
+static S *Function_mergeGenerics(S *fnTo, S *fnFrom) {
+  struct Generic *gTo, *gFrom;
+  for (gFrom = fnFrom->Function.generics; gFrom != NULL; gFrom = gFrom->next) {
+    gTo = Function_lookupGenerics(fnTo, gFrom->type);
+    if (gTo == NULL)
+      Function_addGeneric(
+          fnTo, gFrom->type, gFrom->args, gFrom->body, gFrom->prim);
+    else {
+      gTo->args = gFrom->args;
+      gTo->body = gFrom->body;
+      gTo->prim = gFrom->prim;
+    }
+  }
+  return fnTo;
 }
 
 S *Function_new(S *type, S *args, S *body, S *prim(S *)) {
   S *expr;
+  struct Generic *g;
   expr = S_alloc();
   expr->Function.type = Function;
-  expr->Function.generics = NULL;
-  Function_addGenerics(expr, type, args, body, prim);
+  Function_addGeneric(expr, type, args, body, prim);
   return expr;
 }
 
@@ -302,11 +310,17 @@ static S *Special_assign(S *expr, Env *env) {
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
     if (!TYPEP(var = FIRST(cons), Symbol))
       return Error_new("<-: variable must be symbol.");
-    if ((S *)Env_getSymbol(env, var->Symbol.name) == NULL)
+    if (Env_getSymbol(env, var->Symbol.name) == NULL)
       return Error_new("<-: undefined variable.");
   }
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
-    Env_putSymbol(env, FIRST(cons)->Symbol.name, val = S_eval(SECOND(cons), env));
+    if (TYPEP(val = S_eval(SECOND(cons), env), Function)) {
+      S *old;
+      old = Env_getSymbol(env, FIRST(cons)->Symbol.name);
+      if (TYPEP(old, Function))
+        val = Function_mergeGenerics(old, val);
+    }
+    Env_putSymbol(env, FIRST(cons)->Symbol.name, val);
   }
   return val;
 }
@@ -399,10 +413,11 @@ S *S_print(S *expr) {
       if (fraction == 0) printf("%d", (int)intptr);
       else printf("%f", expr->Number.val);
     }
-    else if (TYPEP(expr, Char)) printf("%c", expr->Char.val);
+    else if (TYPEP(expr, Symbol)) printf("%s", expr->Symbol.name);
     else if (TYPEP(expr, Function)) printf("<Function: %p>", expr);
     else if (TYPEP(expr, Keyword)) printf(":%s", expr->Keyword.val);
-    else if (TYPEP(expr, Symbol)) printf("%s", expr->Symbol.name);
+    else if (TYPEP(expr, Char)) printf("%c", expr->Char.val);
+    else if (TYPEP(expr, Stream)) printf("<Stream: %p>", expr);
     else printf("%s", expr->String.val);
   }
   else {
@@ -421,16 +436,24 @@ S *S_print(S *expr) {
 void Prim_init(Env *env) {
 
   // init ptimitive types
-  Cons = Keyword_new("Cons");
-  Symbol = Keyword_new("Symbol");
-  Keyword = Keyword_new("Keyword");
-  String = Keyword_new("String");
-  Char = Keyword_new("Char");
-  Number = Keyword_new("Number");
-  Function = Keyword_new("Function");
-  Special = Keyword_new("Special");
-  Stream = Keyword_new("Stream");
-  Error = Keyword_new("Error");
+  Env_putKeyword(env, "Cons", Cons = Keyword_new("Cons"));
+  Env_putKeyword(env, "Symbol", Symbol = Keyword_new("Symbol"));
+  Env_putKeyword(env, "Keyword", Keyword = Keyword_new("Keyword"));
+  Env_putKeyword(env, "String", String = Keyword_new("String"));
+  Env_putKeyword(env, "Char", Char = Keyword_new("Char"));
+  Env_putKeyword(env, "Number", Number = Keyword_new("Number"));
+  Env_putKeyword(env, "Function", Function = Keyword_new("Function"));
+  Env_putKeyword(env, "Special", Special = Keyword_new("Special"));
+  Env_putKeyword(env, "Stream", Stream = Keyword_new("Stream"));
+  Env_putKeyword(env, "Error", Error = Keyword_new("Error"));
+
+  // init global symbols.
+  Env_putSymbol(env, "t", t = Symbol_new("t"));
+  Env_putSymbol(env, "nil", nil = Symbol_new("nil"));
+  Env_putSymbol(env, "stdin", Stream_new(stdin));
+  Env_putSymbol(env, "stdout", Stream_new(stdout));
+  Env_putSymbol(env, "stderr", Stream_new(stderr));
+  Env_putSymbol(env, "pi", Number_new(3.14159265358979323846));
 
   // init special forms.
   Env_putSpecial(env, "ifElse", Special_new(Special_ifElse));
@@ -440,14 +463,6 @@ void Prim_init(Env *env) {
   Env_putSpecial(env, "<-", Special_new(Special_assign));
   Env_putSpecial(env, "def", Special_new(Special_def));
   Env_putSpecial(env, "fn", Special_new(Special_fn));
-
-  // init global symbols.
-  Env_putSymbol(env, "t", (t = Symbol_new("t")));
-  Env_putSymbol(env, "nil", (nil = Symbol_new("nil")));
-  Env_putSymbol(env, "stdin", Stream_new(stdin));
-  Env_putSymbol(env, "stdout", Stream_new(stdout));
-  Env_putSymbol(env, "stderr", Stream_new(stderr));
-  Env_putSymbol(env, "pi", Number_new(3.14159265358979323846));
 
   // init functions.
   // Env_putSymbol(env, "nil?", Function_new(Function_isNil, NULL));

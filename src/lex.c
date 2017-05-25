@@ -41,7 +41,7 @@ static S *Lex_parseKeyword() {
   char *token;
   S *keyword;
   token = Ahdrd_readKeyword(&ahdrd);
-  if ((keyword = (S *)Env_getKeyword(env, token)) != NULL) {
+  if ((keyword = Env_getKeyword(env, token)) != NULL) {
     free(token);
     return keyword;
   }
