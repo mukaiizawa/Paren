@@ -2,11 +2,11 @@
   splay tree.
 */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
+#include "std.h"
 #include "splay.h"
 
 #define sentinel (&sentinelNode)
@@ -15,10 +15,7 @@ static struct SplayNode sentinelNode;
 
 static struct SplayNode *SplayNode_new() {
   struct SplayNode *node;
-  if ((node = (struct SplayNode *)malloc(sizeof(struct SplayNode))) == NULL) {
-    fprintf(stderr, "SplayNode_new: Cannot allocate memory.");
-    exit(1);
-  }
+  node = xmalloc(sizeof(struct SplayNode));
   node->left = node->right = sentinel;
   return node;
 }
@@ -101,17 +98,6 @@ static void SplayNode_freeRec(struct SplayNode *node) {
     SplayNode_freeRec(node->right);
     free(node);
   }
-}
-
-static void Splay_dump(struct SplayNode *node, int d) {
-  int i;
-  if (node == sentinel)
-    return;
-  for (i = 0; i < d; i++)
-    printf("    ");
-  printf("%s\n", (char *)node->val);
-  Splay_dump(node->left, d + 1);
-  Splay_dump(node->right, d + 1);
 }
 
 void Splay_init(Splay *splay) {

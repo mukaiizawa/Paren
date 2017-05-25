@@ -8,6 +8,7 @@
 #include <math.h>
 #include <assert.h>
 
+#include "std.h"
 #include "splay.h"
 #include "env.h"
 #include "prim.h"
@@ -44,12 +45,7 @@ int LENGTH(S *expr) {
 }
 
 static S *S_alloc() {
-  S *expr;
-  if ((expr = (S *)malloc(sizeof(S))) == NULL) {
-    fprintf(stderr, "S_alloc: Cannot allocate memory.");
-    exit(1);
-  }
-  return expr;
+  return xmalloc(sizeof(S));
 }
 
 static struct Generic *Generics_alloc() {
@@ -306,9 +302,8 @@ static S *Special_assign(S *expr, Env *env) {
     if ((S *)Env_getSymbol(env, var->Symbol.val) == NULL)
       return Error_new("<-: undefined variable.");
   }
-  for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
+  for (cons = expr; !NILP(cons); cons = REST(REST(cons)))
     Env_putSymbol(env, FIRST(cons)->Symbol.val, val = S_eval(SECOND(cons), env));
-  }
   return val;
 }
 
@@ -364,27 +359,32 @@ static S *S_apply(S *fn, S *args, Env *env) {
 
 S *S_eval(S *expr, Env *env) {
   S *root, *fn, *args;
+  // atom
   if (ATOMP(expr)) {
     if (TYPEP(expr, Symbol))
-      if ((expr = (S *)Env_getSymbol(env, expr->Symbol.val)) == NULL)
+      if ((expr = Env_getSymbol(env, expr->Symbol.val)) == NULL)
         expr =  Error_new("eval: undefined variable.");
     return TYPEP(expr, Error)?
       S_errorHandler(expr):
       expr;
   }
-  if ((S *)(fn = Env_getSpecial(env, FIRST(expr)->Symbol.val)) != NULL)
+  // special form
+  else if ((fn = Env_getSpecial(env, FIRST(expr)->Symbol.val)) != NULL)
     return (fn->Special.fn)(REST(expr), env);
-  root = expr;
-  while (!NILP(expr)) {
-    expr->Cons.car = S_eval(expr->Cons.car, env);
-    expr = expr->Cons.cdr;
+  // function
+  else {
+    root = expr;
+    while (!NILP(expr)) {
+      expr->Cons.car = S_eval(expr->Cons.car, env);
+      expr = expr->Cons.cdr;
+    }
+    fn = FIRST(root);
+    args = REST(root);
+    if (fn->Function.type != Function) {
+      return Error_new("eval: undefined function.");
+    }
+    return S_apply(fn, args, env);
   }
-  fn = root->Cons.car;
-  args = root->Cons.cdr;
-  if (fn->Function.type != Function) {
-    return Error_new("eval: undefined function.");
-  }
-  return S_apply(fn, args, env);
 }
 
 S *S_print(S *expr) {
@@ -396,7 +396,7 @@ S *S_print(S *expr) {
       else printf("%f", expr->Number.val);
     }
     else if (TYPEP(expr, Char)) printf("%c", expr->Char.val);
-    // else if (TYPEP(expr, Function)) printf("%d", expr->Function.type);
+    else if (TYPEP(expr, Function)) printf("<Function: %p>", expr);
     else if (TYPEP(expr, Keyword)) printf(":%s", expr->Keyword.val);
     else printf("%s", expr->String.val);
   }
