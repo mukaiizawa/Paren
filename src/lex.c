@@ -100,8 +100,11 @@ static S *Lex_parseAtom() {
 }
 
 S *Lex_parseExpr() {
+  int c;
   S *acc, *expr;
-  if (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1) == '(') {
+  if ((c = Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1)) == ')')
+    return Lex_eofError();
+  else if (c == '(') {
     acc = nil;
     Ahdrd_skipRead(&ahdrd);    // skip '('
     while (Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1) != ')') {
@@ -112,5 +115,6 @@ S *Lex_parseExpr() {
     Ahdrd_skipRead(&ahdrd);    // skip ')'
     return S_reverse(acc);
   }
-  return Lex_parseAtom();
+  else
+    return Lex_parseAtom();
 }
