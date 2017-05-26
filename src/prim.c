@@ -13,6 +13,8 @@
 #include "env.h"
 #include "prim.h"
 
+// global symbols.
+
 S *t;
 S *nil;
 
@@ -29,6 +31,8 @@ S *Special;
 S *Stream;
 S *Error;
 
+// global functions (for ast manipulation).
+
 int TYPEP(S *expr, S *type) {
   assert(expr->Type.type->Keyword.type = Keyword);
   return expr->Type.type == type;
@@ -42,6 +46,8 @@ int LENGTH(S *expr) {
   while (!NILP(expr = REST(expr))) count++;
   return count;
 }
+
+// constructors.
 
 static S *S_alloc() {
   return xmalloc(sizeof(S));
@@ -253,32 +259,6 @@ static S *Function_Function_desc(S *expr) {
   printf(">\n");
   return expr;
 }
-
-// static S *Function_desc(S *expr) {
-//   printf("address: %d\n", (int)expr);
-//   printf("type: %s\n", expr->Cons.type->Keyword.val);
-//   switch (expr->Cons.type) {
-//     case Cons:
-//       printf("car: %d\n", (int)FIRST(expr));
-//       printf("cdr: %d\n", (int)REST(expr));
-//       break;
-//     case Char:
-//       printf("value: %c\n", expr->Char.val);
-//       break;
-//     case Number:
-//       printf("value: %f\n", expr->Number.val);
-//       break;
-//     case Function:
-//       break;
-//     case Stream:
-//       break;
-//     case Error:
-//       break;
-//     default:
-//       break;
-//   }
-//   return expr;
-// }
 
 // special forms
 
