@@ -30,6 +30,7 @@ S *Stream;
 S *Error;
 
 int TYPEP(S *expr, S *type) {
+  assert(expr->Type.type->Keyword.type = Keyword);
   return expr->Type.type == type;
 };
 
@@ -117,7 +118,7 @@ static void Function_addGeneric(S *fn, S *type, S *args, S *body, S *prim(S *)) 
   g->args = args;
   g->body = body;
   g->prim = prim;
-  g ->next = fn->Function.generics;
+  g->next = fn->Function.generics;
   fn->Function.generics = g;
 }
 
@@ -125,7 +126,7 @@ static S *Function_mergeGenerics(S *fnTo, S *fnFrom) {
   struct Generic *gTo, *gFrom;
   for (gFrom = fnFrom->Function.generics; gFrom != NULL; gFrom = gFrom->next) {
     gTo = Function_lookupGenerics(fnTo, gFrom->type);
-    if (gTo == NULL)
+    if (gTo == NULL || gTo->type == nil)
       Function_addGeneric(
           fnTo, gFrom->type, gFrom->args, gFrom->body, gFrom->prim);
     else {
@@ -173,7 +174,7 @@ S *Error_new(char *str) {
 // primitive functions.
 
 static S *Function_isNil(S *expr) {
-  return NILP(expr)? t: nil;
+  return NILP(FIRST(expr))? t: nil;
 }
 
 static S *Function_isAtom(S *expr) {
@@ -221,7 +222,38 @@ static S *Function_length(S *expr) {
     return Error_new("length: Cannot apply.");
 }
 
-// // TODO: {{{
+static S *Function_String_desc(S *expr) {
+  printf("<Type: String, Value: %s, Address: %p>\n"
+      , expr->String.val
+      , expr);
+  return expr;
+}
+
+static S *Function_Char_desc(S *expr) {
+  printf("<Type: Char, Value: %c, Address: %p>\n"
+      , expr->Char.val
+      , expr);
+  return expr;
+}
+
+static S *Function_Keyword_desc(S *expr) {
+  printf("<Type: Keyword, Value: %s, Address: %p>\n"
+      , expr->Keyword.val
+      , expr);
+  return expr;
+}
+
+static S *Function_Function_desc(S *expr) {
+  struct Generic *g;
+  printf("<Type: Function, Address: %p\n", expr);
+  printf("Generics:\n");
+  for (g = expr->Function.generics; g != NULL; g = g->next) {
+    printf("\tType: %s\n", g->type->Keyword.val);
+  }
+  printf(">\n");
+  return expr;
+}
+
 // static S *Function_desc(S *expr) {
 //   printf("address: %d\n", (int)expr);
 //   printf("type: %s\n", expr->Cons.type->Keyword.val);
@@ -229,15 +261,6 @@ static S *Function_length(S *expr) {
 //     case Cons:
 //       printf("car: %d\n", (int)FIRST(expr));
 //       printf("cdr: %d\n", (int)REST(expr));
-//       break;
-//     case Symbol:
-//       printf("name: %s\n", expr->Symbol.name);
-//       break;
-//     case Keyword:
-//       printf("name: %s\n", expr->Keyword.val);
-//       break;
-//     case String:
-//       printf("value: %s\n", expr->String.val);
 //       break;
 //     case Char:
 //       printf("value: %c\n", expr->Char.val);
@@ -256,7 +279,6 @@ static S *Function_length(S *expr) {
 //   }
 //   return expr;
 // }
-// }}}
 
 // special forms
 
@@ -314,12 +336,10 @@ static S *Special_assign(S *expr, Env *env) {
       return Error_new("<-: undefined variable.");
   }
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
-    if (TYPEP(val = S_eval(SECOND(cons), env), Function)) {
-      S *old;
-      old = Env_getSymbol(env, FIRST(cons)->Symbol.name);
-      if (TYPEP(old, Function))
-        val = Function_mergeGenerics(old, val);
-    }
+    S *envVal;
+    if (TYPEP(val = S_eval(SECOND(cons), env), Function) &&
+        TYPEP(envVal = Env_getSymbol(env, FIRST(cons)->Symbol.name), Function))
+      val = Function_mergeGenerics(envVal, val);
     Env_putSymbol(env, FIRST(cons)->Symbol.name, val);
   }
   return val;
@@ -364,6 +384,9 @@ static S *S_apply(S *fn, S *args, Env *env) {
   type = FIRST(args)->Type.type;
   if ((generic = Function_lookupGenerics(fn, type)) == NULL)
     return Error_new("eval: method not found.");
+  // call primitive function.
+  if (generic->args == NULL) return generic->prim(args);
+  // call user defined function.
   letArgs = nil;
   fnArgs = generic->args;
   while (!NILP(fnArgs)) {
@@ -388,6 +411,8 @@ S *S_eval(S *expr, Env *env) {
       && (fn = Env_getSpecial(env, FIRST(expr)->Symbol.name)) != NULL)
     result = (fn->Special.fn)(REST(expr), env);
   // function
+  else if (LENGTH(expr) <= 1)
+    result =  Error_new("eval: not found receiver.");
   else {
     root = expr;
     while (!NILP(expr)) {
@@ -436,9 +461,11 @@ S *S_print(S *expr) {
 void Prim_init(Env *env) {
 
   // init ptimitive types
+  Keyword = Keyword_new("Keyword");
+  Keyword->Keyword.type = Keyword;
   Env_putKeyword(env, "Cons", Cons = Keyword_new("Cons"));
   Env_putKeyword(env, "Symbol", Symbol = Keyword_new("Symbol"));
-  Env_putKeyword(env, "Keyword", Keyword = Keyword_new("Keyword"));
+  Env_putKeyword(env, "Keyword", Keyword);
   Env_putKeyword(env, "String", String = Keyword_new("String"));
   Env_putKeyword(env, "Char", Char = Keyword_new("Char"));
   Env_putKeyword(env, "Number", Number = Keyword_new("Number"));
@@ -465,12 +492,19 @@ void Prim_init(Env *env) {
   Env_putSpecial(env, "fn", Special_new(Special_fn));
 
   // init functions.
-  // Env_putSymbol(env, "nil?", Function_new(Function_isNil, NULL));
-  // Env_putSymbol(env, "atom?", Function_new(Function_isAtom, NULL));
-  // Env_putSymbol(env, "car", Function_new(Function_car, NULL));
-  // Env_putSymbol(env, "cdr", Function_new(Function_cdr, NULL));
-  // Env_putSymbol(env, "cons", Function_new(Function_cons, NULL));
-  // Env_putSymbol(env, "list", Function_new(Function_list, NULL));
-  // Env_putSymbol(env, "length", Function_new(Function_length, NULL));
-  // Env_putSymbol(env, "desc", Function_new(Function_desc, NULL));
+  Env_putSymbol(env, "nil?", Function_new(nil, NULL, NULL, Function_isNil));
+  Env_putSymbol(env, "atom?", Function_new(nil, NULL, NULL, Function_isAtom));
+  Env_putSymbol(env, "car", Function_new(nil, NULL, NULL, Function_car));
+  Env_putSymbol(env, "cdr", Function_new(nil, NULL, NULL, Function_cdr));
+  Env_putSymbol(env, "cons", Function_new(nil, NULL, NULL, Function_cons));
+  Env_putSymbol(env, "list", Function_new(nil, NULL, NULL, Function_list));
+  Env_putSymbol(env, "length", Function_new(nil, NULL, NULL, Function_length));
+  Env_putSymbol(env, "desc", 
+      Function_mergeGenerics(
+        Function_mergeGenerics(
+          Function_mergeGenerics(
+            Function_new(String, NULL, NULL, Function_String_desc)
+            , Function_new(Char, NULL, NULL, Function_Char_desc))
+          , Function_new(Keyword, NULL, NULL, Function_Keyword_desc))
+        , Function_new(Function, NULL, NULL, Function_Function_desc)));
 }

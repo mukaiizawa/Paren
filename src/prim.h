@@ -1,6 +1,6 @@
 /*
-   paren primitive.
-   */
+  paren primitive.
+*/
 
 typedef union S {
   struct {
