@@ -47,6 +47,10 @@ int LENGTH(S *expr) {
   return count;
 }
 
+static S *QUOTE(S *expr) {
+  return Cons_new(Symbol_new("quote"), Cons_new(expr, nil));
+}
+
 // constructors.
 
 static S *S_alloc() {
@@ -360,7 +364,7 @@ static S *S_apply(S *fn, S *args, Env *env) {
   letArgs = nil;
   fnArgs = generic->args;
   while (!NILP(fnArgs)) {
-    letArgs = Cons_new(FIRST(fnArgs), Cons_new(FIRST(args), letArgs));
+    letArgs = Cons_new(FIRST(fnArgs), Cons_new(QUOTE(FIRST(args)), letArgs));
     fnArgs = REST(fnArgs);
     args = REST(args);
   }
