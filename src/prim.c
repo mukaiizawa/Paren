@@ -208,24 +208,14 @@ static S *Function_cdr(S *expr) {
 }
 
 static S *Function_cons(S *expr) {
-  if (LENGTH(expr) != 2)
-    return Error_new("cons: Illegal argument exception.");
-  if (SECOND(expr)->Cons.type != Cons && !NILP(SECOND(expr)))
+  if (LENGTH(expr) != 2 || !(TYPEP(SECOND(expr), Cons) || NILP(SECOND(expr))))
     return Error_new("cons: Illegal argument exception.");
   return Cons_new(FIRST(expr), SECOND(expr));
 }
 
+// defined as primitive function because of performance.
 static S *Function_list(S *expr) {
   return expr;
-}
-
-static S *Function_length(S *expr) {
-  if (NILP(expr))
-    return Number_new(0);
-  else if (TYPEP(expr, Cons))
-    return Number_new(LENGTH(FIRST(expr)));
-  else
-    return Error_new("length: Cannot apply.");
 }
 
 static S *Function_String_desc(S *expr) {
@@ -364,9 +354,9 @@ static S *S_apply(S *fn, S *args, Env *env) {
   type = FIRST(args)->Type.type;
   if ((generic = Function_lookupGenerics(fn, type)) == NULL)
     return Error_new("eval: method not found.");
-  // call primitive function.
+  // invoke primitive function.
   if (generic->args == NULL) return generic->prim(args);
-  // call user defined function.
+  // invoke user defined function.
   letArgs = nil;
   fnArgs = generic->args;
   while (!NILP(fnArgs)) {
@@ -478,7 +468,6 @@ void Prim_init(Env *env) {
   Env_putSymbol(env, "cdr", Function_new(nil, NULL, NULL, Function_cdr));
   Env_putSymbol(env, "cons", Function_new(nil, NULL, NULL, Function_cons));
   Env_putSymbol(env, "list", Function_new(nil, NULL, NULL, Function_list));
-  Env_putSymbol(env, "length", Function_new(nil, NULL, NULL, Function_length));
   Env_putSymbol(env, "desc", 
       Function_mergeGenerics(
         Function_mergeGenerics(
