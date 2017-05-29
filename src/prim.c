@@ -12,6 +12,7 @@
 #include "splay.h"
 #include "env.h"
 #include "prim.h"
+#include "lex.h"
 
 // global symbols.
 
@@ -222,6 +223,39 @@ static S *Function_list(S *expr) {
   return expr;
 }
 
+static S *Function_open(S *expr) {
+  FILE *fp;
+  if (LENGTH(expr) != 1)
+    return Error_new("String.open: Illegal argument.");
+  if ((fp = fopen(FIRST(expr)->String.val, "r")) == NULL)
+    return Error_new("String.open: cannnot open.");
+  return Stream_new(fp);
+}
+
+static S *Function_close(S *expr) {
+  FILE *fp;
+  if (LENGTH(expr) != 1)
+    return Error_new("String.close: Illegal argument.");
+  fclose(FIRST(expr)->Stream.stream);
+  return nil;
+}
+
+static S *Function_getChar(S *expr) {
+  int c;
+  if (LENGTH(expr) != 1)
+    return Error_new("Stream.getChar: Illegal argument.");
+  c = fgetc(FIRST(expr)->Stream.stream);
+  return c == EOF? nil: Char_new(c);
+}
+
+static S *Function_putChar(S *expr) {
+  S *stream, *c;
+  if (LENGTH(expr) != 2 || !TYPEP(c = SECOND(expr), Char))
+    return Error_new("Stream.putChar: Illegal argument.");
+  fputc(c->Char.val, FIRST(expr)->Stream.stream);
+  return c;
+}
+
 static S *Function_String_desc(S *expr) {
   printf("<Type: String, Value: %s, Address: %p>\n"
       , expr->String.val
@@ -348,9 +382,8 @@ static S *S_errorHandler(S *expr) {
   exit(1);
 }
 
-extern S *Lex_parseExpr();
-
-S *S_read() {
+S *S_read(Env *env, FILE *fp) {
+  Lex_init(env, fp);
   return Lex_parseExpr();
 }
 
@@ -474,6 +507,10 @@ void Prim_init(Env *env) {
   Env_putSymbol(env, "cdr", Function_new(nil, NULL, NULL, Function_cdr));
   Env_putSymbol(env, "cons", Function_new(nil, NULL, NULL, Function_cons));
   Env_putSymbol(env, "list", Function_new(nil, NULL, NULL, Function_list));
+  Env_putSymbol(env, "open", Function_new(String, NULL, NULL, Function_open));
+  Env_putSymbol(env, "close", Function_new(Stream, NULL, NULL, Function_close));
+  Env_putSymbol(env, "getChar", Function_new(Stream, NULL, NULL, Function_getChar));
+  Env_putSymbol(env, "putChar", Function_new(Stream, NULL, NULL, Function_putChar));
   Env_putSymbol(env, "desc", 
       Function_mergeGenerics(
         Function_mergeGenerics(

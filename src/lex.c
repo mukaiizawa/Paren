@@ -15,8 +15,8 @@
 static Ahdrd ahdrd;
 static Env *env;
 
-void Lex_init(Env *_env) {
-  Ahdrd_init(&ahdrd, stdin);
+void Lex_init(Env *_env, FILE *fp) {
+  Ahdrd_init(&ahdrd, fp);
   env = _env;
 }
 

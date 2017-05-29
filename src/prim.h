@@ -92,7 +92,7 @@ extern S *Special_new(S *f(S *, Env *));
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
 
-extern S *S_read();
+extern S *S_read(Env *env, FILE *fp);
 extern S *S_eval(S *expr, Env *env);
 extern S *S_print(S *expr);
 
