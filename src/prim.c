@@ -269,8 +269,10 @@ static S *Special_ifElse(S *expr, Env *env) {
 }
 
 static S *Special_quote(S *expr, Env *env) {
-  if (LENGTH(expr) != 1)
+  int n;
+  if ((n = LENGTH(expr)) > 1)
     return Error_new("quote: Illegal argument exception.");
+  if (n == 0) return nil;    // '() => nil
   return FIRST(expr);
 }
 
