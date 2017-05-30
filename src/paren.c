@@ -18,12 +18,18 @@ static void Paren_init() {
   Prim_init(&env);
 }
 
+static void Paren_prompt() {
+  printf(") ");
+}
+
 int main(int argc, char* argv[]) {
   Paren_init();
-  while (1) {
-    printf(") ");
-    S_print(S_eval(S_read(&env, stdin), &env));
+  void *expr;
+  Paren_prompt();
+  while ((expr = S_read(&env, stdin)) != NULL) {
+    S_print(S_eval(expr, &env));
     printf("\n");
+    Paren_prompt();
   }
   return 0;
 }

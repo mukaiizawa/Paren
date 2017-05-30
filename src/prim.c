@@ -237,6 +237,8 @@ static S *Function_close(S *expr) {
   if (LENGTH(expr) != 1)
     return Error_new("String.close: Illegal argument.");
   fclose(FIRST(expr)->Stream.stream);
+  FIRST(expr)->Symbol.type = Symbol;
+  FIRST(expr)->Symbol.name = "nil";
   return nil;
 }
 
