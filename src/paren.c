@@ -22,12 +22,18 @@ static void Paren_prompt() {
   printf(") ");
 }
 
+static S *Paren_errorHander(S *expr) {
+  return S_print(expr);
+}
+
 int main(int argc, char* argv[]) {
   Paren_init();
   void *expr;
   Paren_prompt();
-  while ((expr = S_read(&env, stdin)) != NULL) {
-    S_print(S_eval(expr, &env));
+  while (1) {
+    expr = S_eval(S_read(&env, stdin), &env);
+    if (TYPEP(expr, Error)) Paren_errorHander(expr);
+    else S_print(expr);
     printf("\n");
     Paren_prompt();
   }

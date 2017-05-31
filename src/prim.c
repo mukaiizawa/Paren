@@ -380,11 +380,6 @@ static S *Special_fn(S *expr, Env *env) {
   return Function_new(type, args, REST(expr), NULL);
 }
 
-static S *S_errorHandler(S *expr) {
-  S_print(expr);
-  exit(1);
-}
-
 S *S_read(Env *env, FILE *fp) {
   Lex_init(env, fp);
   return Lex_parseExpr();
@@ -392,54 +387,50 @@ S *S_read(Env *env, FILE *fp) {
 
 static S *S_apply(S *fn, S *args, Env *env) {
   struct Generic *generic;
-  S *type, *fnArgs, *letArgs;
+  S *type, *fnArgs, *result;
   type = FIRST(args)->Type.type;
   if ((generic = Function_lookupGenerics(fn, type)) == NULL)
     return Error_new("eval: method not found.");
   // invoke primitive function.
   if (generic->args == NULL) return generic->prim(args);
   // invoke user defined function.
-  letArgs = nil;
   fnArgs = generic->args;
+  Env_push(env);
   while (!NILP(fnArgs)) {
-    letArgs = Cons_new(FIRST(fnArgs), Cons_new(QUOTE(FIRST(args)), letArgs));
+    Env_putSymbol(env, FIRST(fnArgs)->Symbol.name, FIRST(args));
     fnArgs = REST(fnArgs);
     args = REST(args);
   }
-  return Special_let(Cons_new(letArgs, generic->body), env);
+  result = Special_progn(generic->body, env);
+  Env_pop(env);
+  return result;
 }
 
 S *S_eval(S *expr, Env *env) {
-  S *root, *fn, *args, *result;
+  S *root, *fn, *args;
   // atom
   if (ATOMP(expr)) {
     if (TYPEP(expr, Symbol))
       if ((expr = Env_getSymbol(env, expr->Symbol.name)) == NULL)
         expr =  Error_new("eval: undefined variable.");
-    result = expr;
+    return expr;
   }
   // special form
-  else if (TYPEP(FIRST(expr), Symbol)
+  if (TYPEP(FIRST(expr), Symbol)
       && (fn = Env_getSpecial(env, FIRST(expr)->Symbol.name)) != NULL)
-    result = (fn->Special.fn)(REST(expr), env);
+    return (fn->Special.fn)(REST(expr), env);
   // function
-  else if (LENGTH(expr) <= 1)
-    result =  Error_new("eval: not found receiver.");
-  else {
-    root = expr;
-    while (!NILP(expr)) {
-      expr->Cons.car = S_eval(expr->Cons.car, env);
-      expr = expr->Cons.cdr;
-    }
-    fn = FIRST(root);
-    args = REST(root);
-    if (fn->Function.type != Function)
-      return Error_new("eval: undefined function.");
-    result = S_apply(fn, args, env);
+  if (LENGTH(expr) <= 1) return Error_new("eval: not found receiver.");
+  root = expr;
+  while (!NILP(expr)) {
+    expr->Cons.car = S_eval(expr->Cons.car, env);
+    expr = expr->Cons.cdr;
   }
-  return TYPEP(result, Error)?
-    S_errorHandler(result):
-    result;
+  fn = FIRST(root);
+  args = REST(root);
+  if (fn->Function.type != Function)
+    return Error_new("eval: undefined function.");
+  return S_apply(fn, args, env);
 }
 
 S *S_print(S *expr) {
