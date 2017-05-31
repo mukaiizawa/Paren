@@ -49,10 +49,6 @@ int LENGTH(S *expr) {
   return count;
 }
 
-static S *QUOTE(S *expr) {
-  return Cons_new(Symbol_new("quote"), Cons_new(expr, nil));
-}
-
 // constructors.
 
 static S *S_alloc() {
@@ -183,6 +179,14 @@ S *Error_new(char *str) {
   return expr;
 }
 
+S *Error_tooManyArgument(char *name, S *body) {
+  // char buf[MAX_STR_LEN], *sbody;
+  // assert((strlen(name) + strlen(sbody = STRING(body))) < MAX_STR_LEN);
+  // sprintf(buf, "eval: too many arguments (%s %s).", name, STRING(body));
+  // return Error_new(buf);
+  return Error_new("too many argument.");
+}
+
 // primitive functions.
 
 static S *Function_isNil(S *expr) {
@@ -194,12 +198,9 @@ static S *Function_isAtom(S *expr) {
 }
 
 static S *Function_car(S *expr) {
-  if (LENGTH(expr) != 1)
-    return Error_new("car: Illegal argument exception.");
-  if (NILP(FIRST(expr)))
-    return nil;
-  if (FIRST(expr)->Cons.type != Cons)
-    return Error_new("car: not a list.");
+  if (LENGTH(expr) != 1) return Error_tooManyArgument("car", expr);
+  if (NILP(FIRST(expr))) return nil;
+  if (!TYPEP(FIRST(expr), Cons)) return Error_new("car: is not a list.");
   return FIRST(FIRST(expr));
 }
 
@@ -257,6 +258,43 @@ static S *Function_putChar(S *expr) {
     return Error_new("Stream.putChar: Illegal argument.");
   fputc(c->Char.val, FIRST(expr)->Stream.stream);
   return c;
+}
+
+static S *Function_Symbol_asString(S *expr) {
+  return String_new(FIRST(expr)->Symbol.name);
+}
+
+static S *Function_Keyword_asString(S *expr) {
+  return String_new(FIRST(expr)->Keyword.val);
+}
+
+static S *Function_String_asString(S *expr) {
+  return String_new(FIRST(expr)->String.val);
+}
+
+static S *Function_Char_asString(S *expr) {
+  char *s;
+  s = xmalloc(sizeof(char) * 2);
+  s[0] = FIRST(expr)->Char.val;
+  s[1] = '\0';
+  return String_new(s);
+}
+
+static S *Function_Number_asString(S *expr) {
+  char *str;
+  str = xmalloc(MAX_STR_LEN);
+  double intptr, fraction;
+  fraction = modf(FIRST(expr)->Number.val, &intptr);
+  if (fraction == 0) snprintf(str, MAX_STR_LEN, "%d", (int)intptr);
+  else snprintf(str, MAX_STR_LEN, "%f", FIRST(expr)->Number.val);
+  return String_new(str);
+}
+
+static S *Function_Function_asString(S *expr) {
+  char *str;
+  str = xmalloc(MAX_STR_LEN);
+  snprintf(str, MAX_STR_LEN, "<Function: %p>", FIRST(expr));
+  return String_new(str);
 }
 
 static S *Function_String_desc(S *expr) {
@@ -423,7 +461,8 @@ S *S_eval(S *expr, Env *env) {
   if (LENGTH(expr) <= 1) return Error_new("eval: not found receiver.");
   root = expr;
   while (!NILP(expr)) {
-    expr->Cons.car = S_eval(expr->Cons.car, env);
+    FIRST(expr) = S_eval(expr->Cons.car, env);
+    if (TYPEP(FIRST(expr), Error)) return FIRST(expr);
     expr = expr->Cons.cdr;
   }
   fn = FIRST(root);
@@ -506,12 +545,16 @@ void Prim_init(Env *env) {
   Env_putSymbol(env, "close", Function_new(Stream, NULL, NULL, Function_close));
   Env_putSymbol(env, "getChar", Function_new(Stream, NULL, NULL, Function_getChar));
   Env_putSymbol(env, "putChar", Function_new(Stream, NULL, NULL, Function_putChar));
-  Env_putSymbol(env, "desc", 
+  Env_putSymbol(env, "asString", 
       Function_mergeGenerics(
         Function_mergeGenerics(
           Function_mergeGenerics(
-            Function_new(String, NULL, NULL, Function_String_desc)
-            , Function_new(Char, NULL, NULL, Function_Char_desc))
-          , Function_new(Keyword, NULL, NULL, Function_Keyword_desc))
-        , Function_new(Function, NULL, NULL, Function_Function_desc)));
+            Function_mergeGenerics(
+              Function_mergeGenerics(
+                Function_new(Symbol, NULL, NULL, Function_Symbol_asString)
+                , Function_new(Keyword, NULL, NULL, Function_Keyword_asString))
+              , Function_new(String, NULL, NULL, Function_String_asString))
+            , Function_new(Char, NULL, NULL, Function_Char_asString))
+          , Function_new(Number, NULL, NULL, Function_Number_asString))
+        , Function_new(Function, NULL, NULL, Function_Function_asString)));
 }
