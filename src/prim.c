@@ -260,6 +260,10 @@ static S *Function_putChar(S *expr) {
   return c;
 }
 
+static S *Function_Cons_asString(S *expr) {
+  return String_new("");
+}
+
 static S *Function_Symbol_asString(S *expr) {
   return String_new(FIRST(expr)->Symbol.name);
 }
@@ -285,16 +289,27 @@ static S *Function_Number_asString(S *expr) {
   str = xmalloc(MAX_STR_LEN);
   double intptr, fraction;
   fraction = modf(FIRST(expr)->Number.val, &intptr);
-  if (fraction == 0) snprintf(str, MAX_STR_LEN, "%d", (int)intptr);
-  else snprintf(str, MAX_STR_LEN, "%f", FIRST(expr)->Number.val);
+  if (fraction == 0) xsnprintf(str, "%d", (int)intptr);
+  else xsnprintf(str, "%f", FIRST(expr)->Number.val);
   return String_new(str);
 }
 
 static S *Function_Function_asString(S *expr) {
   char *str;
   str = xmalloc(MAX_STR_LEN);
-  snprintf(str, MAX_STR_LEN, "<Function: %p>", FIRST(expr));
+  xsnprintf(str, "<Function: %p>", FIRST(expr));
   return String_new(str);
+}
+
+static S *Function_Stream_asString(S *expr) {
+  char *str;
+  str = xmalloc(MAX_STR_LEN);
+  xsnprintf(str, "<Stream: %p>", FIRST(expr));
+  return String_new(str);
+}
+
+static S *Function_Error_asString(S *expr) {
+  return String_new(FIRST(expr)->Error.val);
 }
 
 static S *Function_String_desc(S *expr) {
@@ -551,10 +566,16 @@ void Prim_init(Env *env) {
           Function_mergeGenerics(
             Function_mergeGenerics(
               Function_mergeGenerics(
-                Function_new(Symbol, NULL, NULL, Function_Symbol_asString)
-                , Function_new(Keyword, NULL, NULL, Function_Keyword_asString))
-              , Function_new(String, NULL, NULL, Function_String_asString))
-            , Function_new(Char, NULL, NULL, Function_Char_asString))
-          , Function_new(Number, NULL, NULL, Function_Number_asString))
-        , Function_new(Function, NULL, NULL, Function_Function_asString)));
+                Function_mergeGenerics(
+                  Function_mergeGenerics(
+                    Function_mergeGenerics(
+                      Function_new(Cons, NULL, NULL, Function_Cons_asString)
+                      , Function_new(Symbol, NULL, NULL, Function_Symbol_asString))
+                    , Function_new(Keyword, NULL, NULL, Function_Keyword_asString))
+                  , Function_new(String, NULL, NULL, Function_String_asString))
+                , Function_new(Char, NULL, NULL, Function_Char_asString))
+              , Function_new(Number, NULL, NULL, Function_Number_asString))
+            , Function_new(Function, NULL, NULL, Function_Function_asString))
+          , Function_new(Stream, NULL, NULL, Function_Stream_asString))
+        , Function_new(Error, NULL, NULL, Function_Error_asString)));
 }
