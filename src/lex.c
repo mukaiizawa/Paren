@@ -104,6 +104,10 @@ S *Lex_parseExpr() {
   S *acc, *expr;
   if ((c = Ahdrd_peek(Ahdrd_readSpace(&ahdrd), 1)) == ')')
     return Lex_eofError();
+  else if (c == '`') {
+    Ahdrd_skipRead(&ahdrd);    // skip '`'
+    return Cons_new(quote, Cons_new(Lex_parseExpr(), nil));
+  }
   else if (c == '(') {
     acc = nil;
     Ahdrd_skipRead(&ahdrd);    // skip '('

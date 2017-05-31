@@ -70,6 +70,7 @@ extern int TYPEP(S *expr, S *type);
 
 extern S *t;
 extern S *nil;
+extern S *quote;
 
 extern S *Cons;
 extern S *Symbol;

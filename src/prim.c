@@ -18,6 +18,7 @@
 
 S *t;
 S *nil;
+S *quote;
 
 // primitive types.
 
@@ -486,6 +487,7 @@ void Prim_init(Env *env) {
   Env_putKeyword(env, "Error", Error = Keyword_new("Error"));
 
   // init global symbols.
+  quote = Symbol_new("quote");
   Env_putSymbol(env, "t", t = Symbol_new("t"));
   Env_putSymbol(env, "nil", nil = Symbol_new("nil"));
   Env_putSymbol(env, "stdin", Stream_new(stdin));
