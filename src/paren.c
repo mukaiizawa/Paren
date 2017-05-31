@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
   void *expr;
   Paren_prompt();
   while (1) {
-    expr = S_eval(S_read(&env, stdin), &env);
+    expr = S_eval(S_read(stdin));
     if (TYPEP(expr, Error)) Paren_errorHander(expr);
     else S_print(expr);
     printf("\n");

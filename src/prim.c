@@ -14,6 +14,8 @@
 #include "prim.h"
 #include "lex.h"
 
+static Env *env;
+
 // global symbols.
 
 S *t;
@@ -155,7 +157,7 @@ S *Function_new(S *type, S *args, S *body, S *prim(S *)) {
   return expr;
 }
 
-S *Special_new(S *fn(S *, Env *env)) {
+S *Special_new(S *fn(S *)) {
   S *expr;
   expr = S_alloc();
   expr->Special.type = Special;
@@ -209,7 +211,7 @@ static S *Function_cdr(S *expr) {
     return Error_new("cdr: Illegal argument exception.");
   if (NILP(FIRST(expr)))
     return nil;
-  if (FIRST(expr)->Cons.type != Cons)
+  if (!TYPEP(FIRST(expr), Cons))
     return Error_new("cdr: not a list.");
   return REST(FIRST(expr));
 }
@@ -260,8 +262,26 @@ static S *Function_putChar(S *expr) {
   return c;
 }
 
+/*
+ * 文字列の結合処理
+ * Consの文字列印字表現は、
+ * 再帰的にその子供のデータ型の文字列を取得することにより表示する。
+ * TODO: 
+ * 多重継承時のメソッドのディスパッチ機構については考える必要がある。
+ */
+static char *Function_Cons_asString_rec(S *expr, char *buf) {
+  xstrncat(buf, "(");
+  FIRST(FIRST(expr));
+  REST(FIRST(expr));
+  xstrncat(buf, ")");
+  return buf;
+}
+
 static S *Function_Cons_asString(S *expr) {
-  return String_new("");
+  char *str;
+  str = xmalloc(MAX_STR_LEN);
+  str[0] = '\0';
+  return String_new(Function_Cons_asString_rec(expr, str));
 }
 
 static S *Function_Symbol_asString(S *expr) {
@@ -277,11 +297,11 @@ static S *Function_String_asString(S *expr) {
 }
 
 static S *Function_Char_asString(S *expr) {
-  char *s;
-  s = xmalloc(sizeof(char) * 2);
-  s[0] = FIRST(expr)->Char.val;
-  s[1] = '\0';
-  return String_new(s);
+  char *str;
+  str = xmalloc(sizeof(char) * 2);
+  str[0] = FIRST(expr)->Char.val;
+  str[1] = '\0';
+  return String_new(str);
 }
 
 static S *Function_Number_asString(S *expr) {
@@ -346,19 +366,19 @@ static S *Function_Function_desc(S *expr) {
 
 // special forms
 
-static S *Special_ifElse(S *expr, Env *env) {
+static S *Special_ifElse(S *expr) {
   if (LENGTH(expr) < 2)
     return Error_new("ifElse: Illegal argument exception.");
   while (!NILP(REST(expr))) {
-    if (!NILP(S_eval(FIRST(expr), env)))
-      return S_eval(SECOND(expr), env);
+    if (!NILP(S_eval(FIRST(expr))))
+      return S_eval(SECOND(expr));
     if (NILP(expr = REST(expr)) || NILP(expr = REST(expr)))
       return nil;
   }
-  return S_eval(FIRST(expr), env);
+  return S_eval(FIRST(expr));
 }
 
-static S *Special_quote(S *expr, Env *env) {
+static S *Special_quote(S *expr) {
   int n;
   if ((n = LENGTH(expr)) > 1)
     return Error_new("quote: Illegal argument exception.");
@@ -366,16 +386,16 @@ static S *Special_quote(S *expr, Env *env) {
   return FIRST(expr);
 }
 
-static S *Special_progn(S *expr, Env *env) {
+static S *Special_progn(S *expr) {
   S *result;
   while (!NILP(expr)) {
-    result = S_eval(FIRST(expr), env);
+    result = S_eval(FIRST(expr));
     expr = REST(expr);
   }
   return result;
 }
 
-static S *Special_let(S *expr, Env *env) {
+static S *Special_let(S *expr) {
   S *args, *cons, *result;
   if (!NILP(args = FIRST(expr)) && (ATOMP(args) || (LENGTH(args) % 2) != 0))
     return Error_new("let: Illegal argument.");
@@ -385,13 +405,13 @@ static S *Special_let(S *expr, Env *env) {
   if (LENGTH(expr) == 1) return nil;
   Env_push(env);
   for (cons = args; !NILP(cons); cons = REST(REST(cons)))
-    Env_putSymbol(env, FIRST(cons)->Symbol.name, S_eval(SECOND(cons), env));
-  result = Special_progn(REST(expr), env);
+    Env_putSymbol(env, FIRST(cons)->Symbol.name, S_eval(SECOND(cons)));
+  result = Special_progn(REST(expr));
   Env_pop(env);
   return result;
 }
 
-static S *Special_assign(S *expr, Env *env) {
+static S *Special_assign(S *expr) {
   S *cons, *var, *val;
   if ((LENGTH(expr) % 2) != 0)
     return Error_new("<-: Illegal argument.");
@@ -403,7 +423,7 @@ static S *Special_assign(S *expr, Env *env) {
   }
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
     S *envVal;
-    if (TYPEP(val = S_eval(SECOND(cons), env), Function) &&
+    if (TYPEP(val = S_eval(SECOND(cons)), Function) &&
         TYPEP(envVal = Env_getSymbol(env, FIRST(cons)->Symbol.name), Function))
       val = Function_mergeGenerics(envVal, val);
     Env_putSymbol(env, FIRST(cons)->Symbol.name, val);
@@ -411,7 +431,7 @@ static S *Special_assign(S *expr, Env *env) {
   return val;
 }
 
-static S *Special_def(S *expr, Env *env) {
+static S *Special_def(S *expr) {
   S *cons, *var;
   for (cons = expr; !NILP(cons); cons = REST(cons)) {
     if (!TYPEP(var = FIRST(cons), Symbol))
@@ -424,7 +444,7 @@ static S *Special_def(S *expr, Env *env) {
   return nil;
 }
 
-static S *Special_fn(S *expr, Env *env) {
+static S *Special_fn(S *expr) {
   S *args, *type;
   if (LENGTH(expr) <= 1 || ATOMP(args = FIRST(expr)))
     return Error_new("fn: Illegal argument.");
@@ -433,12 +453,12 @@ static S *Special_fn(S *expr, Env *env) {
   return Function_new(type, args, REST(expr), NULL);
 }
 
-S *S_read(Env *env, FILE *fp) {
+S *S_read(FILE *fp) {
   Lex_init(env, fp);
   return Lex_parseExpr();
 }
 
-static S *S_apply(S *fn, S *args, Env *env) {
+static S *S_apply(S *fn, S *args) {
   struct Generic *generic;
   S *type, *fnArgs, *result;
   type = FIRST(args)->Type.type;
@@ -454,12 +474,12 @@ static S *S_apply(S *fn, S *args, Env *env) {
     fnArgs = REST(fnArgs);
     args = REST(args);
   }
-  result = Special_progn(generic->body, env);
+  result = Special_progn(generic->body);
   Env_pop(env);
   return result;
 }
 
-S *S_eval(S *expr, Env *env) {
+S *S_eval(S *expr) {
   S *root, *fn, *args;
   // atom
   if (ATOMP(expr)) {
@@ -471,20 +491,20 @@ S *S_eval(S *expr, Env *env) {
   // special form
   if (TYPEP(FIRST(expr), Symbol)
       && (fn = Env_getSpecial(env, FIRST(expr)->Symbol.name)) != NULL)
-    return (fn->Special.fn)(REST(expr), env);
+    return (fn->Special.fn)(REST(expr));
   // function
   if (LENGTH(expr) <= 1) return Error_new("eval: not found receiver.");
   root = expr;
   while (!NILP(expr)) {
-    FIRST(expr) = S_eval(expr->Cons.car, env);
+    FIRST(expr) = S_eval(FIRST(expr));
     if (TYPEP(FIRST(expr), Error)) return FIRST(expr);
-    expr = expr->Cons.cdr;
+    expr = REST(expr);
   }
   fn = FIRST(root);
   args = REST(root);
-  if (fn->Function.type != Function)
+  if (!TYPEP(fn, Function))
     return Error_new("eval: undefined function.");
-  return S_apply(fn, args, env);
+  return S_apply(fn, args);
 }
 
 S *S_print(S *expr) {
@@ -504,10 +524,10 @@ S *S_print(S *expr) {
   }
   else {
     printf("(");
-    S_print(expr->Cons.car);
-    for (expr = expr->Cons.cdr; !NILP(expr); expr = expr->Cons.cdr) {
-      if (ATOMP(expr->Cons.car)) printf(" ");
-      S_print(expr->Cons.car);
+    S_print(FIRST(expr));
+    for (expr = REST(expr); !NILP(expr); expr = REST(expr)) {
+      if (ATOMP(FIRST(expr))) printf(" ");
+      S_print(FIRST(expr));
     }
     printf(")");
   }
@@ -515,7 +535,9 @@ S *S_print(S *expr) {
   return expr;
 }
 
-void Prim_init(Env *env) {
+void Prim_init(Env *_env) {
+
+  env = _env;
 
   // init ptimitive types
   Keyword = Keyword_new("Keyword");

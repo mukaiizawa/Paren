@@ -37,7 +37,7 @@ typedef union S {
   } Number;
   struct {
     union S *type;
-    union S *(* fn)(union S *, Env *env);
+    union S *(* fn)(union S *);
   } Special;
   struct {
     union S *type;
@@ -89,12 +89,12 @@ extern S *String_new(char *val);
 extern S *Char_new(char val);
 extern S *Number_new(double val);
 extern S *Function_new(S *type, S *args, S *body, S *prim(S *));
-extern S *Special_new(S *f(S *, Env *));
+extern S *Special_new(S *f(S *));
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
 
-extern S *S_read(Env *env, FILE *fp);
-extern S *S_eval(S *expr, Env *env);
+extern S *S_read(FILE *fp);
+extern S *S_eval(S *expr);
 extern S *S_print(S *expr);
 
 extern void Prim_init(Env *env);
