@@ -2,9 +2,9 @@
   ahead reader.
 */
 
-#define AHDRD_TOKEN_SIZE 2000
-
 #include "ringbuf.h"
+
+#define AHDRD_TOKEN_SIZE 2000
 
 typedef struct {
   FILE *fp;
