@@ -51,7 +51,7 @@ typedef union S {
   } Function;
   struct {
     union S *type;
-    FILE *stream;
+    FILE *fp;
   } Stream;
   struct {
     union S *type;

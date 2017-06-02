@@ -171,7 +171,7 @@ S *Stream_new(FILE *stream) {
   S *expr;
   expr = S_alloc();
   expr->Stream.type = Stream;
-  expr->Stream.stream = stream;
+  expr->Stream.fp = stream;
   return expr;
 }
 
@@ -189,86 +189,6 @@ S *Error_tooManyArgument(char *name, S *body) {
   // sprintf(buf, "eval: too many arguments (%s %s).", name, STRING(body));
   // return Error_new(buf);
   return Error_new("too many argument.");
-}
-
-// primitive functions.
-
-static S *Function_isNil(S *args) {
-  if (LENGTH(args) != 1) return Error_new("nil?: illegal arguments");
-  return NILP(FIRST(args))? t: nil;
-}
-
-static S *Function_isAtom(S *args) {
-  if (LENGTH(args) != 1) return Error_new("nil?: illegal arguments");
-  return ATOMP(FIRST(args))? t: nil;
-}
-
-static S *Function_car(S *args) {
-  if (LENGTH(args) != 1) return Error_tooManyArgument("car", args);
-  if (NILP(FIRST(args))) return nil;
-  if (!TYPEP(FIRST(args), Cons)) return Error_new("car: not a list.");
-  return FIRST(FIRST(args));
-}
-
-static S *Function_cdr(S *args) {
-  if (LENGTH(args) != 1) return Error_new("cdr: Illegal argument exception.");
-  if (NILP(FIRST(args))) return nil;
-  if (!TYPEP(FIRST(args), Cons)) return Error_new("cdr: not a list.");
-  return REST(FIRST(args));
-}
-
-static S *Function_cons(S *args) {
-  if (LENGTH(args) != 2 || !(TYPEP(SECOND(args), Cons) || NILP(SECOND(args))))
-    return Error_new("cons: Illegal argument exception.");
-  return Cons_new(FIRST(args), SECOND(args));
-}
-
-static S *Function_print(S *args) {
-  FILE *fp;
-  if (LENGTH(args) != 2) return Error_new("print: Illegal argument exception.");
-  fp = Writer_getFp(&wr);    // backup
-  Writer_setFp(&wr, FIRST(args)->Stream.stream);
-  Writer_write(&wr, SECOND(args));
-  Writer_setFp(&wr, fp);
-  return FIRST(args);
-}
-
-static S *Function_list(S *args) {
-  return args;
-}
-
-static S *Function_open(S *args) {
-  FILE *fp;
-  if (LENGTH(args) != 1)
-    return Error_new("String.open: Illegal argument.");
-  if ((fp = fopen(FIRST(args)->String.val, "r")) == NULL)
-    return Error_new("String.open: cannnot open.");
-  return Stream_new(fp);
-}
-
-static S *Function_close(S *args) {
-  if (LENGTH(args) != 1)
-    return Error_new("String.close: Illegal argument.");
-  fclose(FIRST(args)->Stream.stream);
-  FIRST(args)->Symbol.type = Symbol;
-  FIRST(args)->Symbol.name = "nil";
-  return nil;
-}
-
-static S *Function_getChar(S *expr) {
-  int c;
-  if (LENGTH(expr) != 1)
-    return Error_new("Stream.getChar: Illegal argument.");
-  c = fgetc(FIRST(expr)->Stream.stream);
-  return c == EOF? nil: Char_new(c);
-}
-
-static S *Function_putChar(S *args) {
-  S *c;
-  if (LENGTH(args) != 2 || !TYPEP(c = SECOND(args), Char))
-    return Error_new("Stream.putChar: Illegal argument.");
-  fputc(c->Char.val, FIRST(args)->Stream.stream);
-  return c;
 }
 
 // special forms
@@ -359,6 +279,102 @@ static S *Special_fn(S *expr) {
   if (TYPEP(type = FIRST(args), Keyword)) args = REST(args);
   else type = nil;
   return Function_new(type, args, REST(expr), NULL);
+}
+
+// primitive functions.
+
+static S *Function_isNil(S *args) {
+  if (LENGTH(args) != 1) return Error_new("nil?: illegal arguments");
+  return NILP(FIRST(args))? t: nil;
+}
+
+static S *Function_isAtom(S *args) {
+  if (LENGTH(args) != 1) return Error_new("nil?: illegal arguments");
+  return ATOMP(FIRST(args))? t: nil;
+}
+
+static S *Function_car(S *args) {
+  if (LENGTH(args) != 1) return Error_tooManyArgument("car", args);
+  if (NILP(FIRST(args))) return nil;
+  if (!TYPEP(FIRST(args), Cons)) return Error_new("car: not a list.");
+  return FIRST(FIRST(args));
+}
+
+static S *Function_cdr(S *args) {
+  if (LENGTH(args) != 1) return Error_new("cdr: Illegal argument exception.");
+  if (NILP(FIRST(args))) return nil;
+  if (!TYPEP(FIRST(args), Cons)) return Error_new("cdr: not a list.");
+  return REST(FIRST(args));
+}
+
+static S *Function_cons(S *args) {
+  if (LENGTH(args) != 2 || !(TYPEP(SECOND(args), Cons) || NILP(SECOND(args))))
+    return Error_new("cons: Illegal argument exception.");
+  return Cons_new(FIRST(args), SECOND(args));
+}
+
+static S *Function_list(S *args) {
+  return args;
+}
+
+static S *Function_open(S *args) {
+  FILE *fp;
+  if (LENGTH(args) != 1)
+    return Error_new("String.open: Illegal argument.");
+  if ((fp = fopen(FIRST(args)->String.val, "r")) == NULL)
+    return Error_new("String.open: cannnot open.");
+  return Stream_new(fp);
+}
+
+static S *Function_close(S *args) {
+  if (LENGTH(args) != 1)
+    return Error_new("String.close: Illegal argument.");
+  fclose(FIRST(args)->Stream.fp);
+  FIRST(args)->Symbol.type = Symbol;
+  FIRST(args)->Symbol.name = "nil";
+  return nil;
+}
+
+static S *Function_getChar(S *expr) {
+  int c;
+  if (LENGTH(expr) != 1)
+    return Error_new("Stream.getChar: Illegal argument.");
+  c = fgetc(FIRST(expr)->Stream.fp);
+  return c == EOF? nil: Char_new(c);
+}
+
+static S *Function_putChar(S *args) {
+  S *c;
+  if (LENGTH(args) != 2 || !TYPEP(c = SECOND(args), Char))
+    return Error_new("Stream.putChar: Illegal argument.");
+  fputc(c->Char.val, FIRST(args)->Stream.fp);
+  return c;
+}
+
+static S *Function_read(S *args) {
+  S *expr;
+  FILE *fp;
+  if (LENGTH(args) != 1) return Error_new("read: Illegal arguments.");
+  fp = Reader_getFp(&rd);
+  Reader_setFp(&rd, FIRST(args)->Stream.fp);
+  expr = Reader_read(&rd);
+  Reader_setFp(&rd, fp);
+  return expr;
+}
+
+static S *Function_eval(S *args) {
+  if (LENGTH(args) != 1) return Error_new("eval: Illegal arguments.");
+  return Paren_eval(FIRST(args));
+}
+
+static S *Function_print(S *args) {
+  FILE *fp;
+  if (LENGTH(args) != 2) return Error_new("print: Illegal argument exception.");
+  fp = Writer_getFp(&wr);    // backup
+  Writer_setFp(&wr, FIRST(args)->Stream.fp);
+  Writer_write(&wr, SECOND(args));
+  Writer_setFp(&wr, fp);
+  return SECOND(args);
 }
 
 static S *S_apply(S *fn, S *args) {
@@ -454,12 +470,14 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "cdr", Function_new(nil, NULL, NULL, Function_cdr));
   Env_putSymbol(env, "close", Function_new(Stream, NULL, NULL, Function_close));
   Env_putSymbol(env, "cons", Function_new(nil, NULL, NULL, Function_cons));
+  Env_putSymbol(env, "eval", Function_new(nil, NULL, NULL, Function_eval));
   Env_putSymbol(env, "getChar" , Function_new(Stream, NULL, NULL, Function_getChar));
   Env_putSymbol(env, "list", Function_new(nil, NULL, NULL, Function_list));
   Env_putSymbol(env, "nil?", Function_new(nil, NULL, NULL, Function_isNil));
   Env_putSymbol(env, "open", Function_new(String, NULL, NULL, Function_open));
   Env_putSymbol(env, "print", Function_new(Stream, NULL, NULL, Function_print));
   Env_putSymbol(env, "putChar" , Function_new(Stream, NULL, NULL, Function_putChar));
+  Env_putSymbol(env, "read", Function_new(Stream, NULL, NULL, Function_read));
 }
 
 static void Paren_errorHandler(S *expr) {
