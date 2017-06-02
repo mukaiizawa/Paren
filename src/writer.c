@@ -8,32 +8,40 @@
 #include <stdlib.h>
 
 #include "splay.h"
+#include "env.h"
 #include "paren.h"
 #include "writer.h"
 
-void Writer_init(Writer *writer, FILE *fp) {
-  writer->fp = fp;
+void Writer_init(Writer *wr, FILE *fp) {
+  wr->fp = fp;
 }
 
-void Writer_write(Writer *writer, S *expr) {
-  FILE *fp = writer->fp;
-  if (TYPEP(expr, Symbol)) fprintf(fp, "%s", expr->Symbol.name);
-  if (TYPEP(expr, Keyword)) fprintf(fp, ":%s", expr->Keyword.val);
-  if (TYPEP(expr, String)) fprintf(fp, "%s", expr->String.val);
-  if (TYPEP(expr, Char)) fprintf(fp, "%c", expr->Char.val);
+void Writer_write(Writer *wr, S *expr) {
+  if (TYPEP(expr, Symbol)) fprintf(wr->fp, "%s", expr->Symbol.name);
+  if (TYPEP(expr, Keyword)) fprintf(wr->fp, ":%s", expr->Keyword.val);
+  if (TYPEP(expr, String)) fprintf(wr->fp, "%s", expr->String.val);
+  if (TYPEP(expr, Char)) fprintf(wr->fp, "%c", expr->Char.val);
   if (TYPEP(expr, Number)) {
     double intptr, fraction;
     fraction = modf(expr->Number.val, &intptr);
-    if (fraction == 0) fprintf(fp, "%d", (int)intptr); 
-    else fprintf(fp, "%f", expr->Number.val);
+    if (fraction == 0) fprintf(wr->fp, "%d", (int)intptr); 
+    else fprintf(wr->fp, "%f", expr->Number.val);
   }
-  if (TYPEP(expr, Function)) fprintf(fp, "%c", expr->Char.val);
-  if (TYPEP(expr, Error)) fprintf(fp, "%s", expr->Error.val);
+  if (TYPEP(expr, Function)) fprintf(wr->fp, "%c", expr->Char.val);
+  if (TYPEP(expr, Error)) fprintf(wr->fp, "%s", expr->Error.val);
   if (TYPEP(expr, Cons)) {
     while (!NILP(expr)) {
-      Writer_write(writer, FIRST(expr));
-      if (!NILP(expr = REST(expr))) fprintf(fp, " ");
+      Writer_write(wr, FIRST(expr));
+      if (!NILP(expr = REST(expr))) fprintf(wr->fp, " ");
     }
   }
-  else fprintf(fp, "<%s: %p>", expr->Type.type->Keyword.val, expr);
+  else fprintf(wr->fp, "<%s: %p>", expr->Type.type->Keyword.val, expr);
+}
+
+FILE *Writer_getFp(Writer *wr) {
+  return wr->fp;
+}
+
+void Writer_setFp(Writer *wr, FILE *fp) {
+  wr->fp = fp;
 }
