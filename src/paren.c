@@ -351,6 +351,30 @@ static S *Function_putChar(S *args) {
   return c;
 }
 
+static S *Function_Number_add(S *args) {
+  S *acc;
+  acc = Number_new(0);
+  while (!NILP(args)) {
+    if (!TYPEP(FIRST(args), Number))
+      return Error_new("+: is not a number");
+    acc->Number.val += FIRST(args)->Number.val;
+    args = REST(args);
+  }
+  return acc;
+}
+
+static S *Function_Number_mul(S *args) {
+  S *acc;
+  acc = Number_new(1);
+  while (!NILP(args)) {
+    if (!TYPEP(FIRST(args), Number))
+      return Error_new("*: is not a number");
+    acc->Number.val *= FIRST(args)->Number.val;
+    args = REST(args);
+  }
+  return acc;
+}
+
 static S *Function_read(S *args) {
   S *expr;
   FILE *fp;
@@ -478,6 +502,8 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "print", Function_new(Stream, NULL, NULL, Function_print));
   Env_putSymbol(env, "putChar" , Function_new(Stream, NULL, NULL, Function_putChar));
   Env_putSymbol(env, "read", Function_new(Stream, NULL, NULL, Function_read));
+  Env_putSymbol(env, "add", Function_new(Number, NULL, NULL, Function_Number_add));
+  Env_putSymbol(env, "*", Function_new(Number, NULL, NULL, Function_Number_mul));
 }
 
 static void Paren_errorHandler(S *expr) {

@@ -29,7 +29,7 @@ void Writer_write(Writer *wr, S *expr) {
     if (fraction == 0) fprintf(fp, "%d", (int)intptr); 
     else fprintf(fp, "%f", expr->Number.val);
   }
-  else if (TYPEP(expr, Function)) fprintf(fp, "%c", expr->Char.val);
+  else if (TYPEP(expr, Function)) fprintf(fp, "%p", expr);
   else if (TYPEP(expr, Error)) fprintf(fp, "%s", expr->Error.val);
   else if (TYPEP(expr, Cons)) {
     fprintf(fp, "(");
