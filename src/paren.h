@@ -68,6 +68,8 @@ typedef union S {
 extern int LENGTH(S *expr);
 extern int TYPEP(S *expr, S *type);
 
+extern Env env;
+
 extern S *t;
 extern S *nil;
 extern S *quote;
@@ -75,6 +77,7 @@ extern S *quote;
 extern S *Cons;
 extern S *Symbol;
 extern S *Keyword;
+extern S *String;
 extern S *Char;
 extern S *Number;
 extern S *Function;
@@ -92,9 +95,4 @@ extern S *Function_new(S *type, S *args, S *body, S *prim(S *));
 extern S *Special_new(S *f(S *));
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
-
-extern S *S_read(FILE *fp);
-extern S *S_eval(S *expr);
-extern S *S_print(S *expr);
-
-extern void Prim_init(Env *env);
+extern S *Error_tooManyArgument(char *name, S *body);
