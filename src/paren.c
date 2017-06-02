@@ -478,6 +478,7 @@ int main(int argc, char* argv[]) {
     expr = Paren_eval(Reader_read(&rd));
     if (TYPEP(expr, Error)) Paren_errorHandler(expr);
     else Writer_write(&wr, expr);
+    printf("\n");
     Paren_prompt();
   }
   return 0;
