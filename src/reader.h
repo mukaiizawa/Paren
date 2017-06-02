@@ -5,9 +5,8 @@
 #include "lexcer.h"
 
 typedef struct {
-  Lexcer lexcer;
-  FILE *fp;
+  Lexcer lex;
 } Reader;
 
-extern void Reader_init(Reader *reader, Env *env, FILE *fp);
-extern S *Reader_read();
+extern void Reader_init(Reader *rd, FILE *fp);
+extern S *Reader_read(Reader *rd);

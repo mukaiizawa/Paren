@@ -9,10 +9,10 @@
 #include "paren.h"
 #include "reader.h"
 
-void Reader_init(Reader *reader, Env *env, FILE *fp) {
-  Lexcer_init(&reader->lexcer, env, fp);
+void Reader_init(Reader *rd, FILE *fp) {
+  Lexcer_init(&rd->lex, fp);
 }
 
-S *Reader_read(Reader *reader) {
-  return Lexcer_parseExpr(&reader->lexcer);
+S *Reader_read(Reader *rd) {
+  return Lexcer_parseExpr(&rd->lex);
 }
