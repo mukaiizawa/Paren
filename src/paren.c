@@ -1,6 +1,6 @@
 /*
    paren main routine.
-   */
+*/
 
 #include <stdio.h>
 #include <string.h>
@@ -451,6 +451,8 @@ S *Paren_eval(S *expr) {
 }
 
 void Paren_init(Env *env, Reader *rd, Writer *wr) {
+
+  setbuf(stdout, NULL);
 
   Env_init(env);
   Reader_init(rd, stdin);
