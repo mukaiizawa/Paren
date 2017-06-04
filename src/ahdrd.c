@@ -79,7 +79,6 @@ Ahdrd *Ahdrd_readSpace(Ahdrd *ahdrd) {
 
 char *Ahdrd_readKeyword(Ahdrd *ahdrd) {
   int c;
-  char *token;
   Ahdrd_skipRead(ahdrd);    // skip ':'
   while (!isspace((c = Ahdrd_peek(ahdrd, 1))) && c != '(' && c != ')')
     Ahdrd_read(ahdrd);
