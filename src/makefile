@@ -5,6 +5,7 @@ supportos=linux windows
 os?=linux
 cc?=clang
 CC=$(cc)
+CFLAGS=-Wall
 
 ifeq ($(filter $(supportos),$(os)),)
 	$(error Unsupport os.)
@@ -24,7 +25,7 @@ objs=paren.c std.o env.o writer.o reader.o splay.o ahdrd.o ringbuf.o
 all: $(paren)
 
 $(paren): paren.c $(objs)
-	$(CC) -Wall -g -o $@ $(objs)
+	$(CC) $(CFLAGS) -g -o $@ $(objs)
 
 include cdep.d
 
