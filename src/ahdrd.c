@@ -25,6 +25,15 @@ static char *Ahdrd_getToken(Ahdrd *ahdrd) {
   return strcpy(str, ahdrd->token);
 }
 
+static void Ahdrd_eofError(char *msg) {
+  fprintf(stderr, "read: %s.\n", msg);
+  exit(1);
+}
+
+static int Ahdrd_isToken(char c) {
+  return !isspace(c) && c != '(' && c != ')' && c != EOF;
+}
+
 int Ahdrd_skipRead(Ahdrd *ahdrd) {
   return (!Ringbuf_isEmpty(&ahdrd->ringbuf))?
     Ringbuf_get(&ahdrd->ringbuf):
@@ -65,9 +74,10 @@ Ahdrd *Ahdrd_readSpace(Ahdrd *ahdrd) {
     return Ahdrd_readSpace(ahdrd);
   }
   else if (c == '#' && Ahdrd_peek(ahdrd, 2) == '|') {
-    while ((c = Ahdrd_peek(ahdrd, 1)) != EOF
-        && (c != '|' || Ahdrd_peek(ahdrd, 2) != '#'))
+    while ((c = Ahdrd_peek(ahdrd, 1)) != '|' || Ahdrd_peek(ahdrd, 2) != '#') {
+      if (c == EOF) Ahdrd_eofError("comment #| |# not closed");
       Ahdrd_skipRead(ahdrd);
+    }
     Ahdrd_skipRead(ahdrd);    // skip '|'
     Ahdrd_skipRead(ahdrd);    // skip '#'
     return Ahdrd_readSpace(ahdrd);
@@ -75,19 +85,11 @@ Ahdrd *Ahdrd_readSpace(Ahdrd *ahdrd) {
   return ahdrd;
 }
 
-char *Ahdrd_readKeyword(Ahdrd *ahdrd) {
-  int c;
-  Ahdrd_skipRead(ahdrd);    // skip ':'
-  while (!isspace((c = Ahdrd_peek(ahdrd, 1))) && c != '(' && c != ')')
-    Ahdrd_read(ahdrd);
-  return Ahdrd_getToken(ahdrd);
-}
-
 static char *Ahdrd_readSurrounded(Ahdrd *ahdrd, char s) {
   int c;
   Ahdrd_skipRead(ahdrd);    // skip surround start
   while ((c = Ahdrd_peek(ahdrd, 1)) != s) {
-    if (c == EOF) return NULL;
+    if (c == EOF) Ahdrd_eofError("quote not closed");
     Ahdrd_read(ahdrd);
     if (c == '\\') Ahdrd_read(ahdrd);
   }
@@ -104,10 +106,13 @@ char *Ahdrd_readString(Ahdrd *ahdrd) {
 }
 
 char *Ahdrd_readSymbol(Ahdrd *ahdrd) {
-  int c;
-  while (!isspace((c = Ahdrd_peek(ahdrd, 1))) && c != '(' && c != ')')
-    Ahdrd_read(ahdrd);
+  while (Ahdrd_isToken(Ahdrd_peek(ahdrd, 1))) Ahdrd_read(ahdrd);
   return Ahdrd_getToken(ahdrd);
+}
+
+char *Ahdrd_readKeyword(Ahdrd *ahdrd) {
+  Ahdrd_skipRead(ahdrd);    // skip ':'
+  return Ahdrd_readSymbol(ahdrd);
 }
 
 char *Ahdrd_readNumber(Ahdrd *ahdrd) {
@@ -116,21 +121,12 @@ char *Ahdrd_readNumber(Ahdrd *ahdrd) {
 
 int Ahdrd_isNumber(Ahdrd *ahdrd) {
   int i, c;
-  i = 0;
-  if ((!isdigit((c = Ahdrd_peek(ahdrd, ++i)))
-        && c != '+' && c != '-') || c == '0')
-    return 0;
-  while (!isspace((c = Ahdrd_peek(ahdrd, ++i)))
-      && c != '(' && c != ')' && c != '.') {
-    if (!isdigit(c))
-      return 0;
-  }
-  if (c == '.') {
-    while (!isspace((c = Ahdrd_peek(ahdrd, ++i)))
-        && c != '(' && c != ')') {
-      if (!isdigit(c))
-        return 0;
-    }
-  }
-  return 1;
+  i = 1;
+  if ((c = Ahdrd_peek(ahdrd, i)) == '+' || c == '-')
+    if (!Ahdrd_isToken(Ahdrd_peek(ahdrd, ++i))) return 0;
+  while (isdigit(c = Ahdrd_peek(ahdrd, i++)));
+  if (!Ahdrd_isToken(c)) return 1;
+  if (c != '.') return 0;
+  while (isdigit(c = Ahdrd_peek(ahdrd, ++i)));
+  return !Ahdrd_isToken(c);
 }
