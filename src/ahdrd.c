@@ -54,8 +54,7 @@ int Ahdrd_peek(Ahdrd *ahdrd, int n) {
 
 Ahdrd *Ahdrd_readSpace(Ahdrd *ahdrd) {
   int c;
-  if ((c = Ahdrd_peek(ahdrd, 1)) == EOF)
-    return ahdrd;
+  if ((c = Ahdrd_peek(ahdrd, 1)) == EOF) return ahdrd;
   else if (isspace(c)) {
     while ((c = Ahdrd_peek(ahdrd, 1)) != EOF && isspace(c))
       Ahdrd_skipRead(ahdrd);
@@ -89,11 +88,9 @@ static char *Ahdrd_readSurrounded(Ahdrd *ahdrd, char s) {
   int c;
   Ahdrd_skipRead(ahdrd);    // skip surround start
   while ((c = Ahdrd_peek(ahdrd, 1)) != s) {
-    if (c == EOF)
-      return NULL;
+    if (c == EOF) return NULL;
     Ahdrd_read(ahdrd);
-    if (c == '\\')
-      Ahdrd_read(ahdrd);
+    if (c == '\\') Ahdrd_read(ahdrd);
   }
   Ahdrd_skipRead(ahdrd);    // skip surround end
   return Ahdrd_getToken(ahdrd);
