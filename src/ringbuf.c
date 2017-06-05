@@ -44,14 +44,3 @@ int Ringbuf_size(Ringbuf *ringbuf) {
     ringbuf->in - ringbuf->out:
     RINGBUF_BUFSIZ - ringbuf->out - ringbuf->in;
 }
-
-void Ringbuf_dump(Ringbuf *ringbuf) {
-  int i;
-  printf("ringbuf[");
-  for (i = ringbuf->out; i != ringbuf->in; i++) {
-    printf("%c", ringbuf->buf[i]);
-    if (i + 1 != ringbuf->in)
-      printf(", ");
-  }
-  printf("]\n");
-}
