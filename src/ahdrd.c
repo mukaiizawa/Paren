@@ -67,7 +67,7 @@ int Ahdrd_peek1(Ahdrd *ahdrd) {
 static char *Ahdrd_readSurrounded(Ahdrd *ahdrd, char s) {
   int c;
   Ahdrd_skipRead(ahdrd);    // skip surround start
-  while ((c = Ahdrd_peek(ahdrd, 1)) != s) {
+  while ((c = Ahdrd_peek1(ahdrd)) != s) {
     if (c == EOF) Ahdrd_eofError("quote not closed");
     Ahdrd_read(ahdrd);
     if (c == '\\') Ahdrd_read(ahdrd);
@@ -85,7 +85,7 @@ char *Ahdrd_readString(Ahdrd *ahdrd) {
 }
 
 char *Ahdrd_readSymbol(Ahdrd *ahdrd) {
-  while (Ahdrd_isToken(Ahdrd_peek(ahdrd, 1))) Ahdrd_read(ahdrd);
+  while (Ahdrd_isToken(Ahdrd_peek1(ahdrd))) Ahdrd_read(ahdrd);
   return Ahdrd_getToken(ahdrd);
 }
 
