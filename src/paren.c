@@ -504,7 +504,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "print", Function_new(Stream, NULL, NULL, Function_print));
   Env_putSymbol(env, "putChar" , Function_new(Stream, NULL, NULL, Function_putChar));
   Env_putSymbol(env, "read", Function_new(Stream, NULL, NULL, Function_read));
-  Env_putSymbol(env, "add", Function_new(Number, NULL, NULL, Function_Number_add));
+  Env_putSymbol(env, "+", Function_new(Number, NULL, NULL, Function_Number_add));
   Env_putSymbol(env, "*", Function_new(Number, NULL, NULL, Function_Number_mul));
 }
 
