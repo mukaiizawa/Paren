@@ -60,29 +60,8 @@ int Ahdrd_peek(Ahdrd *ahdrd, int n) {
   return ahdrd->ringbuf.buf[(ahdrd->ringbuf.out + n - 1) % RINGBUF_BUFSIZ];
 }
 
-Ahdrd *Ahdrd_readSpace(Ahdrd *ahdrd) {
-  int c;
-  if ((c = Ahdrd_peek(ahdrd, 1)) == EOF) return ahdrd;
-  else if (isspace(c)) {
-    while ((c = Ahdrd_peek(ahdrd, 1)) != EOF && isspace(c))
-      Ahdrd_skipRead(ahdrd);
-    return Ahdrd_readSpace(ahdrd);
-  }
-  else if (c == ';') {
-    while ((c = Ahdrd_peek(ahdrd, 1)) != EOF && c != '\n')
-      Ahdrd_skipRead(ahdrd);
-    return Ahdrd_readSpace(ahdrd);
-  }
-  else if (c == '#' && Ahdrd_peek(ahdrd, 2) == '|') {
-    while ((c = Ahdrd_peek(ahdrd, 1)) != '|' || Ahdrd_peek(ahdrd, 2) != '#') {
-      if (c == EOF) Ahdrd_eofError("comment #| |# not closed");
-      Ahdrd_skipRead(ahdrd);
-    }
-    Ahdrd_skipRead(ahdrd);    // skip '|'
-    Ahdrd_skipRead(ahdrd);    // skip '#'
-    return Ahdrd_readSpace(ahdrd);
-  }
-  return ahdrd;
+int Ahdrd_peek1(Ahdrd *ahdrd) {
+  return Ahdrd_peek(ahdrd, 1);
 }
 
 static char *Ahdrd_readSurrounded(Ahdrd *ahdrd, char s) {
