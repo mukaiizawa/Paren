@@ -55,7 +55,10 @@ int Ahdrd_peek(Ahdrd *ahdrd, int n) {
   while (n > Ringbuf_size(&ahdrd->ringbuf)) {
     c = fgetc(ahdrd->fp);
     Ringbuf_put(&ahdrd->ringbuf, c);
-    if (c == EOF) return c;
+    if (c == EOF && n > Ringbuf_size(&ahdrd->ringbuf)) {
+      fprintf(stderr, "ahdrd: reached eof\n");
+      exit(1);
+    }
   }
   return ahdrd->ringbuf.buf[(ahdrd->ringbuf.out + n - 1) % RINGBUF_BUFSIZ];
 }
