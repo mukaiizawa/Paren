@@ -24,6 +24,7 @@ extern S *Paren_eval(S *expr);
 
 S *t;
 S *nil;
+S *eof;
 S *quote;
 
 // primitive types.
@@ -335,6 +336,7 @@ static S *Function_close(S *args) {
   return nil;
 }
 
+// TODO: 第二引数でEOFの値を指定できるようにする。
 static S *Function_getChar(S *expr) {
   int c;
   if (LENGTH(expr) != 1)
@@ -376,13 +378,19 @@ static S *Function_Number_mul(S *args) {
 }
 
 static S *Function_read(S *args) {
-  S *expr;
+  int n;
   FILE *fp;
-  if (LENGTH(args) != 1) return Error_new("read: Illegal arguments.");
+  S *expr, *eof;
+  if ((n = LENGTH(args)) > 2) return Error_new("read: Illegal arguments.");
+  if (n == 2) {
+    eof = Reader_getEOF(&rd);
+    Reader_setEOF(&rd, SECOND(args));
+  }
   fp = Reader_getFp(&rd);
   Reader_setFp(&rd, FIRST(args)->Stream.fp);
   expr = Reader_read(&rd);
   Reader_setFp(&rd, fp);
+  if (n == 2) Reader_setEOF(&rd, eof);
   return expr;
 }
 
@@ -453,6 +461,7 @@ S *Paren_eval(S *expr) {
 void Paren_init(Env *env, Reader *rd, Writer *wr) {
 
   setbuf(stdout, NULL);
+  // setbuf(stdin, NULL);
 
   Env_init(env);
   Reader_init(rd, stdin);
@@ -461,6 +470,9 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   // init ptimitive types
   Keyword = Keyword_new("Keyword");
   Keyword->Keyword.type = Keyword;
+  Env_putKeyword(env, "t", t = Keyword_new("t"));
+  Env_putKeyword(env, "nil", nil = Keyword_new("nil"));
+  Env_putKeyword(env, "EOF", eof = Keyword_new("EOF"));
   Env_putKeyword(env, "Cons", Cons = Keyword_new("Cons"));
   Env_putKeyword(env, "Symbol", Symbol = Keyword_new("Symbol"));
   Env_putKeyword(env, "Keyword", Keyword);
@@ -474,8 +486,6 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
 
   // init global symbols.
   quote = Symbol_new("quote");
-  Env_putSymbol(env, "t", t = Symbol_new("t"));
-  Env_putSymbol(env, "nil", nil = Symbol_new("nil"));
   Env_putSymbol(env, "stdin", Stream_new(stdin));
   Env_putSymbol(env, "stdout", Stream_new(stdout));
   Env_putSymbol(env, "stderr", Stream_new(stderr));
@@ -502,7 +512,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "nil?", Function_new(nil, NULL, NULL, Function_isNil));
   Env_putSymbol(env, "open", Function_new(String, NULL, NULL, Function_open));
   Env_putSymbol(env, "print", Function_new(Stream, NULL, NULL, Function_print));
-  Env_putSymbol(env, "putChar" , Function_new(Stream, NULL, NULL, Function_putChar));
+  Env_putSymbol(env, "putChar", Function_new(Stream, NULL, NULL, Function_putChar));
   Env_putSymbol(env, "read", Function_new(Stream, NULL, NULL, Function_read));
   Env_putSymbol(env, "+", Function_new(Number, NULL, NULL, Function_Number_add));
   Env_putSymbol(env, "*", Function_new(Number, NULL, NULL, Function_Number_mul));
@@ -520,8 +530,8 @@ int main(int argc, char* argv[]) {
   void *expr;
   Paren_init(&env, &rd, &wr);
   Paren_prompt();
-  while (1) {
-    expr = Paren_eval(Reader_read(&rd));
+  while ((expr = Reader_read(&rd)) != eof) {
+    expr = Paren_eval(expr);
     if (TYPEP(expr, Error)) Paren_errorHandler(expr);
     else Writer_write(&wr, expr);
     printf("\n");

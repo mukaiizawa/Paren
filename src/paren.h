@@ -72,6 +72,7 @@ extern Env env;
 
 extern S *t;
 extern S *nil;
+extern S *eof;
 extern S *quote;
 
 extern S *Cons;
