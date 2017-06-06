@@ -337,12 +337,14 @@ static S *Function_close(S *args) {
 }
 
 // TODO: 第二引数でEOFの値を指定できるようにする。
-static S *Function_getChar(S *expr) {
-  int c;
-  if (LENGTH(expr) != 1)
+static S *Function_getChar(S *args) {
+  int n, c;
+  if ((n = LENGTH(args)) > 2)
     return Error_new("Stream.getChar: Illegal argument.");
-  c = fgetc(FIRST(expr)->Stream.fp);
-  return c == EOF? nil: Char_new(c);
+  c = fgetc(FIRST(args)->Stream.fp);
+  if (c != EOF) return Char_new(c);
+  else if (n == 2) return SECOND(args);
+  else return eof;
 }
 
 static S *Function_putChar(S *args) {
@@ -379,19 +381,12 @@ static S *Function_Number_mul(S *args) {
 
 static S *Function_read(S *args) {
   int n;
-  FILE *fp;
-  S *expr, *eof;
+  Reader rd;
+  S *_eof;
   if ((n = LENGTH(args)) > 2) return Error_new("read: Illegal arguments.");
-  if (n == 2) {
-    eof = Reader_getEOF(&rd);
-    Reader_setEOF(&rd, SECOND(args));
-  }
-  fp = Reader_getFp(&rd);
-  Reader_setFp(&rd, FIRST(args)->Stream.fp);
-  expr = Reader_read(&rd);
-  Reader_setFp(&rd, fp);
-  if (n == 2) Reader_setEOF(&rd, eof);
-  return expr;
+  _eof = (n == 2)? SECOND(args): eof;
+  Reader_init(&rd, FIRST(args)->Stream.fp, _eof);
+  return Reader_read(&rd);
 }
 
 static S *Function_eval(S *args) {
@@ -461,11 +456,8 @@ S *Paren_eval(S *expr) {
 void Paren_init(Env *env, Reader *rd, Writer *wr) {
 
   setbuf(stdout, NULL);
-  // setbuf(stdin, NULL);
 
   Env_init(env);
-  Reader_init(rd, stdin);
-  Writer_init(wr, stdout);
 
   // init ptimitive types
   Keyword = Keyword_new("Keyword");
@@ -516,6 +508,9 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "read", Function_new(Stream, NULL, NULL, Function_read));
   Env_putSymbol(env, "+", Function_new(Number, NULL, NULL, Function_Number_add));
   Env_putSymbol(env, "*", Function_new(Number, NULL, NULL, Function_Number_mul));
+
+  Reader_init(rd, stdin, eof);
+  Writer_init(wr, stdout);
 }
 
 static void Paren_errorHandler(S *expr) {

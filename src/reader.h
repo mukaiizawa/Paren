@@ -6,9 +6,8 @@
 
 typedef struct {
   Ahdrd ahdrd;
+  S *eof;
 } Reader;
 
-extern void Reader_init(Reader *rd, FILE *fp);
+extern void Reader_init(Reader *rd, FILE *fp, S *eof);
 extern S *Reader_read(Reader *rd);
-extern FILE *Reader_getFp(Reader *rd);
-extern void Reader_setFp(Reader *rd, FILE *fp);
