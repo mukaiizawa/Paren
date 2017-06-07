@@ -20,4 +20,3 @@ extern void *Env_getSpecial(Env *env, char *key);
 extern void Env_putSpecial(Env *env, char *key, void *val);
 extern void *Env_getKeyword(Env *env, char *key);
 extern void Env_putKeyword(Env *env, char *key, void *val);
-extern void Env_free(Env *env);

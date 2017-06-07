@@ -72,15 +72,3 @@ void Env_putKeyword(Env *env, char *key, void *val) {
   if (Splay_get(&env->keyword, key) != NULL) return;
   Splay_put(&env->keyword, key, val);
 }
-
-void Env_free(Env *env) {
-  struct EnvNode *node, *outer;
-  node = env->root;
-  while (node != NULL) {
-    outer = node->outer;
-    EnvNode_free(node);
-    node = outer;
-  }
-  Splay_free(&env->special);
-  Splay_free(&env->keyword);
-}
