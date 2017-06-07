@@ -192,6 +192,47 @@ S *Error_tooManyArgument(char *name, S *body) {
   return Error_new("too many argument.");
 }
 
+void Cons_free(S *expr) {
+  S_free(expr->Cons.car);
+  S_free(expr->Cons.cdr);
+  free(expr);
+}
+
+void Symbol_free(S *expr) {
+  free(expr->Symbol.name);
+  free(expr);
+}
+
+void String_free(S *expr) {
+  free(expr->String.val);
+  free(expr);
+}
+
+void Function_free(S *expr) {
+  struct Generic *g;
+  while (expr->Function.generics != NULL) {
+    g = expr->Function.generics;
+    expr->Function.generics = g->next;
+    free(g);
+  }
+  free(expr);
+}
+
+void Error_free(S *expr) {
+  free(expr->Error.val);
+  free(expr);
+}
+
+void S_free(S *expr) {
+  if (TYPEP(expr, Cons)) return Cons_free(expr);
+  else if (TYPEP(expr, Symbol)) return Symbol_free(expr);
+  else if (TYPEP(expr, Keyword)) return;
+  else if (TYPEP(expr, String)) return String_free(expr);
+  else if (TYPEP(expr, Function)) return Function_free(expr);
+  else if (TYPEP(expr, Error)) return Error_free(expr);
+  else free(expr);
+}
+
 // special forms
 
 static S *Special_ifElse(S *expr) {

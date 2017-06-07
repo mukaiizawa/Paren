@@ -97,3 +97,4 @@ extern S *Special_new(S *f(S *));
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
 extern S *Error_tooManyArgument(char *name, S *body);
+extern void S_free(S *expr);
