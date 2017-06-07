@@ -377,7 +377,6 @@ static S *Function_close(S *args) {
   return nil;
 }
 
-// TODO: 第二引数でEOFの値を指定できるようにする。
 static S *Function_getChar(S *args) {
   int n, c;
   if ((n = LENGTH(args)) > 2)
