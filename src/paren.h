@@ -4,42 +4,52 @@
 
 typedef union S {
   struct {
+    int gen;
     union S *type;
   } Type;
   struct {
+    int gen;
     union S *type;
     union S *car, *cdr;
   } Cons;
   struct {
+    int gen;
     union S *type;
     char *name;
     Splay vars;
   } Structure;
   struct {
+    int gen;
     union S *type;
     char *name;
   } Symbol;
   struct {
+    int gen;
     union S *type;
     char *val;
   } Keyword;
   struct {
+    int gen;
     union S *type;
     char *val;
   } String;
   struct {
+    int gen;
     union S *type;
     char val;
   } Char;
   struct {
+    int gen;
     union S *type;
     double val;
   } Number;
   struct {
+    int gen;
     union S *type;
     union S *(* fn)(union S *);
   } Special;
   struct {
+    int gen;
     union S *type;
     struct Generic {
       union S *type;
@@ -51,10 +61,12 @@ typedef union S {
     struct Generic *gDefault;
   } Function;
   struct {
+    int gen;
     union S *type;
     FILE *fp;
   } Stream;
   struct {
+    int gen;
     union S *type;
     char *val;
   } Error;
