@@ -2,15 +2,17 @@
   garbage collector.
 */
 
-#define GC_MAX_NEW_NUM 100
-#define GC_OLD_FREQ 5
+#define GC_MAX_NEWBIE_NUM 100
+#define GC_FREQ_ELDER 5
 
-#define GC_OLD 0
-#define GC_NEW 3
+#define GC_NEWBIE 0
+#define GC_ELDER 3
 #define GC_PERM 4
 
 typedef struct {
-  S *newList[GC_MAX_NEW_NUM];
+  int count;
+  S *newbies[GC_MAX_NEWBIE_NUM];
+  // elders
 } GC;
 
 extern void GC_init(GC *gc);

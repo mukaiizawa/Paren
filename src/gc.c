@@ -5,7 +5,6 @@
   年齢の値によりオブジェクトを次の種類に分類する。
   - 新参 -- 0..2
   - 古参 -- 3
-  - 永続 -- 4
   オブジェクトが生成された瞬間は後述する例外を除き、年齢に0が設定される。
   新参の数がある閾値を超えたタイミングで、新参を対象にGCを行う。
   この閾値を新参GC閾値、このGCを新参GCと呼ぶ。
@@ -19,6 +18,7 @@
 */
 
 #include <stdio.h>
+#include <assert.h>
 
 #include "std.h"
 #include "splay.h"
@@ -27,7 +27,36 @@
 #include "gc.h"
 
 void GC_init(GC *gc) {
+  int i;
+  gc->count = 0;
+  for (i = 0; i < GC_MAX_NEWBIE_NUM; i++)
+    gc->newbies[i] = NULL;
+}
+
+static void GC_newbies(GC *gc) {
+  gc->count++;
+}
+
+static void GC_elders(GC *gc) {
 }
 
 void GC_regist(GC *gc, S*expr) {
+  int i;
+  assert(expr->Object.age == GC_NEWBIE);
+  if (TYPEP(expr, Keyword) || TYPEP(expr, Special)) {
+    expr->Object.age = GC_PERM;
+    return;
+  }
+  for (i = 0; i < GC_MAX_NEWBIE_NUM; i++) {
+    if (gc->newbies[i] == NULL) {
+      gc->newbies[i] = expr;
+      return;
+    }
+  }
+  GC_newbies(gc);
+  GC_regist(gc, expr);
+  if (gc->count == GC_FREQ_ELDER) {
+    gc->count = 0;
+    GC_elders(gc);
+  }
 }

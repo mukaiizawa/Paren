@@ -40,7 +40,7 @@ void Writer_write(Writer *wr, S *expr) {
     }
     fprintf(fp, ")");
   }
-  else fprintf(fp, "<%s: %p>", expr->Type.type->Keyword.val, expr);
+  else fprintf(fp, "<%s: %p>", expr->Object.type->Keyword.val, expr);
 }
 
 FILE *Writer_getFp(Writer *wr) {

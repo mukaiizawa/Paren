@@ -11,6 +11,7 @@
 #include "splay.h"
 #include "env.h"
 #include "paren.h"
+#include "gc.h"
 #include "reader.h"
 #include "writer.h"
 
@@ -43,8 +44,8 @@ S *Error;
 // global functions (for ast manipulation).
 
 int TYPEP(S *expr, S *type) {
-  assert(expr->Type.type->Keyword.type = Keyword);
-  return expr->Type.type == type;
+  assert(expr->Object.type->Keyword.type = Keyword);
+  return expr->Object.type == type;
 }
 
 int LENGTH(S *expr) {
@@ -57,7 +58,10 @@ int LENGTH(S *expr) {
 }
 
 static S *S_alloc() {
-  return xmalloc(sizeof(S));
+  S *expr;
+  expr = xmalloc(sizeof(S));
+  expr->Object.age = GC_NEWBIE;
+  return expr;
 }
 
 S *Cons_new(S *car, S *cdr) {
@@ -460,7 +464,7 @@ static S *Function_print(S *args) {
 static S *S_apply(S *fn, S *args) {
   struct Generic *generic;
   S *type, *fnArgs, *result;
-  type = FIRST(args)->Type.type;
+  type = FIRST(args)->Object.type;
   if ((generic = Function_lookup(fn, type)) == NULL)
     return Error_new("eval: method not found.");
   // invoke primitive function.
@@ -501,8 +505,7 @@ S *Paren_eval(S *expr) {
   }
   fn = FIRST(root);
   args = REST(root);
-  if (!TYPEP(fn, Function))
-    return Error_new("eval: undefined function.");
+  if (!TYPEP(fn, Function)) return Error_new("eval: undefined function.");
   return S_apply(fn, args);
 }
 

@@ -12,5 +12,9 @@ paren core routine.
 (def double)
 (<- double (fn (:Number n)
              (* n n)))
-
 (double 10)
+
+(def length)
+(<- length (fn (lis)
+             (ifElse lis (+ 1 (length (cdr lis))) 0)))
+(length `(1 2 3 4))
