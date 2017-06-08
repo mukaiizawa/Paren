@@ -48,6 +48,7 @@ typedef union S {
       union S *(* prim)(union S *);
       struct Generic *next;
     } *generics;
+    struct Generic *gDefault;
   } Function;
   struct {
     union S *type;

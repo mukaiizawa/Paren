@@ -114,14 +114,12 @@ S *Number_new(double val) {
   return expr;
 }
 
-static struct Generic *Function_lookupGenerics(S *fn, S *type) {
+static struct Generic *Function_lookup(S *fn, S *type) {
   struct Generic *g;
   assert(TYPEP(fn, Function));
   for (g = fn->Function.generics; g != NULL; g = g->next)
     if (g->type == type) return g;
-  for (g = fn->Function.generics; g != NULL; g = g->next)
-    if (g->type == nil) return g;
-  return NULL;
+  return fn->Function.gDefault;
 }
 
 static void Function_addGeneric(S *fn, S *type, S *args, S *body, S *prim(S *))
@@ -132,22 +130,35 @@ static void Function_addGeneric(S *fn, S *type, S *args, S *body, S *prim(S *))
   g->args = args;
   g->body = body;
   g->prim = prim;
-  g->next = fn->Function.generics;
-  fn->Function.generics = g;
+  if (type == nil) {
+    g->next = NULL;
+    fn->Function.gDefault = g;
+  }
+  else {
+    g->next = fn->Function.generics;
+    fn->Function.generics = g;
+  }
 }
 
-static S *Function_mergeGenerics(S *fnTo, S *fnFrom) {
-  struct Generic *gTo, *gFrom;
+static S *Function_merge(S *fnTo, S *fnFrom) {
+  struct Generic *gFrom, *gTo;
   for (gFrom = fnFrom->Function.generics; gFrom != NULL; gFrom = gFrom->next) {
-    gTo = Function_lookupGenerics(fnTo, gFrom->type);
-    if (gTo == NULL || gTo->type == nil)
-      Function_addGeneric(
-          fnTo, gFrom->type, gFrom->args, gFrom->body, gFrom->prim);
-    else {
+    gTo = Function_lookup(fnTo, gFrom->type);
+    if (gTo != NULL && gTo->type != nil) {
       gTo->args = gFrom->args;
       gTo->body = gFrom->body;
       gTo->prim = gFrom->prim;
     }
+    else
+      Function_addGeneric(
+          fnTo, gFrom->type, gFrom->args, gFrom->body, gFrom->prim);
+  }
+  if ((gFrom = fnFrom->Function.gDefault) != NULL) {
+    gTo = fnTo->Function.gDefault;
+    if (gTo == NULL) gTo = xmalloc(sizeof(struct Generic));
+    gTo->args = gFrom->args;
+    gTo->body = gFrom->body;
+    gTo->prim = gFrom->prim;
   }
   return fnTo;
 }
@@ -156,6 +167,7 @@ S *Function_new(S *type, S *args, S *body, S *prim(S *)) {
   S *expr;
   expr = S_alloc();
   expr->Function.type = Function;
+  expr->Function.gDefault = expr->Function.generics = NULL;
   Function_addGeneric(expr, type, args, body, prim);
   return expr;
 }
@@ -215,6 +227,7 @@ void Function_free(S *expr) {
     expr->Function.generics = g->next;
     free(g);
   }
+  free(expr->Function.gDefault);
   free(expr);
 }
 
@@ -295,7 +308,7 @@ static S *Special_assign(S *expr) {
     S *envVal;
     if (TYPEP(val = Paren_eval(SECOND(cons)), Function) &&
         TYPEP(envVal = Env_getSymbol(&env, FIRST(cons)->Symbol.name), Function))
-      val = Function_mergeGenerics(envVal, val);
+      val = Function_merge(envVal, val);
     Env_putSymbol(&env, FIRST(cons)->Symbol.name, val);
   }
   return val;
@@ -448,7 +461,7 @@ static S *S_apply(S *fn, S *args) {
   struct Generic *generic;
   S *type, *fnArgs, *result;
   type = FIRST(args)->Type.type;
-  if ((generic = Function_lookupGenerics(fn, type)) == NULL)
+  if ((generic = Function_lookup(fn, type)) == NULL)
     return Error_new("eval: method not found.");
   // invoke primitive function.
   if (generic->args == NULL) return generic->prim(args);
