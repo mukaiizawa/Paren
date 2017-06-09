@@ -16,6 +16,22 @@ void Writer_init(Writer *wr, FILE *fp) {
   wr->fp = fp;
 }
 
+static void Writer_writeGeneric(Writer *wr, struct Generic *g) {
+  FILE *fp;
+  fp = wr->fp;
+  fprintf(fp, "\n\t<Generic.%s: ", g->type->Keyword.val);
+  fprintf(fp, "(fn ");
+  if (g->prim != NULL)
+    fprintf(fp, "<BuiltinFunction: 0x%p>)", g->prim);
+  else {
+    Writer_write(wr, g->args);
+    fprintf(fp, " ");
+    Writer_write(wr, g->body);
+    fprintf(fp, ")");
+  }
+  fprintf(fp, ">");
+}
+
 void Writer_write(Writer *wr, S *expr) {
   FILE *fp;
   fp = wr->fp;
@@ -29,8 +45,15 @@ void Writer_write(Writer *wr, S *expr) {
     if (fraction == 0) fprintf(fp, "%d", (int)intptr); 
     else fprintf(fp, "%f", expr->Number.val);
   }
-  // TODO: writer for function.
-  // else if (TYPEP(expr, Function)) fprintf(fp, "%p", expr);
+  else if (TYPEP(expr, Function)) {
+    struct Generic *g;
+    fprintf(fp, "<Function: 0x%p", expr);
+    if (expr->Function.gDefault != NULL)
+      Writer_writeGeneric(wr, expr->Function.gDefault);
+    for (g = expr->Function.generics; g != NULL; g = g->next)
+      Writer_writeGeneric(wr, g);
+    fprintf(fp, ">");
+  }
   else if (TYPEP(expr, Error)) fprintf(fp, "%s", expr->Error.val);
   else if (TYPEP(expr, Cons)) {
     fprintf(fp, "(");
@@ -40,7 +63,7 @@ void Writer_write(Writer *wr, S *expr) {
     }
     fprintf(fp, ")");
   }
-  else fprintf(fp, "<%s: %p>", expr->Object.type->Keyword.val, expr);
+  else fprintf(fp, "<%s: 0x%p>", expr->Object.type->Keyword.val, expr);
 }
 
 FILE *Writer_getFp(Writer *wr) {
