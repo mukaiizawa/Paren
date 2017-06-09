@@ -146,6 +146,7 @@ static void Function_addGeneric(S *fn, S *type, S *args, S *body, S *prim(S *))
 
 static S *Function_merge(S *fnTo, S *fnFrom) {
   struct Generic *gFrom, *gTo;
+  assert(TYPEP(fnTo, Function) && TYPEP(fnFrom, Function));
   for (gFrom = fnFrom->Function.generics; gFrom != NULL; gFrom = gFrom->next) {
     gTo = Function_lookup(fnTo, gFrom->type);
     if (gTo != NULL && gTo->type != nil) {
@@ -252,6 +253,18 @@ void S_free(S *expr) {
 
 // special forms
 
+static S *Special_defMacro(S *expr) {
+  S *name, *args, *body, *macro;
+  if (LENGTH(expr) < 2)
+    return Error_new("defMacro: Illegal argument exception.");
+  name = FIRST(expr);
+  args = SECOND(expr);
+  body = REST(REST((expr)));
+  macro = Function_new(nil, args, body, NULL);
+  Env_putMacro(&env, name->Symbol.name, macro);
+  return macro;
+}
+
 static S *Special_ifElse(S *expr) {
   if (LENGTH(expr) < 2)
     return Error_new("ifElse: Illegal argument exception.");
@@ -310,7 +323,8 @@ static S *Special_assign(S *expr) {
   }
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
     S *envVal;
-    if (TYPEP(val = Paren_eval(SECOND(cons)), Function) &&
+    if (TYPEP(val = Paren_eval(SECOND(cons)), Error)) return val;
+    if (TYPEP(val, Function) &&
         TYPEP(envVal = Env_getSymbol(&env, FIRST(cons)->Symbol.name), Function))
       val = Function_merge(envVal, val);
     Env_putSymbol(&env, FIRST(cons)->Symbol.name, val);
@@ -360,6 +374,7 @@ static S *Function_car(S *args) {
 }
 
 static S *Function_cdr(S *args) {
+  Writer_write(&wr, args);
   if (LENGTH(args) != 1) return Error_new("cdr: Illegal argument exception.");
   if (NILP(FIRST(args))) return nil;
   if (!TYPEP(FIRST(args), Cons)) return Error_new("cdr: not a list.");
@@ -486,11 +501,15 @@ S *Paren_eval(S *expr) {
   S *root, *fn, *args;
   // atom
   if (ATOMP(expr)) {
-    if (TYPEP(expr, Symbol))
-      if ((expr = Env_getSymbol(&env, expr->Symbol.name)) == NULL)
-        expr =  Error_new("eval: undefined variable.");
+    if (TYPEP(expr, Symbol)
+        && (expr = Env_getSymbol(&env, expr->Symbol.name)) == NULL)
+      expr =  Error_new("eval: undefined variable.");
     return expr;
   }
+  // macro
+  if (TYPEP(FIRST(expr), Symbol)
+      && (fn = Env_getMacro(&env, FIRST(expr)->Symbol.name)) != NULL)
+    return Paren_eval(S_apply(fn, REST(expr)));
   // special form
   if (TYPEP(FIRST(expr), Symbol)
       && (fn = Env_getSpecial(&env, FIRST(expr)->Symbol.name)) != NULL)
@@ -542,6 +561,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   // init special forms.
   Env_putSpecial(env, "<-", Special_new(Special_assign));
   Env_putSpecial(env, "def", Special_new(Special_def));
+  Env_putSpecial(env, "defMacro", Special_new(Special_defMacro));
   Env_putSpecial(env, "fn", Special_new(Special_fn));
   Env_putSpecial(env, "ifElse", Special_new(Special_ifElse));
   Env_putSpecial(env, "let", Special_new(Special_let));

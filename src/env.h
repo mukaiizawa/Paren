@@ -8,6 +8,7 @@ typedef struct Env {
     Splay symbol;
   } *root;
   Splay special;
+  Splay macro;
   Splay keyword;
 } Env;
 
@@ -20,3 +21,5 @@ extern void *Env_getSpecial(Env *env, char *key);
 extern void Env_putSpecial(Env *env, char *key, void *val);
 extern void *Env_getKeyword(Env *env, char *key);
 extern void Env_putKeyword(Env *env, char *key, void *val);
+extern void *Env_getMacro(Env *env, char *key);
+extern void Env_putMacro(Env *env, char *key, void *val);

@@ -7,6 +7,12 @@ paren core routine.
 
 |#
 
+(defMacro twice (x)
+  (list `progn x x))
+
+(twice (print 1))
+
+#|
 (print stdout "hello paren!!")
 
 (def double)
@@ -18,3 +24,4 @@ paren core routine.
 (<- length (fn (lis)
              (ifElse lis (+ 1 (length (cdr lis))) 0)))
 (length `(1 2 3 4))
+|#
