@@ -347,7 +347,7 @@ static S *Special_def(S *expr) {
 
 static S *Special_fn(S *expr) {
   S *args, *type;
-  if (LENGTH(expr) <= 1 || ATOMP(args = FIRST(expr)))
+  if (LENGTH(expr) < 1 || ATOMP(args = FIRST(expr)))
     return Error_new("fn: Illegal argument.");
   if (TYPEP(type = FIRST(args), Keyword)) args = REST(args);
   else type = nil;
