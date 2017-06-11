@@ -18,6 +18,7 @@
 Env env;
 static Reader rd;
 static Writer wr;
+static S *consPool;
 
 extern S *Paren_eval(S *expr);
 
@@ -67,8 +68,14 @@ static S *S_alloc() {
 S *Cons_new(S *car, S *cdr) {
   S *root;
   assert(!ATOMP(cdr) || NILP(cdr));
-  root = S_alloc();
-  root->Cons.type = Cons;
+  if (!NILP(REST(consPool))) {
+    root = REST(consPool);
+    REST(consPool) = REST(root);
+  }
+  else {
+    root = S_alloc();
+    root->Cons.type = Cons;
+  }
   FIRST(root) = car;
   REST(root) = cdr;
   return root;
@@ -212,7 +219,8 @@ S *Error_tooManyArgument(char *name, S *body) {
 void Cons_free(S *expr) {
   S_free(expr->Cons.car);
   S_free(expr->Cons.cdr);
-  free(expr);
+  REST(expr) = REST(consPool);
+  REST(consPool) = expr;
 }
 
 void Symbol_free(S *expr) {
@@ -534,7 +542,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
 
   Env_init(env);
 
-  // init ptimitive types
+  // init ptimitive types.
   Keyword = Keyword_new("Keyword");
   Keyword->Keyword.type = Keyword;
   Env_putKeyword(env, "t", t = Keyword_new("t"));
@@ -550,6 +558,12 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putKeyword(env, "Special", Special = Keyword_new("Special"));
   Env_putKeyword(env, "Stream", Stream = Keyword_new("Stream"));
   Env_putKeyword(env, "Error", Error = Keyword_new("Error"));
+
+  // init cons pool.
+  consPool = S_alloc();
+  consPool->Cons.type = Cons;
+  FIRST(consPool) = nil;
+  REST(consPool) = nil;
 
   // init global symbols.
   quote = Symbol_new("quote");
@@ -585,8 +599,10 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "+", Function_new(Number, NULL, NULL, Function_Number_add));
   Env_putSymbol(env, "*", Function_new(Number, NULL, NULL, Function_Number_mul));
 
+  // init reader and writer.
   Reader_init(rd, stdin, eof);
   Writer_init(wr, stdout);
+
 }
 
 static void Paren_errorHandler(S *expr) {
