@@ -91,11 +91,16 @@ S *Symbol_new(char *name) {
 
 S *Keyword_new(char *val) {
   S *expr;
-  if (strlen(val) == 0)
-    return Error_new("Illegal Keyword.");
+  if (strlen(val) == 0) return Error_new("Illegal Keyword.");
+  if ((expr = Env_getKeyword(&env, val)) != NULL) {
+    free(val);
+    return expr;
+  }
   expr = S_alloc();
   expr->Keyword.type = Keyword;
+  expr->Keyword.age = GC_PERM;
   expr->Keyword.val = val;
+  Env_putKeyword(&env, val, expr);
   return expr;
 }
 
@@ -188,6 +193,7 @@ S *Special_new(S *fn(S *)) {
   S *expr;
   expr = S_alloc();
   expr->Special.type = Special;
+  expr->Special.age = GC_PERM;
   expr->Special.fn = fn;
   return expr;
 }
@@ -363,6 +369,24 @@ static S *Special_fn(S *expr) {
 }
 
 // primitive functions.
+
+static int ISEQ(S *arg1, S *arg2) {
+  S *type;
+  if ((type = arg1->Object.type) != arg2->Object.type) return 0;
+  if (type == String) return strcmp(arg1->String.val, arg2->String.val) == 0;
+  if (type == Symbol) return strcmp(arg1->Symbol.name, arg2->Symbol.name) == 0;
+  if (type == Char) return arg1->Char.val == arg2->Char.val;
+  else return arg1 == arg2;
+}
+
+static S *Function_isEqual(S *args) {
+  if (LENGTH(args) < 2) return Error_new("=?: Illegal argument.");
+  while (!NILP(REST(args))) {
+    if (!ISEQ(FIRST(args), SECOND(args))) return nil;
+    args = REST(args);
+  }
+  return t;
+}
 
 static S *Function_isNil(S *args) {
   if (LENGTH(args) != 1) return Error_new("nil?: illegal arguments");
@@ -598,6 +622,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "read", Function_new(Stream, NULL, NULL, Function_read));
   Env_putSymbol(env, "+", Function_new(Number, NULL, NULL, Function_Number_add));
   Env_putSymbol(env, "*", Function_new(Number, NULL, NULL, Function_Number_mul));
+  Env_putSymbol(env, "=?", Function_new(nil, NULL, NULL, Function_isEqual));
 
   // init reader and writer.
   Reader_init(rd, stdin, eof);

@@ -12,7 +12,7 @@
 typedef struct {
   int count;
   S *newbies[GC_MAX_NEWBIE_NUM];
-  // elders
+  S *elders;
 } GC;
 
 extern void GC_init(GC *gc);

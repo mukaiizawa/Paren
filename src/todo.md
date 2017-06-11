@@ -2,8 +2,7 @@
 parenにおけるtodoを羅列する。
 
 # GC
-- 未実装
-- cons poolの実装
+- GCの実装
 
 # Error
 - フォーマット対応及び、可変長引数化
@@ -15,3 +14,5 @@ parenにおけるtodoを羅列する。
 
 # Function
 - importメソッドの実装
+
+# バグ対応
