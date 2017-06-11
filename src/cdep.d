@@ -1,7 +1,7 @@
 ahdrd.o: ahdrd.c ringbuf.h ahdrd.h std.h
 env.o: env.c env.h splay.h std.h
 gc.o: gc.c gc.h paren.h env.h splay.h std.h
-paren.o: paren.c writer.h ringbuf.h ahdrd.h reader.h paren.h env.h splay.h std.h
+paren.o: paren.c writer.h ringbuf.h ahdrd.h reader.h gc.h paren.h env.h splay.h std.h
 reader.o: reader.c ringbuf.h ahdrd.h reader.h paren.h env.h splay.h
 ringbuf.o: ringbuf.c ringbuf.h
 splay.o: splay.c splay.h std.h

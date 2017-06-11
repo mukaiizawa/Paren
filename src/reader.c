@@ -44,14 +44,7 @@ static int Reader_nextChar(Reader *rd) {
 }
 
 static S *Reader_parseKeyword(Reader *rd) {
-  char *token;
-  S *keyword;
-  token = Ahdrd_readKeyword(&rd->ahdrd);
-  if ((keyword = Env_getKeyword(&env, token)) != NULL) {
-    free(token);
-    return keyword;
-  }
-  return Keyword_new(token);
+  return Keyword_new(Ahdrd_readKeyword(&rd->ahdrd));
 }
 
 static S *Reader_parseChar(Reader *rd) {
