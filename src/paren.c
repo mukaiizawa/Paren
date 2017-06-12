@@ -312,7 +312,7 @@ static S *Special_quote(S *expr) {
 static S *Special_progn(S *expr) {
   S *result;
   while (!NILP(expr)) {
-    result = Paren_eval(FIRST(expr));
+    if (TYPEP(result = Paren_eval(FIRST(expr)), Error)) return result;
     expr = REST(expr);
   }
   return result;
