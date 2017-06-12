@@ -23,19 +23,6 @@ static S *Reader_error(Reader *rd, char *msg) {
   return Error_new(msg);
 }
 
-static S *S_reverse(S *expr) {
-  S *root;
-  if (NILP(expr))
-    return nil;
-  assert(TYPEP(expr, Cons));
-  root = nil;
-  while (!NILP(expr)) {
-    root = Cons_new(FIRST(expr), root);
-    expr = REST(expr);
-  }
-  return root;
-}
-
 static int Reader_nextChar(Reader *rd) {
   int c;
   while ((c = Ahdrd_peek1(&rd->ahdrd)) != EOF && isspace(c))
@@ -134,7 +121,7 @@ static S *Reader_parseExpr(Reader *rd) {
       acc = Cons_new(expr, acc);
     }
     Ahdrd_skipRead(&rd->ahdrd);    // skip ')'
-    return S_reverse(acc);
+    return REVERSE(acc);
   }
   else if (c != ')') return Reader_parseAtom(rd);
   else {

@@ -58,6 +58,19 @@ int LENGTH(S *expr) {
   return count;
 }
 
+S *REVERSE(S *expr) {
+  S *root;
+  if (NILP(expr))
+    return nil;
+  assert(TYPEP(expr, Cons));
+  root = nil;
+  while (!NILP(expr)) {
+    root = Cons_new(FIRST(expr), root);
+    expr = REST(expr);
+  }
+  return root;
+}
+
 static int ISEQ(S *arg1, S *arg2) {
   S *type;
   if ((type = arg1->Object.type) != arg2->Object.type) return 0;
@@ -549,12 +562,13 @@ S *Paren_eval(S *expr) {
     return (fn->Special.fn)(REST(expr));
   // function
   if (LENGTH(expr) <= 1) return Error_new("eval: not found receiver.");
-  root = expr;
+  root = nil;
   while (!NILP(expr)) {
-    FIRST(expr) = Paren_eval(FIRST(expr));
-    if (TYPEP(FIRST(expr), Error)) return FIRST(expr);
+    root = Cons_new(Paren_eval(FIRST(expr)), root);
+    if (TYPEP(FIRST(root), Error)) return FIRST(root);
     expr = REST(expr);
   }
+  root = REVERSE(root);
   fn = FIRST(root);
   args = REST(root);
   if (!TYPEP(fn, Function)) return Error_new("eval: undefined function.");
