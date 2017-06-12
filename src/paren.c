@@ -58,6 +58,16 @@ int LENGTH(S *expr) {
   return count;
 }
 
+static int ISEQ(S *arg1, S *arg2) {
+  S *type;
+  if ((type = arg1->Object.type) != arg2->Object.type) return 0;
+  if (type == String) return strcmp(arg1->String.val, arg2->String.val) == 0;
+  if (type == Symbol) return strcmp(arg1->Symbol.name, arg2->Symbol.name) == 0;
+  if (type == Char) return arg1->Char.val == arg2->Char.val;
+  if (type == Number) return arg1->Number.val == arg2->Number.val;
+  else return arg1 == arg2;
+}
+
 static S *S_alloc() {
   S *expr;
   expr = xmalloc(sizeof(S));
@@ -369,15 +379,6 @@ static S *Special_fn(S *expr) {
 }
 
 // primitive functions.
-
-static int ISEQ(S *arg1, S *arg2) {
-  S *type;
-  if ((type = arg1->Object.type) != arg2->Object.type) return 0;
-  if (type == String) return strcmp(arg1->String.val, arg2->String.val) == 0;
-  if (type == Symbol) return strcmp(arg1->Symbol.name, arg2->Symbol.name) == 0;
-  if (type == Char) return arg1->Char.val == arg2->Char.val;
-  else return arg1 == arg2;
-}
 
 static S *Function_isEqual(S *args) {
   if (LENGTH(args) < 2) return Error_new("=?: Illegal argument.");
