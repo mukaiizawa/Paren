@@ -305,7 +305,7 @@ static S *Special_quote(S *expr) {
   int n;
   if ((n = LENGTH(expr)) > 1)
     return Error_new("quote: Illegal argument exception.");
-  if (n == 0) return nil;    // '() => nil
+  if (n == 0) return nil;    // `() => nil
   return FIRST(expr);
 }
 
