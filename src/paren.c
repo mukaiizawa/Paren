@@ -420,7 +420,6 @@ static S *Function_car(S *args) {
 }
 
 static S *Function_cdr(S *args) {
-  Writer_write(&wr, args);
   if (LENGTH(args) != 1) return Error_new("cdr: Illegal argument exception.");
   if (NILP(FIRST(args))) return nil;
   if (!TYPEP(FIRST(args), Cons)) return Error_new("cdr: not a list.");
