@@ -98,6 +98,7 @@ S *Cons_new(S *car, S *cdr) {
   else {
     root = S_alloc();
     root->Cons.type = Cons;
+    root->Keyword.age = GC_PERM;
   }
   FIRST(root) = car;
   REST(root) = cdr;
