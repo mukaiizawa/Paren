@@ -60,8 +60,7 @@ int LENGTH(S *expr) {
 
 S *REVERSE(S *expr) {
   S *root;
-  if (NILP(expr))
-    return nil;
+  if (NILP(expr)) return nil;
   assert(TYPEP(expr, Cons));
   root = nil;
   while (!NILP(expr)) {
@@ -74,8 +73,10 @@ S *REVERSE(S *expr) {
 static int ISEQ(S *arg1, S *arg2) {
   S *type;
   if ((type = arg1->Object.type) != arg2->Object.type) return 0;
-  else if (type == String) return strcmp(arg1->String.val, arg2->String.val) == 0;
-  else if (type == Symbol) return strcmp(arg1->Symbol.name, arg2->Symbol.name) == 0;
+  else if (type == String)
+    return strcmp(arg1->String.val, arg2->String.val) == 0;
+  else if (type == Symbol)
+    return strcmp(arg1->Symbol.name, arg2->Symbol.name) == 0;
   else if (type == Char) return arg1->Char.val == arg2->Char.val;
   else if (type == Number) return arg1->Number.val == arg2->Number.val;
   else return arg1 == arg2;
