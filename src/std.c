@@ -20,15 +20,16 @@ void *xmalloc(int size) {
   return p;
 }
 
-void xstrncat(char *buf, char *s) {
-  int n;
-  n = MAX_STR_LEN - strlen(buf);
-  strncat(buf, s, n);
-}
-
-void xsnprintf(char *buf, char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  vsnprintf(buf, MAX_STR_LEN, fmt, args);
-  va_end(args);
+char *xmkstr(int size, char *fmt, ...) {
+  int len;
+  char *buf;
+  va_list va;
+  buf = xmalloc(size);
+  va_start(va,fmt);
+  if ((len = vsprintf(buf, fmt, va)) < 0 || len >= size) {
+    fprintf(stderr, "xmkstr: Buffer over flow.");
+    exit(1);
+  }
+  va_end(va);
+  return buf;
 }
