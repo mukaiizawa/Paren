@@ -37,7 +37,7 @@ static S *Reader_parseKeyword(Reader *rd) {
 static S *Reader_parseChar(Reader *rd) {
   int n;
   char c, *token;
-  if ((n = strlen(token)) == 1) c = token[0];
+  if ((n = strlen(token = Ahdrd_readChar(&rd->ahdrd))) == 1) c = token[0];
   else if (n == 2 && token[0] == '\\') {
     switch (token[1]) {
       case 'n': c = '\n'; break;
