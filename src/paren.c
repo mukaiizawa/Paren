@@ -60,8 +60,7 @@ int LENGTH(S *expr) {
 
 S *REVERSE(S *expr) {
   S *root, *cdr;
-  if (NILP(expr)) return nil;
-  assert(TYPEP(expr, Cons));
+  assert(NILP(expr) || TYPEP(expr, Cons));
   root = nil;
   while (!NILP(expr)) {
     cdr = root;
