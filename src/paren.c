@@ -20,7 +20,7 @@ static Reader rd;
 static Writer wr;
 static S *consPool;
 
-extern S *Paren_eval(S *expr);
+extern S *EVAL(S *expr);
 
 // global symbols.
 
@@ -140,8 +140,7 @@ S *String_new(char *val) {
 
 S *Char_new(char val) {
   S *expr;
-  if (val == '\0')
-    return Error_new("Illegal character.");
+  if (val == '\0') return Error_new("Illegal character.");
   expr = S_alloc();
   expr->Char.type = Char;
   expr->Char.val = val;
@@ -309,12 +308,12 @@ static S *Special_ifElse(S *expr) {
   if (LENGTH(expr) < 2)
     return Error_new("ifElse: Illegal argument exception.");
   while (!NILP(REST(expr))) {
-    if (!NILP(Paren_eval(FIRST(expr))))
-      return Paren_eval(SECOND(expr));
+    if (!NILP(EVAL(FIRST(expr))))
+      return EVAL(SECOND(expr));
     if (NILP(expr = REST(expr)) || NILP(expr = REST(expr)))
       return nil;
   }
-  return Paren_eval(FIRST(expr));
+  return EVAL(FIRST(expr));
 }
 
 static S *Special_quote(S *expr) {
@@ -328,7 +327,7 @@ static S *Special_quote(S *expr) {
 static S *Special_progn(S *expr) {
   S *result;
   while (!NILP(expr)) {
-    if (TYPEP(result = Paren_eval(FIRST(expr)), Error)) return result;
+    if (TYPEP(result = EVAL(FIRST(expr)), Error)) return result;
     expr = REST(expr);
   }
   return result;
@@ -345,7 +344,7 @@ static S *Special_let(S *expr) {
   Env_push(&env);
   for (cons = args; !NILP(cons); cons = REST(REST(cons)))
     Env_putSymbol(&env, FIRST(cons)->Symbol.name
-        , Paren_eval(SECOND(cons)));
+        , EVAL(SECOND(cons)));
   result = Special_progn(REST(expr));
   Env_pop(&env);
   return result;
@@ -363,7 +362,7 @@ static S *Special_assign(S *expr) {
   }
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
     S *envVal;
-    if (TYPEP(val = Paren_eval(SECOND(cons)), Error)) return val;
+    if (TYPEP(val = EVAL(SECOND(cons)), Error)) return val;
     if (TYPEP(val, Function) &&
         TYPEP(envVal = Env_getSymbol(&env, FIRST(cons)->Symbol.name), Function))
       val = Function_merge(envVal, val);
@@ -509,7 +508,7 @@ static S *Function_read(S *args) {
 
 static S *Function_eval(S *args) {
   if (LENGTH(args) != 1) return Error_new("eval: Illegal arguments.");
-  return Paren_eval(FIRST(args));
+  return EVAL(FIRST(args));
 }
 
 static S *Function_print(S *args) {
@@ -520,7 +519,7 @@ static S *Function_print(S *args) {
   return SECOND(args);
 }
 
-static S *S_apply(S *fn, S *args) {
+static S *APPLY(S *fn, S *args) {
   struct Generic *generic;
   S *type, *fnArgs, *result;
   type = FIRST(args)->Object.type;
@@ -541,7 +540,7 @@ static S *S_apply(S *fn, S *args) {
   return result;
 }
 
-S *Paren_eval(S *expr) {
+S *EVAL(S *expr) {
   S *root, *fn, *args;
   // atom
   if (ATOMP(expr)) {
@@ -553,7 +552,7 @@ S *Paren_eval(S *expr) {
   // macro
   if (TYPEP(FIRST(expr), Symbol)
       && (fn = Env_getMacro(&env, FIRST(expr)->Symbol.name)) != NULL)
-    return Paren_eval(S_apply(fn, REST(expr)));
+    return EVAL(APPLY(fn, REST(expr)));
   // special form
   if (TYPEP(FIRST(expr), Symbol)
       && (fn = Env_getSpecial(&env, FIRST(expr)->Symbol.name)) != NULL)
@@ -562,7 +561,7 @@ S *Paren_eval(S *expr) {
   if (LENGTH(expr) <= 1) return Error_new("eval: not found receiver.");
   root = nil;
   while (!NILP(expr)) {
-    root = Cons_new(Paren_eval(FIRST(expr)), root);
+    root = Cons_new(EVAL(FIRST(expr)), root);
     if (TYPEP(FIRST(root), Error)) return FIRST(root);
     expr = REST(expr);
   }
@@ -570,7 +569,7 @@ S *Paren_eval(S *expr) {
   fn = FIRST(root);
   args = REST(root);
   if (!TYPEP(fn, Function)) return Error_new("eval: undefined function.");
-  return S_apply(fn, args);
+  return APPLY(fn, args);
 }
 
 void Paren_init(Env *env, Reader *rd, Writer *wr) {
@@ -656,7 +655,7 @@ int main(int argc, char* argv[]) {
   Paren_init(&env, &rd, &wr);
   Paren_prompt();
   while ((expr = Reader_read(&rd)) != eof) {
-    expr = Paren_eval(expr);
+    expr = EVAL(expr);
     if (TYPEP(expr, Error)) Paren_errorHandler(expr);
     else Writer_write(&wr, expr);
     printf("\n");
