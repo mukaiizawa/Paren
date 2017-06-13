@@ -2,55 +2,49 @@
   paren primitive.
 */
 
+#define HEADER \
+  int age; \
+  union S *type;
+
 typedef union S {
   struct {
-    int age;
-    union S *type;
+    HEADER;
   } Object;
   struct {
-    int age;
-    union S *type;
+    HEADER;
     union S *car, *cdr;
   } Cons;
   struct {
-    int age;
-    union S *type;
+    HEADER;
     char *name;
     Splay vars;
   } Structure;
   struct {
-    int age;
-    union S *type;
+    HEADER;
     char *name;
   } Symbol;
   struct {
-    int age;
-    union S *type;
+    HEADER;
     char *val;
   } Keyword;
   struct {
-    int age;
-    union S *type;
+    HEADER;
     char *val;
   } String;
   struct {
-    int age;
-    union S *type;
+    HEADER;
     char val;
   } Char;
   struct {
-    int age;
-    union S *type;
+    HEADER;
     double val;
   } Number;
   struct {
-    int age;
-    union S *type;
+    HEADER;
     union S *(* fn)(union S *);
   } Special;
   struct {
-    int age;
-    union S *type;
+    HEADER;
     struct Generic {
       union S *type;
       union S *args;
@@ -61,13 +55,11 @@ typedef union S {
     struct Generic *gDefault;
   } Function;
   struct {
-    int age;
-    union S *type;
+    HEADER;
     FILE *fp;
   } Stream;
   struct {
-    int age;
-    union S *type;
+    HEADER;
     char *val;
   } Error;
 } S;
