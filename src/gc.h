@@ -10,10 +10,12 @@
 #define GC_PERM 4
 
 typedef struct {
-  int count;
-  S *newbies[GC_MAX_NEWBIE_NUM];
+  int gcCount;
+  int newbieCount;
+  S *newbies;
   S *elders;
 } GC;
 
 extern void GC_init(GC *gc);
-extern void GC_regist(GC *gc, S *expr);
+extern void GC_try(GC *gc);
+extern S *GC_regist(GC *gc, S *expr);
