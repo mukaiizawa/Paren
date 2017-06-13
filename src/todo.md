@@ -16,7 +16,3 @@ parenにおけるtodoを羅列する。
 - importメソッドの実装
 
 # バグ対応
-- generic functionのディスパッチの不具合
-    (def double)
-    (<- double (fn (:Number x) (* x 2)))
-    (=? (double 2) (* (double 1) 2)) => nil ;!?
