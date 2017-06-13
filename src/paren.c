@@ -59,13 +59,15 @@ int LENGTH(S *expr) {
 }
 
 S *REVERSE(S *expr) {
-  S *root;
+  S *root, *cdr;
   if (NILP(expr)) return nil;
   assert(TYPEP(expr, Cons));
   root = nil;
   while (!NILP(expr)) {
-    root = Cons_new(FIRST(expr), root);
+    cdr = root;
+    root = expr;
     expr = REST(expr);
+    REST(root) = cdr;
   }
   return root;
 }
