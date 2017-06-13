@@ -4,6 +4,7 @@
 
 #define HEADER \
   int age; \
+  int isAlive; \
   union S *type;
 
 typedef union S {

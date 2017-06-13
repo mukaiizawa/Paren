@@ -283,7 +283,7 @@ void Error_free(S *expr) {
 void S_free(S *expr) {
   if (TYPEP(expr, Cons)) return Cons_free(expr);
   else if (TYPEP(expr, Symbol)) return Symbol_free(expr);
-  else if (TYPEP(expr, Keyword)) return;
+  else if (TYPEP(expr, Keyword) || TYPEP(expr, Special)) return;
   else if (TYPEP(expr, String)) return String_free(expr);
   else if (TYPEP(expr, Function)) return Function_free(expr);
   else if (TYPEP(expr, Error)) return Error_free(expr);
