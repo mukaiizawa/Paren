@@ -502,10 +502,8 @@ static S *Function_Number_mul(S *args) {
 static S *Function_read(S *args) {
   int n;
   Reader rd;
-  S *_eof;
   if ((n = LENGTH(args)) > 2) return Error_new("read: Illegal arguments.");
-  _eof = (n == 2)? SECOND(args): eof;
-  Reader_init(&rd, FIRST(args)->Stream.fp, _eof);
+  Reader_init(&rd, FIRST(args)->Stream.fp, ((n == 2)? SECOND(args): eof));
   return Reader_read(&rd);
 }
 
@@ -515,12 +513,10 @@ static S *Function_eval(S *args) {
 }
 
 static S *Function_print(S *args) {
-  FILE *fp;
+  Writer wr;
   if (LENGTH(args) != 2) return Error_new("print: Illegal argument exception.");
-  fp = Writer_getFp(&wr);    // backup
-  Writer_setFp(&wr, FIRST(args)->Stream.fp);
+  Writer_init(&wr, FIRST(args)->Stream.fp);
   Writer_write(&wr, SECOND(args));
-  Writer_setFp(&wr, fp);
   return SECOND(args);
 }
 

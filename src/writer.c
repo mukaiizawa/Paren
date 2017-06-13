@@ -65,11 +65,3 @@ void Writer_write(Writer *wr, S *expr) {
   }
   else fprintf(fp, "<%s: 0x%p>", expr->Object.type->Keyword.val, expr);
 }
-
-FILE *Writer_getFp(Writer *wr) {
-  return wr->fp;
-}
-
-void Writer_setFp(Writer *wr, FILE *fp) {
-  wr->fp = fp;
-}
