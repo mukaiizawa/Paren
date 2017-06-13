@@ -37,10 +37,7 @@ static S *Reader_parseKeyword(Reader *rd) {
 static S *Reader_parseChar(Reader *rd) {
   int n;
   char c, *token;
-  if ((token = Ahdrd_readChar(&rd->ahdrd)) == NULL)
-    return Reader_error(rd, "missing `'`");
-  if ((n = strlen(token)) == 1)
-    c = token[0];
+  if ((n = strlen(token)) == 1) c = token[0];
   else if (n == 2 && token[0] == '\\') {
     switch (token[1]) {
       case 'n': c = '\n'; break;
@@ -48,8 +45,7 @@ static S *Reader_parseChar(Reader *rd) {
       default: c = token[1];
     }
   }
-  else
-    c = '\0';
+  else c = '\0';
   free(token);
   return Char_new(c);
 }
