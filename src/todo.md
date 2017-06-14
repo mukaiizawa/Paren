@@ -19,3 +19,4 @@ parenにおけるtodoを羅列する。
 - defMacro -> macroに修正
 
 # バグ対応
+- macro評価時のapply

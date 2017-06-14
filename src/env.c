@@ -27,7 +27,6 @@ void Env_init(Env *env) {
   env->root = EnvNode_new();
   Splay_init(&env->special);
   Splay_init(&env->keyword);
-  Splay_init(&env->macro);
 }
 
 void Env_push(Env *env) {
@@ -63,14 +62,6 @@ void *Env_getSpecial(Env *env, char *key) {
 
 void Env_putSpecial(Env *env, char *key, void *val) {
   Splay_put(&env->special, key, val);
-}
-
-void *Env_getMacro(Env *env, char *key) {
-  return Splay_get(&env->macro, key);
-}
-
-void Env_putMacro(Env *env, char *key, void *val) {
-  Splay_put(&env->macro, key, val);
 }
 
 void *Env_getKeyword(Env *env, char *key) {

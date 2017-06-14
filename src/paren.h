@@ -46,6 +46,11 @@ typedef union S {
   } Special;
   struct {
     HEADER;
+    union S *args;
+    union S *body;
+  } Macro;
+  struct {
+    HEADER;
     struct Generic {
       union S *type;
       union S *args;

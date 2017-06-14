@@ -7,11 +7,6 @@ paren core routine.
 
 |#
 
-(defMacro twice (x)
-  (list `progn x x))
-
-(twice (print 1))
-
 #|
 (print stdout "hello paren!!")
 

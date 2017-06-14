@@ -37,8 +37,9 @@ S *Keyword;
 S *String;
 S *Char;
 S *Number;
-S *Function;
 S *Special;
+S *Macro;
+S *Function;
 S *Stream;
 S *Error;
 
@@ -205,21 +206,31 @@ static S *Function_merge(S *fnTo, S *fnFrom) {
   return fnTo;
 }
 
-S *Function_new(S *type, S *args, S *body, S *prim(S *)) {
-  S *expr;
-  expr = S_alloc();
-  expr->Function.type = Function;
-  expr->Function.gDefault = expr->Function.generics = NULL;
-  Function_addGeneric(expr, type, args, body, prim);
-  return expr;
-}
-
 S *Special_new(S *fn(S *)) {
   S *expr;
   expr = S_alloc();
   expr->Special.type = Special;
   expr->Special.age = GC_PERM;
   expr->Special.fn = fn;
+  return expr;
+}
+
+S *Macro_new(S *args, S *body) {
+  S *expr;
+  expr = S_alloc();
+  expr->Macro.type = Macro;
+  expr->Macro.age = GC_PERM;
+  expr->Macro.args = args;
+  expr->Macro.body = body;
+  return expr;
+}
+
+S *Function_new(S *type, S *args, S *body, S *prim(S *)) {
+  S *expr;
+  expr = S_alloc();
+  expr->Function.type = Function;
+  expr->Function.gDefault = expr->Function.generics = NULL;
+  Function_addGeneric(expr, type, args, body, prim);
   return expr;
 }
 
@@ -278,6 +289,12 @@ void String_free(S *expr) {
   free(expr);
 }
 
+void Macro_free(S *expr) {
+  S_free(expr->Macro.args);
+  S_free(expr->Macro.body);
+  free(expr);
+}
+
 void Function_free(S *expr) {
   struct Generic *g;
   while (expr->Function.generics != NULL) {
@@ -299,24 +316,13 @@ void S_free(S *expr) {
   else if (TYPEP(expr, Symbol)) return Symbol_free(expr);
   else if (TYPEP(expr, Keyword) || TYPEP(expr, Special)) return;
   else if (TYPEP(expr, String)) return String_free(expr);
+  else if (TYPEP(expr, Macro)) return Macro_free(expr);
   else if (TYPEP(expr, Function)) return Function_free(expr);
   else if (TYPEP(expr, Error)) return Error_free(expr);
   else free(expr);
 }
 
 // special forms
-
-// static S *Special_defMacro(S *expr) {
-//   S *name, *args, *body, *macro;
-//   if (LENGTH(expr) < 2)
-//     return Error_new("defMacro: Illegal argument exception.");
-//   name = FIRST(expr);
-//   args = SECOND(expr);
-//   body = REST(REST((expr)));
-//   macro = Function_new(nil, args, body, NULL);
-//   Env_putMacro(&env, name->Symbol.name, macro);
-//   return macro;
-// }
 
 static S *Special_ifElse(S *expr) {
   int len;
@@ -394,6 +400,12 @@ static S *Special_def(S *expr) {
   for (cons = expr; !NILP(cons); cons = REST(cons))
     Env_putSymbol(&env, FIRST(cons)->Symbol.name, nil);
   return nil;
+}
+
+static S *Special_macro(S *expr) {
+  if (LENGTH(expr) < 1 || ATOMP(FIRST(expr)))
+    return Error_new("macro: Illegal argument.");
+  return Macro_new(FIRST(expr), REST(expr));
 }
 
 static S *Special_fn(S *expr) {
@@ -577,7 +589,8 @@ S *EVAL(S *expr) {
   }
   // macro
   if (TYPEP(FIRST(expr), Symbol)
-      && (fn = Env_getMacro(&env, FIRST(expr)->Symbol.name)) != NULL)
+      && (fn = Env_getSymbol(&env, FIRST(expr)->Symbol.name)) != NULL
+      && TYPEP(fn, Macro))
     return EVAL(APPLY(fn, REST(expr)));
   // special form
   if (TYPEP(FIRST(expr), Symbol)
@@ -616,8 +629,9 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putKeyword(env, "String", String = Keyword_new("String"));
   Env_putKeyword(env, "Char", Char = Keyword_new("Char"));
   Env_putKeyword(env, "Number", Number = Keyword_new("Number"));
-  Env_putKeyword(env, "Function", Function = Keyword_new("Function"));
   Env_putKeyword(env, "Special", Special = Keyword_new("Special"));
+  Env_putKeyword(env, "Macro", Macro = Keyword_new("Macro"));
+  Env_putKeyword(env, "Function", Function = Keyword_new("Function"));
   Env_putKeyword(env, "Stream", Stream = Keyword_new("Stream"));
   Env_putKeyword(env, "Error", Error = Keyword_new("Error"));
 
@@ -637,7 +651,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   // init special forms.
   Env_putSpecial(env, "<-", Special_new(Special_assign));
   Env_putSpecial(env, "def", Special_new(Special_def));
-  // Env_putSpecial(env, "defMacro", Special_new(Special_defMacro));
+  Env_putSpecial(env, "macro", Special_new(Special_macro));
   Env_putSpecial(env, "fn", Special_new(Special_fn));
   Env_putSpecial(env, "ifElse", Special_new(Special_ifElse));
   Env_putSpecial(env, "let", Special_new(Special_let));
