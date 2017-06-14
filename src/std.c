@@ -2,11 +2,12 @@
   paren standard library.
 */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <assert.h>
-#include <string.h>
+#include <math.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "std.h"
 
@@ -24,8 +25,8 @@ void *xmalloc(int size) {
 
 void *xrealloc(void *p, int size) {
   if (p == NULL) return xmalloc(size);
-  else if ((p = realloc(p, size)) == NULL)
-    xerror("xmalloc: Cannot allocate memory.");
+  if ((p = realloc(p, size)) == NULL)
+    xerror("xrealloc: Cannot allocate memory.");
   return p;
 }
 
@@ -37,9 +38,18 @@ char *_xvstrcat(char *s1, ...) {
   buf = xmalloc(len = sizeof(char));
   buf[0] = '\0';
   for (s = s1; s != NULL; s = va_arg(args, char *)) {
-    xrealloc(buf, len += (strlen(s) + 1));
-    buf = strcat(buf, s);
+    buf = xrealloc(buf, sizeof(char) * (len += strlen(s)));
+    strcat(buf, s);
   }
   va_end(args);
   return buf;
+}
+
+char *xitoa(int n) {
+  int len;
+  char *s;
+  assert(n >= 0);    // support only positive number.
+  s = xmalloc(sizeof(char) * (len = (int)ceil(log10(n + 1)) + 1));
+  if (sprintf(s, "%d", n) + 1 != len) xerror("xiota: Buffer over flow.");
+  return s;
 }
