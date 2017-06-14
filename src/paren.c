@@ -579,13 +579,13 @@ static S *APPLY(S *fn, S *args) {
 }
 
 S *EVAL(S *expr) {
-  S *root, *fn, *args;
+  S *acc, *fn, *args;
   // atom
   if (ATOMP(expr)) {
-    if (TYPEP(expr, Symbol)
-        && (expr = Env_getSymbol(&env, expr->Symbol.name)) == NULL)
-      expr =  Error_new("eval: undefined variable.");
-    return expr;
+    if (!TYPEP(expr, Symbol)) return expr;
+    if ((acc = Env_getSymbol(&env, expr->Symbol.name)) != NULL) return acc;
+    return Error_new(
+        xvstrcat("eval: undefined variable `", expr->Symbol.name, "'."));
   }
   // macro
   if (TYPEP(FIRST(expr), Symbol)
@@ -598,15 +598,15 @@ S *EVAL(S *expr) {
     return (fn->Special.fn)(REST(expr));
   // function
   if (LENGTH(expr) <= 1) return Error_new("eval: not found receiver.");
-  root = nil;
+  acc = nil;
   while (!NILP(expr)) {
-    root = Cons_new(EVAL(FIRST(expr)), root);
-    if (TYPEP(FIRST(root), Error)) return FIRST(root);
+    acc = Cons_new(EVAL(FIRST(expr)), acc);
+    if (TYPEP(FIRST(acc), Error)) return FIRST(acc);
     expr = REST(expr);
   }
-  root = REVERSE(root);
-  fn = FIRST(root);
-  args = REST(root);
+  acc = REVERSE(acc);
+  fn = FIRST(acc);
+  args = REST(acc);
   if (!TYPEP(fn, Function)) return Error_new("eval: undefined function.");
   return APPLY(fn, args);
 }
