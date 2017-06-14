@@ -117,7 +117,7 @@ S *Symbol_new(char *name) {
 
 S *Keyword_new(char *val) {
   S *expr;
-  if (strlen(val) == 0) return Error_new("Illegal Keyword.");
+  if (strlen(val) == 0) return Error_new("read: Illegal Keyword.");
   if ((expr = Env_getKeyword(&env, val)) != NULL) {
     free(val);
     return expr;
@@ -140,7 +140,7 @@ S *String_new(char *val) {
 
 S *Char_new(char val) {
   S *expr;
-  if (val == '\0') return Error_new("Illegal character.");
+  if (val == '\0') return Error_new("read: Illegal character.");
   expr = S_alloc();
   expr->Char.type = Char;
   expr->Char.val = val;
@@ -231,20 +231,34 @@ S *Stream_new(FILE *stream) {
   return expr;
 }
 
-S *Error_new(char *str) {
+S *Error_new(char *val) {
   S *expr;
   expr = S_alloc();
   expr->Error.type = Error;
-  expr->Error.val = str;
+  expr->Error.val = val;
   return expr;
 }
 
-S *Error_tooManyArgument(char *name, S *body) {
-  // char buf[MAX_STR_LEN], *sbody;
-  // assert((strlen(name) + strlen(sbody = STRING(body))) < MAX_STR_LEN);
-  // sprintf(buf, "eval: too many arguments (%s %s).", name, STRING(body));
-  // return Error_new(buf);
-  return Error_new("too many argument.");
+S *Error_illegalArgument(char *name, int provided, int min, int max) {
+  S *err;
+  char *s1, *s2, *s3, *s4;
+  if (provided < min) {
+    s1 = "few";
+    s2 = "least ";
+    s3 = xitoa(min);
+    s4 = " required.";
+  }
+  else {
+    s1 = "many";
+    s2 = "most ";
+    s3 = xitoa(max);
+    s4 = " accepted.";
+  }
+  err = Error_new(
+      xvstrcat("eval: Too ", s1, "arguments in call to `", name, "' "
+        , xitoa(provided), " arguments provided, at ", s2, s3, s4));
+  free(s3);
+  return err;
 }
 
 void Cons_free(S *expr) {
@@ -292,35 +306,34 @@ void S_free(S *expr) {
 
 // special forms
 
-static S *Special_defMacro(S *expr) {
-  S *name, *args, *body, *macro;
-  if (LENGTH(expr) < 2)
-    return Error_new("defMacro: Illegal argument exception.");
-  name = FIRST(expr);
-  args = SECOND(expr);
-  body = REST(REST((expr)));
-  macro = Function_new(nil, args, body, NULL);
-  Env_putMacro(&env, name->Symbol.name, macro);
-  return macro;
-}
+// static S *Special_defMacro(S *expr) {
+//   S *name, *args, *body, *macro;
+//   if (LENGTH(expr) < 2)
+//     return Error_new("defMacro: Illegal argument exception.");
+//   name = FIRST(expr);
+//   args = SECOND(expr);
+//   body = REST(REST((expr)));
+//   macro = Function_new(nil, args, body, NULL);
+//   Env_putMacro(&env, name->Symbol.name, macro);
+//   return macro;
+// }
 
 static S *Special_ifElse(S *expr) {
-  if (LENGTH(expr) < 2)
-    return Error_new("ifElse: Illegal argument exception.");
+  int len;
+  if ((len = LENGTH(expr)) < 2)
+    return Error_illegalArgument("ifElse", len, 2, -1);
   while (!NILP(REST(expr))) {
-    if (!NILP(EVAL(FIRST(expr))))
-      return EVAL(SECOND(expr));
-    if (NILP(expr = REST(expr)) || NILP(expr = REST(expr)))
-      return nil;
+    if (!NILP(EVAL(FIRST(expr)))) return EVAL(SECOND(expr));
+    if (NILP(expr = REST(expr)) || NILP(expr = REST(expr))) return nil;
   }
   return EVAL(FIRST(expr));
 }
 
 static S *Special_quote(S *expr) {
-  int n;
-  if ((n = LENGTH(expr)) > 1)
-    return Error_new("quote: Illegal argument exception.");
-  if (n == 0) return nil;    // `() => nil
+  int len;
+  if ((len = LENGTH(expr)) > 1)
+    return Error_illegalArgument("quote", len, 1, 1);
+  if (len == 0) return nil;    // `() => nil
   return FIRST(expr);
 }
 
@@ -352,8 +365,7 @@ static S *Special_let(S *expr) {
 
 static S *Special_assign(S *expr) {
   S *cons, *var, *val;
-  if ((LENGTH(expr) % 2) != 0)
-    return Error_new("<-: Illegal argument.");
+  if ((LENGTH(expr) % 2) != 0) return Error_new("<-: Illegal argument.");
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
     if (!TYPEP(var = FIRST(cons), Symbol))
       return Error_new("<-: variable must be symbol.");
@@ -396,7 +408,8 @@ static S *Special_fn(S *expr) {
 // primitive functions.
 
 static S *Function_isEqual(S *args) {
-  if (LENGTH(args) < 2) return Error_new("=?: Illegal argument.");
+  int len;
+  if ((len = LENGTH(args)) < 2) return Error_illegalArgument("=?", len, 2, -1);
   while (!NILP(REST(args))) {
     if (!EQ(FIRST(args), SECOND(args))) return nil;
     args = REST(args);
@@ -405,51 +418,58 @@ static S *Function_isEqual(S *args) {
 }
 
 static S *Function_isNil(S *args) {
-  if (LENGTH(args) != 1) return Error_new("nil?: illegal arguments");
+  int len;
+  if ((len = LENGTH(args)) != 1)
+    return Error_illegalArgument("nil?", len, 1, 1);
   return NILP(FIRST(args))? t: nil;
 }
 
 static S *Function_isAtom(S *args) {
-  if (LENGTH(args) != 1) return Error_new("nil?: illegal arguments");
+  int len;
+  if ((len = LENGTH(args)) != 1)
+    return Error_illegalArgument("atom?", len, 1, 1);
   return ATOMP(FIRST(args))? t: nil;
 }
 
 static S *Function_car(S *args) {
-  if (LENGTH(args) != 1) return Error_tooManyArgument("car", args);
+  int len;
+  if ((len = LENGTH(args)) != 1) return Error_illegalArgument("car", len, 1, 1);
   if (NILP(FIRST(args))) return nil;
-  if (!TYPEP(FIRST(args), Cons)) return Error_new("car: not a list.");
+  if (!TYPEP(FIRST(args), Cons)) return Error_new("car: Not a list.");
   return FIRST(FIRST(args));
 }
 
 static S *Function_cdr(S *args) {
-  if (LENGTH(args) != 1) return Error_new("cdr: Illegal argument exception.");
+  int len;
+  if ((len = LENGTH(args)) != 1) return Error_illegalArgument("cdr", len, 1, 1);
   if (NILP(FIRST(args))) return nil;
-  if (!TYPEP(FIRST(args), Cons)) return Error_new("cdr: not a list.");
+  if (!TYPEP(FIRST(args), Cons)) return Error_new("cdr: Not a list.");
   return REST(FIRST(args));
 }
 
 static S *Function_cons(S *args) {
-  if (LENGTH(args) != 2 || !(TYPEP(SECOND(args), Cons) || NILP(SECOND(args))))
-    return Error_new("cons: Illegal argument exception.");
+  int len;
+  if ((len = LENGTH(args)) != 2)
+    return Error_illegalArgument("cons", len, 2, 2);
+  if (!TYPEP(SECOND(args), Cons) && !NILP(SECOND(args)))
+    return Error_new("cons: Must be terminated with nil.");
   return Cons_new(FIRST(args), SECOND(args));
 }
 
-static S *Function_list(S *args) {
-  return args;
-}
-
 static S *Function_open(S *args) {
+  int len;
   FILE *fp;
-  if (LENGTH(args) != 1)
-    return Error_new("String.open: Illegal argument.");
+  if ((len = LENGTH(args)) != 1)
+    return Error_illegalArgument("open", len, 1, 1);
   if ((fp = fopen(FIRST(args)->String.val, "r")) == NULL)
     return Error_new("String.open: cannnot open.");
   return Stream_new(fp);
 }
 
 static S *Function_close(S *args) {
-  if (LENGTH(args) != 1)
-    return Error_new("String.close: Illegal argument.");
+  int len;
+  if ((len = LENGTH(args)) != 1)
+    return Error_illegalArgument("close", len, 1, 1);
   fclose(FIRST(args)->Stream.fp);
   FIRST(args)->Symbol.type = Symbol;
   FIRST(args)->Symbol.name = "nil";
@@ -457,19 +477,22 @@ static S *Function_close(S *args) {
 }
 
 static S *Function_getChar(S *args) {
-  int n, c;
-  if ((n = LENGTH(args)) > 2)
-    return Error_new("Stream.getChar: Illegal argument.");
+  int len, c;
+  if ((len = LENGTH(args)) > 2)
+    return Error_illegalArgument("getChar", len, 1, 2);
   c = fgetc(FIRST(args)->Stream.fp);
   if (c != EOF) return Char_new(c);
-  else if (n == 2) return SECOND(args);
+  else if (len == 2) return SECOND(args);
   else return eof;
 }
 
 static S *Function_putChar(S *args) {
+  int len;
   S *c;
-  if (LENGTH(args) != 2 || !TYPEP(c = SECOND(args), Char))
-    return Error_new("Stream.putChar: Illegal argument.");
+  if ((len = LENGTH(args)) != 2)
+    return Error_illegalArgument("putChar", len, 2, 2);
+  if (!TYPEP(c = SECOND(args), Char))
+    return Error_new("putChar: Second argument must be character.");
   fputc(c->Char.val, FIRST(args)->Stream.fp);
   return c;
 }
@@ -478,8 +501,7 @@ static S *Function_Number_add(S *args) {
   S *acc;
   acc = Number_new(0);
   while (!NILP(args)) {
-    if (!TYPEP(FIRST(args), Number))
-      return Error_new("+: is not a number");
+    if (!TYPEP(FIRST(args), Number)) return Error_new("+: is not a number");
     acc->Number.val += FIRST(args)->Number.val;
     args = REST(args);
   }
@@ -490,8 +512,7 @@ static S *Function_Number_mul(S *args) {
   S *acc;
   acc = Number_new(1);
   while (!NILP(args)) {
-    if (!TYPEP(FIRST(args), Number))
-      return Error_new("*: is not a number");
+    if (!TYPEP(FIRST(args), Number)) return Error_new("*: is not a number");
     acc->Number.val *= FIRST(args)->Number.val;
     args = REST(args);
   }
@@ -499,21 +520,26 @@ static S *Function_Number_mul(S *args) {
 }
 
 static S *Function_read(S *args) {
-  int n;
+  int len;
   Reader rd;
-  if ((n = LENGTH(args)) > 2) return Error_new("read: Illegal arguments.");
-  Reader_init(&rd, FIRST(args)->Stream.fp, ((n == 2)? SECOND(args): eof));
+  if ((len = LENGTH(args)) > 2)
+    return Error_illegalArgument("read", len, 1, 2);
+  Reader_init(&rd, FIRST(args)->Stream.fp, ((len == 2)? SECOND(args): eof));
   return Reader_read(&rd);
 }
 
 static S *Function_eval(S *args) {
-  if (LENGTH(args) != 1) return Error_new("eval: Illegal arguments.");
+  int len;
+  if ((len = LENGTH(args)) != 1)
+    return Error_illegalArgument("eval", len, 1, 1);
   return EVAL(FIRST(args));
 }
 
 static S *Function_print(S *args) {
+  int len;
   Writer wr;
-  if (LENGTH(args) != 2) return Error_new("print: Illegal argument exception.");
+  if ((len = LENGTH(args)) != 2)
+    return Error_illegalArgument("print", len, 2, 2);
   Writer_init(&wr, FIRST(args)->Stream.fp);
   Writer_write(&wr, SECOND(args));
   return SECOND(args);
@@ -611,7 +637,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   // init special forms.
   Env_putSpecial(env, "<-", Special_new(Special_assign));
   Env_putSpecial(env, "def", Special_new(Special_def));
-  Env_putSpecial(env, "defMacro", Special_new(Special_defMacro));
+  // Env_putSpecial(env, "defMacro", Special_new(Special_defMacro));
   Env_putSpecial(env, "fn", Special_new(Special_fn));
   Env_putSpecial(env, "ifElse", Special_new(Special_ifElse));
   Env_putSpecial(env, "let", Special_new(Special_let));
@@ -626,7 +652,6 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "cons", Function_new(nil, NULL, NULL, Function_cons));
   Env_putSymbol(env, "eval", Function_new(nil, NULL, NULL, Function_eval));
   Env_putSymbol(env, "getChar" , Function_new(Stream, NULL, NULL, Function_getChar));
-  Env_putSymbol(env, "list", Function_new(nil, NULL, NULL, Function_list));
   Env_putSymbol(env, "nil?", Function_new(nil, NULL, NULL, Function_isNil));
   Env_putSymbol(env, "open", Function_new(String, NULL, NULL, Function_open));
   Env_putSymbol(env, "print", Function_new(Stream, NULL, NULL, Function_print));

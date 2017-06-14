@@ -15,4 +15,7 @@ parenにおけるtodoを羅列する。
 # Function
 - importメソッドの実装
 
+# ドキュメント改訂作業
+- defMacro -> macroに修正
+
 # バグ対応
