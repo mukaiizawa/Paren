@@ -28,6 +28,7 @@ S *t;
 S *nil;
 S *eof;
 S *quote;
+S *dot;
 
 // primitive types.
 
@@ -266,7 +267,7 @@ S *Error_illegalArgument(char *name, int provided, int min, int max) {
     s4 = " accepted.";
   }
   err = Error_new(
-      xvstrcat("eval: Too ", s1, "arguments in call to `", name, "' "
+      xvstrcat("eval: Too ", s1, " arguments in call to `", name, "' "
         , xitoa(provided), " arguments provided, at ", s2, s3, s4));
   free(s3);
   return err;
@@ -409,12 +410,32 @@ static S *Special_macro(S *expr) {
 }
 
 static S *Special_fn(S *expr) {
-  S *params, *type;
-  if (LENGTH(expr) < 1 || ATOMP(params = FIRST(expr)))
-    return Error_new("fn: Illegal argument.");
-  if (TYPEP(type = FIRST(params), Keyword)) params = REST(params);
-  else type = nil;
-  return Function_new(type, params, REST(expr), NULL);
+  int len;
+  S *type, *params, *body;
+  if ((len = LENGTH(expr)) < 2)
+    return Error_illegalArgument("fn", LENGTH(expr), len, -1);
+  if (TYPEP(FIRST(expr), Symbol)) {
+    type = nil;
+    params = Cons_new(dot, Cons_new(FIRST(expr), nil));
+    body = REST(expr);
+  } else if (TYPEP(FIRST(expr), Keyword)) {
+    type = FIRST(expr);
+    params = SECOND(expr);
+    body = REST(REST(expr));
+  } else {
+    type = nil;
+    params = FIRST(expr);
+    body = REST(expr);
+  }
+  expr = params;
+  while (!NILP(expr)) {
+    if (FIRST(expr) == dot) {
+      if (NILP(REST(expr)))
+        return Error_new("fn: Not declared after variable argument.");
+    }
+    expr = REST(expr);
+  }
+  return Function_new(type, params, body, NULL);
 }
 
 // primitive functions.
@@ -558,9 +579,27 @@ static S *Function_print(S *args) {
 }
 
 static S *APPLY(S *params, S *body, S *args) {
+  int argNum, min, max, isVariable;
   S *result;
   Env_push(&env);
+  min = isVariable = 0;
+  result = params;
+  while (!NILP(result)) {
+    if (FIRST(result) == dot) {
+      isVariable = 1;
+      break;
+    }
+    result = REST(result);
+    min++;
+  }
+  max = isVariable? -1: min;
+  if ((argNum = LENGTH(args)) < min || (max != -1 && argNum > max))
+    return Error_illegalArgument("", argNum, min, max);
   while (!NILP(params)) {
+    if (FIRST(params) == dot) {
+      Env_putSymbol(&env, SECOND(params)->Symbol.name, args);
+      break;
+    }
     Env_putSymbol(&env, FIRST(params)->Symbol.name, FIRST(args));
     params = REST(params);
     args = REST(args);
@@ -589,7 +628,7 @@ S *EVAL(S *expr) {
       return (fn->Special.fn)(REST(expr));
   }
   // function
-  if (LENGTH(expr) <= 1) return Error_new("eval: not found receiver.");
+  if (LENGTH(expr) <= 1) return Error_new("eval: Not found receiver.");
   acc = nil;
   while (!NILP(expr)) {
     acc = Cons_new(EVAL(FIRST(expr)), acc);
@@ -621,6 +660,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Keyword->Keyword.type = Keyword;
   Env_putKeyword(env, "t", t = Keyword_new("t"));
   Env_putKeyword(env, "nil", nil = Keyword_new("nil"));
+  Env_putKeyword(env, ".", dot = Keyword_new("."));
   Env_putKeyword(env, "EOF", eof = Keyword_new("EOF"));
   Env_putKeyword(env, "Cons", Cons = Keyword_new("Cons"));
   Env_putKeyword(env, "Symbol", Symbol = Keyword_new("Symbol"));
