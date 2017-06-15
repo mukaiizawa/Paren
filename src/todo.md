@@ -17,6 +17,7 @@ parenにおけるtodoを羅列する。
 
 # ドキュメント改訂作業
 - defMacro -> macroに修正
+- Symbol -> variableにする？
 
 # バグ対応
 - macro評価時のapply
