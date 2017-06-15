@@ -21,6 +21,7 @@ static Writer wr;
 static S *consPool;
 
 extern S *EVAL(S *expr);
+extern S *APPLY(S *params, S *body, S *args);
 
 // global symbols.
 
@@ -568,6 +569,23 @@ static S *Function_eval(S *args) {
   return EVAL(FIRST(args));
 }
 
+static S *Function_apply(S *args) {
+  int len;
+  S *fn, *acc;
+  struct Generic *g;
+  if ((len = LENGTH(args)) < 2)
+    return Error_illegalArgument("apply", len, 2, -1);
+  if (!TYPEP(fn = FIRST(args), Function))
+    return Error_new("apply: First argument type must be Function.");
+  if (ATOMP(FIRST(acc = REVERSE(REST(args)))))
+    return Error_new("apply: Last argument must be List.");
+  args = nil;
+  while (!NILP(acc)) args = Cons_new(FIRST(acc), args);
+  if ((g = Function_lookup(fn, SECOND(acc)->Object.type)) == NULL)
+    return Error_new("apply: Not found generic function.");
+  return APPLY(g->params, g->body, args);
+}
+
 static S *Function_print(S *args) {
   int len;
   Writer wr;
@@ -578,7 +596,7 @@ static S *Function_print(S *args) {
   return SECOND(args);
 }
 
-static S *APPLY(S *params, S *body, S *args) {
+S *APPLY(S *params, S *body, S *args) {
   int argNum, min, max, isVariable;
   S *result;
   Env_push(&env);
@@ -704,6 +722,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "close", Function_new(Stream, NULL, NULL, Function_close));
   Env_putSymbol(env, "cons", Function_new(nil, NULL, NULL, Function_cons));
   Env_putSymbol(env, "eval", Function_new(nil, NULL, NULL, Function_eval));
+  Env_putSymbol(env, "apply", Function_new(nil, NULL, NULL, Function_apply));
   Env_putSymbol(env, "getChar" , Function_new(Stream, NULL, NULL, Function_getChar));
   Env_putSymbol(env, "nil?", Function_new(nil, NULL, NULL, Function_isNil));
   Env_putSymbol(env, "open", Function_new(String, NULL, NULL, Function_open));

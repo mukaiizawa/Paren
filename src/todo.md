@@ -1,23 +1,14 @@
 # todo
 parenにおけるtodoを羅列する。
 
-# GC
-- GCの実装
-
-# Error
-- フォーマット対応及び、可変長引数化
-
-# Special Operator
-## fn
-- 定義時に未定義のシンボルチェックを行う。
-- 型staticなメソッドの仕様の策定
-
-# Function
+# 未実装項目
+- GC
+- fn定義時に未定義のパラメタ―チェックを行う。
 - importメソッドの実装
 
-# ドキュメント改訂作業
-- defMacro -> macroに修正
-- Symbol -> variableにする？
+# 検討項目
+- 型staticなメソッドの仕様の策定
+- エラー構造体の構成の見直し(S式をフィールドに持たせるか。)
 
 # バグ対応
 - macro評価時のapply
