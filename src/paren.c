@@ -597,10 +597,11 @@ S *EVAL(S *expr) {
     expr = REST(expr);
   }
   acc = REVERSE(acc);
+  fn = FIRST(acc);
   if (!TYPEP(fn, Function)) return Error_new("eval: Undefined function.");
   else {
     struct Generic *g;
-    if ((g = Function_lookup(FIRST(acc), SECOND(acc)->Object.type)) == NULL)
+    if ((g = Function_lookup(fn, SECOND(acc)->Object.type)) == NULL)
       return Error_new("eval: Method not found.");
     // invoke primitive function.
     if (g->params == NULL) return g->prim(REST(acc));
