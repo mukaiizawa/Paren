@@ -164,12 +164,12 @@ static struct Generic *Function_lookup(S *fn, S *type) {
   return fn->Function.gDefault;
 }
 
-static void Function_addGeneric(S *fn, S *type, S *args, S *body, S *prim(S *))
-{
+static void Function_addGeneric(
+    S *fn, S *type, S *params, S *body , S *prim(S *)) {
   struct Generic *g;
   g = xmalloc(sizeof(struct Generic));
   g->type = type;
-  g->args = args;
+  g->params = params;
   g->body = body;
   g->prim = prim;
   if (type == nil) {
@@ -188,18 +188,18 @@ static S *Function_merge(S *fnTo, S *fnFrom) {
   for (gFrom = fnFrom->Function.generics; gFrom != NULL; gFrom = gFrom->next) {
     gTo = Function_lookup(fnTo, gFrom->type);
     if (gTo != NULL && gTo->type != nil) {
-      gTo->args = gFrom->args;
+      gTo->params = gFrom->params;
       gTo->body = gFrom->body;
       gTo->prim = gFrom->prim;
     }
     else
       Function_addGeneric(
-          fnTo, gFrom->type, gFrom->args, gFrom->body, gFrom->prim);
+          fnTo, gFrom->type, gFrom->params, gFrom->body, gFrom->prim);
   }
   if ((gFrom = fnFrom->Function.gDefault) != NULL) {
     gTo = fnTo->Function.gDefault;
     if (gTo == NULL) gTo = xmalloc(sizeof(struct Generic));
-    gTo->args = gFrom->args;
+    gTo->params = gFrom->params;
     gTo->body = gFrom->body;
     gTo->prim = gFrom->prim;
   }
@@ -215,22 +215,22 @@ S *Special_new(S *fn(S *)) {
   return expr;
 }
 
-S *Macro_new(S *args, S *body) {
+S *Macro_new(S *params, S *body) {
   S *expr;
   expr = S_alloc();
   expr->Macro.type = Macro;
   expr->Macro.age = GC_PERM;
-  expr->Macro.args = args;
+  expr->Macro.params = params;
   expr->Macro.body = body;
   return expr;
 }
 
-S *Function_new(S *type, S *args, S *body, S *prim(S *)) {
+S *Function_new(S *type, S *params, S *body, S *prim(S *)) {
   S *expr;
   expr = S_alloc();
   expr->Function.type = Function;
   expr->Function.gDefault = expr->Function.generics = NULL;
-  Function_addGeneric(expr, type, args, body, prim);
+  Function_addGeneric(expr, type, params, body, prim);
   return expr;
 }
 
@@ -290,7 +290,7 @@ void String_free(S *expr) {
 }
 
 void Macro_free(S *expr) {
-  S_free(expr->Macro.args);
+  S_free(expr->Macro.params);
   S_free(expr->Macro.body);
   free(expr);
 }
@@ -353,17 +353,17 @@ static S *Special_progn(S *expr) {
 }
 
 static S *Special_let(S *expr) {
-  S *args, *cons, *result;
-  if (!NILP(args = FIRST(expr)) && (ATOMP(args) || (LENGTH(args) % 2) != 0))
-    return Error_new("let: Illegal argument.");
-  for (cons = args; !NILP(cons); cons = REST(REST(cons)))
+  S *params, *cons, *result;
+  if (NILP(params = FIRST(expr))) return Special_progn(REST(expr));
+  if (ATOMP(params) || (LENGTH(params) % 2) != 0)
+    return Error_new("let: Illegal parameter.");
+  for (cons = params; !NILP(cons); cons = REST(REST(cons)))
     if (!TYPEP(FIRST(cons), Symbol))
-      return Error_new("let: variable is not a symbol.");
-  if (LENGTH(expr) == 1) return nil;
+      return Error_new("let: Parameter must be symbol.");
+  if (LENGTH(expr) == 1) return nil;    // (let ())
   Env_push(&env);
-  for (cons = args; !NILP(cons); cons = REST(REST(cons)))
-    Env_putSymbol(&env, FIRST(cons)->Symbol.name
-        , EVAL(SECOND(cons)));
+  for (cons = params; !NILP(cons); cons = REST(REST(cons)))
+    Env_putSymbol(&env, FIRST(cons)->Symbol.name , EVAL(SECOND(cons)));
   result = Special_progn(REST(expr));
   Env_pop(&env);
   return result;
@@ -409,12 +409,12 @@ static S *Special_macro(S *expr) {
 }
 
 static S *Special_fn(S *expr) {
-  S *args, *type;
-  if (LENGTH(expr) < 1 || ATOMP(args = FIRST(expr)))
+  S *params, *type;
+  if (LENGTH(expr) < 1 || ATOMP(params = FIRST(expr)))
     return Error_new("fn: Illegal argument.");
-  if (TYPEP(type = FIRST(args), Keyword)) args = REST(args);
+  if (TYPEP(type = FIRST(params), Keyword)) params = REST(params);
   else type = nil;
-  return Function_new(type, args, REST(expr), NULL);
+  return Function_new(type, params, REST(expr), NULL);
 }
 
 // primitive functions.
@@ -557,29 +557,21 @@ static S *Function_print(S *args) {
   return SECOND(args);
 }
 
-static S *APPLY(S *fn, S *args) {
-  struct Generic *generic;
-  S *type, *fnArgs, *result;
-  type = FIRST(args)->Object.type;
-  if ((generic = Function_lookup(fn, type)) == NULL)
-    return Error_new("eval: method not found.");
-  // invoke primitive function.
-  if (generic->args == NULL) return generic->prim(args);
-  // invoke user defined function.
-  fnArgs = generic->args;
+static S *APPLY(S *params, S *body, S *args) {
+  S *result;
   Env_push(&env);
-  while (!NILP(fnArgs)) {
-    Env_putSymbol(&env, FIRST(fnArgs)->Symbol.name, FIRST(args));
-    fnArgs = REST(fnArgs);
+  while (!NILP(params)) {
+    Env_putSymbol(&env, FIRST(params)->Symbol.name, FIRST(args));
+    params = REST(params);
     args = REST(args);
   }
-  result = Special_progn(generic->body);
+  result = Special_progn(body);
   Env_pop(&env);
   return result;
 }
 
 S *EVAL(S *expr) {
-  S *acc, *fn, *args;
+  S *fn, *acc;
   // atom
   if (ATOMP(expr)) {
     if (!TYPEP(expr, Symbol)) return expr;
@@ -587,15 +579,15 @@ S *EVAL(S *expr) {
     return Error_new(
         xvstrcat("eval: undefined variable `", expr->Symbol.name, "'."));
   }
-  // macro
-  if (TYPEP(FIRST(expr), Symbol)
-      && (fn = Env_getSymbol(&env, FIRST(expr)->Symbol.name)) != NULL
-      && TYPEP(fn, Macro))
-    return EVAL(APPLY(fn, REST(expr)));
-  // special form
-  if (TYPEP(FIRST(expr), Symbol)
-      && (fn = Env_getSpecial(&env, FIRST(expr)->Symbol.name)) != NULL)
-    return (fn->Special.fn)(REST(expr));
+  if (TYPEP(FIRST(expr), Symbol)) {
+    // macro
+    if ((fn = Env_getSymbol(&env, FIRST(expr)->Symbol.name)) != NULL
+        && TYPEP(fn, Macro))
+      return EVAL(APPLY(fn->Macro.params, fn->Macro.body, REST(expr)));
+    // special form
+    if ((fn = Env_getSpecial(&env, FIRST(expr)->Symbol.name)) != NULL)
+      return (fn->Special.fn)(REST(expr));
+  }
   // function
   if (LENGTH(expr) <= 1) return Error_new("eval: not found receiver.");
   acc = nil;
@@ -605,10 +597,16 @@ S *EVAL(S *expr) {
     expr = REST(expr);
   }
   acc = REVERSE(acc);
-  fn = FIRST(acc);
-  args = REST(acc);
-  if (!TYPEP(fn, Function)) return Error_new("eval: undefined function.");
-  return APPLY(fn, args);
+  if (!TYPEP(fn, Function)) return Error_new("eval: Undefined function.");
+  else {
+    struct Generic *g;
+    if ((g = Function_lookup(FIRST(acc), SECOND(acc)->Object.type)) == NULL)
+      return Error_new("eval: Method not found.");
+    // invoke primitive function.
+    if (g->params == NULL) return g->prim(REST(acc));
+    // invoke user defined function.
+    else return APPLY(g->params, g->body, REST(acc));
+  }
 }
 
 void Paren_init(Env *env, Reader *rd, Writer *wr) {

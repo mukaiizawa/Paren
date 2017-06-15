@@ -24,7 +24,7 @@ static void Writer_writeGeneric(Writer *wr, struct Generic *g) {
   if (g->prim != NULL)
     fprintf(fp, "<BuiltinFunction: 0x%p>)", g->prim);
   else {
-    Writer_write(wr, g->args);
+    Writer_write(wr, g->params);
     fprintf(fp, " ");
     Writer_write(wr, g->body);
     fprintf(fp, ")");

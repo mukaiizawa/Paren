@@ -46,14 +46,14 @@ typedef union S {
   } Special;
   struct {
     HEADER;
-    union S *args;
+    union S *params;
     union S *body;
   } Macro;
   struct {
     HEADER;
     struct Generic {
       union S *type;
-      union S *args;
+      union S *params;
       union S *body;
       union S *(* prim)(union S *);
       struct Generic *next;
@@ -104,8 +104,9 @@ extern S *Keyword_new(char *val);
 extern S *String_new(char *val);
 extern S *Char_new(char val);
 extern S *Number_new(double val);
-extern S *Function_new(S *type, S *args, S *body, S *prim(S *));
+extern S *Function_new(S *type, S *params, S *body, S *prim(S *));
 extern S *Special_new(S *f(S *));
+extern S *Macro_new(S *params, S *body);
 extern S *Stream_new(FILE *stream);
 extern S *Error_new(char *val);
 extern void S_free(S *expr);
