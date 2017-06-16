@@ -120,7 +120,7 @@ S *Symbol_new(char *name) {
 
 S *Keyword_new(char *val) {
   S *expr;
-  if (strlen(val) == 0) return Error_new("read: Illegal Keyword.");
+  if (strlen(val) == 0) return Error_msg("read: Illegal Keyword.");
   if ((expr = Env_getKeyword(&env, val)) != NULL) {
     free(val);
     return expr;
@@ -143,7 +143,7 @@ S *String_new(char *val) {
 
 S *Char_new(char val) {
   S *expr;
-  if (val == '\0') return Error_new("read: Illegal character.");
+  if (val == '\0') return Error_msg("read: Illegal character.");
   expr = S_alloc();
   expr->Char.type = Char;
   expr->Char.val = val;
@@ -244,12 +244,16 @@ S *Stream_new(FILE *stream) {
   return expr;
 }
 
-S *Error_new(char *val) {
+S *Error_new(S *args) {
   S *expr;
   expr = S_alloc();
   expr->Error.type = Error;
-  expr->Error.val = val;
+  expr->Error.args = args;
   return expr;
+}
+
+S *Error_msg(char *msg) {
+  return Error_new(String_new(msg));
 }
 
 S *Error_illegalArgument(char *name, int provided, int min, int max) {
@@ -267,7 +271,7 @@ S *Error_illegalArgument(char *name, int provided, int min, int max) {
     s3 = xitoa(max);
     s4 = " accepted.";
   }
-  err = Error_new(
+  err = Error_msg(
       xvstrcat("eval: Too ", s1, " arguments in call to `", name, "' "
         , xitoa(provided), " arguments provided, at ", s2, s3, s4));
   free(s3);
@@ -308,11 +312,6 @@ void Function_free(S *expr) {
   free(expr);
 }
 
-void Error_free(S *expr) {
-  free(expr->Error.val);
-  free(expr);
-}
-
 void S_free(S *expr) {
   if (TYPEP(expr, Cons)) return Cons_free(expr);
   else if (TYPEP(expr, Symbol)) return Symbol_free(expr);
@@ -320,7 +319,6 @@ void S_free(S *expr) {
   else if (TYPEP(expr, String)) return String_free(expr);
   else if (TYPEP(expr, Macro)) return Macro_free(expr);
   else if (TYPEP(expr, Function)) return Function_free(expr);
-  else if (TYPEP(expr, Error)) return Error_free(expr);
   else free(expr);
 }
 
@@ -358,10 +356,10 @@ static S *Special_let(S *expr) {
   S *params, *cons, *result;
   if (NILP(params = FIRST(expr))) return Special_progn(REST(expr));
   if (ATOMP(params) || (LENGTH(params) % 2) != 0)
-    return Error_new("let: Illegal parameter.");
+    return Error_msg("let: Illegal parameter.");
   for (cons = params; !NILP(cons); cons = REST(REST(cons)))
     if (!TYPEP(FIRST(cons), Symbol))
-      return Error_new("let: Parameter must be symbol.");
+      return Error_msg("let: Parameter must be symbol.");
   if (LENGTH(expr) == 1) return nil;    // (let ())
   Env_push(&env);
   for (cons = params; !NILP(cons); cons = REST(REST(cons)))
@@ -373,12 +371,13 @@ static S *Special_let(S *expr) {
 
 static S *Special_assign(S *expr) {
   S *cons, *var, *val;
-  if ((LENGTH(expr) % 2) != 0) return Error_new("<-: Illegal argument.");
+  if ((LENGTH(expr) % 2) != 0) return Error_msg("<-: Illegal argument.");
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
     if (!TYPEP(var = FIRST(cons), Symbol))
-      return Error_new("<-: variable must be symbol.");
+      return Error_msg("<-: variable must be symbol.");
     if (Env_getSymbol(&env, var->Symbol.name) == NULL)
-      return Error_new("<-: undefined variable.");
+      return Error_msg(
+          xvstrcat("<-: Undefined variable `", var->Symbol.name,  "'."));
   }
   for (cons = expr; !NILP(cons); cons = REST(REST(cons))) {
     S *envVal;
@@ -395,9 +394,9 @@ static S *Special_def(S *expr) {
   S *cons, *var;
   for (cons = expr; !NILP(cons); cons = REST(cons)) {
     if (!TYPEP(var = FIRST(cons), Symbol))
-      return Error_new("def: variable must be symbol.");
+      return Error_msg("def: variable must be symbol.");
     if (Env_getSymbol(&env, var->Symbol.name) != NULL)
-      return Error_new("def: variable already defined.");
+      return Error_msg("def: variable already defined.");
   }
   for (cons = expr; !NILP(cons); cons = REST(cons))
     Env_putSymbol(&env, FIRST(cons)->Symbol.name, nil);
@@ -406,7 +405,7 @@ static S *Special_def(S *expr) {
 
 static S *Special_macro(S *expr) {
   if (LENGTH(expr) < 1 || ATOMP(FIRST(expr)))
-    return Error_new("macro: Illegal argument.");
+    return Error_msg("macro: Illegal argument.");
   return Macro_new(FIRST(expr), REST(expr));
 }
 
@@ -432,7 +431,7 @@ static S *Special_fn(S *expr) {
   while (!NILP(expr)) {
     if (FIRST(expr) == dot) {
       if (NILP(REST(expr)))
-        return Error_new("fn: Not declared after variable argument.");
+        return Error_msg("fn: Not declared after variable argument.");
     }
     expr = REST(expr);
   }
@@ -469,7 +468,7 @@ static S *Function_car(S *args) {
   int len;
   if ((len = LENGTH(args)) != 1) return Error_illegalArgument("car", len, 1, 1);
   if (NILP(FIRST(args))) return nil;
-  if (!TYPEP(FIRST(args), Cons)) return Error_new("car: Not a list.");
+  if (!TYPEP(FIRST(args), Cons)) return Error_msg("car: Not a list.");
   return FIRST(FIRST(args));
 }
 
@@ -477,7 +476,7 @@ static S *Function_cdr(S *args) {
   int len;
   if ((len = LENGTH(args)) != 1) return Error_illegalArgument("cdr", len, 1, 1);
   if (NILP(FIRST(args))) return nil;
-  if (!TYPEP(FIRST(args), Cons)) return Error_new("cdr: Not a list.");
+  if (!TYPEP(FIRST(args), Cons)) return Error_msg("cdr: Not a list.");
   return REST(FIRST(args));
 }
 
@@ -486,7 +485,7 @@ static S *Function_cons(S *args) {
   if ((len = LENGTH(args)) != 2)
     return Error_illegalArgument("cons", len, 2, 2);
   if (!TYPEP(SECOND(args), Cons) && !NILP(SECOND(args)))
-    return Error_new("cons: Must be terminated with nil.");
+    return Error_msg("cons: Must be terminated with nil.");
   return Cons_new(FIRST(args), SECOND(args));
 }
 
@@ -496,7 +495,7 @@ static S *Function_open(S *args) {
   if ((len = LENGTH(args)) != 1)
     return Error_illegalArgument("open", len, 1, 1);
   if ((fp = fopen(FIRST(args)->String.val, "r")) == NULL)
-    return Error_new("String.open: cannnot open.");
+    return Error_msg("String.open: cannnot open.");
   return Stream_new(fp);
 }
 
@@ -526,7 +525,7 @@ static S *Function_putChar(S *args) {
   if ((len = LENGTH(args)) != 2)
     return Error_illegalArgument("putChar", len, 2, 2);
   if (!TYPEP(c = SECOND(args), Char))
-    return Error_new("putChar: Second argument must be character.");
+    return Error_msg("putChar: Second argument must be character.");
   fputc(c->Char.val, FIRST(args)->Stream.fp);
   return c;
 }
@@ -535,7 +534,7 @@ static S *Function_Number_add(S *args) {
   S *acc;
   acc = Number_new(0);
   while (!NILP(args)) {
-    if (!TYPEP(FIRST(args), Number)) return Error_new("+: is not a number");
+    if (!TYPEP(FIRST(args), Number)) return Error_msg("+: is not a number");
     acc->Number.val += FIRST(args)->Number.val;
     args = REST(args);
   }
@@ -546,7 +545,7 @@ static S *Function_Number_mul(S *args) {
   S *acc;
   acc = Number_new(1);
   while (!NILP(args)) {
-    if (!TYPEP(FIRST(args), Number)) return Error_new("*: is not a number");
+    if (!TYPEP(FIRST(args), Number)) return Error_msg("*: is not a number");
     acc->Number.val *= FIRST(args)->Number.val;
     args = REST(args);
   }
@@ -576,13 +575,13 @@ static S *Function_apply(S *args) {
   if ((len = LENGTH(args)) < 2)
     return Error_illegalArgument("apply", len, 2, -1);
   if (!TYPEP(fn = FIRST(args), Function))
-    return Error_new("apply: First argument type must be Function.");
+    return Error_msg("apply: First argument type must be Function.");
   if (ATOMP(FIRST(acc = REVERSE(REST(args)))))
-    return Error_new("apply: Last argument must be List.");
+    return Error_msg("apply: Last argument must be List.");
   args = nil;
   while (!NILP(acc)) args = Cons_new(FIRST(acc), args);
   if ((g = Function_lookup(fn, SECOND(acc)->Object.type)) == NULL)
-    return Error_new("apply: Not found generic function.");
+    return Error_msg("apply: Not found generic function.");
   return APPLY(g->params, g->body, args);
 }
 
@@ -633,7 +632,7 @@ S *EVAL(S *expr) {
   if (ATOMP(expr)) {
     if (!TYPEP(expr, Symbol)) return expr;
     if ((acc = Env_getSymbol(&env, expr->Symbol.name)) != NULL) return acc;
-    return Error_new(
+    return Error_msg(
         xvstrcat("eval: undefined variable `", expr->Symbol.name, "'."));
   }
   if (TYPEP(FIRST(expr), Symbol)) {
@@ -646,7 +645,7 @@ S *EVAL(S *expr) {
       return (fn->Special.fn)(REST(expr));
   }
   // function
-  if (LENGTH(expr) <= 1) return Error_new("eval: Not found receiver.");
+  if (LENGTH(expr) <= 1) return Error_msg("eval: Not found receiver.");
   acc = nil;
   while (!NILP(expr)) {
     acc = Cons_new(EVAL(FIRST(expr)), acc);
@@ -655,11 +654,11 @@ S *EVAL(S *expr) {
   }
   acc = REVERSE(acc);
   fn = FIRST(acc);
-  if (!TYPEP(fn, Function)) return Error_new("eval: Undefined function.");
+  if (!TYPEP(fn, Function)) return Error_msg("eval: Undefined function.");
   else {
     struct Generic *g;
     if ((g = Function_lookup(fn, SECOND(acc)->Object.type)) == NULL)
-      return Error_new("eval: Method not found.");
+      return Error_msg("eval: Method not found.");
     // invoke primitive function.
     if (g->params == NULL) return g->prim(REST(acc));
     // invoke user defined function.

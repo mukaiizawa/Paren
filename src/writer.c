@@ -32,6 +32,10 @@ static void Writer_writeGeneric(Writer *wr, struct Generic *g) {
   fprintf(fp, ">");
 }
 
+static void Writer_fmtWrite(Writer *wr, S *args) {
+  Writer_write(wr, args);
+}
+
 void Writer_write(Writer *wr, S *expr) {
   FILE *fp;
   fp = wr->fp;
@@ -54,7 +58,8 @@ void Writer_write(Writer *wr, S *expr) {
       Writer_writeGeneric(wr, g);
     fprintf(fp, ">");
   }
-  else if (TYPEP(expr, Error)) fprintf(fp, "%s", expr->Error.val);
+  else if (TYPEP(expr, Error))
+    Writer_fmtWrite(wr, expr->Error.args);
   else if (TYPEP(expr, Cons)) {
     fprintf(fp, "(");
     while (!NILP(expr)) {

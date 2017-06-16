@@ -19,10 +19,6 @@ void Reader_init(Reader *rd, FILE *fp, S *eof) {
   Ahdrd_init(&rd->ahdrd, fp);
 }
 
-static S *Reader_error(Reader *rd, char *msg) {
-  return Error_new(msg);
-}
-
 static int Reader_nextChar(Reader *rd) {
   int c;
   while ((c = Ahdrd_peek1(&rd->ahdrd)) != EOF && isspace(c))
@@ -80,7 +76,7 @@ static S *Reader_parseComment(Reader *rd) {
   int c;
   while ((c = Ahdrd_peek1(&rd->ahdrd)) != '|'
       || Ahdrd_peek(&rd->ahdrd, 2) != '#') {
-    if (c == EOF) return Reader_error(rd, "comment #| |# not closed");
+    if (c == EOF) return Error_msg("comment #| |# not closed");
     Ahdrd_skipRead(&rd->ahdrd);
   }
   Ahdrd_skipRead(&rd->ahdrd);    // skip '|'
@@ -112,7 +108,7 @@ static S *Reader_parseExpr(Reader *rd) {
     acc = nil;
     Ahdrd_skipRead(&rd->ahdrd);    // skip '('
     while ((c = Reader_nextChar(rd)) != ')') {
-      if (c == EOF) return Reader_error(rd, "missing ')'");
+      if (c == EOF) return Error_msg("missing ')'");
       if (TYPEP((expr = Reader_parseExpr(rd)), Error)) return expr;
       acc = Cons_new(expr, acc);
     }
@@ -122,7 +118,7 @@ static S *Reader_parseExpr(Reader *rd) {
   else if (c != ')') return Reader_parseAtom(rd);
   else {
     while (Ahdrd_peek1(&rd->ahdrd) == ')') Ahdrd_skipRead(&rd->ahdrd);
-    return Reader_error(rd, "unexpected token ')'");
+    return Error_msg("unexpected token ')'");
   }
 }
 
