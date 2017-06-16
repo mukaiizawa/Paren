@@ -9,6 +9,7 @@ parenにおけるtodoを羅列する。
 
 # 検討項目
 - 型staticなメソッドの仕様の策定
+- applyの共通化(builinの呼び出し等)
 
 # バグ対応
 - macro評価時のapply

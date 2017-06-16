@@ -578,10 +578,16 @@ static S *Function_apply(S *args) {
     return Error_msg("apply: First argument type must be Function.");
   if (ATOMP(FIRST(acc = REVERSE(REST(args)))))
     return Error_msg("apply: Last argument must be List.");
-  args = nil;
-  while (!NILP(acc)) args = Cons_new(FIRST(acc), args);
-  if ((g = Function_lookup(fn, SECOND(acc)->Object.type)) == NULL)
+  args = FIRST(acc);
+  acc = REST(acc);
+  while (!NILP(acc)) {
+    args = Cons_new(FIRST(acc), args);
+    acc = REST(acc);
+  }
+  if ((g = Function_lookup(fn, FIRST(args)->Object.type)) == NULL)
     return Error_msg("apply: Not found generic function.");
+  // invoke primitive function.
+  if (g->params == NULL) return g->prim(args);
   return APPLY(g->params, g->body, args);
 }
 
