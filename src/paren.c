@@ -262,7 +262,7 @@ S *Error_msg(char *msg) {
   return Error_new(String_new(msg), nil);
 }
 
-S *Error_illegalArgument(char *name, int provided, int min, int max) {
+static S *Error_illegalArgument(S *fn, int provided, int min, int max) {
   S *err;
   char *s1, *s2, *s3, *s4;
   if (provided < min) {
@@ -277,9 +277,11 @@ S *Error_illegalArgument(char *name, int provided, int min, int max) {
     s3 = xitoa(max);
     s4 = " accepted.";
   }
-  err = Error_msg(
-      xvstrcat("eval: Too ", s1, " arguments in call to `", name, "' "
-        , xitoa(provided), " arguments provided, at ", s2, s3, s4));
+  err = Error_new(
+      String_new(xvstrcat("eval: Too ", s1, " arguments in call to `"))
+      , fn , String_new(xvstrcat(
+          "' " , xitoa(provided), " arguments provided, at ", s2, s3, s4))
+      , nil);
   free(s3);
   return err;
 }
@@ -333,7 +335,7 @@ void S_free(S *expr) {
 static S *Special_ifElse(S *expr) {
   int len;
   if ((len = LENGTH(expr)) < 2)
-    return Error_illegalArgument("ifElse", len, 2, -1);
+    return Error_illegalArgument(String_new("ifElse"), len, 2, -1);
   while (!NILP(REST(expr))) {
     if (!NILP(EVAL(FIRST(expr)))) return EVAL(SECOND(expr));
     if (NILP(expr = REST(expr)) || NILP(expr = REST(expr))) return nil;
@@ -344,7 +346,7 @@ static S *Special_ifElse(S *expr) {
 static S *Special_quote(S *expr) {
   int len;
   if ((len = LENGTH(expr)) > 1)
-    return Error_illegalArgument("quote", len, 1, 1);
+    return Error_illegalArgument(String_new("quote"), len, 1, 1);
   if (len == 0) return nil;    // `() => nil
   return FIRST(expr);
 }
@@ -419,7 +421,7 @@ static S *Special_fn(S *expr) {
   int len;
   S *type, *params, *body;
   if ((len = LENGTH(expr)) < 2)
-    return Error_illegalArgument("fn", LENGTH(expr), len, -1);
+    return Error_illegalArgument(String_new("fn"), LENGTH(expr), len, -1);
   if (TYPEP(FIRST(expr), Symbol)) {
     type = nil;
     params = Cons_new(dot, Cons_new(FIRST(expr), nil));
@@ -448,7 +450,8 @@ static S *Special_fn(S *expr) {
 
 static S *Function_isEqual(S *args) {
   int len;
-  if ((len = LENGTH(args)) < 2) return Error_illegalArgument("=?", len, 2, -1);
+  if ((len = LENGTH(args)) < 2)
+    return Error_illegalArgument(String_new("=?"), len, 2, -1);
   while (!NILP(REST(args))) {
     if (!EQ(FIRST(args), SECOND(args))) return nil;
     args = REST(args);
@@ -459,20 +462,21 @@ static S *Function_isEqual(S *args) {
 static S *Function_isNil(S *args) {
   int len;
   if ((len = LENGTH(args)) != 1)
-    return Error_illegalArgument("nil?", len, 1, 1);
+    return Error_illegalArgument(String_new("nil?"), len, 1, 1);
   return NILP(FIRST(args))? t: nil;
 }
 
 static S *Function_isAtom(S *args) {
   int len;
   if ((len = LENGTH(args)) != 1)
-    return Error_illegalArgument("atom?", len, 1, 1);
+    return Error_illegalArgument(String_new("atom?"), len, 1, 1);
   return ATOMP(FIRST(args))? t: nil;
 }
 
 static S *Function_car(S *args) {
   int len;
-  if ((len = LENGTH(args)) != 1) return Error_illegalArgument("car", len, 1, 1);
+  if ((len = LENGTH(args)) != 1)
+    return Error_illegalArgument(String_new("car"), len, 1, 1);
   if (NILP(FIRST(args))) return nil;
   if (!TYPEP(FIRST(args), Cons)) return Error_msg("car: Not a list.");
   return FIRST(FIRST(args));
@@ -480,7 +484,8 @@ static S *Function_car(S *args) {
 
 static S *Function_cdr(S *args) {
   int len;
-  if ((len = LENGTH(args)) != 1) return Error_illegalArgument("cdr", len, 1, 1);
+  if ((len = LENGTH(args)) != 1)
+    return Error_illegalArgument(String_new("cdr"), len, 1, 1);
   if (NILP(FIRST(args))) return nil;
   if (!TYPEP(FIRST(args), Cons)) return Error_msg("cdr: Not a list.");
   return REST(FIRST(args));
@@ -489,7 +494,7 @@ static S *Function_cdr(S *args) {
 static S *Function_cons(S *args) {
   int len;
   if ((len = LENGTH(args)) != 2)
-    return Error_illegalArgument("cons", len, 2, 2);
+    return Error_illegalArgument(String_new("cons"), len, 2, 2);
   if (!TYPEP(SECOND(args), Cons) && !NILP(SECOND(args)))
     return Error_msg("cons: Must be terminated with nil.");
   return Cons_new(FIRST(args), SECOND(args));
@@ -499,7 +504,7 @@ static S *Function_open(S *args) {
   int len;
   FILE *fp;
   if ((len = LENGTH(args)) != 1)
-    return Error_illegalArgument("open", len, 1, 1);
+    return Error_illegalArgument(String_new("open"), len, 1, 1);
   if ((fp = fopen(FIRST(args)->String.val, "r")) == NULL)
     return Error_msg("String.open: cannnot open.");
   return Stream_new(fp);
@@ -508,7 +513,7 @@ static S *Function_open(S *args) {
 static S *Function_close(S *args) {
   int len;
   if ((len = LENGTH(args)) != 1)
-    return Error_illegalArgument("close", len, 1, 1);
+    return Error_illegalArgument(String_new("close"), len, 1, 1);
   fclose(FIRST(args)->Stream.fp);
   FIRST(args)->Symbol.type = Symbol;
   FIRST(args)->Symbol.name = "nil";
@@ -518,7 +523,7 @@ static S *Function_close(S *args) {
 static S *Function_getChar(S *args) {
   int len, c;
   if ((len = LENGTH(args)) > 2)
-    return Error_illegalArgument("getChar", len, 1, 2);
+    return Error_illegalArgument(String_new("getChar"), len, 1, 2);
   c = fgetc(FIRST(args)->Stream.fp);
   if (c != EOF) return Char_new(c);
   else if (len == 2) return SECOND(args);
@@ -529,7 +534,7 @@ static S *Function_putChar(S *args) {
   int len;
   S *c;
   if ((len = LENGTH(args)) != 2)
-    return Error_illegalArgument("putChar", len, 2, 2);
+    return Error_illegalArgument(String_new("putChar"), len, 2, 2);
   if (!TYPEP(c = SECOND(args), Char))
     return Error_msg("putChar: Second argument must be character.");
   fputc(c->Char.val, FIRST(args)->Stream.fp);
@@ -562,7 +567,7 @@ static S *Function_read(S *args) {
   int len;
   Reader rd;
   if ((len = LENGTH(args)) > 2)
-    return Error_illegalArgument("read", len, 1, 2);
+    return Error_illegalArgument(String_new("read"), len, 1, 2);
   Reader_init(&rd, FIRST(args)->Stream.fp, ((len == 2)? SECOND(args): eof));
   return Reader_read(&rd);
 }
@@ -570,7 +575,7 @@ static S *Function_read(S *args) {
 static S *Function_eval(S *args) {
   int len;
   if ((len = LENGTH(args)) != 1)
-    return Error_illegalArgument("eval", len, 1, 1);
+    return Error_illegalArgument(String_new("eval"), len, 1, 1);
   return EVAL(FIRST(args));
 }
 
@@ -578,7 +583,7 @@ static S *Function_apply(S *args) {
   int len;
   S *fn, *acc;
   if ((len = LENGTH(args)) < 2)
-    return Error_illegalArgument("apply", len, 2, -1);
+    return Error_illegalArgument(String_new("apply"), len, 2, -1);
   if (!TYPEP(fn = FIRST(args), Function))
     return Error_msg("apply: First argument type must be Function.");
   if (ATOMP(FIRST(acc = REVERSE(REST(args)))))
@@ -592,7 +597,7 @@ static S *Function_print(S *args) {
   int len;
   Writer wr;
   if ((len = LENGTH(args)) != 2)
-    return Error_illegalArgument("print", len, 2, 2);
+    return Error_illegalArgument(String_new("print"), len, 2, 2);
   Writer_init(&wr, FIRST(args)->Stream.fp);
   Writer_write(&wr, SECOND(args));
   return SECOND(args);
@@ -622,7 +627,7 @@ S *APPLY(S *fn, S *args) {
     }
   max = isVariable? -1: min;
   if ((argNum = LENGTH(args)) < min || (max != -1 && argNum > max))
-    return Error_illegalArgument("", argNum, min, max);
+    return Error_illegalArgument(fn, argNum, min, max);
   while (!NILP(params)) {
     if (FIRST(params) == dot) {
       Env_putSymbol(&env, SECOND(params)->Symbol.name, args);
@@ -651,7 +656,7 @@ S *EVAL(S *expr) {
   if (LENGTH(expr) <= 1)
     return Error_new(String_new("eval: Expression `")
         , expr, String_new("' not found receiver."), nil);
-  fn = EVAL(FIRST(expr));
+  if (TYPEP(fn = EVAL(FIRST(expr)), Error)) return fn;
   // special form
   if (TYPEP(fn, Special)) return (fn->Special.fn)(REST(expr));
   // macro

@@ -16,6 +16,13 @@ void Writer_init(Writer *wr, FILE *fp) {
   wr->fp = fp;
 }
 
+static void Writer_writeCons(Writer *wr, S *cons) {
+  while (!NILP(cons)) {
+    Writer_write(wr, FIRST(cons));
+    if (!NILP(cons = REST(cons))) fprintf(wr->fp, " ");
+  }
+}
+
 static void Writer_writeGeneric(Writer *wr, struct Generic *g) {
   FILE *fp;
   fp = wr->fp;
@@ -26,7 +33,7 @@ static void Writer_writeGeneric(Writer *wr, struct Generic *g) {
   else {
     Writer_write(wr, g->params);
     fprintf(fp, " ");
-    Writer_write(wr, g->body);
+    Writer_writeCons(wr, g->body);
     fprintf(fp, ")");
   }
   fprintf(fp, ">");
@@ -61,10 +68,7 @@ void Writer_write(Writer *wr, S *expr) {
   }
   else if (TYPEP(expr, Cons)) {
     fprintf(fp, "(");
-    while (!NILP(expr)) {
-      Writer_write(wr, FIRST(expr));
-      if (!NILP(expr = REST(expr))) fprintf(fp, " ");
-    }
+    Writer_writeCons(wr, expr);
     fprintf(fp, ")");
   }
   else fprintf(fp, "<%s: 0x%p>", expr->Object.type->Keyword.val, expr);
