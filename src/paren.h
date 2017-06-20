@@ -93,6 +93,7 @@ extern S *Keyword;
 extern S *String;
 extern S *Char;
 extern S *Number;
+extern S *Macro;
 extern S *Function;
 extern S *Special;
 extern S *Stream;

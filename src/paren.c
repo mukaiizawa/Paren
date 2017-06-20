@@ -278,7 +278,7 @@ static S *Error_illegalArgument(S *fn, int provided, int min, int max) {
     s4 = " accepted.";
   }
   err = Error_new(
-      String_new(xvstrcat("eval: Too ", s1, " arguments in call to `"))
+      String_new(xvstrcat("eval: Too ", s1, " arguments in call to \n`"))
       , fn , String_new(xvstrcat(
           "' " , xitoa(provided), " arguments provided, at ", s2, s3, s4))
       , nil);
@@ -593,11 +593,11 @@ static S *Function_apply(S *args) {
   return APPLY(fn, args);
 }
 
-static S *Function_print(S *args) {
+static S *Function_Stream_put(S *args) {
   int len;
   Writer wr;
   if ((len = LENGTH(args)) != 2)
-    return Error_illegalArgument(String_new("print"), len, 2, 2);
+    return Error_illegalArgument(String_new("put"), len, 2, 2);
   Writer_init(&wr, FIRST(args)->Stream.fp);
   Writer_write(&wr, SECOND(args));
   return SECOND(args);
@@ -612,7 +612,11 @@ S *APPLY(S *fn, S *args) {
   } else {
     struct Generic *g;
     if ((g = Function_lookup(fn, FIRST(args)->Object.type)) == NULL)
-      return Error_msg("eval: Method not found.");
+      return Error_new(
+          String_new("eval: Method not found generic function in \n"), fn
+          , String_new(
+            xvstrcat("\ntype of `", FIRST(args)->Object.type->Keyword.val, "'."))
+          , nil);
     // invoke primitive function.
     if (g->params == NULL) return g->prim(args);
     params = g->params;
@@ -671,7 +675,6 @@ S *EVAL(S *expr) {
     acc = Cons_new(EVAL(FIRST(expr)), acc);
     if (TYPEP(FIRST(acc), Error)) return FIRST(acc);
   }
-  acc = REVERSE(acc);
   return APPLY(fn, REVERSE(acc));
 }
 
@@ -734,7 +737,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "getChar" , Function_new(Stream, NULL, NULL, Function_getChar));
   Env_putSymbol(env, "nil?", Function_new(nil, NULL, NULL, Function_isNil));
   Env_putSymbol(env, "open", Function_new(String, NULL, NULL, Function_open));
-  Env_putSymbol(env, "print", Function_new(Stream, NULL, NULL, Function_print));
+  Env_putSymbol(env, "put", Function_new(Stream, NULL, NULL, Function_Stream_put));
   Env_putSymbol(env, "putChar", Function_new(Stream, NULL, NULL, Function_putChar));
   Env_putSymbol(env, "read", Function_new(Stream, NULL, NULL, Function_read));
   Env_putSymbol(env, "+", Function_new(Number, NULL, NULL, Function_Number_add));

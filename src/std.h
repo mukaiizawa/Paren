@@ -7,3 +7,4 @@ extern void *xrealloc(void *p, int size);
 #define xvstrcat(...) _xvstrcat(__VA_ARGS__, NULL)
 extern char *_xvstrcat(char *s1, ...);    // use xvstrcat!
 extern char *xitoa(int n);
+extern int xstreq(char *s1, char *s2);

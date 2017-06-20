@@ -6,5 +6,5 @@ reader.o: reader.c ringbuf.h ahdrd.h reader.h paren.h env.h splay.h
 ringbuf.o: ringbuf.c ringbuf.h
 splay.o: splay.c splay.h std.h
 std.o: std.c std.h
-writer.o: writer.c writer.h paren.h env.h splay.h
+writer.o: writer.c writer.h paren.h env.h splay.h std.h
 

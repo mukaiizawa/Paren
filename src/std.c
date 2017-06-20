@@ -53,3 +53,7 @@ char *xitoa(int n) {
   if (sprintf(s, "%d", n) + 1 != len) xerror("xiota: Buffer over flow.");
   return s;
 }
+
+int xstreq(char *s1, char *s2) {
+  return strcmp(s1, s2) == 0;
+}
