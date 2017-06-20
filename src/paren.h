@@ -108,6 +108,6 @@ extern S *Function_new(S *type, S *params, S *body, S *prim(S *));
 extern S *Special_new(S *f(S *));
 extern S *Macro_new(S *params, S *body);
 extern S *Stream_new(FILE *stream);
-extern S *Error_new(S *args);
+extern S *Error_new(S *args, ...);
 extern S *Error_msg(char *msg);
 extern void S_free(S *expr);

@@ -2,10 +2,11 @@
    paren main routine.
 */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include <assert.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "std.h"
 #include "splay.h"
@@ -21,7 +22,7 @@ static Writer wr;
 static S *consPool;
 
 extern S *EVAL(S *expr);
-extern S *APPLY(S *params, S *body, S *args);
+extern S *APPLY(S *fn, S *args);
 
 // global symbols.
 
@@ -244,16 +245,21 @@ S *Stream_new(FILE *stream) {
   return expr;
 }
 
-S *Error_new(S *args) {
-  S *expr;
-  expr = S_alloc();
-  expr->Error.type = Error;
-  expr->Error.args = args;
-  return expr;
+S *Error_new(S *args, ...) {
+  S *err, *acc, *arg;
+  va_list va;
+  err = S_alloc();
+  err->Error.type = Error;
+  va_start(va, args);
+  acc = nil;
+  for (arg = args; arg != nil; arg = va_arg(va, S *)) acc = Cons_new(arg, acc);
+  va_end(va);
+  err->Error.args = REVERSE(acc);
+  return err;
 }
 
 S *Error_msg(char *msg) {
-  return Error_new(String_new(msg));
+  return Error_new(String_new(msg), nil);
 }
 
 S *Error_illegalArgument(char *name, int provided, int min, int max) {
@@ -571,24 +577,15 @@ static S *Function_eval(S *args) {
 static S *Function_apply(S *args) {
   int len;
   S *fn, *acc;
-  struct Generic *g;
   if ((len = LENGTH(args)) < 2)
     return Error_illegalArgument("apply", len, 2, -1);
   if (!TYPEP(fn = FIRST(args), Function))
     return Error_msg("apply: First argument type must be Function.");
   if (ATOMP(FIRST(acc = REVERSE(REST(args)))))
     return Error_msg("apply: Last argument must be List.");
-  args = FIRST(acc);
-  acc = REST(acc);
-  while (!NILP(acc)) {
+  for (args = FIRST(acc), acc = REST(acc); !NILP(acc); acc =REST(acc))
     args = Cons_new(FIRST(acc), args);
-    acc = REST(acc);
-  }
-  if ((g = Function_lookup(fn, FIRST(args)->Object.type)) == NULL)
-    return Error_msg("apply: Not found generic function.");
-  // invoke primitive function.
-  if (g->params == NULL) return g->prim(args);
-  return APPLY(g->params, g->body, args);
+  return APPLY(fn, args);
 }
 
 static S *Function_print(S *args) {
@@ -601,20 +598,28 @@ static S *Function_print(S *args) {
   return SECOND(args);
 }
 
-S *APPLY(S *params, S *body, S *args) {
+S *APPLY(S *fn, S *args) {
   int argNum, min, max, isVariable;
-  S *result;
+  S *params, *body, *result;
+  if (TYPEP(fn, Macro)) {
+    params = fn->Macro.params;
+    body = fn->Macro.body;;
+  } else {
+    struct Generic *g;
+    if ((g = Function_lookup(fn, FIRST(args)->Object.type)) == NULL)
+      return Error_msg("eval: Method not found.");
+    // invoke primitive function.
+    if (g->params == NULL) return g->prim(args);
+    params = g->params;
+    body = g->body;
+  }
   Env_push(&env);
   min = isVariable = 0;
-  result = params;
-  while (!NILP(result)) {
+  for (result = params; !NILP(result); result = REST(result), min++)
     if (FIRST(result) == dot) {
       isVariable = 1;
       break;
     }
-    result = REST(result);
-    min++;
-  }
   max = isVariable? -1: min;
   if ((argNum = LENGTH(args)) < min || (max != -1 && argNum > max))
     return Error_illegalArgument("", argNum, min, max);
@@ -637,39 +642,32 @@ S *EVAL(S *expr) {
   // atom
   if (ATOMP(expr)) {
     if (!TYPEP(expr, Symbol)) return expr;
-    if ((acc = Env_getSymbol(&env, expr->Symbol.name)) != NULL) return acc;
+    if ((acc = Env_getSpecial(&env, expr->Symbol.name)) != NULL
+        || (acc = Env_getSymbol(&env, expr->Symbol.name)) != NULL)
+      return acc;
     return Error_msg(
         xvstrcat("eval: undefined variable `", expr->Symbol.name, "'."));
   }
-  if (TYPEP(FIRST(expr), Symbol)) {
-    // macro
-    if ((fn = Env_getSymbol(&env, FIRST(expr)->Symbol.name)) != NULL
-        && TYPEP(fn, Macro))
-      return EVAL(APPLY(fn->Macro.params, fn->Macro.body, REST(expr)));
-    // special form
-    if ((fn = Env_getSpecial(&env, FIRST(expr)->Symbol.name)) != NULL)
-      return (fn->Special.fn)(REST(expr));
-  }
+  if (LENGTH(expr) <= 1)
+    return Error_new(String_new("eval: Expression `")
+        , expr, String_new("' not found receiver."), nil);
+  fn = EVAL(FIRST(expr));
+  // special form
+  if (TYPEP(fn, Special)) return (fn->Special.fn)(REST(expr));
+  // macro
+  if (TYPEP(fn, Macro)) return EVAL(APPLY(fn, REST(expr)));
   // function
-  if (LENGTH(expr) <= 1) return Error_msg("eval: Not found receiver.");
+  if (!TYPEP(fn, Function))
+    return Error_new(
+        String_new("eval: The value of `"), fn
+        , String_new("' is not a function."), nil);
   acc = nil;
-  while (!NILP(expr)) {
+  while (!NILP(expr = REST(expr))) {
     acc = Cons_new(EVAL(FIRST(expr)), acc);
     if (TYPEP(FIRST(acc), Error)) return FIRST(acc);
-    expr = REST(expr);
   }
   acc = REVERSE(acc);
-  fn = FIRST(acc);
-  if (!TYPEP(fn, Function)) return Error_msg("eval: Undefined function.");
-  else {
-    struct Generic *g;
-    if ((g = Function_lookup(fn, SECOND(acc)->Object.type)) == NULL)
-      return Error_msg("eval: Method not found.");
-    // invoke primitive function.
-    if (g->params == NULL) return g->prim(REST(acc));
-    // invoke user defined function.
-    else return APPLY(g->params, g->body, REST(acc));
-  }
+  return APPLY(fn, REVERSE(acc));
 }
 
 void Paren_init(Env *env, Reader *rd, Writer *wr) {
