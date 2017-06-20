@@ -79,9 +79,9 @@ static int EQ(S *arg1, S *arg2) {
   S *type;
   if ((type = arg1->Object.type) != arg2->Object.type) return 0;
   else if (type == String)
-    return strcmp(arg1->String.val, arg2->String.val) == 0;
+    return xstreq(arg1->String.val, arg2->String.val);
   else if (type == Symbol)
-    return strcmp(arg1->Symbol.name, arg2->Symbol.name) == 0;
+    return xstreq(arg1->Symbol.name, arg2->Symbol.name);
   else if (type == Char) return arg1->Char.val == arg2->Char.val;
   else if (type == Number) return arg1->Number.val == arg2->Number.val;
   else return arg1 == arg2;
@@ -121,7 +121,7 @@ S *Symbol_new(char *name) {
 
 S *Keyword_new(char *val) {
   S *expr;
-  if (strlen(val) == 0) return Error_msg("read: Illegal Keyword.");
+  if (strlen(val) == 0) return Error_msg("read: Illegal Keyword `'.");
   if ((expr = Env_getKeyword(&env, val)) != NULL) {
     free(val);
     return expr;
@@ -175,7 +175,7 @@ static void Function_addGeneric(
   g->params = params;
   g->body = body;
   g->prim = prim;
-  if (type == nil) {
+  if (NILP(type)) {
     g->next = NULL;
     fn->Function.gDefault = g;
   }
@@ -346,7 +346,7 @@ static S *Special_ifElse(S *expr) {
 static S *Special_quote(S *expr) {
   int len;
   if ((len = LENGTH(expr)) > 1)
-    return Error_illegalArgument(String_new("quote"), len, 1, 1);
+    return Error_illegalArgument(quote, len, 1, 1);
   if (len == 0) return nil;    // `() => nil
   return FIRST(expr);
 }
@@ -417,6 +417,12 @@ static S *Special_macro(S *expr) {
   return Macro_new(FIRST(expr), REST(expr));
 }
 
+static S *Error_illegalParameter(S *params) {
+  return Error_new(
+      String_new("fn: But parameter list ")
+      , params, String_new("."), nil);
+}
+
 static S *Special_fn(S *expr) {
   int len;
   S *type, *params, *body;
@@ -437,9 +443,13 @@ static S *Special_fn(S *expr) {
   }
   expr = params;
   while (!NILP(expr)) {
-    if (FIRST(expr) == dot) {
-      if (NILP(REST(expr)))
+    if (!TYPEP(FIRST(expr), Symbol))
+      return Error_illegalParameter(params);
+    if (EQ(FIRST(expr), dot)) {
+      if (NILP(expr = REST(expr)))
         return Error_msg("fn: Not declared after variable argument.");
+      if (!NILP(REST(expr))) return Error_illegalParameter(params);
+      break;
     }
     expr = REST(expr);
   }
@@ -604,7 +614,7 @@ static S *Function_Stream_put(S *args) {
 }
 
 S *APPLY(S *fn, S *args) {
-  int argNum, min, max, isVariable;
+  int len, min, max, isVariable;
   S *params, *body, *result;
   if (TYPEP(fn, Macro)) {
     params = fn->Macro.params;
@@ -614,8 +624,8 @@ S *APPLY(S *fn, S *args) {
     if ((g = Function_lookup(fn, FIRST(args)->Object.type)) == NULL)
       return Error_new(
           String_new("eval: Method not found generic function in \n"), fn
-          , String_new(
-            xvstrcat("\ntype of `", FIRST(args)->Object.type->Keyword.val, "'."))
+          , String_new(xvstrcat(
+              "\ntype of `", FIRST(args)->Object.type->Keyword.val, "'."))
           , nil);
     // invoke primitive function.
     if (g->params == NULL) return g->prim(args);
@@ -625,15 +635,15 @@ S *APPLY(S *fn, S *args) {
   Env_push(&env);
   min = isVariable = 0;
   for (result = params; !NILP(result); result = REST(result), min++)
-    if (FIRST(result) == dot) {
+    if (EQ(FIRST(result), dot)) {
       isVariable = 1;
       break;
     }
   max = isVariable? -1: min;
-  if ((argNum = LENGTH(args)) < min || (max != -1 && argNum > max))
-    return Error_illegalArgument(fn, argNum, min, max);
+  if ((len = LENGTH(args)) < min || (max != -1 && len > max))
+    return Error_illegalArgument(fn, len, min, max);
   while (!NILP(params)) {
-    if (FIRST(params) == dot) {
+    if (EQ(FIRST(params), dot)) {
       Env_putSymbol(&env, SECOND(params)->Symbol.name, args);
       break;
     }
@@ -689,7 +699,6 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Keyword->Keyword.type = Keyword;
   Env_putKeyword(env, "t", t = Keyword_new("t"));
   Env_putKeyword(env, "nil", nil = Keyword_new("nil"));
-  Env_putKeyword(env, ".", dot = Keyword_new("."));
   Env_putKeyword(env, "EOF", eof = Keyword_new("EOF"));
   Env_putKeyword(env, "Cons", Cons = Keyword_new("Cons"));
   Env_putKeyword(env, "Symbol", Symbol = Keyword_new("Symbol"));
@@ -711,6 +720,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
 
   // init global symbols.
   quote = Symbol_new("quote");
+  dot = Symbol_new(".");
   Env_putSymbol(env, "stdin", Stream_new(stdin));
   Env_putSymbol(env, "stdout", Stream_new(stdout));
   Env_putSymbol(env, "stderr", Stream_new(stderr));
