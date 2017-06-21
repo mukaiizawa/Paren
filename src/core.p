@@ -34,15 +34,17 @@
     cdddar (fn (x) (cdr (cdr (cdr (car x)))))
     cddddr (fn (x) (cdr (cdr (cdr (cdr x))))))
 
-(def not)
-(<- not (fn (x) (ifElse x :nil :t)))
+(def not list?)
+(<- not (fn (x) (if x :nil :t))
+    list? (fn (x) (if (atom? x) (nil? x) :t)))
 
 (def list list. append)
 (<- list (fn lis lis)
     list. (fn lis
-            (cons (car lis)
-                  (ifElse (nil? (cddr lis)) (car lis)
-                          (list. (cdr lis)))))
+            (if (cddr lis) (cons (car lis) (apply list. (cdr lis)))
+                (if (list? (cadr lis))
+                    (cons (car lis) (cadr lis))
+                    (put stderr "list.: Must be list last argument."))))
     append :nil)
 
 #|
