@@ -332,10 +332,10 @@ void S_free(S *expr) {
 
 // special forms
 
-static S *Special_ifElse(S *expr) {
+static S *Special_if(S *expr) {
   int len;
   if ((len = LENGTH(expr)) < 2)
-    return Error_illegalArgument(String_new("ifElse"), len, 2, -1);
+    return Error_illegalArgument(String_new("if"), len, 2, -1);
   while (!NILP(REST(expr))) {
     if (!NILP(EVAL(FIRST(expr)))) return EVAL(SECOND(expr));
     if (NILP(expr = REST(expr)) || NILP(expr = REST(expr))) return nil;
@@ -731,7 +731,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSpecial(env, "def", Special_new(Special_def));
   Env_putSpecial(env, "macro", Special_new(Special_macro));
   Env_putSpecial(env, "fn", Special_new(Special_fn));
-  Env_putSpecial(env, "ifElse", Special_new(Special_ifElse));
+  Env_putSpecial(env, "if", Special_new(Special_if));
   Env_putSpecial(env, "let", Special_new(Special_let));
   Env_putSpecial(env, "progn", Special_new(Special_progn));
   Env_putSpecial(env, "quote", Special_new(Special_quote));
