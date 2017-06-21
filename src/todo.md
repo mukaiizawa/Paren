@@ -14,4 +14,6 @@ parenにおけるtodoを羅列する。
 - goto機構
 
 # バグ対応
+- applyのバグ修正
 - macro評価時のapply
+- reader@コメント
