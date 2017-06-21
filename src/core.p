@@ -34,11 +34,21 @@
     cdddar (fn (x) (cdr (cdr (cdr (car x)))))
     cddddr (fn (x) (cdr (cdr (cdr (cdr x))))))
 
-(def list)
-(<- list (fn lis lis))
+(def not)
+(<- not (fn (x) (ifElse x :nil :t)))
 
+(def list list. append)
+(<- list (fn lis lis)
+    list. (fn lis
+            (cons (car lis)
+                  (ifElse (nil? (cddr lis)) (car lis)
+                          (list. (cdr lis)))))
+    append :nil)
+
+#|
 (def defMacro)
-(<- defMacro (macro (name args . body)
-               (list `progn
-                     (def name)
-                     (<- name (macro args body)))))
+(<- defMacro (macro (name args body)
+               ~(progn
+                  (def ,name)
+                  (macro ,args .body)))
+|#
