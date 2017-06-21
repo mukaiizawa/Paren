@@ -78,6 +78,7 @@ typedef union S {
 #define NILP(expr) ((expr) == nil)
 extern int LENGTH(S *expr);
 extern int TYPEP(S *expr, S *type);
+extern int EQ(S *arg1, S *arg2);
 extern S *REVERSE(S *expr);
 
 extern Env env;
@@ -85,6 +86,7 @@ extern Env env;
 extern S *t;
 extern S *nil;
 extern S *eof;
+extern S *dot;
 extern S *quote;
 
 extern S *Cons;

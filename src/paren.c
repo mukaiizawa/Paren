@@ -75,7 +75,7 @@ S *REVERSE(S *expr) {
   return root;
 }
 
-static int EQ(S *arg1, S *arg2) {
+int EQ(S *arg1, S *arg2) {
   S *type;
   if ((type = arg1->Object.type) != arg2->Object.type) return 0;
   else if (type == String)

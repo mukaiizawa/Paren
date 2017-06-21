@@ -33,7 +33,8 @@ static void Writer_writeGeneric(Writer *wr, struct Generic *g) {
   if (g->prim != NULL)
     fprintf(fp, "<BuiltinFunction: 0x%p>)", g->prim);
   else {
-    Writer_write(wr, g->params);
+    if (EQ(FIRST(g->params), dot)) Writer_write(wr, SECOND(g->params));
+    else Writer_write(wr, g->params);
     fprintf(fp, " ");
     Writer_writeCons(wr, g->body);
     fprintf(fp, ")");
