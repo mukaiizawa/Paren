@@ -42,10 +42,11 @@
 (<- list (fn lis lis)
     list. (fn lis
             (if (nil? (cdr lis)) (car lis)
-                (nil? (cddr lis)) (if (list? (cadr lis))
-                                      (cons (car lis) (cadr lis))
-                                      (new :Error
-                                           "list.: Must be list last argument."))
+                (nil? (cddr lis)) (if (list? (cadr lis)) (cons (car lis)
+                                                               (cadr lis))
+                                      (new
+                                        :Error
+                                        "list.: Must be list last argument."))
                 (cons (car lis) (apply list. (cdr lis)))))
     + :nil)
 
