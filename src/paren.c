@@ -189,22 +189,25 @@ static S *Function_merge(S *fnTo, S *fnFrom) {
   struct Generic *gFrom, *gTo;
   assert(TYPEP(fnTo, Function) && TYPEP(fnFrom, Function));
   for (gFrom = fnFrom->Function.generics; gFrom != NULL; gFrom = gFrom->next) {
-    gTo = Function_lookup(fnTo, gFrom->type);
-    if (gTo != NULL && gTo->type != nil) {
+    if ((gTo = Function_lookup(fnTo, gFrom->type)) != NULL && gTo->type == nil)
+      continue;
+    if (gTo == NULL)
+      Function_addGeneric(
+          fnTo, gFrom->type, gFrom->params, gFrom->body, gFrom->prim);
+    else {
       gTo->params = gFrom->params;
       gTo->body = gFrom->body;
       gTo->prim = gFrom->prim;
     }
-    else
-      Function_addGeneric(
-          fnTo, gFrom->type, gFrom->params, gFrom->body, gFrom->prim);
   }
   if ((gFrom = fnFrom->Function.gDefault) != NULL) {
-    gTo = fnTo->Function.gDefault;
-    if (gTo == NULL) gTo = xmalloc(sizeof(struct Generic));
-    gTo->params = gFrom->params;
-    gTo->body = gFrom->body;
-    gTo->prim = gFrom->prim;
+    if ((gTo = fnTo->Function.gDefault) == NULL)
+      Function_addGeneric(fnTo, nil, gFrom->params, gFrom->body, gFrom->prim);
+    else {
+      gTo->params = gFrom->params;
+      gTo->body = gFrom->body;
+      gTo->prim = gFrom->prim;
+    }
   }
   return fnTo;
 }
@@ -427,7 +430,7 @@ static S *Special_fn(S *expr) {
   int len;
   S *type, *params, *body;
   if ((len = LENGTH(expr)) < 2)
-    return Error_illegalArgument(String_new("fn"), LENGTH(expr), len, -1);
+    return Error_illegalArgument(String_new("fn"), len, 2, -1);
   if (TYPEP(FIRST(expr), Symbol)) {
     type = nil;
     params = Cons_new(dot, Cons_new(FIRST(expr), nil));
@@ -441,17 +444,14 @@ static S *Special_fn(S *expr) {
     params = FIRST(expr);
     body = REST(expr);
   }
-  expr = params;
-  while (!NILP(expr)) {
-    if (!TYPEP(FIRST(expr), Symbol))
-      return Error_illegalParameter(params);
+  for (expr = params; !NILP(expr); expr = REST(expr)) {
+    if (!TYPEP(FIRST(expr), Symbol)) return Error_illegalParameter(params);
     if (EQ(FIRST(expr), dot)) {
       if (NILP(expr = REST(expr)))
         return Error_msg("fn: Not declared after variable argument.");
       if (!NILP(REST(expr))) return Error_illegalParameter(params);
       break;
     }
-    expr = REST(expr);
   }
   return Function_new(type, params, body, NULL);
 }
@@ -613,6 +613,13 @@ static S *Function_Stream_put(S *args) {
   return SECOND(args);
 }
 
+static S *Function_typeOf(S *args) {
+  int len;
+  if ((len = LENGTH(args)) != 1)
+    return Error_illegalArgument(String_new("typeOf"), len, 1, 1);
+  return FIRST(args)->Object.type;
+}
+
 S *APPLY(S *fn, S *args) {
   int len, min, max, isVariable;
   S *params, *body, *result;
@@ -753,6 +760,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "+", Function_new(Number, NULL, NULL, Function_Number_add));
   Env_putSymbol(env, "*", Function_new(Number, NULL, NULL, Function_Number_mul));
   Env_putSymbol(env, "=?", Function_new(nil, NULL, NULL, Function_isEqual));
+  Env_putSymbol(env, "typeOf", Function_new(nil, NULL, NULL, Function_typeOf));
 
   // init reader and writer.
   Reader_init(rd, stdin, eof);
