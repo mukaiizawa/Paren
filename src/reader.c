@@ -63,13 +63,13 @@ static S *Reader_parseSymbol(Reader *rd) {
   return Symbol_new(Ahdrd_readSymbol(&rd->ahdrd));
 }
 
-extern S *Reader_parseAtom(Reader *rd);
+extern S *Reader_parseExpr(Reader *rd);
 
 static S *Reader_parseLineComment(Reader *rd) {
   int c;
   while ((c = Ahdrd_peek1(&rd->ahdrd)) != EOF && c != '\n')
     Ahdrd_skipRead(&rd->ahdrd);
-  return Reader_parseAtom(rd);
+  return Reader_parseExpr(rd);
 }
 
 static S *Reader_parseComment(Reader *rd) {
@@ -81,10 +81,10 @@ static S *Reader_parseComment(Reader *rd) {
   }
   Ahdrd_skipRead(&rd->ahdrd);    // skip '|'
   Ahdrd_skipRead(&rd->ahdrd);    // skip '#'
-  return Reader_parseAtom(rd);
+  return Reader_parseExpr(rd);
 }
 
-S *Reader_parseAtom(Reader *rd) {
+static S *Reader_parseAtom(Reader *rd) {
   int c;
   if ((c = Reader_nextChar(rd)) == ':') return Reader_parseKeyword(rd);
   else if (c == '\'') return Reader_parseChar(rd);
@@ -96,7 +96,7 @@ S *Reader_parseAtom(Reader *rd) {
   else return Reader_parseSymbol(rd);
 }
 
-static S *Reader_parseExpr(Reader *rd) {
+S *Reader_parseExpr(Reader *rd) {
   int c;
   if ((c = Reader_nextChar(rd)) == EOF) return rd->eof;
   else if (c == '`') {
