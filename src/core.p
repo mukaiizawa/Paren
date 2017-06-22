@@ -38,22 +38,16 @@
 (<- not (fn (x) (if x :nil :t))
     list? (fn (x) (if (atom? x) (nil? x) :t)))
 
-(def list list. append)
+(def list list.)
 (<- list (fn lis lis)
     list. (fn lis
             (if (nil? (cdr lis)) (car lis)
                 (nil? (cddr lis)) (if (list? (cadr lis)) (cons (car lis)
                                                                (cadr lis))
-                                      (new
-                                        :Error
-                                        "list.: Must be list last argument."))
+                                      :Error)
                 (cons (car lis) (apply list. (cdr lis)))))
-    + :nil)
-
-#|
-(def defMacro)
-(<- defMacro (macro (name args body)
-               ~(progn
-                  (def ,name)
-                  (macro ,args .body)))
-|#
+    + (fn lis
+        (if (not (list? (car lis))) :Error
+            (not (list? (cdr lis))) :Error
+            (nil? (cdr lis) (car lis))
+            (list. (car lis) (cadr lis) (+ (cddr lis))))))
