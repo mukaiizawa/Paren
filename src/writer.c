@@ -65,8 +65,8 @@ void Writer_write(Writer *wr, S *expr) {
   else if (TYPEP(expr, Function)) {
     struct Generic *g;
     fprintf(fp, "<Function: 0x%p", expr);
-    if (expr->Function.gDefault != NULL)
-      Writer_writeGeneric(wr, expr->Function.gDefault);
+    if ((g = expr->Function.gDefault) != NULL)
+      Writer_writeGeneric(wr, g);
     for (g = expr->Function.generics; g != NULL; g = g->next)
       Writer_writeGeneric(wr, g);
     fprintf(fp, ">");
