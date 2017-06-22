@@ -41,11 +41,13 @@
 (def list list. append)
 (<- list (fn lis lis)
     list. (fn lis
-            (if (cddr lis) (cons (car lis) (apply list. (cdr lis)))
-                (if (list? (cadr lis))
-                    (cons (car lis) (cadr lis))
-                    (put stderr "list.: Must be list last argument."))))
-    append :nil)
+            (if (nil? (cdr lis)) (car lis)
+                (nil? (cddr lis)) (if (list? (cadr lis))
+                                      (cons (car lis) (cadr lis))
+                                      (new :Error
+                                           "list.: Must be list last argument."))
+                (cons (car lis) (apply list. (cdr lis)))))
+    + :nil)
 
 #|
 (def defMacro)
