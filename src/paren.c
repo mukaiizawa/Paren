@@ -255,7 +255,7 @@ S *Error_new(S *args, ...) {
   err->Error.type = Error;
   va_start(va, args);
   acc = nil;
-  for (arg = args; arg != nil; arg = va_arg(va, S *)) acc = Cons_new(arg, acc);
+  for (arg = args; !NILP(arg); arg = va_arg(va, S *)) acc = Cons_new(arg, acc);
   va_end(va);
   err->Error.args = REVERSE(acc);
   return err;
