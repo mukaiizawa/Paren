@@ -55,7 +55,7 @@ int TYPEP(S *expr, S *type) {
 
 int LENGTH(S *expr) {
   int count;
-  if(NILP(expr)) return 0;
+  if (NILP(expr)) return 0;
   if (ATOMP(expr)) return 1;
   count = 1;
   while (!NILP(expr = REST(expr))) count++;
