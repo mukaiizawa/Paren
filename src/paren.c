@@ -626,7 +626,8 @@ S *APPLY(S *fn, S *args) {
   if (TYPEP(fn, Macro)) {
     params = fn->Macro.params;
     body = fn->Macro.body;;
-  } else {
+  }
+  else {
     struct Generic *g;
     if ((g = Function_lookup(fn, FIRST(args)->Object.type)) == NULL)
       return Error_new(
