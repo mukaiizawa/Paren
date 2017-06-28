@@ -666,9 +666,7 @@ S *EVAL(S *expr) {
   // atom
   if (ATOMP(expr)) {
     if (!TYPEP(expr, Symbol)) return expr;
-    if ((acc = Env_getSpecial(&env, expr->Symbol.name)) != NULL
-        || (acc = Env_getSymbol(&env, expr->Symbol.name)) != NULL)
-      return acc;
+    if ((acc = Env_getSymbol(&env, expr->Symbol.name)) != NULL) return acc;
     return Error_msg(
         xvstrcat("eval: undefined variable `", expr->Symbol.name, "'."));
   }
@@ -698,12 +696,13 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   setbuf(stdout, NULL);
 
   Env_init(env);
+  pool = nil;
 
   // init ptimitive types.
   Keyword = Keyword_new("Keyword");
   Keyword->Keyword.type = Keyword;
   Env_putKeyword(env, "t", t = Keyword_new("t"));
-  Env_putKeyword(env, "nil", nil = Keyword_new("nil"));
+  Env_putKeyword(env, "nil", pool = nil = Keyword_new("nil"));
   Env_putKeyword(env, "EOF", eof = Keyword_new("EOF"));
   Env_putKeyword(env, "Cons", Cons = Keyword_new("Cons"));
   Env_putKeyword(env, "Symbol", Symbol = Keyword_new("Symbol"));
@@ -717,9 +716,6 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putKeyword(env, "Stream", Stream = Keyword_new("Stream"));
   Env_putKeyword(env, "Error", Error = Keyword_new("Error"));
 
-  // init cons pool.
-  pool = nil;
-
   // init global symbols.
   quote = Symbol_new("quote");
   dot = Symbol_new(".");
@@ -729,14 +725,14 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putSymbol(env, "pi", Number_new(3.14159265358979323846));
 
   // init special forms.
-  Env_putSpecial(env, "<-", Special_new(Special_assign));
-  Env_putSpecial(env, "def", Special_new(Special_def));
-  Env_putSpecial(env, "macro", Special_new(Special_macro));
-  Env_putSpecial(env, "fn", Special_new(Special_fn));
-  Env_putSpecial(env, "if", Special_new(Special_if));
-  Env_putSpecial(env, "let", Special_new(Special_let));
-  Env_putSpecial(env, "progn", Special_new(Special_progn));
-  Env_putSpecial(env, "quote", Special_new(Special_quote));
+  Env_putSymbol(env, "<-", Special_new(Special_assign));
+  Env_putSymbol(env, "def", Special_new(Special_def));
+  Env_putSymbol(env, "macro", Special_new(Special_macro));
+  Env_putSymbol(env, "fn", Special_new(Special_fn));
+  Env_putSymbol(env, "if", Special_new(Special_if));
+  Env_putSymbol(env, "let", Special_new(Special_let));
+  Env_putSymbol(env, "progn", Special_new(Special_progn));
+  Env_putSymbol(env, "quote", Special_new(Special_quote));
 
   // init functions.
   Env_putSymbol(env, "atom?", Function_new(nil, NULL, NULL, Function_isAtom));
