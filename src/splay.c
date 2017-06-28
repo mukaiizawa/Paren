@@ -60,16 +60,16 @@ static struct SplayNode *Splay_balance(Splay *splay, char *key) {
   sentinel->key = key;
   sentinel->right = sentinel->left = sentinel;
   newRoot = splay->root;
-  while ((cmp = strcmp(key, newRoot->key)) != 0) {
+  while ((cmp = splay->cmp(key, newRoot->key)) != 0) {
     if (cmp < 0) {
-      if ((cmp = strcmp(key, newRoot->left->key)) == 0)
+      if ((cmp = splay->cmp(key, newRoot->left->key)) == 0)
         return splay->root = Splaynode_rotR(newRoot);
       newRoot = (cmp < 0)?
         Splaynode_rotRR(newRoot):
         Splaynode_rotLR(newRoot);
     }
     else {
-      if ((cmp = strcmp(key, newRoot->right->key)) == 0)
+      if ((cmp = splay->cmp(key, newRoot->right->key)) == 0)
         return splay->root = Splaynode_rotL(newRoot);
       newRoot = (cmp > 0)?
         Splaynode_rotLL(newRoot):
@@ -85,24 +85,23 @@ static void Splay_rebuild(Splay *splay) {
     newRoot = splay->root->right;
   else {
     newRoot = node = splay->root->left;
-    while (node->right != sentinel)
-      node = node->right;
+    while (node->right != sentinel) node = node->right;
     node->right = splay->root->right;
   }
   splay->root = newRoot;
 }
 
 static void SplayNode_freeRec(struct SplayNode *node) {
-  if (node != sentinel) {
-    SplayNode_freeRec(node->left);
-    SplayNode_freeRec(node->right);
-    free(node);
-  }
+  if (node == sentinel) return;
+  SplayNode_freeRec(node->left);
+  SplayNode_freeRec(node->right);
+  free(node);
 }
 
-void Splay_init(Splay *splay) {
+void Splay_init(Splay *splay, int (*cmp)(void *key1, void *key2)) {
   splay->size = 0;
   splay->root = sentinel;
+  splay->cmp = cmp;
 }
 
 int Splay_size(Splay *splay) {
@@ -111,8 +110,7 @@ int Splay_size(Splay *splay) {
 
 void *Splay_get(Splay *splay, char *key) {
   Splay_balance(splay, key);
-  if (splay->root != sentinel)
-    return splay->root->val;
+  if (splay->root != sentinel) return splay->root->val;
   Splay_rebuild(splay);
   return NULL;
 }

@@ -14,7 +14,7 @@ static struct EnvNode *EnvNode_new() {
   struct EnvNode *node;
   node = xmalloc(sizeof(struct EnvNode));
   node->outer = NULL;
-  Splay_init(&node->symbol);
+  Splay_init(&node->symbol, (int(*)(void*,void*))strcmp);
   return node;
 }
 
@@ -25,7 +25,7 @@ static void EnvNode_free(struct EnvNode *node) {
 
 void Env_init(Env *env) {
   env->root = EnvNode_new();
-  Splay_init(&env->keyword);
+  Splay_init(&env->keyword, (int(*)(void*,void*))strcmp);
 }
 
 void Env_push(Env *env) {
