@@ -19,7 +19,7 @@
 Env env;
 static Reader rd;
 static Writer wr;
-static S *consPool;
+static S *pool;
 
 extern S *EVAL(S *expr);
 extern S *APPLY(S *fn, S *args);
@@ -89,7 +89,11 @@ int EQ(S *arg1, S *arg2) {
 
 static S *S_alloc() {
   S *expr;
-  expr = xmalloc(sizeof(S));
+  if (NILP(pool)) expr = xmalloc(sizeof(S));
+  else {
+    expr = pool;
+    pool = REST(expr);
+  }
   expr->Object.age = GC_NEWBIE;
   return expr;
 }
@@ -97,15 +101,9 @@ static S *S_alloc() {
 S *Cons_new(S *car, S *cdr) {
   S *root;
   assert(!ATOMP(cdr) || NILP(cdr));
-  if (!NILP(REST(consPool))) {
-    root = REST(consPool);
-    REST(consPool) = REST(root);
-  }
-  else {
-    root = S_alloc();
-    root->Cons.type = Cons;
-    root->Keyword.age = GC_PERM;
-  }
+  root = S_alloc();
+  root->Cons.type = Cons;
+  root->Keyword.age = GC_PERM;
   FIRST(root) = car;
   REST(root) = cdr;
   return root;
@@ -290,10 +288,9 @@ static S *Error_illegalArgument(S *fn, int provided, int min, int max) {
 }
 
 void Cons_free(S *expr) {
-  S_free(expr->Cons.car);
   S_free(expr->Cons.cdr);
-  REST(expr) = REST(consPool);
-  REST(consPool) = expr;
+  REST(expr) = REST(pool);
+  REST(pool) = expr;
 }
 
 void Symbol_free(S *expr) {
@@ -324,12 +321,12 @@ void Function_free(S *expr) {
 }
 
 void S_free(S *expr) {
-  if (TYPEP(expr, Cons)) return Cons_free(expr);
-  else if (TYPEP(expr, Symbol)) return Symbol_free(expr);
+  if (TYPEP(expr, Cons)) Cons_free(expr);
+  else if (TYPEP(expr, Symbol)) Symbol_free(expr);
   else if (TYPEP(expr, Keyword) || TYPEP(expr, Special)) return;
-  else if (TYPEP(expr, String)) return String_free(expr);
-  else if (TYPEP(expr, Macro)) return Macro_free(expr);
-  else if (TYPEP(expr, Function)) return Function_free(expr);
+  else if (TYPEP(expr, String)) String_free(expr);
+  else if (TYPEP(expr, Macro)) Macro_free(expr);
+  else if (TYPEP(expr, Function)) Function_free(expr);
   else free(expr);
 }
 
@@ -721,10 +718,7 @@ void Paren_init(Env *env, Reader *rd, Writer *wr) {
   Env_putKeyword(env, "Error", Error = Keyword_new("Error"));
 
   // init cons pool.
-  consPool = S_alloc();
-  consPool->Cons.type = Cons;
-  FIRST(consPool) = nil;
-  REST(consPool) = nil;
+  pool = nil;
 
   // init global symbols.
   quote = Symbol_new("quote");
