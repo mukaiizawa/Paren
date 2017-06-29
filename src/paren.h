@@ -17,11 +17,6 @@ typedef union S {
   } Cons;
   struct {
     HEADER;
-    union S *xtype;
-    Splay vars;
-  } Structure;
-  struct {
-    HEADER;
     char *name;
   } Symbol;
   struct {
