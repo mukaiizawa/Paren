@@ -25,7 +25,6 @@ extern S *EVAL(S *expr);
 extern S *APPLY(S *fn, S *args);
 
 // global symbols.
-
 S *t;
 S *nil;
 S *eof;
@@ -691,71 +690,68 @@ S *EVAL(S *expr) {
   return APPLY(fn, REVERSE(acc));
 }
 
-void Paren_init(Env *env, Reader *rd, Writer *wr) {
+void Paren_init() {
 
-  setbuf(stdout, NULL);
-
-  Env_init(env);
+  Env_init(&env);
   pool = nil;
 
-  // init ptimitive types.
+  // init primitive types.
   Keyword = Keyword_new("Keyword");
   Keyword->Keyword.type = Keyword;
-  Env_putKeyword(env, "t", t = Keyword_new("t"));
-  Env_putKeyword(env, "nil", pool = nil = Keyword_new("nil"));
-  Env_putKeyword(env, "EOF", eof = Keyword_new("EOF"));
-  Env_putKeyword(env, "Cons", Cons = Keyword_new("Cons"));
-  Env_putKeyword(env, "Symbol", Symbol = Keyword_new("Symbol"));
-  Env_putKeyword(env, "Keyword", Keyword);
-  Env_putKeyword(env, "String", String = Keyword_new("String"));
-  Env_putKeyword(env, "Char", Char = Keyword_new("Char"));
-  Env_putKeyword(env, "Number", Number = Keyword_new("Number"));
-  Env_putKeyword(env, "Special", Special = Keyword_new("Special"));
-  Env_putKeyword(env, "Macro", Macro = Keyword_new("Macro"));
-  Env_putKeyword(env, "Function", Function = Keyword_new("Function"));
-  Env_putKeyword(env, "Stream", Stream = Keyword_new("Stream"));
-  Env_putKeyword(env, "Error", Error = Keyword_new("Error"));
+  t = Keyword_new("t");
+  pool = nil = Keyword_new("nil");
+  eof = Keyword_new("EOF");
+  Cons = Keyword_new("Cons");
+  Symbol = Keyword_new("Symbol");
+  String = Keyword_new("String");
+  Char = Keyword_new("Char");
+  Number = Keyword_new("Number");
+  Special = Keyword_new("Special");
+  Macro = Keyword_new("Macro");
+  Function = Keyword_new("Function");
+  Stream = Keyword_new("Stream");
+  Error = Keyword_new("Error");
 
   // init global symbols.
   quote = Symbol_new("quote");
   dot = Symbol_new(".");
-  Env_putSymbol(env, "stdin", Stream_new(stdin));
-  Env_putSymbol(env, "stdout", Stream_new(stdout));
-  Env_putSymbol(env, "stderr", Stream_new(stderr));
-  Env_putSymbol(env, "pi", Number_new(3.14159265358979323846));
+  Env_putSymbol(&env, "stdin", Stream_new(stdin));
+  Env_putSymbol(&env, "stdout", Stream_new(stdout));
+  Env_putSymbol(&env, "stderr", Stream_new(stderr));
+  Env_putSymbol(&env, "pi", Number_new(3.14159265358979323846));
 
   // init special forms.
-  Env_putSymbol(env, "<-", Special_new(Special_assign));
-  Env_putSymbol(env, "def", Special_new(Special_def));
-  Env_putSymbol(env, "macro", Special_new(Special_macro));
-  Env_putSymbol(env, "fn", Special_new(Special_fn));
-  Env_putSymbol(env, "if", Special_new(Special_if));
-  Env_putSymbol(env, "let", Special_new(Special_let));
-  Env_putSymbol(env, "progn", Special_new(Special_progn));
-  Env_putSymbol(env, "quote", Special_new(Special_quote));
+  Env_putSymbol(&env, "<-", Special_new(Special_assign));
+  Env_putSymbol(&env, "def", Special_new(Special_def));
+  Env_putSymbol(&env, "macro", Special_new(Special_macro));
+  Env_putSymbol(&env, "fn", Special_new(Special_fn));
+  Env_putSymbol(&env, "if", Special_new(Special_if));
+  Env_putSymbol(&env, "let", Special_new(Special_let));
+  Env_putSymbol(&env, "progn", Special_new(Special_progn));
+  Env_putSymbol(&env, "quote", Special_new(Special_quote));
 
   // init functions.
-  Env_putSymbol(env, "atom?", Function_new(nil, NULL, NULL, Function_isAtom));
-  Env_putSymbol(env, "car", Function_new(nil, NULL, NULL, Function_car));
-  Env_putSymbol(env, "cdr", Function_new(nil, NULL, NULL, Function_cdr));
-  Env_putSymbol(env, "close", Function_new(Stream, NULL, NULL, Function_close));
-  Env_putSymbol(env, "cons", Function_new(nil, NULL, NULL, Function_cons));
-  Env_putSymbol(env, "eval", Function_new(nil, NULL, NULL, Function_eval));
-  Env_putSymbol(env, "apply", Function_new(nil, NULL, NULL, Function_apply));
-  Env_putSymbol(env, "getChar" , Function_new(Stream, NULL, NULL, Function_getChar));
-  Env_putSymbol(env, "nil?", Function_new(nil, NULL, NULL, Function_isNil));
-  Env_putSymbol(env, "open", Function_new(String, NULL, NULL, Function_open));
-  Env_putSymbol(env, "put", Function_new(Stream, NULL, NULL, Function_Stream_put));
-  Env_putSymbol(env, "putChar", Function_new(Stream, NULL, NULL, Function_putChar));
-  Env_putSymbol(env, "read", Function_new(Stream, NULL, NULL, Function_read));
-  Env_putSymbol(env, "+", Function_new(Number, NULL, NULL, Function_Number_add));
-  Env_putSymbol(env, "*", Function_new(Number, NULL, NULL, Function_Number_mul));
-  Env_putSymbol(env, "=?", Function_new(nil, NULL, NULL, Function_isEqual));
-  Env_putSymbol(env, "typeOf", Function_new(nil, NULL, NULL, Function_typeOf));
+  Env_putSymbol(&env, "atom?", Function_new(nil, NULL, NULL, Function_isAtom));
+  Env_putSymbol(&env, "car", Function_new(nil, NULL, NULL, Function_car));
+  Env_putSymbol(&env, "cdr", Function_new(nil, NULL, NULL, Function_cdr));
+  Env_putSymbol(&env, "close", Function_new(Stream, NULL, NULL, Function_close));
+  Env_putSymbol(&env, "cons", Function_new(nil, NULL, NULL, Function_cons));
+  Env_putSymbol(&env, "eval", Function_new(nil, NULL, NULL, Function_eval));
+  Env_putSymbol(&env, "apply", Function_new(nil, NULL, NULL, Function_apply));
+  Env_putSymbol(&env, "getChar" , Function_new(Stream, NULL, NULL, Function_getChar));
+  Env_putSymbol(&env, "nil?", Function_new(nil, NULL, NULL, Function_isNil));
+  Env_putSymbol(&env, "open", Function_new(String, NULL, NULL, Function_open));
+  Env_putSymbol(&env, "put", Function_new(Stream, NULL, NULL, Function_Stream_put));
+  Env_putSymbol(&env, "putChar", Function_new(Stream, NULL, NULL, Function_putChar));
+  Env_putSymbol(&env, "read", Function_new(Stream, NULL, NULL, Function_read));
+  Env_putSymbol(&env, "+", Function_new(Number, NULL, NULL, Function_Number_add));
+  Env_putSymbol(&env, "*", Function_new(Number, NULL, NULL, Function_Number_mul));
+  Env_putSymbol(&env, "=", Function_new(nil, NULL, NULL, Function_isEqual));
+  Env_putSymbol(&env, "typeOf", Function_new(nil, NULL, NULL, Function_typeOf));
 
   // init reader and writer.
-  Reader_init(rd, stdin, eof);
-  Writer_init(wr, stdout);
+  Reader_init(&rd, stdin, eof);
+  Writer_init(&wr, stdout);
 
 }
 
@@ -769,7 +765,8 @@ static void Paren_prompt() {
 
 int main(int argc, char* argv[]) {
   void *expr;
-  Paren_init(&env, &rd, &wr);
+  setbuf(stdout, NULL);
+  Paren_init();
   Paren_prompt();
   while ((expr = Reader_read(&rd)) != eof) {
     expr = EVAL(expr);
