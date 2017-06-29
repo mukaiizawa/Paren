@@ -326,7 +326,10 @@ void S_free(S *expr) {
   else if (TYPEP(expr, String)) String_free(expr);
   else if (TYPEP(expr, Macro)) Macro_free(expr);
   else if (TYPEP(expr, Function)) Function_free(expr);
-  else free(expr);
+  expr->Object.type = Cons;
+  expr->Cons.car = nil;
+  expr->Cons.cdr = pool;
+  pool = expr;
 }
 
 // special forms
