@@ -17,7 +17,7 @@ typedef union S {
   } Cons;
   struct {
     HEADER;
-    char *name;
+    union S *xtype;
     Splay vars;
   } Structure;
   struct {
@@ -76,6 +76,7 @@ typedef union S {
 #define THIRD(expr) FIRST(REST(REST(expr)))
 #define ATOMP(expr) ((expr)->Cons.type != Cons)
 #define NILP(expr) ((expr) == nil)
+#define LISTP(expr) (NILP(expr) || !ATOMP(expr))
 extern int LENGTH(S *expr);
 extern int TYPEP(S *expr, S *type);
 extern int EQ(S *arg1, S *arg2);

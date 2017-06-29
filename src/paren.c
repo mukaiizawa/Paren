@@ -440,6 +440,7 @@ static S *Special_fn(S *expr) {
     params = FIRST(expr);
     body = REST(expr);
   }
+  if (!LISTP(params)) return Error_illegalParameter(params);
   for (expr = params; !NILP(expr); expr = REST(expr)) {
     if (!TYPEP(FIRST(expr), Symbol)) return Error_illegalParameter(params);
     if (EQ(FIRST(expr), dot)) {
@@ -738,7 +739,7 @@ void Paren_init() {
   Env_putSymbol(&env, "cons", Function_new(nil, NULL, NULL, Function_cons));
   Env_putSymbol(&env, "eval", Function_new(nil, NULL, NULL, Function_eval));
   Env_putSymbol(&env, "apply", Function_new(nil, NULL, NULL, Function_apply));
-  Env_putSymbol(&env, "getChar" , Function_new(Stream, NULL, NULL, Function_getChar));
+  Env_putSymbol(&env, "getChar", Function_new(Stream, NULL, NULL, Function_getChar));
   Env_putSymbol(&env, "nil?", Function_new(nil, NULL, NULL, Function_isNil));
   Env_putSymbol(&env, "open", Function_new(String, NULL, NULL, Function_open));
   Env_putSymbol(&env, "put", Function_new(Stream, NULL, NULL, Function_Stream_put));
