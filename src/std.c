@@ -57,3 +57,7 @@ char *xitoa(int n) {
 int xstreq(char *s1, char *s2) {
   return strcmp(s1, s2) == 0;
 }
+
+int xnstreq(char *s1, char *s2, int n) {
+  return strncmp(s1, s2, n) == 0;
+}
