@@ -588,7 +588,7 @@ static S *Function_apply(S *args) {
     return Error_msg("apply: First argument type must be Function.");
   if (ATOMP(FIRST(acc = REVERSE(REST(args)))))
     return Error_msg("apply: Last argument must be List.");
-  for (args = FIRST(acc), acc = REST(acc); !NILP(acc); acc =REST(acc))
+  for (args = FIRST(acc), acc = REST(acc); !NILP(acc); acc = REST(acc))
     args = Cons_new(FIRST(acc), args);
   return APPLY(fn, args);
 }
