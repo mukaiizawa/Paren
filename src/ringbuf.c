@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "ringbuf.h"
 
@@ -20,20 +21,14 @@ int Ringbuf_isEmpty(Ringbuf *ringbuf) {
 void Ringbuf_put(Ringbuf *ringbuf, int c) {
   int nextIn;
   nextIn = (ringbuf->in + 1) % RINGBUF_BUFSIZ;
-  if (nextIn == ringbuf->out) {
-    fprintf(stderr, "Ringbuf_put: Buffer over flow.");
-    exit(1);
-  }
+  assert(nextIn != ringbuf->out);    // buffer  over flow.
   ringbuf->buf[ringbuf->in] = c;
   ringbuf->in = nextIn;
 }
 
 int Ringbuf_get(Ringbuf *ringbuf) {
   int c;
-  if (Ringbuf_isEmpty(ringbuf)) {
-    fprintf(stderr, "Ringbuf_get: Buffer empty.");
-    exit(1);
-  }
+  assert(!Ringbuf_isEmpty(ringbuf));
   c = ringbuf->buf[ringbuf->out];
   ringbuf->out = (ringbuf->out + 1) % RINGBUF_BUFSIZ;
   return c;
