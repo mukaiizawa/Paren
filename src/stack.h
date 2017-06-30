@@ -2,7 +2,6 @@
   stack.
 */
 
-
 typedef struct {
   struct StackNode {
     struct StackNode *next;

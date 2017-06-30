@@ -9,6 +9,8 @@
 #include <string.h>
 
 #include "std.h"
+#include "array.h"
+#include "stack.h"
 #include "splay.h"
 #include "env.h"
 #include "paren.h"
@@ -17,14 +19,15 @@
 #include "writer.h"
 
 Env env;
+static GC gc;
 static Reader rd;
 static Writer wr;
-static S *pool;
 
 extern S *EVAL(S *expr);
 extern S *APPLY(S *fn, S *args);
 
 // global symbols.
+
 S *t;
 S *nil;
 S *eof;
@@ -86,23 +89,11 @@ int EQ(S *arg1, S *arg2) {
   else return arg1 == arg2;
 }
 
-static S *S_alloc() {
-  S *expr;
-  if (NILP(pool)) expr = xmalloc(sizeof(S));
-  else {
-    expr = pool;
-    pool = REST(expr);
-  }
-  expr->Object.age = GC_NEWBIE;
-  return expr;
-}
-
 S *Cons_new(S *car, S *cdr) {
   S *root;
   assert(!ATOMP(cdr) || NILP(cdr));
-  root = S_alloc();
+  root = GC_alloc(&gc);
   root->Cons.type = Cons;
-  root->Keyword.age = GC_PERM;
   FIRST(root) = car;
   REST(root) = cdr;
   return root;
@@ -110,7 +101,7 @@ S *Cons_new(S *car, S *cdr) {
 
 S *Symbol_new(char *name) {
   S *expr;
-  expr = S_alloc();
+  expr = GC_alloc(&gc);
   expr->Symbol.type = Symbol;
   expr->Symbol.name = name;
   return expr;
@@ -123,7 +114,7 @@ S *Keyword_new(char *val) {
     free(val);
     return expr;
   }
-  expr = S_alloc();
+  expr = GC_alloc(&gc);
   expr->Keyword.type = Keyword;
   expr->Keyword.age = GC_PERM;
   expr->Keyword.val = val;
@@ -133,7 +124,7 @@ S *Keyword_new(char *val) {
 
 S *String_new(char *val) {
   S *expr;
-  expr = S_alloc();
+  expr = GC_alloc(&gc);
   expr->String.type = String;
   expr->String.val = val;
   return expr;
@@ -142,7 +133,7 @@ S *String_new(char *val) {
 S *Char_new(char val) {
   S *expr;
   if (val == '\0') return Error_msg("read: Illegal character.");
-  expr = S_alloc();
+  expr = GC_alloc(&gc);
   expr->Char.type = Char;
   expr->Char.val = val;
   return expr;
@@ -150,7 +141,7 @@ S *Char_new(char val) {
 
 S *Number_new(double val) {
   S *expr;
-  expr = S_alloc();
+  expr = GC_alloc(&gc);
   expr->Number.type = Number;
   expr->Number.val = val;
   return expr;
@@ -211,7 +202,7 @@ static S *Function_merge(S *fnTo, S *fnFrom) {
 
 S *Special_new(S *fn(S *)) {
   S *expr;
-  expr = S_alloc();
+  expr = GC_alloc(&gc);
   expr->Special.type = Special;
   expr->Special.age = GC_PERM;
   expr->Special.fn = fn;
@@ -220,9 +211,8 @@ S *Special_new(S *fn(S *)) {
 
 S *Macro_new(S *params, S *body) {
   S *expr;
-  expr = S_alloc();
+  expr = GC_alloc(&gc);
   expr->Macro.type = Macro;
-  expr->Macro.age = GC_PERM;
   expr->Macro.params = params;
   expr->Macro.body = body;
   return expr;
@@ -230,7 +220,7 @@ S *Macro_new(S *params, S *body) {
 
 S *Function_new(S *type, S *params, S *body, S *prim(S *)) {
   S *expr;
-  expr = S_alloc();
+  expr = GC_alloc(&gc);
   expr->Function.type = Function;
   expr->Function.gDefault = expr->Function.generics = NULL;
   Function_addGeneric(expr, type, params, body, prim);
@@ -239,7 +229,7 @@ S *Function_new(S *type, S *params, S *body, S *prim(S *)) {
 
 S *Stream_new(FILE *stream) {
   S *expr;
-  expr = S_alloc();
+  expr = GC_alloc(&gc);
   expr->Stream.type = Stream;
   expr->Stream.fp = stream;
   return expr;
@@ -248,7 +238,7 @@ S *Stream_new(FILE *stream) {
 S *Error_new(S *args, ...) {
   S *err, *acc, *arg;
   va_list va;
-  err = S_alloc();
+  err = GC_alloc(&gc);
   err->Error.type = Error;
   va_start(va, args);
   acc = nil;
@@ -288,8 +278,8 @@ static S *Error_illegalArgument(S *fn, int provided, int min, int max) {
 
 void Cons_free(S *expr) {
   S_free(expr->Cons.cdr);
-  REST(expr) = REST(pool);
-  REST(pool) = expr;
+  // REST(expr) = REST(pool);
+  // REST(pool) = expr;
 }
 
 void Symbol_free(S *expr) {
@@ -328,8 +318,8 @@ void S_free(S *expr) {
   else if (TYPEP(expr, Function)) Function_free(expr);
   expr->Object.type = Cons;
   expr->Cons.car = nil;
-  expr->Cons.cdr = pool;
-  pool = expr;
+  // expr->Cons.cdr = pool;
+  // pool = expr;
 }
 
 // special forms
@@ -697,13 +687,13 @@ S *EVAL(S *expr) {
 void Paren_init() {
 
   Env_init(&env);
-  pool = nil;
+  GC_init(&gc);
 
   // init primitive types.
   Keyword = Keyword_new("Keyword");
   Keyword->Keyword.type = Keyword;
   t = Keyword_new("t");
-  pool = nil = Keyword_new("nil");
+  nil = Keyword_new("nil");
   eof = Keyword_new("EOF");
   Cons = Keyword_new("Cons");
   Symbol = Keyword_new("Symbol");

@@ -21,28 +21,31 @@
 #include <assert.h>
 
 #include "std.h"
+#include "array.h"
+#include "stack.h"
 #include "splay.h"
 #include "env.h"
 #include "paren.h"
 #include "gc.h"
 
-/*
- * GC初期化処理
- */
 void GC_init(GC *gc) {
-  gc->gcCount = gc->newbieCount = 0;
-  gc->newbies = gc->elders = nil;
+  int size;
+  size = sizeof(S *);
+  Array_init(&gc->newbies, size, GC_NEWBIE_SIZE);
+  Array_init(&gc->elders, size, GC_INIT_ELDER_SIZE);
+  Stack_init(&gc->pool);
+  gc->times = 0;
 }
 
-/*
- * マーキング処理
- * GC対象外のオブジェクトにマーキングを行う。
- */
-static void GC_mark(S *target) {
-  while (!NILP(target)) {
-    // do mark
-    target = REST(target);
-  }
+S *GC_alloc(GC *gc) {
+  S *expr;
+  if (Stack_isEmpty(&gc->pool)) expr = xmalloc(sizeof(S));
+  else expr = Stack_pop(&gc->pool);
+  expr->Object.age = GC_NEWBIE;
+  return expr;
+}
+
+static void GC_mark(Array *objs) {
 }
 
 /*
@@ -52,16 +55,16 @@ static void GC_mark(S *target) {
  * 古参の閾値に達したオブジェクトは古参に移行する。
  */
 static void GC_newbies(GC *gc) {
-  S *newbies;
-  GC_mark(gc->newbies);
-  newbies = gc->newbies;
-  while (!NILP(newbies)) {
-    if (FIRST(newbies)->Object.isAlive) FIRST(newbies)->Object.isAlive = 0;
-    else {
-      S_free(FIRST(newbies));
-    }
-    newbies = REST(newbies);
-  }
+  // S *newbies;
+  // GC_mark(gc->newbies);
+  // newbies = gc->newbies;
+  // while (!NILP(newbies)) {
+  //   if (FIRST(newbies)->Object.isAlive) FIRST(newbies)->Object.isAlive = 0;
+  //   else {
+  //     S_free(FIRST(newbies));
+  //   }
+  //   newbies = REST(newbies);
+  // }
 }
 
 /*
@@ -69,24 +72,7 @@ static void GC_newbies(GC *gc) {
  * 新参のGC回数が一定回数になったら実行する。
  */
 static void GC_elders(GC *gc) {
-  GC_mark(gc->elders);
-}
-
-/*
- * GCの管理対象を登録する。
- * parenにおいて管理対象となるのは次のオブジェクト
- * 管理対象にならないオブジェクト（永続オブジェクトまたは定数等）
- * - keyword parameter
- * - シンボル(環境のキーになるもの)
- * 管理対象とするもの
- * - 環境の値(環境解放処理にて解放)
- * - 関数の返り値
- */
-S *GC_regist(GC *gc, S *expr) {
-  assert(expr->Object.age == GC_NEWBIE);
-  gc->newbieCount++;
-  gc->newbies = Cons_new(expr, gc->newbies);
-  return expr;
+  GC_mark(&gc->elders);
 }
 
 /*
@@ -95,7 +81,7 @@ S *GC_regist(GC *gc, S *expr) {
  * 新米GCを実行した場合は、必要に応じて古参GCを実施する。
  */
 void GC_try(GC *gc) {
-  if (gc->newbieCount < GC_MAX_NEWBIE_NUM) return;
+  // if (gc->newbieNum < GC_MAX_NEWBIE_NUM) return;
   GC_newbies(gc);
-  if ((gc->gcCount = (gc->gcCount % GC_FREQ_ELDER) + 1) == 0) GC_elders(gc);
+  if ((gc->times = (gc->times % GC_FREQ_ELDER) + 1) == 0) GC_elders(gc);
 }
