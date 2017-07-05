@@ -272,21 +272,23 @@ Parenドキュメントの文法はマークダウン形式とする。
 - 関数
 例として関数のParenドキュメントを示す。
     #||
-     | # Syntax
+     | # Function list
+     | ## Syntax
      |     list . objects => list
-     | # Description
+     | ## Description
      | list returns a list containing the supplied objects.
-     | # Arguments
+     | ## Arguments
      |     objects --- a object list. 
-     | # Value
+     | ## Value
      |     list --- a list containing the supplied object.
-     | # Examples
-     | # Side Effects
-     | # Exceptional Situations
-     | # See Also
+     | ## Examples
+     | ## Side Effects
+     | ## Exceptional Situations
+     | ## See Also
      |     [cons](core.html#cons).
      |#
     (defun list (. args) args)
+一行目は見出しレベル最大で記述対象を明記する。
 Parenドキュメントを記載する場合は必要に応じて次の項目を使用する。
 - Syntax
 - Description
