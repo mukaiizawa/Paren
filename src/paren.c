@@ -26,7 +26,7 @@ static Writer wr;
 extern S *EVAL(S *expr);
 extern S *APPLY(S *fn, S *args);
 
-// global symbols.
+// global keywords
 
 S *t;
 S *nil;
@@ -34,7 +34,7 @@ S *eof;
 S *quote;
 S *dot;
 
-// primitive types.
+// primitive types
 
 S *Cons;
 S *Symbol;
@@ -48,7 +48,7 @@ S *Function;
 S *Stream;
 S *Error;
 
-// global functions (for ast manipulation).
+// global functions (for ast manipulation)
 
 int TYPEP(S *expr, S *type) {
   assert(expr->Object.type->Keyword.type = Keyword);
@@ -625,7 +625,7 @@ S *APPLY(S *fn, S *args) {
           , String_new(xvstrcat(
               "\ntype of `", FIRST(args)->Object.type->Keyword.val, "'."))
           , nil);
-    // invoke primitive function.
+    // invoke primitive function
     if (g->params == NULL) return g->prim(args);
     params = g->params;
     body = g->body;
@@ -689,7 +689,7 @@ void Paren_init() {
   Env_init(&env);
   GC_init(&gc);
 
-  // init primitive types.
+  // init primitive types
   Keyword = Keyword_new("Keyword");
   Keyword->Keyword.type = Keyword;
   t = Keyword_new("t");
@@ -706,7 +706,7 @@ void Paren_init() {
   Stream = Keyword_new("Stream");
   Error = Keyword_new("Error");
 
-  // init global symbols.
+  // init global symbols
   quote = Symbol_new("quote");
   dot = Symbol_new(".");
   Env_putSymbol(&env, "stdin", Stream_new(stdin));
@@ -714,7 +714,7 @@ void Paren_init() {
   Env_putSymbol(&env, "stderr", Stream_new(stderr));
   Env_putSymbol(&env, "pi", Number_new(3.14159265358979323846));
 
-  // init special forms.
+  // init special forms
   Env_putSymbol(&env, "<-", Special_new(Special_assign));
   Env_putSymbol(&env, "def", Special_new(Special_def));
   Env_putSymbol(&env, "macro", Special_new(Special_macro));
@@ -724,7 +724,7 @@ void Paren_init() {
   Env_putSymbol(&env, "progn", Special_new(Special_progn));
   Env_putSymbol(&env, "quote", Special_new(Special_quote));
 
-  // init functions.
+  // init functions
   Env_putSymbol(&env, "atom?", Function_new(nil, NULL, NULL, Function_isAtom));
   Env_putSymbol(&env, "car", Function_new(nil, NULL, NULL, Function_car));
   Env_putSymbol(&env, "cdr", Function_new(nil, NULL, NULL, Function_cdr));
@@ -743,7 +743,7 @@ void Paren_init() {
   Env_putSymbol(&env, "=", Function_new(nil, NULL, NULL, Function_isEqual));
   Env_putSymbol(&env, "typeOf", Function_new(nil, NULL, NULL, Function_typeOf));
 
-  // init reader and writer.
+  // init reader and writer
   Reader_init(&rd, stdin, eof);
   Writer_init(&wr, stdout);
 
