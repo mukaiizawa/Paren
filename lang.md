@@ -66,15 +66,12 @@ S式はリストまたはアトムである。
 要素がないリストは空のリストと呼び、
 セマンティックス上は後述するキーワード`:nil`と等価である。
 ### アトム(atom)
-    atom = (symbol | keyword | number | string | map | array)
+    atom = (symbol | keyword | number | string)
 atomは次の字句で構成される。
 - シンボル
 - キーワード
 - 数値
-- 文字
 - 文字列
-- マップ
-- 配列
 #### シンボル(symbol)
     symbol = identifier
     identifier = (identifier_first identifier_rest)
