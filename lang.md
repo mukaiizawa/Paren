@@ -66,17 +66,17 @@ S式はリストまたはアトムである。
 要素がないリストは空のリストと呼び、
 セマンティックス上は後述するキーワード`:nil`と等価である。
 ### アトム(atom)
-    atom = (symbol | keyword | number | string)
+    atom = (variable | keyword | number | string)
 atomは次の字句で構成される。
-- シンボル
+- 変数
 - キーワード
 - 数値
 - 文字列
-#### シンボル(symbol)
-    symbol = identifier
+#### 変数(variable)
+    variable = identifier
     identifier = (identifier_first identifier_rest)
-    identifier_first = [!$%&*+\-/<=>?a-zA-Z^_|.]
-    identifier_rest = (identifier_first | ["#',0-9\[\]`{}~])*
+    identifier_first = [!$%&*+\-/<=>?a-zA-Z^_|]
+    identifier_rest = (identifier_first | [#'0-9])*
 識別子は一部の記号及び数字を除く文字から始まり、
 ほとんどすべてのascii文字が任意の数続く。
 ただし、上記の条件を満たす識別子のうち、
@@ -155,7 +155,7 @@ Parenでは指数表記等はサポートしない。
 - fn
 ## <-(代入)
     <- = '(<-' assign_args* ')'
-    assign_args = symbol s_expr
+    assign_args = variable s_expr
 `<-`は現在の環境から最も近い環境に存在する変数に値を代入する。
 代入対象の変数が環境から見つからない場合は、
 現在の環境に対象変数を登録し、値を設定する。
@@ -166,7 +166,7 @@ Parenでは指数表記等はサポートしない。
 ## let(変数束縛)
     let = '(let' '(' let_form+ ')'
               s_expr* ')'
-    let_form = '(' symbol s_expr ')' | symbol | nil
+    let_form = '(' variable s_expr ')' | variable | nil
 `let`は新しく変数を束縛する。
 束縛する変数が既に宣言されていても構わない。
 第一引数が変数束縛フォームのリストを表す。
@@ -208,7 +208,7 @@ C言語系の条件分岐との比較イメージを示す。
 その順番は上のとおりに指定しなければならない。
 ### 必須パラメーター
     (fn (x y z) body)
-必須パラメーターはsymbolのリストである。
+必須パラメーターは変数のリストである。
 指定したパラメーターは必須となり、
 関数呼び出し時に実引数が足りない場合はエラーとなる。
 ### オプショナルパラメーター
