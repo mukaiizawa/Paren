@@ -65,24 +65,19 @@ S式はリストまたはアトムである。
 要素がないリストは空のリストと呼び、
 セマンティックス上は後述するキーワード`:nil`と等価である。
 ### アトム(atom)
-    atom = (variable | keyword | number | string)
+    atom = (identifier | number | string)
 atomは次のリテラルがある。
-- 変数
-- キーワード
+- 識別子
 - 数値
 - 文字列
-#### 変数(variable)
-    variable = identifier
+#### 識別子(variable)
     identifier = (identifier_first identifier_rest)
-    identifier_first = [!$%&*+\-/<=>?a-zA-Z^_|]
+    identifier_first = [!$%&*+\-/:<=>?a-zA-Z^_|]
     identifier_rest = (identifier_first | [#'0-9])*
 識別子は一部の記号及び数字を除く文字から始まり、
 ほとんどすべてのascii文字が任意の数続く。
 ただし、上記の条件を満たす識別子のうち、
 後述する数値と見做せるトークンに限り数値と見做す。
-#### キーワード(keyword)
-    keyword = ':' identifier
-キーワードは識別子の前に`:`を付けたものである。
 #### 数値(number)
     number = [+-]? [0-9]+ ('.' [0-9]+)?
 Parenでは指数表記等はサポートしない。
