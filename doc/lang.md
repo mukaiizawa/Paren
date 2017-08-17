@@ -1,6 +1,8 @@
 Paren言語仕様書
 
+# 概要
 この資料はParenの仕様を定義する。
+Parenのチュートリアルは別紙を参照のこと。
 
 # 基本概念
 ParenはCommon Lisp、Scheme、Arc等のLisp系の言語を参考に、
