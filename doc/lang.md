@@ -32,7 +32,7 @@ Parenの文法を以下のEBNF表記で定義する。
     [...] -- 文字グループ。[]内で指定された文字の何れか。
              x-yと表記された場合はxとyの間の何れかを表す。
              先頭に~を指定した場合は[]内で指定された文字以外の何れかを示す。
-    = -- 定義。左辺で示される構文要素を右辺で定義される。
+    := -- 定義。左辺で示される構文要素を右辺で定義される。
 ## 注意事項
 メタ言語内で、可読性のため空白を挿入することがある。
 その空白はメタ言語において無視されるものとする。
@@ -44,49 +44,49 @@ Parenの文法を以下のEBNF表記で定義する。
 字句規則はリードマクロの展開前と展開後で異なる。
 ここではリードマクロ展開後の字句規則について述べる。
 ## 字句の区切り(separator)
-    separator = space | comment
+    separator := space | comment
 プログラムは空白又はコメントにより区切られる。
 これらは要素の区切りとして使用される以外は無視される。
 ### 空白(space)
-    space = [\t\n ]
+    space := [\t\n ]
 空白はタブ文字、改行文字、半角スペースである。
 ### コメント(comment)
-    comment = (line_comment | documentation_coment)
-    line_comment = ';' [^\n]*
-    documentation_coment = '"""' .* '"""'
+    comment := (line_comment | documentation_coment)
+    line_comment := ';' [^\n]*
+    documentation_coment := '"""' .* '"""'
 コメントは一行コメントとドキュメンテーションコメントの二種類存在する。
 一行コメントは`;`から行末までである。
 ドキュメンテーションコメントは`"""`で始まり`"""`で囲まれた領域であり、
 最短一致で字句解析されるため、内部で`"""`を使用することはできない。
 ## S式(s_expr)
-    s_expr = list | atom
+    s_expr := list | atom
 S式はリストまたはアトムである。
 ### リスト(list)
-    list = '(' (s_expr (separator s_expr)*)* ')'
+    list := '(' (s_expr (separator s_expr)*)* ')'
 リストは零以上のS式を括弧`(`、`)`で括ったものである。
 要素がないリストは空のリストと呼び、
 セマンティックス上は後述するキーワード`:nil`と等価である。
 ### アトム(atom)
-    atom = (identifier | number | string)
+    atom := (identifier | number | string)
 atomは次のリテラルがある。
 - 識別子
 - 数値
 - 文字列
 #### 識別子(variable)
-    identifier = (identifier_first identifier_rest)
-    identifier_first = [!$%&*+\-/:<=>?a-zA-Z^_|]
-    identifier_rest = (identifier_first | [#'0-9])*
+    identifier := (identifier_first identifier_rest)
+    identifier_first := [!$%&*+\-/:<=>?a-zA-Z^_|]
+    identifier_rest := (identifier_first | [#'0-9])*
 識別子は一部の記号及び数字を除く文字から始まり、
 ほとんどすべてのascii文字が任意の数続く。
 ただし、上記の条件を満たす識別子のうち、
 後述する数値と見做せるトークンに限り数値と見做す。
 #### 数値(number)
-    number = [+-]? [0-9]+ ('.' [0-9]+)?
+    number := [+-]? [0-9]+ ('.' [0-9]+)?
 Parenでは指数表記等はサポートしない。
 処理の簡潔化のため、`001`等も数字と見做し、`1`と評価する。
 #### 文字列(string)
-    string = '"' ([^"\\] | esc)* '"'
-    esc = '\\' .
+    string := '"' ([^"\\] | esc)* '"'
+    esc := '\\' .
 文字列はダブルクォートで囲まれた文字またはエスケープシーケンスの列である。
 エスケープシーケンスは'\'から始まり次の一文字によりその意味が異なる。
 - n: 改行
@@ -99,13 +99,14 @@ Parenでは指数表記等はサポートしない。
 ここでは厳密に定義することはせず、
 意味論的にどのように展開されるべきかについて述べる。
 ## バッククォート(quote)
-    backquote = '`' s_expr
+    '`' s_expr
     => (quote s_expr)
 バッククォートはS式の前に`\``を付けたものである。
 展開結果はスペシャルフォーム`quote`で囲まれる。
 この展開を`s_expr`をクォートする。乃至、`s_expr`がクォートされるという。
 ## チルダ(tilde)
-    tilde = '~' s_expr
+    '~' s_expr
+    => (backQuote s_expr)
 チルダはその後に読み込まれるS式内に、
 後述するカンマまたは、カンマアットが含まれている場合を除き、
 バッククォートと同じ振る舞いをする。
@@ -126,12 +127,12 @@ Parenでは指数表記等はサポートしない。
     ~(list 1 ,@(list 2 3))
     => (list 1 2 3)
 ## 配列(array)
-    array = '[' s_expr* ']'
+    '[' s_expr* ']'
     => (array s_expr)
 配列は鍵括弧`[`、`]`で囲まれたS式である。
 展開後は、配列を生成するS式となる。
 ## マップ(map)
-    map = '{' (s_expr s_expr)* '}'
+    '{' (s_expr s_expr)* '}'
     => (map s_expr)
 マップは括弧`{`、`}`で囲まれたS式の対である。
 展開後は、マップを生成するS式となる。
