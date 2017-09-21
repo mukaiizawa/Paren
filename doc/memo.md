@@ -65,11 +65,11 @@ $methodはキーにメソッド名称、値にその型ごとの実装のハッ�
 自動でアクセサが生成される。
     (class Point () x y)
     (method .x ((Point p) :opt x)
-      (if ((nil? x) ({} ({} :fields p) :x)
-           ({} ({} :fields p) :x x))))
+      (if ((nil? x) ({} ({} :fields p) :x))
+          (:else ({} ({} :fields p) :x x))))
     (method .y ((Point p) :opt y)
-      (if ((nil? y) ({} ({} :fields p) :y)
-           ({} ({} :fields p) :y y))))
+      (if ((nil? y) ({} ({} :fields p) :y))
+          (:else ({} ({} :fields p) :y y))))
 Parenでは宣言したインスタンス変数はすべて外部に公開する仕様である。
 このことは、作成するクラスにドキュメントを書くことと、
 使用するクラスのドキュメントを読むことを後押しする。
