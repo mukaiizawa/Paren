@@ -15,26 +15,62 @@ Parenを作成するにあたり検討した記録などを示す。
 しかし、この仕様は次の理由で取りやめとなった。
 - 引数無しの関数が使えないのため不便
 - primitiveに総称関数をサポートすると実装が複雑になる
+- 書いていてつまらない
+- Parenらしくない
 
 # クラス機構の実装
-;; クラスは単なるハッシュマップ
-(class Class (SuperClass ...)
-    field ...)
-<=> (<- Class  { :type :Car
-                 :super '(:SuperClass ...)
-                 :fields '(field ...) })
-
-;; クラスの型を調べるにはtypeマクロを使用する。
-(type Class) <=> ({} Class :type) => :Class
-
-;; インスタンスの生成にはnewマクロを使用する。
-(new :Car) <=> { type :car
-
-
-;; メソッドはグローバルなそれにシグネチャをキーに持ち、値をメソッド本体に持つように実装
-;; 名前衝突回避のためにメソッド名称にはドットを先頭につける。
-(method .to_s ((Car car))
-   body_forms)
-<=> ({} $method.to_s signature body_form)
-
-;; 必要に応じて初期化処理を
+## クラスの作成
+クラスはマクロclassにより作成する。
+    (class Class (SuperClass ...)
+        field ...)
+    <=>
+    (progn
+        (<- Class #{:type :Class
+                    :super '(:SuperClass ...)
+                    :fields #{:field :nil ...}})
+        ({} $class :Class Class))
+作成したクラスはグローバル変数$classに登録される。
+クラスの実態は次に示すようなキーと値を持つようなハッシュマップである。
+    キー    値
+    -------------------------------
+    :type   型
+    :super  親クラスのリスト
+    :fields このクラスのフィールドのリスト
+クラスの構成から分かるように、メソッドはクラスに属さない。
+Parenのメソッドは次に示すように、呼び出し時に動的にディスパッチされる。
+クラスの型を調べるにはtypeマクロを使用する。
+    (type Class) <=> ({} Class :type)
+    => :Class
+## インスタンスの生成
+インスタンスの生成にはnewマクロを使用する。
+newの実態は、クラスをディープコピーするだけである。
+Parenのクラスシステムはクラスベースというよりはプロトタイプベースに近い。
+    (new Class) <=> (copy Class)
+## メソッドの定義
+メソッドの定義はmethodマクロを使用する。
+methodは型と変数名のリストを必須パラメーター指定するようなdefだと思えばよい。
+このマクロはグローバル変数$methodにメソッド登録するS式に展開される。
+    (method .method ((Class c))
+       body_forms)
+    <=> ({} ({} $method .method) '(:Class) body_form)
+$methodはキーにメソッド名称、値にその型ごとの実装のハッシュマップを持つ、
+ハッシュマップである。
+生成したオブジェクトの初期化は、慣習としてinitメソッドを定義してそこで行う。
+    (init (new Point) :x 4 :y 5)
+このようなinitは次のように定義されているであろう。
+    (method init ((Point p) :key (x 0) (y 0))
+        (.x p x)
+        (.y p y))
+例に示すように、実はインスタンス定義したインスタンス変数は、
+自動でアクセサが生成される。
+    (class Point () x y)
+    (method .x ((Point p) :opt x)
+      (if ((nil? x) ({} ({} :fields p) :x)
+           ({} ({} :fields p) :x x))))
+    (method .y ((Point p) :opt y)
+      (if ((nil? y) ({} ({} :fields p) :y)
+           ({} ({} :fields p) :y y))))
+Parenでは宣言したインスタンス変数はすべて外部に公開する仕様である。
+このことは、作成するクラスにドキュメントを書くことと、
+使用するクラスのドキュメントを読むことを後押しする。
+また、クラスをハックする手段を意図的に残している。
