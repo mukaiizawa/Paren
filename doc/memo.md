@@ -18,17 +18,28 @@ Parenを作成するにあたり検討した記録などを示す。
 - 書いていてつまらない
 - Parenらしくない
 
-# クラス機構の実装
+# クラス
+Parenは関数型言語として設計されているが、
+マクロの力により、手続き型言語として使用することも十分可能であることを見てきた。
+ここではマクロを用いてParenの上に構築されたオブジェクト指向言語について述べる。
+以後、このオブジェクトシステムをPOOP(Paren Object Oriented Programming)と呼ぶ。
+POOPはCommon LispのCLOSから強い影響を受けているが、
+強力すぎる機能をそぎ落として、使用頻度が高い必要最低限の機能に抑えてある。
+また、実装の簡潔に心がけ必要に応じてハックできる余地も残してある。
 ## クラスの作成
 クラスはマクロclassにより作成する。
-    (class Class (SuperClass ...)
+    (class class_name (super_class ...)
         field ...)
-    <=>
-    (progn
-        (<- Class #{:type :Class
-                    :super '(:SuperClass ...)
-                    :fields #{:field :nil ...}})
-        ({} $class :Class Class))
+    class_name -- 作成するクラスの名前
+    super_class -- 作成するクラスのスーパークラス
+    field -- 作成するクラスのインスタンス変数
+classマクロは次のような式に展開される。
+    (<- Class #{:type :Class
+                :super '(:SuperClass ...)
+                :fields #{:field :nil ...}})
+二次元ベクトル空間の元を表すクラスPointを示す。
+例のように、クラス名は慣習としてパスカルケースを用いる。
+    (class Point () x y)
 作成したクラスはグローバル変数$classに登録される。
 クラスの実態は次に示すようなキーと値を持つようなハッシュマップである。
     キー    値
