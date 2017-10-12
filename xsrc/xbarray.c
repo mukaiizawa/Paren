@@ -21,82 +21,76 @@
  * SOFTWARE.
  */
 
-#include <stdlib.h>
 #include <string.h>
 
 #include "std.h"
+#include "xbarray.h"
 
-#if XCONSOLE_P
-#include "xconsole.h"
-#endif
-
-void xvsprintf(char *buf,char *fmt,va_list va) {
-  int len;
-#if DOS_P
-  len=vsprintf(buf,fmt,va);
-#else
-  len=vsnprintf(buf,MAX_STR_LEN,fmt,va);
-#endif
-  if(len+1>MAX_STR_LEN) xerror("xvsprintf/buffer overflow.");
+void xbarray_reset(struct xbarray *x) {
+  x->size=0;
 }
 
-void xsprintf(char *buf,char *fmt,...) {
-  va_list va;
-  va_start(va,fmt);
-  xvsprintf(buf,fmt,va);
-  va_end(va);
+void xbarray_init(struct xbarray *x) {
+  x->elt=NULL;
+  x->alloc_size=0;
+  xbarray_reset(x);
 }
 
-void xerror(char *fmt,...) {
-  va_list va;
-  char buf[MAX_STR_LEN];
-  va_start(va,fmt);
-  xvsprintf(buf,fmt,va);
-  va_end(va);
-#if XCONSOLE_P
-  xputc('!');
-  xputs(buf);
-  xputc('\n');
-  xexit();
-#else
-  fprintf(stderr,"!%s\n",buf);
-  exit(1);
-#endif
+void xbarray_free(struct xbarray *x) {
+  xfree(x->elt);
 }
 
-void *xmalloc(int size) {
-  void *p;
-  if(size==0) return NULL;
-  if((p=malloc(size))==NULL) xerror("xmalloc failed.");
+static void extend(struct xbarray *x,int size) {
+  int newsize; 
+  newsize=x->alloc_size;
+  if(newsize==0) newsize=16;
+  while(newsize<size) newsize*=2;
+  xassert(newsize!=x->alloc_size); 
+  x->elt=xrealloc(x->elt,newsize);
+  x->alloc_size=newsize;
+}
+
+char *xbarray_reserve(struct xbarray *x,int size) {
+  char *p; 
+  if(x->alloc_size<x->size+size) extend(x,x->size+size);
+  p=x->elt+x->size;
+  x->size+=size;
   return p;
 }
 
-void xfree(void *p) {
-  if(p!=NULL) free(p);
+void xbarray_add(struct xbarray *x,int ch) {
+  *xbarray_reserve(x,1)=ch;
 }
 
-void *xrealloc(void *p,int size) {
-  if(p==NULL) p=xmalloc(size);
-  else if(size==0) {
-    xfree(p);
-    p=NULL;
-  } else {
-    if((p=realloc(p,size))==NULL) xerror("xrealloc failed.");
-  }
-  return p;
-}
-
-char *xstrdup(char *s) {
+void xbarray_adds(struct xbarray *x,char *s) {
   int len;
-  char *result;
   len=strlen(s);
-  result=xmalloc(len+1);
-  memcpy(result,s,len+1);
-  return result;
+  memcpy(xbarray_reserve(x,len),s,len);
 }
 
-#ifndef NDEBUG
-void xassert_failed(char *fn,int line) {
-  xerror("assert failed at %s:%d.",fn,line);
+void xbarray_addf(struct xbarray *x,char *fmt,...) {
+  char buf[MAX_STR_LEN];
+  va_list va;
+  va_start(va,fmt);
+  xvsprintf(buf,fmt,va);
+  va_end(va);
+  xbarray_adds(x,buf);
 }
-#endif
+
+char *xbarray_fgets(struct xbarray *x,FILE *fp) {
+  int ch;
+  xbarray_reset(x);
+  while(TRUE) {
+    ch=fgetc(fp);
+    if(ch==EOF) return NULL;
+    if(ch=='\n') break;
+    if(ch=='\r') {
+      ch=fgetc(fp);
+      if(ch!='\n') ungetc(ch,fp);
+      break;
+    }
+    xbarray_add(x,ch);
+  }
+  xbarray_add(x,'\0');
+  return x->elt;
+}

@@ -21,46 +21,15 @@
  * SOFTWARE.
  */
 
-#define TRUE 1
-#define FALSE 0
+#define CQUEUE_BUF 80
 
-#include "config.h"
+struct cqueue {
+  char buf[CQUEUE_BUF];
+  int inpos;
+  int outpos;
+};
 
-#include <stdio.h>
-#include <stdarg.h>
-
-#ifdef __BORLANDC__
-#define INT64(x) (x ## i64)
-typedef int intptr_t;
-typedef unsigned int uintptr_t;
-typedef __int64 int64_t;
-#define INT32_MAX 2147483647
-#define INT32_MIN (-INT32_MAX-1)
-#define INTPTR_MAX INT32_MAX
-#define INTPTR_MIN INT32_MIN
-#define INT64_MAX INT64(9223372036854775807)
-#define INT64_MIN (-INT64_MAX-1)
-#else
-#define INT64(x) (x ## ll)
-#include <stdint.h>
-#endif
-
-#define MAX_STR_LEN 256
-
-extern void xvsprintf(char *buf,char *fmt,va_list va);
-extern void xsprintf(char *buf,char *fmt,...);
-
-extern void xerror(char *fmt,...);
-extern void *xmalloc(int size);
-extern void xfree(void *);
-extern void *xrealloc(void *p,int size);
-extern char *xstrdup(char *s);
-
-/* use xassert to catch assert failure. */
-
-#ifdef NDEBUG
-#define xassert(cond) ;
-#else
-extern void xassert_failed(char *fn,int line);
-#define xassert(cond) if(!(cond)) xassert_failed(__FILE__,__LINE__);
-#endif
+extern void cqueue_reset(struct cqueue *q);
+extern void cqueue_put(struct cqueue *q,int ch);
+extern int cqueue_get(struct cqueue *q);
+extern int cqueue_empty_p(struct cqueue *q);
