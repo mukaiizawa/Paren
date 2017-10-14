@@ -35,15 +35,17 @@ endif
 .c.o:
 	$(cc) $(cflags) $<
 
-paren=paren$(exe)
-all: $(paren)
+all: $(paren) paren.mi
 
-objs=paren.o std.o gc.o env.o writer.o reader.o splay.o ahdrd.o array.o \
-		 stack.o ringbuf.o
-$(paren): $(objs)
-	$(CC) $(CFLAGS) -g -o $@ $(objs)
+xc.a: std.o heap.o xbarray.o xctype.o splay.o xgetopt.o log.o xarray.o pf.o \
+	cqueue.o xsleep.o
+	ar -ru xc.a $+
+
+paren.mi: xc.a
+	echo should be implemented.
 
 include cdep.d
 
 clean:
-	$(RM) *.o *.exe
+	rm -f *.o *.a *.wk
+	rm -f $(paren)
