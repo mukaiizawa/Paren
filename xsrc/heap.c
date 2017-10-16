@@ -28,7 +28,7 @@
 
 #include "heap.h"
 
-struct heap heap_perm={NULL,NULL};
+struct heap heap_perm = { NULL, NULL };
 
 void heap_init(struct heap *h)
 {
@@ -36,76 +36,70 @@ void heap_init(struct heap *h)
   h->tail=NULL;
 }
 
-static int gap_to_align(int offset,int align)
+static int gap_to_align(int offset, int align)
 {
-  if(offset%align==0) return 0;
-  else return align-offset%align;
+  int mod = offset % align;
+  return (mod == 0)? 0: align - mod;
 }
 
-#define BLOCK_TOP offsetof(struct heap_block,buf[0])
+#define BLOCK_TOP offsetof(struct heap_block, buf[0])
 
-static void *independent_alloc(struct heap *h,int size,int align)
+static void *independent_alloc(struct heap *h, int size, int align)
 {
   int gap;
   struct heap_block *n;
-
-  gap=gap_to_align(BLOCK_TOP,align);
-  n=xmalloc(BLOCK_TOP+gap+size);
-  if(h->block==NULL) h->block=n;
+  gap = gap_to_align(BLOCK_TOP, align);
+  n = xmalloc(BLOCK_TOP + gap + size);
+  if (h->block == NULL) h->block = n;
   else {
-    n->next=h->block->next;
-    h->block->next=n;
+    n->next = h->block->next;
+    h->block->next = n;
   }
-  return n->buf+gap;
+  return n->buf + gap;
 }
 
-void *heap_alloc_align(struct heap *h,int size,int align)
+void *heap_alloc_align(struct heap *h, int size, int align)
 {
-  int topgap,used,gap;
+  int topgap, used, gap;
   struct heap_block *n;
-
-  if(size==0) return NULL;
-
-  topgap=gap_to_align(BLOCK_TOP,align);
-  if(topgap+size>HEAP_BLOCK_SIZE) return independent_alloc(h,size,align);
-
-  if(h->tail!=NULL) {
-    used=(int)(h->tail-h->block->buf);
-    gap=gap_to_align(BLOCK_TOP+used,align);
-    if(used+gap+size<=HEAP_BLOCK_SIZE) {
-      h->tail+=gap+size;
-      return h->tail-size;
-    } else if(used<HEAP_BLOCK_SIZE/2) {
-      return independent_alloc(h,size,align);
+  if (size == 0) return NULL;
+  topgap = gap_to_align(BLOCK_TOP, align);
+  if (topgap + size > HEAP_BLOCK_SIZE) return independent_alloc(h, size, align);
+  if (h->tail != NULL) {
+    used = (int)(h->tail-h->block->buf);
+    gap = gap_to_align(BLOCK_TOP + used, align);
+    if (used + gap + size <= HEAP_BLOCK_SIZE) {
+      h->tail += gap + size;
+      return h->tail - size;
+    } else if (used < HEAP_BLOCK_SIZE / 2) {
+      return independent_alloc(h, size, align);
     }
   }
-
-  n=xmalloc(sizeof(struct heap_block));
-  n->next=h->block;
-  h->block=n;
-  h->tail=n->buf+topgap+size;
-  return h->tail-size;	
+  n = xmalloc(sizeof(struct heap_block));
+  n->next = h->block;
+  h->block = n;
+  h->tail = n->buf + topgap + size;
+  return h->tail - size;
 }
 
 void *heap_alloc(struct heap *h,int size)
 {
   /* in general, apply ptr size alignment for safety. */
-  return heap_alloc_align(h,size,sizeof(void*));
+  return heap_alloc_align(h, size, sizeof(void*));
 }
 
 void heap_free(struct heap *h)
 {
   struct heap_block *b,*n;
-
-  b=h->block;
-  while(b!=NULL) {
-    n=b->next;
+  b = h->block;
+  while (b != NULL) {
+    n = b->next;
     xfree(b);
-    b=n;
+    b = n;
   }
 }
 
 char *heap_strdup(struct heap *h,char *s)
 {
-  return strcpy(heap_alloc_align(h,strlen(s)+1,1),s);
+  return strcpy(heap_alloc_align(h,strlen(s) + 1, 1), s);
 }

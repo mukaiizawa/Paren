@@ -38,7 +38,7 @@ endif
 all: $(paren) paren.mi
 
 xc.a: std.o heap.o xbarray.o xctype.o splay.o xgetopt.o log.o xarray.o pf.o \
-	cqueue.o xsleep.o
+	cqueue.o
 	ar -ru xc.a $+
 
 paren.mi: xc.a

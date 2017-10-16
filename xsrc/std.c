@@ -21,10 +21,10 @@
  * SOFTWARE.
  */
 
+#include "std.h"
+
 #include <stdlib.h>
 #include <string.h>
-
-#include "std.h"
 
 #if XCONSOLE_P
 #include "xconsole.h"

@@ -113,9 +113,9 @@
 
 /* options for paren */
 
-#define K 1024
-#define DEFAULT_FRAME_STACK_SIZE 1 /* * K CELL */
-#define DEFAULT_CONTEXT_STACK_SIZE 1 /* * K CELL */
+#define UNIT_K 1024
+#define DEFAULT_FRAME_STACK_SIZE 1
+#define DEFAULT_CONTEXT_STACK_SIZE 1
 
 #define IP_POLLING_INTERVAL 256 /* for gc/interrut check */
 

@@ -21,9 +21,10 @@
  * SOFTWARE.
  */
 
+#include "std.h"
+
 #include <string.h>
 
-#include "std.h"
 #include "xbarray.h"
 
 void xbarray_reset(struct xbarray *x) {
