@@ -60,14 +60,14 @@ Parenオブジェクトを出力する関数の名称をどうすればよいか
 - pprint
 2017-10-19
 次の仕様で実装する。
-    関数  処理
+    関数       処理
     -----------------------------------------
-    read  Parenオブジェクトとして入力
-    write Parenオブジェクトとして出力
-    getc  一文字読み込み
-    putc  書き込み
-    getln 一行読み込み
-    putln 書き込み後改行書き込み
+    write_expr Parenオブジェクトとして出力
+    write      書き込み
+    write_line 書き込み後改行
+    read_expr  Parenオブジェクトとして入力
+    read_char  一文字読み込み
+    read_line  一行読み込み
 
 # クラス
 Parenは関数型言語として設計されているが、
