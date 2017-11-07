@@ -34,7 +34,6 @@ struct heap {
 extern struct heap heap_perm;
 
 extern void heap_init(struct heap *h);
-extern void *heap_alloc_align(struct heap *h,int size,int align);
 extern void *heap_alloc(struct heap *h,int size);
 extern void heap_free(struct heap *h);
 extern char *heap_strdup(struct heap *h,char *s);
