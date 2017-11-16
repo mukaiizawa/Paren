@@ -50,6 +50,7 @@ Parenでは代入を頻繁に使用するため、
                  そうでなければ、現在の環境に束縛
     <--          現在の環境に束縛されている場合はその値を更新
                  そうでなければ、親の環境を探索
+                 ない場合はトップレベルに束縛
 次のようにな記号も考えたが、タイプ数など様々な理由により却下
 - ::=
 定義として使用したいが、その場合よく使うローカル変数に束縛する演算子となり、タイプ数が多くなりがち
@@ -78,8 +79,10 @@ Parenオブジェクトを出力する関数の名称をどうすればよいか
     write_expr Parenオブジェクトとして出力
     write      書き込み
     write_line 書き込み後改行
+
     read_expr  Parenオブジェクトとして入力
     read_char  一文字読み込み
+    read_byte  一バイト書き込み
     read_line  一行読み込み
 
 # クラス
@@ -149,3 +152,20 @@ Parenでは宣言したインスタンス変数はすべて外部に公開する
 このことは、作成するクラスにドキュメントを書くことと、
 使用するクラスのドキュメントを読むことを後押しする。
 また、クラスをハックする手段を意図的に残している。
+
+# マークダウンの書式
+Parenで作成するマークダウンパーサの構文
+    markdown ::= expr ...
+    expr ::= { titile | list | pre | quote | paragraph }
+    title ::= { # | ## | ### | #### | ##### | ###### } string new_line
+    pre :;= pre_line [pre_line ...]
+    pre_line ::= '    ' string new_line
+    paragraph ::= [ [ string | inline_code | link ] ... ] string new_line
+    inline_code ::= ` string `
+    link ::=  '[' string '](' url ')'
+    list ::= { u_list [u_list ...] | o_list [o_list ...] }
+    u_list ::= - string new_line
+    o_list ::= 1. string new_line
+    string -- 改行を含まない文字の列
+    new_line -- 改行
+    url -- URL

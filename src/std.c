@@ -1,63 +1,104 @@
-/*
-  paren standard library.
-*/
+// extended standard
 
-#include <assert.h>
-#include <math.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+/*
+ * Mulk system.
+ * Copyright (C) 2009-2017 Ken'ichi Tokuoka. All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in 
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 
 #include "std.h"
 
-#define xerror(str) { \
-  fprintf(stderr, str); \
-  exit(1); \
+#include <stdlib.h>
+#include <string.h>
+
+#if XCONSOLE_P
+#include "xconsole.h"
+#endif
+
+void xvsprintf(char *buf,char *fmt,va_list va) {
+  int len;
+#if DOS_P
+  len=vsprintf(buf,fmt,va);
+#else
+  len=vsnprintf(buf,MAX_STR_LEN,fmt,va);
+#endif
+  if(len+1>MAX_STR_LEN) xerror("xvsprintf/buffer overflow.");
+}
+
+void xsprintf(char *buf,char *fmt,...) {
+  va_list va;
+  va_start(va,fmt);
+  xvsprintf(buf,fmt,va);
+  va_end(va);
+}
+
+void xerror(char *fmt,...) {
+  va_list va;
+  char buf[MAX_STR_LEN];
+  va_start(va,fmt);
+  xvsprintf(buf,fmt,va);
+  va_end(va);
+#if XCONSOLE_P
+  xputc('!');
+  xputs(buf);
+  xputc('\n');
+  xexit();
+#else
+  fprintf(stderr,"!%s\n",buf);
+  exit(1);
+#endif
 }
 
 void *xmalloc(int size) {
   void *p;
-  assert(size > 0);
-  if ((p = malloc(size)) == NULL) xerror("xmalloc: Cannot allocate memory.");
+  if(size==0) return NULL;
+  if((p=malloc(size))==NULL) xerror("xmalloc failed.");
   return p;
 }
 
-void *xrealloc(void *p, int size) {
-  if (p == NULL) return xmalloc(size);
-  if ((p = realloc(p, size)) == NULL)
-    xerror("xrealloc: Cannot allocate memory.");
-  return p;
+void xfree(void *p) {
+  if(p!=NULL) free(p);
 }
 
-char *_xvstrcat(char *s1, ...) {
-  int len;
-  char *s, *buf;
-  va_list args;
-  va_start(args, s1);
-  buf = xmalloc(len = sizeof(char));
-  buf[0] = '\0';
-  for (s = s1; s != NULL; s = va_arg(args, char *)) {
-    buf = xrealloc(buf, sizeof(char) * (len += strlen(s)));
-    strcat(buf, s);
+void *xrealloc(void *p,int size) {
+  if(p==NULL) p=xmalloc(size);
+  else if(size==0) {
+    xfree(p);
+    p=NULL;
+  } else {
+    if((p=realloc(p,size))==NULL) xerror("xrealloc failed.");
   }
-  va_end(args);
-  return buf;
+  return p;
 }
 
-char *xitoa(int n) {
+char *xstrdup(char *s) {
   int len;
-  char *s;
-  assert(n >= 0);    // support only positive number.
-  s = xmalloc(sizeof(char) * (len = (int)ceil(log10(n + 1)) + 1));
-  if (sprintf(s, "%d", n) + 1 != len) xerror("xiota: Buffer over flow.");
-  return s;
+  char *result;
+  len=strlen(s);
+  result=xmalloc(len+1);
+  memcpy(result,s,len+1);
+  return result;
 }
 
-int xstreq(char *s1, char *s2) {
-  return strcmp(s1, s2) == 0;
+#ifndef NDEBUG
+void xassert_failed(char *fn,int line) {
+  xerror("assert failed at %s:%d.",fn,line);
 }
-
-int xnstreq(char *s1, char *s2, int n) {
-  return strncmp(s1, s2, n) == 0;
-}
+#endif

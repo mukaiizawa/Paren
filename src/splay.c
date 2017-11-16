@@ -1,144 +1,194 @@
-/*
-  splay tree.
-*/
+// splay tree
 
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
+/*
+ * Mulk system.
+ * Copyright (C) 2009-2017 Ken'ichi Tokuoka. All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in 
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 
 #include "std.h"
+#include "heap.h"
 #include "splay.h"
 
-#define sentinel (&sentinelNode)
+static struct splay_node splay_null_node;
+#define null (&splay_null_node)
 
-static struct SplayNode sentinelNode;
+static struct splay_node *free_list=NULL;
 
-static struct SplayNode *SplayNode_new() {
-  struct SplayNode *node;
-  node = xmalloc(sizeof(struct SplayNode));
-  node->left = node->right = sentinel;
-  return node;
+static struct splay_node *alloc(void)
+{
+  struct splay_node *n;
+  if(free_list!=NULL) {
+    n=free_list;
+    free_list=n->left;
+  } else {
+    n=heap_alloc(&heap_perm,sizeof(struct splay_node));
+  }
+  return n;
 }
 
-static struct SplayNode *Splaynode_rotR(struct SplayNode *node) {
-  struct SplayNode *root;
-  root = node->left;
-  node->left = root->right;
-  root->right = node;
-  return root;
+static void release(struct splay_node *n)
+{
+  xassert(n!=null);
+  n->left=free_list;
+  free_list=n;
 }
 
-static struct SplayNode *Splaynode_rotL(struct SplayNode *node) {
-  struct SplayNode *root;
-  root = node->right;
-  node->right = root->left;
-  root->left = node;
-  return root;
+void splay_init(struct splay *s,int (*cmp)(void *p,void *q))
+{
+  s->top=null;
+  s->cmp=cmp;
 }
 
-static struct SplayNode *Splaynode_rotRR(struct SplayNode *node) {
-  return Splaynode_rotR(Splaynode_rotR(node));
-}
+static struct splay_node *balance(struct splay *s,void *key)
+{
+  struct splay_node *top,*p,*q;
+  int (*cmp)(void *p,void *q),d;
 
-static struct SplayNode *Splaynode_rotLL(struct SplayNode *node) {
-  return Splaynode_rotL(Splaynode_rotL(node));
-}
-
-static struct SplayNode *Splaynode_rotLR(struct SplayNode *node) {
-  node->left = Splaynode_rotL(node->left); 
-  return Splaynode_rotR(node);
-}
-
-static struct SplayNode *Splaynode_rotRL(struct SplayNode *node) {
-  node->right = Splaynode_rotR(node->right); 
-  return Splaynode_rotL(node);
-}
-
-static struct SplayNode *Splay_balance(Splay *splay, char *key) {
-  int cmp;
-  struct SplayNode *newRoot;
-  sentinel->key = key;
-  sentinel->right = sentinel->left = sentinel;
-  newRoot = splay->root;
-  while ((cmp = splay->cmp(key, newRoot->key)) != 0) {
-    if (cmp < 0) {
-      if ((cmp = splay->cmp(key, newRoot->left->key)) == 0)
-        return splay->root = Splaynode_rotR(newRoot);
-      newRoot = (cmp < 0)?
-        Splaynode_rotRR(newRoot):
-        Splaynode_rotLR(newRoot);
+  top=s->top;
+  cmp=s->cmp;
+  null->key=key;
+  null->left=null->right=null;
+  while((d=(*cmp)(key,top->key))!=0) {
+    p=top;
+    if(d<0) {
+      q=p->left;
+      if((d=(*cmp)(key,q->key))==0) {
+        top=q;
+        p->left=top->right;
+        top->right=p;
+        break;
+      } else if(d<0) {
+        top=q->left;
+        q->left=top->right;
+        top->right=p;
+      } else {
+        top=q->right;
+        q->right=top->left;
+        top->left=q;
+        p->left=top->right;
+        top->right=p;
+      }
+    } else {
+      q=p->right;
+      if((d=(*cmp)(key,q->key))==0) {
+        top=q;
+        p->right=top->left;
+        top->left=p;
+        break;
+      } else if(d>0) {
+        top=q->right;
+        q->right=top->left;
+        top->left=p;
+      } else {
+        top=q->left;
+        q->left=top->right;
+        top->right=q;
+        p->right=top->left;
+        top->left=p;
+      }
     }
-    else {
-      if ((cmp = splay->cmp(key, newRoot->right->key)) == 0)
-        return splay->root = Splaynode_rotL(newRoot);
-      newRoot = (cmp > 0)?
-        Splaynode_rotLL(newRoot):
-        Splaynode_rotRL(newRoot);
-    }
   }
-  return splay->root = newRoot;
+  return top;
 }
 
-static void Splay_rebuild(Splay *splay) {
-  struct SplayNode *newRoot, *node;
-  if (splay->root->left == sentinel)
-    newRoot = splay->root->right;
-  else {
-    newRoot = node = splay->root->left;
-    while (node->right != sentinel) node = node->right;
-    node->right = splay->root->right;
+static struct splay_node *resume(struct splay_node *top)
+{
+  struct splay_node *l,*r,*p;
+  l=top->left;
+  r=top->right;
+  if(l==null) return r;
+
+  if(r!=null) {
+    p=l;
+    while(p->right!=null) p=p->right;
+    p->right=r;
   }
-  splay->root = newRoot;
+  return l;
 }
 
-static void SplayNode_freeRec(struct SplayNode *node) {
-  if (node == sentinel) return;
-  SplayNode_freeRec(node->left);
-  SplayNode_freeRec(node->right);
-  free(node);
+void splay_add(struct splay *s,void *k,void *d)
+{
+  struct splay_node *top,*newtop;
+  newtop=alloc();
+  top=balance(s,k);
+  xassert(top==null);
+  newtop->left=null->left;
+  newtop->right=null->right;
+  newtop->key=k;
+  newtop->data=d;
+  s->top=newtop;
 }
 
-void Splay_init(Splay *splay, int (*cmp)(void *key1, void *key2)) {
-  splay->size = 0;
-  splay->root = sentinel;
-  splay->cmp = cmp;
-}
-
-int Splay_size(Splay *splay) {
-  return splay->size;
-}
-
-void *Splay_get(Splay *splay, char *key) {
-  Splay_balance(splay, key);
-  if (splay->root != sentinel) return splay->root->val;
-  Splay_rebuild(splay);
-  return NULL;
-}
-
-void Splay_put(Splay *splay, char *key, void *val) {
-  Splay_balance(splay, key);
-  if (splay->root == sentinel) {
-    struct SplayNode *newNode;
-    splay->size++;
-    newNode = SplayNode_new();
-    newNode->key = key;
-    newNode->left = splay->root->left;
-    newNode->right = splay->root->right;
-    splay->root = newNode;
+void *splay_find(struct splay *s,void *k)
+{
+  struct splay_node *top;
+  top=balance(s,k);
+  if(top==null) {
+    s->top=resume(top);
+    return NULL;
+  } else {
+    s->top=top;
+    return top->data;
   }
-  splay->root->val = val;
 }
 
-void Splay_remove(Splay *splay, char *key) {
-  struct SplayNode *rmNode;
-  splay->size--;
-  Splay_balance(splay, key);
-  rmNode = splay->root;
-  assert(rmNode != sentinel);
-  Splay_rebuild(splay);
-  SplayNode_freeRec(rmNode);
+void splay_delete(struct splay *s,void *k)
+{
+  struct splay_node *top;
+  top=balance(s,k);
+  xassert(top!=null);
+  s->top=resume(top);
+  release(top);
 }
 
-void Splay_free(Splay *splay) {
-  SplayNode_freeRec(splay->root);
+static void free1(struct splay_node *n)
+{
+  if(n!=null) {
+    free1(n->left);
+    free1(n->right);
+    release(n);
+  }
+}
+
+void splay_free(struct splay *s)
+{
+  free1(s->top);
+  s->top=null;
+}
+
+static void (*func)(int depth,void *key,void *data)=NULL;
+
+static void foreach1(int depth,struct splay_node *n)
+{
+  if(n!=null) {
+    foreach1(depth+1,n->left);
+    (*func)(depth,n->key,n->data);
+    foreach1(depth+1,n->right);
+  }
+}
+
+void splay_foreach(struct splay *s,void (*f)(int d,void *key,void *data))
+{
+  xassert(func==NULL);
+  func=f;
+  foreach1(0,s->top);
+  func=NULL;
 }

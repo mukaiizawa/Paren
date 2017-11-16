@@ -33,10 +33,11 @@
           " ")))))
 
 (defun main ()
-  (write-to!
-    (with-output-to-string (s)
-      (let ((*standard-output* s))
-        (print-depend)))
-    "cdep.d"))
+  (with-open-file (out (make-pathname :name "cdep.d")
+                       :direction :output
+                       :if-exists :supersede
+                       :if-does-not-exist :create)
+    (let ((*standard-output* out))
+      (print-depend))))
 
 (main)

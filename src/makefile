@@ -1,34 +1,48 @@
 # makefile
-# Usage: make [os=(linux|windows)] [cc=(clang|gcc)]
+# Usage: make [os={linux|windows}] [cc={clang|gcc}] [debug={on|off}]
 
 supportos=linux windows
 os?=linux
 cc?=clang
-CC=$(cc)
-CFLAGS=-Wall
+debug?=off
 
 ifeq ($(filter $(supportos),$(os)),)
 	$(error Unsupport os.)
 endif
-
 ifeq ($(os), linux)
-	pref=./
 endif
-
 ifeq ($(os), windows)
 	exe=.exe
 endif
 
-paren=paren$(exe)
-objs=paren.o std.o gc.o env.o writer.o reader.o splay.o ahdrd.o array.o \
-		 stack.o ringbuf.o
+ifeq ($(debug), on)
+cflags+=-O3 -DNDEBUG
+link+= ; $(strip) $(sflags) $@
+else
+uflags+=-g
+endif
 
-all: $(paren)
+uflags=-Wall -Werror
+cflags=$(uflags) -c
+lflags=$(uflags)
+sflags=-s
+link=$(cc) $(lflags) -o $@ $+ $(libs)
 
-$(paren): $(objs)
-	$(CC) $(CFLAGS) -g -o $@ $(objs)
+ib=ib$(exe)
 
-include cdep.d
+.SUFFIXES: .c .o
+.c.o:
+	$(cc) $(cflags) $<
+
+all: $(ib)
+
+xc.a: std.o heap.o xarray.o om.o splay.o
+	ar -ru xc.a $+
+
+$(ib): ib.o xc.a
+	$(link)
 
 clean:
-	$(RM) *.o *.exe
+	rm -f *.o *.exe
+
+include cdep.d

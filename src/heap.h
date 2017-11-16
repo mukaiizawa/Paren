@@ -1,17 +1,19 @@
+// heap
+
 /*
- *                                 Mulk system.
- *        Copyright (C) 2009-2017 Ken'ichi Tokuoka. All rights reserved.
- * 
+ * Mulk system.
+ * Copyright (C) 2009-2017 Ken'ichi Tokuoka. All rights reserved.
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in
+ *
+ * The above copyright notice and this permission notice shall be included in 
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -34,6 +36,7 @@ struct heap {
 extern struct heap heap_perm;
 
 extern void heap_init(struct heap *h);
+extern void *heap_alloc_align(struct heap *h,int size,int align);
 extern void *heap_alloc(struct heap *h,int size);
 extern void heap_free(struct heap *h);
 extern char *heap_strdup(struct heap *h,char *s);
