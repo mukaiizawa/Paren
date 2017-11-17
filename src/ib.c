@@ -23,13 +23,17 @@ static int symbol_cmp(struct fbarray *p, struct fbarray *q)
   return 0;
 }
 
+static void make_initial_objects(void)
+{
+}
+
 int main(int argc, char *argv[])
 {
-  // object boot_args;
   setbuf(stdout,NULL);
   om_init();
   splay_init(&symbol_splay,(int(*)(void*,void*))strcmp);
   splay_init(&global_splay,(int(*)(void*,void*))symbol_cmp);
+  make_initial_objects();
   printf("%d\n", 3);
   return 0;
 }

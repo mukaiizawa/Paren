@@ -36,7 +36,7 @@ ib=ib$(exe)
 
 all: $(ib)
 
-xc.a: std.o heap.o xarray.o om.o splay.o
+xc.a: std.o heap.o xarray.o om.o splay.o gc.o
 	ar -ru xc.a $+
 
 $(ib): ib.o xc.a
