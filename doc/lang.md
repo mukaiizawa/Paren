@@ -72,17 +72,21 @@ atomは次のリテラルがある。
 - 識別子
 - 数値
 - 文字列
-#### 識別子(variable)
-    identifier ::= (identifier_first+ identifier_rest* | identifier_special)
+#### 識別子(identifier)
     identifier_first ::= [!$%&*/:<=>?a-zA-Z^_|]
-    identifier_rest ::= (identifier_first | [#'0-9])*
-    identifier_special ::= ('+' | '++' | '-' | '--')
-識別子は一部の記号及び数字を除く文字から始まり、
+    identifier_rest ::= (identifier_first | [0-9+\-])*
+    identifier_special ::= ('+' | '-')
+#### シンボル(symbol)
+    symbol ::= (identifier_first identifier_rest* | identifier_special)
+シンボルは一部の記号及び数字を除く文字から始まり、
 ほとんどすべてのascii文字が任意の数続く。
+#### キーワード(keyword)
+    keyword ::= ':' (identifier_rest | identifier_rest)+
+キーワードは`:`から始まる識別子である。
 #### 数値(number)
-    number ::= [+-]? [0-9]+ ('.' [0-9]+)?
+    number ::= (digit+ 'x')? digit+ '.' digit
+    digit ::= [0-9]
 Parenでは指数表記等はサポートしない。
-処理の簡潔化のため、`001`等も数字と見做し、`1`と評価する。
 #### 文字列(string)
     string ::= '"' ([^"\\] | esc)* '"'
     esc ::= '\\' .
