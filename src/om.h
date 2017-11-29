@@ -46,8 +46,7 @@ union om {
 
   struct symbol {
     HEADER;
-    object args;
-    object bytecode;
+    object name;
   } symbol;
 
 };
