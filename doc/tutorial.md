@@ -1157,7 +1157,7 @@ Common Lispでは、`#|`から始まり、`|#`までの文字の列がコメン�
         body_form ...))
 
 # 例外処理機構
-try/catch/finally/throwは例外処理機構を扱うためのスペシャルオペレーター群である。
+try/catch/finally/throwは例外処理を行うためのスペシャルオペレーター群である。
     (try [body_form ...]
         [(catch (type var) catch_body_form ...) ...]
         [(finaly catch_body_form ...)])
