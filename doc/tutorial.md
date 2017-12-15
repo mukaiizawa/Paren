@@ -1168,31 +1168,31 @@ try/catch/finally/throwは例外処理を行うためのスペシャルオペレ
 # クラス
 Parenは関数型言語として設計されているが、ここではマクロを用いてParenの上に構築されたオブジェクト指向言語について述べる。以後、このドメイン特化言語をPOS(Paren Object System)と呼ぶ。
 
-POSはCommon LispのCLOSを参考に、オブジェクト指向のコアとなる機能を実装している。
-
-POSには次の特徴がある。
-- 多重継承
-- メソッドがクラスに属さない
-- メソッドの多重ディスパッチ
+POSは次の特徴をもつ。
 
 ## クラスの作成
 クラスはマクロclassにより作成する。
-    (class class_name (super_class ...)
-      field ...)
+    (class class_name (interface ...)
+      ((instans_var ...)
+       (method ...)))
     class_name -- クラスの名前
-    super_class -- スーパークラス
-    field -- インスタンス変数
+    interface -- 実装するインターフェース
+    instans_var -- クラスのインスタンス変数
+    method -- クラスのメソッド
 
-クラスは名前、スーパークラス、インスタンス変数を指定して作成する。
+クラスは名前、インターフェース、インスタンス変数を指定して作成する。
+TODO;
 
 例として二次元実数空間の(一部の)元を表すクラスPointを示す。クラス名は慣習としてパスカルケースで命名する。
-    (class Point () x y)
+    (class Point ()
+      ((x y)
+       (.norm .to_string .add)))
 
 Pointクラスはインスタンス変数xとyを持つ。classマクロは概ね、次のようなS式に展開される。
     (begin
       (<-- Point #{:type :Point
                    :super '()
-                   :fields '(x y))
+                   :fields '(x y)})
       ({} $class :class_name Point))
 
 展開結果から分かるように、クラスはグローバルシンボルに連想配列として管理される。
