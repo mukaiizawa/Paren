@@ -28,21 +28,21 @@ lflags=$(uflags)
 sflags=-s
 link=$(cc) $(lflags) -o $@ $+ $(libs)
 
-ib=ib$(exe)
+paren = paren$(exe)
 
 .SUFFIXES: .c .o
 .c.o:
 	$(cc) $(cflags) $<
 
-all: $(ib)
+all: $(paren)
 
-xc.a: std.o heap.o xarray.o om.o splay.o gc.o
+xc.a: std.o xbarray.o lex.o
 	ar -ru xc.a $+
 
-$(ib): ib.o xc.a
+$(paren): paren.o xc.a
 	$(link)
 
 clean:
-	rm -f *.o *.exe
+	rm -f *.o *.a *.exe
 
 include cdep.d
