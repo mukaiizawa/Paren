@@ -1,15 +1,12 @@
-/*
-	lexical analysis.
-	$Id: lex.h 813 2011-07-19 12:30:37Z kt $
-*/
+// lexical analysis.
 
 #include "xbarray.h"
 
 // token types -- -1..255 as single character
-#define tSYMBOL 256
-#define tKEYWORD 257
-#define tINTEGER 258
-#define tFLOAT 259
+#define LEX_SYMBOL 256
+#define LEX_KEYWORD 257
+#define LEX_INT 258
+#define LEX_FLOAT 259
 
 extern struct xbarray lex_str;
 extern int lex_ival;

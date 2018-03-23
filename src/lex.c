@@ -23,7 +23,7 @@ void lex_error(char *fmt, ...)
   va_start(va, fmt);
   xvsprintf(buf, fmt, va);
   va_end(va);
-  xerror("%s at %d:%d.", buf, line, column);
+  xerror("%s at line: %d, column: %d.", buf, line, column);
 }
 
 static int skip(void)
@@ -116,13 +116,13 @@ int lex(void)
         lex_fval += factor * digit_val(skip(), 10);
         factor /= 10;
       }
-      return tFLOAT;
+      return LEX_FLOAT;
     }
-    return tINTEGER;
+    return LEX_INT;
   } else if (identifier_lead_char_p()) {
     while (identifier_trail_char_p()) get();
-    if (lex_str.elt[0] == ':') return tKEYWORD;
-    return tSYMBOL;
+    if (lex_str.elt[0] == ':') return LEX_KEYWORD;
+    return LEX_SYMBOL;
   }
   lex_error("illegal char '%c'", next_ch);
   return 0;
@@ -132,10 +132,10 @@ char *lex_token_name(char *buf, int tk)
 {
   char *name;
   switch (tk) {
-    case tSYMBOL: name = "symbol"; break;
-    case tKEYWORD: name = "keyword"; break;
-    case tINTEGER: name = "integer"; break;
-    case tFLOAT: name = "float"; break;
+    case LEX_SYMBOL: name = "symbol"; break;
+    case LEX_KEYWORD: name = "keyword"; break;
+    case LEX_INT: name = "integer"; break;
+    case LEX_FLOAT: name = "float"; break;
     case EOF: name = "eof"; break;
     default: name = NULL; break;
   }
