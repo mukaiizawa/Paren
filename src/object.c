@@ -4,11 +4,11 @@
 #include <string.h>
 
 #include "std.h"
+#include "xsplay.h"
 #include "lex.h"
 #include "object.h"
 
-environment toplevel;
-
+object object_toplevel;
 object object_nil;
 object object_true;
 object object_false;
@@ -112,7 +112,7 @@ static void dump_s_expr(object o)
       else printf("(macro ");
       dump_cons(o->let.params);
       printf("\n\t");
-      dump_cons(o->let.params);
+      dump_cons(o->let.body);
       printf(")");
       break;
   }

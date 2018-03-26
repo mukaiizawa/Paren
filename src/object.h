@@ -1,7 +1,6 @@
 // paren object
 
 typedef union s_expr *object;
-typedef struct xsplay *environment;
 
 enum object_type {
   cons,
@@ -26,7 +25,7 @@ union s_expr {
   struct let {
     struct object_header header;
     object params, body; 
-    environment env;
+    struct xsplay table;
   } let;
   struct xint {
     struct object_header header;
@@ -47,8 +46,7 @@ union s_expr {
   } keyword;
 };
 
-extern environment toplevel;
-
+extern object object_toplevel;
 extern object object_nil;
 extern object object_true;
 extern object object_false;
