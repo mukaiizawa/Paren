@@ -97,7 +97,6 @@ int lex(void)
   }
   if (next_ch == EOF || next_ch == '(' || next_ch == ')' || next_ch == '.')
     return skip();
-  xbarray_reset(&lex_str);
   if (isdigit(next_ch)) {
     lex_ival = 0;
     while (isdigit(next_ch)) lex_ival = lex_ival * 10 + digit_val(skip(), 10);
@@ -120,7 +119,9 @@ int lex(void)
     }
     return LEX_INT;
   } else if (identifier_lead_char_p()) {
+    xbarray_reset(&lex_str);
     while (identifier_trail_char_p()) get();
+    xbarray_add(&lex_str, '\0');
     if (lex_str.elt[0] == ':') return LEX_KEYWORD;
     return LEX_SYMBOL;
   }

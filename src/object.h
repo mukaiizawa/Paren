@@ -43,6 +43,10 @@ extern object object_nil;
 extern object object_true;
 extern object object_false;
 
+extern int object_nilp(object o);
+extern int object_consp(object o);
+extern int object_listp(object o);
+
 extern object object_alloc(int size);
 extern object object_type(object o);
 extern object object_new_cons(object car, object cdr);

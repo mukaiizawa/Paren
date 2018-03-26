@@ -27,8 +27,9 @@
 static object reverse(object o)
 {
   object p;
+  xassert(object_listp(o));
   p = object_nil;
-  while (o->cons.cdr != object_nil) {
+  while (!object_nilp(o)) {
     p = object_new_cons(o->cons.car, p);
     o = o->cons.cdr;
   }
@@ -49,17 +50,19 @@ static object parse_s_expr(void);
 static object parse_list(void)
 {
   object o;
-  parse_skip();
   o = object_nil;
+  parse_skip();    // skip '('
   while (next_token != ')') o = object_new_cons(parse_s_expr(), o);
-  parse_skip();
+  parse_skip();    // skip ')'
   return reverse(o);
 }
 
 static object parse_symbol(void)
 {
+  object o;
+  o = object_new_symbol(lex_str.elt);
   parse_skip();
-  return NULL;
+  return o;
 }
 
 static object parse_keyword(void)
