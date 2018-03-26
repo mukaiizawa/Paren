@@ -7,6 +7,8 @@
 #include "lex.h"
 #include "object.h"
 
+environment toplevel;
+
 object object_nil;
 object object_true;
 object object_false;
@@ -89,11 +91,30 @@ static void dump_cons(object o)
 static void dump_s_expr(object o)
 {
   switch (o->header.type) {
-    case cons: dump_cons(o); break;
-    case xint: printf("%lld", o->xint.val); break;
-    case xfloat: printf("%f", o->xfloat.val); break;
-    case keyword: printf("%s", o->keyword.name); break;
-    case symbol: printf("%s", o->symbol.name); break;
+    case cons:
+      dump_cons(o);
+      break;
+    case xint:
+      printf("%lld", o->xint.val);
+      break;
+    case xfloat:
+      printf("%f", o->xfloat.val);
+      break;
+    case keyword:
+      printf("%s", o->keyword.name);
+      break;
+    case symbol: 
+      printf("%s", o->symbol.name);
+      break;
+    case function:
+    case macro: 
+      if (o->header.type == function) printf("(lambda ");
+      else printf("(macro ");
+      dump_cons(o->let.params);
+      printf("\n\t");
+      dump_cons(o->let.params);
+      printf(")");
+      break;
   }
 }
 

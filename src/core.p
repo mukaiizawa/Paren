@@ -1,17 +1,12 @@
 ; paren core library.
 
-()
-(function a)
+(function print ())
 
-(function)
+(function eval ())
 
-; (function print ())
+(function read ())
 
-; (function eval ())
-;
-; (function read ())
-;
-; (function repl ()
-;   (print (eval (read))))
-;
-; (repl)
+(function repl ()
+  (print (eval (read))))
+
+(repl)

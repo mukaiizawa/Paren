@@ -1,9 +1,12 @@
 // paren object
 
 typedef union s_expr *object;
+typedef struct xsplay *environment;
 
 enum object_type {
   cons,
+  function,
+  macro,
   xint,
   xfloat,
   symbol,
@@ -18,8 +21,13 @@ union s_expr {
   struct object_header header;
   struct cons {
     struct object_header header;
-    union s_expr *car, *cdr; 
+    object car, cdr; 
   } cons;
+  struct let {
+    struct object_header header;
+    object params, body; 
+    environment env;
+  } let;
   struct xint {
     struct object_header header;
     int64_t val; 
@@ -31,13 +39,15 @@ union s_expr {
   struct symbol {
     struct object_header header;
     char *name; 
-    union s_expr *val; 
+    object val; 
   } symbol;
   struct keyword {
     struct object_header header;
     char *name; 
   } keyword;
 };
+
+extern environment toplevel;
 
 extern object object_nil;
 extern object object_true;

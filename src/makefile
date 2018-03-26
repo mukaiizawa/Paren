@@ -36,7 +36,7 @@ paren = paren$(exe)
 
 all: $(paren)
 
-xc.a: std.o xbarray.o lex.o object.o
+xc.a: std.o xbarray.o xsplay.o lex.o object.o
 	ar -ru xc.a $+
 
 $(paren): paren.o xc.a

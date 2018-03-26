@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "std.h"
+#include "xsplay.h"
 #include "object.h"
 #include "lex.h"
 
