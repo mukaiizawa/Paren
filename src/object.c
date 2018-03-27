@@ -13,31 +13,54 @@ object object_nil;
 object object_true;
 object object_false;
 
-object object_alloc(int size)
+static char *str_alloc(char *str)
 {
-  return xmalloc(size);
+  int size;
+  char *result;
+  result = xmalloc(size = sizeof(char) * (strlen(str) + 1));
+  memcpy(result, str, size);
+  return result;
+}
+
+object object_alloc()
+{
+  return xmalloc(sizeof(union s_expr));
 }
 
 object object_new_cons(object car, object cdr)
 {
   object o;
-  o = object_alloc(sizeof(struct cons));
+  o = object_alloc();
   o->header.type = cons;
   o->cons.car = car;
   o->cons.cdr = cdr;
   return o;
 }
 
+object object_new_xint(int val)
+{
+  object o;
+  o = object_alloc();
+  o->header.type = xint;
+  o->xint.val = val;
+  return o;
+}
+
+object object_new_xfloat(double val)
+{
+  object o;
+  o = object_alloc();
+  o->header.type = xfloat;
+  o->xfloat.val = val;
+  return o;
+}
+
 object object_new_symbol(char *name)
 {
-  int size;
-  char* str;
   object o;
-  o = object_alloc(sizeof(struct symbol));
-  str = xmalloc(size = sizeof(char) * (strlen(name) + 1));
-  memcpy(str, name, size);
+  o = object_alloc();
   o->header.type = symbol;
-  o->symbol.name = str;
+  o->symbol.name = str_alloc(name);
   o->symbol.val = object_nil;
   return o;
 }
@@ -45,9 +68,9 @@ object object_new_symbol(char *name)
 object object_new_keyword(char *name)
 {
   object o;
-  o = object_alloc(sizeof(struct keyword));
-  o->header.type = keyword;
-  o->keyword.name = name;
+  o = object_alloc();
+  o->header.type = symbol;
+  o->symbol.name = str_alloc(name);
   return o;
 }
 

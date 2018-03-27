@@ -68,20 +68,24 @@ static object parse_symbol(void)
 
 static object parse_keyword(void)
 {
+  object o;
+  o = object_new_keyword(lex_str.elt);
   parse_skip();
-  return NULL;
+  return o;
 }
 
 static object parse_integer(void)
 {
+  int val = lex_ival;
   parse_skip();
-  return NULL;
+  return object_new_xfloat(val);
 }
 
 static object parse_float(void)
 {
+  double val = lex_fval;
   parse_skip();
-  return NULL;
+  return object_new_xfloat(val);
 }
 
 static object parse_s_expr(void)
