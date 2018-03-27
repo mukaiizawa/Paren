@@ -92,10 +92,10 @@ static object parse_s_expr(void)
 {
   switch (next_token) {
     case '(': return parse_list();
-    case LEX_SYMBOL: return parse_symbol();
-    case LEX_KEYWORD: return parse_keyword();
     case LEX_INT: return parse_integer();
     case LEX_FLOAT: return parse_float();
+    case LEX_SYMBOL: return parse_symbol();
+    case LEX_KEYWORD: return parse_keyword();
     default: lex_error("illegal token value '%d'.", next_token); return NULL;
   }
 }

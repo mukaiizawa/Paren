@@ -18,15 +18,15 @@ struct object_header {
 
 union s_expr {
   struct object_header header;
-  struct cons {
-    struct object_header header;
-    object car, cdr; 
-  } cons;
   struct let {
     struct object_header header;
     object params, body; 
     struct xsplay table;
   } let;
+  struct cons {
+    struct object_header header;
+    object car, cdr; 
+  } cons;
   struct xint {
     struct object_header header;
     int64_t val; 

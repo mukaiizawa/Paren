@@ -114,6 +114,15 @@ static void dump_cons(object o)
 static void dump_s_expr(object o)
 {
   switch (o->header.type) {
+    case function:
+    case macro:
+      if (o->header.type == function) printf("(lambda ");
+      else printf("(macro ");
+      dump_cons(o->let.params);
+      printf("\n\t");
+      dump_cons(o->let.body);
+      printf(")");
+      break;
     case cons:
       dump_cons(o);
       break;
@@ -126,17 +135,8 @@ static void dump_s_expr(object o)
     case keyword:
       printf("%s", o->keyword.name);
       break;
-    case symbol: 
+    case symbol:
       printf("%s", o->symbol.name);
-      break;
-    case function:
-    case macro: 
-      if (o->header.type == function) printf("(lambda ");
-      else printf("(macro ");
-      dump_cons(o->let.params);
-      printf("\n\t");
-      dump_cons(o->let.body);
-      printf(")");
       break;
   }
 }
