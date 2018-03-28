@@ -21,7 +21,7 @@ union s_expr {
   struct let {
     struct object_header header;
     object params, body; 
-    struct xsplay table;
+    struct xsplay symbol_table;
   } let;
   struct cons {
     struct object_header header;
@@ -56,6 +56,8 @@ extern int object_consp(object o);
 extern int object_listp(object o);
 
 extern object object_type(object o);
+extern object object_new_function(object params, object body);
+extern object object_new_macro(object params, object body);
 extern object object_new_cons(object car, object cdr);
 extern object object_new_xint(int val);
 extern object object_new_xfloat(double val);

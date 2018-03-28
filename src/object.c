@@ -27,6 +27,25 @@ object object_alloc()
   return xmalloc(sizeof(union s_expr));
 }
 
+object object_new_function(object params, object body)
+{
+  object o;
+  o = object_alloc();
+  o->header.type = function;
+  o->let.params = params;
+  o->let.body = body;
+  xsplay_init(&o->let.symbol_table, (int(*)(void* ,void*))strcmp);
+  return o;
+}
+
+object object_new_macro(object params, object body)
+{
+  object o;
+  o = object_new_function(params, body);
+  o->header.type = macro;
+  return o;
+}
+
 object object_new_cons(object car, object cdr)
 {
   object o;
