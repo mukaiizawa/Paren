@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "std.h"
 #include "xsplay.h"
@@ -25,6 +26,11 @@
  * <digit> ::= [0-9]
  */
 
+static int typep(object o, enum object_type type)
+{
+  return o->header.type == type;
+}
+
 static object reverse(object o)
 {
   object p;
@@ -35,6 +41,78 @@ static object reverse(object o)
     o = o->cons.cdr;
   }
   return p;
+}
+
+// object construct and regist
+
+static object toplevel;
+static struct xsplay symbol_table;
+
+static int symbol_cmp(object o, object p)
+{
+  xassert(typep(o, symbol) && typep(p, symbol));
+  return strcmp(o->symbol.name, p->symbol.name);
+}
+
+// static object find(object env, object sym)
+// {
+//   object o;
+//   xassert(typep(env, lambda) && typep(sym, symbol));
+//   while (env != object_nil) {
+//     if ((o = xsplay_find(&env->lambda.binding, sym)) != NULL) return o;
+//     env = env->lambda.top;
+//   }
+//   return object_nil;
+// }
+
+static void bind(object env, object sym, object val)
+{
+  xassert(typep(env, lambda) && typep(sym, symbol));
+  while (env != object_nil) {
+    if (xsplay_find(&env->lambda.binding, sym) != NULL) {
+      xsplay_delete(&env->lambda.binding, sym);
+      xsplay_add(&env->lambda.binding, sym, val);
+      return;
+    }
+    env = env->lambda.top;
+  }
+  xsplay_add(&toplevel->lambda.binding, sym, val);
+}
+
+static object new_lambda(object top, object params, object body)
+{
+  object o;
+  o = object_alloc();
+  o->header.type = lambda;
+  o->lambda.params = params;
+  o->lambda.body = body;
+  xsplay_init(&o->lambda.binding, (int(*)(void* ,void*))symbol_cmp);
+  return o;
+}
+
+static object new_keyword(char *name)
+{
+  object o;
+  if ((o = xsplay_find(&symbol_table, name)) == NULL) {
+    o = object_alloc();
+    o->header.type = keyword;
+    o->symbol.name = stralloc(name);
+  }
+  return o;
+}
+
+static void make_initial_objects(void)
+{
+  xsplay_init(&symbol_table, (int(*)(void* ,void*))symbol_cmp);
+  object_nil = object_alloc();
+  object_nil->header.type = symbol;
+  object_nil->symbol.name = stralloc("nil");
+  toplevel = new_lambda(object_nil, object_nil, object_nil);
+  bind(toplevel, object_nil, object_nil);
+  object_true = object_new_symbol("true");
+  bind(toplevel, object_true, object_nil);
+  object_false = object_new_symbol("false");
+  bind(toplevel, object_false, object_false);
 }
 
 // parser
@@ -69,7 +147,7 @@ static object parse_symbol(void)
 static object parse_keyword(void)
 {
   object o;
-  o = object_new_keyword(lex_str.elt);
+  o = new_keyword(lex_str.elt);
   parse_skip();
   return o;
 }
@@ -100,19 +178,34 @@ static object parse_s_expr(void)
   }
 }
 
+// evaluater
+
 static object eval(object o)
 {
-  object_dump(o);
-  return o;
+  object p;
+  switch (o->header.type) {
+    case lambda:
+    case cons:
+    case fbarray:
+    case farray:
+    case xint:
+    case xfloat:
+    case keyword:
+    case symbol:
+      p = o;
+      break;
+  }
+  return p;
 }
 
-static void make_initial_objects(void)
+// printer
+
+static void print(object o)
 {
-  object_nil = object_new_symbol("nil");
-  object_nil->symbol.val = object_nil;
-  object_true = object_new_symbol("true");
-  object_false = object_new_symbol("false");
+  object_dump(o);
 }
+
+// loader
 
 static void load(char *fn)
 {
@@ -120,7 +213,7 @@ static void load(char *fn)
   if((fp = fopen(fn, "r")) == NULL) xerror("load/open %s failed.", fn);
   lex_start(fp);
   parse_skip();
-  while (next_token != EOF) eval(parse_s_expr());
+  while (next_token != EOF) print(eval(parse_s_expr()));
   fclose(fp);
 }
 

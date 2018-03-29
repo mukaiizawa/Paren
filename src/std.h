@@ -13,6 +13,7 @@ extern void xsprintf(char *buf, char *fmt, ...);
 
 extern void xerror(char *fmt, ...);
 extern void *xmalloc(int size);
+extern char *stralloc(char *str);
 extern void xfree(void *);
 extern void *xrealloc(void *p, int size);
 extern char *xstrdup(char *s);

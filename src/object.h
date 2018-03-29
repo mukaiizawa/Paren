@@ -3,9 +3,10 @@
 typedef union s_expr *object;
 
 enum object_type {
+  lambda,
   cons,
-  function,
-  macro,
+  fbarray,
+  farray,
   xint,
   xfloat,
   symbol,
@@ -14,19 +15,30 @@ enum object_type {
 
 struct object_header {
   enum object_type type;
+  int hash;
 } object_header;
 
 union s_expr {
   struct object_header header;
-  struct let {
+  struct lambda {
     struct object_header header;
-    object params, body; 
-    struct xsplay symbol_table;
-  } let;
+    object top, params, body; 
+    struct xsplay binding;
+  } lambda;
   struct cons {
     struct object_header header;
     object car, cdr; 
   } cons;
+  struct fbarray {
+    struct object_header header;
+    int size;
+    char elt[1];
+  } fbarray;
+  struct farray {
+    struct object_header header;
+    int size;
+    object elt[1];
+  } farray;
   struct xint {
     struct object_header header;
     int64_t val; 
@@ -38,15 +50,9 @@ union s_expr {
   struct symbol {
     struct object_header header;
     char *name; 
-    object val; 
   } symbol;
-  struct keyword {
-    struct object_header header;
-    char *name; 
-  } keyword;
 };
 
-extern object object_toplevel;
 extern object object_nil;
 extern object object_true;
 extern object object_false;
@@ -56,11 +62,11 @@ extern int object_consp(object o);
 extern int object_listp(object o);
 
 extern object object_type(object o);
-extern object object_new_function(object params, object body);
-extern object object_new_macro(object params, object body);
+extern object object_alloc();
+extern object object_new_lambda(object top, object params, object body);
 extern object object_new_cons(object car, object cdr);
+extern object object_new_barray(int len);
 extern object object_new_xint(int val);
 extern object object_new_xfloat(double val);
 extern object object_new_symbol(char *name);
-extern object object_new_keyword(char *name);
 extern void object_dump(object o);

@@ -8,42 +8,13 @@
 #include "lex.h"
 #include "object.h"
 
-object object_toplevel;
 object object_nil;
 object object_true;
 object object_false;
 
-static char *str_alloc(char *str)
-{
-  int size;
-  char *result;
-  result = xmalloc(size = sizeof(char) * (strlen(str) + 1));
-  memcpy(result, str, size);
-  return result;
-}
-
 object object_alloc()
 {
   return xmalloc(sizeof(union s_expr));
-}
-
-object object_new_function(object params, object body)
-{
-  object o;
-  o = object_alloc();
-  o->header.type = function;
-  o->let.params = params;
-  o->let.body = body;
-  xsplay_init(&o->let.symbol_table, (int(*)(void* ,void*))strcmp);
-  return o;
-}
-
-object object_new_macro(object params, object body)
-{
-  object o;
-  o = object_new_function(params, body);
-  o->header.type = macro;
-  return o;
 }
 
 object object_new_cons(object car, object cdr)
@@ -53,6 +24,23 @@ object object_new_cons(object car, object cdr)
   o->header.type = cons;
   o->cons.car = car;
   o->cons.cdr = cdr;
+  return o;
+}
+
+object object_new_barray(int len)
+{
+  object o;
+  o = xmalloc(sizeof(struct fbarray) + len - 1);
+  o->header.type = fbarray;
+  return o;
+}
+
+object object_new_fbarray(int len)
+{
+  object o;
+  o = xmalloc(sizeof(struct farray) + (len - 1) * sizeof(object));
+  o->header.type = farray;
+  while (len-- > 0) o->farray.elt[len] = object_nil;
   return o;
 }
 
@@ -79,17 +67,7 @@ object object_new_symbol(char *name)
   object o;
   o = object_alloc();
   o->header.type = symbol;
-  o->symbol.name = str_alloc(name);
-  o->symbol.val = object_nil;
-  return o;
-}
-
-object object_new_keyword(char *name)
-{
-  object o;
-  o = object_alloc();
-  o->header.type = symbol;
-  o->symbol.name = str_alloc(name);
+  o->symbol.name = stralloc(name);
   return o;
 }
 
@@ -132,18 +110,25 @@ static void dump_cons(object o)
 
 static void dump_s_expr(object o)
 {
+  int i;
   switch (o->header.type) {
-    case function:
-    case macro:
-      if (o->header.type == function) printf("(lambda ");
-      else printf("(macro ");
-      dump_cons(o->let.params);
+    case lambda:
+      printf("(lambda ");
+      dump_cons(o->lambda.params);
       printf("\n\t");
-      dump_cons(o->let.body);
+      dump_cons(o->lambda.body);
       printf(")");
       break;
     case cons:
       dump_cons(o);
+      break;
+    case fbarray:
+      printf("%s", o->fbarray.elt);
+      break;
+    case farray:
+      printf("[");
+      for (i = 0; i < o->farray.size; i++) dump_s_expr(o->farray.elt[i]);
+      printf("]");
       break;
     case xint:
       printf("%lld", o->xint.val);
@@ -151,10 +136,8 @@ static void dump_s_expr(object o)
     case xfloat:
       printf("%f", o->xfloat.val);
       break;
-    case keyword:
-      printf("%s", o->keyword.name);
-      break;
     case symbol:
+    case keyword:
       printf("%s", o->symbol.name);
       break;
   }

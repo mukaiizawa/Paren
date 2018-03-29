@@ -62,6 +62,15 @@ void *xmalloc(int size)
   return p;
 }
 
+char *stralloc(char *str)
+{
+  int size;
+  char *result;
+  result = xmalloc(size = sizeof(char) * (strlen(str) + 1));
+  memcpy(result, str, size);
+  return result;
+}
+
 void xfree(void *p)
 {
   if (p != NULL) free(p);
