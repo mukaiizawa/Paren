@@ -62,7 +62,7 @@ static struct xsplay_node *balance(struct xsplay *s, void *key)
   top = s->top;
   cmp = s->cmp;
   null->key = key;
-  null->left = null->right=null;
+  null->left = null->right = null;
   while((d = (*cmp)(key, top->key)) != 0) {
     p = top;
     if (d < 0) {
@@ -152,7 +152,7 @@ void xsplay_delete(struct xsplay *s, void *k)
   struct xsplay_node *top;
   top = balance(s, k);
   xassert(top != null);
-  s->top=resume(top);
+  s->top = resume(top);
   release(top);
 }
 
