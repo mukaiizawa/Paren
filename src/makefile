@@ -27,7 +27,7 @@ cflags+=-O3 -DNDEBUG
 link+= ; $(strip) $(sflags) $@
 endif
 
-paren = paren$(exe)
+paren=paren$(exe)
 
 .SUFFIXES: .c .o
 .c.o:
@@ -35,13 +35,17 @@ paren = paren$(exe)
 
 all: $(paren)
 
-xc.a: std.o xbarray.o xsplay.o lex.o object.o
+prim=special.c
+prim.wk: $(prim)
+	cat $+ | grep ^PRIM>$@
+
+xc.a: std.o xbarray.o xsplay.o lex.o object.o $(prim:%.c=%.o)
 	ar -ru xc.a $+
 
 $(paren): paren.o xc.a
 	$(link)
 
 clean:
-	rm -f *.o *.a *.exe
+	rm -f *.o *.a *.wk *.exe
 
 include cdep.d

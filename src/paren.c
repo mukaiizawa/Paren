@@ -57,6 +57,13 @@ static struct xsplay keyword_table;
 static object toplevel;
 static object env;
 
+static char *prim_name_table[] = {
+#define PRIM(n) #n,
+#include "prim.wk"
+#undef PRIM
+  NULL
+};
+
 static object find(object sym)
 {
   object o, e;
@@ -276,5 +283,6 @@ int main(int argc, char *argv[])
   make_initial_objects();
   load(core_fn);
   dump_symbol_table();
+  printf("%s\n", prim_name_table[0]);
   return 0;
 }
