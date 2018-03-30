@@ -64,10 +64,9 @@ void *xmalloc(int size)
 
 char *stralloc(char *str)
 {
-  int size;
   char *result;
-  result = xmalloc(size = sizeof(char) * (strlen(str) + 1));
-  memcpy(result, str, size);
+  result = xmalloc(sizeof(char) * (strlen(str) + 1));
+  strcpy(result, str);
   return result;
 }
 

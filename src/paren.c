@@ -36,24 +36,26 @@ static int typep(object o, enum object_type type)
   return o->header.type == type;
 }
 
-static object reverse(object o)
+static object car(object o)
 {
-  object p;
-  xassert(object_listp(o));
-  p = object_nil;
-  while (!object_nilp(o)) {
-    p = object_new_cons(o->cons.car, p);
-    o = o->cons.cdr;
-  }
-  return p;
+  if (o == object_nil) return o;
+  xassert(typep(o, cons));
+  return o->cons.car;
 }
 
-// object construct and regist
+static object cdr(object o)
+{
+  if (o == object_nil) return o;
+  xassert(typep(o, cons));
+  return o->cons.cdr;
+}
 
-static object toplevel;
-static object env;
+// symbol table and environment
+
 static struct xsplay symbol_table;
 static struct xsplay keyword_table;
+static object toplevel;
+static object env;
 
 static object find(object sym)
 {
@@ -83,6 +85,20 @@ static void bind(object sym, object val)
   xsplay_add(&toplevel->lambda.binding, sym, val);
 }
 
+static void dump_symbol(int depth, void *key, void *data)
+{
+  printf("\t%s\t%p\n", key, data);
+}
+
+static void dump_symbol_table()
+{
+  printf("symbol_table {\n");
+  xsplay_foreach(&symbol_table, dump_symbol);
+  printf("}\n");
+}
+
+// object construct and regist
+
 static object new_lambda(object top, object params, object body)
 {
   object o;
@@ -95,6 +111,16 @@ static object new_lambda(object top, object params, object body)
   return o;
 }
 
+static object new_cons(object car, object cdr)
+{
+  object o;
+  o = object_alloc();
+  o->header.type = cons;
+  o->cons.car = car;
+  o->cons.cdr = cdr;
+  return o;
+}
+
 static object new_symbol(char *name)
 {
   object o;
@@ -102,6 +128,7 @@ static object new_symbol(char *name)
     o = object_alloc();
     o->header.type = symbol;
     o->symbol.name = stralloc(name);
+    xsplay_add(&symbol_table, o->symbol.name, o);
   }
   return o;
 }
@@ -113,6 +140,7 @@ static object new_keyword(char *name)
     o = object_alloc();
     o->header.type = keyword;
     o->symbol.name = stralloc(name);
+    xsplay_add(&keyword_table, o->symbol.name, o);
   }
   return o;
 }
@@ -121,14 +149,12 @@ static void make_initial_objects(void)
 {
   xsplay_init(&symbol_table, (int(*)(void* ,void*))strcmp);
   xsplay_init(&keyword_table, (int(*)(void* ,void*))strcmp);
-  object_nil = object_alloc();
-  object_nil->header.type = symbol;
-  object_nil->symbol.name = stralloc("nil");
+  object_nil = new_symbol("nil");
+  object_true = new_symbol("true");
+  object_false = new_symbol("false");
   env = toplevel = new_lambda(object_nil, object_nil, object_nil);
   bind(object_nil, object_nil);
-  object_true = new_symbol("true");
   bind(object_true, object_true);
-  object_false = new_symbol("false");
   bind(object_false, object_false);
 }
 
@@ -148,9 +174,9 @@ static object parse_list(void)
   object o;
   o = object_nil;
   parse_skip();    // skip '('
-  while (next_token != ')') o = object_new_cons(parse_s_expr(), o);
+  while (next_token != ')') o = new_cons(parse_s_expr(), o);
   parse_skip();    // skip ')'
-  return reverse(o);
+  return o;
 }
 
 static object parse_symbol(void)
@@ -199,7 +225,9 @@ static object parse_s_expr(void)
 
 static object eval_cons(object o)
 {
-  return o;
+  if (!typep(car(o), symbol)) lex_error("illegal list");
+  if (car(o) == car(cdr(o))) return object_true;
+  return object_false;
 }
 
 static object eval(object o)
@@ -214,7 +242,7 @@ static object eval(object o)
     case keyword:
       return o;
     case symbol:
-      if ((p = find(o)) == NULL) xerror("unbind symbol '%s'", o->symbol.name);
+      if ((p = find(o)) == NULL) lex_error("unbind symbol '%s'", o->symbol.name);
       return p;
     case cons:
       return eval_cons(o);
@@ -247,5 +275,6 @@ int main(int argc, char *argv[])
   core_fn = "core.p";
   make_initial_objects();
   load(core_fn);
+  dump_symbol_table();
   return 0;
 }

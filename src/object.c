@@ -17,16 +17,6 @@ object object_alloc()
   return xmalloc(sizeof(union s_expr));
 }
 
-object object_new_cons(object car, object cdr)
-{
-  object o;
-  o = object_alloc();
-  o->header.type = cons;
-  o->cons.car = car;
-  o->cons.cdr = cdr;
-  return o;
-}
-
 object object_new_barray(int len)
 {
   object o;
