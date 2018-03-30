@@ -26,6 +26,11 @@
  * <digit> ::= [0-9]
  */
 
+static int symcmp(object o, object p)
+{
+  return strcmp(o->symbol.name, p->symbol.name);
+}
+
 static int typep(object o, enum object_type type)
 {
   return o->header.type == type;
@@ -46,35 +51,34 @@ static object reverse(object o)
 // object construct and regist
 
 static object toplevel;
+static object env;
 static struct xsplay symbol_table;
+static struct xsplay keyword_table;
 
-static int symbol_cmp(object o, object p)
+static object find(object sym)
 {
-  xassert(typep(o, symbol) && typep(p, symbol));
-  return strcmp(o->symbol.name, p->symbol.name);
+  object o, e;
+  xassert(typep(sym, symbol));
+  e = env;
+  while (e != object_nil) {
+    if ((o = xsplay_find(&e->lambda.binding, sym)) != NULL) return o;
+    e = e->lambda.top;
+  }
+  return NULL;
 }
 
-// static object find(object env, object sym)
-// {
-//   object o;
-//   xassert(typep(env, lambda) && typep(sym, symbol));
-//   while (env != object_nil) {
-//     if ((o = xsplay_find(&env->lambda.binding, sym)) != NULL) return o;
-//     env = env->lambda.top;
-//   }
-//   return object_nil;
-// }
-
-static void bind(object env, object sym, object val)
+static void bind(object sym, object val)
 {
-  xassert(typep(env, lambda) && typep(sym, symbol));
-  while (env != object_nil) {
-    if (xsplay_find(&env->lambda.binding, sym) != NULL) {
-      xsplay_delete(&env->lambda.binding, sym);
-      xsplay_add(&env->lambda.binding, sym, val);
+  object e;
+  xassert(typep(sym, symbol));
+  e = env;
+  while (e != object_nil) {
+    if (xsplay_find(&e->lambda.binding, sym) != NULL) {
+      xsplay_delete(&e->lambda.binding, sym);
+      xsplay_add(&e->lambda.binding, sym, val);
       return;
     }
-    env = env->lambda.top;
+    e = e->lambda.top;
   }
   xsplay_add(&toplevel->lambda.binding, sym, val);
 }
@@ -84,16 +88,28 @@ static object new_lambda(object top, object params, object body)
   object o;
   o = object_alloc();
   o->header.type = lambda;
+  o->lambda.top = top;
   o->lambda.params = params;
   o->lambda.body = body;
-  xsplay_init(&o->lambda.binding, (int(*)(void* ,void*))symbol_cmp);
+  xsplay_init(&o->lambda.binding, (int(*)(void* ,void*))symcmp);
+  return o;
+}
+
+static object new_symbol(char *name)
+{
+  object o;
+  if ((o = xsplay_find(&symbol_table, name)) == NULL) {
+    o = object_alloc();
+    o->header.type = symbol;
+    o->symbol.name = stralloc(name);
+  }
   return o;
 }
 
 static object new_keyword(char *name)
 {
   object o;
-  if ((o = xsplay_find(&symbol_table, name)) == NULL) {
+  if ((o = xsplay_find(&keyword_table, name)) == NULL) {
     o = object_alloc();
     o->header.type = keyword;
     o->symbol.name = stralloc(name);
@@ -103,16 +119,17 @@ static object new_keyword(char *name)
 
 static void make_initial_objects(void)
 {
-  xsplay_init(&symbol_table, (int(*)(void* ,void*))symbol_cmp);
+  xsplay_init(&symbol_table, (int(*)(void* ,void*))strcmp);
+  xsplay_init(&keyword_table, (int(*)(void* ,void*))strcmp);
   object_nil = object_alloc();
   object_nil->header.type = symbol;
   object_nil->symbol.name = stralloc("nil");
-  toplevel = new_lambda(object_nil, object_nil, object_nil);
-  bind(toplevel, object_nil, object_nil);
-  object_true = object_new_symbol("true");
-  bind(toplevel, object_true, object_nil);
-  object_false = object_new_symbol("false");
-  bind(toplevel, object_false, object_false);
+  env = toplevel = new_lambda(object_nil, object_nil, object_nil);
+  bind(object_nil, object_nil);
+  object_true = new_symbol("true");
+  bind(object_true, object_true);
+  object_false = new_symbol("false");
+  bind(object_false, object_false);
 }
 
 // parser
@@ -139,7 +156,7 @@ static object parse_list(void)
 static object parse_symbol(void)
 {
   object o;
-  o = object_new_symbol(lex_str.elt);
+  o = new_symbol(lex_str.elt);
   parse_skip();
   return o;
 }
@@ -180,22 +197,28 @@ static object parse_s_expr(void)
 
 // evaluater
 
+static object eval_cons(object o)
+{
+  return o;
+}
+
 static object eval(object o)
 {
   object p;
   switch (o->header.type) {
     case lambda:
-    case cons:
     case fbarray:
     case farray:
     case xint:
     case xfloat:
     case keyword:
+      return o;
     case symbol:
-      p = o;
-      break;
+      if ((p = find(o)) == NULL) xerror("unbind symbol '%s'", o->symbol.name);
+      return p;
+    case cons:
+      return eval_cons(o);
   }
-  return p;
 }
 
 // printer

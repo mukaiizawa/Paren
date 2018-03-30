@@ -62,15 +62,6 @@ object object_new_xfloat(double val)
   return o;
 }
 
-object object_new_symbol(char *name)
-{
-  object o;
-  o = object_alloc();
-  o->header.type = symbol;
-  o->symbol.name = stralloc(name);
-  return o;
-}
-
 int object_nilp(object o)
 {
   return o == object_nil;

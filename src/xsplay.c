@@ -34,7 +34,7 @@ static struct xsplay_node *free_list = NULL;
 static struct xsplay_node *alloc(void)
 {
   struct xsplay_node *n;
-  if (free_list == NULL) n = xmalloc(sizeof(struct xsplay_node));
+  if (free_list == NULL) return xmalloc(sizeof(struct xsplay_node));
   else {
     n = free_list;
     free_list = n->left;
@@ -90,7 +90,7 @@ static struct xsplay_node *balance(struct xsplay *s, void *key)
         p->right = top->left;
         top->left = p;
         break;
-      } else if (d>0) {
+      } else if (d > 0) {
         top = q->right;
         q->right = top->left;
         top->left = p;

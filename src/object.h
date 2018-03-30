@@ -63,10 +63,8 @@ extern int object_listp(object o);
 
 extern object object_type(object o);
 extern object object_alloc();
-extern object object_new_lambda(object top, object params, object body);
 extern object object_new_cons(object car, object cdr);
 extern object object_new_barray(int len);
 extern object object_new_xint(int val);
 extern object object_new_xfloat(double val);
-extern object object_new_symbol(char *name);
 extern void object_dump(object o);
