@@ -11,11 +11,15 @@
 ; keyword
 :asdf
 
-; list
-(n ni nil null)
-(print print)
-(nil print)
-(nil nil)
+; nil
+()
+
+; dot list
+(quote (1 . 2))
+(list 1 . (list 2 3 4))
+
+; pure list
+(apply + (quote (list 1 2 3)))
 
 (function print ())
 
@@ -23,6 +27,6 @@
 
 (function read ())
 
-; (function repl () (print (eval (read))))
+(function repl () (print (eval (read))))
 
 (repl)

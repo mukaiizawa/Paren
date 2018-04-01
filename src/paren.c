@@ -43,15 +43,16 @@ static object car(object o)
   return o->cons.car;
 }
 
-static object cdr(object o)
-{
-  if (o == object_nil) return o;
-  xassert(typep(o, cons));
-  return o->cons.cdr;
-}
+// static object cdr(object o)
+// {
+//   if (o == object_nil) return o;
+//   xassert(typep(o, cons));
+//   return o->cons.cdr;
+// }
 
 // symbol table and environment
 
+static struct xsplay prim_table;
 static struct xsplay symbol_table;
 static struct xsplay keyword_table;
 static object toplevel;
@@ -101,6 +102,7 @@ static void dump_symbol_table()
 {
   printf("symbol_table {\n");
   xsplay_foreach(&symbol_table, dump_symbol);
+  xsplay_foreach(&prim_table, dump_symbol);
   printf("}\n");
 }
 
@@ -154,6 +156,9 @@ static object new_keyword(char *name)
 
 static void make_initial_objects(void)
 {
+  int i;
+  char *s;
+  xsplay_init(&prim_table, (int(*)(void* ,void*))strcmp);
   xsplay_init(&symbol_table, (int(*)(void* ,void*))strcmp);
   xsplay_init(&keyword_table, (int(*)(void* ,void*))strcmp);
   object_nil = new_symbol("nil");
@@ -163,6 +168,8 @@ static void make_initial_objects(void)
   bind(object_nil, object_nil);
   bind(object_true, object_true);
   bind(object_false, object_false);
+  for (i = 0; (s = prim_name_table[i]) != NULL; i++)
+    xsplay_add(&prim_table, s, new_symbol(s));
 }
 
 // parser
@@ -176,12 +183,25 @@ static int parse_skip(void)
 
 static object parse_s_expr(void);
 
+static object parse_cdr()
+{
+  object cdr;
+  if (next_token == ')') return object_nil;
+  if (next_token == '.') {
+    parse_skip();
+    cdr = parse_s_expr();
+    if (next_token != ')') lex_error("illegal dot list");
+    return cdr;
+  }
+  return new_cons(parse_s_expr(), parse_cdr());
+}
+
 static object parse_list(void)
 {
   object o;
-  o = object_nil;
   parse_skip();    // skip '('
-  while (next_token != ')') o = new_cons(parse_s_expr(), o);
+  if (next_token == ')') o = object_nil;
+  else o = new_cons(parse_s_expr(), parse_cdr());
   parse_skip();    // skip ')'
   return o;
 }
@@ -232,9 +252,11 @@ static object parse_s_expr(void)
 
 static object eval_cons(object o)
 {
-  if (!typep(car(o), symbol)) lex_error("illegal list");
-  if (car(o) == car(cdr(o))) return object_true;
-  return object_false;
+  if (!typep(car(o), symbol)) {
+    object_dump(o);
+    lex_error("illegal list");
+  }
+  return o;
 }
 
 static object eval(object o)
@@ -283,6 +305,5 @@ int main(int argc, char *argv[])
   make_initial_objects();
   load(core_fn);
   dump_symbol_table();
-  printf("%s\n", prim_name_table[0]);
   return 0;
 }
