@@ -14,24 +14,25 @@ object object_false;
 object object_error;
 object object_pre_condition_error;
 object object_post_condition_error;
+object object_argument_error;
 
 object object_car(object o)
 {
-  if (o == object_nil) return o;
-  xassert(object_typep(o, cons));
+  xassert(object_listp(o));
+  if (object_nilp(o)) return object_nil;
   return o->cons.car;
 }
 
 object object_cdr(object o)
 {
-  if (o == object_nil) return o;
-  xassert(object_typep(o, cons));
+  xassert(object_listp(o));
+  if (object_nilp(o)) return object_nil;
   return o->cons.cdr;
 }
 
 object object_nth(object o, int n)
 {
-  xassert(n >= 0);
+  xassert(object_listp(o) && n >= 0);
   while (n-- != 0) o = object_cdr(o);
   return object_car(o);
 }
@@ -46,11 +47,13 @@ int object_length(object o)
 
 int object_typep(object o, enum object_type type)
 {
+  xassert(o != NULL);
   return o->header.type == type;
 }
 
 int object_nilp(object o)
 {
+  xassert(o != NULL);
   return o == object_nil;
 }
 
@@ -64,6 +67,26 @@ int object_listp(object o)
 {
   xassert(o != NULL);
   return object_consp(o) || object_nilp(o);
+}
+
+int object_bool(object o) {
+  xassert(o != NULL);
+  switch (o->header.type) {
+    case lambda:
+    case cons:
+    case keyword:
+      return TRUE;
+    case fbarray:
+      return o->fbarray.size != 0;
+    case farray:
+      return o->farray.size != 0;
+    case xint:
+      return o->xint.val != 0;
+    case xfloat:
+      return o->xfloat.val != 0.0;
+    case symbol:
+      return object_nilp(o) || o == object_false;
+  }
 }
 
 static void dump_s_expr(object o);
@@ -92,9 +115,9 @@ static void dump_s_expr(object o)
   switch (o->header.type) {
     case lambda:
       printf("(lambda ");
-      dump_cons(o->lambda.params);
-      printf("\n\t");
-      dump_cons(o->lambda.body);
+      dump_s_expr(o->lambda.params);
+      printf(" ");
+      dump_s_expr(o->lambda.body);
       printf(")");
       break;
     case cons:

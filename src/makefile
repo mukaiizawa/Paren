@@ -35,17 +35,20 @@ paren=paren$(exe)
 
 all: $(paren)
 
-prim=prim.c
+prim=special.c list.c
 prim.wk: $(prim)
+	cat $+>$@
+
+prim_name.wk: $(prim)
 	cat $+ | grep ^PRIM>$@
 
-xc.a: std.o xbarray.o xsplay.o lex.o object.o $(prim:%.c=%.o)
+xc.a: std.o xbarray.o xsplay.o lex.o object.o
 	ar -ru xc.a $+
 
 $(paren): paren.o xc.a
 	$(link)
 
 clean:
-	rm -f *.o *.a *.wk *.exe
+	rm -f *.o *.a *.exe *.wk
 
 include cdep.d

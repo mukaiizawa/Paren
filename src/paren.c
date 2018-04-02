@@ -28,23 +28,38 @@
 
 // symbol table and environment
 
-static struct xsplay prim_table;
 static struct xsplay symbol_table;
 static struct xsplay keyword_table;
 static object toplevel;
 static object env;
 
-static int symcmp(object o, object p)
-{
-  return strcmp(o->symbol.name, p->symbol.name);
-}
+// primitive
 
-static char *prim_name_table[] = {
-#define PRIM(n) #n,
-#include "prim.wk"
+#define PRIM(name) extern object prim_##name(object args);
+#include "prim_name.wk"
+#undef PRIM
+
+static object (*prim_table[])(object args) = {
+#define PRIM(name) prim_##name,
+#include "prim_name.wk"
 #undef PRIM
   NULL
 };
+
+static char *prim_name_table[] = {
+#define PRIM(n) #n,
+#include "prim_name.wk"
+#undef PRIM
+  NULL
+};
+
+// object construct and regist
+
+static int symcmp(object o, object p)
+{
+  xassert(object_typep(o, symbol) && object_typep(p, symbol));
+  return strcmp(o->symbol.name, p->symbol.name);
+}
 
 static object find(object sym)
 {
@@ -83,18 +98,15 @@ static void dump_symbol_table()
 {
   printf("symbol_table {\n");
   xsplay_foreach(&symbol_table, dump_symbol);
-  xsplay_foreach(&prim_table, dump_symbol);
   printf("}\n");
 }
-
-// object construct and regist
 
 static object object_alloc()
 {
   return xmalloc(sizeof(union s_expr));
 }
 
-static object new_lambda(object top, object params, object body)
+static object new_lambda(object top, object params, object body, int prim_cd)
 {
   object o;
   o = object_alloc();
@@ -102,6 +114,7 @@ static object new_lambda(object top, object params, object body)
   o->lambda.top = top;
   o->lambda.params = params;
   o->lambda.body = body;
+  o->lambda.prim_cd = prim_cd;
   xsplay_init(&o->lambda.binding, (int(*)(void* ,void*))symcmp);
   return o;
 }
@@ -175,29 +188,29 @@ static object new_keyword(char *name)
   return o;
 }
 
-static void bind_primitive_symbol(object o, char *name)
+static void bind_primitive_symbol(object *o, char *name)
 {
-  o = new_symbol(name);
-  bind(o, o);
+  *o = new_symbol(name);
+  bind(*o, *o);
 }
 
 static void make_initial_objects(void)
 {
   int i;
   char *s;
-  xsplay_init(&prim_table, (int(*)(void* ,void*))strcmp);
   xsplay_init(&symbol_table, (int(*)(void* ,void*))strcmp);
   xsplay_init(&keyword_table, (int(*)(void* ,void*))strcmp);
   object_nil = new_symbol("nil");
-  env = toplevel = new_lambda(object_nil, object_nil, object_nil);
+  env = toplevel = new_lambda(object_nil, object_nil, object_nil, -1);
   bind(object_nil, object_nil);
-  bind_primitive_symbol(object_true, "true");
-  bind_primitive_symbol(object_false, "false");
-  bind_primitive_symbol(object_error, "error");
-  bind_primitive_symbol(object_pre_condition_error, "pre_condition_error");
-  bind_primitive_symbol(object_post_condition_error, "post_condition_error");
+  bind_primitive_symbol(&object_true, "true");
+  bind_primitive_symbol(&object_false, "false");
+  object_error = new_keyword(":Error");
+  object_pre_condition_error = new_keyword(":PreConditionError");
+  object_post_condition_error = new_keyword(":PostConditionError");
+  object_argument_error = new_keyword(":ArgumentError");
   for (i = 0; (s = prim_name_table[i]) != NULL; i++)
-    xsplay_add(&prim_table, s, new_symbol(s));
+    bind(new_symbol(s), new_lambda(toplevel, object_nil, object_nil, i));
 }
 
 // parser
@@ -278,12 +291,19 @@ static object parse_s_expr(void)
 
 // evaluater
 
-static object eval_cons(object o)
+static object eval(object o);
+
+static object eval_list(object o)
 {
-  if (!object_typep(object_car(o), symbol)) {
-    object_dump(o);
-    lex_error("illegal list");
+  object ope, args;
+  ope = eval(object_car(o));
+  args = object_cdr(o);
+  if (!object_typep(ope, lambda)) {
+    object_dump(ope);
+    lex_error("is not a operators");
   }
+  if (o->lambda.prim_cd >= 0)
+    return (*prim_table[ope->lambda.prim_cd])(args);
   return o;
 }
 
@@ -303,7 +323,7 @@ static object eval(object o)
         lex_error("unbind symbol '%s'", o->symbol.name);
       return p;
     case cons:
-      return eval_cons(o);
+      return eval_list(o);
   }
 }
 
@@ -326,6 +346,14 @@ static void load(char *fn)
   fclose(fp);
 }
 
+#define arg(n) object_nth(args, n)
+#define argc object_length(args)
+#define PRIM(name) object prim_##name(object args)
+#include "prim.wk" 
+#undef PRIM
+#undef argc
+#undef arg
+
 int main(int argc, char *argv[])
 {
   char *core_fn;
@@ -333,6 +361,6 @@ int main(int argc, char *argv[])
   core_fn = "core.p";
   make_initial_objects();
   load(core_fn);
-  dump_symbol_table();
+  if (0) dump_symbol_table();
   return 0;
 }
