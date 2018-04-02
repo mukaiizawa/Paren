@@ -53,17 +53,17 @@ union s_expr {
   } symbol;
 };
 
+// global object
 extern object object_nil;
 extern object object_true;
 extern object object_false;
 
-extern int object_nilp(object o);
-extern int object_consp(object o);
-extern int object_listp(object o);
+// list utility
+extern object CAR(object o);
+extern object CDR(object o);
+extern int TYPEP(object o, enum object_type type);
+extern int NILP(object o);
+extern int CONSP(object o);
+extern int LISTP(object o);
 
-extern object object_type(object o);
-extern object object_alloc();
-extern object object_new_barray(int len);
-extern object object_new_xint(int val);
-extern object object_new_xfloat(double val);
 extern void object_dump(object o);

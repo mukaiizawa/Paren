@@ -31,25 +31,6 @@ static int symcmp(object o, object p)
   return strcmp(o->symbol.name, p->symbol.name);
 }
 
-static int typep(object o, enum object_type type)
-{
-  return o->header.type == type;
-}
-
-static object car(object o)
-{
-  if (o == object_nil) return o;
-  xassert(typep(o, cons));
-  return o->cons.car;
-}
-
-// static object cdr(object o)
-// {
-//   if (o == object_nil) return o;
-//   xassert(typep(o, cons));
-//   return o->cons.cdr;
-// }
-
 // symbol table and environment
 
 static struct xsplay prim_table;
@@ -68,7 +49,7 @@ static char *prim_name_table[] = {
 static object find(object sym)
 {
   object o, e;
-  xassert(typep(sym, symbol));
+  xassert(TYPEP(sym, symbol));
   e = env;
   while (e != object_nil) {
     if ((o = xsplay_find(&e->lambda.binding, sym)) != NULL) return o;
@@ -80,7 +61,7 @@ static object find(object sym)
 static void bind(object sym, object val)
 {
   object e;
-  xassert(typep(sym, symbol));
+  xassert(TYPEP(sym, symbol));
   e = env;
   while (e != object_nil) {
     if (xsplay_find(&e->lambda.binding, sym) != NULL) {
@@ -108,6 +89,11 @@ static void dump_symbol_table()
 
 // object construct and regist
 
+static object object_alloc()
+{
+  return xmalloc(sizeof(union s_expr));
+}
+
 static object new_lambda(object top, object params, object body)
 {
   object o;
@@ -127,6 +113,41 @@ static object new_cons(object car, object cdr)
   o->header.type = cons;
   o->cons.car = car;
   o->cons.cdr = cdr;
+  return o;
+}
+
+// object object_new_barray(int len)
+// {
+//   object o;
+//   o = xmalloc(sizeof(struct fbarray) + len - 1);
+//   o->header.type = fbarray;
+//   return o;
+// }
+//
+// object object_new_fbarray(int len)
+// {
+//   object o;
+//   o = xmalloc(sizeof(struct farray) + (len - 1) * sizeof(object));
+//   o->header.type = farray;
+//   while (len-- > 0) o->farray.elt[len] = object_nil;
+//   return o;
+// }
+
+static object new_xint(int val)
+{
+  object o;
+  o = object_alloc();
+  o->header.type = xint;
+  o->xint.val = val;
+  return o;
+}
+
+static object new_xfloat(double val)
+{
+  object o;
+  o = object_alloc();
+  o->header.type = xfloat;
+  o->xfloat.val = val;
   return o;
 }
 
@@ -226,14 +247,14 @@ static object parse_integer(void)
 {
   int val = lex_ival;
   parse_skip();
-  return object_new_xint(val);
+  return new_xint(val);
 }
 
 static object parse_float(void)
 {
   double val = lex_fval;
   parse_skip();
-  return object_new_xfloat(val);
+  return new_xfloat(val);
 }
 
 static object parse_s_expr(void)
@@ -252,7 +273,7 @@ static object parse_s_expr(void)
 
 static object eval_cons(object o)
 {
-  if (!typep(car(o), symbol)) {
+  if (!TYPEP(CAR(o), symbol)) {
     object_dump(o);
     lex_error("illegal list");
   }

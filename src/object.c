@@ -12,74 +12,53 @@ object object_nil;
 object object_true;
 object object_false;
 
-object object_alloc()
+object CAR(object o)
 {
-  return xmalloc(sizeof(union s_expr));
+  if (o == object_nil) return o;
+  xassert(TYPEP(o, cons));
+  return o->cons.car;
 }
 
-object object_new_barray(int len)
+object CDR(object o)
 {
-  object o;
-  o = xmalloc(sizeof(struct fbarray) + len - 1);
-  o->header.type = fbarray;
-  return o;
+  if (o == object_nil) return o;
+  xassert(TYPEP(o, cons));
+  return o->cons.cdr;
 }
 
-object object_new_fbarray(int len)
+int TYPEP(object o, enum object_type type)
 {
-  object o;
-  o = xmalloc(sizeof(struct farray) + (len - 1) * sizeof(object));
-  o->header.type = farray;
-  while (len-- > 0) o->farray.elt[len] = object_nil;
-  return o;
+  return o->header.type == type;
 }
 
-object object_new_xint(int val)
-{
-  object o;
-  o = object_alloc();
-  o->header.type = xint;
-  o->xint.val = val;
-  return o;
-}
-
-object object_new_xfloat(double val)
-{
-  object o;
-  o = object_alloc();
-  o->header.type = xfloat;
-  o->xfloat.val = val;
-  return o;
-}
-
-int object_nilp(object o)
+int NILP(object o)
 {
   return o == object_nil;
 }
 
-int object_consp(object o)
+int CONP(object o)
 {
   xassert(o != NULL);
   return o->header.type == cons;
 }
 
-int object_listp(object o)
+int listp(object o)
 {
   xassert(o != NULL);
-  return object_consp(o) || object_nilp(o);
+  return CONP(o) || NILP(o);
 }
 
 static void dump_s_expr(object o);
 
 static void dump_cons(object o)
 {
-  xassert(object_consp(o));
+  xassert(CONP(o));
   printf("(");
-  dump_s_expr(o->cons.car);
-  while (!object_nilp(o->cons.cdr)) {
+  dump_s_expr(CAR(o));
+  while (!NILP(CDR(o))) {
     printf(" ");
-    o = o->cons.cdr;
-    if (object_listp(o)) dump_s_expr(o->cons.car);
+    o = CDR(o);
+    if (listp(o)) dump_s_expr(CAR(o));
     else {
       printf(". ");
       dump_s_expr(o);
