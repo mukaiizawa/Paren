@@ -26,11 +26,6 @@
  * <digit> ::= [0-9]
  */
 
-static int symcmp(object o, object p)
-{
-  return strcmp(o->symbol.name, p->symbol.name);
-}
-
 // symbol table and environment
 
 static struct xsplay prim_table;
@@ -38,6 +33,11 @@ static struct xsplay symbol_table;
 static struct xsplay keyword_table;
 static object toplevel;
 static object env;
+
+static int symcmp(object o, object p)
+{
+  return strcmp(o->symbol.name, p->symbol.name);
+}
 
 static char *prim_name_table[] = {
 #define PRIM(n) #n,
@@ -49,7 +49,7 @@ static char *prim_name_table[] = {
 static object find(object sym)
 {
   object o, e;
-  xassert(TYPEP(sym, symbol));
+  xassert(object_typep(sym, symbol));
   e = env;
   while (e != object_nil) {
     if ((o = xsplay_find(&e->lambda.binding, sym)) != NULL) return o;
@@ -61,7 +61,7 @@ static object find(object sym)
 static void bind(object sym, object val)
 {
   object e;
-  xassert(TYPEP(sym, symbol));
+  xassert(object_typep(sym, symbol));
   e = env;
   while (e != object_nil) {
     if (xsplay_find(&e->lambda.binding, sym) != NULL) {
@@ -273,7 +273,7 @@ static object parse_s_expr(void)
 
 static object eval_cons(object o)
 {
-  if (!TYPEP(CAR(o), symbol)) {
+  if (!object_typep(object_car(o), symbol)) {
     object_dump(o);
     lex_error("illegal list");
   }
@@ -292,7 +292,8 @@ static object eval(object o)
     case keyword:
       return o;
     case symbol:
-      if ((p = find(o)) == NULL) lex_error("unbind symbol '%s'", o->symbol.name);
+      if ((p = find(o)) == NULL)
+        lex_error("unbind symbol '%s'", o->symbol.name);
       return p;
     case cons:
       return eval_cons(o);

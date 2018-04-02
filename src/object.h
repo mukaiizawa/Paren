@@ -59,11 +59,11 @@ extern object object_true;
 extern object object_false;
 
 // list utility
-extern object CAR(object o);
-extern object CDR(object o);
-extern int TYPEP(object o, enum object_type type);
-extern int NILP(object o);
-extern int CONSP(object o);
+extern object object_car(object o);
+extern object object_cdr(object o);
+extern int object_typep(object o, enum object_type type);
+extern int object_nilp(object o);
+extern int object_consp(object o);
 extern int LISTP(object o);
 
 extern void object_dump(object o);

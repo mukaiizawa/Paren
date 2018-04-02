@@ -12,53 +12,53 @@ object object_nil;
 object object_true;
 object object_false;
 
-object CAR(object o)
+object object_car(object o)
 {
   if (o == object_nil) return o;
-  xassert(TYPEP(o, cons));
+  xassert(object_typep(o, cons));
   return o->cons.car;
 }
 
-object CDR(object o)
+object object_cdr(object o)
 {
   if (o == object_nil) return o;
-  xassert(TYPEP(o, cons));
+  xassert(object_typep(o, cons));
   return o->cons.cdr;
 }
 
-int TYPEP(object o, enum object_type type)
+int object_typep(object o, enum object_type type)
 {
   return o->header.type == type;
 }
 
-int NILP(object o)
+int object_nilp(object o)
 {
   return o == object_nil;
 }
 
-int CONP(object o)
+int object_consp(object o)
 {
   xassert(o != NULL);
   return o->header.type == cons;
 }
 
-int listp(object o)
+int object_listp(object o)
 {
   xassert(o != NULL);
-  return CONP(o) || NILP(o);
+  return object_consp(o) || object_nilp(o);
 }
 
 static void dump_s_expr(object o);
 
 static void dump_cons(object o)
 {
-  xassert(CONP(o));
+  xassert(object_consp(o));
   printf("(");
-  dump_s_expr(CAR(o));
-  while (!NILP(CDR(o))) {
+  dump_s_expr(object_car(o));
+  while (!object_nilp(object_cdr(o))) {
     printf(" ");
-    o = CDR(o);
-    if (listp(o)) dump_s_expr(CAR(o));
+    o = object_cdr(o);
+    if (object_listp(o)) dump_s_expr(object_car(o));
     else {
       printf(". ");
       dump_s_expr(o);
