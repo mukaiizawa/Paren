@@ -175,6 +175,12 @@ static object new_keyword(char *name)
   return o;
 }
 
+static void bind_primitive_symbol(object o, char *name)
+{
+  o = new_symbol(name);
+  bind(o, o);
+}
+
 static void make_initial_objects(void)
 {
   int i;
@@ -183,12 +189,13 @@ static void make_initial_objects(void)
   xsplay_init(&symbol_table, (int(*)(void* ,void*))strcmp);
   xsplay_init(&keyword_table, (int(*)(void* ,void*))strcmp);
   object_nil = new_symbol("nil");
-  object_true = new_symbol("true");
-  object_false = new_symbol("false");
   env = toplevel = new_lambda(object_nil, object_nil, object_nil);
   bind(object_nil, object_nil);
-  bind(object_true, object_true);
-  bind(object_false, object_false);
+  bind_primitive_symbol(object_true, "true");
+  bind_primitive_symbol(object_false, "false");
+  bind_primitive_symbol(object_error, "error");
+  bind_primitive_symbol(object_pre_condition_error, "pre_condition_error");
+  bind_primitive_symbol(object_post_condition_error, "post_condition_error");
   for (i = 0; (s = prim_name_table[i]) != NULL; i++)
     xsplay_add(&prim_table, s, new_symbol(s));
 }

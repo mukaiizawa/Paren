@@ -57,13 +57,18 @@ union s_expr {
 extern object object_nil;
 extern object object_true;
 extern object object_false;
+extern object object_error;
+extern object object_pre_condition_error;
+extern object object_post_condition_error;
 
 // list utility
 extern object object_car(object o);
 extern object object_cdr(object o);
+extern object object_nth(object o, int n);
+extern int object_length(object o);
 extern int object_typep(object o, enum object_type type);
 extern int object_nilp(object o);
 extern int object_consp(object o);
-extern int LISTP(object o);
+extern int object_listp(object o);
 
 extern void object_dump(object o);

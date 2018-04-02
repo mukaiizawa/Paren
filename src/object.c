@@ -11,6 +11,9 @@
 object object_nil;
 object object_true;
 object object_false;
+object object_error;
+object object_pre_condition_error;
+object object_post_condition_error;
 
 object object_car(object o)
 {
@@ -24,6 +27,21 @@ object object_cdr(object o)
   if (o == object_nil) return o;
   xassert(object_typep(o, cons));
   return o->cons.cdr;
+}
+
+object object_nth(object o, int n)
+{
+  xassert(n >= 0);
+  while (n-- != 0) o = object_cdr(o);
+  return object_car(o);
+}
+
+int object_length(object o)
+{
+  xassert(object_listp(o));
+  int c;
+  for (c = 0; !object_nilp(o); o = object_cdr(o)) c++;
+  return c;
 }
 
 int object_typep(object o, enum object_type type)

@@ -35,7 +35,7 @@ paren=paren$(exe)
 
 all: $(paren)
 
-prim=special.c
+prim=prim.c
 prim.wk: $(prim)
 	cat $+ | grep ^PRIM>$@
 
