@@ -91,12 +91,15 @@
 //   }
 // }
 
-static void repl()
-{
-  return;
+static object eval(object o) {
+  return o;
 }
 
-void ip_start(object args[])
+static void print(object o) {
+  object_dump(o);
+}
+
+void ip_start(object args)
 {
-  repl();
+  print(eval(args));
 }

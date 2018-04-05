@@ -60,22 +60,9 @@ union s_expr {
 extern struct xarray object_table;
 
 // global object
-extern object object_env;
 extern object object_nil;
 extern object object_true;
 extern object object_false;
-extern object object_prim;
-
-// list utility
-// extern object object_car(object o);
-// extern object object_cdr(object o);
-// extern object object_nth(object o, int n);
-// extern int object_length(object o);
-// extern int object_typep(object o, enum object_type type);
-// extern int object_nilp(object o);
-// extern int object_consp(object o);
-// extern int object_listp(object o);
-// extern int object_bool(object o);
 
 extern object object_alloc(void);
 extern void object_dump(object o);

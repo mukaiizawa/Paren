@@ -11,7 +11,6 @@
 
 struct xarray object_table;
 
-object object_env;
 object object_nil;
 object object_true;
 object object_false;

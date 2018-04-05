@@ -28,3 +28,6 @@ Atomには次のよく使う型があります。
     ;; => 1
 
 Listは`(<function> <arg1> <arg2> ... <argN>)`の形式をとります。
+
+# Special Thanks
+Ken'ichi Tokuoka.
