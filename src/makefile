@@ -42,7 +42,7 @@ prim.wk: $(prim)
 prim_name.wk: $(prim)
 	cat $+ | grep ^PRIM>$@
 
-xc.a: std.o xbarray.o xsplay.o lex.o object.o
+xc.a: std.o xarray.o xbarray.o xsplay.o object.o lex.o ip.o
 	ar -ru xc.a $+
 
 $(paren): paren.o xc.a

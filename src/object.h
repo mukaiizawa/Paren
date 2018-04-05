@@ -13,6 +13,8 @@ enum object_type {
   keyword
 };
 
+extern char *object_type_name[];
+
 struct object_header {
   enum object_type type;
   int hash;
@@ -54,25 +56,28 @@ union s_expr {
   } symbol;
 };
 
+// table
+extern struct xarray object_table;
+
 // global object
+extern object object_env;
 extern object object_nil;
 extern object object_true;
 extern object object_false;
 extern object object_prim;
-extern object object_error;
-extern object object_pre_condition_error;
-extern object object_post_condition_error;
-extern object object_argument_error;
 
 // list utility
-extern object object_car(object o);
-extern object object_cdr(object o);
-extern object object_nth(object o, int n);
-extern int object_length(object o);
-extern int object_typep(object o, enum object_type type);
-extern int object_nilp(object o);
-extern int object_consp(object o);
-extern int object_listp(object o);
-extern int object_bool(object o);
+// extern object object_car(object o);
+// extern object object_cdr(object o);
+// extern object object_nth(object o, int n);
+// extern int object_length(object o);
+// extern int object_typep(object o, enum object_type type);
+// extern int object_nilp(object o);
+// extern int object_consp(object o);
+// extern int object_listp(object o);
+// extern int object_bool(object o);
 
+extern object object_alloc(void);
 extern void object_dump(object o);
+
+extern void object_init(void);

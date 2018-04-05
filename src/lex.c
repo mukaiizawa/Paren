@@ -6,6 +6,22 @@
 #include "std.h"
 #include "lex.h"
 
+/*
+ * paren bnf
+ * <s_expr> ::= <list> | <atom>
+ * <list> ::= <pure_list> | <dot_list>
+ * <pure_list> ::= '(' [<s_expr>] ... ')'
+ * <dot_list> ::= '(' <s_expr> ... '.' <s_expr> ')'
+ * <atom> ::= <number> | <symbol> | <keyword>
+ * <number> ::= [<digit>+ 'x'] [0-9a-z]+ | <digit>+ [ '.' <digit>+ ]
+ * <symbol> ::= <identifier>
+ * <keyword> ::= ':' <identifier>
+ * <identifier> ::= <identifier_first> [<identifier_rest>] ...
+ * <identifier_first> ::= [!$%&*+-/\-<=>?a-zA-Z_]
+ * <identifier_rest> ::= <identifier_first> | [0-9]
+ * <digit> ::= [0-9]
+ */
+
 struct xbarray lex_str;
 int lex_ival;
 double lex_fval;

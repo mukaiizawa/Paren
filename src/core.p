@@ -1,9 +1,10 @@
 ; paren core library.
 
-(assign a 1 b 2)
-a
-b
-
+; (assign a (lambda (x) x))
+lambda
+car
+((lambda (x) x) 2)
+; (a 3)
 
 ; dot list
 ; (quote (1 . 2))

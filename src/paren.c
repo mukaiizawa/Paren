@@ -7,115 +7,53 @@
 
 #include "std.h"
 #include "xsplay.h"
+#include "xarray.h"
 #include "object.h"
 #include "lex.h"
+#include "ip.h"
 
-/*
- * paren bnf
- * <s_expr> ::= <list> | <atom>
- * <list> ::= <pure_list> | <dot_list>
- * <pure_list> ::= '(' [<s_expr>] ... ')'
- * <dot_list> ::= '(' <s_expr> ... '.' <s_expr> ')'
- * <atom> ::= <number> | <symbol> | <keyword>
- * <number> ::= [<digit>+ 'x'] [0-9a-z]+ | <digit>+ [ '.' <digit>+ ]
- * <symbol> ::= <identifier>
- * <keyword> ::= ':' <identifier>
- * <identifier> ::= <identifier_first> [<identifier_rest>] ...
- * <identifier_first> ::= [!$%&*+-/\-<=>?a-zA-Z_]
- * <identifier_rest> ::= <identifier_first> | [0-9]
- * <digit> ::= [0-9]
- */
+// option
 
-// symbol table and environment
+static int dump_object_table_p;
+static char *core_fn;
 
-static struct xsplay symbol_table;
-static struct xsplay keyword_table;
-static object toplevel;
-static object env;
-
-// primitive
-
-#define PRIM(name) extern object prim_##name(object args);
-#include "prim_name.wk"
-#undef PRIM
-
-static object (*prim_table[])(object args) = {
-#define PRIM(name) prim_##name,
-#include "prim_name.wk"
-#undef PRIM
-  NULL
-};
-
-static char *prim_name_table[] = {
-#define PRIM(n) #n,
-#include "prim_name.wk"
-#undef PRIM
-  NULL
-};
+static void parse_opt(int argc,char *argv[])
+{
+  core_fn = "core.p";
+  dump_object_table_p = TRUE;
+}
 
 // object construct and regist
 
+static struct xsplay symbol_table;
+
 static int symcmp(object o, object p)
 {
-  xassert(object_typep(o, symbol) && object_typep(p, symbol));
+  xassert(o->header.type == symbol && o->header.type == p->header.type);
   return strcmp(o->symbol.name, p->symbol.name);
 }
 
-static object find(object sym)
+static void regist(object o)
 {
-  object o, e;
-  xassert(object_typep(sym, symbol));
-  e = env;
-  while (e != object_nil) {
-    if ((o = xsplay_find(&e->lambda.binding, sym)) != NULL) return o;
-    e = e->lambda.top;
-  }
-  return NULL;
+  xarray_add(&object_table, o);
 }
 
-static void bind(object sym, object val)
+static object new_lambda(object params, object body, int prim_cd)
 {
-  object e;
-  xassert(object_typep(sym, symbol));
-  e = env;
-  while (e != object_nil) {
-    if (xsplay_find(&e->lambda.binding, sym) != NULL) {
-      xsplay_delete(&e->lambda.binding, sym);
-      xsplay_add(&e->lambda.binding, sym, val);
-      return;
-    }
-    e = e->lambda.top;
-  }
-  xsplay_add(&toplevel->lambda.binding, sym, val);
-}
-
-static void dump_symbol(int depth, void *key, void *data)
-{
-  printf("\t%s\t%p\n", key, data);
-}
-
-static void dump_symbol_table()
-{
-  printf("symbol_table {\n");
-  xsplay_foreach(&symbol_table, dump_symbol);
-  printf("}\n");
-}
-
-static object object_alloc()
-{
-  return xmalloc(sizeof(union s_expr));
-}
-
-static object new_lambda(object top, object params, object body, int prim_cd)
-{
-  object o;
+  object o, p;
   o = object_alloc();
   o->header.type = lambda;
-  o->lambda.top = top;
+  o->lambda.top = object_nil;
   o->lambda.params = params;
   o->lambda.body = body;
   o->lambda.prim_cd = prim_cd;
-  xsplay_init(&o->lambda.binding, (int(*)(void* ,void*))symcmp);
+  xsplay_init(&o->lambda.binding, (int(*)(void *, void *))symcmp);
+  while (params->header.type == cons) {
+    if ((p = params->cons.car)->header.type == symbol)
+      xsplay_add(&o->lambda.binding, p, object_nil);
+    params = params->cons.cdr;
+  }
+  regist(o);
   return o;
 }
 
@@ -126,6 +64,7 @@ static object new_cons(object car, object cdr)
   o->header.type = cons;
   o->cons.car = car;
   o->cons.cdr = cdr;
+  regist(o);
   return o;
 }
 
@@ -152,6 +91,7 @@ static object new_xint(int val)
   o = object_alloc();
   o->header.type = xint;
   o->xint.val = val;
+  regist(o);
   return o;
 }
 
@@ -161,56 +101,26 @@ static object new_xfloat(double val)
   o = object_alloc();
   o->header.type = xfloat;
   o->xfloat.val = val;
+  regist(o);
+  return o;
+}
+
+static object new_symbol_keyword(int token_kind, char *name)
+{
+  object o;
+  if ((o = xsplay_find(&symbol_table, name)) == NULL) {
+    o = object_alloc();
+    if (token_kind == LEX_SYMBOL) o->header.type = symbol;
+    else o->symbol.name = stralloc(name);
+    xsplay_add(&symbol_table, o->symbol.name, o);
+  }
+  regist(o);
   return o;
 }
 
 static object new_symbol(char *name)
 {
-  object o;
-  if ((o = xsplay_find(&symbol_table, name)) == NULL) {
-    o = object_alloc();
-    o->header.type = symbol;
-    o->symbol.name = stralloc(name);
-    xsplay_add(&symbol_table, o->symbol.name, o);
-  }
-  return o;
-}
-
-static object new_keyword(char *name)
-{
-  object o;
-  if ((o = xsplay_find(&keyword_table, name)) == NULL) {
-    o = object_alloc();
-    o->header.type = keyword;
-    o->symbol.name = stralloc(name);
-    xsplay_add(&keyword_table, o->symbol.name, o);
-  }
-  return o;
-}
-
-static void bind_primitive_symbol(object *o, char *name)
-{
-  *o = new_symbol(name);
-  bind(*o, *o);
-}
-
-static void make_initial_objects(void)
-{
-  int i;
-  char *s;
-  xsplay_init(&symbol_table, (int(*)(void* ,void*))strcmp);
-  xsplay_init(&keyword_table, (int(*)(void* ,void*))strcmp);
-  object_nil = new_symbol("nil");
-  env = toplevel = new_lambda(object_nil, object_nil, object_nil, -1);
-  bind(object_nil, object_nil);
-  bind_primitive_symbol(&object_true, "true");
-  bind_primitive_symbol(&object_false, "false");
-  object_error = new_keyword(":Error");
-  object_pre_condition_error = new_keyword(":PreConditionError");
-  object_post_condition_error = new_keyword(":PostConditionError");
-  object_argument_error = new_keyword(":ArgumentError");
-  for (i = 0; (s = prim_name_table[i]) != NULL; i++)
-    bind(new_symbol(s), new_lambda(toplevel, object_nil, object_nil, i));
+  return new_symbol_keyword(LEX_SYMBOL, name);
 }
 
 // parser
@@ -224,7 +134,7 @@ static int parse_skip(void)
 
 static object parse_s_expr(void);
 
-static object parse_cdr()
+static object parse_cdr(void)
 {
   object cdr;
   if (next_token == ')') return object_nil;
@@ -247,18 +157,10 @@ static object parse_list(void)
   return o;
 }
 
-static object parse_symbol(void)
+static object parse_symbol_keyword(void)
 {
   object o;
-  o = new_symbol(lex_str.elt);
-  parse_skip();
-  return o;
-}
-
-static object parse_keyword(void)
-{
-  object o;
-  o = new_keyword(lex_str.elt);
+  o = new_symbol_keyword(next_token, lex_str.elt);
   parse_skip();
   return o;
 }
@@ -283,55 +185,10 @@ static object parse_s_expr(void)
     case '(': return parse_list();
     case LEX_INT: return parse_integer();
     case LEX_FLOAT: return parse_float();
-    case LEX_SYMBOL: return parse_symbol();
-    case LEX_KEYWORD: return parse_keyword();
+    case LEX_SYMBOL:
+    case LEX_KEYWORD: return parse_symbol_keyword();
     default: lex_error("illegal token value '%d'.", next_token); return NULL;
   }
-}
-
-// evaluater
-
-static object eval(object o);
-
-static object eval_list(object o)
-{
-  object ope, args;
-  ope = eval(object_car(o));
-  args = object_cdr(o);
-  if (!object_typep(ope, lambda)) {
-    object_dump(ope);
-    lex_error("is not a operators");
-  }
-  if (o->lambda.prim_cd >= 0)
-    return (*prim_table[ope->lambda.prim_cd])(args);
-  return o;
-}
-
-static object eval(object o)
-{
-  object p;
-  switch (o->header.type) {
-    case lambda:
-    case fbarray:
-    case farray:
-    case xint:
-    case xfloat:
-    case keyword:
-      return o;
-    case symbol:
-      if ((p = find(o)) == NULL)
-        lex_error("unbind symbol '%s'", o->symbol.name);
-      return p;
-    case cons:
-      return eval_list(o);
-  }
-}
-
-// printer
-
-static void print(object o)
-{
-  object_dump(o);
 }
 
 // loader
@@ -342,25 +199,52 @@ static void load(char *fn)
   if((fp = fopen(fn, "r")) == NULL) xerror("load/open %s failed.", fn);
   lex_start(fp);
   parse_skip();
-  while (next_token != EOF) print(eval(parse_s_expr()));
+  while (next_token != EOF) parse_s_expr();
   fclose(fp);
 }
 
-#define arg(n) object_nth(args, n)
-#define argc object_length(args)
-#define PRIM(name) object prim_##name(object args)
-#include "prim.wk" 
+static char *prim_name_table[]={
+#define PRIM(n) #n,
+#include "prim_name.wk"
 #undef PRIM
-#undef argc
-#undef arg
+  NULL
+};
+
+static void make_initial_objects(void)
+{
+  int i;
+  char *s;
+  object_nil = new_symbol("nil");
+  object_true = new_symbol("true");
+  object_false = new_symbol("false");
+  object_env = new_lambda(object_nil, object_nil, -1);
+  for (i = 0; (s = prim_name_table[i]) != NULL; i++) new_symbol(s);
+}
+
+static object *make_boot_args(void)
+{
+  object *boot_args;
+  boot_args = xmalloc(sizeof(object) * 4);
+  boot_args[0] = object_nil;
+  boot_args[1] = object_true;
+  boot_args[2] = object_false;
+  boot_args[3] = object_env;
+  return boot_args;
+}
 
 int main(int argc, char *argv[])
 {
-  char *core_fn;
+  int i;
+  object *boot_args;
   setbuf(stdout, NULL);
-  core_fn = "core.p";
+  parse_opt(argc, argv);
+  object_init();
+  xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
   make_initial_objects();
   load(core_fn);
-  if (0) dump_symbol_table();
+  if (dump_object_table_p)
+    for(i = 0; i < object_table.size; i++) object_dump(object_table.elt[i]);
+  boot_args = make_boot_args();
+  ip_start(boot_args);
   return 0;
 }
