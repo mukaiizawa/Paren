@@ -20,6 +20,7 @@ static char *core_fn;
 static void parse_opt(int argc,char *argv[])
 {
   core_fn = "core.p";
+  if (argc == 2) core_fn = argv[1];
   dump_object_table_p = FALSE;
 }
 

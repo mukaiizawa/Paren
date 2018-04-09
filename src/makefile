@@ -46,10 +46,9 @@ $(paren): paren.o pprim.o xc.a
 	$(link)
 
 core.p: $(paren)
-	touch core.p
-	./paren
+	./paren core.p
 
 clean:
-	rm -f *.o *.a *.exe *.wk
+	rm -f *.o *.a *.wk $(paren)
 
 include cdep.d
