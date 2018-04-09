@@ -27,26 +27,27 @@ cflags+=-O3 -DNDEBUG
 link+= ; $(strip) $(sflags) $@
 endif
 
-paren=paren$(exe)
-
 .SUFFIXES: .c .o
 .c.o:
 	$(cc) $(cflags) $<
 
-all: $(paren)
+all: $(paren) core.p
 
-prim=special.c list.c
-prim.wk: $(prim)
-	cat $+>$@
-
-prim_name.wk: $(prim)
+pprim=ip.c xint.c
+pprim.wk: $(pprim)
 	cat $+ | grep ^PRIM>$@
 
-xc.a: std.o xarray.o xbarray.o xsplay.o object.o lex.o ip.o
+xc.a: std.o xarray.o xbarray.o xsplay.o object.o prim.o lex.o \
+	$(pprim:%.c=%.o)
 	ar -ru xc.a $+
 
-$(paren): paren.o xc.a
+paren=paren$(exe)
+$(paren): paren.o pprim.o xc.a
 	$(link)
+
+core.p: $(paren)
+	touch core.p
+	./paren
 
 clean:
 	rm -f *.o *.a *.exe *.wk

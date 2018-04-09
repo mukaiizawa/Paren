@@ -2,6 +2,9 @@
 
 typedef union s_expr *object;
 
+#define XINT_MAX 0x3fffffff
+#define XINT_MIN (- XINT_MAX - 1)
+
 enum object_type {
   lambda,
   cons,
@@ -66,5 +69,7 @@ extern object object_false;
 
 extern object object_alloc(void);
 extern void object_dump(object o);
+
+extern object object_bool(int b);
 
 extern void object_init(void);

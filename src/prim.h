@@ -1,14 +1,19 @@
 // primitive
 
-#define arg(n) object_nth(args, n)
-#define argc object_length(args)
+#define PRIM(name) int prim_##name(object *args, object *result)
 
-#define PRIM(name) int prim_##name(object self,object *args,object *result)
+#define ARG(n, p) \
+{ \
+  int i; \
+  object o; \
+  o = *args; \
+  for (i = n; i >= 0; i--) { \
+    if (o == object_nil) return FALSE; \
+    p = o->cons.car; \
+    o = o->cons.cdr; \
+  } \
+}
 
-// #define PRIM(name) int prim_##name(object args, object *result)
-// #define arg(n) object_nth(args, n)
-// #define argc object_length(args)
-// #include "prim.wk"
-// #undef argc
-// #undef arg
-// #undef PRIM
+extern char *prim_name_table[];
+
+extern object prim_xint(int64_t val);

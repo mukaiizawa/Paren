@@ -20,79 +20,6 @@ object object_alloc(void)
   return xmalloc(sizeof(union s_expr));
 }
 
-// object object_car(object o)
-// {
-//   xassert(object_listp(o));
-//   if (object_nilp(o)) return object_nil;
-//   return o->cons.car;
-// }
-//
-// object object_cdr(object o)
-// {
-//   xassert(object_listp(o));
-//   if (object_nilp(o)) return object_nil;
-//   return o->cons.cdr;
-// }
-//
-// object object_nth(object o, int n)
-// {
-//   xassert(object_listp(o) && n >= 0);
-//   while (n-- != 0) o = object_cdr(o);
-//   return object_car(o);
-// }
-//
-// int object_length(object o)
-// {
-//   xassert(object_listp(o));
-//   int c;
-//   for (c = 0; !object_nilp(o); o = object_cdr(o)) c++;
-//   return c;
-// }
-//
-// int object_typep(object o, enum object_type type)
-// {
-//   xassert(o != NULL);
-//   return o->header.type == type;
-// }
-//
-// int object_nilp(object o)
-// {
-//   xassert(o != NULL);
-//   return o == object_nil;
-// }
-//
-// int object_consp(object o)
-// {
-//   xassert(o != NULL);
-//   return object_typep(o, cons);
-// }
-//
-// int object_listp(object o)
-// {
-//   xassert(o != NULL);
-//   return object_consp(o) || object_nilp(o);
-// }
-//
-// int object_bool(object o) {
-//   xassert(o != NULL);
-//   switch (o->header.type) {
-//     case lambda:
-//     case cons:
-//     case keyword:
-//       return TRUE;
-//     case fbarray:
-//       return o->fbarray.size != 0;
-//     case farray:
-//       return o->farray.size != 0;
-//     case xint:
-//       return o->xint.val != 0;
-//     case xfloat:
-//       return o->xfloat.val != 0.0;
-//     case symbol:
-//       return object_nilp(o) || o == object_false;
-//   }
-// }
-
 static void dump_s_expr(object o);
 
 static void dump_cons(object o)
@@ -125,7 +52,7 @@ char *object_type_name[] = {
 
 static char *prim_name_table[] = {
 #define PRIM(n) #n,
-#include "prim_name.wk"
+#include "pprim.wk"
 #undef PRIM
   NULL
 };
@@ -167,6 +94,7 @@ static void dump_s_expr(object o)
     case keyword:
       printf("%s", o->symbol.name);
       break;
+    default: xerror("unknown type '%d'", o->header.type);
   }
 }
 
@@ -175,6 +103,12 @@ void object_dump(object o)
   xassert(o != NULL);
   dump_s_expr(o);
   printf("\n");
+}
+
+object object_bool(int b)
+{
+  if (b) return object_true;
+  return object_false;
 }
 
 void object_init(void)

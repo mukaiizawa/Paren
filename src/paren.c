@@ -192,9 +192,11 @@ static object load(char *fn)
   return o;
 }
 
+extern int (*prim_table[])(object *args, object *result);
+
 static char *prim_name_table[] = {
 #define PRIM(n) #n,
-#include "prim_name.wk"
+#include "pprim.wk"
 #undef PRIM
   NULL
 };
@@ -209,6 +211,16 @@ static void make_initial_objects(void)
   for (i = 0; (s = prim_name_table[i]) != NULL; i++) new_symbol(s);
 }
 
+static void bind_prim(object o, int i)
+{
+  object p;
+  p = object_alloc();
+  p->header.type = lambda;
+  p->lambda.top = p->lambda.params = p->lambda.body = object_nil;
+  p->lambda.prim_cd = i;
+  xsplay_add(&o->lambda.binding, new_symbol(prim_name_table[i]), p);
+}
+
 static void bind_pseudo_symbol(object o, object p)
 {
   xsplay_add(&o->lambda.binding, p, p);
@@ -216,34 +228,38 @@ static void bind_pseudo_symbol(object o, object p)
 
 static object make_boot_args(object o)
 {
-  object boot_args;
-  boot_args = object_alloc();
-  boot_args->header.type = lambda;
-  boot_args->lambda.top = boot_args->lambda.params = object_nil;
-  boot_args->lambda.body = o;
-  boot_args->lambda.prim_cd = -1;
-  xsplay_init(&boot_args->lambda.binding, (int(*)(void *, void *))symcmp);
-  bind_pseudo_symbol(boot_args, object_nil);
-  bind_pseudo_symbol(boot_args, object_true);
-  bind_pseudo_symbol(boot_args, object_false);
-  regist(boot_args);
-  return boot_args;
+  int i;
+  char *s;
+  object boot_arg;
+  boot_arg = object_alloc();
+  boot_arg->header.type = lambda;
+  boot_arg->lambda.top = boot_arg->lambda.params = object_nil;
+  boot_arg->lambda.body = o;
+  boot_arg->lambda.prim_cd = -1;
+  xsplay_init(&boot_arg->lambda.binding, (int(*)(void *, void *))symcmp);
+  bind_pseudo_symbol(boot_arg, object_nil);
+  bind_pseudo_symbol(boot_arg, object_true);
+  bind_pseudo_symbol(boot_arg, object_false);
+  for (i = 0; (s = prim_name_table[i]) != NULL; i++) bind_prim(boot_arg, i);
+  regist(boot_arg);
+  return boot_arg;
 }
 
 int main(int argc, char *argv[])
 {
   int i;
-  object boot_args;
+  object boot_arg;
   setbuf(stdout, NULL);
   parse_opt(argc, argv);
   object_init();
   xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
   make_initial_objects();
-  boot_args = make_boot_args(load(core_fn));
+  boot_arg = make_boot_args(load(core_fn));
   if (dump_object_table_p) {
-    printf("* object table\n");
+    printf("* object table >\n");
     for(i = 0; i < object_table.size; i++) object_dump(object_table.elt[i]);
+    printf("<\n");
   }
-  ip_start(boot_args);
+  ip_start(boot_arg);
   return 0;
 }
