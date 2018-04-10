@@ -194,13 +194,7 @@ static object load(char *fn)
 }
 
 extern int (*prim_table[])(object *args, object *result);
-
-static char *prim_name_table[] = {
-#define PRIM(n) #n,
-#include "pprim.wk"
-#undef PRIM
-  NULL
-};
+extern char *prim_name_table[];
 
 static void make_initial_objects(void)
 {

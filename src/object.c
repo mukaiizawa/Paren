@@ -50,12 +50,7 @@ char *object_type_name[] = {
   "keyword"
 };
 
-static char *prim_name_table[] = {
-#define PRIM(n) #n,
-#include "pprim.wk"
-#undef PRIM
-  NULL
-};
+extern char *prim_name_table[];
 
 static void dump_s_expr(object o)
 {

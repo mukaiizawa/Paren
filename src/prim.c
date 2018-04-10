@@ -9,7 +9,7 @@
 
 #undef PRIM
 char *prim_name_table[] = {
-#define PRIM(n) #n,
+#define PRIM(n) "%" #n,
 #include "pprim.wk"
 #undef PRIM
   NULL
