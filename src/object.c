@@ -1,6 +1,5 @@
 // paren object
 
-#include <stdint.h>
 #include <string.h>
 
 #include "std.h"
@@ -80,7 +79,7 @@ static void dump_s_expr(object o)
       printf("]");
       break;
     case xint:
-      printf("%lld", o->xint.val);
+      printf("%d", o->xint.val);
       break;
     case xfloat:
       printf("%f", o->xfloat.val);

@@ -47,7 +47,7 @@ union s_expr {
   } farray;
   struct xint {
     struct object_header header;
-    int64_t val; 
+    int val; 
   } xint;
   struct xfloat {
     struct object_header header;

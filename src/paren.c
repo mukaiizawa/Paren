@@ -87,23 +87,18 @@ static object new_xfloat(double val)
   return o;
 }
 
-static object new_symbol_keyword(int token_kind, char *name)
+static object new_symbol(char *name)
 {
   object o;
   if ((o = xsplay_find(&symbol_table, name)) == NULL) {
     o = object_alloc();
-    if (token_kind == LEX_SYMBOL) o->header.type = symbol;
+    if (name[0] != ':') o->header.type = symbol;
     else o->header.type = keyword;
-    o->symbol.name = stralloc(name);
-    xsplay_add(&symbol_table, o->symbol.name, o);
+    o->symbol.name = name;
+    xsplay_add(&symbol_table, name, o);
     regist(o);
   }
   return o;
-}
-
-static object new_symbol(char *name)
-{
-  return new_symbol_keyword(LEX_SYMBOL, name);
 }
 
 // parser
@@ -133,31 +128,32 @@ static object parse_cdr(void)
 static object parse_list(void)
 {
   object o;
-  parse_skip();    // skip '('
-  if (next_token == ')') o = object_nil;
+  if (parse_skip() == ')') o = object_nil;
   else o = new_cons(parse_s_expr(), parse_cdr());
-  parse_skip();    // skip ')'
-  return o;
-}
-
-static object parse_symbol_keyword(void)
-{
-  object o;
-  o = new_symbol_keyword(next_token, lex_str.elt);
   parse_skip();
   return o;
 }
 
+static object parse_symbol(void)
+{
+  char *s;
+  s = stralloc(lex_str.elt);
+  parse_skip();
+  return new_symbol(s);
+}
+
 static object parse_integer(void)
 {
-  int val = lex_ival;
+  int val;
+  val = lex_ival;
   parse_skip();
   return new_xint(val);
 }
 
 static object parse_float(void)
 {
-  double val = lex_fval;
+  double val;
+  val = lex_fval;
   parse_skip();
   return new_xfloat(val);
 }
@@ -168,7 +164,7 @@ static object parse_s_expr(void)
     case '(': return parse_list();
     case LEX_INT: return parse_integer();
     case LEX_FLOAT: return parse_float();
-    case LEX_SYMBOL: case LEX_KEYWORD: return parse_symbol_keyword();
+    case LEX_SYMBOL: return parse_symbol();
     default: lex_error("illegal token value '%d'.", next_token); return NULL;
   }
 }
@@ -183,9 +179,9 @@ static object load_rec(void)
 
 static object load(char *fn)
 {
-  object o;
   FILE *fp;
-  if((fp = fopen(fn, "r")) == NULL) xerror("load/open %s failed.", fn);
+  object o;
+  if ((fp = fopen(fn, "r")) == NULL) xerror("load/open %s failed.", fn);
   lex_start(fp);
   parse_skip();
   o = new_cons(parse_s_expr(), load_rec());
@@ -198,12 +194,9 @@ extern char *prim_name_table[];
 
 static void make_initial_objects(void)
 {
-  int i;
-  char *s;
   object_nil = new_symbol("nil");
   object_true = new_symbol("true");
   object_false = new_symbol("false");
-  for (i = 0; (s = prim_name_table[i]) != NULL; i++) new_symbol(s);
 }
 
 static void bind_prim(object o, int i)

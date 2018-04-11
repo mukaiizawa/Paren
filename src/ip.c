@@ -168,6 +168,7 @@ static object eval(object o)
       return p;
     case cons:
       return eval_list(o);
+    default: xerror("illegal object"); return NULL;
   }
 }
 

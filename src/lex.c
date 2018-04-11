@@ -138,7 +138,6 @@ int lex(void)
     xbarray_reset(&lex_str);
     while (identifier_trail_char_p()) get();
     xbarray_add(&lex_str, '\0');
-    if (lex_str.elt[0] == ':') return LEX_KEYWORD;
     return LEX_SYMBOL;
   }
   lex_error("illegal char '%c'", next_ch);
@@ -150,7 +149,6 @@ char *lex_token_name(char *buf, int tk)
   char *name;
   switch (tk) {
     case LEX_SYMBOL: name = "symbol"; break;
-    case LEX_KEYWORD: name = "keyword"; break;
     case LEX_INT: name = "integer"; break;
     case LEX_FLOAT: name = "float"; break;
     case EOF: name = "eof"; break;
