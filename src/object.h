@@ -20,7 +20,7 @@ extern char *object_type_name[];
 
 struct object_header {
   enum object_type type;
-  int hash, gen, alievp;
+  int hash, gen, alivep;
 } object_header;
 
 union s_expr {
