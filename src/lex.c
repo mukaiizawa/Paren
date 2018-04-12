@@ -137,24 +137,9 @@ int lex(void)
   } else if (identifier_lead_char_p()) {
     xbarray_reset(&lex_str);
     while (identifier_trail_char_p()) get();
-    xbarray_add(&lex_str, '\0');
+    add('\0');
     return LEX_SYMBOL;
   }
   lex_error("illegal char '%c'", next_ch);
   return 0;
-}
-
-char *lex_token_name(char *buf, int tk)
-{
-  char *name;
-  switch (tk) {
-    case LEX_SYMBOL: name = "symbol"; break;
-    case LEX_INT: name = "integer"; break;
-    case LEX_FLOAT: name = "float"; break;
-    case EOF: name = "eof"; break;
-    default: name = NULL; break;
-  }
-  if (name == NULL) xerror("illegal token '%d'.", tk);
-  strcpy(buf, name);
-  return buf;
 }

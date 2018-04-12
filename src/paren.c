@@ -19,7 +19,7 @@ static char *core_fn;
 
 static void parse_opt(int argc,char *argv[])
 {
-  core_fn = "core.p";
+  core_fn = "./core.p";
   if (argc == 2) core_fn = argv[1];
   dump_object_table_p = FALSE;
 }
@@ -112,28 +112,6 @@ static int parse_skip(void)
 
 static object parse_s_expr(void);
 
-static object parse_cdr(void)
-{
-  object cdr;
-  if (next_token == ')') return object_nil;
-  if (next_token == '.') {
-    parse_skip();
-    cdr = parse_s_expr();
-    if (next_token != ')') lex_error("illegal dot list");
-    return cdr;
-  }
-  return new_cons(parse_s_expr(), parse_cdr());
-}
-
-static object parse_list(void)
-{
-  object o;
-  if (parse_skip() == ')') o = object_nil;
-  else o = new_cons(parse_s_expr(), parse_cdr());
-  parse_skip();
-  return o;
-}
-
 static object parse_symbol(void)
 {
   char *s;
@@ -158,15 +136,42 @@ static object parse_float(void)
   return new_xfloat(val);
 }
 
-static object parse_s_expr(void)
+static object parse_cdr(void)
+{
+  object cdr;
+  if (next_token == ')') return object_nil;
+  if (next_token == '.') {
+    parse_skip();
+    cdr = parse_s_expr();
+    if (next_token != ')') lex_error("illegal dot list");
+    return cdr;
+  }
+  return new_cons(parse_s_expr(), parse_cdr());
+}
+
+static object parse_list(void)
+{
+  object o;
+  if (parse_skip() == ')') o = object_nil;
+  else o = new_cons(parse_s_expr(), parse_cdr());
+  parse_skip();
+  return o;
+}
+
+static object parse_atom(void)
 {
   switch (next_token) {
-    case '(': return parse_list();
     case LEX_INT: return parse_integer();
     case LEX_FLOAT: return parse_float();
     case LEX_SYMBOL: return parse_symbol();
     default: lex_error("illegal token value '%d'.", next_token); return NULL;
   }
+}
+
+static object parse_s_expr(void)
+{
+  if (next_token == '(') return parse_list();
+  return parse_atom();
 }
 
 // loader
@@ -184,7 +189,7 @@ static object load(char *fn)
   if ((fp = fopen(fn, "r")) == NULL) xerror("load/open %s failed.", fn);
   lex_start(fp);
   parse_skip();
-  o = new_cons(parse_s_expr(), load_rec());
+  o = load_rec();
   fclose(fp);
   return o;
 }
@@ -199,14 +204,18 @@ static void make_initial_objects(void)
   object_false = new_symbol("false");
 }
 
-static void bind_prim(object o, int i)
+static void bind_prim(object o)
 {
+  int i;
+  char *s;
   object p;
-  p = object_alloc();
-  p->header.type = lambda;
-  p->lambda.top = p->lambda.params = p->lambda.body = object_nil;
-  p->lambda.prim_cd = i;
-  xsplay_add(&o->lambda.binding, new_symbol(prim_name_table[i]), p);
+  for (i = 0; (s = prim_name_table[i]) != NULL; i++) {
+    p = object_alloc();
+    p->header.type = lambda;
+    p->lambda.top = p->lambda.params = p->lambda.body = object_nil;
+    p->lambda.prim_cd = i;
+    xsplay_add(&o->lambda.binding, new_symbol(s), p);
+  }
 }
 
 static void bind_pseudo_symbol(object o, object p)
@@ -216,8 +225,6 @@ static void bind_pseudo_symbol(object o, object p)
 
 static object make_boot_args(object o)
 {
-  int i;
-  char *s;
   object boot_arg;
   boot_arg = object_alloc();
   boot_arg->header.type = lambda;
@@ -228,7 +235,7 @@ static object make_boot_args(object o)
   bind_pseudo_symbol(boot_arg, object_nil);
   bind_pseudo_symbol(boot_arg, object_true);
   bind_pseudo_symbol(boot_arg, object_false);
-  for (i = 0; (s = prim_name_table[i]) != NULL; i++) bind_prim(boot_arg, i);
+  bind_prim(boot_arg);
   regist(boot_arg);
   return boot_arg;
 }

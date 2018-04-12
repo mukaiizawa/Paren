@@ -14,6 +14,3 @@ extern double lex_fval;
 extern void lex_start(FILE *fp);
 extern void lex_error(char *fmt,...);
 extern int lex(void);
-
-extern char *lex_token_name(char *buf,int tk);
-extern char *lex_current_string(char *buf,int tk);

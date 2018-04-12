@@ -2,8 +2,7 @@
 # Usage: make os={linux|windows} [cc=gcc] [debug=off]
 
 supportos=linux windows
-# cc?=clang
-cc?=gcc
+cc?=clang
 debug?=on
 
 ifeq ($(filter $(supportos),$(os)),)
