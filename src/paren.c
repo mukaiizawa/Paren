@@ -138,22 +138,26 @@ static object parse_float(void)
 
 static object parse_cdr(void)
 {
-  object cdr;
+  object o;
   if (next_token == ')') return object_nil;
   if (next_token == '.') {
     parse_skip();
-    cdr = parse_s_expr();
+    o = parse_s_expr();
     if (next_token != ')') lex_error("illegal dot list");
-    return cdr;
+    return o;
   }
-  return new_cons(parse_s_expr(), parse_cdr());
+  o = parse_s_expr();
+  return new_cons(o, parse_cdr());
 }
 
 static object parse_list(void)
 {
   object o;
   if (parse_skip() == ')') o = object_nil;
-  else o = new_cons(parse_s_expr(), parse_cdr());
+  else {
+    o = parse_s_expr();
+    o = new_cons(o, parse_cdr());
+  }
   parse_skip();
   return o;
 }
@@ -178,8 +182,10 @@ static object parse_s_expr(void)
 
 static object load_rec(void)
 {
+  object o;    // function parameters are not evaluated in a defined order in C!
   if (next_token == EOF) return object_nil;
-  return new_cons(parse_s_expr(), load_rec());
+  o = parse_s_expr();
+  return new_cons(o, load_rec());
 }
 
 static object load(char *fn)
