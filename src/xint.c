@@ -15,7 +15,9 @@
 
 PRIM(xint_equal)
 {
-  int x, y;
+  int argc, x, y;
+  ARGC(argc);
+  if (argc != 2) return FALSE;
   XINT_ARG(0, x);
   XINT_ARG(1, y);
   *result = object_bool(x == y);
@@ -24,7 +26,9 @@ PRIM(xint_equal)
 
 PRIM(xint_add)
 {
-  int x, y;
+  int argc, x, y;
+  ARGC(argc);
+  if (argc != 2) return FALSE;
   XINT_ARG(0, x);
   XINT_ARG(1, y);
   *result = prim_xint(x + y);

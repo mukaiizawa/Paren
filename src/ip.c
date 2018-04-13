@@ -4,13 +4,14 @@
 #include "xsplay.h"
 #include "xarray.h"
 #include "object.h"
+#include "gc.h"
 #include "prim.h"
 #include "ip.h"
 
 static object toplevel;
 static object env;
 
-extern int (*prim_table[])(object *args, object *result);
+extern int (*prim_table[])(object args, object *result);
 extern char *prim_name_table[];
 
 static object eval(object o);
@@ -122,17 +123,16 @@ static int valid_param_p(object params) {
 
 PRIM(lambda)
 {
-  object params, body;
+  object o, params;
   ARG(0, params);
   if (!valid_param_p(params)) return FALSE;
-  body = (*args)->cons.cdr;
-  *result = object_alloc();
-  (*result)->header.type = lambda;
-  (*result)->lambda.top = env;
-  (*result)->lambda.params = params;
-  (*result)->lambda.body = body;
-  (*result)->lambda.prim_cd = -1;
-  xsplay_init(&(*result)->lambda.binding, (int(*)(void *, void *))symcmp);
+  *result = o = object_alloc();
+  o->header.type = lambda;
+  o->lambda.top = env;
+  o->lambda.params = params;
+  o->lambda.body = args->cons.cdr;
+  o->lambda.prim_cd = -1;
+  xsplay_init(&o->lambda.binding, (int(*)(void *, void *))symcmp);
   return TRUE;
 }
 
@@ -164,28 +164,75 @@ PRIM(lambda)
 //   return TRUE;
 // }
 
+PRIM(cons)
+{
+  int argc;
+  object o, p;
+  ARGC(argc);
+  if (argc != 2) return FALSE;
+  ARG(0, o);
+  ARG(1, p);
+  *result = gc_new_cons(eval(o), eval(p));
+  return TRUE;
+}
+
+PRIM(car)
+{
+  int argc;
+  object o, p;
+  ARGC(argc);
+  ARG(0, o);
+  o = eval(o);
+  if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
+  if (argc == 1) *result = o->cons.car;
+  else {
+    ARG(1, p);
+    p = eval(p);
+    *(o->cons.car) = *p;
+    *result = p;
+  }
+  return TRUE;
+}
+
+PRIM(cdr)
+{
+  int argc;
+  object o, p;
+  ARGC(argc);
+  ARG(0, o);
+  o = eval(o);
+  if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
+  if (argc == 1) *result = o->cons.cdr;
+  else {
+    ARG(1, p);
+    p = eval(p);
+    *(o->cons.cdr) = *p;
+    *result = p;
+  }
+  return TRUE;
+}
+
 // evaluater
 
+#define param (params->cons.car)
 static object eval_list(object o)
 {
   object ope, args, result, params, body;
   ope = eval(o->cons.car);
   args = o->cons.cdr;
-  if (ope->header.type != lambda) {
-    print(ope);
-    xerror("is not a operators");
-  }
-  if (o->lambda.prim_cd >= 0) {
-    if (!(*prim_table[ope->lambda.prim_cd])(&args, &result))
+  if (ope->header.type != lambda) xerror("not a operators");
+  if (ope->lambda.prim_cd >= 0) {
+    if (!(*prim_table[ope->lambda.prim_cd])(args, &result))
       xerror("primitive '%s' failed", prim_name_table[ope->lambda.prim_cd]);
   } else {
     env = ope;
     params = ope->lambda.params;
-
     // required parameter
     while (params != object_nil) {
       if (args == object_nil) xerror("too few argument");
-      bind(params->cons.car, eval(args->cons.car));
+      if (param == object_opt || param == object_rest || param == object_key)
+        break;
+      bind(param, eval(args->cons.car));
       params = params->cons.cdr;
       args = args->cons.cdr;
     }
@@ -199,6 +246,7 @@ static object eval_list(object o)
   }
   return result;
 }
+#undef param
 
 static object eval(object o)
 {

@@ -10,6 +10,7 @@
 #include "xarray.h"
 #include "object.h"
 #include "lex.h"
+#include "gc.h"
 #include "ip.h"
 
 // option
@@ -32,22 +33,6 @@ int symcmp(object o, object p)
 {
   xassert(o->header.type == symbol && o->header.type == p->header.type);
   return strcmp(o->symbol.name, p->symbol.name);
-}
-
-static void regist(object o)
-{
-  xarray_add(&object_table, o);
-}
-
-static object new_cons(object car, object cdr)
-{
-  object o;
-  o = object_alloc();
-  o->header.type = cons;
-  o->cons.car = car;
-  o->cons.cdr = cdr;
-  regist(o);
-  return o;
 }
 
 // object object_new_barray(int len)
@@ -73,7 +58,7 @@ static object new_xint(int val)
   o = object_alloc();
   o->header.type = xint;
   o->xint.val = val;
-  regist(o);
+  gc_regist(o);
   return o;
 }
 
@@ -83,7 +68,7 @@ static object new_xfloat(double val)
   o = object_alloc();
   o->header.type = xfloat;
   o->xfloat.val = val;
-  regist(o);
+  gc_regist(o);
   return o;
 }
 
@@ -96,7 +81,7 @@ static object new_symbol(char *name)
     else o->header.type = keyword;
     o->symbol.name = name;
     xsplay_add(&symbol_table, name, o);
-    regist(o);
+    gc_regist(o);
   }
   return o;
 }
@@ -147,7 +132,7 @@ static object parse_cdr(void)
     return o;
   }
   o = parse_s_expr();
-  return new_cons(o, parse_cdr());
+  return gc_new_cons(o, parse_cdr());
 }
 
 static object parse_list(void)
@@ -156,7 +141,7 @@ static object parse_list(void)
   if (parse_skip() == ')') o = object_nil;
   else {
     o = parse_s_expr();
-    o = new_cons(o, parse_cdr());
+    o = gc_new_cons(o, parse_cdr());
   }
   parse_skip();
   return o;
@@ -185,7 +170,7 @@ static object load_rec(void)
   object o;    // function parameters are not evaluated in a defined order in C!
   if (next_token == EOF) return object_nil;
   o = parse_s_expr();
-  return new_cons(o, load_rec());
+  return gc_new_cons(o, load_rec());
 }
 
 static object load(char *fn)
@@ -200,7 +185,7 @@ static object load(char *fn)
   return o;
 }
 
-extern int (*prim_table[])(object *args, object *result);
+extern int (*prim_table[])(object args, object *result);
 extern char *prim_name_table[];
 
 static void make_initial_objects(void)
@@ -245,7 +230,7 @@ static object make_boot_args(object o)
   bind_pseudo_symbol(boot_arg, object_true);
   bind_pseudo_symbol(boot_arg, object_false);
   bind_prim(boot_arg);
-  regist(boot_arg);
+  gc_regist(boot_arg);
   return boot_arg;
 }
 
@@ -264,6 +249,8 @@ int main(int argc, char *argv[])
     for(i = 0; i < object_table.size; i++) object_dump(object_table.elt[i]);
     printf("<\n");
   }
+  gc_init();
   ip_start(boot_arg);
+  gc_full();
   return 0;
 }

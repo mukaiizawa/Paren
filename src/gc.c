@@ -1,19 +1,31 @@
 // garbage collector
 
+#include "std.h"
+#include "xsplay.h"
+#include "xarray.h"
+#include "object.h"
+#include "lex.h"
+
+void gc_regist(object o)
+{
+  xarray_add(&object_table, o);
+}
+
+object gc_new_cons(object car, object cdr)
+{
+  object o;
+  o = object_alloc();
+  o->header.type = cons;
+  o->cons.car = car;
+  o->cons.cdr = cdr;
+  gc_regist(o);
+  return o;
+}
+
+void gc_full(void)
+{
+}
 
 void gc_init(void)
 {
-  int i;
-  object o;
-  new_top=om_table.size;
-  last_old_space_size=om_table.size;
-  last_new_space_size=0;
-  xarray_init(&refnew_table);
-  xarray_init(&mark_stack);
-  for(i=0;i<om_table.size;i++) {
-    o=om_table.elt[i];
-    set_generation(o,OLD);
-    set_alive(o,FALSE);
-    set_refnew(o,FALSE);
-  }
 }

@@ -28,4 +28,20 @@
 (%lambda (x y :opt (a 0) (b 0) :rest a) x)
 (%lambda (x y :opt (a 0) (b 0) :rest a :key a b (c 3)) x)
 
+;; cons
+(%cons :dot :list)
+(%cons 1 (%cons 2 (%cons 3 nil)))
+
+;; car
+(%car (%cons :car :cdr))
+(%car (%cons :car :cdr) :x)
+
+;; car
+(%cdr (%cons :car :cdr))
+(%cdr (%cons :car :cdr) :x)
+
+; evalueate
+((%lambda (x) x) :identity)
+((%lambda (x y) (%cons y x)) 1 2)
+
 :finish

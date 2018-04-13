@@ -1,16 +1,23 @@
 // primitive
 
-#define PRIM(name) int prim_##name(object *args, object *result)
+#define PRIM(name) int prim_##name(object args, object *result)
+
+#define ARGC(n) \
+{ \
+  object ___ ## gensym; \
+  n = 0; \
+  for (___ ## gensym = args; ___ ## gensym != object_nil; ___ ## gensym = ___ ## gensym->cons.cdr) n++; \
+}
 
 #define ARG(n, p) \
 { \
   int i; \
-  object o; \
-  o = *args; \
+  object ___ ## gensym; \
+  ___ ## gensym = args; \
   for (i = n; i >= 0; i--) { \
-    if (o == object_nil) return FALSE; \
-    p = o->cons.car; \
-    o = o->cons.cdr; \
+    if (___ ## gensym == object_nil) return FALSE; \
+    p = ___ ## gensym->cons.car; \
+    ___ ## gensym = ___ ## gensym->cons.cdr; \
   } \
 }
 
