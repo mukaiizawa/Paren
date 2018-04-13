@@ -13,6 +13,9 @@ struct xarray object_table;
 object object_nil;
 object object_true;
 object object_false;
+object object_opt;
+object object_key;
+object object_rest;
 
 object object_alloc(void)
 {
@@ -79,7 +82,7 @@ static void dump_s_expr(object o)
       printf("]");
       break;
     case xint:
-      printf("%d", o->xint.val);
+      printf("%lld", o->xint.val);
       break;
     case xfloat:
       printf("%f", o->xfloat.val);

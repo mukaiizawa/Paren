@@ -28,7 +28,7 @@ static void parse_opt(int argc,char *argv[])
 
 static struct xsplay symbol_table;
 
-static int symcmp(object o, object p)
+int symcmp(object o, object p)
 {
   xassert(o->header.type == symbol && o->header.type == p->header.type);
   return strcmp(o->symbol.name, p->symbol.name);
@@ -208,6 +208,9 @@ static void make_initial_objects(void)
   object_nil = new_symbol("nil");
   object_true = new_symbol("true");
   object_false = new_symbol("false");
+  object_opt = new_symbol(":opt");
+  object_key = new_symbol(":key");
+  object_rest = new_symbol(":rest");
 }
 
 static void bind_prim(object o)

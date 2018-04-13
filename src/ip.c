@@ -13,6 +13,9 @@ static object env;
 extern int (*prim_table[])(object *args, object *result);
 extern char *prim_name_table[];
 
+static object eval(object o);
+static void print(object o);
+
 static object find(object sym)
 {
   object o, e;
@@ -61,24 +64,75 @@ static void bind(object sym, object val)
 //   }
 // }
 
-// TODO dispatch parameters
+int symcmp(object o, object p);
+
+// <params> ::= [<params>] [:opt <param_values>] [:rest <param>] [:key <param_values>]
+// <params> ::= <param> <param> ...
+// <param_values> ::= <param_value> <param_value> ...
+// <param_value> ::= { <param> | (<param> <value>) }
+
+static int valid_param_value_p(object o) {
+  if (o->header.type == symbol) return TRUE;
+  if (o->header.type != cons) return FALSE;
+  if (o->cons.car->header.type != symbol) return FALSE;
+  o = o->cons.cdr;
+  return o == object_nil || o->cons.cdr == object_nil;
+}
+
+#define param (params->cons.car)
+
+#define next_params() { \
+  params = params->cons.cdr; \
+  if (!listp(params)) return FALSE; \
+}
+
+#define next_param_values() { \
+  next_params(); \
+  while (params != object_nil) { \
+    if (!valid_param_value_p(param)) return FALSE; \
+    next_params(); \
+    if (param->header.type == keyword) break; \
+  } \
+}
+
+static int valid_param_p(object params) {
+  if (params == object_nil) return TRUE;
+  if (params->header.type != cons) return FALSE;
+  while (params != object_nil) {
+    if (param->header.type == symbol) {
+      next_params();
+      continue;
+    }
+    if (param->header.type == keyword) break;
+    return FALSE;
+  }
+  if (param == object_opt) next_param_values();
+  if (param == object_rest) {
+    next_params();
+    if (param->header.type != symbol) return FALSE;
+    next_params();
+  }
+  if (param == object_key) next_param_values();
+  return params == object_nil;
+}
+
+#undef next_param_values
+#undef next_params
+#undef param
+
 PRIM(lambda)
 {
-  object params, param, body;
+  object params, body;
   ARG(0, params);
+  if (!valid_param_p(params)) return FALSE;
   body = (*args)->cons.cdr;
-  while (params != object_nil) {
-    if (param->header.type != cons) return FALSE;
-    if ((param = params->cons.car)->header.type == symbol) {
-    } else if (param->header.type == keyword) {
-    } else return FALSE;
-    params = params->cons.cdr;
-  }
   *result = object_alloc();
   (*result)->header.type = lambda;
-  (*result)->lambda.top = params;
+  (*result)->lambda.top = env;
+  (*result)->lambda.params = params;
   (*result)->lambda.body = body;
   (*result)->lambda.prim_cd = -1;
+  xsplay_init(&(*result)->lambda.binding, (int(*)(void *, void *))symcmp);
   return TRUE;
 }
 
@@ -112,9 +166,6 @@ PRIM(lambda)
 
 // evaluater
 
-static object eval(object o);
-static void print(object o);
-
 static object eval_list(object o)
 {
   object ope, args, result, params, body;
@@ -130,17 +181,15 @@ static object eval_list(object o)
   } else {
     env = ope;
     params = ope->lambda.params;
-    while (params->header.type == cons) {
-      // parse required parameter
-      while (params->cons.car->header.type  == symbol) {
-        if (args->header.type != cons) xerror("too few argument");
-        if (params->header.type != cons) xerror("too many argument");
-        bind(params->cons.car, eval(args->cons.car));
-        args = args->cons.cdr;
-        params = params->cons.cdr;
-      }
-      // TODO
+
+    // required parameter
+    while (params != object_nil) {
+      if (args == object_nil) xerror("too few argument");
+      bind(params->cons.car, eval(args->cons.car));
+      params = params->cons.cdr;
+      args = args->cons.cdr;
     }
+    // evaluate
     body = ope->lambda.body;
     while (body != object_nil) {
       result = eval(body->cons.car);

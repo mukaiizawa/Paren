@@ -47,7 +47,7 @@ union s_expr {
   } farray;
   struct xint {
     struct object_header header;
-    int val; 
+    int64_t val; 
   } xint;
   struct xfloat {
     struct object_header header;
@@ -59,6 +59,8 @@ union s_expr {
   } symbol;
 };
 
+#define listp(o) (o == object_nil || o->header.type == cons)
+
 // table
 extern struct xarray object_table;
 
@@ -66,6 +68,9 @@ extern struct xarray object_table;
 extern object object_nil;
 extern object object_true;
 extern object object_false;
+extern object object_opt;
+extern object object_key;
+extern object object_rest;
 
 extern object object_alloc(void);
 extern void object_dump(object o);
