@@ -1,6 +1,7 @@
 // paren object
 
 #include <string.h>
+#include <inttypes.h>
 
 #include "std.h"
 #include "xarray.h"
@@ -82,7 +83,7 @@ static void dump_s_expr(object o)
       printf("]");
       break;
     case xint:
-      printf("%lld", o->xint.val);
+      printf("%"PRId64"", o->xint.val);
       break;
     case xfloat:
       printf("%f", o->xfloat.val);
