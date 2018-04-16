@@ -14,9 +14,6 @@ static object env;
 extern int (*prim_table[])(object args, object *result);
 extern char *prim_name_table[];
 
-static object eval(object o);
-static void print(object o);
-
 static object find(object sym)
 {
   object o, e;
@@ -44,26 +41,6 @@ static void bind(object sym, object val)
 }
 
 // primitive
-
-// int object_bool(object o) {
-//   xassert(o != NULL);
-//   switch (o->header.type) {
-//     case lambda:
-//     case cons:
-//     case keyword:
-//       return TRUE;
-//     case fbarray:
-//       return o->fbarray.size != 0;
-//     case farray:
-//       return o->farray.size != 0;
-//     case xint:
-//       return o->xint.val != 0;
-//     case xfloat:
-//       return o->xfloat.val != 0.0;
-//     case symbol:
-//       return object_nilp(o) || o == object_false;
-//   }
-// }
 
 int symcmp(object o, object p);
 
@@ -121,6 +98,22 @@ static int valid_param_p(object params) {
 #undef next_params
 #undef param
 
+PRIM(assign)
+{
+  int i, argc;
+  object sym, val;
+  ARGC(argc);
+  if (argc % 2 != 0) return FALSE;
+  for (i = 0; i < argc - 1; i += 2) {
+    ARG(i, sym);
+    ARG(i + 1, val);
+    if (sym->header.type != symbol) return FALSE;
+    val = eval(val);
+    bind(sym, *result = val);
+  }
+  return TRUE;
+}
+
 PRIM(lambda)
 {
   object o, params;
@@ -136,33 +129,42 @@ PRIM(lambda)
   return TRUE;
 }
 
-// PRIM(assign)
-// {
-//   int i;
-//   if (argc % 2 != 0) return FALSE;
-//   for (i = 0; i <= argc / 2; i+= 2) {
-//     if (!object_typep(arg(i), symbol)) return FALSE;
-//     *result = eval(arg(i + 1));
-//     bind(arg(i), *result);
-//   }
-//   return TRUE;
-// }
-//
-// PRIM(quote)
-// {
-//   if (argc != 1) return FALSE;
-//   *result = arg(0);
-//   return TRUE;
-// }
-//
-// PRIM(if)
-// {
-//   if (argc != 2 && argc != 3) return FALSE;
-//   if (object_bool(arg(0))) *result = eval(arg(1));
-//   else if (argc > 2) *result = eval(arg(2));
-//   else *result = object_false;
-//   return TRUE;
-// }
+PRIM(quote)
+{
+  int argc;
+  object o;
+  ARGC(argc);
+  if (argc != 1) return FALSE;
+  ARG(0, o);
+  *result = o;
+  return TRUE;
+}
+
+PRIM(if)
+{
+  int b, argc;
+  object test, then, els;
+  ARGC(argc);
+  ARG(0, test);
+  test = eval(test);
+  if (argc != 2 && argc != 3) return FALSE;
+  switch (test->header.type) {
+    case lambda: case cons: case keyword: b= TRUE; break;
+    case fbarray: b = test->fbarray.size != 0; break;
+    case farray: b = test->farray.size != 0; break;
+    case xint: case xfloat: b = test->xint.val != 0; break;
+    case symbol: b = test == object_nil || test == object_false; break;
+    default: return FALSE;
+  }
+  if (b) {
+    ARG(1, then);
+    *result = eval(then);
+  } else if (argc > 2) {
+    ARG(2, els);
+    *result = eval(els);
+  } else *result = object_false;
+  return TRUE;
+}
 
 PRIM(cons)
 {
@@ -248,7 +250,7 @@ static object eval_list(object o)
 }
 #undef param
 
-static object eval(object o)
+object eval(object o)
 {
   object p;
   switch (o->header.type) {
@@ -269,7 +271,7 @@ static object eval(object o)
   }
 }
 
-static void print(object o) {
+void print(object o) {
   object_dump(o);
 }
 

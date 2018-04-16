@@ -5,32 +5,33 @@
 #include "object.h"
 #include "prim.h"
 
-#define XINT_ARG(n, x) \
+#define XINT_ARG(n, arg) \
 { \
-  object xa; \
-  ARG(n, xa); \
-  if (xa->header.type != xint) return FALSE; \
-  x = xa->xint.val; \
+  ARG(n, arg); \
+  arg = eval(arg); \
+  if (arg->header.type != xint) return FALSE; \
 }
 
 PRIM(xint_equal)
 {
-  int argc, x, y;
+  int argc;
+  object x, y;
   ARGC(argc);
   if (argc != 2) return FALSE;
   XINT_ARG(0, x);
   XINT_ARG(1, y);
-  *result = object_bool(x == y);
+  *result = object_bool(x->xint.val == y->xint.val);
   return TRUE;
 }
 
 PRIM(xint_add)
 {
-  int argc, x, y;
+  int argc;
+  object x, y;
   ARGC(argc);
   if (argc != 2) return FALSE;
   XINT_ARG(0, x);
   XINT_ARG(1, y);
-  *result = prim_xint(x + y);
+  *result = prim_xint(x->xint.val + y->xint.val);
   return TRUE;
 }

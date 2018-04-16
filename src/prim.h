@@ -11,9 +11,9 @@
 
 #define ARG(n, arg) \
 { \
-  int i; \
+  int argi; \
   arg = args; \
-  for (i = n; i > 0; i--) { \
+  for (argi = n; argi > 0; argi--) { \
     if (arg == object_nil) return FALSE; \
     arg = arg->cons.cdr; \
   } \
@@ -21,5 +21,8 @@
 }
 
 extern char *prim_name_table[];
+
+extern object eval(object o);
+extern void print(object o);
 
 extern object prim_xint(int64_t val);
