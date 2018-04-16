@@ -108,8 +108,3 @@ object object_bool(int b)
   if (b) return object_true;
   return object_false;
 }
-
-void object_init(void)
-{
-  xarray_init(&object_table);
-}

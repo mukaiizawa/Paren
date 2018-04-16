@@ -1,14 +1,45 @@
 // garbage collector
 
+#include <string.h>
+
 #include "std.h"
 #include "xsplay.h"
 #include "xarray.h"
 #include "object.h"
 #include "lex.h"
 
+struct xarray object_table;
+struct xsplay symbol_table;
+
+int symcmp(object o, object p)
+{
+  xassert(o->header.type == symbol && o->header.type == p->header.type);
+  return strcmp(o->symbol.name, p->symbol.name);
+}
+
 void gc_regist(object o)
 {
   xarray_add(&object_table, o);
+}
+
+object gc_new_xint(int val)
+{
+  object o;
+  o = object_alloc();
+  o->header.type = xint;
+  o->xint.val = val;
+  gc_regist(o);
+  return o;
+}
+
+object gc_new_xfloat(double val)
+{
+  object o;
+  o = object_alloc();
+  o->header.type = xfloat;
+  o->xfloat.val = val;
+  gc_regist(o);
+  return o;
 }
 
 object gc_new_cons(object car, object cdr)
@@ -22,10 +53,43 @@ object gc_new_cons(object car, object cdr)
   return o;
 }
 
+object gc_new_symbol(char *name)
+{
+  object o;
+  if ((o = xsplay_find(&symbol_table, name)) == NULL) {
+    o = object_alloc();
+    if (name[0] != ':') o->header.type = symbol;
+    else o->header.type = keyword;
+    o->symbol.name = name;
+    xsplay_add(&symbol_table, name, o);
+    gc_regist(o);
+  }
+  return o;
+}
+
+object gc_new_barray(int len)
+{
+  object o;
+  o = xmalloc(sizeof(struct fbarray) + len - 1);
+  o->header.type = fbarray;
+  return o;
+}
+
+object gc_new_fbarray(int len)
+{
+  object o;
+  o = xmalloc(sizeof(struct farray) + (len - 1) * sizeof(object));
+  o->header.type = farray;
+  while (len-- > 0) o->farray.elt[len] = object_nil;
+  return o;
+}
+
 void gc_full(void)
 {
 }
 
 void gc_init(void)
 {
+  xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
+  xarray_init(&object_table);
 }

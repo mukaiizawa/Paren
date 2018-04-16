@@ -61,9 +61,6 @@ union s_expr {
 
 #define listp(o) (o == object_nil || o->header.type == cons)
 
-// table
-extern struct xarray object_table;
-
 // global object
 extern object object_nil;
 extern object object_true;
@@ -76,5 +73,3 @@ extern object object_alloc(void);
 extern void object_dump(object o);
 
 extern object object_bool(int b);
-
-extern void object_init(void);

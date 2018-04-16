@@ -14,6 +14,8 @@ static object env;
 extern int (*prim_table[])(object args, object *result);
 extern char *prim_name_table[];
 
+int symcmp(object o, object p);
+
 static object find(object sym)
 {
   object o, e;
@@ -40,8 +42,6 @@ static void bind(object sym, object val)
 }
 
 // primitive
-
-int symcmp(object o, object p);
 
 // <params> ::= [<params>] [:opt <param_values>] [:rest <param>] [:key <param_values>]
 // <params> ::= <param> <param> ...
