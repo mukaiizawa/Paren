@@ -31,8 +31,7 @@ static void bind(object sym, object val)
   e = env;
   while (e != object_nil) {
     if (xsplay_find(&e->lambda.binding, sym) != NULL) {
-      xsplay_delete(&e->lambda.binding, sym);
-      xsplay_add(&e->lambda.binding, sym, val);
+      xsplay_replace(&e->lambda.binding, sym, val);
       return;
     }
     e = e->lambda.top;
@@ -234,10 +233,11 @@ static object eval_list(object o)
       if (args == object_nil) xerror("too few argument");
       if (param == object_opt || param == object_rest || param == object_key)
         break;
-      bind(param, eval(args->cons.car));
+      xsplay_replace(&ope->lambda.binding, param, eval(args->cons.car));
       params = params->cons.cdr;
       args = args->cons.cdr;
     }
+    // TODO ... other parameter
     // evaluate
     body = ope->lambda.body;
     while (body != object_nil) {

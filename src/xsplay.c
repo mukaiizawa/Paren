@@ -133,6 +133,12 @@ void xsplay_add(struct xsplay *s, void *k, void *d)
   s->top = newtop;
 }
 
+void xsplay_replace(struct xsplay *s, void *k, void *d)
+{
+  if (xsplay_find(s, k) != NULL) xsplay_delete(s, k);
+  xsplay_add(s, k, d);
+}
+
 void *xsplay_find(struct xsplay *s, void *k)
 {
   struct xsplay_node *top;
