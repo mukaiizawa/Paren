@@ -2,23 +2,22 @@
 
 #define PRIM(name) int prim_##name(object args, object *result)
 
-#define ARGC(n) \
+#define ARGC(argc) \
 { \
-  object ___ ## gensym; \
-  n = 0; \
-  for (___ ## gensym = args; ___ ## gensym != object_nil; ___ ## gensym = ___ ## gensym->cons.cdr) n++; \
+  object o; \
+  argc = 0; \
+  for (o = args; o != object_nil; o = o->cons.cdr) argc++; \
 }
 
-#define ARG(n, p) \
+#define ARG(n, arg) \
 { \
   int i; \
-  object ___ ## gensym; \
-  ___ ## gensym = args; \
-  for (i = n; i >= 0; i--) { \
-    if (___ ## gensym == object_nil) return FALSE; \
-    p = ___ ## gensym->cons.car; \
-    ___ ## gensym = ___ ## gensym->cons.cdr; \
+  arg = args; \
+  for (i = n; i > 0; i--) { \
+    if (arg == object_nil) return FALSE; \
+    arg = arg->cons.cdr; \
   } \
+  arg = arg->cons.car; \
 }
 
 extern char *prim_name_table[];
