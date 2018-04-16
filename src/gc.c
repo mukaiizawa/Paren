@@ -8,8 +8,8 @@
 #include "object.h"
 #include "lex.h"
 
-struct xarray object_table;
-struct xsplay symbol_table;
+static struct xarray table;
+static struct xsplay symbol_table;
 
 int symcmp(object o, object p)
 {
@@ -19,7 +19,7 @@ int symcmp(object o, object p)
 
 void gc_regist(object o)
 {
-  xarray_add(&object_table, o);
+  xarray_add(&table, o);
 }
 
 object gc_new_xint(int val)
@@ -91,5 +91,13 @@ void gc_full(void)
 void gc_init(void)
 {
   xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
-  xarray_init(&object_table);
+  xarray_init(&table);
+}
+
+void gc_dump_table(void)
+{
+  int i;
+  printf("* object table >\n");
+  for(i = 0; i < table.size; i++) object_dump(table.elt[i]);
+  printf("<\n");
 }

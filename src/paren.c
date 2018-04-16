@@ -175,18 +175,13 @@ static object make_boot_args(object o)
 
 int main(int argc, char *argv[])
 {
-  int i;
   object boot_arg;
   setbuf(stdout, NULL);
   parse_opt(argc, argv);
   gc_init();
   make_initial_objects();
   boot_arg = make_boot_args(load(core_fn));
-  if (dump_object_table_p) {
-    printf("* object table >\n");
-    for(i = 0; i < object_table.size; i++) object_dump(object_table.elt[i]);
-    printf("<\n");
-  }
+  if (dump_object_table_p) gc_dump_table();
   ip_start(boot_arg);
   gc_full();
   return 0;
