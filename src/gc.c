@@ -98,6 +98,9 @@ void gc_dump_table(void)
 {
   int i;
   printf("* object table >\n");
-  for(i = 0; i < table.size; i++) object_dump(table.elt[i]);
+  for(i = 0; i < table.size; i++) {
+    printf("%p\t", table.elt[i]);
+    object_dump(table.elt[i]);
+  }
   printf("<\n");
 }
