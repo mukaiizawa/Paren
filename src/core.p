@@ -58,9 +58,10 @@ c
 ((%lambda (x) x) :identity)
 ((%lambda (x y) (%cons y x)) 1 2)
 
-; evalueate
 (%assign a :outer)
 ((%lambda (a) (%assign a :inner) a) (%quote a))
 a
+
+(%lambda (x) a b c d)
 
 :finish

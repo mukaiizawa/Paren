@@ -25,7 +25,6 @@ static void dump_s_expr(object o);
 
 static void dump_cons(object o)
 {
-  printf("(");
   dump_s_expr(o->cons.car);
   while ((o = o->cons.cdr) != object_nil) {
     printf(" ");
@@ -36,7 +35,6 @@ static void dump_cons(object o)
       break;
     }
   }
-  printf(")");
 }
 
 char *object_type_name[] = {
@@ -65,12 +63,14 @@ static void dump_s_expr(object o)
       else {
         dump_s_expr(o->lambda.params);
         printf(" ");
-        dump_s_expr(o->lambda.body);
+        dump_cons(o->lambda.body);
       }
       printf(")");
       break;
     case cons:
+      printf("(");
       dump_cons(o);
+      printf(")");
       break;
     case fbarray:
       printf("%s", o->fbarray.elt);
