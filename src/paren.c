@@ -187,11 +187,12 @@ int main(int argc, char *argv[])
 {
   object boot_arg;
   setbuf(stdout, NULL);
+  setbuf(stderr, NULL);
   parse_opt(argc, argv);
   gc_init();
   make_initial_objects();
   boot_arg = make_boot_args(load(core_fn));
-  if (dump_object_table_p) gc_dump_table();
   ip_start(boot_arg);
+  if (dump_object_table_p) gc_dump_table();
   return 0;
 }

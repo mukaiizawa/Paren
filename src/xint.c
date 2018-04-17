@@ -8,7 +8,7 @@
 #define XINT_ARG(n, arg) \
 { \
   ARG(n, arg); \
-  arg = eval(arg); \
+  arg = eval(env, arg); \
   if (arg->header.type != xint) return FALSE; \
 }
 

@@ -9,34 +9,30 @@
 #include "ip.h"
 
 static object toplevel;
-static object env;
 
-extern int (*prim_table[])(object args, object *result);
+extern int (*prim_table[])(object env, object args, object *result);
 extern char *prim_name_table[];
 
 int symcmp(object o, object p);
 
-static object find(object sym)
+static object find(object env, object sym)
 {
-  object o, e;
-  e = env;
-  while (e != object_nil) {
-    if ((o = xsplay_find(&e->lambda.binding, sym)) != NULL) return o;
-    e = e->lambda.top;
+  object o;
+  while (env != object_nil) {
+    if ((o = xsplay_find(&env->lambda.binding, sym)) != NULL) return o;
+    env = env->lambda.top;
   }
   return NULL;
 }
 
-static void bind(object sym, object val)
+static void bind(object env, object sym, object val)
 {
-  object e;
-  e = env;
-  while (e != object_nil) {
-    if (xsplay_find(&e->lambda.binding, sym) != NULL) {
-      xsplay_replace(&e->lambda.binding, sym, val);
+  while (env != object_nil) {
+    if (xsplay_find(&env->lambda.binding, sym) != NULL) {
+      xsplay_replace(&env->lambda.binding, sym, val);
       return;
     }
-    e = e->lambda.top;
+    env = env->lambda.top;
   }
   xsplay_add(&toplevel->lambda.binding, sym, val);
 }
@@ -107,8 +103,8 @@ PRIM(assign)
     ARG(i, sym);
     ARG(i + 1, val);
     if (sym->header.type != symbol) return FALSE;
-    val = eval(val);
-    bind(sym, *result = val);
+    val = eval(env, val);
+    bind(env, sym, *result = val);
   }
   return TRUE;
 }
@@ -145,7 +141,7 @@ PRIM(if)
   object test, then, els;
   ARGC(argc);
   ARG(0, test);
-  test = eval(test);
+  test = eval(env, test);
   if (argc != 2 && argc != 3) return FALSE;
   switch (test->header.type) {
     case lambda: case cons: case keyword: b = TRUE; break;
@@ -157,10 +153,10 @@ PRIM(if)
   }
   if (b) {
     ARG(1, then);
-    *result = eval(then);
+    *result = eval(env, then);
   } else if (argc > 2) {
     ARG(2, els);
-    *result = eval(els);
+    *result = eval(env, els);
   } else *result = object_false;
   return TRUE;
 }
@@ -173,7 +169,7 @@ PRIM(cons)
   if (argc != 2) return FALSE;
   ARG(0, o);
   ARG(1, p);
-  *result = gc_new_cons(eval(o), eval(p));
+  *result = gc_new_cons(eval(env, o), eval(env, p));
   return TRUE;
 }
 
@@ -183,7 +179,7 @@ PRIM(car)
   object o, p;
   ARGC(argc);
   ARG(0, o);
-  o = eval(o);
+  o = eval(env, o);
   if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
   if (argc == 1) {
     if (o == object_nil) *result = object_nil;
@@ -191,7 +187,7 @@ PRIM(car)
   } else {
     if (o == object_nil) return FALSE;
     ARG(1, p);
-    p = eval(p);
+    p = eval(env, p);
     *(o->cons.car) = *p;
     *result = p;
   }
@@ -204,7 +200,7 @@ PRIM(cdr)
   object o, p;
   ARGC(argc);
   ARG(0, o);
-  o = eval(o);
+  o = eval(env, o);
   if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
   if (argc == 1) {
     if (o == object_nil) *result = object_nil;
@@ -212,7 +208,7 @@ PRIM(cdr)
   } else {
     if (o == object_nil) return FALSE;
     ARG(1, p);
-    p = eval(p);
+    p = eval(env, p);
     *(o->cons.cdr) = *p;
     *result = p;
   }
@@ -222,14 +218,14 @@ PRIM(cdr)
 // evaluater
 
 #define param (params->cons.car)
-static object eval_list(object o)
+static object eval_list(object env, object o)
 {
   object ope, args, result, params, body;
-  ope = eval(o->cons.car);
+  ope = eval(env, o->cons.car);
   args = o->cons.cdr;
   if (ope->header.type != lambda) xerror("not a operators");
   if (ope->lambda.prim_cd >= 0) {
-    if (!(*prim_table[ope->lambda.prim_cd])(args, &result))
+    if (!(*prim_table[ope->lambda.prim_cd])(env, args, &result))
       xerror("primitive '%s' failed", prim_name_table[ope->lambda.prim_cd]);
   } else {
     env = ope;
@@ -239,24 +235,24 @@ static object eval_list(object o)
       if (args == object_nil) xerror("too few argument");
       if (param == object_opt || param == object_rest || param == object_key)
         break;
-      xsplay_replace(&ope->lambda.binding, param, eval(args->cons.car));
+      xsplay_replace(&ope->lambda.binding, param, eval(env, args->cons.car));
       params = params->cons.cdr;
       args = args->cons.cdr;
     }
+    if (args != object_nil) xerror("too many argument");
     // TODO ... other parameter
     // evaluate
     body = ope->lambda.body;
     while (body != object_nil) {
-      result = eval(body->cons.car);
+      result = eval(env, body->cons.car);
       body = body->cons.cdr;
     }
-    env = ope->lambda.top;
   }
   return result;
 }
 #undef param
 
-object eval(object o)
+object eval(object e, object o)
 {
   object p;
   switch (o->header.type) {
@@ -268,11 +264,11 @@ object eval(object o)
     case keyword:
       return o;
     case symbol:
-      if ((p = find(o)) == NULL)
+      if ((p = find(e, o)) == NULL)
         xerror("unbind symbol '%s'", o->symbol.name);
       return p;
     case cons:
-      return eval_list(o);
+      return eval_list(e, o);
     default: xerror("illegal object"); return NULL;
   }
 }
@@ -284,10 +280,10 @@ void print(object o) {
 void ip_start(object arg)
 {
   object o;
-  toplevel = env = arg;
-  o = env->lambda.body;
+  toplevel = arg;
+  o = toplevel->lambda.body;
   while (o != object_nil) {
-    print(eval(o->cons.car));
+    print(eval(toplevel, o->cons.car));
     o = o->cons.cdr;
   }
 }
