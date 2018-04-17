@@ -37,7 +37,7 @@ pprim=ip.c xint.c
 pprim.wk: $(pprim)
 	cat $+ | grep ^PRIM>$@
 
-xc.a: std.o xarray.o xbarray.o xsplay.o gc.o object.o prim.o lex.o \
+xc.a: std.o xarray.o xbarray.o xsplay.o xgetopt.o gc.o object.o prim.o lex.o \
 	$(pprim:%.c=%.o)
 	ar -ru xc.a $+
 

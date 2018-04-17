@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "std.h"
+#include "xgetopt.h"
 #include "xsplay.h"
 #include "xarray.h"
 #include "object.h"
@@ -21,9 +22,18 @@ int symcmp(object o, object p);
 
 static void parse_opt(int argc,char *argv[])
 {
+  int ch;
   core_fn = "./core.p";
-  if (argc == 2) core_fn = argv[1];
   dump_object_table_p = FALSE;
+  while((ch = xgetopt(argc,argv,"of:")) != EOF)
+    switch(ch) {
+      case 'o': dump_object_table_p = TRUE; break;
+      case 'f': core_fn = xoptarg; break;
+      default: xerror("\
+-o to dump object table.\n\
+-f FILE as base for paren\n\
+");
+    }
 }
 
 // parser
@@ -183,6 +193,5 @@ int main(int argc, char *argv[])
   boot_arg = make_boot_args(load(core_fn));
   if (dump_object_table_p) gc_dump_table();
   ip_start(boot_arg);
-  gc_full();
   return 0;
 }
