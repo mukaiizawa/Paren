@@ -30,8 +30,8 @@ static void parse_opt(int argc,char *argv[])
       case 'o': dump_object_table_p = TRUE; break;
       case 'f': core_fn = xoptarg; break;
       default: xerror("\
--o to dump object table.\n\
--f FILE as base for paren\n\
+-o dump object table.\n\
+-f FILE as core library for paren\n\
 ");
     }
 }
