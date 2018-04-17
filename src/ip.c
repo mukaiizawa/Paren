@@ -185,8 +185,11 @@ PRIM(car)
   ARG(0, o);
   o = eval(o);
   if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
-  if (argc == 1) *result = o->cons.car;
-  else {
+  if (argc == 1) {
+    if (o == object_nil) *result = object_nil;
+    else *result = o->cons.car;
+  } else {
+    if (o == object_nil) return FALSE;
     ARG(1, p);
     p = eval(p);
     *(o->cons.car) = *p;
@@ -203,8 +206,11 @@ PRIM(cdr)
   ARG(0, o);
   o = eval(o);
   if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
-  if (argc == 1) *result = o->cons.cdr;
-  else {
+  if (argc == 1) {
+    if (o == object_nil) *result = object_nil;
+    else *result = o->cons.cdr;
+  } else {
+    if (o == object_nil) return FALSE;
     ARG(1, p);
     p = eval(p);
     *(o->cons.cdr) = *p;
