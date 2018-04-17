@@ -148,11 +148,11 @@ PRIM(if)
   test = eval(test);
   if (argc != 2 && argc != 3) return FALSE;
   switch (test->header.type) {
-    case lambda: case cons: case keyword: b= TRUE; break;
+    case lambda: case cons: case keyword: b = TRUE; break;
     case fbarray: b = test->fbarray.size != 0; break;
     case farray: b = test->farray.size != 0; break;
     case xint: case xfloat: b = test->xint.val != 0; break;
-    case symbol: b = test == object_nil || test == object_false; break;
+    case symbol: b = test != object_nil && test != object_false; break;
     default: return FALSE;
   }
   if (b) {
