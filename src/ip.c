@@ -8,8 +8,6 @@
 #include "prim.h"
 #include "ip.h"
 
-static object toplevel;
-
 extern int (*prim_table[])(object env, object args, object *result);
 extern char *prim_name_table[];
 
@@ -271,7 +269,6 @@ void print(object o) {
 void ip_start(object arg)
 {
   object o;
-  toplevel = arg;
   o = toplevel->lambda.body;
   while (o != object_nil) {
     print(eval(toplevel, o->cons.car));

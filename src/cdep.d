@@ -1,4 +1,4 @@
-gc.o: gc.c xbarray.h lex.h object.h xarray.h xsplay.h std.h
+gc.o: gc.c gc.h xbarray.h lex.h object.h xarray.h xsplay.h std.h
 ip.o: ip.c ip.h prim.h gc.h object.h xarray.h xsplay.h std.h
 lex.o: lex.c xbarray.h lex.h std.h
 object.o: object.c object.h xbarray.h lex.h xsplay.h xarray.h std.h

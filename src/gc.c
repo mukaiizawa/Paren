@@ -7,19 +7,28 @@
 #include "xarray.h"
 #include "object.h"
 #include "lex.h"
+#include "gc.h"
 
+object toplevel;
+
+static int count;
+static struct xarray x;
 static struct xarray table;
 static struct xsplay symbol_table;
 
 static int symcmp(object o, object p)
 {
-  xassert(o->header.type == symbol && o->header.type == p->header.type);
+  xassert(o->header.type == symbol && p->header.type == symbol);
   return o - p;
 }
 
-void gc_regist(object o)
+static void gc_regist(object o)
 {
   xarray_add(&table, o);
+  if (count++ == 20) {
+    count = 0;
+    // gc_full();
+  }
 }
 
 object gc_new_lambda(object top, object params, object body, int prim_cd)
@@ -76,7 +85,6 @@ object gc_new_symbol(char *name)
     else o->header.type = keyword;
     o->symbol.name = name;
     xsplay_add(&symbol_table, name, o);
-    gc_regist(o);
   }
   return o;
 }
@@ -100,14 +108,85 @@ object gc_new_fbarray(int len)
   return o;
 }
 
+static void mark_s_expr(object o);
+
+static void lambda_sweep(int depth, void *key, void *data)
+{
+  printf("lambda  s----------------------------------\n");
+  object_dump(key);
+  object_dump(data);
+  mark_s_expr(data);
+  printf("lambda  ----------------------------------\n");
+}
+
+static void mark_lambda(object o)
+{
+  object_dump(o);
+  xsplay_foreach(&o->lambda.binding, lambda_sweep);
+}
+
+static void mark_cons(object o)
+{
+  object p;
+  for (p = o; p != object_nil; p = p->cons.cdr) {
+    mark_s_expr(p->cons.car);
+    mark_s_expr(p->cons.cdr);
+  }
+}
+
+static void mark_farray(object o)
+{
+  int i;
+  for (i = 0; i < o->farray.size; i++) mark_s_expr(o->farray.elt[i]);
+}
+
+static void mark_s_expr(object o)
+{
+  printf("mark ----------------------------------\n");
+  object_dump(o);
+  if (o->header.alivep) return;
+  o->header.alivep = TRUE;
+  switch (o->header.type) {
+    case lambda: mark_lambda(o); break;
+    case cons: mark_cons(o); break;
+    case farray: mark_farray(o); break;
+    default: break;
+  }
+}
+
+static void free_s_expr(object o)
+{
+  printf("free ----------------------------------\n");
+  object_dump(o);
+  switch (o->header.type) {
+    default: return;
+  }
+}
+
 void gc_full(void)
 {
+  printf("gc start------------------------------------\n");
+  int i;
+  object o;
+  xarray_reset(&x);
+  for (i = 0; i < table.size; i++) ((object)table.elt[i])->header.alivep = 0;
+  mark_s_expr(toplevel);
+  for (i = 0; i < table.size; i++) {
+    o = table.elt[i];
+    if (o->header.alivep) xarray_add(&x, o);
+    else free_s_expr(o);
+  }
+  xarray_reset(&table);
+  for (i = 0; i < x.size; i++) xarray_add(&table, x.elt[i]);
+  printf("gc end------------------------------------\n");
 }
 
 void gc_init(void)
 {
-  xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
+  count = 0;
+  xarray_init(&x);
   xarray_init(&table);
+  xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
 }
 
 void gc_dump_table(void)

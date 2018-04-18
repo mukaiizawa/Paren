@@ -1,5 +1,7 @@
 // garbage collector
 
+extern object toplevel;
+
 extern object gc_new_lambda(object top, object params, object body
     , int prim_cd);
 extern object gc_new_xint(int val);

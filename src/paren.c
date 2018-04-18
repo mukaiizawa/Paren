@@ -135,17 +135,12 @@ static object load(char *fn)
   return o;
 }
 
-static void make_initial_objects(void)
+static void bind_pseudo_symbol(object o)
 {
-  object_nil = gc_new_symbol("nil");
-  object_true = gc_new_symbol("true");
-  object_false = gc_new_symbol("false");
-  object_opt = gc_new_symbol(":opt");
-  object_key = gc_new_symbol(":key");
-  object_rest = gc_new_symbol(":rest");
+  xsplay_add(&toplevel->lambda.binding, o, o);
 }
 
-static void bind_prim(object toplevel)
+static void bind_prim(void)
 {
   int i;
   char *s;
@@ -157,32 +152,30 @@ static void bind_prim(object toplevel)
   }
 }
 
-static void bind_pseudo_symbol(object toplevel, object o)
+static void make_initial_objects(void)
 {
-  xsplay_add(&toplevel->lambda.binding, o, o);
-}
-
-static object make_boot_args(object body)
-{
-  object boot_arg;
-  boot_arg = gc_new_lambda(object_nil, object_nil, body, -1);
-  bind_pseudo_symbol(boot_arg, object_nil);
-  bind_pseudo_symbol(boot_arg, object_true);
-  bind_pseudo_symbol(boot_arg, object_false);
-  bind_prim(boot_arg);
-  return boot_arg;
+  object_nil = gc_new_symbol("nil");
+  object_true = gc_new_symbol("true");
+  object_false = gc_new_symbol("false");
+  object_opt = gc_new_symbol(":opt");
+  object_key = gc_new_symbol(":key");
+  object_rest = gc_new_symbol(":rest");
+  toplevel = gc_new_lambda(object_nil, object_nil, object_nil, -1);
+  bind_pseudo_symbol(object_nil);
+  bind_pseudo_symbol(object_true);
+  bind_pseudo_symbol(object_false);
+  bind_prim();
 }
 
 int main(int argc, char *argv[])
 {
-  object boot_arg;
   setbuf(stdout, NULL);
   setbuf(stderr, NULL);
   parse_opt(argc, argv);
   gc_init();
   make_initial_objects();
-  boot_arg = make_boot_args(load(core_fn));
-  ip_start(boot_arg);
+  toplevel->lambda.body = load(core_fn);
+  ip_start(toplevel);
   if (dump_object_table_p) gc_dump_table();
   return 0;
 }

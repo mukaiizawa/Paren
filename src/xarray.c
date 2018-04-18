@@ -28,7 +28,7 @@ SOFTWARE.
 
 void xarray_reset(struct xarray *x)
 {
-  x->size=0;
+  x->size = 0;
 }
 
 void xarray_init(struct xarray *x)
@@ -42,7 +42,7 @@ static void extend(struct xarray *x, int size)
 {
   int newsize;
   newsize = x->alloc_size;
-  if (newsize == 0) newsize = 4;
+  if (newsize == 0) newsize = 8;
   while (newsize < size) newsize *= 2;
   x->elt = xrealloc(x->elt, newsize * sizeof(void *));
   x->alloc_size = newsize;
@@ -59,7 +59,7 @@ void xarray_free(struct xarray *x)
   xfree(x->elt);
 }
 
-void xarray_resize(struct xarray *x,int newsize)
+void xarray_resize(struct xarray *x, int newsize)
 {
   while (x->size < newsize) xarray_add(x, NULL);
   x->size = newsize;
