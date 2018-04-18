@@ -16,17 +16,6 @@ object object_opt;
 object object_key;
 object object_rest;
 
-int symcmp(object o, object p)
-{
-  xassert(o->header.type == symbol && o->header.type == p->header.type);
-  return o - p;
-}
-
-object object_alloc(void)
-{
-  return xmalloc(sizeof(union s_expr));
-}
-
 static void dump_s_expr(object o);
 
 static void dump_cons(object o)

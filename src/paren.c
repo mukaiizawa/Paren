@@ -18,6 +18,8 @@
 static int dump_object_table_p;
 static char *core_fn;
 
+extern char *prim_name_table[];
+
 static void parse_opt(int argc,char *argv[])
 {
   int ch;
@@ -115,7 +117,7 @@ static object parse_s_expr(void)
 
 static object load_rec(void)
 {
-  object o;    // function parameters are not evaluated in a defined order in C!
+  object o;    // function parameters are not evaluated in a defined order in C
   if (next_token == EOF) return object_nil;
   o = parse_s_expr();
   return gc_new_cons(o, load_rec());
@@ -133,8 +135,6 @@ static object load(char *fn)
   return o;
 }
 
-extern char *prim_name_table[];
-
 static void make_initial_objects(void)
 {
   object_nil = gc_new_symbol("nil");
@@ -145,34 +145,27 @@ static void make_initial_objects(void)
   object_rest = gc_new_symbol(":rest");
 }
 
-static void bind_prim(object o)
+static void bind_prim(object toplevel)
 {
   int i;
   char *s;
-  object p;
+  object p, q;
   for (i = 0; (s = prim_name_table[i]) != NULL; i++) {
-    p = object_alloc();
-    p->header.type = lambda;
-    p->lambda.top = p->lambda.params = p->lambda.body = object_nil;
-    p->lambda.prim_cd = i;
-    xsplay_add(&o->lambda.binding, gc_new_symbol(s), p);
+    p = gc_new_symbol(s); 
+    q = gc_new_lambda(toplevel, object_nil, object_nil, i);
+    xsplay_add(&toplevel->lambda.binding, p, q);
   }
 }
 
-static void bind_pseudo_symbol(object o, object p)
+static void bind_pseudo_symbol(object toplevel, object o)
 {
-  xsplay_add(&o->lambda.binding, p, p);
+  xsplay_add(&toplevel->lambda.binding, o, o);
 }
 
-static object make_boot_args(object o)
+static object make_boot_args(object body)
 {
   object boot_arg;
-  boot_arg = object_alloc();
-  boot_arg->header.type = lambda;
-  boot_arg->lambda.top = boot_arg->lambda.params = object_nil;
-  boot_arg->lambda.body = o;
-  boot_arg->lambda.prim_cd = -1;
-  xsplay_init(&boot_arg->lambda.binding, (int(*)(void *, void *))symcmp);
+  boot_arg = gc_new_lambda(object_nil, object_nil, body, -1);
   bind_pseudo_symbol(boot_arg, object_nil);
   bind_pseudo_symbol(boot_arg, object_true);
   bind_pseudo_symbol(boot_arg, object_false);

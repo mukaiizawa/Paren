@@ -109,16 +109,10 @@ PRIM(assign)
 
 PRIM(lambda)
 {
-  object o, params;
+  object params;
   ARG(0, params);
   if (!valid_param_p(params)) return FALSE;
-  *result = o = object_alloc();
-  o->header.type = lambda;
-  o->lambda.top = env;
-  o->lambda.params = params;
-  o->lambda.body = args->cons.cdr;
-  o->lambda.prim_cd = -1;
-  xsplay_init(&o->lambda.binding, (int(*)(void *, void *))symcmp);
+  *result = gc_new_lambda(env, params, args->cons.cdr, -1);
   return TRUE;
 }
 

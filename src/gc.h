@@ -4,6 +4,7 @@
 #define GC_OLD 1
 #define GC_PERM 2
 
+extern object gc_new_lambda(object top, object params, object body, int prim_cd);
 extern object gc_new_xint(int val);
 extern object gc_new_xfloat(double val);
 extern object gc_new_cons(object car, object cdr);

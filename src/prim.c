@@ -6,6 +6,7 @@
 #include "xsplay.h"
 #include "object.h"
 #include "prim.h"
+#include "gc.h"
 
 #undef PRIM
 char *prim_name_table[] = {
@@ -17,14 +18,6 @@ char *prim_name_table[] = {
 
 object prim_xint(int64_t val)
 {
-  object o;
-  o = object_alloc();
-  if(XINT_MIN <= val && val <= XINT_MAX) {
-    o->header.type = xint;
-    o->xint.val = val;
-  } else {
-    o->header.type = xfloat;
-    o->xfloat.val = val;
-  }
-  return o;
+  if(XINT_MIN <= val && val <= XINT_MAX) return gc_new_xint(val);
+  return gc_new_xfloat(val);
 }

@@ -69,9 +69,5 @@ extern object object_opt;
 extern object object_key;
 extern object object_rest;
 
-extern object object_alloc(void);
 extern void object_dump(object o);
-
 extern object object_bool(int b);
-
-extern int symcmp(object o, object p);
