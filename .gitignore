@@ -2,4 +2,5 @@
 *.a
 *.wk
 *.exe
+test.p
 src/paren
