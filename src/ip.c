@@ -13,8 +13,6 @@ static object toplevel;
 extern int (*prim_table[])(object env, object args, object *result);
 extern char *prim_name_table[];
 
-int symcmp(object o, object p);
-
 static object find(object env, object sym)
 {
   object o;

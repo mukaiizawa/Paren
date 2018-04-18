@@ -8,14 +8,9 @@
 #include "object.h"
 #include "lex.h"
 
+// static struct xarray free_list;
 static struct xarray table;
 static struct xsplay symbol_table;
-
-int symcmp(object o, object p)
-{
-  xassert(o->header.type == symbol && o->header.type == p->header.type);
-  return strcmp(o->symbol.name, p->symbol.name);
-}
 
 void gc_regist(object o)
 {

@@ -18,8 +18,6 @@
 static int dump_object_table_p;
 static char *core_fn;
 
-int symcmp(object o, object p);
-
 static void parse_opt(int argc,char *argv[])
 {
   int ch;
