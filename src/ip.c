@@ -228,7 +228,6 @@ static object eval_list(object env, object o)
     if (!(*prim_table[ope->lambda.prim_cd])(env, args, &result))
       xerror("primitive '%s' failed", prim_name_table[ope->lambda.prim_cd]);
   } else {
-    env = ope;
     params = ope->lambda.params;
     // required parameter
     while (params != object_nil) {
@@ -244,7 +243,7 @@ static object eval_list(object env, object o)
     // evaluate
     body = ope->lambda.body;
     while (body != object_nil) {
-      result = eval(env, body->cons.car);
+      result = eval(ope, body->cons.car);
       body = body->cons.cdr;
     }
   }
