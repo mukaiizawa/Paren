@@ -22,15 +22,10 @@ void gc_regist(object o)
   xarray_add(&table, o);
 }
 
-object gc_alloc(void)
-{
-  return xmalloc(sizeof(union s_expr));
-}
-
 object gc_new_lambda(object top, object params, object body, int prim_cd)
 {
   object o;
-  o = gc_alloc();
+  o = xmalloc(sizeof(struct lambda));
   o->header.type = lambda;
   o->lambda.top = top;
   o->lambda.params = params;
@@ -44,7 +39,7 @@ object gc_new_lambda(object top, object params, object body, int prim_cd)
 object gc_new_xint(int val)
 {
   object o;
-  o = gc_alloc();
+  o = xmalloc(sizeof(struct xint));
   o->header.type = xint;
   o->xint.val = val;
   gc_regist(o);
@@ -54,7 +49,7 @@ object gc_new_xint(int val)
 object gc_new_xfloat(double val)
 {
   object o;
-  o = gc_alloc();
+  o = xmalloc(sizeof(struct xfloat));
   o->header.type = xfloat;
   o->xfloat.val = val;
   gc_regist(o);
@@ -64,7 +59,7 @@ object gc_new_xfloat(double val)
 object gc_new_cons(object car, object cdr)
 {
   object o;
-  o = gc_alloc();
+  o = xmalloc(sizeof(struct cons));
   o->header.type = cons;
   o->cons.car = car;
   o->cons.cdr = cdr;
@@ -76,7 +71,7 @@ object gc_new_symbol(char *name)
 {
   object o;
   if ((o = xsplay_find(&symbol_table, name)) == NULL) {
-    o = gc_alloc();
+    o = xmalloc(sizeof(struct symbol));
     if (name[0] != ':') o->header.type = symbol;
     else o->header.type = keyword;
     o->symbol.name = name;

@@ -32,18 +32,6 @@ static void dump_cons(object o)
   }
 }
 
-char *object_type_name[] = {
-  "lambda",
-  "cons",
-  "fbarray",
-  "farray",
-  "xint",
-  "xfloat",
-  "symbol",
-  "symbol",
-  "keyword"
-};
-
 extern char *prim_name_table[];
 
 static void dump_s_expr(object o)
