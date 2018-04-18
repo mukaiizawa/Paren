@@ -13,12 +13,12 @@
 #include "gc.h"
 #include "ip.h"
 
+extern char *prim_name_table[];
+
 // option
 
 static int dump_object_table_p;
 static char *core_fn;
-
-extern char *prim_name_table[];
 
 static void parse_opt(int argc,char *argv[])
 {
@@ -170,7 +170,6 @@ static object make_boot_args(object body)
   bind_pseudo_symbol(boot_arg, object_true);
   bind_pseudo_symbol(boot_arg, object_false);
   bind_prim(boot_arg);
-  gc_regist(boot_arg);
   return boot_arg;
 }
 

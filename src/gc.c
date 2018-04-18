@@ -86,6 +86,7 @@ object gc_new_barray(int len)
   object o;
   o = xmalloc(sizeof(struct fbarray) + len - 1);
   o->header.type = fbarray;
+  gc_regist(o);
   return o;
 }
 
@@ -95,6 +96,7 @@ object gc_new_fbarray(int len)
   o = xmalloc(sizeof(struct farray) + (len - 1) * sizeof(object));
   o->header.type = farray;
   while (len-- > 0) o->farray.elt[len] = object_nil;
+  gc_regist(o);
   return o;
 }
 
