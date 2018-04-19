@@ -1,6 +1,7 @@
 // garbage collector
 
 #include <string.h>
+#include <inttypes.h>
 
 #include "std.h"
 #include "xsplay.h"
@@ -12,18 +13,17 @@
 object toplevel;
 
 static int count;
-static struct xarray x;
 static struct xarray table;
+static struct xarray work_table;
 static struct xsplay symbol_table;
 
 static int symcmp(object o, object p)
 {
-  // intptr_t i;
+  intptr_t i;
   xassert(o->header.type == symbol && p->header.type == symbol);
-  // if ((i = o - p) == 0) return 0;
-  // if (i > 0) return 1;
-  // return -1;
-  return strcmp(o->symbol.name, p->symbol.name);
+  if ((i = (intptr_t)o - (intptr_t)p) == 0) return 0;
+  if (i > 0) return 1;
+  return -1;
 }
 
 static void gc_regist(object o)
@@ -173,23 +173,23 @@ void gc_full(void)
   printf("gc start------------------------------------\n");
   int i;
   object o;
-  xarray_reset(&x);
+  xarray_reset(&work_table);
   for (i = 0; i < table.size; i++) ((object)table.elt[i])->header.alivep = 0;
   mark_s_expr(toplevel);
   for (i = 0; i < table.size; i++) {
     o = table.elt[i];
-    if (o->header.alivep) xarray_add(&x, o);
+    if (o->header.alivep) xarray_add(&work_table, o);
     else free_s_expr(o);
   }
   xarray_reset(&table);
-  for (i = 0; i < x.size; i++) xarray_add(&table, x.elt[i]);
+  for (i = 0; i < work_table.size; i++) xarray_add(&table, work_table.elt[i]);
   printf("gc end------------------------------------\n");
 }
 
 void gc_init(void)
 {
   count = 0;
-  xarray_init(&x);
+  xarray_init(&work_table);
   xarray_init(&table);
   xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
 }
