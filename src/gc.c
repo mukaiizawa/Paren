@@ -161,6 +161,17 @@ static void mark_s_expr(object o)
   }
 }
 
+static void free_s_expr(object o)
+{
+  gc_used_memory -= sizeof(o);
+  switch (type(o)) {
+    case Lambda: xsplay_free(&o->lambda.binding); break;
+    case Symbol: xfree(o->symbol.name); break;
+    default: break;
+  }
+  xfree(o);
+}
+
 void gc_chance(void)
 {
   if (gc_used_memory > GC_CHANCE_MEMORY) gc_full();
@@ -179,10 +190,7 @@ void gc_full(void)
   for (i = 0; i < table.size; i++) {
     o = table.elt[i];
     if (alivep(o)) xarray_add(&work_table, o);
-    else {
-      gc_used_memory -= sizeof(o);
-      xfree(o);
-    }
+    else free_s_expr(o);
   }
   xarray_reset(&table);
   for (i = 0; i < work_table.size; i++) xarray_add(&table, work_table.elt[i]);

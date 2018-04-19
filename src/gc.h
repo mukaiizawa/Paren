@@ -1,7 +1,7 @@
 // garbage collector
 
-#define GC_MAX_MEMORY (512 * 1024 * 1024)
-#define GC_CHANCE_MEMORY (256 * 1024 * 1024)
+#define GC_MAX_MEMORY (256 * 1024 * 1024)
+#define GC_CHANCE_MEMORY (512 * 1024)
 
 extern int gc_used_memory;
 extern int gc_max_used_memory;
