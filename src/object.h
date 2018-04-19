@@ -2,9 +2,6 @@
 
 typedef union s_expr *object;
 
-#define XINT_MAX 0x3fffffff
-#define XINT_MIN (- XINT_MAX - 1)
-
 enum object_type {
   lambda,
   cons,

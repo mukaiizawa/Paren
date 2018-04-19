@@ -1,14 +1,17 @@
 // xc std
 
-#define TRUE 1
-#define FALSE 0
-
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define TRUE 1
+#define FALSE 0
+
+#define XINT_MAX 0x3fffffff
+#define XINT_MIN (- XINT_MAX - 1)
 
 #define MAX_STR_LEN 256
 
