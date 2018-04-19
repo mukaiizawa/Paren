@@ -41,9 +41,9 @@ static void bind(object env, object sym, object val)
 // <param_value> ::= { <param> | (<param> <value>) }
 
 static int valid_param_value_p(object o) {
-  if (o->header.type == symbol) return TRUE;
-  if (o->header.type != cons) return FALSE;
-  if (o->cons.car->header.type != symbol) return FALSE;
+  if (typep(o, Symbol)) return TRUE;
+  if (!typep(o, Cons)) return FALSE;
+  if (!typep(o->cons.car, Symbol)) return FALSE;
   o = o->cons.cdr;
   return o == object_nil || o->cons.cdr == object_nil;
 }
@@ -60,34 +60,30 @@ static int valid_param_value_p(object o) {
   while (params != object_nil) { \
     if (!valid_param_value_p(param)) return FALSE; \
     next_params(); \
-    if (param->header.type == keyword) break; \
+    if (typep(param, Keyword)) break; \
   } \
 }
 
 static int valid_param_p(object params) {
   if (params == object_nil) return TRUE;
-  if (params->header.type != cons) return FALSE;
+  if (!typep(params, Cons)) return FALSE;
   while (params != object_nil) {
-    if (param->header.type == symbol) {
+    if (typep(param, Symbol)) {
       next_params();
       continue;
     }
-    if (param->header.type == keyword) break;
+    if (typep(param, Keyword)) break;
     return FALSE;
   }
   if (param == object_opt) next_param_values();
   if (param == object_rest) {
     next_params();
-    if (param->header.type != symbol) return FALSE;
+    if (!typep(param, Symbol)) return FALSE;
     next_params();
   }
   if (param == object_key) next_param_values();
   return params == object_nil;
 }
-
-#undef next_param_values
-#undef next_params
-#undef param
 
 PRIM(assign)
 {
@@ -98,7 +94,7 @@ PRIM(assign)
   for (i = 0; i < argc - 1; i += 2) {
     ARG(i, sym);
     ARG(i + 1, val);
-    if (sym->header.type != symbol) return FALSE;
+    if (!typep(sym, Symbol)) return FALSE;
     val = eval(env, val);
     bind(env, sym, *result = val);
   }
@@ -133,12 +129,12 @@ PRIM(if)
   ARG(0, test);
   test = eval(env, test);
   if (argc != 2 && argc != 3) return FALSE;
-  switch (test->header.type) {
-    case lambda: case cons: case keyword: b = TRUE; break;
-    case fbarray: b = test->fbarray.size != 0; break;
-    case farray: b = test->farray.size != 0; break;
-    case xint: case xfloat: b = test->xint.val != 0; break;
-    case symbol: b = test != object_nil && test != object_false; break;
+  switch (type(test)) {
+    case Lambda: case Cons: case Keyword: b = TRUE; break;
+    case Fbarray: b = test->fbarray.size != 0; break;
+    case Farray: b = test->farray.size != 0; break;
+    case Xint: case Xfloat: b = test->xint.val != 0; break;
+    case Symbol: b = test != object_nil && test != object_false; break;
     default: return FALSE;
   }
   if (b) {
@@ -213,7 +209,7 @@ static object eval_list(object env, object o)
   object ope, args, result, params, body;
   ope = eval(env, o->cons.car);
   args = o->cons.cdr;
-  if (ope->header.type != lambda) xerror("not a operators");
+  if (!typep(ope, Lambda)) xerror("not a operators");
   if (ope->lambda.prim_cd >= 0) {
     if (!(*prim_table[ope->lambda.prim_cd])(env, args, &result))
       xerror("primitive '%s' failed", prim_name_table[ope->lambda.prim_cd]);
@@ -244,21 +240,22 @@ static object eval_list(object env, object o)
 object eval(object e, object o)
 {
   object p;
-  switch (o->header.type) {
-    case lambda:
-    case fbarray:
-    case farray:
-    case xint:
-    case xfloat:
-    case keyword:
+  switch (type(o)) {
+    case Lambda:
+    case Fbarray:
+    case Farray:
+    case Xint:
+    case Xfloat:
+    case Keyword:
       return o;
-    case symbol:
+    case Symbol:
       if ((p = find(e, o)) == NULL)
         xerror("unbind symbol '%s'", o->symbol.name);
       return p;
-    case cons:
+    case Cons:
       return eval_list(e, o);
-    default: xerror("illegal object"); return NULL;
+    default:
+      xerror("illegal object type '%d'", type(o)); return NULL;
   }
 }
 

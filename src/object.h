@@ -2,61 +2,58 @@
 
 typedef union s_expr *object;
 
-enum object_type {
-  lambda,
-  cons,
-  fbarray,
-  farray,
-  xint,
-  xfloat,
-  symbol,
-  keyword
-};
+#define ALIVE_MASK 0xf00000
+#define TYPE_MASK 0x0fffff
+#define   Lambda 0x1
+#define   Cons 0x2
+#define   Fbarray 0x3
+#define   Farray 0x4
+#define   Xint 0x5
+#define   Xfloat 0x6
+#define   Symbol 0x7
+#define   Keyword 0x8
+
+#define type(o) (o->header & TYPE_MASK)
+#define typep(o, t) (type(o) == t)
+#define listp(o) (o == object_nil || typep(o, Cons))
 
 extern char *object_type_name[];
 
-struct object_header {
-  enum object_type type;
-  int hash, alivep;
-} object_header;
-
 union s_expr {
-  struct object_header header;
+  int header;
   struct lambda {
-    struct object_header header;
+    int header;
     object top, params, body; 
     int prim_cd;
     struct xsplay binding;
   } lambda;
   struct cons {
-    struct object_header header;
+    int header;
     object car, cdr; 
   } cons;
   struct fbarray {
-    struct object_header header;
+    int header;
     int size;
     char elt[1];
   } fbarray;
   struct farray {
-    struct object_header header;
+    int header;
     int size;
     object elt[1];
   } farray;
   struct xint {
-    struct object_header header;
+    int header;
     int64_t val; 
   } xint;
   struct xfloat {
-    struct object_header header;
+    int header;
     double val; 
   } xfloat;
   struct symbol {
-    struct object_header header;
+    int header;
     char *name; 
   } symbol;
 };
-
-#define listp(o) (o == object_nil || o->header.type == cons)
 
 // global object
 extern object toplevel;

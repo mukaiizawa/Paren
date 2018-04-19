@@ -21,7 +21,7 @@ static void dump_cons(object o)
   dump_s_expr(o->cons.car);
   while ((o = o->cons.cdr) != object_nil) {
     printf(" ");
-    if (o->header.type == cons) dump_s_expr(o->cons.car);
+    if (typep(o, Cons)) dump_s_expr(o->cons.car);
     else {
       printf(". ");
       dump_s_expr(o);
@@ -35,8 +35,8 @@ extern char *prim_name_table[];
 static void dump_s_expr(object o)
 {
   int i;
-  switch (o->header.type) {
-    case lambda:
+  switch (type(o)) {
+    case Lambda:
       printf("(lambda ");
       i = o->lambda.prim_cd;
       if (i >= 0)
@@ -51,30 +51,30 @@ static void dump_s_expr(object o)
       }
       printf(")");
       break;
-    case cons:
+    case Cons:
       printf("(");
       dump_cons(o);
       printf(")");
       break;
-    case fbarray:
+    case Fbarray:
       printf("%s", o->fbarray.elt);
       break;
-    case farray:
+    case Farray:
       printf("[");
       for (i = 0; i < o->farray.size; i++) dump_s_expr(o->farray.elt[i]);
       printf("]");
       break;
-    case xint:
+    case Xint:
       printf("%"PRId64"", o->xint.val);
       break;
-    case xfloat:
+    case Xfloat:
       printf("%f", o->xfloat.val);
       break;
-    case symbol:
-    case keyword:
+    case Symbol:
+    case Keyword:
       printf("%s", o->symbol.name);
       break;
-    default: xerror("unknown type '%d'", o->header.type);
+    default: xerror("unknown type '%d'", type(o));
   }
 }
 

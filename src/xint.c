@@ -9,7 +9,7 @@
 { \
   ARG(n, arg); \
   arg = eval(env, arg); \
-  if (arg->header.type != xint) return FALSE; \
+  if (!typep(arg, Xint)) return FALSE; \
 }
 
 PRIM(xint_equal)

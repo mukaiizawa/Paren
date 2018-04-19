@@ -1,4 +1,6 @@
 ; paren core library.
+(%assign a 1)
+(%lambda (:opt a) x)
 
 ; primitive
 ;; assign
