@@ -1,3 +1,3 @@
 // interpreter
 
-extern void ip_start(object arg);
+extern void ip_start(object arg, int silentp);

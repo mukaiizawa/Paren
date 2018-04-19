@@ -262,16 +262,20 @@ object eval(object e, object o)
   }
 }
 
-void print(object o) {
-  object_dump(o);
+void silent_print(object o)
+{
+  // do nothing
 }
 
-void ip_start(object arg)
+void ip_start(object arg, int silentp)
 {
   object o;
+  void (* print)(object);
+  if (silentp) print = silent_print;
+  else  print = object_dump;
   o = toplevel->lambda.body;
   while (o != object_nil) {
-    print(eval(toplevel, o->cons.car));
+    (*print)(eval(toplevel, o->cons.car));
     o = o->cons.cdr;
   }
 }

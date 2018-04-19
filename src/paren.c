@@ -18,19 +18,23 @@ extern char *prim_name_table[];
 // option
 
 static int dump_object_table_p;
+static int silentp;
 static char *core_fn;
 
 static void parse_opt(int argc,char *argv[])
 {
   int ch;
   core_fn = "./core.p";
+  silentp = FALSE;
   dump_object_table_p = FALSE;
-  while((ch = xgetopt(argc,argv,"of:")) != EOF)
+  while((ch = xgetopt(argc,argv,"sof:")) != EOF)
     switch(ch) {
+      case 's': silentp = TRUE; break;
       case 'o': dump_object_table_p = TRUE; break;
       case 'f': core_fn = xoptarg; break;
       default: xerror("\
 -o dump object table.\n\
+-s silent mode.\n\
 -f FILE as core library for paren\n\
 ");
     }
@@ -175,7 +179,7 @@ int main(int argc, char *argv[])
   gc_init();
   make_initial_objects();
   toplevel->lambda.body = load(core_fn);
-  ip_start(toplevel);
+  ip_start(toplevel, silentp);
   if (dump_object_table_p) gc_dump_table();
   return 0;
 }

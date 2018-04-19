@@ -18,8 +18,12 @@ static struct xsplay symbol_table;
 
 static int symcmp(object o, object p)
 {
+  // intptr_t i;
   xassert(o->header.type == symbol && p->header.type == symbol);
-  return o - p;
+  // if ((i = o - p) == 0) return 0;
+  // if (i > 0) return 1;
+  // return -1;
+  return strcmp(o->symbol.name, p->symbol.name);
 }
 
 static void gc_regist(object o)
@@ -85,6 +89,7 @@ object gc_new_symbol(char *name)
     else o->header.type = keyword;
     o->symbol.name = name;
     xsplay_add(&symbol_table, name, o);
+    gc_regist(o);
   }
   return o;
 }
