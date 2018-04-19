@@ -165,6 +165,7 @@ static void make_initial_objects(void)
   object_key = gc_new_symbol(":key");
   object_rest = gc_new_symbol(":rest");
   toplevel = gc_new_lambda(object_nil, object_nil, object_nil, -1);
+  object_dump(toplevel);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
   bind_pseudo_symbol(object_false);

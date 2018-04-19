@@ -44,9 +44,12 @@ static void dump_s_expr(object o)
       if (i >= 0)
         printf("<primitive:%s>", prim_name_table[i]);
       else {
-        dump_s_expr(o->lambda.params);
-        printf(" ");
-        dump_cons(o->lambda.body);
+        if (o->lambda.params == object_nil) printf("()");
+        else dump_s_expr(o->lambda.params);
+        if (o->lambda.body != object_nil) {
+          printf(" ");
+          dump_cons(o->lambda.body);
+        }
       }
       printf(")");
       break;
