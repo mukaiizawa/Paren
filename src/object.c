@@ -6,6 +6,7 @@
 #include "lex.h"
 #include "object.h"
 
+object toplevel;
 object object_nil;
 object object_true;
 object object_false;

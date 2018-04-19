@@ -161,7 +161,6 @@ static void make_initial_objects(void)
   object_key = gc_new_symbol(":key");
   object_rest = gc_new_symbol(":rest");
   toplevel = gc_new_lambda(object_nil, object_nil, object_nil, -1);
-  object_dump(toplevel);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
   bind_pseudo_symbol(object_false);
@@ -177,6 +176,8 @@ int main(int argc, char *argv[])
   make_initial_objects();
   toplevel->lambda.body = load(core_fn);
   ip_start(toplevel, silentp);
+  if (dump_object_table_p) gc_dump_table();
+  gc_full();
   if (dump_object_table_p) gc_dump_table();
   return 0;
 }

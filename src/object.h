@@ -59,6 +59,7 @@ union s_expr {
 #define listp(o) (o == object_nil || o->header.type == cons)
 
 // global object
+extern object toplevel;
 extern object object_nil;
 extern object object_true;
 extern object object_false;
