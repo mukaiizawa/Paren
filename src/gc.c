@@ -1,8 +1,5 @@
 // garbage collector
 
-#include <string.h>
-#include <inttypes.h>
-
 #include "std.h"
 #include "xsplay.h"
 #include "xarray.h"

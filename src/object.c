@@ -1,8 +1,5 @@
 // paren object
 
-#include <string.h>
-#include <inttypes.h>
-
 #include "std.h"
 #include "xarray.h"
 #include "xsplay.h"

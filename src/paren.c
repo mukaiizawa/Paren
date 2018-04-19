@@ -1,9 +1,5 @@
 // paren main routine.
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-
 #include "std.h"
 #include "xgetopt.h"
 #include "xsplay.h"

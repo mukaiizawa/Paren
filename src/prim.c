@@ -1,7 +1,5 @@
 // primitive
 
-#include <stdlib.h>
-
 #include "std.h"
 #include "xsplay.h"
 #include "object.h"

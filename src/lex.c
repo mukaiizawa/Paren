@@ -1,7 +1,6 @@
 // lexical analysis
 
 #include <ctype.h>
-#include <string.h>
 
 #include "std.h"
 #include "lex.h"

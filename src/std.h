@@ -3,9 +3,12 @@
 #define TRUE 1
 #define FALSE 0
 
-#include <stdio.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define MAX_STR_LEN 256
 

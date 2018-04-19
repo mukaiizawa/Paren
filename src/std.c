@@ -25,9 +25,6 @@ SOFTWARE.
 
 #include "std.h"
 
-#include <stdlib.h>
-#include <string.h>
-
 void xvsprintf(char *buf, char *fmt, va_list va)
 {
   int len;
