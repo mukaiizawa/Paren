@@ -149,7 +149,7 @@ static void mark_s_expr(object o)
       mark_s_expr(o->lambda.top);
       mark_s_expr(o->lambda.params);
       mark_s_expr(o->lambda.body);
-      if (o->lambda.prim_cd < 0)
+      if (o->lambda.prim_cd < 0 && o != toplevel)
         xsplay_foreach(&o->lambda.binding, mark_sweep);
       break;
     case Cons:
@@ -166,6 +166,19 @@ static void mark_s_expr(object o)
 static void free_s_expr(object o)
 {
   gc_used_memory -= sizeof(o);
+  switch (type(o)) {
+    case Lambda:
+      xsplay_free(&o->lambda.binding);
+      break;
+    case Fbarray:
+      xfree(o->fbarray.elt);
+      break;
+    case Symbol:
+    case Keyword:
+      xfree(o->symbol.name);
+      break;
+    default: break;
+  }
   xfree(o);
 }
 

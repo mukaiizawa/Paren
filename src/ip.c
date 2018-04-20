@@ -147,6 +147,18 @@ PRIM(if)
   return TRUE;
 }
 
+PRIM(samep)
+{
+  int argc;
+  object o, p;
+  ARGC(argc);
+  if (argc != 2) return FALSE;
+  ARG(0, o);
+  ARG(1, p);
+  *result = object_bool(o == p);
+  return TRUE;
+}
+
 PRIM(cons)
 {
   int argc;
