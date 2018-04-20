@@ -6,12 +6,12 @@ typedef union s_expr *object;
 #define TYPE_MASK  0x0fff
 #define   Lambda   0x0001
 #define   Cons     0x0002
-#define   Fbarray  0x0003
-#define   Farray   0x0004
-#define   Xint     0x0005
-#define   Xfloat   0x0006
-#define   Symbol   0x0007
-#define   Keyword  0x0008
+#define   Fbarray  0x0004
+#define   Farray   0x0008
+#define   Xint     0x0010
+#define   Xfloat   0x0020
+#define   Symbol   0x0040
+#define   Keyword  0x0080
 
 #define type(o) (o->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
