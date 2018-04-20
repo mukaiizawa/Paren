@@ -35,3 +35,39 @@ PRIM(xint_add)
   *result = prim_xint(x->xint.val + y->xint.val);
   return TRUE;
 }
+
+PRIM(xint_multiply)
+{
+  int argc;
+  object x, y;
+  ARGC(argc);
+  if (argc != 2) return FALSE;
+  XINT_ARG(0, x);
+  XINT_ARG(1, y);
+  *result = prim_xint(x->xint.val * y->xint.val);
+  return TRUE;
+}
+
+PRIM(xint_eq)
+{
+  int argc;
+  object x, y;
+  ARGC(argc);
+  if (argc != 2) return FALSE;
+  XINT_ARG(0, x);
+  XINT_ARG(1, y);
+  *result = object_bool(x->xint.val == y->xint.val);
+  return TRUE;
+}
+
+PRIM(xint_lt)
+{
+  int argc;
+  object x, y;
+  ARGC(argc);
+  if (argc != 2) return FALSE;
+  XINT_ARG(0, x);
+  XINT_ARG(1, y);
+  *result = object_bool(x->xint.val < y->xint.val);
+  return TRUE;
+}

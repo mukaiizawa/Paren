@@ -43,16 +43,23 @@ c
 :%xint_add
 (%xint_add 1 2)
 (%xint_add 1 (%xint_add 3 0x30))
+:%xint_lt
+(%xint_lt 1 1)
+(%xint_lt 1 2)
+(%xint_lt 2 1)
 
 ;; cons
+:cons
 (%cons :dot :list)
 (%cons 1 (%cons 2 (%cons 3 nil)))
 
 ;; car
+:car
 (%car (%cons :car :cdr))
 (%car (%cons :car :cdr) :x)
 
-;; car
+;; cdr
+:cdr
 (%cdr (%cons :car :cdr))
 (%cdr (%cons :car :cdr) :x)
 

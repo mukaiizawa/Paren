@@ -62,8 +62,10 @@ object gc_new_lambda(object top, object params, object body, int prim_cd)
   o->lambda.params = params;
   o->lambda.body = body;
   o->lambda.prim_cd = prim_cd;
-  xsplay_init(&o->lambda.binding, (int(*)(void *, void *))symcmp);
-  if (prim_cd < 0) gc_regist(o);
+  if (prim_cd < 0) {
+    xsplay_init(&o->lambda.binding, (int(*)(void *, void *))symcmp);
+    gc_regist(o);
+  }
   return o;
 }
 
@@ -164,11 +166,6 @@ static void mark_s_expr(object o)
 static void free_s_expr(object o)
 {
   gc_used_memory -= sizeof(o);
-  switch (type(o)) {
-    case Lambda: xsplay_free(&o->lambda.binding); break;
-    case Symbol: xfree(o->symbol.name); break;
-    default: break;
-  }
   xfree(o);
 }
 
@@ -179,6 +176,7 @@ void gc_chance(void)
 
 void gc_full(void)
 {
+  printf("gc start ---------------------------\n");
   int i;
   object o;
   xarray_reset(&work_table);
@@ -194,6 +192,7 @@ void gc_full(void)
   }
   xarray_reset(&table);
   for (i = 0; i < work_table.size; i++) xarray_add(&table, work_table.elt[i]);
+  printf("gc end ---------------------------\n");
 }
 
 void gc_init(void)
