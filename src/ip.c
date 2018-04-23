@@ -186,7 +186,7 @@ PRIM(car)
     if (o == object_nil) return FALSE;
     ARG(1, p);
     p = eval(env, p);
-    *(o->cons.car) = *p;
+    o->cons.car = p;
     *result = p;
   }
   return TRUE;
@@ -207,7 +207,7 @@ PRIM(cdr)
     if (o == object_nil) return FALSE;
     ARG(1, p);
     p = eval(env, p);
-    *(o->cons.cdr) = *p;
+    o->cons.cdr = p;
     *result = p;
   }
   return TRUE;

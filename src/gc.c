@@ -43,8 +43,7 @@ static void set_type(object o, int type)
 static object gc_alloc(int size)
 {
   if (gc_used_memory += size > GC_MAX_MEMORY) xerror("out of memory.");
-  if (gc_max_used_memory < gc_used_memory)
-    gc_max_used_memory = gc_used_memory;
+  if (gc_max_used_memory < gc_used_memory) gc_max_used_memory = gc_used_memory;
   return xmalloc(size);
 }
 
@@ -146,10 +145,9 @@ static void mark_s_expr(object o)
   set_alive(o, TRUE);
   switch (type(o)) {
     case Lambda:
-      mark_s_expr(o->lambda.top);
       mark_s_expr(o->lambda.params);
       mark_s_expr(o->lambda.body);
-      if (o->lambda.prim_cd < 0 && o != toplevel)
+      if (o->lambda.prim_cd < 0 && o != toplevel)    // TODO toplevel
         xsplay_foreach(&o->lambda.binding, mark_sweep);
       break;
     case Cons:
