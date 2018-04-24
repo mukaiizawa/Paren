@@ -102,7 +102,7 @@ static int identifier_trail_char_p(void)
 
 int lex(void)
 {
-  int radix;
+  int sign, radix;
   double factor;
   while (isspace(next_ch)) skip();
   if (next_ch == ';') {
@@ -112,6 +112,11 @@ int lex(void)
   }
   if (next_ch == EOF || next_ch == '(' || next_ch == ')' || next_ch == '.')
     return skip();
+  if (next_ch == '+' || next_ch == '-') {
+    if (next_ch == '+') sign = 1;
+    else  sign = -1;
+    skip();
+  } else sign = 0;
   if (isdigit(next_ch)) {
     lex_ival = 0;
     while (isdigit(next_ch)) lex_ival = lex_ival * 10 + digit_val(skip(), 10);
@@ -130,11 +135,15 @@ int lex(void)
         lex_fval += factor * digit_val(skip(), 10);
         factor /= 10;
       }
+      if (sign != 0) lex_fval = sign * lex_fval;
       return LEX_FLOAT;
     }
+    if (sign != 0) lex_ival = sign * lex_ival;
     return LEX_INT;
   } else if (identifier_lead_char_p()) {
     xbarray_reset(&lex_str);
+    if (sign == 1) add('+');
+    else if (sign == -1) add('-');
     while (identifier_trail_char_p()) get();
     add('\0');
     return LEX_SYMBOL;
