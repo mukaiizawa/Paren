@@ -85,6 +85,10 @@ static int valid_param_p(object params) {
   return params == object_nil;
 }
 
+#undef param
+#undef next_params
+#undef next_param_values
+
 PRIM(assign)
 {
   int i, argc;
