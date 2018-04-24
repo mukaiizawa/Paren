@@ -170,7 +170,6 @@ static void make_initial_objects(void)
 int main(int argc, char *argv[])
 {
   setbuf(stdout, NULL);
-  setbuf(stderr, NULL);
   parse_opt(argc, argv);
   gc_init();
   make_initial_objects();
