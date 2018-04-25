@@ -15,6 +15,7 @@ extern char *prim_name_table[];
 
 static int dump_object_table_p;
 static int silentp;
+static int gc_logp;
 static char *core_fn;
 
 static void parse_opt(int argc,char *argv[])
@@ -22,13 +23,16 @@ static void parse_opt(int argc,char *argv[])
   int ch;
   core_fn = "./core.p";
   silentp = FALSE;
+  gc_logp = FALSE;
   dump_object_table_p = FALSE;
-  while((ch = xgetopt(argc,argv,"sof:")) != EOF)
+  while((ch = xgetopt(argc,argv,"gsof:")) != EOF)
     switch(ch) {
+      case 'g': gc_logp = TRUE; break;
       case 's': silentp = TRUE; break;
       case 'o': dump_object_table_p = TRUE; break;
       case 'f': core_fn = xoptarg; break;
       default: xerror("\
+-g show log garbage collection.\n\
 -o dump object table.\n\
 -s silent mode.\n\
 -f FILE as core library for paren\n\
@@ -171,7 +175,7 @@ int main(int argc, char *argv[])
 {
   setbuf(stdout, NULL);
   parse_opt(argc, argv);
-  gc_init();
+  gc_init(gc_logp);
   make_initial_objects();
   toplevel->lambda.body = load(core_fn);
   ip_start(toplevel, silentp);

@@ -10,6 +10,10 @@
 int gc_used_memory;
 int gc_max_used_memory;
 
+static int logp;
+static long cons_alloc_size;
+static object free_cons;
+
 static struct xarray table;
 static struct xarray work_table;
 static struct xsplay symbol_table;
@@ -90,8 +94,22 @@ object gc_new_xfloat(double val)
 
 object gc_new_cons(object car, object cdr)
 {
+  int i;
   object o;
-  o = gc_alloc(sizeof(struct cons));
+  struct cons *p;
+  if (free_cons == NULL) {
+    free_cons = gc_alloc(sizeof(struct cons) * cons_alloc_size);
+    for (i = 0, p = (struct cons *)free_cons; i < cons_alloc_size - 1; i++)
+      p[i].cdr = (object)&(p[i + 1]);
+    p[cons_alloc_size - 1].cdr = NULL;
+    cons_alloc_size *= 2;
+    // for (i = 0; i < cons_alloc_size - 1; i++)
+    //   free_cons[i].cons.cdr = &(free_cons[i + 1]);
+    // free_cons[cons_alloc_size - 1].cons.cdr = NULL;
+    // cons_alloc_size *= 2;
+  }
+  o = free_cons;
+  free_cons = o->cons.cdr;
   set_type(o, Cons);
   o->cons.car = car;
   o->cons.cdr = cdr;
@@ -168,6 +186,10 @@ static void free_s_expr(object o)
     case Lambda:
       xsplay_free(&o->lambda.binding);
       break;
+    case Cons:
+      o->cons.cdr = free_cons;
+      free_cons = o;
+      return;
     case Fbarray:
       xfree(o->fbarray.elt);
       break;
@@ -187,7 +209,6 @@ void gc_chance(void)
 
 void gc_full(void)
 {
-  printf("gc start ---------------------------\n");
   int i;
   object o;
   xarray_reset(&work_table);
@@ -201,14 +222,24 @@ void gc_full(void)
     if (alivep(o)) xarray_add(&work_table, o);
     else free_s_expr(o);
   }
+  if (logp) {
+    printf("before gc\n");
+    gc_dump_table();
+  }
   xarray_reset(&table);
   for (i = 0; i < work_table.size; i++) xarray_add(&table, work_table.elt[i]);
-  printf("gc end ---------------------------\n");
+  if (logp) {
+    printf("after gc\n");
+    gc_dump_table();
+  }
 }
 
-void gc_init(void)
+void gc_init(int gc_logp)
 {
+  logp = gc_logp;
   gc_used_memory = gc_max_used_memory = 0;
+  cons_alloc_size = 256;
+  free_cons = NULL;
   xarray_init(&table);
   xarray_init(&work_table);
   xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
@@ -222,5 +253,5 @@ void gc_dump_table(void)
     printf("%p\t", table.elt[i]);
     object_dump(table.elt[i]);
   }
-  printf("object table <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+  printf("\nobject table <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 }

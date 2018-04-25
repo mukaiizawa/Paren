@@ -270,9 +270,10 @@ object eval(object e, object o)
       return p;
     case Cons:
       return eval_list(e, o);
-    default:
-      xerror("illegal object type '%d'", type(o)); return NULL;
+    default: break;
   }
+  xerror("illegal object type '%d'", type(o));
+  return NULL;
 }
 
 void silent_print(object o)
