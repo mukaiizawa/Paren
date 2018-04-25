@@ -103,10 +103,6 @@ object gc_new_cons(object car, object cdr)
       p[i].cdr = (object)&(p[i + 1]);
     p[cons_alloc_size - 1].cdr = NULL;
     cons_alloc_size *= 2;
-    // for (i = 0; i < cons_alloc_size - 1; i++)
-    //   free_cons[i].cons.cdr = &(free_cons[i + 1]);
-    // free_cons[cons_alloc_size - 1].cons.cdr = NULL;
-    // cons_alloc_size *= 2;
   }
   o = free_cons;
   free_cons = o->cons.cdr;

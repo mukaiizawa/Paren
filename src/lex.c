@@ -100,10 +100,45 @@ static int identifier_trail_char_p(void)
   return identifier_lead_char_p() || isdigit(next_ch);
 }
 
+static int lex_number(int sign)
+{
+  int radix;
+  double factor;
+  lex_ival = 0;
+  while (isdigit(next_ch)) lex_ival = lex_ival * 10 + digit_val(skip(), 10);
+  if (next_ch == 'x') {
+    skip();
+    radix = lex_ival;
+    lex_ival = 0;
+    if (radix == 0) radix = 16;
+    while (isalnum(next_ch))
+      lex_ival = lex_ival * radix + digit_val(skip(), radix);
+  } else if (next_ch == '.') {
+    skip();
+    lex_fval = lex_ival;
+    factor = 0.1;
+    while (isdigit(next_ch)) {
+      lex_fval += factor * digit_val(skip(), 10);
+      factor /= 10;
+    }
+    if (sign != 0) lex_fval = sign * lex_fval;
+    return LEX_FLOAT;
+  }
+  if (sign != 0) lex_ival = sign * lex_ival;
+  return LEX_INT;
+}
+
+static int lex_identifier(void)
+{
+  while (identifier_trail_char_p()) get();
+  add('\0');
+  return LEX_SYMBOL;
+}
+
 int lex(void)
 {
-  int sign, radix;
-  double factor;
+  int sign;
+  xbarray_reset(&lex_str);
   while (isspace(next_ch)) skip();
   if (next_ch == ';') {
     while (next_ch != '\n') skip();
@@ -115,39 +150,11 @@ int lex(void)
   if (next_ch == '+' || next_ch == '-') {
     if (next_ch == '+') sign = 1;
     else  sign = -1;
-    skip();
+    get();
+    if (isspace(next_ch)) return lex_identifier();
   } else sign = 0;
-  if (isdigit(next_ch)) {
-    lex_ival = 0;
-    while (isdigit(next_ch)) lex_ival = lex_ival * 10 + digit_val(skip(), 10);
-    if (next_ch == 'x') {
-      skip();
-      radix = lex_ival;
-      lex_ival = 0;
-      if (radix == 0) radix = 16;
-      while (isalnum(next_ch))
-        lex_ival = lex_ival * radix + digit_val(skip(), radix);
-    } else if (next_ch == '.') {
-      skip();
-      lex_fval = lex_ival;
-      factor = 0.1;
-      while (isdigit(next_ch)) {
-        lex_fval += factor * digit_val(skip(), 10);
-        factor /= 10;
-      }
-      if (sign != 0) lex_fval = sign * lex_fval;
-      return LEX_FLOAT;
-    }
-    if (sign != 0) lex_ival = sign * lex_ival;
-    return LEX_INT;
-  } else if (identifier_lead_char_p()) {
-    xbarray_reset(&lex_str);
-    if (sign == 1) add('+');
-    else if (sign == -1) add('-');
-    while (identifier_trail_char_p()) get();
-    add('\0');
-    return LEX_SYMBOL;
-  }
+  if (isdigit(next_ch)) return lex_number(sign);
+  if (identifier_lead_char_p()) return lex_identifier();
   lex_error("illegal char '%c'", next_ch);
   return 0;
 }
