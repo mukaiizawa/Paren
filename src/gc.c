@@ -197,10 +197,6 @@ static void free_s_expr(object o)
     case Fbarray:
       xfree(o->fbarray.elt);
       break;
-    case Symbol:
-    case Keyword:
-      xfree(o->symbol.name);
-      break;
     default: break;
   }
   xfree(o);

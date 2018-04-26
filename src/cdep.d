@@ -1,6 +1,7 @@
 gc.o: gc.c gc.h xbarray.h lex.h object.h xarray.h xsplay.h std.h
 ip.o: ip.c ip.h prim.h gc.h object.h xarray.h xsplay.h std.h
 lex.o: lex.c xbarray.h lex.h std.h
+list.o: list.c prim.h gc.h object.h xsplay.h std.h
 object.o: object.c object.h xbarray.h lex.h xsplay.h xarray.h std.h
 paren.o: paren.c ip.h gc.h xbarray.h lex.h object.h xarray.h xsplay.h xgetopt.h std.h
 pprim.o: pprim.c pprim.wk object.h xsplay.h std.h

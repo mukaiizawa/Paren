@@ -1,40 +1,41 @@
 ; paren core library.
-(%assign a 1)
-(%lambda (:opt a) x)
+1
+(<- a 1)
+(lambda (:opt a) x)
 
 ; primitive
-;; assign
-(%assign a 1 b 2 c 3)
+;; <-
+(<- a 1 b 2 c 3)
 a
 b
 c
 
 ;; if
-(%if true true false)
-(%if false true false)
-(%if false true)
+(if true true false)
+(if false true false)
+(if false true)
 
 ;; quote
-(%quote hello_paren)
+(quote hello_paren)
 
 ;; lambda
-(%lambda (x) x)
-(%lambda (x y z) x)
-(%lambda (:opt a) x)
-(%lambda (:opt a b) x)
-(%lambda (:opt (a 0)) x)
-(%lambda (:opt a (b 0)) x)
-(%lambda (:opt (a 0) (b 0)) x)
-(%lambda (:rest a) x)
-(%lambda (:key a) x)
-(%lambda (:key a b) x)
-(%lambda (:key (a 0)) x)
-(%lambda (:key a (b 0)) x)
-(%lambda (:key (a 0) (b 0)) x)
-(%lambda (x y :opt (a 0) (b 0)) x)
-(%lambda (:rest a :key (a 0) (b 0) ) x)
-(%lambda (x y :opt (a 0) (b 0) :rest a) x)
-(%lambda (x y :opt (a 0) (b 0) :rest a :key a b (c 3)) x)
+(lambda (x) x)
+(lambda (x y z) x)
+(lambda (:opt a) x)
+(lambda (:opt a b) x)
+(lambda (:opt (a 0)) x)
+(lambda (:opt a (b 0)) x)
+(lambda (:opt (a 0) (b 0)) x)
+(lambda (:rest a) x)
+(lambda (:key a) x)
+(lambda (:key a b) x)
+(lambda (:key (a 0)) x)
+(lambda (:key a (b 0)) x)
+(lambda (:key (a 0) (b 0)) x)
+(lambda (x y :opt (a 0) (b 0)) x)
+(lambda (:rest a :key (a 0) (b 0) ) x)
+(lambda (x y :opt (a 0) (b 0) :rest a) x)
+(lambda (x y :opt (a 0) (b 0) :rest a :key a b (c 3)) x)
 
 ;; xint
 :%xint_equal
@@ -64,13 +65,13 @@ c
 (%cdr (%cons :car :cdr) :x)
 
 ; evalueate
-((%lambda (x) x) :identity)
-((%lambda (x y) (%cons y x)) 1 2)
+((lambda (x) x) :identity)
+((lambda (x y) (%cons y x)) 1 2)
 
-(%assign a :outer)
-((%lambda (a) (%assign a :inner) a) (%quote a))
+(<- a :outer)
+((lambda (a) (<- a :inner) a) (quote a))
 a
 
-(%lambda (x) a b c d)
+(lambda (x) a b c d)
 
 :finish

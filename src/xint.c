@@ -8,7 +8,6 @@
 #define XINT_ARG(n, arg) \
 { \
   ARG(n, arg); \
-  arg = eval(env, arg); \
   if (!typep(arg, Xint)) return FALSE; \
 }
 

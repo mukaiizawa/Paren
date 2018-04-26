@@ -33,12 +33,12 @@ endif
 
 all: $(paren) core.p
 
-pprim=ip.c xint.c
+pprim=xint.c list.c
 pprim.wk: $(pprim)
 	cat $+ | grep ^PRIM>$@
 
 xc.a: std.o xarray.o xbarray.o xsplay.o xgetopt.o gc.o object.o prim.o lex.o \
-	$(pprim:%.c=%.o)
+	ip.o $(pprim:%.c=%.o)
 	ar -ru xc.a $+
 
 paren=paren$(exe)
