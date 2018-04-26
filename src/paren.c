@@ -14,7 +14,6 @@ extern char *prim_name_table[];
 // option
 
 static int dump_object_table_p;
-static int silentp;
 static int gc_logp;
 static char *core_fn;
 
@@ -22,19 +21,16 @@ static void parse_opt(int argc,char *argv[])
 {
   int ch;
   core_fn = "./core.p";
-  silentp = FALSE;
   gc_logp = FALSE;
   dump_object_table_p = FALSE;
   while((ch = xgetopt(argc,argv,"gsof:")) != EOF)
     switch(ch) {
       case 'g': gc_logp = TRUE; break;
-      case 's': silentp = TRUE; break;
       case 'o': dump_object_table_p = TRUE; break;
       case 'f': core_fn = xoptarg; break;
       default: xerror("\
 -g show log garbage collection.\n\
 -o dump object table.\n\
--s silent mode.\n\
 -f FILE as core library for paren\n\
 ");
     }
@@ -127,11 +123,12 @@ static object load_rec(void)
   return gc_new_cons(o, load_rec());
 }
 
-static object load(char *fn)
+static object load()
 {
   FILE *fp;
   object o;
-  if ((fp = fopen(fn, "r")) == NULL) xerror("load/open %s failed.", fn);
+  if ((fp = fopen(core_fn, "r")) == NULL)
+    xerror("load/open %s failed.", core_fn);
   lex_start(fp);
   parse_skip();
   o = load_rec();
@@ -141,7 +138,7 @@ static object load(char *fn)
 
 static void bind_pseudo_symbol(object o)
 {
-  xsplay_add(&object_toplevel->lambda.binding, o, o);
+  xsplay_add(&object_toplevel->env.binding, o, o);
 }
 
 static void bind_prim(void)
@@ -152,7 +149,7 @@ static void bind_prim(void)
   for (i = 0; (s = prim_name_table[i]) != NULL; i++) {
     p = gc_new_symbol(s); 
     q = gc_new_lambda(object_toplevel, object_nil, object_nil, i);
-    xsplay_add(&object_toplevel->lambda.binding, p, q);
+    xsplay_add(&object_toplevel->env.binding, p, q);
   }
 }
 
@@ -164,10 +161,18 @@ static void make_initial_objects(void)
   object_opt = gc_new_symbol(":opt");
   object_key = gc_new_symbol(":key");
   object_rest = gc_new_symbol(":rest");
-  object_toplevel = gc_new_lambda(object_nil, object_nil, object_nil, -1);
+  object_if = gc_new_symbol("if");
+  object_quote = gc_new_symbol("quote");
+  object_assign = gc_new_symbol("<-");
+  object_lambda = gc_new_symbol("lambda");
+  object_toplevel = gc_new_env(object_nil);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
   bind_pseudo_symbol(object_false);
+  bind_pseudo_symbol(object_if);
+  bind_pseudo_symbol(object_quote);
+  bind_pseudo_symbol(object_assign);
+  bind_pseudo_symbol(object_lambda);
   bind_prim();
 }
 
@@ -177,8 +182,7 @@ int main(int argc, char *argv[])
   parse_opt(argc, argv);
   gc_init(gc_logp);
   make_initial_objects();
-  object_toplevel->lambda.body = load(core_fn);
-  ip_start(object_toplevel, silentp);
+  ip_start(gc_new_lambda(object_toplevel, object_nil, load(), -1));
   if (dump_object_table_p) gc_dump_table();
   gc_full();
   if (dump_object_table_p) gc_dump_table();

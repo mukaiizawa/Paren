@@ -56,19 +56,26 @@ static void gc_regist(object o)
   xarray_add(&table, o);
 }
 
-object gc_new_lambda(object top, object params, object body, int prim_cd)
+object gc_new_env(object top)
+{
+  object o;
+  o = gc_alloc(sizeof(struct env));
+  set_type(o, Env);
+  o->env.top = top;
+  xsplay_init(&o->env.binding, (int(*)(void *, void *))symcmp);
+  return o;
+}
+
+object gc_new_lambda(object env, object params, object body, int prim_cd)
 {
   object o;
   o = gc_alloc(sizeof(struct lambda));
   set_type(o, Lambda);
-  o->lambda.top = top;
+  o->lambda.env = env;
   o->lambda.params = params;
   o->lambda.body = body;
   o->lambda.prim_cd = prim_cd;
-  if (prim_cd < 0) {
-    xsplay_init(&o->lambda.binding, (int(*)(void *, void *))symcmp);
-    gc_regist(o);
-  }
+  if (prim_cd < 0) gc_regist(o);
   return o;
 }
 
@@ -158,11 +165,12 @@ static void mark_s_expr(object o)
   if (alivep(o)) return;
   set_alive(o, TRUE);
   switch (type(o)) {
+    case Env:
+      xsplay_foreach(&o->env.binding, mark_sweep);
+      break;
     case Lambda:
       mark_s_expr(o->lambda.params);
       mark_s_expr(o->lambda.body);
-      if (o->lambda.prim_cd < 0 && o != object_toplevel)    // TODO object_toplevel
-        xsplay_foreach(&o->lambda.binding, mark_sweep);
       break;
     case Cons:
       mark_s_expr(o->cons.car);
@@ -179,8 +187,8 @@ static void free_s_expr(object o)
 {
   gc_used_memory -= sizeof(o);
   switch (type(o)) {
-    case Lambda:
-      xsplay_free(&o->lambda.binding);
+    case Env:
+      xsplay_free(&o->env.binding);
       break;
     case Cons:
       o->cons.cdr = free_cons;

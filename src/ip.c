@@ -8,29 +8,29 @@
 #include "prim.h"
 #include "ip.h"
 
-extern int (*prim_table[])(object env, object args, object *result);
+extern int (*prim_table[])(object args, object *result);
 extern char *prim_name_table[];
 
-static object find(object env, object sym)
+static object find(object e, object s)
 {
   object o;
-  while (env != object_nil) {
-    if ((o = xsplay_find(&env->lambda.binding, sym)) != NULL) return o;
-    env = env->lambda.top;
+  while (e != object_nil) {
+    if ((o = xsplay_find(&e->env.binding, s)) != NULL) return o;
+    e = e->env.top;
   }
   return NULL;
 }
 
-static void bind(object env, object sym, object val)
+static void bind(object env, object s, object val)
 {
   while (env != object_nil) {
-    if (xsplay_find(&env->lambda.binding, sym) != NULL) {
-      xsplay_replace(&env->lambda.binding, sym, val);
+    if (xsplay_find(&env->env.binding, s) != NULL) {
+      xsplay_replace(&env->env.binding, s, val);
       return;
     }
-    env = env->lambda.top;
+    env = env->env.top;
   }
-  xsplay_add(&toplevel->lambda.binding, sym, val);
+  xsplay_add(&object_toplevel->env.binding, s, val);
 }
 
 // primitive
@@ -89,66 +89,66 @@ static int valid_param_p(object params) {
 #undef next_params
 #undef next_param_values
 
-PRIM(assign)
+static object eval(object e, object o);
+
+static object special_assign(object e, object args)
 {
   int i, argc;
   object sym, val;
   ARGC(argc);
-  if (argc % 2 != 0) return FALSE;
+  if (argc % 2 != 0) xerror("<-: must be pair");
   for (i = 0; i < argc - 1; i += 2) {
     ARG(i, sym);
     ARG(i + 1, val);
-    if (!typep(sym, Symbol)) return FALSE;
-    val = eval(env, val);
-    bind(env, sym, *result = val);
+    if (!typep(sym, Symbol)) xerror("<-: cannot bind except symbol");
+    bind(e, sym, val = eval(e, val));
   }
-  return TRUE;
+  return val;
 }
 
-PRIM(lambda)
+static object special_lambda(object e, object args)
 {
   object params;
   ARG(0, params);
-  if (!valid_param_p(params)) return FALSE;
-  *result = gc_new_lambda(env, params, args->cons.cdr, -1);
-  return TRUE;
+  if (!valid_param_p(params)) xerror("lambda: illegal paramter list");
+  return gc_new_lambda(e, params, args->cons.cdr, -1);
 }
 
-PRIM(quote)
+static object special_quote(object e, object args)
 {
   int argc;
   object o;
   ARGC(argc);
-  if (argc != 1) return FALSE;
+  if (argc != 1) xerror("quote: too many arguments");
   ARG(0, o);
-  *result = o;
-  return TRUE;
+  return o;
 }
 
-PRIM(if)
+static object special_if(object e, object args)
 {
   int b, argc;
   object test, then, els;
   ARGC(argc);
   ARG(0, test);
-  test = eval(env, test);
-  if (argc != 2 && argc != 3) return FALSE;
+  test = eval(e, test);
+  if (argc != 2 && argc != 3) xerror("if: illegal arguments");
   switch (type(test)) {
     case Lambda: case Cons: case Keyword: b = TRUE; break;
     case Fbarray: b = test->fbarray.size != 0; break;
     case Farray: b = test->farray.size != 0; break;
     case Xint: case Xfloat: b = test->xint.val != 0; break;
     case Symbol: b = test != object_nil && test != object_false; break;
-    default: return FALSE;
+    default: xerror("if: unknown object");
   }
   if (b) {
     ARG(1, then);
-    *result = eval(env, then);
-  } else if (argc > 2) {
+    return eval(e, then);
+  }
+  if (argc > 2) {
     ARG(2, els);
-    *result = eval(env, els);
-  } else *result = object_false;
-  return TRUE;
+    return eval(e, els);
+  }
+  return object_false;
 }
 
 PRIM(samep)
@@ -171,7 +171,7 @@ PRIM(cons)
   if (argc != 2) return FALSE;
   ARG(0, o);
   ARG(1, p);
-  *result = gc_new_cons(eval(env, o), eval(env, p));
+  *result = gc_new_cons(o, p);
   return TRUE;
 }
 
@@ -181,7 +181,6 @@ PRIM(car)
   object o, p;
   ARGC(argc);
   ARG(0, o);
-  o = eval(env, o);
   if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
   if (argc == 1) {
     if (o == object_nil) *result = object_nil;
@@ -189,7 +188,6 @@ PRIM(car)
   } else {
     if (o == object_nil) return FALSE;
     ARG(1, p);
-    p = eval(env, p);
     o->cons.car = p;
     *result = p;
   }
@@ -202,7 +200,6 @@ PRIM(cdr)
   object o, p;
   ARGC(argc);
   ARG(0, o);
-  o = eval(env, o);
   if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
   if (argc == 1) {
     if (o == object_nil) *result = object_nil;
@@ -210,7 +207,6 @@ PRIM(cdr)
   } else {
     if (o == object_nil) return FALSE;
     ARG(1, p);
-    p = eval(env, p);
     o->cons.cdr = p;
     *result = p;
   }
@@ -219,43 +215,53 @@ PRIM(cdr)
 
 // evaluater
 
-#define param (params->cons.car)
-static object eval_list(object env, object o)
+object eval_operands(object e, object o)
 {
-  object ope, args, result, params, body;
-  ope = eval(env, o->cons.car);
-  args = o->cons.cdr;
-  if (!typep(ope, Lambda)) xerror("not a operators");
-  if (ope->lambda.prim_cd >= 0) {
-    if (!(*prim_table[ope->lambda.prim_cd])(env, args, &result))
-      xerror("primitive '%s' failed", prim_name_table[ope->lambda.prim_cd]);
+  object p;
+  if (o == object_nil) return object_nil;
+  p = eval(e, o);
+  return gc_new_cons(p, eval_operands(e, o));
+}
+
+object eval_sequential(object e, object o)
+{
+  object result;
+  while (o != object_nil) result = eval(e, o->cons.car);
+  return result;
+}
+
+static object apply(object env, object operator, object operands)
+{
+  object new_env, args, result, params;
+  if (operator->lambda.prim_cd >= 0) {
+    if (!(*prim_table[operator->lambda.prim_cd])(operands, &result))
+      xerror("primitive '%s' failed"
+          , prim_name_table[operator->lambda.prim_cd]);
   } else {
-    params = ope->lambda.params;
+    new_env = gc_new_env(operator->lambda.env);
+    params = operator->lambda.params;
+    args = operands;
     // required parameter
     while (params != object_nil) {
-      if (args == object_nil) xerror("too few argument");
-      if (param == object_opt || param == object_rest || param == object_key)
-        break;
-      xsplay_replace(&ope->lambda.binding, param, eval(env, args->cons.car));
+      if (args == object_nil) xerror("too few arguments");
+      if (params->cons.car == object_opt
+          || params->cons.car == object_rest
+          || params->cons.car == object_key) break;
+      xsplay_add(&new_env->env.binding, params->cons.car, args->cons.car);
       params = params->cons.cdr;
       args = args->cons.cdr;
     }
-    if (args != object_nil) xerror("too many argument");
+    if (args != object_nil) xerror("too many arguments");
     // TODO ... other parameter
     // evaluate
-    body = ope->lambda.body;
-    while (body != object_nil) {
-      result = eval(ope, body->cons.car);
-      body = body->cons.cdr;
-    }
+    result = eval_sequential(new_env, operator->lambda.body);
   }
   return result;
 }
-#undef param
 
-object eval(object e, object o)
+static object eval(object e, object o)
 {
-  object p;
+  object operator, operands, p;
   switch (type(o)) {
     case Lambda:
     case Fbarray:
@@ -269,27 +275,24 @@ object eval(object e, object o)
         xerror("unbind symbol '%s'", o->symbol.name);
       return p;
     case Cons:
-      return eval_list(e, o);
+      operator = eval(e, o->cons.car);
+      operands = o->cons.cdr;
+      if (operator == object_if) return special_if(e, operands);
+      if (operator == object_quote) return special_quote(e, operands);
+      if (operator == object_assign) return special_assign(e, operands);
+      if (operator == object_lambda) return special_lambda(e, operands);
+      if (typep(operator, Lambda)) {
+        operands = eval_operands(e, o->cons.cdr);
+        return apply(e, operator, operands);
+      }
+      xerror("not a operator");
     default: break;
   }
   xerror("illegal object type '%d'", type(o));
   return NULL;
 }
 
-void silent_print(object o)
+void ip_start(object args)
 {
-  // do nothing
-}
-
-void ip_start(object arg, int silentp)
-{
-  object o;
-  void (* print)(object);
-  if (silentp) print = silent_print;
-  else  print = object_dump;
-  o = toplevel->lambda.body;
-  while (o != object_nil) {
-    (*print)(eval(toplevel, o->cons.car));
-    o = o->cons.cdr;
-  }
+  eval_sequential(object_toplevel, args);
 }

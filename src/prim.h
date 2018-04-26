@@ -1,6 +1,6 @@
 // primitive
 
-#define PRIM(name) int prim_##name(object env, object args, object *result)
+#define PRIM(name) int prim_##name(object args, object *result)
 
 #define ARGC(argc) \
 { \
@@ -21,7 +21,5 @@
 }
 
 extern char *prim_name_table[];
-
-extern object eval(object env, object o);
 
 extern object prim_xint(int64_t val);
