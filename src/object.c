@@ -14,6 +14,11 @@ object object_opt;
 object object_key;
 object object_rest;
 
+object object_if;
+object object_quote;
+object object_assign;
+object object_lambda;
+
 static void dump_s_expr(object o);
 
 static void dump_cons(object o)
