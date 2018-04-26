@@ -161,7 +161,7 @@ static void mark_s_expr(object o)
     case Lambda:
       mark_s_expr(o->lambda.params);
       mark_s_expr(o->lambda.body);
-      if (o->lambda.prim_cd < 0 && o != toplevel)    // TODO toplevel
+      if (o->lambda.prim_cd < 0 && o != object_toplevel)    // TODO object_toplevel
         xsplay_foreach(&o->lambda.binding, mark_sweep);
       break;
     case Cons:
@@ -212,7 +212,7 @@ void gc_full(void)
     o = table.elt[i];
     set_alive(o, FALSE);
   }
-  mark_s_expr(toplevel);
+  mark_s_expr(object_toplevel);
   for (i = 0; i < table.size; i++) {
     o = table.elt[i];
     if (alivep(o)) xarray_add(&work_table, o);

@@ -141,7 +141,7 @@ static object load(char *fn)
 
 static void bind_pseudo_symbol(object o)
 {
-  xsplay_add(&toplevel->lambda.binding, o, o);
+  xsplay_add(&object_toplevel->lambda.binding, o, o);
 }
 
 static void bind_prim(void)
@@ -151,8 +151,8 @@ static void bind_prim(void)
   object p, q;
   for (i = 0; (s = prim_name_table[i]) != NULL; i++) {
     p = gc_new_symbol(s); 
-    q = gc_new_lambda(toplevel, object_nil, object_nil, i);
-    xsplay_add(&toplevel->lambda.binding, p, q);
+    q = gc_new_lambda(object_toplevel, object_nil, object_nil, i);
+    xsplay_add(&object_toplevel->lambda.binding, p, q);
   }
 }
 
@@ -164,7 +164,7 @@ static void make_initial_objects(void)
   object_opt = gc_new_symbol(":opt");
   object_key = gc_new_symbol(":key");
   object_rest = gc_new_symbol(":rest");
-  toplevel = gc_new_lambda(object_nil, object_nil, object_nil, -1);
+  object_toplevel = gc_new_lambda(object_nil, object_nil, object_nil, -1);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
   bind_pseudo_symbol(object_false);
@@ -177,8 +177,8 @@ int main(int argc, char *argv[])
   parse_opt(argc, argv);
   gc_init(gc_logp);
   make_initial_objects();
-  toplevel->lambda.body = load(core_fn);
-  ip_start(toplevel, silentp);
+  object_toplevel->lambda.body = load(core_fn);
+  ip_start(object_toplevel, silentp);
   if (dump_object_table_p) gc_dump_table();
   gc_full();
   if (dump_object_table_p) gc_dump_table();

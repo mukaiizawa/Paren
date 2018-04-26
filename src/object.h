@@ -61,7 +61,7 @@ union s_expr {
 };
 
 // global object
-extern object toplevel;
+extern object object_toplevel;
 extern object object_nil;
 extern object object_true;
 extern object object_false;
