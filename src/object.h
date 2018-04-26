@@ -4,14 +4,15 @@ typedef union s_expr *object;
 
 #define ALIVE_MASK 0xf000
 #define TYPE_MASK  0x0fff
-#define   Lambda   0x0001
-#define   Cons     0x0002
-#define   Fbarray  0x0004
-#define   Farray   0x0008
-#define   Xint     0x0010
-#define   Xfloat   0x0020
-#define   Symbol   0x0040
-#define   Keyword  0x0080
+#define   Env      0x0001
+#define   Lambda   0x0002
+#define   Cons     0x0004
+#define   Fbarray  0x0008
+#define   Farray   0x0010
+#define   Xint     0x0020
+#define   Xfloat   0x0040
+#define   Symbol   0x0080
+#define   Keyword  0x0100
 
 #define type(o) (o->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
@@ -21,11 +22,15 @@ extern char *object_type_name[];
 
 union s_expr {
   int header;
+  struct env {
+    int header;
+    object top;
+    struct xsplay binding;
+  } env;
   struct lambda {
     int header;
-    object top, params, body; 
+    object env, params, body;
     int prim_cd;
-    struct xsplay binding;
   } lambda;
   struct cons {
     int header;
