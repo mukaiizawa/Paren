@@ -167,7 +167,10 @@ static object eval_operands(object e, object o)
 static object eval_sequential(object e, object o)
 {
   object p;
-  while (o != object_nil) p = eval(e, o->cons.car);
+  while (o != object_nil) {
+    p = eval(e, o->cons.car);
+    o = o->cons.cdr;
+  }
   return p;
 }
 
