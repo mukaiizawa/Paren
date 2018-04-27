@@ -1,4 +1,4 @@
-; recursion test
+; recursion
 
 (<- + (lambda (x y) (%xint_add x y))
     = (lambda (x y) (%xint_eq x y))
