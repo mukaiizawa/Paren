@@ -60,6 +60,8 @@ union s_expr {
   } symbol;
 };
 
+extern int symcmp(object o, object p);
+
 // global object
 extern object object_toplevel;
 extern object object_nil;

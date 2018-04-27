@@ -18,15 +18,6 @@ static struct xarray table;
 static struct xarray work_table;
 static struct xsplay symbol_table;
 
-static int symcmp(object o, object p)
-{
-  intptr_t i;
-  xassert(typep(o, Symbol) && typep(p, Symbol));
-  if ((i = (intptr_t)o - (intptr_t)p) == 0) return 0;
-  if (i > 0) return 1;
-  return -1;
-}
-
 static int alivep(object o)
 {
   return o->header & ALIVE_MASK;

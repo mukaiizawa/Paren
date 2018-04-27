@@ -37,6 +37,15 @@ static void dump_cons(object o)
 
 extern char *prim_name_table[];
 
+int symcmp(object o, object p)
+{
+  intptr_t i;
+  xassert(typep(o, Symbol) && typep(p, Symbol));
+  if ((i = (intptr_t)o - (intptr_t)p) == 0) return 0;
+  if (i > 0) return 1;
+  return -1;
+}
+
 static void dump_s_expr(object o)
 {
   int i;

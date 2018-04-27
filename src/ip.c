@@ -8,6 +8,7 @@
 #include "prim.h"
 #include "ip.h"
 
+static struct xsplay special_table;
 extern int (*prim_table[])(object args, object *result);
 extern char *prim_name_table[];
 
@@ -204,6 +205,7 @@ static object apply(object operator, object operands)
 
 static object eval(object e, object o)
 {
+  object (*special)(object, object);
   object p, operator, operands;
   switch (type(o)) {
     case Lambda:
@@ -220,23 +222,35 @@ static object eval(object e, object o)
     case Cons:
       operator = eval(e, o->cons.car);
       operands = o->cons.cdr;
-      if (operator == object_if) return special_if(e, operands);
-      if (operator == object_quote) return special_quote(e, operands);
-      if (operator == object_assign) return special_assign(e, operands);
-      if (operator == object_lambda) return special_lambda(e, operands);
-      if (typep(operator, Lambda)) {
-        operands = eval_operands(e, o->cons.cdr);
-        return apply(operator, operands);
+      switch (type(operator)) {
+        case Symbol:
+          if ((special = xsplay_find(&special_table, operator)) != NULL)
+            return (*special)(e, operands);
+          break;
+        case Lambda:
+          operands = eval_operands(e, o->cons.cdr);
+          return apply(operator, operands);
+        default:
+          xerror("not a operator");
       }
-      xerror("not a operator");
     default:
       xerror("illegal object type '%d'", type(o));
       return NULL;
   }
 }
 
+static void init_special_forms(void)
+{
+  xsplay_init(&special_table, (int(*)(void *, void *))symcmp);
+  xsplay_add(&special_table, object_if, &special_if);
+  xsplay_add(&special_table, object_quote, &special_quote);
+  xsplay_add(&special_table, object_assign, &special_assign);
+  xsplay_add(&special_table, object_lambda, &special_lambda);
+}
+
 void ip_start(object args)
 {
+  init_special_forms();
 #ifdef NDEBUG
   apply(object_toplevel, args, object_nil);
 #else
