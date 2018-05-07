@@ -25,3 +25,4 @@
              (tarai (-- y) z x)
              (tarai (-- z) x y)))))
 (tarai 6 3 0)    ; 6
+(tarai 12 6 0)    ; 12
