@@ -98,6 +98,7 @@ static object special_assign(object e, object args)
   object sym, val;
   ARGC(argc);
   if (argc % 2 != 0) xerror("<-: must be pair");
+  if (argc == 0) return object_nil;
   for (i = 0; i < argc - 1; i += 2) {
     ARG(i, sym);
     ARG(i + 1, val);
@@ -248,14 +249,17 @@ static void init_special_forms(void)
   xsplay_add(&special_table, object_lambda, &special_lambda);
 }
 
+extern int verbosep;
+
 void ip_start(object args)
 {
-  init_special_forms();
-#ifdef NDEBUG
-  apply(object_toplevel, args, object_nil);
-#else
   object o;
-  for (o = args->lambda.body; o != object_nil; o = o->cons.cdr)
-    object_dump(eval(object_toplevel, o->cons.car));
-#endif
+  init_special_forms();
+  if (!verbosep) apply(args, object_nil);
+  else {
+    for (o = args->lambda.body; o != object_nil; o = o->cons.cdr) {
+      object_dump(eval(object_toplevel, o->cons.car));
+      gc_chance();
+    }
+  }
 }

@@ -16,6 +16,7 @@ extern char *prim_name_table[];
 static int dump_object_table_p;
 static int gc_logp;
 static char *core_fn;
+int verbosep;
 
 static void parse_opt(int argc,char *argv[])
 {
@@ -23,15 +24,18 @@ static void parse_opt(int argc,char *argv[])
   core_fn = "./core.p";
   gc_logp = FALSE;
   dump_object_table_p = FALSE;
-  while((ch = xgetopt(argc,argv,"gsof:")) != EOF)
+  verbosep = FALSE;
+  while((ch = xgetopt(argc,argv,"gsof:v")) != EOF)
     switch(ch) {
       case 'g': gc_logp = TRUE; break;
       case 'o': dump_object_table_p = TRUE; break;
       case 'f': core_fn = xoptarg; break;
+      case 'v': verbosep = TRUE; break;
       default: xerror("\
 -g show log garbage collection.\n\
 -o dump object table.\n\
 -f FILE as core library for paren\n\
+-v always print evaluate.\n\
 ");
     }
 }
@@ -183,7 +187,6 @@ int main(int argc, char *argv[])
   gc_init(gc_logp);
   make_initial_objects();
   ip_start(gc_new_lambda(object_toplevel, object_nil, load(), -1));
-  if (dump_object_table_p) gc_dump_table();
   gc_full();
   if (dump_object_table_p) gc_dump_table();
   return 0;
