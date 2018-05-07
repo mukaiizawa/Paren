@@ -122,15 +122,15 @@ static struct xsplay_node *resume(struct xsplay_node *top)
 
 void xsplay_add(struct xsplay *s, void *k, void *d)
 {
-  struct xsplay_node *top, *newtop;
-  newtop = alloc();
+  struct xsplay_node *top;
   top = balance(s, k);
   xassert(top == null);
-  newtop->left = null->left;
-  newtop->right = null->right;
-  newtop->key = k;
-  newtop->data = d;
-  s->top = newtop;
+  top = alloc();
+  top->left = null->left;
+  top->right = null->right;
+  top->key = k;
+  top->data = d;
+  s->top = top;
 }
 
 void xsplay_replace(struct xsplay *s, void *k, void *d)
