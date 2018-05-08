@@ -37,9 +37,26 @@ static void set_type(object o, int type)
 
 static object gc_alloc(int size)
 {
-  if (gc_used_memory += size > GC_MAX_MEMORY) xerror("out of memory.");
+  if ((gc_used_memory += size) > GC_MAX_MEMORY) xerror("out of memory.");
   if (gc_max_used_memory < gc_used_memory) gc_max_used_memory = gc_used_memory;
   return xmalloc(size);
+}
+
+static int byte_size(object o)
+{
+  switch (type(o)) {
+    case Env: return sizeof(struct env);
+    case Lambda: return sizeof(struct lambda);
+    case Cons: return sizeof(struct cons);
+    case Fbarray: return sizeof(struct fbarray) + o->fbarray.size;
+    case Farray: return sizeof(struct farray)
+                 + (o->farray.size * sizeof(object));
+    case Xint: return sizeof(struct xint);
+    case Xfloat: return sizeof(struct xfloat);
+    case Symbol: case Keyword: return sizeof(struct symbol);
+    default: xerror("illegal object");
+  }
+  return -1;
 }
 
 static void gc_regist(object o)
@@ -111,24 +128,12 @@ object gc_new_cons(object car, object cdr)
   return o;
 }
 
-object gc_new_symbol(char *name)
-{
-  object o;
-  if ((o = xsplay_find(&symbol_table, name)) == NULL) {
-    o = gc_alloc(sizeof(struct symbol));
-    if (name[0] != ':') set_type(o, Symbol);
-    else set_type(o, Keyword);
-    o->symbol.name = name;
-    xsplay_add(&symbol_table, name, o);
-  }
-  return o;
-}
-
 object gc_new_barray(int len)
 {
   object o;
   o = gc_alloc(sizeof(struct fbarray) + len - 1);
   set_type(o, Fbarray);
+  o->fbarray.size = len;
   gc_regist(o);
   return o;
 }
@@ -139,7 +144,21 @@ object gc_new_fbarray(int len)
   o = gc_alloc(sizeof(struct farray) + (len - 1) * sizeof(object));
   set_type(o, Farray);
   while (len-- > 0) o->farray.elt[len] = object_nil;
+  o->farray.size = len;
   gc_regist(o);
+  return o;
+}
+
+object gc_new_symbol(char *name)
+{
+  object o;
+  if ((o = xsplay_find(&symbol_table, name)) == NULL) {
+    o = gc_alloc(sizeof(struct symbol));
+    if (name[0] != ':') set_type(o, Symbol);
+    else set_type(o, Keyword);
+    o->symbol.name = name;
+    xsplay_add(&symbol_table, name, o);
+  }
   return o;
 }
 
@@ -176,7 +195,7 @@ static void mark_s_expr(object o)
 
 void gc_collect(object o)
 {
-  // gc_used_memory -= sizeof(o); <- bug
+  gc_used_memory -= byte_size(o);
   switch (type(o)) {
     case Env:
       xsplay_free(&o->env.binding);

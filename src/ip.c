@@ -260,7 +260,7 @@ void ip_start(object args)
   else {
     for (o = args->lambda.body; o != object_nil; o = o->cons.cdr) {
       object_dump(eval(object_toplevel, o->cons.car));
-      // gc_chance();
+      gc_chance();
     }
   }
 }
