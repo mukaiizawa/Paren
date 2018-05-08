@@ -174,9 +174,9 @@ static void mark_s_expr(object o)
   }
 }
 
-static void free_s_expr(object o)
+void gc_collect(object o)
 {
-  gc_used_memory -= sizeof(o);
+  // gc_used_memory -= sizeof(o); <- bug
   switch (type(o)) {
     case Env:
       xsplay_free(&o->env.binding);
@@ -211,7 +211,7 @@ void gc_full(void)
   for (i = 0; i < table.size; i++) {
     o = table.elt[i];
     if (alivep(o)) xarray_add(&work_table, o);
-    else free_s_expr(o);
+    else gc_collect(o);
   }
   if (logp) {
     printf("before gc\n");
