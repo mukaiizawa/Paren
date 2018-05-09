@@ -186,8 +186,8 @@ int main(int argc, char *argv[])
   parse_opt(argc, argv);
   gc_init(gc_logp);
   make_initial_objects();
-  ip_start(gc_new_lambda(object_toplevel, object_nil, load(), -1));
-  gc_full();
+  object_boot_lambda = gc_new_lambda(object_toplevel, object_nil, load(), -1);
+  ip_start();
   if (dump_object_table_p) gc_dump_table();
   return 0;
 }

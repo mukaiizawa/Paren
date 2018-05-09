@@ -200,7 +200,6 @@ static object apply(object operator, object operands)
     // TODO ... other parameter
     // evaluate
     result = eval_sequential(e, operator->lambda.body);
-    gc_collect(e);
   }
   return result;
 }
@@ -250,17 +249,16 @@ static void init_special_forms(void)
   xsplay_add(&special_table, object_lambda, &special_lambda);
 }
 
+// boot option
 extern int verbosep;
 
-void ip_start(object args)
+void ip_start()
 {
-  object o;
+  object o, p;
   init_special_forms();
-  if (!verbosep) apply(args, object_nil);
-  else {
-    for (o = args->lambda.body; o != object_nil; o = o->cons.cdr) {
-      object_dump(eval(object_toplevel, o->cons.car));
-      gc_chance();
-    }
+  for (o = object_boot_lambda->lambda.body; o != object_nil; o = o->cons.cdr) {
+    p = eval(object_toplevel, o->cons.car);
+    if (verbosep) object_dump(p);
+    gc_chance();
   }
 }

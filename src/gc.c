@@ -164,7 +164,7 @@ object gc_new_symbol(char *name)
 
 static void mark_s_expr(object o);
 
-static void mark_sweep(int depth, void *key, void *data)
+static void sweep_env(int depth, void *key, void *data)
 {
   mark_s_expr(data);
 }
@@ -176,9 +176,10 @@ static void mark_s_expr(object o)
   set_alive(o, TRUE);
   switch (type(o)) {
     case Env:
-      xsplay_foreach(&o->env.binding, mark_sweep);
+      xsplay_foreach(&o->env.binding, sweep_env);
       break;
     case Lambda:
+      mark_s_expr(o->lambda.env);
       mark_s_expr(o->lambda.params);
       mark_s_expr(o->lambda.body);
       break;
@@ -193,7 +194,7 @@ static void mark_s_expr(object o)
   }
 }
 
-void gc_collect(object o)
+static void gc_free(object o)
 {
   gc_used_memory -= byte_size(o);
   switch (type(o)) {
@@ -212,34 +213,34 @@ void gc_collect(object o)
   xfree(o);
 }
 
-void gc_chance(void)
-{
-  if (gc_used_memory > GC_CHANCE_MEMORY) gc_full();
-}
-
-void gc_full(void)
+static void sweep_s_expr()
 {
   int i;
   object o;
-  xarray_reset(&work_table);
   for (i = 0; i < table.size; i++) {
     o = table.elt[i];
-    set_alive(o, FALSE);
-  }
-  mark_s_expr(object_toplevel);
-  for (i = 0; i < table.size; i++) {
-    o = table.elt[i];
-    if (alivep(o)) xarray_add(&work_table, o);
-    else gc_collect(o);
-  }
-  if (logp) {
-    printf("before gc\n");
-    gc_dump_table();
+    if (!alivep(o)) gc_free(o);
+    else {
+      set_alive(o, FALSE);
+      xarray_add(&work_table, o);
+    }
   }
   xarray_reset(&table);
   for (i = 0; i < work_table.size; i++) xarray_add(&table, work_table.elt[i]);
+  xarray_reset(&work_table);
+}
+
+void gc_chance()
+{
+  if (gc_used_memory < GC_CHANCE_MEMORY) return;
   if (logp) {
-    printf("after gc\n");
+    printf("before gc ");
+    gc_dump_table();
+  }
+  mark_s_expr(object_boot_lambda);
+  sweep_s_expr();
+  if (logp) {
+    printf("after gc ");
     gc_dump_table();
   }
 }
@@ -258,10 +259,10 @@ void gc_init(int gc_logp)
 void gc_dump_table(void)
 {
   int i;
-  printf("object table >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+  printf("; object table {{{\n");
   for(i = 0; i < table.size; i++) {
-    printf("%p\t", table.elt[i]);
+    printf("; \t%p\t", table.elt[i]);
     object_dump(table.elt[i]);
   }
-  printf("\nobject table <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+  printf("; }}}\n");
 }

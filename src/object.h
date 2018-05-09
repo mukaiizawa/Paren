@@ -64,6 +64,7 @@ extern int symcmp(object o, object p);
 
 // global object
 extern object object_toplevel;
+extern object object_boot_lambda;
 extern object object_nil;
 extern object object_true;
 extern object object_false;
