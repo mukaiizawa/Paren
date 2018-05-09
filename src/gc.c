@@ -71,6 +71,7 @@ object gc_new_env(object top)
   set_type(o, Env);
   o->env.top = top;
   xsplay_init(&o->env.binding, (int(*)(void *, void *))symcmp);
+  gc_regist(o);
   return o;
 }
 
