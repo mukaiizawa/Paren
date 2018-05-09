@@ -176,6 +176,7 @@ static void mark_s_expr(object o)
   set_alive(o, TRUE);
   switch (type(o)) {
     case Env:
+      mark_s_expr(o->env.top);
       xsplay_foreach(&o->env.binding, sweep_env);
       break;
     case Lambda:
