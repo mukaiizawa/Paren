@@ -7,6 +7,9 @@
 #include "lex.h"
 #include "gc.h"
 
+#define MAX_HEAP_SIZE (256 * 1024 * 1024)
+#define GC_CHANCE_MEMORY (512 * 1024)
+
 int gc_used_memory;
 int gc_max_used_memory;
 
@@ -37,7 +40,7 @@ static void set_type(object o, int type)
 
 static object gc_alloc(int size)
 {
-  if ((gc_used_memory += size) > GC_MAX_MEMORY) xerror("out of memory.");
+  if ((gc_used_memory += size) > MAX_HEAP_SIZE) xerror("out of memory.");
   if (gc_max_used_memory < gc_used_memory) gc_max_used_memory = gc_used_memory;
   return xmalloc(size);
 }
