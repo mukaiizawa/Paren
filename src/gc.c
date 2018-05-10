@@ -263,10 +263,14 @@ void gc_init(int gc_logp)
 void gc_dump_table(void)
 {
   int i;
+  object o;
+  printf("; free_cons: %p\n", free_cons);
   printf("; object table {{{\n");
   for(i = 0; i < table.size; i++) {
-    printf("; \t%p\t", table.elt[i]);
-    object_dump(table.elt[i]);
+    o = table.elt[i];
+    printf("; \t%p\t", o);
+    if (typep(o, Cons)) printf("(%p . %p)\n", o->cons.car, o->cons.cdr);
+    else object_dump(o);
   }
   printf("; }}}\n");
 }
