@@ -7,7 +7,7 @@
 #include "object.h"
 
 object object_toplevel;
-object object_boot_lambda;
+object object_boot;
 object object_nil;
 object object_true;
 object object_false;

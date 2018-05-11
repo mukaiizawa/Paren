@@ -256,7 +256,7 @@ void ip_start()
 {
   object o, p;
   init_special_forms();
-  for (o = object_boot_lambda->lambda.body; o != object_nil; o = o->cons.cdr) {
+  for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
     p = eval(object_toplevel, o->cons.car);
     if (verbosep) object_dump(p);
     gc_chance();

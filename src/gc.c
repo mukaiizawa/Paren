@@ -242,7 +242,7 @@ void gc_chance()
     printf("before gc ");
     gc_dump_table();
   }
-  mark_s_expr(object_boot_lambda);
+  mark_s_expr(object_boot);
   sweep_s_expr();
   if (logp) {
     printf("after gc ");
