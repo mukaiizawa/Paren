@@ -218,7 +218,7 @@ static void gc_free(object o)
   xfree(o);
 }
 
-static void sweep_s_expr()
+static void sweep_s_expr(void)
 {
   int i;
   object o;
@@ -235,7 +235,7 @@ static void sweep_s_expr()
   xarray_reset(&work_table);
 }
 
-void gc_chance()
+void gc_chance(void)
 {
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
   if (logp) {

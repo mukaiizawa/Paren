@@ -252,7 +252,7 @@ static void init_special_forms(void)
 // boot option
 extern int verbosep;
 
-void ip_start()
+void ip_start(void)
 {
   object o, p;
   init_special_forms();

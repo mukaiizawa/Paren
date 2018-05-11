@@ -127,7 +127,7 @@ static object load_rec(void)
   return gc_new_cons(o, load_rec());
 }
 
-static object load()
+static object load(void)
 {
   FILE *fp;
   object o;
