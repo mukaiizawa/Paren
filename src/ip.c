@@ -112,7 +112,7 @@ static object special_lambda(object e, object args)
 {
   object params;
   ARG(0, params);
-  if (!valid_param_p(params)) xerror("lambda: illegal paramter list");
+  if (!valid_param_p(params)) xerror("lambda: illegal parameter list");
   return gc_new_lambda(e, params, args->cons.cdr, -1);
 }
 

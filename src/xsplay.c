@@ -172,13 +172,14 @@ static void free1(struct xsplay_node *n)
 
 void xsplay_free(struct xsplay *s)
 {
-  free1(s->top);
-  s->top = null;
+  xsplay_reset(s);
+  xfree(s);
 }
 
 void xsplay_reset(struct xsplay *s)
 {
-  xsplay_free(s);
+  free1(s->top);
+  s->top = null;
 }
 
 static void (*func)(int depth, void *key, void *data) = NULL;
