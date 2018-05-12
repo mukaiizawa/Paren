@@ -1,9 +1,9 @@
 // xc extensible byte array.
 
 struct xbarray {
-	char *elt;
-	int size;
-	int alloc_size;
+  char *elt;
+  int size;
+  int alloc_size;
 };
 
 extern void xbarray_reset(struct xbarray *x);
