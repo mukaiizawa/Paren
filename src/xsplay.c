@@ -176,6 +176,11 @@ void xsplay_free(struct xsplay *s)
   s->top = null;
 }
 
+void xsplay_reset(struct xsplay *s)
+{
+  xsplay_free(s);
+}
+
 static void (*func)(int depth, void *key, void *data) = NULL;
 
 static void foreach1(int depth, struct xsplay_node *n)

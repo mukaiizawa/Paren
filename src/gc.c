@@ -16,6 +16,7 @@ int gc_max_used_memory;
 static int logp;
 static long cons_alloc_size;
 static object free_cons;
+static object free_env;
 
 static struct xarray table;
 static struct xarray work_table;
@@ -70,8 +71,13 @@ static void gc_regist(object o)
 object gc_new_env(object top)
 {
   object o;
-  o = gc_alloc(sizeof(struct env));
-  set_type(o, Env);
+  if (free_env == NULL) {
+    o = gc_alloc(sizeof(struct env));
+    set_type(o, Env);
+  } else {
+    o = free_env;
+    free_env = o->env.top;
+  }
   o->env.top = top;
   xsplay_init(&o->env.binding, (int(*)(void *, void *))symcmp);
   gc_regist(o);
@@ -204,7 +210,9 @@ static void gc_free(object o)
   gc_used_memory -= byte_size(o);
   switch (type(o)) {
     case Env:
-      xsplay_free(&o->env.binding);
+      xsplay_reset(&o->env.binding);
+      o->env.top = free_env;
+      free_env = o;
       break;
     case Cons:
       o->cons.cdr = free_cons;
@@ -255,7 +263,7 @@ void gc_init(int gc_logp)
   logp = gc_logp;
   gc_used_memory = gc_max_used_memory = 0;
   cons_alloc_size = 256;
-  free_cons = NULL;
+  free_env = free_cons = NULL;
   xarray_init(&table);
   xarray_init(&work_table);
   xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
@@ -265,7 +273,6 @@ void gc_dump_table(void)
 {
   int i;
   object o;
-  printf("; free_cons: %p\n", free_cons);
   printf("; object table {{{\n");
   for(i = 0; i < table.size; i++) {
     o = table.elt[i];
