@@ -100,6 +100,24 @@ void object_dump(object o)
   printf("\n");
 }
 
+int object_length(object o)
+{
+  int i;
+  xassert(listp(o));
+  for (i = 0; typep(o, Cons); i++) o = o->cons.cdr;
+  return i;
+}
+
+object object_nth(object o, int n)
+{
+  xassert(listp(o));
+  while (n != 0) {
+    if (o == object_nil) return object_nil;
+    o = o->cons.cdr;
+  }
+  return o->cons.car;
+}
+
 object object_bool(int b)
 {
   if (b) return object_true;

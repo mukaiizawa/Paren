@@ -34,7 +34,7 @@ static void bind(object e, object s, object v)
   xsplay_add(&object_toplevel->env.binding, s, v);
 }
 
-// primitive
+// special forms
 
 // <params> ::= [<params>] [:opt <param_values>] [:rest <param>] [:key <param_values>]
 // <params> ::= <param> <param> ...
@@ -92,50 +92,45 @@ static int valid_param_p(object params) {
 
 static object eval(object e, object o);
 
-static object special_assign(object e, object args)
+static object special_assign(object e, int argc, object argv)
 {
-  int i, argc;
   object sym, val;
-  ARGC(argc);
   if (argc % 2 != 0) xerror("<-: must be pair");
   if (argc == 0) return object_nil;
-  for (i = 0; i < argc - 1; i += 2) {
-    ARG(i, sym);
-    ARG(i + 1, val);
+  while (argc != 0) {
+    sym = argv->cons.car;
+    argv = argv->cons.cdr;
+    val = argv->cons.car;
+    argv = argv->cons.cdr;
     if (!typep(sym, Symbol)) xerror("<-: cannot bind except symbol");
     bind(e, sym, val = eval(e, val));
+    argc -= 2;
   }
   return val;
 }
 
-static object special_lambda(object e, object args)
+static object special_lambda(object e, int argc, object argv)
 {
   object params;
-  ARG(0, params);
+  params = argv->cons.car;
   if (!valid_param_p(params)) xerror("lambda: illegal parameter list");
-  return gc_new_lambda(e, params, args->cons.cdr, -1);
+  return gc_new_lambda(e, params, argv->cons.cdr, -1);
 }
 
-static object special_quote(object e, object args)
+static object special_quote(object e, int argc, object argv)
 {
-  int argc;
-  object o;
-  ARGC(argc);
   if (argc != 1) {
     if (argc == 0) xerror("quote: requires argument");
     else xerror("quote: too many arguments");
   }
-  ARG(0, o);
-  return o;
+  return argv->cons.car;
 }
 
-static object special_if(object e, object args)
+static object special_if(object e, int argc, object argv)
 {
-  int b, argc;
-  object test, then, els;
-  ARGC(argc);
-  ARG(0, test);
-  test = eval(e, test);
+  int b;
+  object test;
+  test = eval(e, argv->cons.car);
   if (argc != 2 && argc != 3) xerror("if: illegal arguments");
   switch (type(test)) {
     case Fbarray: b = test->fbarray.size != 0; break;
@@ -145,14 +140,8 @@ static object special_if(object e, object args)
     case Symbol: b = test != object_nil && test != object_false; break;
     default: b = TRUE;
   }
-  if (b) {
-    ARG(1, then);
-    return eval(e, then);
-  }
-  if (argc > 2) {
-    ARG(2, els);
-    return eval(e, els);
-  }
+  if (b) return eval(e, argv->cons.cdr->cons.car);
+  if (argc > 2) return eval(e, argv->cons.cdr->cons.cdr->cons.car);
   return object_false;
 }
 
@@ -206,7 +195,8 @@ static object apply(object operator, object operands)
 
 static object eval(object e, object o)
 {
-  object (*special)(object, object);
+  int argc;
+  object (*special)(object, int, object);
   object operator, operands, result;
   switch (type(o)) {
     case Lambda:
@@ -224,10 +214,11 @@ static object eval(object e, object o)
     case Cons:
       operator = eval(e, o->cons.car);
       operands = o->cons.cdr;
+      argc = object_length(operands);
       switch (type(operator)) {
         case Symbol:
           if ((special = xsplay_find(&special_table, operator)) != NULL) {
-            result = (*special)(e, operands);
+            result = (*special)(e, argc, operands);
             break;
           }
           xerror("not a operator");
@@ -240,8 +231,6 @@ static object eval(object e, object o)
     default:
       xerror("eval: illegal object type '%d'", type(o));
   }
-  gc_mark(result);
-  gc_chance();
   return result;
 }
 
@@ -265,5 +254,7 @@ void ip_start(void)
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
     p = eval(object_toplevel, o->cons.car);
     if (verbosep) object_dump(p);
+    // gc_mark(result);
+    gc_chance();
   }
 }

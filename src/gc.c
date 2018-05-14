@@ -63,7 +63,7 @@ static int byte_size(object o)
   return -1;
 }
 
-static void gc_regist(object o)
+static void regist(object o)
 {
   xarray_add(&table, o);
 }
@@ -80,7 +80,7 @@ object gc_new_env(object top)
     free_env = o->env.top;
   }
   o->env.top = top;
-  gc_regist(o);
+  regist(o);
   return o;
 }
 
@@ -93,7 +93,7 @@ object gc_new_lambda(object env, object params, object body, int prim_cd)
   o->lambda.params = params;
   o->lambda.body = body;
   o->lambda.prim_cd = prim_cd;
-  if (prim_cd < 0) gc_regist(o);
+  if (prim_cd < 0) regist(o);
   return o;
 }
 
@@ -103,7 +103,7 @@ object gc_new_xint(int val)
   o = gc_alloc(sizeof(struct xint));
   set_type(o, Xint);
   o->xint.val = val;
-  gc_regist(o);
+  regist(o);
   return o;
 }
 
@@ -113,7 +113,7 @@ object gc_new_xfloat(double val)
   o = gc_alloc(sizeof(struct xfloat));
   set_type(o, Xfloat);
   o->xfloat.val = val;
-  gc_regist(o);
+  regist(o);
   return o;
 }
 
@@ -136,7 +136,7 @@ object gc_new_cons(object car, object cdr)
   }
   o->cons.car = car;
   o->cons.cdr = cdr;
-  gc_regist(o);
+  regist(o);
   return o;
 }
 
@@ -146,7 +146,7 @@ object gc_new_barray(int len)
   o = gc_alloc(sizeof(struct fbarray) + len - 1);
   set_type(o, Fbarray);
   o->fbarray.size = len;
-  gc_regist(o);
+  regist(o);
   return o;
 }
 
@@ -157,7 +157,7 @@ object gc_new_fbarray(int len)
   set_type(o, Farray);
   while (len-- > 0) o->farray.elt[len] = object_nil;
   o->farray.size = len;
-  gc_regist(o);
+  regist(o);
   return o;
 }
 
@@ -242,7 +242,7 @@ static void sweep_s_expr(void)
     }
   }
   xarray_reset(&table);
-  for (i = 0; i < work_table.size; i++) xarray_add(&table, work_table.elt[i]);
+  for (i = 0; i < work_table.size; i++) regist(work_table.elt[i]);
   xarray_reset(&work_table);
 }
 

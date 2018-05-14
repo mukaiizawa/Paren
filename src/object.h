@@ -78,4 +78,6 @@ extern object object_assign;
 extern object object_lambda;
 
 extern void object_dump(object o);
+extern int object_length(object o);
+extern object object_nth(object o, int n);
 extern object object_bool(int b);
