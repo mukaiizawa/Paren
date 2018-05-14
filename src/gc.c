@@ -42,7 +42,7 @@ static void set_type(object o, int type)
 static object gc_alloc(int size)
 {
   if ((gc_used_memory += size) > MAX_HEAP_SIZE) xerror("out of memory.");
-  if (gc_max_used_memory < gc_used_memory) gc_max_used_memory = gc_used_memory;
+  if (gc_used_memory < gc_max_used_memory) gc_max_used_memory = gc_used_memory;
   return xmalloc(size);
 }
 
@@ -74,12 +74,12 @@ object gc_new_env(object top)
   if (free_env == NULL) {
     o = gc_alloc(sizeof(struct env));
     set_type(o, Env);
+    xsplay_init(&o->env.binding, (int(*)(void *, void *))symcmp);
   } else {
     o = free_env;
     free_env = o->env.top;
   }
   o->env.top = top;
-  xsplay_init(&o->env.binding, (int(*)(void *, void *))symcmp);
   gc_regist(o);
   return o;
 }
@@ -174,34 +174,32 @@ object gc_new_symbol(char *name)
   return o;
 }
 
-static void mark_s_expr(object o);
-
 static void sweep_env(int depth, void *key, void *data)
 {
-  mark_s_expr(data);
+  gc_mark(data);
 }
 
-static void mark_s_expr(object o)
+void gc_mark(object o)
 {
   int i;
   if (alivep(o)) return;
   set_alive(o, TRUE);
   switch (type(o)) {
     case Env:
-      mark_s_expr(o->env.top);
+      gc_mark(o->env.top);
       xsplay_foreach(&o->env.binding, sweep_env);
       break;
     case Lambda:
-      mark_s_expr(o->lambda.env);
-      mark_s_expr(o->lambda.params);
-      mark_s_expr(o->lambda.body);
+      gc_mark(o->lambda.env);
+      gc_mark(o->lambda.params);
+      gc_mark(o->lambda.body);
       break;
     case Cons:
-      mark_s_expr(o->cons.car);
-      mark_s_expr(o->cons.cdr);
+      gc_mark(o->cons.car);
+      gc_mark(o->cons.cdr);
       break;
     case Farray:
-      for (i = 0; i < o->farray.size; i++) mark_s_expr(o->farray.elt[i]);
+      for (i = 0; i < o->farray.size; i++) gc_mark(o->farray.elt[i]);
       break;
     default: break;
   }
@@ -209,7 +207,6 @@ static void mark_s_expr(object o)
 
 static void gc_free(object o)
 {
-  gc_used_memory -= byte_size(o);
   switch (type(o)) {
     case Env:
       xsplay_reset(&o->env.binding);
@@ -228,6 +225,7 @@ static void gc_free(object o)
       break;
     default: break;
   }
+  gc_used_memory -= byte_size(o);
   xfree(o);
 }
 
@@ -252,13 +250,13 @@ void gc_chance(void)
 {
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
   if (logp) {
-    printf("before gc(used memory %d[byte])", gc_used_memory);
+    printf("before gc(used memory %d[byte])\n", gc_used_memory);
     gc_dump_table();
   }
-  mark_s_expr(object_boot);
+  gc_mark(object_boot);
   sweep_s_expr();
   if (logp) {
-    printf("after gc(used memory %d[byte])", gc_used_memory);
+    printf("after gc(used memory %d[byte])\n", gc_used_memory);
     gc_dump_table();
   }
 }

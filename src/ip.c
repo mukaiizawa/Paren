@@ -207,7 +207,7 @@ static object apply(object operator, object operands)
 static object eval(object e, object o)
 {
   object (*special)(object, object);
-  object p, operator, operands;
+  object operator, operands, result;
   switch (type(o)) {
     case Lambda:
     case Fbarray:
@@ -215,29 +215,34 @@ static object eval(object e, object o)
     case Xint:
     case Xfloat:
     case Keyword:
-      return o;
+      result = o;
+      break;
     case Symbol:
-      if ((p = find(e, o)) == NULL)
+      if ((result = find(e, o)) == NULL)
         xerror("unbind symbol '%s'", o->symbol.name);
-      return p;
+      break;
     case Cons:
       operator = eval(e, o->cons.car);
       operands = o->cons.cdr;
       switch (type(operator)) {
         case Symbol:
-          if ((special = xsplay_find(&special_table, operator)) != NULL)
-            return (*special)(e, operands);
-          break;
+          if ((special = xsplay_find(&special_table, operator)) != NULL) {
+            result = (*special)(e, operands);
+            break;
+          }
+          xerror("not a operator");
         case Lambda:
           operands = eval_operands(e, o->cons.cdr);
-          return apply(operator, operands);
-        default:
-          xerror("not a operator");
+          result = apply(operator, operands);
+          break;
       }
+      break;
     default:
-      xerror("illegal object type '%d'", type(o));
-      return NULL;
+      xerror("eval: illegal object type '%d'", type(o));
   }
+  gc_mark(result);
+  gc_chance();
+  return result;
 }
 
 // TODO: must be improved(define SPECIAL macro)
@@ -260,6 +265,5 @@ void ip_start(void)
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
     p = eval(object_toplevel, o->cons.car);
     if (verbosep) object_dump(p);
-    gc_chance();
   }
 }
