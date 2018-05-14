@@ -283,7 +283,7 @@ void gc_dump_table(void)
     o = table.elt[i];
     printf("; \t%p\t", o);
     if (typep(o, Cons)) printf("(%p . %p)\n", o->cons.car, o->cons.cdr);
-    else if (typep(o, Env)) printf("-> %p", o->env.top);
+    else if (typep(o, Env)) printf("-> %p\n", o->env.top);
     else object_dump(o);
   }
   printf("; }}}\n");
