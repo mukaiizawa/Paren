@@ -213,13 +213,16 @@ static void gc_free(object o)
       xsplay_reset(&o->env.binding);
       o->env.top = free_env;
       free_env = o;
-      return;
+      return;    // reuse.
     case Cons:
       o->cons.cdr = free_cons;
       free_cons = o;
-      return;
+      return;    // reuse.
     case Fbarray:
       xfree(o->fbarray.elt);
+      break;
+    case Farray:
+      xfree(o->farray.elt);
       break;
     default: break;
   }
