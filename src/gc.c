@@ -252,13 +252,13 @@ void gc_chance(void)
 {
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
   if (logp) {
-    printf("before gc(used memory %s[byte])", gc_used_memory);
+    printf("before gc(used memory %d[byte])", gc_used_memory);
     gc_dump_table();
   }
   mark_s_expr(object_boot);
   sweep_s_expr();
   if (logp) {
-    printf("after gc(used memory %s[byte])", gc_used_memory);
+    printf("after gc(used memory %d[byte])", gc_used_memory);
     gc_dump_table();
   }
 }
