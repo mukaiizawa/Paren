@@ -213,7 +213,7 @@ static void gc_free(object o)
       xsplay_reset(&o->env.binding);
       o->env.top = free_env;
       free_env = o;
-      break;
+      return;
     case Cons:
       o->cons.cdr = free_cons;
       free_cons = o;

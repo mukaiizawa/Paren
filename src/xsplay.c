@@ -170,12 +170,6 @@ static void free1(struct xsplay_node *n)
   }
 }
 
-void xsplay_free(struct xsplay *s)
-{
-  xsplay_reset(s);
-  xfree(s);
-}
-
 void xsplay_reset(struct xsplay *s)
 {
   free1(s->top);
