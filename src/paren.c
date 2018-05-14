@@ -145,6 +145,7 @@ static void bind_pseudo_symbol(object o)
   xsplay_add(&object_toplevel->env.binding, o, o);
 }
 
+// TODO: to treat primitive functions as special(eval %xint_add return %xint_add)
 static void bind_prim(void)
 {
   int i;

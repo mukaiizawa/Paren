@@ -240,6 +240,7 @@ static object eval(object e, object o)
   }
 }
 
+// TODO: must be improved(define SPECIAL macro)
 static void init_special_forms(void)
 {
   xsplay_init(&special_table, (int(*)(void *, void *))symcmp);
