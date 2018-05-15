@@ -4,13 +4,38 @@
 #include "xsplay.h"
 #include "object.h"
 
-#define PRIM(name) extern int prim_##name(object args, object *result);
-#include "pprim.wk"
+char *special_name_table[] = {
+#define SPECIAL(n) #n,
+#include "special.wk"
+#undef SPECIAL
+  NULL
+};
+
+#define SPECIAL(name) extern object special_##name(object, int, object);
+#include "special.wk"
+#undef SPECIAL
+
+int (*special_table[])(int, object, object *) = {
+#define SPECIAL(name) special_##name,
+#include "special.wk"
+#undef SPECIAL
+  NULL
+};
+
+char *prim_name_table[] = {
+#define PRIM(n) ":" #n,
+#include "prim.wk"
+#undef PRIM
+  NULL
+};
+
+#define PRIM(name) extern int prim_##name(int, object, object *);
+#include "prim.wk"
 #undef PRIM
 
-int (*prim_table[])(object args, object *result) = {
+int (*prim_table[])(int, object, object *) = {
 #define PRIM(name) prim_##name,
-#include "pprim.wk"
+#include "prim.wk"
 #undef PRIM
   NULL
 };

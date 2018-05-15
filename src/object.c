@@ -53,16 +53,11 @@ static void dump_s_expr(object o)
   switch (type(o)) {
     case Lambda:
       printf("(lambda ");
-      i = o->lambda.prim_cd;
-      if (i >= 0)
-        printf("<primitive:%s>", prim_name_table[i]);
-      else {
-        if (o->lambda.params == object_nil) printf("()");
-        else dump_s_expr(o->lambda.params);
-        if (o->lambda.body != object_nil) {
-          printf(" ");
-          dump_cons(o->lambda.body);
-        }
+      if (o->lambda.params == object_nil) printf("()");
+      else dump_s_expr(o->lambda.params);
+      if (o->lambda.body != object_nil) {
+        printf(" ");
+        dump_cons(o->lambda.body);
       }
       printf(")");
       break;

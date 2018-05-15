@@ -145,19 +145,6 @@ static void bind_pseudo_symbol(object o)
   xsplay_add(&object_toplevel->env.binding, o, o);
 }
 
-// TODO: to treat primitive functions as special(eval %xint_add return %xint_add)
-static void bind_prim(void)
-{
-  int i;
-  char *s;
-  object p, q;
-  for (i = 0; (s = prim_name_table[i]) != NULL; i++) {
-    p = gc_new_symbol(s); 
-    q = gc_new_lambda(object_toplevel, object_nil, object_nil, i);
-    xsplay_add(&object_toplevel->env.binding, p, q);
-  }
-}
-
 static void make_initial_objects(void)
 {
   object_nil = gc_new_symbol("nil");
@@ -178,7 +165,6 @@ static void make_initial_objects(void)
   bind_pseudo_symbol(object_quote);
   bind_pseudo_symbol(object_assign);
   bind_pseudo_symbol(object_lambda);
-  bind_prim();
 }
 
 int main(int argc, char *argv[])
@@ -187,7 +173,7 @@ int main(int argc, char *argv[])
   parse_opt(argc, argv);
   gc_init(gc_logp);
   make_initial_objects();
-  object_boot = gc_new_lambda(object_toplevel, object_nil, load(), -1);
+  object_boot = gc_new_lambda(object_toplevel, object_nil, load());
   ip_start();
   if (dump_object_table_p) gc_dump_table();
   return 0;

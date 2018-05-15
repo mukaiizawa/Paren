@@ -8,9 +8,8 @@
 #include "prim.h"
 #include "ip.h"
 
-static struct xsplay special_table;
-extern int (*prim_table[])(object args, object *result);
-extern char *prim_name_table[];
+static struct xsplay special_splay;
+static struct xsplay prim_splay;
 
 static object find(object e, object s)
 {
@@ -90,9 +89,9 @@ static int valid_param_p(object params) {
 #undef next_params
 #undef next_param_values
 
-static object eval(object e, object o);
+static object eval(object env, object o);
 
-static object special_assign(object e, int argc, object argv)
+SPECIAL(assign)
 {
   object sym, val;
   if (argc % 2 != 0) xerror("<-: must be pair");
@@ -103,21 +102,21 @@ static object special_assign(object e, int argc, object argv)
     val = argv->cons.car;
     argv = argv->cons.cdr;
     if (!typep(sym, Symbol)) xerror("<-: cannot bind except symbol");
-    bind(e, sym, val = eval(e, val));
+    bind(env, sym, val = eval(env, val));
     argc -= 2;
   }
   return val;
 }
 
-static object special_lambda(object e, int argc, object argv)
+SPECIAL(lambda)
 {
   object params;
   params = argv->cons.car;
   if (!valid_param_p(params)) xerror("lambda: illegal parameter list");
-  return gc_new_lambda(e, params, argv->cons.cdr, -1);
+  return gc_new_lambda(env, params, argv->cons.cdr);
 }
 
-static object special_quote(object e, int argc, object argv)
+SPECIAL(quote)
 {
   if (argc != 1) {
     if (argc == 0) xerror("quote: requires argument");
@@ -126,11 +125,11 @@ static object special_quote(object e, int argc, object argv)
   return argv->cons.car;
 }
 
-static object special_if(object e, int argc, object argv)
+SPECIAL(if)
 {
   int b;
   object test;
-  test = eval(e, argv->cons.car);
+  test = eval(env, argv->cons.car);
   if (argc != 2 && argc != 3) xerror("if: illegal arguments");
   switch (type(test)) {
     case Fbarray: b = test->fbarray.size != 0; break;
@@ -140,108 +139,113 @@ static object special_if(object e, int argc, object argv)
     case Symbol: b = test != object_nil && test != object_false; break;
     default: b = TRUE;
   }
-  if (b) return eval(e, argv->cons.cdr->cons.car);
-  if (argc > 2) return eval(e, argv->cons.cdr->cons.cdr->cons.car);
+  if (b) return eval(env, argv->cons.cdr->cons.car);
+  if (argc > 2) return eval(env, argv->cons.cdr->cons.cdr->cons.car);
   return object_false;
 }
 
 // evaluater
 
-static object eval_operands(object e, object o)
+static object eval_operands(object env, object expr)
 {
-  object p;
-  if (o == object_nil) return object_nil;
-  p = eval(e, o->cons.car);
-  return gc_new_cons(p, eval_operands(e, o->cons.cdr));
+  object o;
+  if (expr == object_nil) return object_nil;
+  o = eval(env, expr->cons.car);
+  return gc_new_cons(o, eval_operands(env, expr->cons.cdr));
 }
 
-static object eval_sequential(object e, object o)
+static object eval_sequential(object env, object expr)
 {
-  object p;
-  while (o != object_nil) {
-    p = eval(e, o->cons.car);
-    o = o->cons.cdr;
+  object o;
+  while (expr != object_nil) {
+    o = eval(env, expr->cons.car);
+    expr = expr->cons.cdr;
   }
-  return p;
+  return o;
 }
 
 static object apply(object operator, object operands)
 {
   object e, params, result;
-  if (operator->lambda.prim_cd >= 0) {
-    if (!(*prim_table[operator->lambda.prim_cd])(operands, &result))
-      xerror("primitive '%s' failed"
-          , prim_name_table[operator->lambda.prim_cd]);
-  } else {
-    e = gc_new_env(operator->lambda.env);
-    params = operator->lambda.params;
-    // required parameter
-    while (params != object_nil) {
-      if (operands == object_nil) xerror("too few arguments");
-      if (params->cons.car == object_opt
-          || params->cons.car == object_rest
-          || params->cons.car == object_key) break;
-      xsplay_add(&e->env.binding, params->cons.car, operands->cons.car);
-      params = params->cons.cdr;
-      operands = operands->cons.cdr;
-    }
-    if (operands != object_nil) xerror("too many arguments");
-    // TODO ... other parameter
-    // evaluate
-    result = eval_sequential(e, operator->lambda.body);
+  e = gc_new_env(operator->lambda.env);
+  params = operator->lambda.params;
+  // required parameter
+  while (params != object_nil) {
+    if (operands == object_nil) xerror("too few arguments");
+    if (params->cons.car == object_opt
+        || params->cons.car == object_rest
+        || params->cons.car == object_key) break;
+    xsplay_add(&e->env.binding, params->cons.car, operands->cons.car);
+    params = params->cons.cdr;
+    operands = operands->cons.cdr;
   }
+  if (operands != object_nil) xerror("too many arguments");
+  // TODO ... other parameter
+  // evaluate
+  result = eval_sequential(e, operator->lambda.body);
   return result;
 }
 
-static object eval(object e, object o)
+static object eval(object env, object expr)
 {
   int argc;
   object (*special)(object, int, object);
+  object (*prim)(int, object, object *);
   object operator, operands, result;
-  switch (type(o)) {
+  switch (type(expr)) {
     case Lambda:
     case Fbarray:
     case Farray:
     case Xint:
     case Xfloat:
     case Keyword:
-      result = o;
+      result = expr;
       break;
     case Symbol:
-      if ((result = find(e, o)) == NULL)
-        xerror("unbind symbol '%s'", o->symbol.name);
+      if ((result = find(env, expr)) == NULL)
+        xerror("unbind symbol '%s'", expr->symbol.name);
       break;
     case Cons:
-      operator = eval(e, o->cons.car);
-      operands = o->cons.cdr;
+      operator = eval(env, expr->cons.car);
+      operands = expr->cons.cdr;
       argc = object_length(operands);
+      result = NULL;
       switch (type(operator)) {
         case Symbol:
-          if ((special = xsplay_find(&special_table, operator)) != NULL) {
-            result = (*special)(e, argc, operands);
-            break;
+          if ((special = xsplay_find(&special_splay, operator)) != NULL) {
+            result = (*special)(env, argc, operands);
           }
-          xerror("not a operator");
+          break;
+        case Keyword:
+          if ((prim = xsplay_find(&prim_splay, operator)) != NULL) {
+            if (!(*prim)(argc, operands, &result))
+              xerror("primitive '%s' failed", operator->symbol.name);
+          }
+          break;
         case Lambda:
-          operands = eval_operands(e, o->cons.cdr);
+          operands = eval_operands(env, expr->cons.cdr);
           result = apply(operator, operands);
           break;
+        default: break;
       }
+      if (result == NULL) xerror("not a operator");
       break;
     default:
-      xerror("eval: illegal object type '%d'", type(o));
+      xerror("eval: illegal object type '%d'", type(expr));
   }
   return result;
 }
 
-// TODO: must be improved(define SPECIAL macro)
-static void init_special_forms(void)
+static void init_builtin(void)
 {
-  xsplay_init(&special_table, (int(*)(void *, void *))symcmp);
-  xsplay_add(&special_table, object_if, &special_if);
-  xsplay_add(&special_table, object_quote, &special_quote);
-  xsplay_add(&special_table, object_assign, &special_assign);
-  xsplay_add(&special_table, object_lambda, &special_lambda);
+  int i;
+  char *s;
+  xsplay_init(&special_splay, (int(*)(void *, void *))symcmp);
+  xsplay_init(&prim_splay, (int(*)(void *, void *))symcmp);
+  for (i = 0; (s = special_name_table[i]) != NULL; i++)
+    xsplay_add(&special_splay, gc_new_symbol(s), special_table[i]);
+  for (i = 0; (s = prim_name_table[i]) != NULL; i++)
+    xsplay_add(&prim_splay, gc_new_symbol(s), prim_table[i]);
 }
 
 // boot option
@@ -250,11 +254,10 @@ extern int verbosep;
 void ip_start(void)
 {
   object o, p;
-  init_special_forms();
+  init_builtin();
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
     p = eval(object_toplevel, o->cons.car);
     if (verbosep) object_dump(p);
-    // gc_mark(result);
     gc_chance();
   }
 }

@@ -14,7 +14,7 @@ int gc_used_memory;
 int gc_max_used_memory;
 
 static int logp;
-// static long cons_alloc_size;
+static long cons_alloc_size;
 static object free_cons;
 static object free_env;
 
@@ -84,7 +84,7 @@ object gc_new_env(object top)
   return o;
 }
 
-object gc_new_lambda(object env, object params, object body, int prim_cd)
+object gc_new_lambda(object env, object params, object body)
 {
   object o;
   o = gc_alloc(sizeof(struct lambda));
@@ -92,8 +92,7 @@ object gc_new_lambda(object env, object params, object body, int prim_cd)
   o->lambda.env = env;
   o->lambda.params = params;
   o->lambda.body = body;
-  o->lambda.prim_cd = prim_cd;
-  if (prim_cd < 0) regist(o);
+  regist(o);
   return o;
 }
 
@@ -119,21 +118,19 @@ object gc_new_xfloat(double val)
 
 object gc_new_cons(object car, object cdr)
 {
-  // int i;
+  int i;
   object o;
-  // struct cons *p;
+  struct cons *p;
   if (free_cons == NULL) {
-    // free_cons = gc_alloc(sizeof(struct cons) * cons_alloc_size);
-    // p = (struct cons *)free_cons;
-    // for (i = 0; i < cons_alloc_size - 1; i++) p[i].cdr = (object)&(p[i + 1]);
-    // p[cons_alloc_size - 1].cdr = NULL;
-    // cons_alloc_size *= 2;
-    o = gc_alloc(sizeof(struct cons));
-    set_type(o, Cons);
-  } else {
-    o = free_cons;
-    free_cons = o->cons.cdr;
+    free_cons = gc_alloc(sizeof(struct cons) * cons_alloc_size);
+    p = (struct cons *)free_cons;
+    for (i = 0; i < cons_alloc_size - 1; i++) p[i].cdr = (object)&(p[i + 1]);
+    p[cons_alloc_size - 1].cdr = NULL;
+    cons_alloc_size *= 2;
   }
+  o = free_cons;
+  free_cons = o->cons.cdr;
+  set_type(o, Cons);
   o->cons.car = car;
   o->cons.cdr = cdr;
   regist(o);
@@ -265,7 +262,7 @@ void gc_init(int gc_logp)
 {
   logp = gc_logp;
   gc_used_memory = gc_max_used_memory = 0;
-  // cons_alloc_size = 256;
+  cons_alloc_size = 256;
   free_env = free_cons = NULL;
   xarray_init(&table);
   xarray_init(&work_table);

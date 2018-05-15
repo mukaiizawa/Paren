@@ -33,16 +33,20 @@ endif
 
 all: $(paren) core.p
 
-pprim=xint.c list.c
-pprim.wk: $(pprim)
-	cat $+ | grep ^PRIM>$@
+special=ip.c
+special.wk: $(special)
+	cat $+ | grep ^SPECIAL>$@
+
+prim=xint.c list.c
+prim.wk: $(prim)
+	cat $+ | grep ^PRIM>>$@
 
 xc.a: std.o xarray.o xbarray.o xsplay.o xgetopt.o gc.o object.o prim.o lex.o \
-	ip.o $(pprim:%.c=%.o)
+	ip.o $(prim:%.c=%.o)
 	ar -ru xc.a $+
 
 paren=paren$(exe)
-$(paren): paren.o pprim.o xc.a
+$(paren): paren.o xc.a
 	$(link)
 
 core.p: $(paren)

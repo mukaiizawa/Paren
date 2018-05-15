@@ -18,8 +18,6 @@ typedef union s_expr *object;
 #define typep(o, t) (type(o) == t)
 #define listp(o) (o == object_nil || typep(o, Cons))
 
-extern char *object_type_name[];
-
 union s_expr {
   int header;
   struct env {
@@ -30,7 +28,6 @@ union s_expr {
   struct lambda {
     int header;
     object env, params, body;
-    int prim_cd;
   } lambda;
   struct cons {
     int header;
