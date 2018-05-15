@@ -5,7 +5,7 @@
 #include "xarray.h"
 #include "object.h"
 #include "gc.h"
-#include "prim.h"
+#include "bi.h"
 #include "ip.h"
 
 static struct xsplay special_splay;

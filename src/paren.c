@@ -8,7 +8,7 @@
 #include "lex.h"
 #include "gc.h"
 #include "ip.h"
-#include "prim.h"
+#include "bi.h"
 
 // option
 

@@ -4,7 +4,7 @@
 #include "xsplay.h"
 #include "object.h"
 #include "gc.h"
-#include "prim.h"
+#include "bi.h"
 
 PRIM(samep)
 {

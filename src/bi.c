@@ -1,8 +1,13 @@
-// primitive table for paren
+// built in.
 
 #include "std.h"
 #include "xsplay.h"
 #include "object.h"
+#include "gc.h"
+#include "bi.h"
+
+#undef SPECIAL
+#undef PRIM
 
 char *special_name_table[] = {
 #define SPECIAL(name, sym) #sym,
@@ -39,3 +44,9 @@ int (*prim_table[])(int argc, object argv, object *result) = {
 #undef PRIM
   NULL
 };
+
+object prim_xint(int64_t val)
+{
+  if (XINT_MIN <= val && val <= XINT_MAX) return gc_new_xint(val);
+  return gc_new_xfloat(val);
+}

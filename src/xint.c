@@ -3,7 +3,7 @@
 #include "std.h"
 #include "xsplay.h"
 #include "object.h"
-#include "prim.h"
+#include "bi.h"
 
 #define XINT_ARG(n, v) \
 { \
