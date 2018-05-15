@@ -46,7 +46,7 @@ xc.a: std.o xarray.o xbarray.o xsplay.o xgetopt.o gc.o object.o prim.o lex.o \
 	ar -ru xc.a $+
 
 paren=paren$(exe)
-$(paren): paren.o xc.a
+$(paren): paren.o pprim.o xc.a
 	$(link)
 
 core.p: $(paren)

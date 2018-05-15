@@ -8,41 +8,35 @@
 
 PRIM(samep)
 {
-  int argc;
   object o, p;
-  ARGC(argc);
   if (argc != 2) return FALSE;
-  ARG(0, o);
-  ARG(1, p);
+  o = object_nth(argv, 0);
+  p = object_nth(argv, 1);
   *result = object_bool(o == p);
   return TRUE;
 }
 
 PRIM(cons)
 {
-  int argc;
   object o, p;
-  ARGC(argc);
   if (argc != 2) return FALSE;
-  ARG(0, o);
-  ARG(1, p);
+  o = object_nth(argv, 0);
+  p = object_nth(argv, 1);
   *result = gc_new_cons(o, p);
   return TRUE;
 }
 
 PRIM(car)
 {
-  int argc;
   object o, p;
-  ARGC(argc);
-  ARG(0, o);
+  o = object_nth(argv, 0);
   if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
   if (argc == 1) {
     if (o == object_nil) *result = object_nil;
     else *result = o->cons.car;
   } else {
     if (o == object_nil) return FALSE;
-    ARG(1, p);
+    p = object_nth(argv, 1);
     o->cons.car = p;
     *result = p;
   }
@@ -51,17 +45,15 @@ PRIM(car)
 
 PRIM(cdr)
 {
-  int argc;
   object o, p;
-  ARGC(argc);
-  ARG(0, o);
+  o = object_nth(argv, 0);
   if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
   if (argc == 1) {
     if (o == object_nil) *result = object_nil;
     else *result = o->cons.cdr;
   } else {
     if (o == object_nil) return FALSE;
-    ARG(1, p);
+    p = object_nth(argv, 1);
     o->cons.cdr = p;
     *result = p;
   }

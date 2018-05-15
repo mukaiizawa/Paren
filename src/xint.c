@@ -7,15 +7,13 @@
 
 #define XINT_ARG(n, arg) \
 { \
-  ARG(n, arg); \
+  arg = object_nth(argv, n); \
   if (!typep(arg, Xint)) return FALSE; \
 }
 
 PRIM(xint_equal)
 {
-  int argc;
   object x, y;
-  ARGC(argc);
   if (argc != 2) return FALSE;
   XINT_ARG(0, x);
   XINT_ARG(1, y);
@@ -25,9 +23,7 @@ PRIM(xint_equal)
 
 PRIM(xint_add)
 {
-  int argc;
   object x, y;
-  ARGC(argc);
   if (argc != 2) return FALSE;
   XINT_ARG(0, x);
   XINT_ARG(1, y);
@@ -37,9 +33,7 @@ PRIM(xint_add)
 
 PRIM(xint_multiply)
 {
-  int argc;
   object x, y;
-  ARGC(argc);
   if (argc != 2) return FALSE;
   XINT_ARG(0, x);
   XINT_ARG(1, y);
@@ -49,9 +43,7 @@ PRIM(xint_multiply)
 
 PRIM(xint_eq)
 {
-  int argc;
   object x, y;
-  ARGC(argc);
   if (argc != 2) return FALSE;
   XINT_ARG(0, x);
   XINT_ARG(1, y);
@@ -61,9 +53,7 @@ PRIM(xint_eq)
 
 PRIM(xint_lt)
 {
-  int argc;
   object x, y;
-  ARGC(argc);
   if (argc != 2) return FALSE;
   XINT_ARG(0, x);
   XINT_ARG(1, y);

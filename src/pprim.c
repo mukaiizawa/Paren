@@ -15,7 +15,7 @@ char *special_name_table[] = {
 #include "special.wk"
 #undef SPECIAL
 
-int (*special_table[])(int, object, object *) = {
+object (*special_table[])(object, int, object) = {
 #define SPECIAL(name) special_##name,
 #include "special.wk"
 #undef SPECIAL
