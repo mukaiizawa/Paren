@@ -1,10 +1,10 @@
 ; recursion
 
-(<- + (lambda (x y) (%xint_add x y))
-    = (lambda (x y) (%xint_eq x y))
-    < (lambda (x y) (%xint_lt x y))
+(<- + (lambda (x y) (:xint_add x y))
+    = (lambda (x y) (:xint_eq x y))
+    < (lambda (x y) (:xint_lt x y))
     <= (lambda (x y) (if (= x y) true (< x y)))
-    -- (lambda (x) (%xint_add x -1)))
+    -- (lambda (x) (:xint_add x -1)))
 
 :fib
 (<- fib (lambda (x)

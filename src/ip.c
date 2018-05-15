@@ -91,7 +91,7 @@ static int valid_param_p(object params) {
 
 static object eval(object env, object o);
 
-SPECIAL(assign)
+SPECIAL(assign, <-)
 {
   object sym, val;
   if (argc % 2 != 0) xerror("<-: must be pair");
@@ -108,7 +108,7 @@ SPECIAL(assign)
   return val;
 }
 
-SPECIAL(lambda)
+SPECIAL(lambda, lambda)
 {
   object params;
   params = argv->cons.car;
@@ -116,7 +116,7 @@ SPECIAL(lambda)
   return gc_new_lambda(env, params, argv->cons.cdr);
 }
 
-SPECIAL(quote)
+SPECIAL(quote, quote)
 {
   if (argc != 1) {
     if (argc == 0) xerror("quote: requires argument");
@@ -125,7 +125,7 @@ SPECIAL(quote)
   return argv->cons.car;
 }
 
-SPECIAL(if)
+SPECIAL(if, if)
 {
   int b;
   object test;
@@ -218,13 +218,12 @@ static object eval(object env, object expr)
           break;
         case Keyword:
           if ((prim = xsplay_find(&prim_splay, operator)) != NULL) {
-            if (!(*prim)(argc, operands, &result))
+            if (!(*prim)(argc, eval_operands(env, operands), &result))
               xerror("primitive '%s' failed", operator->symbol.name);
           }
           break;
         case Lambda:
-          operands = eval_operands(env, expr->cons.cdr);
-          result = apply(operator, operands);
+          result = apply(operator, eval_operands(env, operands));
           break;
         default: break;
       }

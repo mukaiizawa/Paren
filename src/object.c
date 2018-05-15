@@ -107,7 +107,7 @@ int object_length(object o)
 object object_nth(object o, int n)
 {
   xassert(listp(o));
-  while (n != 0) {
+  while (n-- != 0) {
     if (o == object_nil) return object_nil;
     o = o->cons.cdr;
   }

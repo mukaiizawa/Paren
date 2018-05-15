@@ -39,7 +39,7 @@ special.wk: $(special)
 
 prim=xint.c list.c
 prim.wk: $(prim)
-	cat $+ | grep ^PRIM>>$@
+	cat $+ | grep ^PRIM>$@
 
 xc.a: std.o xarray.o xbarray.o xsplay.o xgetopt.o gc.o object.o prim.o lex.o \
 	ip.o $(prim:%.c=%.o)

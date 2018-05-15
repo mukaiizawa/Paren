@@ -5,10 +5,10 @@
 #include "object.h"
 #include "prim.h"
 
-#define XINT_ARG(n, arg) \
+#define XINT_ARG(n, v) \
 { \
-  arg = object_nth(argv, n); \
-  if (!typep(arg, Xint)) return FALSE; \
+  v = object_nth(argv, n); \
+  if (!typep(v, Xint)) return FALSE; \
 }
 
 PRIM(xint_equal)
