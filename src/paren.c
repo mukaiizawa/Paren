@@ -136,6 +136,13 @@ static void bind_pseudo_symbol(object o)
   xsplay_add(&object_toplevel->env.binding, o, o);
 }
 
+static void bind_special(void)
+{
+  int i;
+  for (i = 0; special_name_table[i] != NULL; i++)
+    bind_pseudo_symbol(gc_new_symbol(special_name_table[i]));
+}
+
 static void make_initial_objects(void)
 {
   object_nil = gc_new_symbol("nil");
@@ -152,10 +159,7 @@ static void make_initial_objects(void)
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
   bind_pseudo_symbol(object_false);
-  bind_pseudo_symbol(object_if);
-  bind_pseudo_symbol(object_quote);
-  bind_pseudo_symbol(object_assign);
-  bind_pseudo_symbol(object_lambda);
+  bind_special();
 }
 
 int main(int argc, char *argv[])
