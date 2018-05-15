@@ -7,13 +7,9 @@
 #include "lex.h"
 #include "gc.h"
 
-#define MAX_HEAP_SIZE (256 * 1024 * 1024)
-#define GC_CHANCE_MEMORY (512 * 1024)
-
 int gc_used_memory;
 int gc_max_used_memory;
 
-static int logp;
 static long cons_alloc_size;
 static object free_cons;
 static object free_env;
@@ -246,21 +242,20 @@ static void sweep_s_expr(void)
 void gc_chance(void)
 {
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
-  if (logp) {
+  if(GC_LOG_P) {
     printf("before gc(used memory %d[byte])\n", gc_used_memory);
     gc_dump_table();
   }
   gc_mark(object_boot);
   sweep_s_expr();
-  if (logp) {
+  if (GC_LOG_P) {
     printf("after gc(used memory %d[byte])\n", gc_used_memory);
     gc_dump_table();
   }
 }
 
-void gc_init(int gc_logp)
+void gc_init(void)
 {
-  logp = gc_logp;
   gc_used_memory = gc_max_used_memory = 0;
   cons_alloc_size = 256;
   free_env = free_cons = NULL;

@@ -5,7 +5,7 @@
 #include "object.h"
 
 char *special_name_table[] = {
-#define SPECIAL(n, s) #s,
+#define SPECIAL(name, sym) #sym,
 #include "special.wk"
 #undef SPECIAL
   NULL
@@ -23,7 +23,7 @@ object (*special_table[])(object env, int argc, object argv) = {
 };
 
 char *prim_name_table[] = {
-#define PRIM(n) ":" #n,
+#define PRIM(name) ":" #name,
 #include "prim.wk"
 #undef PRIM
   NULL

@@ -12,7 +12,7 @@ extern object gc_new_symbol(char *name);
 extern object gc_new_barray(int len);
 extern object gc_new_fbarray(int len);
 
-extern void gc_init(int gc_logp);
+extern void gc_init(void);
 extern void gc_mark(object o);
 extern void gc_chance(void);
 extern void gc_dump_table(void);

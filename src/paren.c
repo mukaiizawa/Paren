@@ -8,34 +8,25 @@
 #include "lex.h"
 #include "gc.h"
 #include "ip.h"
-
-extern char *prim_name_table[];
+#include "prim.h"
 
 // option
 
-static int dump_object_table_p;
-static int gc_logp;
-static char *core_fn;
-int verbosep;
+char *core_fn;
+int dump_object_table_p;
 
 static void parse_opt(int argc,char *argv[])
 {
   int ch;
   core_fn = "./core.p";
-  gc_logp = FALSE;
   dump_object_table_p = FALSE;
-  verbosep = FALSE;
-  while((ch = xgetopt(argc,argv,"gsof:v")) != EOF)
+  while((ch = xgetopt(argc, argv, "f:o")) != EOF)
     switch(ch) {
-      case 'g': gc_logp = TRUE; break;
-      case 'o': dump_object_table_p = TRUE; break;
       case 'f': core_fn = xoptarg; break;
-      case 'v': verbosep = TRUE; break;
+      case 'o': dump_object_table_p = TRUE; break;
       default: xerror("\
--g show log garbage collection.\n\
--o dump object table.\n\
 -f FILE as core library for paren\n\
--v always print evaluate.\n\
+-o dump object table.\n\
 ");
     }
 }
@@ -171,7 +162,7 @@ int main(int argc, char *argv[])
 {
   setbuf(stdout, NULL);
   parse_opt(argc, argv);
-  gc_init(gc_logp);
+  gc_init();
   make_initial_objects();
   object_boot = gc_new_lambda(object_toplevel, object_nil, load());
   ip_start();

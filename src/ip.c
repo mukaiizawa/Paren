@@ -247,16 +247,13 @@ static void init_builtin(void)
     xsplay_add(&prim_splay, gc_new_symbol(s), prim_table[i]);
 }
 
-// boot option
-extern int verbosep;
-
 void ip_start(void)
 {
   object o, p;
   init_builtin();
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
     p = eval(object_toplevel, o->cons.car);
-    if (verbosep) object_dump(p);
+    if (VERBOSE_P) object_dump(p);
     gc_chance();
   }
 }
