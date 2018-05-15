@@ -1,6 +1,6 @@
 // paren configure.
 
-#define VERBOSE_P FALSE
+#define VERBOSE_P TRUE
 
 #define MAX_HEAP_SIZE (256 * 1024 * 1024)
 
