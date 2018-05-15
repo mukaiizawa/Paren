@@ -69,11 +69,6 @@ extern object object_opt;
 extern object object_key;
 extern object object_rest;
 
-extern object object_if;
-extern object object_quote;
-extern object object_assign;
-extern object object_lambda;
-
 extern void object_dump(object o);
 extern int object_length(object o);
 extern object object_nth(object o, int n);

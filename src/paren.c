@@ -151,10 +151,6 @@ static void make_initial_objects(void)
   object_opt = gc_new_symbol(":opt");
   object_key = gc_new_symbol(":key");
   object_rest = gc_new_symbol(":rest");
-  object_if = gc_new_symbol("if");
-  object_quote = gc_new_symbol("quote");
-  object_assign = gc_new_symbol("<-");
-  object_lambda = gc_new_symbol("lambda");
   object_toplevel = gc_new_env(object_nil);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
