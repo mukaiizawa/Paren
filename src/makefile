@@ -41,8 +41,8 @@ prim=xint.c list.c
 prim.wk: $(prim)
 	cat $+ | grep ^PRIM>$@
 
-xc.a: std.o xarray.o xbarray.o xsplay.o xgetopt.o gc.o object.o bi.o lex.o \
-	ip.o $(prim:%.c=%.o)
+xc.a: std.o xarray.o xbarray.o xsplay.o xgetopt.o gc.o object.o lex.o  bi.o\
+	ip.o $(prim:%.c=%.o) 
 	ar -ru xc.a $+
 
 paren=paren$(exe)
