@@ -141,6 +141,8 @@ static void bind_special(void)
   int i;
   for (i = 0; special_name_table[i] != NULL; i++)
     bind_pseudo_symbol(gc_new_symbol(special_name_table[i]));
+  for (i = 0; prim_name_table[i] != NULL; i++)
+    bind_pseudo_symbol(gc_new_symbol(prim_name_table[i]));
 }
 
 static void make_initial_objects(void)

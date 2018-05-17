@@ -216,10 +216,7 @@ static object eval(object env, object expr)
         case Symbol:
           if ((special = xsplay_find(&special_splay, operator)) != NULL) {
             result = (*special)(env, argc, operands);
-          }
-          break;
-        case Keyword:
-          if ((prim = xsplay_find(&prim_splay, operator)) != NULL) {
+          } else if ((prim = xsplay_find(&prim_splay, operator)) != NULL) {
             if (!(*prim)(argc, eval_operands(env, operands), &result))
               xerror("primitive '%s' failed", operator->symbol.name);
           }

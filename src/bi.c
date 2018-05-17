@@ -25,7 +25,7 @@ char *special_name_table[] = {
 };
 
 char *prim_name_table[] = {
-#define PRIM(name) ":" #name,
+#define PRIM(name) #name,
 #include "prim.wk"
 #undef PRIM
   NULL
