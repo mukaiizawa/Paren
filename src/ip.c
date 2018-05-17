@@ -168,21 +168,47 @@ static object eval_sequential(object env, object expr)
 
 static object apply(object operator, object operands)
 {
-  object e, params, result;
+  object e, k, v, rk, rv, params, result;
   e = gc_new_env(operator->lambda.env);
   params = operator->lambda.params;
-  // required parameter
-  while (params != object_nil) {
+
+  while (params != object_nil && !typep(params->cons.car, Keyword)) {
     if (operands == object_nil) xerror("too few arguments");
-    if (params->cons.car == object_opt
-        || params->cons.car == object_rest
-        || params->cons.car == object_key) break;
     xsplay_add(&e->env.binding, params->cons.car, operands->cons.car);
     params = params->cons.cdr;
     operands = operands->cons.cdr;
   }
+
+  if (params->cons.car == object_opt) {
+    params = params->cons.cdr;
+    while (params != object_nil && !typep(params->cons.car, Keyword)) {
+      if (!typep(params->cons.car, Cons))
+        k = params->cons.car;
+      else {
+        k = params->cons.car->cons.car;
+        v = params->cons.car->cons.cdr->cons.car;
+      }
+      params = params->cons.cdr;
+      if (operands != object_nil) {
+        v = operands->cons.car;
+        operands = operands->cons.cdr;
+      }
+      xsplay_add(&e->env.binding, k, v);
+    }
+  }
+
+  if (params->cons.car == object_rest) {
+    params = params->cons.cdr;
+    rk = params->cons.car;
+    rv = object_nil;
+    params = params->cons.cdr;
+  } else {
+    rk = rv = NULL;
+  }
+
+  if (rk != NULL) xsplay_add(&e->env.binding, rk, rv);
   if (operands != object_nil) xerror("too many arguments");
-  // TODO ... other parameter
+
   // evaluate
   result = eval_sequential(e, operator->lambda.body);
   return result;
