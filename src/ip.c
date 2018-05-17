@@ -48,7 +48,6 @@ static int valid_param_value_p(object o) {
   return o == object_nil || o->cons.cdr == object_nil;
 }
 
-#define param (params->cons.car)
 
 #define next_params() { \
   params = params->cons.cdr; \
@@ -58,9 +57,9 @@ static int valid_param_value_p(object o) {
 #define next_param_values() { \
   next_params(); \
   while (params != object_nil) { \
-    if (!valid_param_value_p(param)) return FALSE; \
+    if (!valid_param_value_p(params->cons.car)) return FALSE; \
     next_params(); \
-    if (typep(param, Keyword)) break; \
+    if (typep(params->cons.car, Keyword)) break; \
   } \
 }
 
@@ -68,24 +67,23 @@ static int valid_param_p(object params) {
   if (params == object_nil) return TRUE;
   if (!typep(params, Cons)) return FALSE;
   while (params != object_nil) {
-    if (typep(param, Symbol)) {
+    if (typep(params->cons.car, Symbol)) {
       next_params();
       continue;
     }
-    if (typep(param, Keyword)) break;
+    if (typep(params->cons.car, Keyword)) break;
     return FALSE;
   }
-  if (param == object_opt) next_param_values();
-  if (param == object_rest) {
+  if (params->cons.car == object_opt) next_param_values();
+  if (params->cons.car == object_rest) {
     next_params();
-    if (!typep(param, Symbol)) return FALSE;
+    if (!typep(params->cons.car, Symbol)) return FALSE;
     next_params();
   }
-  if (param == object_key) next_param_values();
+  if (params->cons.car == object_key) next_param_values();
   return params == object_nil;
 }
 
-#undef param
 #undef next_params
 #undef next_param_values
 
