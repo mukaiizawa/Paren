@@ -40,52 +40,56 @@ static void bind(object e, object s, object v)
 // <param_values> ::= <param_value> <param_value> ...
 // <param_value> ::= { <param> | (<param> <value>) }
 
-static int valid_param_value_p(object o) {
-  if (typep(o, Symbol)) return TRUE;
-  if (!typep(o, Cons)) return FALSE;
-  if (!typep(o->cons.car, Symbol)) return FALSE;
-  o = o->cons.cdr;
-  return o == object_nil || o->cons.cdr == object_nil;
-}
-
-
-#define next_params() { \
-  params = params->cons.cdr; \
-  if (!listp(params)) return FALSE; \
-}
-
-#define next_param_values() { \
-  next_params(); \
-  while (params != object_nil) { \
-    if (!valid_param_value_p(params->cons.car)) return FALSE; \
-    next_params(); \
-    if (typep(params->cons.car, Keyword)) break; \
-  } \
-}
-
-static int valid_param_p(object params) {
-  if (params == object_nil) return TRUE;
+static int valid_param_value_p(object params)
+{
+  object param;
   if (!typep(params, Cons)) return FALSE;
-  while (params != object_nil) {
-    if (typep(params->cons.car, Symbol)) {
-      next_params();
-      continue;
-    }
+  param = params->cons.car;
+  if (typep(param, Symbol)) return TRUE;
+  return typep(param, Cons) && typep(param->cons.car, Symbol)
+    && typep((param = param->cons.cdr), Cons) && param->cons.cdr == object_nil;
+}
+
+static int fetch_param_value(object *params)
+{
+  if (!valid_param_value_p(*params)) return FALSE;
+  *params = (*params)->cons.cdr;
+  return TRUE;
+}
+
+static int fetch_param_values(object *params)
+{
+  *params = (*params)->cons.cdr;
+  if (!fetch_param_value(params)) return FALSE;
+  while (TRUE) {
+    if (*params == object_nil) return TRUE;
+    if (!typep((*params), Cons)) return FALSE;
+    if (typep((*params)->cons.car, Keyword)) return TRUE;
+    if (!fetch_param_value(params)) return FALSE;
+  }
+}
+
+static int valid_lambda_list_p(object params)
+{
+  // required parameter
+  while (TRUE) {
+    if (params == object_nil) return TRUE;
+    if (!typep(params, Cons)) return FALSE;
     if (typep(params->cons.car, Keyword)) break;
-    return FALSE;
-  }
-  if (params->cons.car == object_opt) next_param_values();
-  if (params->cons.car == object_rest) {
-    next_params();
     if (!typep(params->cons.car, Symbol)) return FALSE;
-    next_params();
+    params = params->cons.cdr;
   }
-  if (params->cons.car == object_key) next_param_values();
+  if (params->cons.car == object_opt)
+    if (!fetch_param_values(&params)) return FALSE;
+  if (params->cons.car == object_rest) {
+    params = params->cons.cdr;
+    if (!(typep(params, Cons) && typep(params->cons.car, Symbol))) return FALSE;
+    params = params->cons.cdr;
+  }
+  if (params->cons.car == object_key)
+    if (!fetch_param_values(&params)) return FALSE;
   return params == object_nil;
 }
-
-#undef next_params
-#undef next_param_values
 
 static object eval(object env, object o);
 
@@ -110,7 +114,7 @@ SPECIAL(lambda, lambda)
 {
   object params;
   params = argv->cons.car;
-  if (!valid_param_p(params)) xerror("lambda: illegal parameter list");
+  if (!valid_lambda_list_p(params)) xerror("lambda: illegal parameter list");
   return gc_new_lambda(env, params, argv->cons.cdr);
 }
 
