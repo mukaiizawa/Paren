@@ -168,7 +168,7 @@ static object eval_sequential(object env, object expr)
 
 static object apply(object operator, object operands)
 {
-  object e, k, v, rk, rv, params, result;
+  object e, k, v, params, result;
   e = gc_new_env(operator->lambda.env);
   params = operator->lambda.params;
 
@@ -199,14 +199,10 @@ static object apply(object operator, object operands)
 
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    rk = params->cons.car;
-    rv = object_nil;
+    xsplay_add(&e->env.binding, params->cons.car, operands);
     params = params->cons.cdr;
-  } else {
-    rk = rv = NULL;
   }
 
-  if (rk != NULL) xsplay_add(&e->env.binding, rk, rv);
   if (operands != object_nil) xerror("too many arguments");
 
   // evaluate
