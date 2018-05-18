@@ -168,7 +168,11 @@ static object eval_sequential(object env, object expr)
 
 static object apply(object operator, object operands)
 {
+  int rest_p;
+  char *s;
   object e, k, v, params, result;
+
+  rest_p = FALSE;
   e = gc_new_env(operator->lambda.env);
   params = operator->lambda.params;
 
@@ -182,9 +186,10 @@ static object apply(object operator, object operands)
   if (params->cons.car == object_opt) {
     params = params->cons.cdr;
     while (params != object_nil && !typep(params->cons.car, Keyword)) {
-      if (!typep(params->cons.car, Cons))
+      if (!typep(params->cons.car, Cons)) {
         k = params->cons.car;
-      else {
+        v = object_nil;
+      } else {
         k = params->cons.car->cons.car;
         v = params->cons.car->cons.cdr->cons.car;
       }
@@ -201,11 +206,37 @@ static object apply(object operator, object operands)
     params = params->cons.cdr;
     xsplay_add(&e->env.binding, params->cons.car, operands);
     params = params->cons.cdr;
+    rest_p = TRUE;
   }
 
-  if (operands != object_nil) xerror("too many arguments");
+  if (params->cons.car == object_key) {
+    params = params->cons.cdr;
+    while (params != object_nil) {
+      if (!typep(params->cons.car, Cons)) {
+        k = params->cons.car;
+        v = object_nil;
+      } else {
+        k = params->cons.car->cons.car;
+        v = params->cons.car->cons.cdr->cons.car;
+      }
+      xsplay_add(&e->env.binding, k, v);
+      params = params->cons.cdr;
+    }
+    while (operands != object_nil) {
+      if (!typep(operands->cons.car, Keyword))
+        xerror("illegal keyword parameter");
+      s = operands->cons.car->symbol.name + 1;
+      k = gc_new_symbol(s);    // skip ':'
+      if ((v = xsplay_find(&e->env.binding, k)) == NULL)
+        xerror("undefined keyword parameter ':%s'", k->symbol.name);
+      v = (operands = operands->cons.cdr)->cons.car;
+      xsplay_replace(&e->env.binding, k, v);
+      operands = operands->cons.cdr;
+    }
+  }
 
-  // evaluate
+  if (!rest_p && operands != object_nil) xerror("too many arguments");
+
   result = eval_sequential(e, operator->lambda.body);
   return result;
 }
