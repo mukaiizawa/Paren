@@ -13,7 +13,7 @@
 #include "special.wk"
 #undef SPECIAL
 
-#define PRIM(name) extern int prim_##name(int, object, object *);
+#define PRIM(name, sym) extern int prim_##name(int, object, object *);
 #include "prim.wk"
 #undef PRIM
 
@@ -25,7 +25,7 @@ char *special_name_table[] = {
 };
 
 char *prim_name_table[] = {
-#define PRIM(name) #name,
+#define PRIM(name, sym) #sym,
 #include "prim.wk"
 #undef PRIM
   NULL
@@ -39,7 +39,7 @@ object (*special_table[])(object env, int argc, object argv) = {
 };
 
 int (*prim_table[])(int argc, object argv, object *result) = {
-#define PRIM(name) prim_##name,
+#define PRIM(name, sym) prim_##name,
 #include "prim.wk"
 #undef PRIM
   NULL

@@ -2,7 +2,7 @@
 
 #define SPECIAL(name, sym) object special_##name(object env, int argc\
     , object argv)
-#define PRIM(name) int prim_##name(int argc, object argv, object *result)
+#define PRIM(name, sym) int prim_##name(int argc, object argv, object *result)
 
 extern char *special_name_table[];
 extern char *prim_name_table[];

@@ -11,17 +11,7 @@
   if (!typep(v, Xint)) return FALSE; \
 }
 
-PRIM(xint_equal)
-{
-  object x, y;
-  if (argc != 2) return FALSE;
-  XINT_ARG(0, x);
-  XINT_ARG(1, y);
-  *result = object_bool(x->xint.val == y->xint.val);
-  return TRUE;
-}
-
-PRIM(xint_add)
+PRIM(xint_add, xint_add)
 {
   object x, y;
   if (argc != 2) return FALSE;
@@ -31,7 +21,7 @@ PRIM(xint_add)
   return TRUE;
 }
 
-PRIM(xint_multiply)
+PRIM(xint_multiply, xint_multiply)
 {
   object x, y;
   if (argc != 2) return FALSE;
@@ -41,7 +31,7 @@ PRIM(xint_multiply)
   return TRUE;
 }
 
-PRIM(xint_eq)
+PRIM(xint_eq, xint_eq)
 {
   object x, y;
   if (argc != 2) return FALSE;
@@ -51,7 +41,7 @@ PRIM(xint_eq)
   return TRUE;
 }
 
-PRIM(xint_lt)
+PRIM(xint_lt, xint_lt)
 {
   object x, y;
   if (argc != 2) return FALSE;

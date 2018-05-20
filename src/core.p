@@ -38,31 +38,35 @@ c
 (lambda (x y :opt (a 0) (b 0) :rest a :key a b (c 3)) x)
 
 ;; xint
-:xint_equal
-(xint_equal 10 2x1010)
-(xint_equal 1 0)
+:xint_eq
+(xint_eq 10 2x1010)
+(xint_eq 1 0)
+
 :xint_add
 (xint_add 1 2)
 (xint_add 1 (xint_add 3 0x30))
+
 :xint_lt
 (xint_lt 1 1)
 (xint_lt 1 2)
 (xint_lt 2 1)
 
-;; cons
+;; list
 :cons
 (cons :dot :list)
 (cons 1 (cons 2 (cons 3 nil)))
 
-;; car
 :car
 (car (cons :car :cdr))
 (car (cons :car :cdr) :x)
 
-;; cdr
 :cdr
 (cdr (cons :car :cdr))
 (cdr (cons :car :cdr) :x)
+
+:same?
+(same? nil nil)
+(same? nil false)
 
 ; evalueate
 ((lambda (x) x) :identity)
