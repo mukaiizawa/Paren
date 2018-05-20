@@ -72,7 +72,6 @@ static int fetch_param_values(object *params)
 static int valid_lambda_list_p(int lambda_type, object params)
 {
   int type;
-  // required parameter
   while (TRUE) {
     if (params == object_nil) return TRUE;
     if (!typep(params, Cons)) return FALSE;
@@ -86,16 +85,18 @@ static int valid_lambda_list_p(int lambda_type, object params)
     }
     else return FALSE;
   }
-  if (params->cons.car == object_opt)
+  if (params->cons.car == object_opt) {
     if (!fetch_param_values(&params)) return FALSE;
+  }
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
     if (typep(params, Cons) && typep(params->cons.car, Symbol))
       params = params->cons.cdr;
     else return FALSE;
   }
-  if (params->cons.car == object_key)
+  if (params->cons.car == object_key) {
     if (!fetch_param_values(&params)) return FALSE;
+  }
   return params == object_nil;
 }
 
@@ -188,21 +189,19 @@ static object eval_sequential(object env, object expr)
   return o;
 }
 
-static object apply(object operator, object operands)
+static void bind_lambda_list(object env, object params, object operands)
 {
   int rest_p;
-  object e, k, v, params;
+  object k, v;
   rest_p = FALSE;
-  e = gc_new_env(operator->lambda.env);
-  params = operator->lambda.params;
-  // required parameter
   while (params != object_nil && !typep(params->cons.car, Keyword)) {
     if (operands == object_nil) xerror("too few arguments");
-    xsplay_add(&e->env.binding, params->cons.car, operands->cons.car);
+    if (typep(params->cons.car, Cons))
+      bind_lambda_list(env, params->cons.car, operands->cons.car);
+    else xsplay_add(&env->env.binding, params->cons.car, operands->cons.car);
     params = params->cons.cdr;
     operands = operands->cons.cdr;
   }
-  // optional parameter
   if (params->cons.car == object_opt) {
     params = params->cons.cdr;
     while (params != object_nil && !typep(params->cons.car, Keyword)) {
@@ -218,17 +217,15 @@ static object apply(object operator, object operands)
         v = operands->cons.car;
         operands = operands->cons.cdr;
       }
-      xsplay_add(&e->env.binding, k, v);
+      xsplay_add(&env->env.binding, k, v);
     }
   }
-  // rest parameter
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    xsplay_add(&e->env.binding, params->cons.car, operands);
+    xsplay_add(&env->env.binding, params->cons.car, operands);
     params = params->cons.cdr;
     rest_p = TRUE;
   }
-  // keyword parameter
   if (params->cons.car == object_key) {
     params = params->cons.cdr;
     while (params != object_nil) {
@@ -239,21 +236,28 @@ static object apply(object operator, object operands)
         k = params->cons.car->cons.car;
         v = params->cons.car->cons.cdr->cons.car;
       }
-      xsplay_add(&e->env.binding, k, v);
+      xsplay_add(&env->env.binding, k, v);
       params = params->cons.cdr;
     }
     while (operands != object_nil) {
       if (!typep(operands->cons.car, Keyword))
         xerror("illegal keyword parameter");
       k = gc_new_symbol(operands->cons.car->symbol.name + 1);    // skip ':'
-      if ((v = xsplay_find(&e->env.binding, k)) == NULL)
+      if ((v = xsplay_find(&env->env.binding, k)) == NULL)
         xerror("undefined keyword parameter ':%s'", k->symbol.name);
       v = (operands = operands->cons.cdr)->cons.car;
-      xsplay_replace(&e->env.binding, k, v);
+      xsplay_replace(&env->env.binding, k, v);
       operands = operands->cons.cdr;
     }
   }
   if (!rest_p && operands != object_nil) xerror("too many arguments");
+}
+
+static object apply(object operator, object operands)
+{
+  object e;
+  e = gc_new_env(operator->lambda.env);
+  bind_lambda_list(e, operator->lambda.params, operands);
   return eval_sequential(e, operator->lambda.body);
 }
 
