@@ -176,7 +176,9 @@ static object eval_operands(object env, object expr)
   object o;
   if (expr == object_nil) return object_nil;
   o = eval(env, expr->cons.car);
-  return gc_new_cons(o, eval_operands(env, expr->cons.cdr));
+  expr = expr->cons.cdr;
+  if (!listp(expr)) xerror("parameter must be pure list");
+  return gc_new_cons(o, eval_operands(env, expr));
 }
 
 static object eval_sequential(object env, object expr)
@@ -187,6 +189,12 @@ static object eval_sequential(object env, object expr)
     expr = expr->cons.cdr;
   }
   return o;
+}
+
+static void next_operands(object *operands)
+{
+  *operands = (*operands)->cons.cdr;
+  if (!listp(*operands)) xerror("illegal arguments");
 }
 
 static void bind_lambda_list(object env, object params, object operands)
@@ -215,7 +223,7 @@ static void bind_lambda_list(object env, object params, object operands)
       params = params->cons.cdr;
       if (operands != object_nil) {
         v = operands->cons.car;
-        operands = operands->cons.cdr;
+        next_operands(&operands);
       }
       xsplay_add(&env->env.binding, k, v);
     }
@@ -245,9 +253,10 @@ static void bind_lambda_list(object env, object params, object operands)
       k = gc_new_symbol(operands->cons.car->symbol.name + 1);    // skip ':'
       if ((v = xsplay_find(&env->env.binding, k)) == NULL)
         xerror("undefined keyword parameter ':%s'", k->symbol.name);
-      v = (operands = operands->cons.cdr)->cons.car;
+      next_operands(&operands);
+      v = operands->cons.car;
       xsplay_replace(&env->env.binding, k, v);
-      operands = operands->cons.cdr;
+      next_operands(&operands);
     }
   }
   if (!rest_p && operands != object_nil) xerror("too many arguments");
