@@ -17,3 +17,7 @@
 ((lambda (:key x y z) (cons x (cons y (cons z nil)))) :x 1 :y 2 :z 3)
 ((lambda (:key (x 1) (y 2) (z 3)) (cons x (cons y (cons z nil)))) :x 1 :y -2 :z 3)
 ((lambda (:key (x 1) (y 2) (z 3)) (cons x (cons y (cons z nil)))) :z 1 :y -2 :x 3)
+
+;; keyword parameter
+(macro for ((init-form end-condition update-form :opt result) :rest body)
+  body)

@@ -5,14 +5,15 @@ typedef union s_expr *object;
 #define ALIVE_MASK 0xf000
 #define TYPE_MASK  0x0fff
 #define   Env      0x0001
-#define   Lambda   0x0002
-#define   Cons     0x0004
-#define   Fbarray  0x0008
-#define   Farray   0x0010
-#define   Xint     0x0020
-#define   Xfloat   0x0040
-#define   Symbol   0x0080
-#define   Keyword  0x0100
+#define   Macro    0x0002
+#define   Lambda   0x0004
+#define   Cons     0x0008
+#define   Fbarray  0x0010
+#define   Farray   0x0020
+#define   Xint     0x0040
+#define   Xfloat   0x0080
+#define   Symbol   0x0100
+#define   Keyword  0x0200
 
 #define type(o) (o->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)

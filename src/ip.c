@@ -69,22 +69,30 @@ static int fetch_param_values(object *params)
   }
 }
 
-static int valid_lambda_list_p(object params)
+static int valid_lambda_list_p(int lambda_type, object params)
 {
+  int type;
   // required parameter
   while (TRUE) {
     if (params == object_nil) return TRUE;
     if (!typep(params, Cons)) return FALSE;
-    if (typep(params->cons.car, Keyword)) break;
-    if (!typep(params->cons.car, Symbol)) return FALSE;
-    params = params->cons.cdr;
+    type = type(params->cons.car);
+    if (type == Keyword) break;
+    else if (type == Symbol) params = params->cons.cdr;
+    else if (type == Cons) {
+      if (lambda_type == Macro && valid_lambda_list_p(Macro, params->cons.car))
+        params = params->cons.cdr;
+      else return FALSE;
+    }
+    else return FALSE;
   }
   if (params->cons.car == object_opt)
     if (!fetch_param_values(&params)) return FALSE;
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    if (!(typep(params, Cons) && typep(params->cons.car, Symbol))) return FALSE;
-    params = params->cons.cdr;
+    if (typep(params, Cons) && typep(params->cons.car, Symbol))
+      params = params->cons.cdr;
+    else return FALSE;
   }
   if (params->cons.car == object_key)
     if (!fetch_param_values(&params)) return FALSE;
@@ -110,11 +118,25 @@ SPECIAL(assign, <-)
   return val;
 }
 
+SPECIAL(macro, macro)
+{
+  object sym, params, result;
+  if (!typep((sym = argv->cons.car), Symbol))
+    xerror("macro: required macro name");
+  params = (argv = argv->cons.cdr)->cons.car;
+  if (!valid_lambda_list_p(Macro, params))
+    xerror("macro: illegal parameter list");
+  result = gc_new_macro(env, params, argv->cons.cdr);
+  xsplay_add(&env->env.binding, sym, result);
+  return result;
+}
+
 SPECIAL(lambda, lambda)
 {
   object params;
   params = argv->cons.car;
-  if (!valid_lambda_list_p(params)) xerror("lambda: illegal parameter list");
+  if (!valid_lambda_list_p(Lambda, params))
+    xerror("lambda: illegal parameter list");
   return gc_new_lambda(env, params, argv->cons.cdr);
 }
 
@@ -267,6 +289,9 @@ static object eval(object env, object expr)
             if (!(*prim)(argc, eval_operands(env, operands), &result))
               xerror("primitive '%s' failed", operator->symbol.name);
           }
+          break;
+        case Macro:
+          result = eval(env, apply(operator, operands));
           break;
         case Lambda:
           result = apply(operator, eval_operands(env, operands));

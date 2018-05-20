@@ -46,7 +46,7 @@ static int byte_size(object o)
 {
   switch (type(o)) {
     case Env: return sizeof(struct env);
-    case Lambda: return sizeof(struct lambda);
+    case Macro: case Lambda: return sizeof(struct lambda);
     case Cons: return sizeof(struct cons);
     case Fbarray: return sizeof(struct fbarray) + o->fbarray.size;
     case Farray: return sizeof(struct farray)
@@ -60,7 +60,7 @@ static int byte_size(object o)
 }
 
 static void regist(object o)
-{
+{ 
   xarray_add(&table, o);
 }
 
@@ -80,16 +80,27 @@ object gc_new_env(object top)
   return o;
 }
 
-object gc_new_lambda(object env, object params, object body)
+static object new_lambda(object env, object params, object body, int macro_p)
 {
   object o;
   o = gc_alloc(sizeof(struct lambda));
-  set_type(o, Lambda);
+  if (macro_p) set_type(o, Macro);
+  else set_type(o, Lambda);
   o->lambda.env = env;
   o->lambda.params = params;
   o->lambda.body = body;
   regist(o);
   return o;
+}
+
+object gc_new_macro(object env, object params, object body)
+{
+  return new_lambda(env, params, body, TRUE);
+}
+
+object gc_new_lambda(object env, object params, object body)
+{
+  return new_lambda(env, params, body, FALSE);
 }
 
 object gc_new_xint(int val)
@@ -182,6 +193,7 @@ void gc_mark(object o)
       gc_mark(o->env.top);
       xsplay_foreach(&o->env.binding, sweep_env);
       break;
+    case Macro:
     case Lambda:
       gc_mark(o->lambda.env);
       gc_mark(o->lambda.params);

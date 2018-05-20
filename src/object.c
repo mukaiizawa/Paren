@@ -47,8 +47,10 @@ static void dump_s_expr(object o)
 {
   int i;
   switch (type(o)) {
+    case Macro:
     case Lambda:
-      printf("(lambda ");
+      if (typep(o, Macro)) printf("(macro ");
+      else printf("(lambda ");
       if (o->lambda.params == object_nil) printf("()");
       else dump_s_expr(o->lambda.params);
       if (o->lambda.body != object_nil) {
