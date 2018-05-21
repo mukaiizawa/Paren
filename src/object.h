@@ -69,6 +69,7 @@ extern object object_false;
 extern object object_opt;
 extern object object_key;
 extern object object_rest;
+extern object object_quote;
 
 extern void object_dump(object o);
 extern int object_length(object o);

@@ -104,6 +104,10 @@ static object parse_atom(void)
 
 static object parse_s_expr(void)
 {
+  if (next_token == '\'') {
+    parse_skip();
+    return gc_new_cons(object_quote, gc_new_cons(parse_s_expr(), object_nil));
+  }
   if (next_token == '(') return parse_list();
   return parse_atom();
 }
@@ -154,6 +158,7 @@ static void make_initial_objects(void)
   object_opt = gc_new_symbol(":opt");
   object_key = gc_new_symbol(":key");
   object_rest = gc_new_symbol(":rest");
+  object_quote = gc_new_symbol("quote");
   object_toplevel = gc_new_env(object_nil);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);

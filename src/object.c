@@ -14,6 +14,7 @@ object object_false;
 object object_opt;
 object object_key;
 object object_rest;
+object object_quote;
 
 static void dump_s_expr(object o);
 
