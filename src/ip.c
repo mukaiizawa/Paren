@@ -50,6 +50,7 @@ static object eval_sequential(object env, object expr)
 {
   object o;
   while (expr != object_nil) {
+    if (!listp(expr)) xerror("eval_sequential: is not a list");
     o = eval(env, expr->cons.car);
     expr = expr->cons.cdr;
   }
@@ -329,6 +330,12 @@ SPECIAL(while)
   while (object_true_p(eval(env, argv->cons.car)))
     eval_sequential(env, argv->cons.cdr);
   return object_nil;
+}
+
+// (begin form1 form2 ...) <=> ((lambda () form1 form2 ...))
+SPECIAL(begin)
+{
+  return eval_sequential(env, argv);
 }
 
 static void init_builtin(void)
