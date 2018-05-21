@@ -9,41 +9,56 @@
 #undef SPECIAL
 #undef PRIM
 
-#define SPECIAL(name, sym) extern object special_##name(object, int, object);
+#define SPECIAL(name) extern object special_##name(object, int, object);
 #include "special.wk"
 #undef SPECIAL
 
-#define PRIM(name, sym) extern int prim_##name(int, object, object *);
+#define PRIM(name) extern int prim_##name(int, object, object *);
 #include "prim.wk"
 #undef PRIM
 
+static char *symbol_name_map[] = {
+  "assign", "<-",
+  "samep", "same?",
+  NULL
+};
+
 char *special_name_table[] = {
-#define SPECIAL(name, sym) #sym,
+#define SPECIAL(name) #name,
 #include "special.wk"
 #undef SPECIAL
   NULL
 };
 
 char *prim_name_table[] = {
-#define PRIM(name, sym) #sym,
+#define PRIM(name) #name,
 #include "prim.wk"
 #undef PRIM
   NULL
 };
 
 object (*special_table[])(object env, int argc, object argv) = {
-#define SPECIAL(name, sym) special_##name,
+#define SPECIAL(name) special_##name,
 #include "special.wk"
 #undef SPECIAL
   NULL
 };
 
 int (*prim_table[])(int argc, object argv, object *result) = {
-#define PRIM(name, sym) prim_##name,
+#define PRIM(name) prim_##name,
 #include "prim.wk"
 #undef PRIM
   NULL
 };
+
+char *bi_as_symbol_name(char *name)
+{
+  int i;
+  if (name == NULL) return NULL;
+  for (i = 0; symbol_name_map[i] != NULL; i += 2)
+    if (strcmp(name, symbol_name_map[i]) == 0) return symbol_name_map[i + 1];
+  return name;
+}
 
 object prim_xint(int64_t val)
 {

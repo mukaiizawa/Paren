@@ -6,7 +6,7 @@
 #include "gc.h"
 #include "bi.h"
 
-PRIM(samep, same?)
+PRIM(samep)
 {
   object o, p;
   if (argc != 2) return FALSE;
@@ -16,7 +16,7 @@ PRIM(samep, same?)
   return TRUE;
 }
 
-PRIM(cons, cons)
+PRIM(cons)
 {
   object o, p;
   if (argc != 2) return FALSE;
@@ -26,7 +26,7 @@ PRIM(cons, cons)
   return TRUE;
 }
 
-PRIM(car, car)
+PRIM(car)
 {
   object o, p;
   o = object_nth(argv, 0);
@@ -43,7 +43,7 @@ PRIM(car, car)
   return TRUE;
 }
 
-PRIM(cdr, cdr)
+PRIM(cdr)
 {
   object o, p;
   o = object_nth(argv, 0);

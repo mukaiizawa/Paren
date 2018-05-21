@@ -102,7 +102,7 @@ static int valid_lambda_list_p(int lambda_type, object params)
 
 static object eval(object env, object o);
 
-SPECIAL(assign, <-)
+SPECIAL(assign)
 {
   object sym, val;
   if (argc % 2 != 0) xerror("<-: must be pair");
@@ -119,7 +119,7 @@ SPECIAL(assign, <-)
   return val;
 }
 
-SPECIAL(macro, macro)
+SPECIAL(macro)
 {
   object sym, params, result;
   if (!typep((sym = argv->cons.car), Symbol))
@@ -132,7 +132,7 @@ SPECIAL(macro, macro)
   return result;
 }
 
-SPECIAL(lambda, lambda)
+SPECIAL(lambda)
 {
   object params;
   params = argv->cons.car;
@@ -141,7 +141,7 @@ SPECIAL(lambda, lambda)
   return gc_new_lambda(env, params, argv->cons.cdr);
 }
 
-SPECIAL(quote, quote)
+SPECIAL(quote)
 {
   if (argc != 1) {
     if (argc == 0) xerror("quote: requires argument");
@@ -150,7 +150,7 @@ SPECIAL(quote, quote)
   return argv->cons.car;
 }
 
-SPECIAL(if, if)
+SPECIAL(if)
 {
   int b;
   object test;
@@ -325,9 +325,9 @@ static void init_builtin(void)
   char *s;
   xsplay_init(&special_splay, (int(*)(void *, void *))symcmp);
   xsplay_init(&prim_splay, (int(*)(void *, void *))symcmp);
-  for (i = 0; (s = special_name_table[i]) != NULL; i++)
+  for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++)
     xsplay_add(&special_splay, gc_new_symbol(s), special_table[i]);
-  for (i = 0; (s = prim_name_table[i]) != NULL; i++)
+  for (i = 0; (s = bi_as_symbol_name(prim_name_table[i])) != NULL; i++)
     xsplay_add(&prim_splay, gc_new_symbol(s), prim_table[i]);
 }
 
