@@ -33,143 +33,8 @@ static void bind(object e, object s, object v)
   xsplay_add(&object_toplevel->env.binding, s, v);
 }
 
-// special forms
-
-// <params> ::= [<params>] [:opt <param_values>] [:rest <param>] [:key <param_values>]
-// <params> ::= <param> <param> ...
-// <param_values> ::= <param_value> <param_value> ...
-// <param_value> ::= { <param> | (<param> <value>) }
-
-static int valid_param_value_p(object params)
-{
-  object param;
-  if (!typep(params, Cons)) return FALSE;
-  param = params->cons.car;
-  if (typep(param, Symbol)) return TRUE;
-  return typep(param, Cons) && typep(param->cons.car, Symbol)
-    && typep((param = param->cons.cdr), Cons) && param->cons.cdr == object_nil;
-}
-
-static int fetch_param_value(object *params)
-{
-  if (!valid_param_value_p(*params)) return FALSE;
-  *params = (*params)->cons.cdr;
-  return TRUE;
-}
-
-static int fetch_param_values(object *params)
-{
-  *params = (*params)->cons.cdr;
-  if (!fetch_param_value(params)) return FALSE;
-  while (TRUE) {
-    if (*params == object_nil) return TRUE;
-    if (!typep((*params), Cons)) return FALSE;
-    if (typep((*params)->cons.car, Keyword)) return TRUE;
-    if (!fetch_param_value(params)) return FALSE;
-  }
-}
-
-static int valid_lambda_list_p(int lambda_type, object params)
-{
-  int type;
-  while (TRUE) {
-    if (params == object_nil) return TRUE;
-    if (!typep(params, Cons)) return FALSE;
-    type = type(params->cons.car);
-    if (type == Keyword) break;
-    else if (type == Symbol) params = params->cons.cdr;
-    else if (type == Cons) {
-      if (lambda_type == Macro && valid_lambda_list_p(Macro, params->cons.car))
-        params = params->cons.cdr;
-      else return FALSE;
-    }
-    else return FALSE;
-  }
-  if (params->cons.car == object_opt) {
-    if (!fetch_param_values(&params)) return FALSE;
-  }
-  if (params->cons.car == object_rest) {
-    params = params->cons.cdr;
-    if (typep(params, Cons) && typep(params->cons.car, Symbol))
-      params = params->cons.cdr;
-    else return FALSE;
-  }
-  if (params->cons.car == object_key) {
-    if (!fetch_param_values(&params)) return FALSE;
-  }
-  return params == object_nil;
-}
-
-static object eval(object env, object o);
-
-SPECIAL(assign)
-{
-  object sym, val;
-  if (argc % 2 != 0) xerror("<-: must be pair");
-  if (argc == 0) return object_nil;
-  while (argc != 0) {
-    sym = argv->cons.car;
-    argv = argv->cons.cdr;
-    val = argv->cons.car;
-    argv = argv->cons.cdr;
-    if (!typep(sym, Symbol)) xerror("<-: cannot bind except symbol");
-    bind(env, sym, val = eval(env, val));
-    argc -= 2;
-  }
-  return val;
-}
-
-SPECIAL(macro)
-{
-  object sym, params, result;
-  if (!typep((sym = argv->cons.car), Symbol))
-    xerror("macro: required macro name");
-  params = (argv = argv->cons.cdr)->cons.car;
-  if (!valid_lambda_list_p(Macro, params))
-    xerror("macro: illegal parameter list");
-  result = gc_new_macro(env, params, argv->cons.cdr);
-  xsplay_add(&env->env.binding, sym, result);
-  return result;
-}
-
-SPECIAL(lambda)
-{
-  object params;
-  params = argv->cons.car;
-  if (!valid_lambda_list_p(Lambda, params))
-    xerror("lambda: illegal parameter list");
-  return gc_new_lambda(env, params, argv->cons.cdr);
-}
-
-SPECIAL(quote)
-{
-  if (argc != 1) {
-    if (argc == 0) xerror("quote: requires argument");
-    else xerror("quote: too many arguments");
-  }
-  return argv->cons.car;
-}
-
-SPECIAL(if)
-{
-  int b;
-  object test;
-  test = eval(env, argv->cons.car);
-  if (argc != 2 && argc != 3) xerror("if: illegal arguments");
-  switch (type(test)) {
-    case Fbarray: b = test->fbarray.size != 0; break;
-    case Farray: b = test->farray.size != 0; break;
-    case Xint: b = test->xint.val != 0; break;
-    case Xfloat: b = test->xfloat.val != 0; break;
-    case Symbol: b = test != object_nil && test != object_false; break;
-    default: b = TRUE;
-  }
-  if (b) return eval(env, argv->cons.cdr->cons.car);
-  if (argc > 2) return eval(env, argv->cons.cdr->cons.cdr->cons.car);
-  return object_false;
-}
-
 // evaluater
+static object eval(object env, object expr);
 
 static object eval_operands(object env, object expr)
 {
@@ -317,6 +182,153 @@ static object eval(object env, object expr)
       xerror("eval: illegal object type '%d'", type(expr));
   }
   return result;
+}
+
+// special forms
+
+// <params> ::= [<params>] [:opt <param_values>] [:rest <param>] [:key <param_values>]
+// <params> ::= <param> <param> ...
+// <param_values> ::= <param_value> <param_value> ...
+// <param_value> ::= { <param> | (<param> <value>) }
+
+static int valid_param_value_p(object params)
+{
+  object param;
+  if (!typep(params, Cons)) return FALSE;
+  param = params->cons.car;
+  if (typep(param, Symbol)) return TRUE;
+  return typep(param, Cons) && typep(param->cons.car, Symbol)
+    && typep((param = param->cons.cdr), Cons) && param->cons.cdr == object_nil;
+}
+
+static int fetch_param_value(object *params)
+{
+  if (!valid_param_value_p(*params)) return FALSE;
+  *params = (*params)->cons.cdr;
+  return TRUE;
+}
+
+static int fetch_param_values(object *params)
+{
+  *params = (*params)->cons.cdr;
+  if (!fetch_param_value(params)) return FALSE;
+  while (TRUE) {
+    if (*params == object_nil) return TRUE;
+    if (!typep((*params), Cons)) return FALSE;
+    if (typep((*params)->cons.car, Keyword)) return TRUE;
+    if (!fetch_param_value(params)) return FALSE;
+  }
+}
+
+static int valid_lambda_list_p(int lambda_type, object params)
+{
+  int type;
+  while (TRUE) {
+    if (params == object_nil) return TRUE;
+    if (!typep(params, Cons)) return FALSE;
+    type = type(params->cons.car);
+    if (type == Keyword) break;
+    else if (type == Symbol) params = params->cons.cdr;
+    else if (type == Cons) {
+      if (lambda_type == Macro && valid_lambda_list_p(Macro, params->cons.car))
+        params = params->cons.cdr;
+      else return FALSE;
+    }
+    else return FALSE;
+  }
+  if (params->cons.car == object_opt) {
+    if (!fetch_param_values(&params)) return FALSE;
+  }
+  if (params->cons.car == object_rest) {
+    params = params->cons.cdr;
+    if (typep(params, Cons) && typep(params->cons.car, Symbol))
+      params = params->cons.cdr;
+    else return FALSE;
+  }
+  if (params->cons.car == object_key) {
+    if (!fetch_param_values(&params)) return FALSE;
+  }
+  return params == object_nil;
+}
+
+static object eval(object env, object o);
+
+SPECIAL(assign)
+{
+  object sym, val;
+  if (argc % 2 != 0) xerror("<-: must be pair");
+  if (argc == 0) return object_nil;
+  while (argc != 0) {
+    sym = argv->cons.car;
+    argv = argv->cons.cdr;
+    val = argv->cons.car;
+    argv = argv->cons.cdr;
+    if (!typep(sym, Symbol)) xerror("<-: cannot bind except symbol");
+    bind(env, sym, val = eval(env, val));
+    argc -= 2;
+  }
+  return val;
+}
+
+SPECIAL(macro)
+{
+  object sym, params, result;
+  if (!typep((sym = argv->cons.car), Symbol))
+    xerror("macro: required macro name");
+  params = (argv = argv->cons.cdr)->cons.car;
+  if (!valid_lambda_list_p(Macro, params))
+    xerror("macro: illegal parameter list");
+  result = gc_new_macro(env, params, argv->cons.cdr);
+  xsplay_add(&env->env.binding, sym, result);
+  return result;
+}
+
+SPECIAL(lambda)
+{
+  object params;
+  params = argv->cons.car;
+  if (!valid_lambda_list_p(Lambda, params))
+    xerror("lambda: illegal parameter list");
+  return gc_new_lambda(env, params, argv->cons.cdr);
+}
+
+SPECIAL(quote)
+{
+  if (argc != 1) {
+    if (argc == 0) xerror("quote: requires argument");
+    else xerror("quote: too many arguments");
+  }
+  return argv->cons.car;
+}
+
+static int object_true_p(object o)
+{
+  switch (type(o)) {
+    case Fbarray: return o->fbarray.size != 0;
+    case Farray: return o->farray.size != 0;
+    case Xint: return o->xint.val != 0;
+    case Xfloat: return o->xfloat.val != 0;
+    case Symbol: return o != object_nil && o != object_false;
+    default: return TRUE;
+  }
+}
+
+SPECIAL(if)
+{
+  object test;
+  if (argc != 2 && argc != 3) xerror("if: illegal arguments");
+  test = eval(env, argv->cons.car);
+  if (object_true_p(test)) return eval(env, argv->cons.cdr->cons.car);
+  if (argc > 2) return eval(env, argv->cons.cdr->cons.cdr->cons.car);
+  return object_false;
+}
+
+SPECIAL(while)
+{
+  if (argc < 1) xerror("while: requires condition");
+  while (object_true_p(eval(env, argv->cons.car)))
+    eval_sequential(env, argv->cons.cdr);
+  return object_nil;
 }
 
 static void init_builtin(void)
