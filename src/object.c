@@ -31,8 +31,6 @@ static void dump_cons(object o)
   }
 }
 
-extern char *prim_name_table[];
-
 int symcmp(object o, object p)
 {
   intptr_t i;
