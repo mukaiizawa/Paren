@@ -8,30 +8,21 @@
 #include "bi.h"
 #include "ip.h"
 
+// static object curr_process;
+
 static struct xsplay special_splay;
 static struct xsplay prim_splay;
 
-static object find(object e, object s)
-{
-  object o;
-  while (e != object_nil) {
-    if ((o = xsplay_find(&e->env.binding, s)) != NULL) return o;
-    e = e->env.top;
-  }
-  return NULL;
-}
-
-static void bind(object e, object s, object v)
-{
-  while (e != object_nil) {
-    if (xsplay_find(&e->env.binding, s) != NULL) {
-      xsplay_replace(&e->env.binding, s, v);
-      return;
-    }
-    e = e->env.top;
-  }
-  xsplay_add(&object_toplevel->env.binding, s, v);
-}
+// static void dump_stack_trace(void)
+// {
+//   object o;
+//   for (o = curr_process; o != object_toplevel; o = o->cons.cdr) {
+//     printf("at ");
+//     object_dump(o->cons.car);
+//     printf("\n");
+//   }
+//   xerror(msg);
+// }
 
 // evaluater
 static object eval(object env, object expr);
@@ -141,7 +132,7 @@ static object eval(object env, object expr)
   int argc;
   object (*special)(object, int, object);
   object (*prim)(int, object, object *);
-  object operator, operands, result;
+  object e, operator, operands, result;
   switch (type(expr)) {
     case Lambda:
     case Fbarray:
@@ -152,8 +143,12 @@ static object eval(object env, object expr)
       result = expr;
       break;
     case Symbol:
-      if ((result = find(env, expr)) == NULL)
-        xerror("unbind symbol '%s'", expr->symbol.name);
+      e = env;
+      while (e != object_nil) {
+        if ((result = xsplay_find(&e->env.binding, expr)) != NULL) break;
+        e = e->env.top;
+      }
+      if (result == NULL) xerror("unbind symbol '%s'", expr->symbol.name);
       break;
     case Cons:
       operator = eval(env, expr->cons.car);
@@ -256,19 +251,29 @@ static object eval(object env, object o);
 
 SPECIAL(assign)
 {
-  object sym, val;
-  if (argc % 2 != 0) xerror("<-: must be pair");
+  object e, s, v;
   if (argc == 0) return object_nil;
+  if (argc % 2 != 0) xerror("<-: must be pair");
   while (argc != 0) {
-    sym = argv->cons.car;
+    e = env;
+    s = argv->cons.car;
     argv = argv->cons.cdr;
-    val = argv->cons.car;
+    v = argv->cons.car;
     argv = argv->cons.cdr;
-    if (!typep(sym, Symbol)) xerror("<-: cannot bind except symbol");
-    bind(env, sym, val = eval(env, val));
+    if (!typep(s, Symbol)) xerror("<-: cannot bind except symbol");
+    v = eval(e, v);
+    while (TRUE) {
+      if (e == object_nil) {
+        xsplay_replace(&object_toplevel->env.binding, s, v);
+        break;
+      } else if (xsplay_find(&e->env.binding, s) != NULL) {
+        xsplay_replace(&e->env.binding, s, v);
+        break;
+      } else e = e->env.top;
+    }
     argc -= 2;
   }
-  return val;
+  return v;
 }
 
 SPECIAL(macro)
@@ -354,6 +359,7 @@ void ip_start(void)
 {
   object o, p;
   init_builtin();
+  // curr_process = object_boot;
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
     p = eval(object_toplevel, o->cons.car);
     if (VERBOSE_P) object_dump(p);
