@@ -329,15 +329,6 @@ SPECIAL(if)
   return object_false;
 }
 
-SPECIAL(while)
-{
-  if (argc < 1) xerror("while: requires condition");
-  while (object_true_p(eval(env, argv->cons.car)))
-    eval_sequential(env, argv->cons.cdr);
-  return object_nil;
-}
-
-// (begin form1 form2 ...) <=> ((lambda () form1 form2 ...))
 SPECIAL(begin)
 {
   return eval_sequential(env, argv);
