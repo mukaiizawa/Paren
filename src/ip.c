@@ -19,6 +19,19 @@ void ip_mark(void)
   gc_mark(call_stack);
 }
 
+static void dump_call_stack(void);
+
+static void ip_error(char *fmt, ...)
+{
+  char buf[MAX_STR_LEN];
+  va_list va;
+  va_start(va, fmt);
+  xvsprintf(buf, fmt, va);
+  va_end(va);
+  dump_call_stack();
+  xerror(buf);
+}
+
 // call stack
 
 static void dump_call_stack(void)
@@ -35,9 +48,9 @@ static void push_call_stack(object o)
 {
   if (sp >= CALL_STACK_SIZE - 1) {
     dump_call_stack();
-    xerror("stack over flow");
+    ip_error("stack over flow");
   }
-  call_stack->farray.elt[++sp] = o;
+  call_stack->farray.elt[sp++] = o;
 }
 
 static void pop_call_stack(void)
@@ -54,7 +67,7 @@ static object eval_operands(object env, object expr)
   if (expr == object_nil) return object_nil;
   o = eval(env, expr->cons.car);
   expr = expr->cons.cdr;
-  if (!listp(expr)) xerror("parameter must be pure list");
+  if (!listp(expr)) ip_error("parameter must be pure list");
   return gc_new_cons(o, eval_operands(env, expr));
 }
 
@@ -62,7 +75,7 @@ static object eval_sequential(object env, object expr)
 {
   object o;
   while (expr != object_nil) {
-    if (!listp(expr)) xerror("eval_sequential: is not a list");
+    if (!listp(expr)) ip_error("eval_sequential: is not a list");
     o = eval(env, expr->cons.car);
     expr = expr->cons.cdr;
   }
@@ -72,7 +85,7 @@ static object eval_sequential(object env, object expr)
 static void next_operands(object *operands)
 {
   *operands = (*operands)->cons.cdr;
-  if (!listp(*operands)) xerror("illegal arguments");
+  if (!listp(*operands)) ip_error("illegal arguments");
 }
 
 static void bind_lambda_list(object env, object params, object operands)
@@ -81,7 +94,7 @@ static void bind_lambda_list(object env, object params, object operands)
   object k, v;
   rest_p = FALSE;
   while (params != object_nil && !typep(params->cons.car, Keyword)) {
-    if (operands == object_nil) xerror("too few arguments");
+    if (operands == object_nil) ip_error("too few arguments");
     if (typep(params->cons.car, Cons))
       bind_lambda_list(env, params->cons.car, operands->cons.car);
     else xsplay_add(&env->env.binding, params->cons.car, operands->cons.car);
@@ -127,17 +140,17 @@ static void bind_lambda_list(object env, object params, object operands)
     }
     while (operands != object_nil) {
       if (!typep(operands->cons.car, Keyword))
-        xerror("illegal keyword parameter");
+        ip_error("illegal keyword parameter");
       k = gc_new_symbol(operands->cons.car->symbol.name + 1);    // skip ':'
       if ((v = xsplay_find(&env->env.binding, k)) == NULL)
-        xerror("undefined keyword parameter ':%s'", k->symbol.name);
+        ip_error("undefined keyword parameter ':%s'", k->symbol.name);
       next_operands(&operands);
       v = operands->cons.car;
       xsplay_replace(&env->env.binding, k, v);
       next_operands(&operands);
     }
   }
-  if (!rest_p && operands != object_nil) xerror("too many arguments");
+  if (!rest_p && operands != object_nil) ip_error("too many arguments");
 }
 
 static object apply(object operator, object operands)
@@ -169,7 +182,7 @@ static object eval(object env, object expr)
         if ((result = xsplay_find(&e->env.binding, expr)) != NULL) break;
         e = e->env.top;
       }
-      if (result == NULL) xerror("unbind symbol '%s'", expr->symbol.name);
+      if (result == NULL) ip_error("unbind symbol '%s'", expr->symbol.name);
       break;
     case Cons:
       operator = eval(env, expr->cons.car);
@@ -183,7 +196,7 @@ static object eval(object env, object expr)
             result = (*special)(env, argc, operands);
           } else if ((prim = xsplay_find(&prim_splay, operator)) != NULL) {
             if (!(*prim)(argc, eval_operands(env, operands), &result))
-              xerror("primitive '%s' failed", operator->symbol.name);
+              ip_error("primitive '%s' failed", operator->symbol.name);
           }
           break;
         case Macro:
@@ -194,11 +207,11 @@ static object eval(object env, object expr)
           break;
         default: break;
       }
-      if (result == NULL) xerror("not a operator");
+      if (result == NULL) ip_error("not a operator");
       pop_call_stack();
       break;
     default:
-      xerror("eval: illegal object type '%d'", type(expr));
+      ip_error("eval: illegal object type '%d'", type(expr));
   }
   return result;
 }
@@ -276,14 +289,14 @@ SPECIAL(assign)
 {
   object e, s, v;
   if (argc == 0) return object_nil;
-  if (argc % 2 != 0) xerror("<-: must be pair");
+  if (argc % 2 != 0) ip_error("<-: must be pair");
   while (argc != 0) {
     e = env;
     s = argv->cons.car;
     argv = argv->cons.cdr;
     v = argv->cons.car;
     argv = argv->cons.cdr;
-    if (!typep(s, Symbol)) xerror("<-: cannot bind except symbol");
+    if (!typep(s, Symbol)) ip_error("<-: cannot bind except symbol");
     v = eval(e, v);
     while (TRUE) {
       if (e == object_nil) {
@@ -303,10 +316,10 @@ SPECIAL(macro)
 {
   object sym, params, result;
   if (!typep((sym = argv->cons.car), Symbol))
-    xerror("macro: required macro name");
+    ip_error("macro: required macro name");
   params = (argv = argv->cons.cdr)->cons.car;
   if (!valid_lambda_list_p(Macro, params))
-    xerror("macro: illegal parameter list");
+    ip_error("macro: illegal parameter list");
   result = gc_new_macro(env, params, argv->cons.cdr);
   xsplay_add(&env->env.binding, sym, result);
   return result;
@@ -317,15 +330,15 @@ SPECIAL(lambda)
   object params;
   params = argv->cons.car;
   if (!valid_lambda_list_p(Lambda, params))
-    xerror("lambda: illegal parameter list");
+    ip_error("lambda: illegal parameter list");
   return gc_new_lambda(env, params, argv->cons.cdr);
 }
 
 SPECIAL(quote)
 {
   if (argc != 1) {
-    if (argc == 0) xerror("quote: requires argument");
-    else xerror("quote: too many arguments");
+    if (argc == 0) ip_error("quote: requires argument");
+    else ip_error("quote: too many arguments");
   }
   return argv->cons.car;
 }
@@ -345,7 +358,7 @@ static int object_true_p(object o)
 SPECIAL(if)
 {
   object test;
-  if (argc != 2 && argc != 3) xerror("if: illegal arguments");
+  if (argc != 2 && argc != 3) ip_error("if: illegal arguments");
   test = eval(env, argv->cons.car);
   if (object_true_p(test)) return eval(env, argv->cons.cdr->cons.car);
   if (argc > 2) return eval(env, argv->cons.cdr->cons.cdr->cons.car);
