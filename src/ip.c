@@ -8,21 +8,21 @@
 #include "bi.h"
 #include "ip.h"
 
-// static object curr_process;
+static int sp;
+static object call_stack;
 
 static struct xsplay special_splay;
 static struct xsplay prim_splay;
 
-// static void dump_stack_trace(void)
-// {
-//   object o;
-//   for (o = curr_process; o != object_toplevel; o = o->cons.cdr) {
-//     printf("at ");
-//     object_dump(o->cons.car);
-//     printf("\n");
-//   }
-//   xerror(msg);
-// }
+static void dump_call_stack(void)
+{
+  int i;
+  printf("\n%s\n", "*** stack trace ***");
+  for (i = 0; i < sp; i++) {
+    printf("at ");
+    object_dump(call_stack->farray.elt[i]);
+  }
+}
 
 // evaluater
 static object eval(object env, object expr);
@@ -154,6 +154,7 @@ static object eval(object env, object expr)
       operator = eval(env, expr->cons.car);
       operands = expr->cons.cdr;
       argc = object_length(operands);
+      call_stack->farray.elt[sp++] = operator;
       result = NULL;
       switch (type(operator)) {
         case Symbol:
@@ -173,6 +174,8 @@ static object eval(object env, object expr)
         default: break;
       }
       if (result == NULL) xerror("not a operator");
+      dump_call_stack();
+      sp--;
       break;
     default:
       xerror("eval: illegal object type '%d'", type(expr));
@@ -350,7 +353,8 @@ void ip_start(void)
 {
   object o, p;
   init_builtin();
-  // curr_process = object_boot;
+  sp = 0;
+  call_stack = gc_new_farray(DEFAULT_CALL_STACK_SIZE);
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
     p = eval(object_toplevel, o->cons.car);
     if (VERBOSE_P) object_dump(p);

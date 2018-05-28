@@ -144,7 +144,7 @@ object gc_new_cons(object car, object cdr)
   return o;
 }
 
-object gc_new_barray(int len)
+object gc_new_fbarray(int len)
 {
   object o;
   o = gc_alloc(sizeof(struct fbarray) + len - 1);
@@ -154,7 +154,7 @@ object gc_new_barray(int len)
   return o;
 }
 
-object gc_new_fbarray(int len)
+object gc_new_farray(int len)
 {
   object o;
   o = gc_alloc(sizeof(struct farray) + (len - 1) * sizeof(object));
