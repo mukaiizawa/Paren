@@ -2,7 +2,7 @@
 
 #define VERBOSE_P TRUE
 
-#define DEFAULT_CALL_STACK_SIZE (2 * 1024)
+#define CALL_STACK_SIZE (1 * 1024)
 
 #define MAX_HEAP_SIZE (256 * 1024 * 1024)
 

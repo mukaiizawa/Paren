@@ -5,6 +5,7 @@
 #include "xarray.h"
 #include "object.h"
 #include "lex.h"
+#include "ip.h"
 #include "gc.h"
 
 int gc_used_memory;
@@ -258,6 +259,7 @@ void gc_chance(void)
     printf("before gc(used memory %d[byte])\n", gc_used_memory);
     gc_dump_table();
   }
+  ip_mark();
   gc_mark(object_boot);
   sweep_s_expr();
   if (GC_LOG_P) {
