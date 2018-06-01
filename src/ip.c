@@ -91,7 +91,8 @@ static void next_operands(object *operands)
 static void bind_lambda_list(object env, object params, object operands)
 {
   int rest_p;
-  object k, v;
+  object o, k, v;
+  struct xsplay s;
   rest_p = FALSE;
   while (params != object_nil && !typep(params->cons.car, Keyword)) {
     if (operands == object_nil) ip_error("too few arguments");
@@ -104,12 +105,13 @@ static void bind_lambda_list(object env, object params, object operands)
   if (params->cons.car == object_opt) {
     params = params->cons.cdr;
     while (params != object_nil && !typep(params->cons.car, Keyword)) {
-      if (!typep(params->cons.car, Cons)) {
-        k = params->cons.car;
+      o = params->cons.car;
+      if (!typep(o, Cons)) {
+        k = o;
         v = object_nil;
       } else {
-        k = params->cons.car->cons.car;
-        v = params->cons.car->cons.cdr->cons.car;
+        k = o->cons.car;
+        v = o->cons.cdr->cons.car;
       }
       params = params->cons.cdr;
       if (operands != object_nil) {
@@ -127,13 +129,19 @@ static void bind_lambda_list(object env, object params, object operands)
   }
   if (params->cons.car == object_key) {
     params = params->cons.cdr;
+    xsplay_init(&s, (int(*)(void *, void *))symcmp);
     while (params != object_nil) {
-      if (!typep(params->cons.car, Cons)) {
-        k = params->cons.car;
+      o = params->cons.car;
+      if (!typep(o, Cons)) {
+        k = o;
         v = object_nil;
       } else {
-        k = params->cons.car->cons.car;
-        v = params->cons.car->cons.cdr->cons.car;
+        k = o->cons.car;
+        v = (o = o->cons.cdr)->cons.car;
+        if ((o = o->cons.cdr) != object_nil) {
+          xsplay_add(&s, k, o->cons.car);
+          xsplay_add(&env->env.binding, o->cons.car, object_nil);
+        }
       }
       xsplay_add(&env->env.binding, k, v);
       params = params->cons.cdr;
@@ -147,6 +155,8 @@ static void bind_lambda_list(object env, object params, object operands)
       next_operands(&operands);
       v = operands->cons.car;
       xsplay_replace(&env->env.binding, k, v);
+      if ((o = xsplay_find(&s, k)) != NULL)
+        xsplay_replace(&env->env.binding, o, object_true);
       next_operands(&operands);
     }
   }
@@ -218,38 +228,30 @@ static object eval(object env, object expr)
 
 // special forms
 
-// <params> ::= [<params>] [:opt <param_values>] [:rest <param>] [:key <param_values>]
-// <params> ::= <param> <param> ...
-// <param_values> ::= <param_value> <param_value> ...
-// <param_value> ::= { <param> | (<param> <value>) }
+// <lambda_list> ::= [<required_params>] [:opt <opt_params>] [:rest <param>] [:key <key_params>]
+// <required_params> ::= <param> <param> ...
+// <opt_params> ::= <opt> <opt> ...
+// <opt> ::= { <param> | (<param> <initial_value>) }
+// <key_params> ::= <key> <key> ...
+// <key> ::= { <param> | (<param> <initial_value> [<givedp>]) }
 
-static int valid_param_value_p(object params)
+static int valid_opt_p(object o)
 {
-  object param;
-  if (!typep(params, Cons)) return FALSE;
-  param = params->cons.car;
-  if (typep(param, Symbol)) return TRUE;
-  return typep(param, Cons) && typep(param->cons.car, Symbol)
-    && typep((param = param->cons.cdr), Cons) && param->cons.cdr == object_nil;
+  o = o->cons.car;
+  if (typep(o, Symbol)) return TRUE;
+  return typep(o, Cons) && typep(o->cons.car, Symbol)
+    && typep(o = o->cons.cdr, Cons) && o->cons.cdr == object_nil;
 }
 
-static int fetch_param_value(object *params)
+static int valid_key_p(object o)
 {
-  if (!valid_param_value_p(*params)) return FALSE;
-  *params = (*params)->cons.cdr;
-  return TRUE;
-}
-
-static int fetch_param_values(object *params)
-{
-  *params = (*params)->cons.cdr;
-  if (!fetch_param_value(params)) return FALSE;
-  while (TRUE) {
-    if (*params == object_nil) return TRUE;
-    if (!typep((*params), Cons)) return FALSE;
-    if (typep((*params)->cons.car, Keyword)) return TRUE;
-    if (!fetch_param_value(params)) return FALSE;
-  }
+  o = o->cons.car;
+  if (typep(o, Symbol)) return TRUE;
+  return typep(o, Cons) && typep(o->cons.car, Symbol)
+    && typep(o = o->cons.cdr, Cons)
+    && (o->cons.cdr == object_nil
+        || (typep(o = o->cons.cdr, Cons)
+          && typep(o->cons.car, Symbol) && o->cons.cdr == object_nil));
 }
 
 static int valid_lambda_list_p(int lambda_type, object params)
@@ -269,7 +271,16 @@ static int valid_lambda_list_p(int lambda_type, object params)
     else return FALSE;
   }
   if (params->cons.car == object_opt) {
-    if (!fetch_param_values(&params)) return FALSE;
+    params = params->cons.cdr;
+    if (!valid_opt_p(params)) return FALSE;
+    params = params->cons.cdr;
+    while (TRUE) {
+      if (params == object_nil) break;
+      if (!typep(params, Cons)) return FALSE;
+      if (typep(params->cons.car, Keyword)) break;
+      if (!valid_opt_p(params)) return FALSE;
+      params = params->cons.cdr;
+    }
   }
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
@@ -278,7 +289,16 @@ static int valid_lambda_list_p(int lambda_type, object params)
     else return FALSE;
   }
   if (params->cons.car == object_key) {
-    if (!fetch_param_values(&params)) return FALSE;
+    params = params->cons.cdr;
+    if (!valid_key_p(params)) return FALSE;
+    params = params->cons.cdr;
+    while (TRUE) {
+      if (params == object_nil) break;
+      if (!typep(params, Cons)) return FALSE;
+      if (typep(params->cons.car, Keyword)) break;
+      if (!valid_key_p(params)) return FALSE;
+      params = params->cons.cdr;
+    }
   }
   return params == object_nil;
 }
@@ -315,13 +335,16 @@ SPECIAL(assign)
 SPECIAL(macro)
 {
   object sym, params, result;
-  if (!typep((sym = argv->cons.car), Symbol))
-    ip_error("macro: required macro name");
-  params = (argv = argv->cons.cdr)->cons.car;
+  if (typep((sym = argv->cons.car), Symbol))
+    params = (argv = argv->cons.cdr)->cons.car;
+  else {
+    params = sym;
+    sym = NULL;
+  }
   if (!valid_lambda_list_p(Macro, params))
     ip_error("macro: illegal parameter list");
   result = gc_new_macro(env, params, argv->cons.cdr);
-  xsplay_add(&env->env.binding, sym, result);
+  if (sym != NULL) xsplay_add(&env->env.binding, sym, result);
   return result;
 }
 
