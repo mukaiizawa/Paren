@@ -71,7 +71,7 @@ extern object object_key;
 extern object object_rest;
 extern object object_quote;
 
-extern void object_dump(object o);
+extern char *object_describe(object o, char *buf);
 extern int object_length(object o);
 extern object object_nth(object o, int n);
 extern object object_bool(int b);

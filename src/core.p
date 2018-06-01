@@ -34,8 +34,10 @@
     not (lambda (x) (if x false true))
     list (lambda (:rest args) args))
 
-(<- reduce (lambda (lis f :key (identity nil has-identity?))
+(<- reduce (lambda (lis f :key (identity nil identity?))
+             identity?
              ))
+(reduce '(1 2 3) (lambda (x y) (cons x y)))
 
 ; (defun reduce (function sequence &key from-end (start 0)
 ;                         end (initial-value nil ivp) key)

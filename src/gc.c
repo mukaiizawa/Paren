@@ -281,6 +281,7 @@ void gc_init(void)
 void gc_dump_table(void)
 {
   int i;
+  char buf[MAX_STR_LEN];
   object o;
   printf("; object table {{{\n");
   printf("; \ttoplevel\t%p\n", object_toplevel);
@@ -290,7 +291,7 @@ void gc_dump_table(void)
     printf("; \t%p\t", o);
     if (typep(o, Cons)) printf("(%p . %p)\n", o->cons.car, o->cons.cdr);
     else if (typep(o, Env)) printf("-> %p\n", o->env.top);
-    else object_dump(o);
+    else object_describe(o, buf);
   }
   printf("; }}}\n");
 }

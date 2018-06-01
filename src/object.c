@@ -2,8 +2,8 @@
 
 #include "std.h"
 #include "xarray.h"
+#include "xbarray.h"
 #include "xsplay.h"
-#include "lex.h"
 #include "object.h"
 
 object object_toplevel;
@@ -16,22 +16,6 @@ object object_key;
 object object_rest;
 object object_quote;
 
-static void dump_s_expr(object o);
-
-static void dump_cons(object o)
-{
-  dump_s_expr(o->cons.car);
-  while ((o = o->cons.cdr) != object_nil) {
-    printf(" ");
-    if (typep(o, Cons)) dump_s_expr(o->cons.car);
-    else {
-      printf(". ");
-      dump_s_expr(o);
-      break;
-    }
-  }
-}
-
 int symcmp(object o, object p)
 {
   intptr_t i;
@@ -40,56 +24,6 @@ int symcmp(object o, object p)
   if ((i = (intptr_t)o - (intptr_t)p) == 0) return 0;
   if (i > 0) return 1;
   return -1;
-}
-
-static void dump_s_expr(object o)
-{
-  int i;
-  switch (type(o)) {
-    case Macro:
-    case Lambda:
-      if (typep(o, Macro)) printf("(macro ");
-      else printf("(lambda ");
-      if (o->lambda.params == object_nil) printf("()");
-      else dump_s_expr(o->lambda.params);
-      if (o->lambda.body != object_nil) {
-        printf(" ");
-        dump_cons(o->lambda.body);
-      }
-      printf(")");
-      break;
-    case Cons:
-      printf("(");
-      dump_cons(o);
-      printf(")");
-      break;
-    case Fbarray:
-      printf("%s", o->fbarray.elt);
-      break;
-    case Farray:
-      printf("[");
-      for (i = 0; i < o->farray.size; i++) dump_s_expr(o->farray.elt[i]);
-      printf("]");
-      break;
-    case Xint:
-      printf("%"PRId64"", o->xint.val);
-      break;
-    case Xfloat:
-      printf("%f", o->xfloat.val);
-      break;
-    case Symbol:
-    case Keyword:
-      printf("%s", o->symbol.name);
-      break;
-    default: xerror("unknown type '%d'", type(o));
-  }
-}
-
-void object_dump(object o)
-{
-  xassert(o != NULL);
-  dump_s_expr(o);
-  printf("\n");
 }
 
 int object_length(object o)
@@ -108,6 +42,83 @@ object object_nth(object o, int n)
     o = o->cons.cdr;
   }
   return o->cons.car;
+}
+
+static void describe_s_expr(object o, struct xbarray *x);
+static void describe_cons(object o, struct xbarray *x)
+{
+  describe_s_expr(o->cons.car, x);
+  while ((o = o->cons.cdr) != object_nil) {
+    xbarray_add(x, ' ');
+    if (typep(o, Cons)) describe_s_expr(o->cons.car, x);
+    else {
+      xbarray_adds(x, ". ");
+      describe_s_expr(o, x);
+      break;
+    }
+    if(x->size > MAX_STR_LEN) return;
+  }
+}
+
+static void describe_s_expr(object o, struct xbarray *x)
+{
+  int i;
+  if(x->size > MAX_STR_LEN) return;
+  switch (type(o)) {
+    case Macro:
+    case Lambda:
+      if (typep(o, Macro)) xbarray_adds(x, "(macro ");
+      else xbarray_adds(x, "(lambda ");
+      if (o->lambda.params == object_nil) xbarray_adds(x, "()");
+      else describe_s_expr(o->lambda.params, x);
+      if (o->lambda.body != object_nil) {
+        xbarray_add(x, ' ');
+        describe_s_expr(o->lambda.body, x);
+      }
+      xbarray_add(x, ')');
+      break;
+    case Cons:
+      xbarray_add(x, '(');
+      describe_cons(o, x);
+      xbarray_add(x, ')');
+      break;
+    case Fbarray:
+      xbarray_addf(x, "%s", o->fbarray.elt);
+      break;
+    case Farray:
+      xbarray_add(x, '[');
+      for (i = 0; i < o->farray.size; i++)
+        describe_s_expr(o->farray.elt[i], x);
+      xbarray_add(x, ']');
+      break;
+    case Xint:
+      xbarray_addf(x, "%d", o->xint.val);
+      break;
+    case Xfloat:
+      xbarray_addf(x, "%f", o->xfloat.val);
+      break;
+    case Symbol:
+    case Keyword:
+      xbarray_addf(x, "%s", o->symbol.name);
+      break;
+    default: xerror("unknown type '%d'", type(o));
+  }
+}
+
+char *object_describe(object o, char *buf)
+{
+  struct xbarray x;
+  xassert(o != NULL);
+  xbarray_init(&x);
+  describe_s_expr(o, &x);
+  xbarray_add(&x,'\0');
+  if(x.size <= MAX_STR_LEN) memcpy(buf, x.elt, x.size);
+  else {
+    memcpy(buf, x.elt, MAX_STR_LEN - 4);
+    strcpy(buf + MAX_STR_LEN - 4, "...");
+  }
+  xbarray_free(&x);
+  return buf;
 }
 
 object object_bool(int b)

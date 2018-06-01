@@ -37,11 +37,10 @@ static void ip_error(char *fmt, ...)
 static void dump_call_stack(void)
 {
   int i;
+  char buf[MAX_STR_LEN];
   printf("\n%s\n", "*** stack trace ***");
-  for (i = sp - 1; i >= 0; i--) {
-    printf("at ");
-    object_dump(call_stack->farray.elt[i]);
-  }
+  for (i = sp - 1; i >= 0; i--)
+    printf("at %s", object_describe(call_stack->farray.elt[i], buf));
 }
 
 static void push_call_stack(object o)
@@ -140,7 +139,7 @@ static void bind_lambda_list(object env, object params, object operands)
         v = (o = o->cons.cdr)->cons.car;
         if ((o = o->cons.cdr) != object_nil) {
           xsplay_add(&s, k, o->cons.car);
-          xsplay_add(&env->env.binding, o->cons.car, object_nil);
+          xsplay_add(&env->env.binding, o->cons.car, object_false);
         }
       }
       xsplay_add(&env->env.binding, k, v);
@@ -407,13 +406,14 @@ static void init_builtin(void)
 
 void ip_start(void)
 {
+  char buf[MAX_STR_LEN];
   object o, p;
   init_builtin();
   sp = 0;
   call_stack = gc_new_farray(CALL_STACK_SIZE);
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
     p = eval(object_toplevel, o->cons.car);
-    if (VERBOSE_P) object_dump(p);
+    if (VERBOSE_P) printf("%s\n", object_describe(p, buf));
     gc_chance();
   }
 }
