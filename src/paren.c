@@ -98,7 +98,7 @@ static object parse_atom(void)
     case LEX_INT: return parse_integer();
     case LEX_FLOAT: return parse_float();
     case LEX_SYMBOL: return parse_symbol();
-    default: lex_error("illegal token value '%d'.", next_token); return NULL;
+    default: lex_error("illegal token '%c'.", (char)next_token); return NULL;
   }
 }
 
