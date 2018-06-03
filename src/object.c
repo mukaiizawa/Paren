@@ -73,7 +73,7 @@ static void describe_s_expr(object o, struct xbarray *x)
       else describe_s_expr(o->lambda.params, x);
       if (o->lambda.body != object_nil) {
         xbarray_add(x, ' ');
-        describe_s_expr(o->lambda.body, x);
+        describe_cons(o->lambda.body, x);
       }
       xbarray_add(x, ')');
       break;
