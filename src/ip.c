@@ -39,22 +39,27 @@ static void dump_call_stack(void)
   int i;
   char buf[MAX_STR_LEN];
   printf("\n%s\n", "*** stack trace ***");
-  for (i = sp - 1; i >= 0; i--)
-    printf("at %s", object_describe(call_stack->farray.elt[i], buf));
+  for (i = sp; i > 0; i -= 2) {
+    printf("at %s\n", object_describe(gc_new_cons(
+            call_stack->farray.elt[i - 2], call_stack->farray.elt[i - 1])
+          , buf));
+  }
 }
 
-static void push_call_stack(object o)
+static void push_call_stack(object o, object p)
 {
-  if (sp >= CALL_STACK_SIZE - 1) {
+  if (sp == CALL_STACK_SIZE) {
     dump_call_stack();
     ip_error("stack over flow");
   }
   call_stack->farray.elt[sp++] = o;
+  call_stack->farray.elt[sp++] = p;
 }
 
 static void pop_call_stack(void)
 {
-  sp--;
+  xassert(sp >= 0);
+  sp -= 2;
 }
 
 // evaluater
@@ -139,7 +144,7 @@ static void bind_lambda_list(object env, object params, object operands)
         v = (o = o->cons.cdr)->cons.car;
         if ((o = o->cons.cdr) != object_nil) {
           xsplay_add(&s, k, o->cons.car);
-          xsplay_add(&env->env.binding, o->cons.car, object_false);
+          xsplay_add(&env->env.binding, o->cons.car, object_nil);
         }
       }
       xsplay_add(&env->env.binding, k, v);
@@ -177,6 +182,7 @@ static object eval(object env, object expr)
   object (*prim)(int, object, object *);
   object e, operator, operands, result;
   switch (type(expr)) {
+    case Macro:
     case Lambda:
     case Fbarray:
     case Farray:
@@ -196,8 +202,8 @@ static object eval(object env, object expr)
     case Cons:
       operator = eval(env, expr->cons.car);
       operands = expr->cons.cdr;
+      push_call_stack(operator, operands);
       argc = object_length(operands);
-      push_call_stack(operator);
       result = NULL;
       switch (type(operator)) {
         case Symbol:
@@ -220,7 +226,7 @@ static object eval(object env, object expr)
       pop_call_stack();
       break;
     default:
-      ip_error("eval: illegal object type '%d'", type(expr));
+      xerror("eval: illegal object type '%d'", type(expr));
   }
   return result;
 }
@@ -370,9 +376,7 @@ static int object_true_p(object o)
   switch (type(o)) {
     case Fbarray: return o->fbarray.size != 0;
     case Farray: return o->farray.size != 0;
-    case Xint: return o->xint.val != 0;
-    case Xfloat: return o->xfloat.val != 0;
-    case Symbol: return o != object_nil && o != object_false;
+    case Symbol: return o != object_nil;
     default: return TRUE;
   }
 }
@@ -384,7 +388,7 @@ SPECIAL(if)
   test = eval(env, argv->cons.car);
   if (object_true_p(test)) return eval(env, argv->cons.cdr->cons.car);
   if (argc > 2) return eval(env, argv->cons.cdr->cons.cdr->cons.car);
-  return object_false;
+  return object_nil;
 }
 
 SPECIAL(begin)

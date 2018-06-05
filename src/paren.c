@@ -154,7 +154,6 @@ static void make_initial_objects(void)
 {
   object_nil = gc_new_symbol("nil");
   object_true = gc_new_symbol("true");
-  object_false = gc_new_symbol("false");
   object_opt = gc_new_symbol(":opt");
   object_key = gc_new_symbol(":key");
   object_rest = gc_new_symbol(":rest");
@@ -162,7 +161,6 @@ static void make_initial_objects(void)
   object_toplevel = gc_new_env(object_nil);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
-  bind_pseudo_symbol(object_false);
   bind_special();
 }
 

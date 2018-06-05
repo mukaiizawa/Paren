@@ -16,6 +16,13 @@ PRIM(samep)
   return TRUE;
 }
 
+PRIM(atomp)
+{
+  if (argc != 1) return FALSE;
+  *result = object_bool(!typep(argv->cons.car, Cons));
+  return TRUE;
+}
+
 PRIM(cons)
 {
   object o, p;

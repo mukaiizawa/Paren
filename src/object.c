@@ -10,7 +10,6 @@ object object_toplevel;
 object object_boot;
 object object_nil;
 object object_true;
-object object_false;
 object object_opt;
 object object_key;
 object object_rest;
@@ -124,5 +123,5 @@ char *object_describe(object o, char *buf)
 object object_bool(int b)
 {
   if (b) return object_true;
-  return object_false;
+  return object_nil;
 }

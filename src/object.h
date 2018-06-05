@@ -65,7 +65,6 @@ extern object object_toplevel;
 extern object object_boot;
 extern object object_nil;
 extern object object_true;
-extern object object_false;
 extern object object_opt;
 extern object object_key;
 extern object object_rest;
