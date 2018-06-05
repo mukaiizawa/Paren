@@ -31,6 +31,8 @@
     cdddar (lambda (x) (cdr (cddar x)))
     cddddr (lambda (x) (cdr (cdddr x))))
 
+(macro backquote (:rest body) 1)
+
 (macro function (name args :rest body)
   (list <- name (cons lambda (cons args body))))
 
@@ -66,6 +68,8 @@
 
 (function list? (x)
   (or (nil? x) (cons? x)))
+
+`(1 2 ,3)
 
 ; (let ((x y))
 ; (macro let (args :rest body)

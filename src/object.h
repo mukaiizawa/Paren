@@ -69,6 +69,9 @@ extern object object_opt;
 extern object object_key;
 extern object object_rest;
 extern object object_quote;
+extern object object_bq;
+extern object object_comma;
+extern object object_splice;
 
 extern char *object_describe(object o, char *buf);
 extern int object_length(object o);

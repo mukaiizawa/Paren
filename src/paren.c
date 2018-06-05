@@ -34,6 +34,7 @@ static void parse_opt(int argc,char *argv[])
 // parser
 
 static int next_token;
+static int bq_level;
 
 static int parse_skip(void)
 {
@@ -104,9 +105,26 @@ static object parse_atom(void)
 
 static object parse_s_expr(void)
 {
-  if (next_token == '\'') {
+  object o, result;
+  if (next_token == '\'' || next_token == '`' || next_token == ',') {
+    if (next_token == '\'') o = object_quote;
+    else if (next_token == '`') o = object_bq;
+    else o = object_comma;
     parse_skip();
-    return gc_new_cons(object_quote, gc_new_cons(parse_s_expr(), object_nil));
+    if (o == object_comma && next_token == '@') {
+      o = object_splice;
+      parse_skip();
+    }
+    if (o != object_quote) {
+      if (o == object_bq) bq_level++;
+      else if (--bq_level < 0) lex_error("comma not inside backquote");
+    }
+    result = gc_new_cons(o, gc_new_cons(parse_s_expr(), object_nil));
+    if (o != object_quote) {
+      if (o == object_bq) bq_level--;
+      else bq_level++;
+    }
+    return result;
   }
   if (next_token == '(') return parse_list();
   return parse_atom();
@@ -128,6 +146,7 @@ static object load(void)
   object o;
   if ((fp = fopen(core_fn, "r")) == NULL)
     xerror("load/open %s failed.", core_fn);
+  bq_level = 0;
   lex_start(fp);
   parse_skip();
   o = load_rec();
@@ -158,6 +177,9 @@ static void make_initial_objects(void)
   object_key = gc_new_symbol(":key");
   object_rest = gc_new_symbol(":rest");
   object_quote = gc_new_symbol("quote");
+  object_bq = gc_new_symbol("backquote");
+  object_comma = gc_new_symbol("unquote");
+  object_splice = gc_new_symbol("splice");
   object_toplevel = gc_new_env(object_nil);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
