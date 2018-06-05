@@ -31,10 +31,24 @@
     cdddar (lambda (x) (cdr (cddar x)))
     cddddr (lambda (x) (cdr (cdddr x))))
 
-(macro backquote (:rest body) 1)
-
 (macro function (name args :rest body)
   (list <- name (cons lambda (cons args body))))
+
+(macro let (args :rest body)
+  (if body
+    (list
+      (list lambda
+            (if args (cons :opt (map args (lambda (x) (car (->list x))))))
+            (cons begin
+                  (map args
+                       (lambda (x)
+                         (if (cons? x) (list <- (car x) (cadr x))))))
+            (cons begin body)))))
+
+(macro cond (:rest expr)
+  (if (nil? expr)
+    nil
+    (list if (caar expr) (cons begin (cdar expr)) (cons cond (cdr expr)))))
 
 (macro begin-if (test :rest body)
   (list if test (cons begin body)))
@@ -48,20 +62,14 @@
     (car expr)
     (list if (car expr) (cons and (cdr expr)))))
 
-; todo
-; (function nth (lis n)
-;   (if (<= n 0)
-;     (car lis)
-;     (nth (cdr lis) (-- n))))
-
 (function nil? (x)
   (same? x nil))
 
 (function not (x)
   (if x nil true))
 
-(function map (lis f)
-  (if lis (cons (f (car lis)) (map (cdr lis) f))))
+(function map (args f)
+  (if args (cons (f (car args)) (map (cdr args) f))))
 
 (function cons? (x)
   (not (atom? x)))
@@ -69,39 +77,20 @@
 (function list? (x)
   (or (nil? x) (cons? x)))
 
-`(1 2 ,3)
+(function ->list (x)
+  (if (list? x) x (list x)))
 
-; (let ((x y))
-; (macro let (args :rest body)
-;   (lambda (args
+(function reduce (args f :key (identity nil identity?))
+  (let ((rec (lambda (args)
+               (if (nil? (cdr args)) (car args)
+                 (rec (cons (f (car args) (cadr args)) (cddr args)))))))
+    (rec (if identity? (cons identity args) args))))
 
-; (function reduce (lis f :key (identity nil identity?))
-;   )
-; (reduce '(1 2 3) (lambda (x y) (cons x y)))
+; todo
+; (function nth (lis n)
+;   (if (<= n 0)
+;     (car lis)
+;     (nth (cdr lis) (-- n))))
 
-; (defun reduce (function sequence &key from-end (start 0)
-;                         end (initial-value nil ivp) key)
-;   "The specified Sequence is ``reduced'' using the given Function.
-;   See manual for details."
-;   (unless end (setq end (length sequence)))
-;   (if (= end start)
-;     (if ivp initial-value (funcall function))
-;     (seq-dispatch
-;      sequence
-;      (if from-end
-;        (list-reduce-from-end  function sequence start end initial-value ivp key)
-;        (list-reduce function sequence start end initial-value ivp key))
-;      (let* ((disp (if from-end -1 1))
-;             (index (if from-end (1- end) start))
-;             (terminus (if from-end (1- start) end))
-;             (value (if ivp initial-value
-;                        (let ((elt (aref sequence index)))
-;                          (setq index (+ index disp))
-;                          (if key (funcall key elt) elt))))
-;             (element nil))
-;        (do* ()
-;             ((= index terminus) value)
-;          (setq element (aref sequence index)
-;                index (+ index disp)
-;                element (if key (funcall key element) element)
-;                value (funcall function (if from-end element value) (if from-end value element))))))))
+; (<- $$backquote-depth 0)
+; (macro backquote (:rest body)
