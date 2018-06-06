@@ -34,17 +34,6 @@
 (macro function (name args :rest body)
   (list <- name (cons lambda (cons args body))))
 
-(macro let (args :rest body)
-  (if body
-    (list
-      (list lambda
-            (if args (cons :opt (map args (lambda (x) (car (->list x))))))
-            (cons begin
-                  (map args
-                       (lambda (x)
-                         (if (cons? x) (list <- (car x) (cadr x))))))
-            (cons begin body)))))
-
 (macro cond (:rest expr)
   (if (nil? expr)
     nil
@@ -54,8 +43,7 @@
   (list if test (cons begin body)))
 
 (macro or (:rest expr)
-  (begin-if expr
-    (list if (car expr) true (cons or (cdr expr)))))
+  (if expr (list if (car expr) true (cons or (cdr expr)))))
 
 (macro and (:rest expr)
   (if (nil? (cdr expr))

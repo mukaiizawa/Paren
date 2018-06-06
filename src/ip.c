@@ -310,6 +310,28 @@ static int valid_lambda_list_p(int lambda_type, object params)
 
 static object eval(object env, object o);
 
+SPECIAL(let)
+{
+  object e, o, k, v;
+  if (argc <= 1) ip_error("let; too few argument");
+  e = gc_new_env(env);
+  o = argv->cons.car;
+  while (o != object_nil) {
+    if (!typep(o, Cons)) ip_error("let: parameter must be list");
+    if (!valid_opt_p(o)) ip_error("let: illegal argument");
+    k = o->cons.car;
+    v = object_nil;
+    if (typep(k, Cons)) {
+      v = k->cons.cdr->cons.car;
+      k = k->cons.car;
+    }
+    xsplay_add(&e->env.binding, k, object_nil);    // important regist k before eval v to define recursion!
+    if (v != object_nil) xsplay_replace(&e->env.binding, k, eval(e, v));
+    o = o->cons.cdr;
+  }
+  return eval_sequential(e, argv->cons.cdr);
+}
+
 SPECIAL(assign)
 {
   object e, s, v;
