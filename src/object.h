@@ -8,12 +8,10 @@ typedef union s_expr *object;
 #define   Macro    0x0002
 #define   Lambda   0x0004
 #define   Cons     0x0008
-#define   Fbarray  0x0010
-#define   Farray   0x0020
-#define   Xint     0x0040
-#define   Xfloat   0x0080
-#define   Symbol   0x0100
-#define   Keyword  0x0200
+#define   Xint     0x0010
+#define   Xfloat   0x0020
+#define   Symbol   0x0040
+#define   Keyword  0x0080
 
 #define type(o) ((o)->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
@@ -34,16 +32,6 @@ union s_expr {
     int header;
     object car, cdr; 
   } cons;
-  struct fbarray {
-    int header;
-    int size;
-    char elt[1];
-  } fbarray;
-  struct farray {
-    int header;
-    int size;
-    object elt[1];
-  } farray;
   struct xint {
     int header;
     int64_t val; 

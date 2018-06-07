@@ -9,14 +9,13 @@
 #include "ip.h"
 
 static int sp;
-static object call_stack;
+static struct xarray call_stack;
 
 static struct xsplay special_splay;
 static struct xsplay prim_splay;
 
 void ip_mark(void)
 {
-  gc_mark(call_stack);
 }
 
 static void dump_call_stack(void);
@@ -41,7 +40,7 @@ static void dump_call_stack(void)
   printf("\n%s\n", "*** stack trace ***");
   for (i = sp; i > 0; i -= 2) {
     printf("at %s\n", object_describe(gc_new_cons(
-            call_stack->farray.elt[i - 2], call_stack->farray.elt[i - 1])
+            call_stack.elt[i - 2], call_stack.elt[i - 1])
           , buf));
   }
 }
@@ -52,14 +51,15 @@ static void push_call_stack(object o, object p)
     dump_call_stack();
     ip_error("stack over flow");
   }
-  call_stack->farray.elt[sp++] = o;
-  call_stack->farray.elt[sp++] = p;
+  xarray_add(&call_stack, o);
+  xarray_add(&call_stack, p);
+  sp += 2;
 }
 
 static void pop_call_stack(void)
 {
   xassert(sp >= 0);
-  sp -= 2;
+  xarray_resize(&call_stack, sp -= 2);
 }
 
 // evaluater
@@ -184,8 +184,6 @@ static object eval(object env, object expr)
   switch (type(expr)) {
     case Macro:
     case Lambda:
-    case Fbarray:
-    case Farray:
     case Xint:
     case Xfloat:
     case Keyword:
@@ -393,22 +391,12 @@ SPECIAL(quote)
   return argv->cons.car;
 }
 
-static int object_true_p(object o)
-{
-  switch (type(o)) {
-    case Fbarray: return o->fbarray.size != 0;
-    case Farray: return o->farray.size != 0;
-    case Symbol: return o != object_nil;
-    default: return TRUE;
-  }
-}
-
 SPECIAL(if)
 {
   object test;
   if (argc != 2 && argc != 3) ip_error("if: illegal arguments");
   test = eval(env, argv->cons.car);
-  if (object_true_p(test)) return eval(env, argv->cons.cdr->cons.car);
+  if (test != object_nil) return eval(env, argv->cons.cdr->cons.car);
   if (argc > 2) return eval(env, argv->cons.cdr->cons.cdr->cons.car);
   return object_nil;
 }
@@ -436,7 +424,7 @@ void ip_start(void)
   object o, p;
   init_builtin();
   sp = 0;
-  call_stack = gc_new_farray(CALL_STACK_SIZE);
+  xarray_init(&call_stack);
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
     p = eval(object_toplevel, o->cons.car);
     if (VERBOSE_P) printf("%s\n", object_describe(p, buf));

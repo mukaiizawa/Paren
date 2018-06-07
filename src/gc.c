@@ -49,9 +49,6 @@ static int byte_size(object o)
     case Env: return sizeof(struct env);
     case Macro: case Lambda: return sizeof(struct lambda);
     case Cons: return sizeof(struct cons);
-    case Fbarray: return sizeof(struct fbarray) + o->fbarray.size;
-    case Farray: return sizeof(struct farray)
-                 + (o->farray.size * sizeof(object));
     case Xint: return sizeof(struct xint);
     case Xfloat: return sizeof(struct xfloat);
     case Symbol: case Keyword: return sizeof(struct symbol);
@@ -145,27 +142,6 @@ object gc_new_cons(object car, object cdr)
   return o;
 }
 
-object gc_new_fbarray(int len)
-{
-  object o;
-  o = gc_alloc(sizeof(struct fbarray) + len - 1);
-  set_type(o, Fbarray);
-  o->fbarray.size = len;
-  regist(o);
-  return o;
-}
-
-object gc_new_farray(int len)
-{
-  object o;
-  o = gc_alloc(sizeof(struct farray) + (len - 1) * sizeof(object));
-  set_type(o, Farray);
-  while (len-- > 0) o->farray.elt[len] = object_nil;
-  o->farray.size = len;
-  regist(o);
-  return o;
-}
-
 object gc_new_symbol(char *name)
 {
   object o;
@@ -186,7 +162,6 @@ static void sweep_env(int depth, void *key, void *data)
 
 void gc_mark(object o)
 {
-  int i;
   if (alivep(o)) return;
   set_alive(o, TRUE);
   switch (type(o)) {
@@ -204,9 +179,6 @@ void gc_mark(object o)
       gc_mark(o->cons.car);
       gc_mark(o->cons.cdr);
       break;
-    case Farray:
-      for (i = 0; i < o->farray.size; i++) gc_mark(o->farray.elt[i]);
-      break;
     default: break;
   }
 }
@@ -223,12 +195,6 @@ static void gc_free(object o)
       o->cons.cdr = free_cons;
       free_cons = o;
       return;    // reuse.
-    case Fbarray:
-      xfree(o->fbarray.elt);
-      break;
-    case Farray:
-      xfree(o->farray.elt);
-      break;
     default: break;
   }
   gc_used_memory -= byte_size(o);

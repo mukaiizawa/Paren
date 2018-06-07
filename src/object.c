@@ -64,7 +64,6 @@ static void describe_cons(object o, struct xbarray *x)
 
 static void describe_s_expr(object o, struct xbarray *x)
 {
-  int i;
   if(x->size > MAX_STR_LEN) return;
   switch (type(o)) {
     case Macro:
@@ -83,15 +82,6 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_add(x, '(');
       describe_cons(o, x);
       xbarray_add(x, ')');
-      break;
-    case Fbarray:
-      xbarray_addf(x, "%s", o->fbarray.elt);
-      break;
-    case Farray:
-      xbarray_add(x, '[');
-      for (i = 0; i < o->farray.size; i++)
-        describe_s_expr(o->farray.elt[i], x);
-      xbarray_add(x, ']');
       break;
     case Xint:
       xbarray_addf(x, "%d", o->xint.val);
