@@ -94,7 +94,7 @@ static void next_operands(object *operands)
 
 static void bind_lambda_list(object env, object params, object operands)
 {
-  int rest_p;
+  int supply_p, rest_p;
   object o, k, v;
   struct xsplay s;
   rest_p = FALSE;
@@ -110,17 +110,24 @@ static void bind_lambda_list(object env, object params, object operands)
     params = params->cons.cdr;
     while (params != object_nil && !typep(params->cons.car, Keyword)) {
       o = params->cons.car;
+      supply_p = FALSE;
       if (!typep(o, Cons)) {
         k = o;
         v = object_nil;
       } else {
         k = o->cons.car;
-        v = o->cons.cdr->cons.car;
+        v = (o = o->cons.cdr)->cons.car;
+        if ((o = o->cons.cdr) != object_nil) {
+          supply_p = TRUE;
+          xsplay_add(&env->env.binding, o->cons.car, object_nil);
+        }
       }
       params = params->cons.cdr;
       if (operands != object_nil) {
         v = operands->cons.car;
         next_operands(&operands);
+        if (supply_p)
+          xsplay_replace(&env->env.binding, o->cons.car, object_true);
       }
       xsplay_add(&env->env.binding, k, v);
     }
@@ -231,22 +238,12 @@ static object eval(object env, object expr)
 
 // special forms
 
-// <lambda_list> ::= [<required_params>] [:opt <opt_params>] [:rest <param>] [:key <key_params>]
+// <lambda_list> ::= [<required_params>] [:opt <xparams>] [:rest <param>] [:key <xparams>]
 // <required_params> ::= <param> <param> ...
-// <opt_params> ::= <opt> <opt> ...
-// <opt> ::= { <param> | (<param> <initial_value>) }
-// <key_params> ::= <key> <key> ...
-// <key> ::= { <param> | (<param> <initial_value> [<givedp>]) }
+// <xparams> ::= <xparam> <xparam> ...
+// <xparam> ::= { <param> | (<param> <initial_value> [<supplyp>]) }
 
-static int valid_opt_p(object o)
-{
-  o = o->cons.car;
-  if (typep(o, Symbol)) return TRUE;
-  return typep(o, Cons) && typep(o->cons.car, Symbol)
-    && typep(o = o->cons.cdr, Cons) && o->cons.cdr == object_nil;
-}
-
-static int valid_key_p(object o)
+static int valid_xparam_p(object o)
 {
   o = o->cons.car;
   if (typep(o, Symbol)) return TRUE;
@@ -255,6 +252,21 @@ static int valid_key_p(object o)
     && (o->cons.cdr == object_nil
         || (typep(o = o->cons.cdr, Cons)
           && typep(o->cons.car, Symbol) && o->cons.cdr == object_nil));
+}
+
+static int parse_params(object *o)
+{
+  *o = (*o)->cons.cdr;
+  if (!valid_xparam_p(*o)) return FALSE;
+  *o = (*o)->cons.cdr;
+  while (TRUE) {
+    if (*o == object_nil) break;
+    if (!typep(*o, Cons)) return FALSE;
+    if (typep((*o)->cons.car, Keyword)) break;
+    if (!valid_xparam_p(*o)) return FALSE;
+    *o = (*o)->cons.cdr;
+  }
+  return TRUE;
 }
 
 static int valid_lambda_list_p(int lambda_type, object params)
@@ -273,36 +285,16 @@ static int valid_lambda_list_p(int lambda_type, object params)
     }
     else return FALSE;
   }
-  if (params->cons.car == object_opt) {
-    params = params->cons.cdr;
-    if (!valid_opt_p(params)) return FALSE;
-    params = params->cons.cdr;
-    while (TRUE) {
-      if (params == object_nil) break;
-      if (!typep(params, Cons)) return FALSE;
-      if (typep(params->cons.car, Keyword)) break;
-      if (!valid_opt_p(params)) return FALSE;
-      params = params->cons.cdr;
-    }
-  }
+  if (params->cons.car == object_opt)
+    if (!parse_params(&params)) return FALSE;
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
     if (typep(params, Cons) && typep(params->cons.car, Symbol))
       params = params->cons.cdr;
     else return FALSE;
   }
-  if (params->cons.car == object_key) {
-    params = params->cons.cdr;
-    if (!valid_key_p(params)) return FALSE;
-    params = params->cons.cdr;
-    while (TRUE) {
-      if (params == object_nil) break;
-      if (!typep(params, Cons)) return FALSE;
-      if (typep(params->cons.car, Keyword)) break;
-      if (!valid_key_p(params)) return FALSE;
-      params = params->cons.cdr;
-    }
-  }
+  if (params->cons.car == object_key)
+    if (!parse_params(&params)) return FALSE;
   return params == object_nil;
 }
 
@@ -316,7 +308,7 @@ SPECIAL(let)
   o = argv->cons.car;
   while (o != object_nil) {
     if (!typep(o, Cons)) ip_error("let: parameter must be list");
-    if (!valid_opt_p(o)) ip_error("let: illegal argument");
+    if (!valid_xparam_p(o)) ip_error("let: illegal argument");
     k = o->cons.car;
     v = object_nil;
     if (typep(k, Cons)) {
@@ -342,6 +334,7 @@ SPECIAL(assign)
     v = argv->cons.car;
     argv = argv->cons.cdr;
     if (!typep(s, Symbol)) ip_error("<-: cannot bind except symbol");
+    if (s == object_nil)ip_error("<-: cannot bind nil");
     v = eval(e, v);
     while (TRUE) {
       if (e == object_nil) {
