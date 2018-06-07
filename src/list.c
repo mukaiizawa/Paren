@@ -6,23 +6,6 @@
 #include "gc.h"
 #include "bi.h"
 
-PRIM(samep)
-{
-  object o, p;
-  if (argc != 2) return FALSE;
-  o = object_nth(argv, 0);
-  p = object_nth(argv, 1);
-  *result = object_bool(o == p);
-  return TRUE;
-}
-
-PRIM(atomp)
-{
-  if (argc != 1) return FALSE;
-  *result = object_bool(!typep(argv->cons.car, Cons));
-  return TRUE;
-}
-
 PRIM(cons)
 {
   object o, p;

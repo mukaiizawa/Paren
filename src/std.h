@@ -12,9 +12,6 @@
 #define TRUE 1
 #define FALSE 0
 
-#define XINT_MAX 0x3fffffff
-#define XINT_MIN (- XINT_MAX - 1)
-
 #define MAX_STR_LEN 256
 
 extern void xvsprintf(char *buf, char *fmt, va_list va);

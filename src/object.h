@@ -13,6 +13,9 @@ typedef union s_expr *object;
 #define   Symbol   0x0040
 #define   Keyword  0x0080
 
+#define XINT_MAX 0x3fffffff
+#define XINT_MIN (- XINT_MAX - 1)
+
 #define type(o) ((o)->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
 #define listp(o) (o == object_nil || typep(o, Cons))

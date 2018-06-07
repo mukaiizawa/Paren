@@ -37,7 +37,7 @@ special=ip.c
 special.wk: $(special)
 	cat $+ | grep ^SPECIAL>$@
 
-prim=xint.c list.c
+prim=bb.c number.c list.c
 prim.wk: $(prim)
 	cat $+ | grep ^PRIM>$@
 

@@ -1,6 +1,6 @@
 ; paren core library.
 
-;; list
+; list
 (<- list (lambda (:rest args) args)
     caar (lambda (x) (car (car x)))
     cadr (lambda (x) (car (cdr x)))
@@ -74,11 +74,26 @@
                  (rec (cons (f (car args) (cadr args)) (cddr args)))))))
     (rec (if identity? (cons identity args) args))))
 
-; todo
-; (function nth (lis n)
-;   (if (<= n 0)
-;     (car lis)
-;     (nth (cdr lis) (-- n))))
+; number
+(function + (:rest args)
+  (reduce args number_add :identity 0))
+
+(function * (:rest args)
+  (reduce args number_multiply :identity 1))
+
+(function negated (x)
+  (* x -1))
+
+(function - (:rest args)
+  (reduce (map (cdr args) negated) number_add :identity (car args)))
+
+(function = (:rest args)
+  (if (nil? (cdr args))
+    nil
+    (let ((rec (lambda (args)
+                 (cond ((nil? (cdr args)) (car args))
+                       ((number_eq (car args) (cadr args)) (rec (cdr args)))
+                       (true nil)))))
+      (rec args))))
 
 ; (<- $$backquote-depth 0)
-; (macro backquote (:rest body)
