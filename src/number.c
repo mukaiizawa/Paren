@@ -70,7 +70,7 @@ PRIM(number_eq)
   return TRUE;
 }
 
-PRIM(xint_lt)
+PRIM(number_lt)
 {
   object x, y;
   PARSE_ARGS(x, y);

@@ -51,3 +51,13 @@ PRIM(atomp)
   *result = object_bool(!typep(argv->cons.car, Cons));
   return TRUE;
 }
+
+// should be removed.
+PRIM(print)
+{
+  char buf[MAX_STR_LEN];
+  if (argc != 1) return FALSE;
+  *result = argv->cons.car;
+  printf("%s\n", object_describe(*result, buf));
+  return TRUE;
+}

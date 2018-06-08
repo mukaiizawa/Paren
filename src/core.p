@@ -96,6 +96,8 @@
   (or (nil? x) (cons? x)))
 
 ; list processor
+(function identity (x) x)
+
 (function ->list (x)
   (if (list? x) x (list x)))
 
@@ -112,6 +114,20 @@
                (if (nil? (cdr args)) (car args)
                  (rec (cons (f (car args) (cadr args)) (cddr args)))))))
     (rec (if identity? (cons identity args) args))))
+
+(function find (lis e :key (test same?) (key identity))
+  (if (nil? lis)
+    nil
+    (if (test (key (car lis)) e)
+      (car lis)
+      (find (cdr lis) e :test test :key key))))
+
+(function find-if (lis f :key (key identity))
+  (if (nil? lis)
+    nil
+    (if (f (key (car lis)))
+      (car lis)
+      (find-if (cdr lis) f :key key))))
 
 ;; associative list
 (function {} (alis key :key (test same?))
@@ -171,4 +187,27 @@
                        (:default nil)))))
       (rec args))))
 
+(function < (x y)
+  (number_lt x y))
+
+(function > (x y)
+  (< y x))
+
+(function <= (x y)
+  (not (< y x)))
+
+(function >= (x y)
+  (not (< x y)))
+
 ; (<- $$backquote-depth 0)
+
+; should be implemente
+; (<- q '(r s))
+; ``(q ,q ,,q ,@q ,,'q ,',q ',,q ,@,q ,,@q ,@,@q)
+;
+; (CONS 'Q
+;       (CONS Q
+;             (CONS (R S)
+;                   (APPEND Q
+;                           (CONS Q
+;                                 (CONS '(R S) (CONS (LIST 'QUOTE (R S)) (APPEND (R S) (LIST* R S (APPEND R S))))))))))

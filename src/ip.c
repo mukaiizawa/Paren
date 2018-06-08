@@ -116,7 +116,7 @@ static void bind_lambda_list(object env, object params, object operands)
         v = object_nil;
       } else {
         k = o->cons.car;
-        v = (o = o->cons.cdr)->cons.car;
+        v = eval(env, (o = o->cons.cdr)->cons.car);
         if ((o = o->cons.cdr) != object_nil) {
           supply_p = TRUE;
           xsplay_add(&env->env.binding, o->cons.car, object_nil);
@@ -148,7 +148,7 @@ static void bind_lambda_list(object env, object params, object operands)
         v = object_nil;
       } else {
         k = o->cons.car;
-        v = (o = o->cons.cdr)->cons.car;
+        v = eval(env, (o = o->cons.cdr)->cons.car);
         if ((o = o->cons.cdr) != object_nil) {
           xsplay_add(&s, k, o->cons.car);
           xsplay_add(&env->env.binding, o->cons.car, object_nil);
