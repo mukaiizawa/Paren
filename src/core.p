@@ -172,8 +172,7 @@
 (function -- (x)
   (number_add x -1))
 
-(function * (:rest args)
-  (reduce args number_multiply :identity 1))
+(function * (:rest args) (reduce args number_multiply :identity 1))
 
 (function negated (x)
   (* x -1))
@@ -199,9 +198,19 @@
 (function >= (x y)
   (not (< x y)))
 
+; test
+(function hanoi (n)
+  (let ((move (lambda (n a b)
+                (if (> n 1) (move (-- n) a (- 6 a b)))
+                (print (list 'move n 'from a 'to b))
+                (if (> n 1) (move (-- n) (- 6 a b) b)))))
+    (move n 1 2)))
+
+(hanoi 3)
+
 ; (<- $$backquote-depth 0)
 
-; should be implemente
+; should be implement
 ; (<- q '(r s))
 ; ``(q ,q ,,q ,@q ,,'q ,',q ',,q ,@,q ,,@q ,@,@q)
 ;
