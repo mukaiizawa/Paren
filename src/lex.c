@@ -88,8 +88,8 @@ static int digit_val(int ch, int radix)
 static int identifier_lead_char_p(void)
 {
   switch (next_ch) {
-    case '!': case '$': case '%': case '&': case '*': case '+': case '/':
-    case '-': case ':': case '<': case '=': case '>': case '?': case '_':
+    case '$': case '%': case '&': case '*': case '+': case '/': case '-':
+    case ':': case '<': case '=': case '>': case '?': case '_':
     case '{': case '}': case '[': case ']':
       return TRUE;
     default: return isalpha(next_ch);
@@ -147,7 +147,7 @@ int lex(void)
     return lex();
   }
   if (next_ch == EOF || next_ch == '(' || next_ch == ')' || next_ch == '.'
-      || next_ch == '\'' || next_ch == '`' || next_ch == ',')
+      || next_ch == '\'' || next_ch == '`' || next_ch == ',' || next_ch == '!')
     return skip();
   if (next_ch == '+' || next_ch == '-') {
     if (next_ch == '+') sign = 1;

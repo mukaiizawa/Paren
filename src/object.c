@@ -17,6 +17,7 @@ object object_quote;
 object object_bq;
 object object_comma;
 object object_splice;
+object object_not;
 
 int symcmp(object o, object p)
 {

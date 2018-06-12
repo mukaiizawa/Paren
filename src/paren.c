@@ -106,8 +106,11 @@ static object parse_atom(void)
 static object parse_s_expr(void)
 {
   object o, result;
-  if (next_token == '\'' || next_token == '`' || next_token == ',') {
-    if (next_token == '\'') o = object_quote;
+  if (next_token == '\'' || next_token == '`' || next_token == ','
+      || next_token == '!')
+  {
+    if (next_token == '!') o = object_not;
+    else if (next_token == '\'') o = object_quote;
     else if (next_token == '`') o = object_bq;
     else o = object_comma;
     parse_skip();
@@ -115,7 +118,7 @@ static object parse_s_expr(void)
       o = object_splice;
       parse_skip();
     }
-    if (o != object_quote) {
+    if (o == object_bq || o == object_comma || o == object_splice) {
       if (o == object_bq) bq_level++;
       else if (--bq_level < 0) lex_error("comma not inside backquote");
     }
@@ -180,6 +183,7 @@ static void make_initial_objects(void)
   object_bq = gc_new_symbol("backquote");
   object_comma = gc_new_symbol("unquote");
   object_splice = gc_new_symbol("splice");
+  object_not = gc_new_symbol("not");
   object_toplevel = gc_new_env(object_nil);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);

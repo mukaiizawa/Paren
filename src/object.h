@@ -63,6 +63,7 @@ extern object object_quote;
 extern object object_bq;
 extern object object_comma;
 extern object object_splice;
+extern object object_not;
 
 extern char *object_describe(object o, char *buf);
 extern int object_length(object o);

@@ -90,7 +90,7 @@
   (same? (type x) k))
 
 (function cons? (x)
-  (not (atom? x)))
+  !(atom? x))
 
 (function list? (x)
   (or (nil? x) (cons? x)))
@@ -172,7 +172,8 @@
 (function -- (x)
   (number_add x -1))
 
-(function * (:rest args) (reduce args number_multiply :identity 1))
+(function * (:rest args)
+  (reduce args number_multiply :identity 1))
 
 (function negated (x)
   (* x -1))
@@ -193,10 +194,10 @@
   (< y x))
 
 (function <= (x y)
-  (not (< y x)))
+  !(< y x))
 
 (function >= (x y)
-  (not (< x y)))
+  !(< x y))
 
 ; test
 (function hanoi (n)
