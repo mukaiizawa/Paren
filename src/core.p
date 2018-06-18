@@ -158,23 +158,23 @@
       (find-if (cdr lis) f :key key))))
 
 ;; associative list
-(function {} (alis key :key (test same?))
+(function get (alis key :key (test same?))
   (if (nil? alis)
     nil
     (let ((first (car alis))
           (rest (cdr alis)))
       (if (test key (car first))
         (cdr first)
-        ({} (cdr alis) key :test test)))))
+        (get (cdr alis) key :test test)))))
 
-(function <-{} (alis key val :key (test same?))
+(function put (alis key val :key (test same?))
   (if (nil? alis)
     nil
     (let ((first (car alis))
           (rest (cdr alis)))
       (if (test key (car first))
         (<-cdr first val)
-        (<-{} (cdr alis) key val :test test)))))
+        (put (cdr alis) key val :test test)))))
 
 (function has-key? (alis key :key (test same?))
   (and alis
@@ -182,10 +182,10 @@
            (has-key? (cdr alis) key :test test))))
 
 ; numeric
-(macro <-+ (x y)
+(macro inc (x :opt (y 1))
   (list <- x (list + x y)))
 
-(macro <-- (x y)
+(macro dec (x :opt (y 1))
   (list <- x (list - x y)))
 
 (function + (:rest args)
