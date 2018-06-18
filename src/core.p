@@ -98,6 +98,34 @@
 ; list processor
 (function identity (x) x)
 
+(function last-cons (lis)
+  (if (nil? lis)
+    nil
+    (let ((rec (lambda (lis) (if (cdr lis) (rec (cdr lis)) lis))))
+      (rec lis))))
+
+(function last (lis)
+  (car (last-cons lis)))
+
+(function nth (lis n)
+  (cond ((nil? lis) nil)
+        ((= n 0) (car lis))
+        (:default (rec (cdr lis) (-- n)))))
+
+(function len (lis)
+  (let ((rec (lambda (lis n)
+               (if (nil? lis) n (rec (cdr lis) (++ n))))))
+    (rec lis 0)))
+
+(macro add (lis x)
+  (list <-cdr (list last-cons lis) (list cons x nil)))
+
+(macro push (lis x)
+  (list <- lis (list cons x lis)))
+
+(macro pop (lis)
+  (list <- lis (list cdr lis)))
+
 (function ->list (x)
   (if (list? x) x (list x)))
 
@@ -198,16 +226,6 @@
 
 (function >= (x y)
   !(< x y))
-
-; test
-(function hanoi (n)
-  (let ((move (lambda (n a b)
-                (if (> n 1) (move (-- n) a (- 6 a b)))
-                (print (list 'move n 'from a 'to b))
-                (if (> n 1) (move (-- n) (- 6 a b) b)))))
-    (move n 1 2)))
-
-(hanoi 3)
 
 ; (<- $$backquote-depth 0)
 
