@@ -37,11 +37,47 @@ PRIM(type)
 
 PRIM(samep)
 {
+  int b;
   object o, p;
-  if (argc != 2) return FALSE;
-  o = object_nth(argv, 0);
-  p = object_nth(argv, 1);
-  *result = object_bool(o == p);
+  if (argc < 2) return FALSE;
+  while (argv->cons.cdr != object_nil) {
+    o = argv->cons.car;
+    p = (argv = argv->cons.cdr)->cons.car;
+    if (!(b = o == p)) break;
+  }
+  *result = object_bool(b);
+  return TRUE;
+}
+
+PRIM(equalp)
+{
+  int b;
+  object o, p;
+  if (argc < 2) return FALSE;
+  while (argv->cons.cdr != object_nil) {
+    o = argv->cons.car;
+    p = (argv = argv->cons.cdr)->cons.car;
+    if ((b = type(o) == type(p))) {
+      switch (type(o)) {
+        case Macro:
+        case Lambda:
+        case Cons:
+        case Symbol:
+        case Keyword:
+          b = o == p;
+          break;
+        case Xint:
+          b = o->xint.val == p->xint.val;
+          break;
+        case Xfloat:
+          b = o->xfloat.val == p->xfloat.val;
+          break;
+        default: return FALSE;
+      }
+    }
+    if (!b) break;
+  }
+  *result = object_bool(b);
   return TRUE;
 }
 

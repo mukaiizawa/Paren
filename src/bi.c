@@ -20,6 +20,7 @@
 static char *symbol_name_map[] = {
   "assign", "<-",
   "samep", "same?",
+  "equalp", "=",
   "atomp", "atom?",
   NULL
 };

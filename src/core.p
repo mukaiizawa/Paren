@@ -115,7 +115,7 @@
                  (rec (cons (f (car args) (cadr args)) (cddr args)))))))
     (rec (if identity? (cons identity args) args))))
 
-(function find (lis e :key (test same?) (key identity))
+(function find (lis e :key (test =) (key identity))
   (if (nil? lis)
     nil
     (if (test (key (car lis)) e)
@@ -130,7 +130,7 @@
       (find-if (cdr lis) f :key key))))
 
 ;; associative list
-(function get (alis key :key (test same?))
+(function get (alis key :key (test =))
   (if (nil? alis)
     nil
     (let ((first (car alis))
@@ -139,7 +139,7 @@
         (cdr first)
         (get (cdr alis) key :test test)))))
 
-(function put (alis key val :key (test same?))
+(function put (alis key val :key (test =))
   (if (nil? alis)
     nil
     (let ((first (car alis))
@@ -148,7 +148,7 @@
         (cdr first val)
         (put (cdr alis) key val :test test)))))
 
-(function has-key? (alis key :key (test same?))
+(function has-key? (alis key :key (test =))
   (and alis
        (or (test key (car (car alis)))
            (has-key? (cdr alis) key :test test))))
@@ -177,15 +177,6 @@
 
 (function negated (x)
   (* x -1))
-
-(function = (:rest args)
-  (if (nil? (cdr args))
-    nil
-    (let ((rec (lambda (args)
-                 (cond ((nil? (cdr args)) (car args))
-                       ((number_eq (car args) (cadr args)) (rec (cdr args)))
-                       (:default nil)))))
-      (rec args))))
 
 (function < (x y)
   (number_lt x y))
