@@ -67,6 +67,18 @@
 (function list? (x)
   (or (nil? x) (cons? x)))
 
+(function all-satisfy? (lis f)
+  (if (nil? lis)
+    true
+    (and (f (car lis)) (all-satisfy? (cdr lis) f))))
+
+(function any-satisfy? (lis f)
+  (if lis (or (f (car lis)) (any-satisfy? (cdr lis) f))))
+
+(function all-satisfy-binary-function? (lis f)
+  (if (nil? (cdr lis)) true
+    (and (f (car lis) (cadr lis)) (all-satisfy-binary-function? (cdr lis) f))))
+
 ; list processor
 (function identity (x) x)
 
@@ -173,25 +185,13 @@
   (* x -1))
 
 (function > (:rest args)
-  (let ((rec (lambda (args)
-               (if (nil? (cdr args))
-                 true
-                 (and (< (cadr args) (car args)) (rec (cdr args)))))))
-    (rec args)))
+  (all-satisfy-binary-function? args (lambda (x y) (< y x))))
 
 (function <= (:rest args)
-  (let ((rec (lambda (args)
-               (if (nil? (cdr args))
-                 true
-                 (and !(< (cadr args) (car args)) (rec (cdr args)))))))
-    (rec args)))
+  (all-satisfy-binary-function? args (lambda (x y) !(< y x))))
 
 (function >= (:rest args)
-  (let ((rec (lambda (args)
-               (if (nil? (cdr args))
-                 true
-                 (and !(< (car args) (cadr args)) (rec (cdr args)))))))
-    (rec args)))
+  (all-satisfy-binary-function? args (lambda (x y) !(< x y))))
 
 ; (<- $$backquote-depth 0)
 
