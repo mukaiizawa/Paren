@@ -75,9 +75,9 @@
 (function any-satisfy? (lis f)
   (if lis (or (f (car lis)) (any-satisfy? (cdr lis) f))))
 
-(function all-satisfy-binary-function? (lis f)
+(function each-satisfy? (lis f)
   (if (nil? (cdr lis)) true
-    (and (f (car lis) (cadr lis)) (all-satisfy-binary-function? (cdr lis) f))))
+    (and (f (car lis) (cadr lis)) (each-satisfy? (cdr lis) f))))
 
 ; list processor
 (function identity (x) x)
@@ -185,13 +185,13 @@
   (* x -1))
 
 (function > (:rest args)
-  (all-satisfy-binary-function? args (lambda (x y) (< y x))))
+  (each-satisfy? args (lambda (x y) (< y x))))
 
 (function <= (:rest args)
-  (all-satisfy-binary-function? args (lambda (x y) !(< y x))))
+  (each-satisfy? args (lambda (x y) !(< y x))))
 
 (function >= (:rest args)
-  (all-satisfy-binary-function? args (lambda (x y) !(< x y))))
+  (each-satisfy? args (lambda (x y) !(< x y))))
 
 ; (<- $$backquote-depth 0)
 
