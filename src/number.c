@@ -6,10 +6,9 @@
 #include "gc.h"
 #include "bi.h"
 
-#define PARSE_ARGS(x, y) { \
-  if (argc != 2) return FALSE; \
+#define FETCH_NUMBER(x) { \
   if (!numberp(x = argv->cons.car)) return FALSE; \
-  if (!numberp(y = argv->cons.cdr->cons.car)) return FALSE; \
+  argv = argv->cons.cdr; \
 }
 
 static int numberp(object o)
@@ -43,37 +42,46 @@ static object new_xint(int64_t val)
 PRIM(number_add)
 {
   object x, y;
-  PARSE_ARGS(x, y);
-  if (typep(x, Xint) && typep(y, Xint))
-    *result = new_xint(x->xint.val + y->xint.val);
-  else
-    *result = new_xfloat(double_val(x) + double_val(y));
+  x = object_sint[0];
+  while (argv != object_nil) {
+    FETCH_NUMBER(y);
+    if (typep(x, Xint) && typep(y, Xint))
+      x = new_xint(x->xint.val + y->xint.val);
+    else
+      x = new_xfloat(double_val(x) + double_val(y));
+  }
+  *result = x;
   return TRUE;
 }
 
 PRIM(number_multiply)
 {
   object x, y;
-  PARSE_ARGS(x, y);
-  if (typep(x, Xint) && typep(y, Xint))
-    *result = new_xint(x->xint.val * y->xint.val);
-  else
-    *result = new_xfloat(double_val(x) * double_val(y));
-  return TRUE;
-}
-
-PRIM(number_eq)
-{
-  object x, y;
-  PARSE_ARGS(x, y);
-  *result = object_bool(double_val(x) == double_val(y));
+  x = object_sint[1];
+  while (argv != object_nil) {
+    FETCH_NUMBER(y);
+    if (typep(x, Xint) && typep(y, Xint))
+      x = new_xint(x->xint.val * y->xint.val);
+    else
+      x = new_xfloat(double_val(x) * double_val(y));
+  }
+  *result = x;
   return TRUE;
 }
 
 PRIM(number_lt)
 {
   object x, y;
-  PARSE_ARGS(x, y);
-  *result = object_bool(double_val(x) < double_val(y));
+  if (argc < 2) return FALSE;
+  FETCH_NUMBER(x);
+  while (argv != object_nil) {
+    FETCH_NUMBER(y);
+    if (double_val(x) >= double_val(y)) {
+      *result = object_nil;
+      return TRUE;
+    }
+    x = y;
+  }
+  *result = object_true;
   return TRUE;
 }

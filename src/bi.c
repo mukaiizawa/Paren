@@ -22,6 +22,9 @@ static char *symbol_name_map[] = {
   "samep", "same?",
   "equalp", "=",
   "atomp", "atom?",
+  "number_add", "+",
+  "number_multiply", "*",
+  "number_lt", "<",
   NULL
 };
 

@@ -174,6 +174,7 @@ static void bind_special(void)
 
 static void make_initial_objects(void)
 {
+  int i;
   object_nil = gc_new_symbol("nil");
   object_true = gc_new_symbol("true");
   object_opt = gc_new_symbol(":opt");
@@ -185,6 +186,7 @@ static void make_initial_objects(void)
   object_splice = gc_new_symbol("splice");
   object_not = gc_new_symbol("not");
   object_toplevel = gc_new_env(object_nil);
+  for (i = 0; i < 256; i++) object_sint[i] = gc_new_sint(i);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
   bind_special();

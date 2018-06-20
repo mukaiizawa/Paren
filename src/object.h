@@ -15,6 +15,7 @@ typedef union s_expr *object;
 
 #define XINT_MAX 0x3fffffff
 #define XINT_MIN (- XINT_MAX - 1)
+#define SINT_MAX 255
 
 #define type(o) ((o)->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
@@ -64,6 +65,7 @@ extern object object_bq;
 extern object object_comma;
 extern object object_splice;
 extern object object_not;
+extern object object_sint[SINT_MAX];
 
 extern char *object_describe(object o, char *buf);
 extern int object_length(object o);

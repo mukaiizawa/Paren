@@ -11,23 +11,23 @@ PRIM(type)
   if (argc != 1) return FALSE;
   switch (type(argv->cons.car)) {
     case Macro:
-      *result = gc_new_symbol(":Macro");
+      *result = gc_new_symbol(":macro");
       break;
     case Lambda:
-      *result = gc_new_symbol(":Lambda");
+      *result = gc_new_symbol(":lambda");
       break;
     case Cons:
-      *result = gc_new_symbol(":Cons");
+      *result = gc_new_symbol(":cons");
       break;
     case Xint:
     case Xfloat:
-      *result = gc_new_symbol(":Number");
+      *result = gc_new_symbol(":number");
       break;
     case Symbol:
-      *result = gc_new_symbol(":Symbol");
+      *result = gc_new_symbol(":symbol");
       break;
     case Keyword:
-      *result = gc_new_symbol(":Keyword");
+      *result = gc_new_symbol(":keyword");
       break;
     default:
       return FALSE;
@@ -38,12 +38,11 @@ PRIM(type)
 PRIM(samep)
 {
   int b;
-  object o, p;
+  object o;
   if (argc < 2) return FALSE;
-  while (argv->cons.cdr != object_nil) {
-    o = argv->cons.car;
-    p = (argv = argv->cons.cdr)->cons.car;
-    if (!(b = o == p)) break;
+  o = argv->cons.car;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (!(b = o == argv->cons.car)) break;
   }
   *result = object_bool(b);
   return TRUE;
@@ -54,9 +53,10 @@ PRIM(equalp)
   int b;
   object o, p;
   if (argc < 2) return FALSE;
-  while (argv->cons.cdr != object_nil) {
-    o = argv->cons.car;
-    p = (argv = argv->cons.cdr)->cons.car;
+  o = argv->cons.car;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    p = argv->cons.car;
+    if ((b = o == p)) continue;
     if ((b = type(o) == type(p))) {
       switch (type(o)) {
         case Macro:

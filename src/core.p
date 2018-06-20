@@ -160,35 +160,38 @@
 (macro dec (x :opt (y 1))
   (list <- x (list - x y)))
 
-(function + (:rest args)
-  (reduce args number_add :identity 0))
-
 (function ++ (x)
-  (number_add x 1))
+  (+ x 1))
 
 (function - (:rest args)
-  (reduce (map (cdr args) negated) number_add :identity (car args)))
+  (reduce (map (cdr args) negated) + :identity (car args)))
 
 (function -- (x)
-  (number_add x -1))
-
-(function * (:rest args)
-  (reduce args number_multiply :identity 1))
+  (+ x -1))
 
 (function negated (x)
   (* x -1))
 
-(function < (x y)
-  (number_lt x y))
+(function > (:rest args)
+  (let ((rec (lambda (args)
+               (if (nil? (cdr args))
+                 true
+                 (and (< (cadr args) (car args)) (rec (cdr args)))))))
+    (rec args)))
 
-(function > (x y)
-  (< y x))
+(function <= (:rest args)
+  (let ((rec (lambda (args)
+               (if (nil? (cdr args))
+                 true
+                 (and !(< (cadr args) (car args)) (rec (cdr args)))))))
+    (rec args)))
 
-(function <= (x y)
-  !(< y x))
-
-(function >= (x y)
-  !(< x y))
+(function >= (:rest args)
+  (let ((rec (lambda (args)
+               (if (nil? (cdr args))
+                 true
+                 (and !(< (car args) (cadr args)) (rec (cdr args)))))))
+    (rec args)))
 
 ; (<- $$backquote-depth 0)
 
