@@ -75,9 +75,9 @@
 (function any-satisfy? (lis f)
   (if lis (or (f (car lis)) (any-satisfy? (cdr lis) f))))
 
-(function each-satisfy? (lis f)
+(function each-pair-satisfy? (lis f)
   (if (nil? (cdr lis)) true
-    (and (f (car lis) (cadr lis)) (each-satisfy? (cdr lis) f))))
+    (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
 
 ; list processor
 (function identity (x) x)
@@ -91,10 +91,13 @@
 (function last (lis)
   (car (last-cons lis)))
 
-(function nth (lis n)
+(function nthcdr (lis n)
   (cond ((nil? lis) nil)
-        ((= n 0) (car lis))
-        (:default (rec (cdr lis) (-- n)))))
+        ((<= n 0) lis)
+        (:default (nthcdr (cdr lis) (-- n)))))
+
+(function nth (lis n)
+  (car (nthcdr lis n)))
 
 (function len (lis)
   (let ((rec (lambda (lis n)
@@ -185,13 +188,16 @@
   (* x -1))
 
 (function > (:rest args)
-  (each-satisfy? args (lambda (x y) (< y x))))
+  (each-pair-satisfy? args (lambda (x y) (< y x))))
 
 (function <= (:rest args)
-  (each-satisfy? args (lambda (x y) !(< y x))))
+  (each-pair-satisfy? args (lambda (x y) !(< y x))))
 
 (function >= (:rest args)
-  (each-satisfy? args (lambda (x y) !(< x y))))
+  (each-pair-satisfy? args (lambda (x y) !(< x y))))
+
+(nth '(1 2 3) 1)
+(nthcdr '(1 2 3) 1)
 
 ; (<- $$backquote-depth 0)
 
