@@ -20,6 +20,16 @@ void ip_mark(void)
 
 static void dump_call_stack(void);
 
+static object symbol_find(object e, object o)
+{
+  object result;
+  while (e != object_nil) {
+    if ((result = xsplay_find(&e->env.binding, o)) != NULL) break;
+    e = e->env.top;
+  }
+  return result;
+}
+
 static void ip_error(char *fmt, ...)
 {
   char buf[MAX_STR_LEN];
@@ -187,7 +197,7 @@ static object eval(object env, object expr)
   int argc;
   object (*special)(object, int, object);
   object (*prim)(int, object, object *);
-  object e, operator, operands, result;
+  object operator, operands, result;
   switch (type(expr)) {
     case Macro:
     case Lambda:
@@ -197,12 +207,8 @@ static object eval(object env, object expr)
       result = expr;
       break;
     case Symbol:
-      e = env;
-      while (e != object_nil) {
-        if ((result = xsplay_find(&e->env.binding, expr)) != NULL) break;
-        e = e->env.top;
-      }
-      if (result == NULL) ip_error("unbind symbol '%s'", expr->symbol.name);
+      if ((result = symbol_find(env, expr)) == NULL)
+        ip_error("unbind symbol '%s'", expr->symbol.name);
       break;
     case Cons:
       operator = eval(env, expr->cons.car);
@@ -302,8 +308,8 @@ static object eval(object env, object o);
 
 SPECIAL(let)
 {
-  object e, o, k, v;
-  if (argc <= 1) ip_error("let; too few argument");
+  object e, o, p, k, v;
+  if (argc <= 1) ip_error("let: too few argument");
   e = gc_new_env(env);
   o = argv->cons.car;
   while (o != object_nil) {
@@ -315,7 +321,9 @@ SPECIAL(let)
       v = k->cons.cdr->cons.car;
       k = k->cons.car;
     }
-    xsplay_add(&e->env.binding, k, object_nil);    // important regist k before eval v to define recursion!
+    p = symbol_find(e, k);
+    if (p == NULL) p = object_nil;
+    xsplay_add(&e->env.binding, k, p);    // important regist k before eval v to define recursion!
     if (v != object_nil) xsplay_replace(&e->env.binding, k, eval(e, v));
     o = o->cons.cdr;
   }

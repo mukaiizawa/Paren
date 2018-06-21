@@ -36,19 +36,17 @@
   (list <- name (cons lambda (cons args body))))
 
 (macro cond (:rest expr)
-  (if (nil? expr)
-    nil
+  (if (nil? expr) nil
     (list if (caar expr) (cons begin (cdar expr)) (cons cond (cdr expr)))))
 
 (macro begin-if (test :rest body)
   (list if test (cons begin body)))
 
 (macro or (:rest expr)
-  (if expr (list if (car expr) true (cons or (cdr expr)))))
+  (if expr (list if (car expr) (car expr) (cons or (cdr expr)))))
 
 (macro and (:rest expr)
-  (if (nil? (cdr expr))
-    (car expr)
+  (if (nil? (cdr expr)) (car expr)
     (list if (car expr) (cons and (cdr expr)))))
 
 ; basic predicate
@@ -68,8 +66,7 @@
   (or (nil? x) (cons? x)))
 
 (function all-satisfy? (lis f)
-  (if (nil? lis)
-    true
+  (if (nil? lis) true
     (and (f (car lis)) (all-satisfy? (cdr lis) f))))
 
 (function any-satisfy? (lis f)
@@ -82,9 +79,17 @@
 ; list processor
 (function identity (x) x)
 
+(function sublist (lis s :opt e)
+  (let ((len (length lis))
+        (e (or e len))
+        (rec (lambda (lis n)
+               (if (= n 0) nil
+                 (cons (car lis) (rec (cdr lis) (-- n)))))))
+    (if (or (> s e) (< s 0) (> e len)) :error)
+    (rec (nthcdr lis s) (- e s))))
+
 (function last-cons (lis)
-  (if (nil? lis)
-    nil
+  (if (nil? lis) nil
     (let ((rec (lambda (lis) (if (cdr lis) (rec (cdr lis)) lis))))
       (rec lis))))
 
@@ -99,7 +104,7 @@
 (function nth (lis n)
   (car (nthcdr lis n)))
 
-(function len (lis)
+(function length (lis)
   (let ((rec (lambda (lis n)
                (if (nil? lis) n (rec (cdr lis) (++ n))))))
     (rec lis 0)))
@@ -131,36 +136,28 @@
     (rec (if identity? (cons identity args) args))))
 
 (function find (lis e :key (test =) (key identity))
-  (if (nil? lis)
-    nil
-    (if (test (key (car lis)) e)
-      (car lis)
+  (if (nil? lis) nil
+    (if (test (key (car lis)) e) (car lis)
       (find (cdr lis) e :test test :key key))))
 
 (function find-if (lis f :key (key identity))
-  (if (nil? lis)
-    nil
-    (if (f (key (car lis)))
-      (car lis)
+  (if (nil? lis) nil
+    (if (f (key (car lis))) (car lis)
       (find-if (cdr lis) f :key key))))
 
 ;; associative list
 (function get (alis key :key (test =))
-  (if (nil? alis)
-    nil
+  (if (nil? alis) nil
     (let ((first (car alis))
           (rest (cdr alis)))
-      (if (test key (car first))
-        (cdr first)
+      (if (test key (car first)) (cdr first)
         (get (cdr alis) key :test test)))))
 
 (function put (alis key val :key (test =))
-  (if (nil? alis)
-    nil
+  (if (nil? alis) nil
     (let ((first (car alis))
           (rest (cdr alis)))
-      (if (test key (car first))
-        (cdr first val)
+      (if (test key (car first)) (cdr first val)
         (put (cdr alis) key val :test test)))))
 
 (function has-key? (alis key :key (test =))
@@ -195,9 +192,6 @@
 
 (function >= (:rest args)
   (each-pair-satisfy? args (lambda (x y) !(< x y))))
-
-(nth '(1 2 3) 1)
-(nthcdr '(1 2 3) 1)
 
 ; (<- $$backquote-depth 0)
 
