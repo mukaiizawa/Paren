@@ -88,6 +88,9 @@
     (if (or (> s e) (< s 0) (> e len)) :error)
     (rec (nthcdr lis s) (- e s))))
 
+(function copy-list (lis)
+  (sublist lis 0 (length lis)))
+
 (function last-cons (lis)
   (if (nil? lis) nil
     (let ((rec (lambda (lis) (if (cdr lis) (rec (cdr lis)) lis))))
@@ -193,9 +196,8 @@
 (function >= (:rest args)
   (each-pair-satisfy? args (lambda (x y) !(< x y))))
 
-; (<- $$backquote-depth 0)
-
 ; should be implement
+; (<- $$backquote-depth 0)
 ; (<- q '(r s))
 ; ``(q ,q ,,q ,@q ,,'q ,',q ',,q ,@,q ,,@q ,@,@q)
 ;

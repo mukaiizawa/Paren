@@ -12,12 +12,13 @@
  * <pure_list> ::= '(' [<s_expr>] ... ')'
  * <dot_list> ::= '(' <s_expr> ... '.' <s_expr> ')'
  * <atom> ::= <number> | <symbol> | <keyword>
- * <number> ::= [<digit>+ 'x'] [0-9a-z]+ | <digit>+ [ '.' <digit>+ ]
+ * <number> ::= [- | +] <digit> <digit> ... 'x' [0-9a-z] ...
+ *            | [- | +] <digit> <digit> ... [ '.' <digit> ... ]
  * <symbol> ::= <identifier>
  * <keyword> ::= ':' <identifier>
  * <identifier> ::= <identifier_first> [<identifier_rest>] ...
- * <identifier_first> ::= [!$%&*+-/\-<=>?a-zA-Z_]
- * <identifier_rest> ::= <identifier_first> | [0-9]
+ * <identifier_first> ::= [$%&*+-/\-<=>?a-zA-Z_]
+ * <identifier_rest> ::= <identifier_first> | [0-9] | [!]
  * <digit> ::= [0-9]
  */
 
@@ -98,7 +99,7 @@ static int identifier_lead_char_p(void)
 
 static int identifier_trail_char_p(void)
 {
-  return identifier_lead_char_p() || isdigit(next_ch);
+  return identifier_lead_char_p() || isdigit(next_ch) || next_ch == '!';
 }
 
 static int lex_number(int sign)
@@ -122,15 +123,18 @@ static int lex_number(int sign)
       lex_fval += factor * digit_val(skip(), 10);
       factor /= 10;
     }
-    if (sign != 0) lex_fval = sign * lex_fval;
+    if (sign == -1) lex_fval = sign * lex_fval;
     return LEX_FLOAT;
   }
-  if (sign != 0) lex_ival = sign * lex_ival;
+  if (sign == -1) lex_ival = sign * lex_ival;
   return LEX_INT;
 }
 
-static int lex_identifier(void)
+static int lex_identifier(int sign)
 {
+  xbarray_reset(&lex_str);
+  if (sign == 1) add('+');
+  else if (sign == -1) add('-');
   while (identifier_trail_char_p()) get();
   add('\0');
   return LEX_SYMBOL;
@@ -139,7 +143,6 @@ static int lex_identifier(void)
 int lex(void)
 {
   int sign;
-  xbarray_reset(&lex_str);
   while (isspace(next_ch)) skip();
   if (next_ch == ';') {
     while (next_ch != '\n') skip();
@@ -149,14 +152,14 @@ int lex(void)
   if (next_ch == EOF || next_ch == '(' || next_ch == ')' || next_ch == '.'
       || next_ch == '\'' || next_ch == '`' || next_ch == ',' || next_ch == '!')
     return skip();
-  if (next_ch == '+' || next_ch == '-') {
+  if (next_ch != '+' && next_ch != '-') sign = 0;
+  else {
     if (next_ch == '+') sign = 1;
-    else  sign = -1;
-    get();
-    if (isspace(next_ch)) return lex_identifier();
-  } else sign = 0;
+    else sign = -1;
+    skip();
+  }
   if (isdigit(next_ch)) return lex_number(sign);
-  if (identifier_lead_char_p()) return lex_identifier();
+  if (identifier_lead_char_p() || sign != 0) return lex_identifier(sign);
   lex_error("illegal char '%c'", next_ch);
-  return 0;
+  return -1;
 }
