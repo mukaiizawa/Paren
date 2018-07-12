@@ -148,25 +148,20 @@
     (if (f (key (car lis))) (car lis)
       (find-if (cdr lis) f :key key))))
 
-;; associative list
-(function get (alis key :key (test =))
-  (if (nil? alis) nil
-    (let ((first (car alis))
-          (rest (cdr alis)))
-      (if (test key (car first)) (cdr first)
-        (get (cdr alis) key :test test)))))
+; association list
+(function {} (alis key :opt (val nil val?))
+  (find alis key))
 
-(function put (alis key val :key (test =))
-  (if (nil? alis) nil
-    (let ((first (car alis))
-          (rest (cdr alis)))
-      (if (test key (car first)) (cdr first val)
-        (put (cdr alis) key val :test test)))))
-
-(function has-key? (alis key :key (test =))
+(function in? (alis key)
   (and alis
-       (or (test key (car (car alis)))
-           (has-key? (cdr alis) key :test test))))
+       (or (= key (caarr alis))
+           (in? (cdr alis) key))))
+
+(function keys (alis)
+  (map alis car))
+
+(function vals (alis)
+  (map alis cdr))
 
 ; numeric
 (macro inc (x :opt (y 1))

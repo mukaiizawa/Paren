@@ -8,8 +8,24 @@
 #include "bi.h"
 #include "ip.h"
 
+static object er;     // evaluation register
+
+// instruction
+enum inst { EVAL, EVAL_ARGS, EVAL_LIST, EVAL_LAMBDA, EVAL_SPECIAL, EVAL_PRIM };
+
+// instruction stack frame
+struct isf {
+  enum inst i;
+  object o;
+};
+
+#define MAX_IS_SIZE 1000
+
+// stack pointer
 static int sp;
-static struct xarray call_stack;
+
+// instruction stack
+static struct isf is[MAX_IS_SIZE];
 
 static struct xsplay special_splay;
 static struct xsplay prim_splay;
@@ -45,31 +61,28 @@ static void ip_error(char *fmt, ...)
 
 static void dump_call_stack(void)
 {
-  int i;
-  char buf[MAX_STR_LEN];
-  printf("\n%s\n", "*** stack trace ***");
-  for (i = sp; i > 0; i -= 2) {
-    printf("at %s\n", object_describe(gc_new_cons(
-            call_stack.elt[i - 2], call_stack.elt[i - 1])
-          , buf));
-  }
+  // int i;
+  // char buf[MAX_STR_LEN];
+  // printf("\n%s\n", "*** stack trace ***");
+  // for (i = sp; i > 0; i -= 2) {
+  //   printf("at %s\n", object_describe(gc_new_cons(
+  //           call_stack.elt[i - 2], call_stack.elt[i - 1])
+  //         , buf));
+  // }
 }
 
-static void push_call_stack(object o, object p)
+static void push_inst(enum inst i, object o)
 {
-  if (sp == CALL_STACK_SIZE) {
-    dump_call_stack();
-    ip_error("stack over flow");
-  }
-  xarray_add(&call_stack, o);
-  xarray_add(&call_stack, p);
-  sp += 2;
+  is[sp].i = i;
+  is[sp].o = o;
+  sp++;
 }
 
-static void pop_call_stack(void)
+static void pop_inst(void)
 {
   xassert(sp >= 0);
-  xarray_resize(&call_stack, sp -= 2);
+  sp--;
+  // xarray_resize(&call_stack, sp -= 2);
 }
 
 // evaluater
@@ -213,7 +226,6 @@ static object eval(object env, object expr)
     case Cons:
       operator = eval(env, expr->cons.car);
       operands = expr->cons.cdr;
-      push_call_stack(operator, operands);
       argc = object_length(operands);
       result = NULL;
       switch (type(operator)) {
@@ -234,7 +246,6 @@ static object eval(object env, object expr)
         default: break;
       }
       if (result == NULL) ip_error("not a operator");
-      pop_call_stack();
       break;
     default:
       xerror("eval: illegal object type '%d'", type(expr));
@@ -422,13 +433,16 @@ static void init_builtin(void)
 void ip_start(void)
 {
   char buf[MAX_STR_LEN];
-  object o, p;
+  object o;
   init_builtin();
-  sp = 0;
-  xarray_init(&call_stack);
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
-    p = eval(object_toplevel, o->cons.car);
-    if (VERBOSE_P) printf("%s\n", object_describe(p, buf));
-    gc_chance();
+    sp = 0;
+    er = o->cons.car;
+    push_inst(EVAL, er);
+    while (sp != -1) {
+      pop_inst();
+      gc_chance();
+      if (VERBOSE_P) printf("%s\n", object_describe(er, buf));
+    }
   }
 }
