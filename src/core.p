@@ -194,13 +194,80 @@
 (function >= (:rest args)
   (each-pair-satisfy? args (lambda (x y) !(< x y))))
 
+; TODO
+; (function even? (x))
+; (function odd? (x))
+
 ; test
 (macro assert (test)
   (list if (list not test)
         (list print (list list :AssertionFailed (list quote test)))))
 
+;; test code
+;;; cxr
+(assert (= (list 1 2 3) '(1 2 3)))
+(assert (same? (caar '((caar) x)) 'caar))
+(assert (same? (cadr '(x cadr)) 'cadr))
+(assert (same? (cdar '((x . cdar) y)) 'cdar))
+(assert (same? (cddr '(x y . cddr)) 'cddr))
+(assert (same? (caaar '(((caaar)))) 'caaar))
+(assert (same? (caadr '(x (caadr))) 'caadr))
+(assert (same? (cadar '((x cadar) y)) 'cadar))
+(assert (same? (caddr '(x y caddr)) 'caddr))
+(assert (same? (cdaar '(((x . cdaar) . y) . cdr)) 'cdaar))
+(assert (same? (cdadr '(x (y . cdadr))) 'cdadr))
+(assert (same? (cddar '((x y . cddar))) 'cddar))
+(assert (same? (cdddr '(x y z . cdddr)) 'cdddr))
+(assert (same? (caaaar '((((caaaar))))) 'caaaar))
+(assert (same? (caaadr '(x ((caaadr)))) 'caaadr))
+(assert (same? (caadar '((x (caadar)))) 'caadar))
+(assert (same? (caaddr '(x y (caaddr))) 'caaddr))
+(assert (same? (cadaar '(((x cadaar)))) 'cadaar))
+(assert (same? (cadadr '(x (y cadadr))) 'cadadr))
+(assert (same? (caddar '((x y caddar))) 'caddar))
+(assert (same? (cadddr '(x y z cadddr)) 'cadddr))
+(assert (same? (cdaaar '((((caaar . cdaaar))))) 'cdaaar))
+(assert (same? (cdaadr '(x ((y . cdaadr)))) 'cdaadr))
+(assert (same? (cdadar '((x (y . cdadar)))) 'cdadar))
+(assert (same? (cdaddr '(x y (z . cdaddr))) 'cdaddr))
+(assert (same? (cddaar '(((x y . cddaar)))) 'cddaar))
+(assert (same? (cddadr '(x (y z . cddadr))) 'cddadr))
+(assert (same? (cdddar '((x y z . cdddar))) 'cdddar))
+(assert (same? (cddddr '(w x y z . cddddr)) 'cddddr))
+
+;;; nil?
+(assert (nil? nil))
+(assert !(nil? true))
+
+;;; /=
+(assert (/= 1 2))
+(assert !(/= 1 1))
+
+;;; type?
+(assert (type? 1 :number))
+(assert !(type? :keyword :number))
+
+;;; list?
+(assert !(list? 1))
+(assert (list? (cons 1 nil)))
+(assert (list? nil))
+
+;;; all-satisfy?
+(assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (type? x :number))))
+(assert !(all-satisfy? '(1 :a 3 :b 5) (lambda (x) (type? x :number))))
+
+;;; any-satisfy?
+(assert (any-satisfy? '(1 2 3 4 5) (lambda (x) (type? x :number))))
+(assert (any-satisfy? '(1 :a 3 :b 5) (lambda (x) (type? x :number))))
+
+;;; each-pair-satisfy?
+(assert (each-pair-satisfy? '(1 2 3 4 5) <))
+(assert !(each-pair-satisfy? '(1 2 3 3 5) <))
+
+(print :finish)
 
 ; should be implement
+; {{{
 ; (<- $$backquote-depth 0)
 ; (<- q '(r s))
 ; ``(q ,q ,,q ,@q ,,'q ,',q ',,q ,@,q ,,@q ,@,@q)
@@ -211,3 +278,4 @@
 ;                   (APPEND Q
 ;                           (CONS Q
 ;                                 (CONS '(R S) (CONS (LIST 'QUOTE (R S)) (APPEND (R S) (LIST* R S (APPEND R S))))))))))
+;                                 }}}
