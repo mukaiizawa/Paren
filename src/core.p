@@ -53,6 +53,9 @@
 (function not (x)
   (if x nil true))
 
+(function /= (x y)
+  !(= x y))
+
 (function nil? (x)
   (same? x nil))
 
@@ -190,6 +193,12 @@
 
 (function >= (:rest args)
   (each-pair-satisfy? args (lambda (x y) !(< x y))))
+
+; test
+(macro assert (test)
+  (list if (list not test)
+        (list print (list list :AssertionFailed (list quote test)))))
+
 
 ; should be implement
 ; (<- $$backquote-depth 0)

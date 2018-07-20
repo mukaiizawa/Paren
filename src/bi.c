@@ -1,4 +1,4 @@
-// built in.
+// built-in.
 
 #include "std.h"
 #include "xsplay.h"

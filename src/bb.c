@@ -48,6 +48,27 @@ PRIM(samep)
   return TRUE;
 }
 
+static int equal_s_expr(object o, object p);
+static int equal_cons_p(object o, object p)
+{
+  return equal_s_expr(o->cons.car, p->cons.car)
+    && equal_s_expr(o->cons.cdr, p->cons.cdr);
+}
+
+static int equal_s_expr(object o, object p)
+{
+  int t;
+  if (o == p) return TRUE;
+  if ((t = type(o)) != type(p)) return FALSE;
+  switch (t) {
+    case Cons: return equal_cons_p(o, p);
+    case Xint: return o->xint.val == p->xint.val;
+    case Xfloat: return o->xfloat.val == p->xfloat.val;
+    default: return FALSE;
+  }
+}
+
+// compare built-in object.
 PRIM(equalp)
 {
   int b;
@@ -56,26 +77,7 @@ PRIM(equalp)
   o = argv->cons.car;
   while ((argv = argv->cons.cdr) != object_nil) {
     p = argv->cons.car;
-    if ((b = o == p)) continue;
-    if ((b = type(o) == type(p))) {
-      switch (type(o)) {
-        case Macro:
-        case Lambda:
-        case Cons:
-        case Symbol:
-        case Keyword:
-          b = o == p;
-          break;
-        case Xint:
-          b = o->xint.val == p->xint.val;
-          break;
-        case Xfloat:
-          b = o->xfloat.val == p->xfloat.val;
-          break;
-        default: return FALSE;
-      }
-    }
-    if (!b) break;
+    if (!(b = equal_s_expr(o, p))) break;
   }
   *result = object_bool(b);
   return TRUE;
