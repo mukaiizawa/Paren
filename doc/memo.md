@@ -287,3 +287,46 @@ POSシステムでは、第一要素がキーワードのリストのことを�
     (:String (val (array 104 101 108 108 111 32 119 111 114 108 100))
              (length 3)
              (hash 0x234234))
+
+# プロトタイプベース
+2018-07-23
+
+parenのPOSシステムをプロトタイプベースにしてみてはどうかと思い至った。
+下に示すように、関数呼び出しの記法が納得いけば問題ない？
+
+(function . (k o :optional v)
+ "
+ # vが与えられていない場合
+ オブジェクトoからプロパティkに対応する値を取得する。
+ # vが与えられた場合
+ オブジェクトoのプロパティkに値を設定する。
+ ")
+
+; define abstruct class
+(class Reader () :rd read-byte)
+;; (<- Reader (clone Object))
+
+(.read-byte Reader (lambda () ((.fgetc OS))))
+
+
+(class AheadReader (Reader) :reader :nextch next-char skip-char)
+;; (<- AheadReader (clone Reader))
+
+(<- r ((.init (new AheadReader)) :rd (.init 
+; (<- r (clone Reader))
+
+
+# コンスの記法
+コンスセルはCLでは次のように表記されていた。
+
+(cons 1 2)
+> (1 . 2)
+
+.をプロパティアクセス演算子にしたいので、新しくハットをコンスの記号としてはどうか。
+(cons 1 2)
+> (1 ^ 2)
+
+.よはすごい。りもコンスセルらしい気がしなくもないが、違和感がすごい。
+
+(-> a b)
+
