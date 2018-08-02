@@ -151,21 +151,6 @@
     (if (f (key (car lis))) (car lis)
       (find-if (cdr lis) f :key key))))
 
-; association list
-(function {} (alis key :opt (val nil val?))
-  (find alis key))
-
-(function in? (alis key)
-  (and alis
-       (or (= key (caarr alis))
-           (in? (cdr alis) key))))
-
-(function keys (alis)
-  (map alis car))
-
-(function vals (alis)
-  (map alis cdr))
-
 ; numeric
 (macro inc (x :opt (y 1))
   (list <- x (list + x y)))
@@ -194,11 +179,26 @@
 (function >= (:rest args)
   (each-pair-satisfy? args (lambda (x y) !(< x y))))
 
+; pos
+
+(<- Object '((:super nil)
+             (:type :Object)))
+
+(function . (object property :opt (val nil val?))
+  (let ((get (lambda ()))
+        (set (lambda ())))
+    (if val? (get) (set))))
+
+(<- o (new Object))
+(. o :type)
+
+
 ; TODO
 ; (function even? (x))
 ; (function odd? (x))
 
 ; test
+; {{{
 (macro assert (test)
   (list if (list not test)
         (list print (list list :AssertionFailed (list quote test)))))
@@ -263,6 +263,8 @@
 ;;; each-pair-satisfy?
 (assert (each-pair-satisfy? '(1 2 3 4 5) <))
 (assert !(each-pair-satisfy? '(1 2 3 3 5) <))
+
+; }}}
 
 (print :finish)
 

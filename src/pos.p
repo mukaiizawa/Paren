@@ -10,17 +10,6 @@
 
 (method Object .equals ())
 
-(class Class ())
-
-(method Class .new ()
-        (.init self))
-
-(method Class .type ())
-
-(method Class .fields ())
-
-(method Class .methods ())
-
 (class Point () x y) ; (<- Point (clone Object))
 
 
