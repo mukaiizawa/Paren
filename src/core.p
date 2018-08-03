@@ -49,6 +49,10 @@
   (if (nil? (cdr expr)) (car expr)
     (list if (car expr) (cons and (cdr expr)))))
 
+(macro assert (test)
+  (list if (list not test)
+        (list print (list list :AssertionFailed (list quote test)))))
+
 ; basic predicate
 (function not (x)
   (if x nil true))
@@ -184,14 +188,12 @@
 (<- Object '((:super nil)
              (:type :Object)))
 
-(function . (object property :opt (val nil val?))
-  (let ((get (lambda ()))
-        (set (lambda ())))
-    (if val? (get) (set))))
+(function . (object prop :opt (val nil val?))
+  (let ((pair (find object prop :key car)))
+    (if (nil? pair) (assert "can not find prop"))
+    (if val? (cdr pair val) (cdr pair))))
 
-(<- o (new Object))
-(. o :type)
-
+(print (. Object :super)) 
 
 ; TODO
 ; (function even? (x))
@@ -199,11 +201,7 @@
 
 ; test
 ; {{{
-(macro assert (test)
-  (list if (list not test)
-        (list print (list list :AssertionFailed (list quote test)))))
 
-;; test code
 ;;; cxr
 (assert (= (list 1 2 3) '(1 2 3)))
 (assert (same? (caar '((caar) x)) 'caar))

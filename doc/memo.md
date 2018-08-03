@@ -235,11 +235,11 @@ parenをプロトタイプベースの言語に仕上げる構想があったが
 
 クラスはクラス名、スーパークラス及びフィーチャーリスト、インスタンス変数からなる。
     ; 構文の候補
-    (struct Stream :extends Object
-                  :features '(Reader Writer)
-                  :instance-vars '(buf bufsize))
-    (struct Stream (Object Reader Writer) buf bufsize)
-    (struct Stream (:super Object :features '(Reader Writer)) buf bufsize)
+    (struct MemoryStream :extends Object
+                         :features '(Reader Writer)
+                         :instance-vars '(buf bufsize))
+    (struct MemoryStream (Object Reader Writer) buf bufsize)
+    (struct MemoryStream (:super Object :features '(Reader Writer)) buf bufsize)
 
 メソッドは定義するクラス/フィーチャー、及び、メソッド名、及び仮引数と処理からなる。
     (generics String ->string () self)
