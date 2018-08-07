@@ -6,18 +6,24 @@
 #include "lex.h"
 
 /*
+ * reader macro
+ * ! <s_expr> => (not <s_expr>)
+ * ' <s_expr> => (quote <s_expr>)
+ * ` <s_expr> => (backquote <s_expr>)
+ * , <s_expr> => (unquote <s_expr>)
+ * ,@ <s_expr> => (splice <s_expr>)
+ * '[' <s_expr> <s_expr> ']' => (cons <s_expr> <s_expr>)
+ *
  * paren bnf
+ * <paren> ::= <s_expr> ...
  * <s_expr> ::= <list> | <atom>
- * <list> ::= <pure_list> | <dot_list>
- * <pure_list> ::= '(' [<s_expr>] ... ')'
- * <dot_list> ::= '(' <s_expr> ... '.' <s_expr> ')'
+ * <list> ::= '(' [<s_expr>] ... ')'
  * <atom> ::= <number> | <symbol> | <keyword>
  * <number> ::= [- | +] <digit> <digit> ... 'x' [0-9a-z] ...
  *            | [- | +] <digit> <digit> ... [ '.' <digit> ... ]
  * <symbol> ::= <identifier>
- * <keyword> ::= ':' <identifier>
  * <identifier> ::= <identifier_first> [<identifier_rest>] ...
- * <identifier_first> ::= [$%&*+-/\-<=>?a-zA-Z_]
+ * <identifier_first> ::= [$%&*+\-/<=>:?a-zA-Z_]
  * <identifier_rest> ::= <identifier_first> | [0-9] | [!]
  * <digit> ::= [0-9]
  */
@@ -89,9 +95,8 @@ static int digit_val(int ch, int radix)
 static int identifier_lead_char_p(void)
 {
   switch (next_ch) {
-    case '$': case '%': case '&': case '*': case '+': case '/': case '-':
-    case ':': case '<': case '=': case '>': case '?': case '_':
-    case '{': case '}': case '[': case ']':
+    case '$': case '%': case '&': case '*': case '+': case '-': case '/':
+    case ':': case '<': case '=': case '>': case '?': case '_': case '.':
       return TRUE;
     default: return isalpha(next_ch);
   }
@@ -140,6 +145,19 @@ static int lex_identifier(int sign)
   return LEX_SYMBOL;
 }
 
+char *lex_token_name(char *buf, int token)
+{
+  char *name;
+  switch(token) {
+    case LEX_SYMBOL: name="symbol"; break;
+    case EOF: name = "EOF"; break;
+    default: name = NULL; break;
+  }
+  if(name != NULL) strcpy(buf, name);
+  else xsprintf(buf, "%c", token);
+  return buf;
+}
+
 int lex(void)
 {
   int sign;
@@ -149,8 +167,9 @@ int lex(void)
     skip();
     return lex();
   }
-  if (next_ch == EOF || next_ch == '(' || next_ch == ')' || next_ch == '.'
-      || next_ch == '\'' || next_ch == '`' || next_ch == ',' || next_ch == '!')
+  if (next_ch == EOF || next_ch == '(' || next_ch == ')'
+      || next_ch == '\'' || next_ch == '`' || next_ch == ',' || next_ch == '!'
+      || next_ch == '[' || next_ch == ']')
     return skip();
   if (next_ch != '+' && next_ch != '-') sign = 0;
   else {

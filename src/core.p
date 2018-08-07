@@ -183,55 +183,55 @@
 (function >= (:rest args)
   (each-pair-satisfy? args (lambda (x y) !(< x y))))
 
+; TODO
+; (function even? (x))
+; (function odd? (x))
+
 ; pos
 
 (<- Object '((:super nil)
              (:type :Object)))
 
-(function . (object prop :opt (val nil val?))
-  (let ((pair (find object prop :key car)))
-    (if (nil? pair) (assert "can not find prop"))
+(function . (object property :opt (val nil val?))
+  (let ((pair (find object property :key car)))
+    (if (nil? pair) (assert (list :NotFountProperty property)))
     (if val? (cdr pair val) (cdr pair))))
 
-(print (. Object :super)) 
-
-; TODO
-; (function even? (x))
-; (function odd? (x))
+; (. Object :super) ; nil
 
 ; test
 ; {{{
 
 ;;; cxr
 (assert (= (list 1 2 3) '(1 2 3)))
-(assert (same? (caar '((caar) x)) 'caar))
-(assert (same? (cadr '(x cadr)) 'cadr))
-(assert (same? (cdar '((x . cdar) y)) 'cdar))
-(assert (same? (cddr '(x y . cddr)) 'cddr))
-(assert (same? (caaar '(((caaar)))) 'caaar))
-(assert (same? (caadr '(x (caadr))) 'caadr))
-(assert (same? (cadar '((x cadar) y)) 'cadar))
-(assert (same? (caddr '(x y caddr)) 'caddr))
-(assert (same? (cdaar '(((x . cdaar) . y) . cdr)) 'cdaar))
-(assert (same? (cdadr '(x (y . cdadr))) 'cdadr))
-(assert (same? (cddar '((x y . cddar))) 'cddar))
-(assert (same? (cdddr '(x y z . cdddr)) 'cdddr))
-(assert (same? (caaaar '((((caaaar))))) 'caaaar))
-(assert (same? (caaadr '(x ((caaadr)))) 'caaadr))
-(assert (same? (caadar '((x (caadar)))) 'caadar))
-(assert (same? (caaddr '(x y (caaddr))) 'caaddr))
-(assert (same? (cadaar '(((x cadaar)))) 'cadaar))
-(assert (same? (cadadr '(x (y cadadr))) 'cadadr))
-(assert (same? (caddar '((x y caddar))) 'caddar))
-(assert (same? (cadddr '(x y z cadddr)) 'cadddr))
-(assert (same? (cdaaar '((((caaar . cdaaar))))) 'cdaaar))
-(assert (same? (cdaadr '(x ((y . cdaadr)))) 'cdaadr))
-(assert (same? (cdadar '((x (y . cdadar)))) 'cdadar))
-(assert (same? (cdaddr '(x y (z . cdaddr))) 'cdaddr))
-(assert (same? (cddaar '(((x y . cddaar)))) 'cddaar))
-(assert (same? (cddadr '(x (y z . cddadr))) 'cddadr))
-(assert (same? (cdddar '((x y z . cdddar))) 'cdddar))
-(assert (same? (cddddr '(w x y z . cddddr)) 'cddddr))
+(assert (same? (caar '[[true x] y]) true))
+(assert (same? (cadr '[x [true y]]) true))
+(assert (same? (cdar '[[x true] y]) true))
+(assert (same? (cddr '[x [y true]]) true))
+(assert (same? (caaar '[[[true x] y] z]) true))
+(assert (same? (caadr '[x [[true y] z]]) true))
+(assert (same? (cadar '[[x [true y]] z]) true))
+(assert (same? (caddr '[x [y [true z]]]) true))
+(assert (same? (cdaar '[[[x true] y] z]) true))
+(assert (same? (cdadr '[x [[y true] z]]) true))
+(assert (same? (cddar '[[x [y true]] z]) true))
+(assert (same? (cdddr '[x [y [z true]]]) true))
+(assert (same? (caaaar '[[[[true w] x] y] z]) true))
+(assert (same? (caaadr '[w [[[true x] y] z]]) true))
+(assert (same? (caadar '[[w [[true x] y]] z]) true))
+(assert (same? (caaddr '[w [x [[true y] z]]]) true))
+(assert (same? (cadaar '[[[w [true x]] y] z]) true))
+(assert (same? (cadadr '[w [[x [true y]] z]]) true))
+(assert (same? (caddar '[[w [x [true y]]] z]) true))
+(assert (same? (cadddr '[w [x [y [true z]]]]) true))
+(assert (same? (cdaaar '[[[[w true] x] y] z]) true))
+(assert (same? (cdaadr '[w [[[x true] y] z]]) true))
+(assert (same? (cdadar '[[w [[x true] y]] z]) true))
+(assert (same? (cdaddr '[w [x [[y true] z]]]) true))
+(assert (same? (cddaar '[[[x [y true]] y] z]) true))
+(assert (same? (cddadr '[w [[x [y true]] z]]) true))
+(assert (same? (cdddar '[[w [x [y true]]] z]) true))
+(assert (same? (cddddr '[w [x [y [z true]]]]) true))
 
 ;;; nil?
 (assert (nil? nil))
@@ -265,17 +265,3 @@
 ; }}}
 
 (print :finish)
-
-; should be implement
-; {{{
-; (<- $$backquote-depth 0)
-; (<- q '(r s))
-; ``(q ,q ,,q ,@q ,,'q ,',q ',,q ,@,q ,,@q ,@,@q)
-;
-; (CONS 'Q
-;       (CONS Q
-;             (CONS (R S)
-;                   (APPEND Q
-;                           (CONS Q
-;                                 (CONS '(R S) (CONS (LIST 'QUOTE (R S)) (APPEND (R S) (LIST* R S (APPEND R S))))))))))
-;                                 }}}

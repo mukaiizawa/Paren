@@ -13,12 +13,19 @@ object object_true;
 object object_opt;
 object object_key;
 object object_rest;
+object object_cons;
 object object_quote;
 object object_bq;
 object object_comma;
 object object_splice;
 object object_not;
 object object_sint[SINT_MAX];
+
+static int pure_list_p(object o)
+{
+  while (typep(o, Cons)) o = o->cons.cdr;
+  return o == object_nil;
+}
 
 int symcmp(object o, object p)
 {
@@ -49,7 +56,7 @@ object object_nth(object o, int n)
 }
 
 static void describe_s_expr(object o, struct xbarray *x);
-static void describe_cons(object o, struct xbarray *x)
+static void describe_pure_list(object o, struct xbarray *x)
 {
   describe_s_expr(o->cons.car, x);
   while ((o = o->cons.cdr) != object_nil) {
@@ -64,8 +71,18 @@ static void describe_cons(object o, struct xbarray *x)
   }
 }
 
+static void describe_cons(object o, struct xbarray *x)
+{
+  xbarray_add(x, '[');
+  describe_s_expr(o->cons.car, x);
+  xbarray_add(x, ' ');
+  describe_s_expr(o->cons.cdr, x);
+  xbarray_add(x, ']');
+}
+
 static void describe_s_expr(object o, struct xbarray *x)
 {
+  object p;
   if(x->size > MAX_STR_LEN) return;
   switch (type(o)) {
     case Macro:
@@ -76,14 +93,30 @@ static void describe_s_expr(object o, struct xbarray *x)
       else describe_s_expr(o->lambda.params, x);
       if (o->lambda.body != object_nil) {
         xbarray_add(x, ' ');
-        describe_cons(o->lambda.body, x);
+        describe_pure_list(o->lambda.body, x);
       }
       xbarray_add(x, ')');
       break;
     case Cons:
-      xbarray_add(x, '(');
-      describe_cons(o, x);
-      xbarray_add(x, ')');
+      if (!pure_list_p(o)) describe_cons(o, x);
+      else {
+        p = o->cons.car;
+        if (p == object_quote) {
+          xbarray_add(x, '\'');
+          describe_pure_list(o->cons.cdr, x);
+        } else if (p == object_bq) {
+          xbarray_add(x, '`');
+          describe_pure_list(o->cons.cdr, x);
+        } else if (p == object_cons) {
+          xbarray_add(x, '[');
+          describe_pure_list(o->cons.cdr, x);
+          xbarray_add(x, ']');
+        } else {
+          xbarray_add(x, '(');
+          describe_pure_list(o, x);
+          xbarray_add(x, ')');
+        }
+      }
       break;
     case Xint:
       xbarray_addf(x, "%d", o->xint.val);

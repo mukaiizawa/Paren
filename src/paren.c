@@ -34,11 +34,17 @@ static void parse_opt(int argc,char *argv[])
 // parser
 
 static int next_token;
-static int bq_level;
 
 static int parse_skip(void)
 {
   return next_token = lex();
+}
+
+static int parse_token(int token)
+{
+  char buf[MAX_STR_LEN];
+  if(next_token != token) lex_error("missing %s", lex_token_name(buf, token));
+  return parse_skip();
 }
 
 static object parse_s_expr(void);
@@ -67,16 +73,31 @@ static object parse_float(void)
   return gc_new_xfloat(val);
 }
 
+static object parse_cons(void)
+{
+  object o, p;
+  parse_skip();
+  o = parse_s_expr();
+  p = parse_s_expr();
+  parse_token(']');
+  return gc_new_cons(o, p);
+}
+
+static object parse_atom(void)
+{
+  switch (next_token) {
+    case LEX_INT: return parse_integer();
+    case LEX_FLOAT: return parse_float();
+    case LEX_SYMBOL: return parse_symbol();
+    case '[': return parse_cons();
+    default: lex_error("illegal token '%c'.", (char)next_token); return NULL;
+  }
+}
+
 static object parse_cdr(void)
 {
   object o;
   if (next_token == ')') return object_nil;
-  if (next_token == '.') {
-    parse_skip();
-    o = parse_s_expr();
-    if (next_token != ')') lex_error("illegal dot list");
-    return o;
-  }
   o = parse_s_expr();
   return gc_new_cons(o, parse_cdr());
 }
@@ -91,16 +112,6 @@ static object parse_list(void)
   }
   parse_skip();
   return o;
-}
-
-static object parse_atom(void)
-{
-  switch (next_token) {
-    case LEX_INT: return parse_integer();
-    case LEX_FLOAT: return parse_float();
-    case LEX_SYMBOL: return parse_symbol();
-    default: lex_error("illegal token '%c'.", (char)next_token); return NULL;
-  }
 }
 
 static object parse_s_expr(void)
@@ -118,15 +129,7 @@ static object parse_s_expr(void)
       o = object_splice;
       parse_skip();
     }
-    if (o == object_bq || o == object_comma || o == object_splice) {
-      if (o == object_bq) bq_level++;
-      else if (--bq_level < 0) lex_error("comma not inside backquote");
-    }
     result = gc_new_cons(o, gc_new_cons(parse_s_expr(), object_nil));
-    if (o != object_quote) {
-      if (o == object_bq) bq_level--;
-      else bq_level++;
-    }
     return result;
   }
   if (next_token == '(') return parse_list();
@@ -149,7 +152,6 @@ static object load(void)
   object o;
   if ((fp = fopen(core_fn, "r")) == NULL)
     xerror("load/open %s failed.", core_fn);
-  bq_level = 0;
   lex_start(fp);
   parse_skip();
   o = load_rec();
@@ -180,6 +182,7 @@ static void make_initial_objects(void)
   object_opt = gc_new_symbol(":opt");
   object_key = gc_new_symbol(":key");
   object_rest = gc_new_symbol(":rest");
+  object_cons = gc_new_symbol("cons");
   object_quote = gc_new_symbol("quote");
   object_bq = gc_new_symbol("backquote");
   object_comma = gc_new_symbol("unquote");

@@ -60,6 +60,7 @@ extern object object_true;
 extern object object_opt;
 extern object object_key;
 extern object object_rest;
+extern object object_cons;
 extern object object_quote;
 extern object object_bq;
 extern object object_comma;
