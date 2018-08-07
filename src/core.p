@@ -188,16 +188,15 @@
 ; (function odd? (x))
 
 ; pos
-
-(<- Object '((:super nil)
-             (:type :Object)))
+(<- Object '([:super nil]
+             [:type :Object]))
 
 (function . (object property :opt (val nil val?))
   (let ((pair (find object property :key car)))
     (if (nil? pair) (assert (list :NotFountProperty property)))
     (if val? (cdr pair val) (cdr pair))))
 
-; (. Object :super) ; nil
+; (print (. Object :type)) ; :Object
 
 ; test
 ; {{{
