@@ -63,12 +63,13 @@ extern object object_rest;
 extern object object_cons;
 extern object object_quote;
 extern object object_bq;
-extern object object_comma;
+extern object object_uq;
 extern object object_splice;
 extern object object_not;
 extern object object_sint[SINT_MAX];
 
 extern char *object_describe(object o, char *buf);
+extern int object_pure_list_p(object o);
 extern int object_length(object o);
 extern object object_nth(object o, int n);
 extern object object_bool(int b);

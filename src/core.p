@@ -31,7 +31,7 @@
     cdddar (lambda (x) (cdr (cddar x)))
     cddddr (lambda (x) (cdr (cdddr x))))
 
-; fundamental macro
+; fundamental operator
 (macro function (name args :rest body)
   (list <- name (cons lambda (cons args body))))
 
@@ -50,8 +50,13 @@
     (list if (car expr) (cons and (cdr expr)))))
 
 (macro assert (test)
-  (list if (list not test)
-        (list print (list list :AssertionFailed (list quote test)))))
+  (list begin-if (list not test)
+        (list print (list list :AssertionFailed (list quote test)))
+        '(quit)))
+
+(function error (:rest args)
+  (print (list 'error args))
+  (quit))
 
 ; basic predicate
 (function not (x)
@@ -188,15 +193,16 @@
 ; (function odd? (x))
 
 ; pos
-(<- Object '([:super nil]
-             [:type :Object]))
-
-(function . (object property :opt (val nil val?))
-  (let ((pair (find object property :key car)))
-    (if (nil? pair) (assert (list :NotFountProperty property)))
-    (if val? (cdr pair val) (cdr pair))))
-
+; {{{
+; (<- Object '([:super nil]
+;              [:type :Object]))
+; (function . (object property :opt (val nil val?))
+;   (let ((pair (find object property :key car)))
+;     (if (nil? pair) (assert (list :NotFountProperty property)))
+;     (if val? (cdr pair val) (cdr pair))))
 ; (print (. Object :type)) ; :Object
+; (print (. Object :type)) ; :Object
+; }}}
 
 ; test
 ; {{{

@@ -46,7 +46,6 @@ static object eval_operands(object env, object expr)
   if (expr == object_nil) return object_nil;
   o = eval(env, expr->cons.car);
   expr = expr->cons.cdr;
-  if (!listp(expr)) ip_error("parameter must be pure list");
   return gc_new_cons(o, eval_operands(env, expr));
 }
 
@@ -160,6 +159,7 @@ static object apply(object operator, object operands)
 static object eval(object env, object expr)
 {
   int argc;
+  char buf[MAX_STR_LEN];
   object (*special)(object, int, object);
   object (*prim)(int, object, object *);
   object operator, operands, result;
@@ -178,6 +178,8 @@ static object eval(object env, object expr)
     case Cons:
       operator = eval(env, expr->cons.car);
       operands = expr->cons.cdr;
+      if(!object_pure_list_p(operands))
+        ip_error("'%s' is not evaluate", object_describe(expr, buf));
       argc = object_length(operands);
       result = NULL;
       switch (type(operator)) {
@@ -197,7 +199,8 @@ static object eval(object env, object expr)
           break;
         default: break;
       }
-      if (result == NULL) ip_error("not a operator");
+      if (result == NULL)
+        ip_error("'%s' is not a operator", object_describe(operator, buf));
       break;
     default:
       xerror("eval: illegal object type '%d'", type(expr));

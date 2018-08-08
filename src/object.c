@@ -16,12 +16,12 @@ object object_rest;
 object object_cons;
 object object_quote;
 object object_bq;
-object object_comma;
+object object_uq;
 object object_splice;
 object object_not;
 object object_sint[SINT_MAX];
 
-static int pure_list_p(object o)
+int object_pure_list_p(object o)
 {
   while (typep(o, Cons)) o = o->cons.cdr;
   return o == object_nil;
@@ -98,7 +98,7 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_add(x, ')');
       break;
     case Cons:
-      if (!pure_list_p(o)) describe_cons(o, x);
+      if (!object_pure_list_p(o)) describe_cons(o, x);
       else {
         p = o->cons.car;
         if (p == object_quote) {
@@ -107,10 +107,15 @@ static void describe_s_expr(object o, struct xbarray *x)
         } else if (p == object_bq) {
           xbarray_add(x, '`');
           describe_pure_list(o->cons.cdr, x);
-        } else if (p == object_cons) {
-          xbarray_add(x, '[');
+        } else if (p == object_uq) {
+          xbarray_add(x, ',');
           describe_pure_list(o->cons.cdr, x);
-          xbarray_add(x, ']');
+        } else if (p == object_splice) {
+          xbarray_adds(x, ",@");
+          describe_pure_list(o->cons.cdr, x);
+        } else if (p == object_not) {
+          xbarray_add(x, '!');
+          describe_pure_list(o->cons.cdr, x);
         } else {
           xbarray_add(x, '(');
           describe_pure_list(o, x);

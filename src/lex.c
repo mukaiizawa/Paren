@@ -167,8 +167,8 @@ int lex(void)
     skip();
     return lex();
   }
-  if (next_ch == EOF || next_ch == '(' || next_ch == ')'
-      || next_ch == '\'' || next_ch == '`' || next_ch == ',' || next_ch == '!'
+  if (next_ch == EOF || next_ch == '(' || next_ch == ')' || next_ch == '!'
+      || next_ch == '\'' || next_ch == '`' || next_ch == ',' || next_ch == '@'
       || next_ch == '[' || next_ch == ']')
     return skip();
   if (next_ch != '+' && next_ch != '-') sign = 0;

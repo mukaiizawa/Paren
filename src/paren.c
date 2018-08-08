@@ -110,27 +110,26 @@ static object parse_list(void)
     o = parse_s_expr();
     o = gc_new_cons(o, parse_cdr());
   }
-  parse_skip();
+  parse_token(')');
   return o;
 }
 
 static object parse_s_expr(void)
 {
-  object o, result;
+  object o;
   if (next_token == '\'' || next_token == '`' || next_token == ','
       || next_token == '!')
   {
-    if (next_token == '!') o = object_not;
-    else if (next_token == '\'') o = object_quote;
+    if (next_token == '\'') o = object_quote;
     else if (next_token == '`') o = object_bq;
-    else o = object_comma;
+    else if (next_token == ',') o = object_uq;
+    else o = object_not;
     parse_skip();
-    if (o == object_comma && next_token == '@') {
+    if (o == object_uq && next_token == '@') {
       o = object_splice;
       parse_skip();
     }
-    result = gc_new_cons(o, gc_new_cons(parse_s_expr(), object_nil));
-    return result;
+    return gc_new_cons(o, gc_new_cons(parse_s_expr(), object_nil));
   }
   if (next_token == '(') return parse_list();
   return parse_atom();
@@ -185,11 +184,11 @@ static void make_initial_objects(void)
   object_cons = gc_new_symbol("cons");
   object_quote = gc_new_symbol("quote");
   object_bq = gc_new_symbol("backquote");
-  object_comma = gc_new_symbol("unquote");
+  object_uq = gc_new_symbol("unquote");
   object_splice = gc_new_symbol("splice");
   object_not = gc_new_symbol("not");
   object_toplevel = gc_new_env(object_nil);
-  for (i = 0; i < 256; i++) object_sint[i] = gc_new_sint(i);
+  for (i = 0; i < SINT_MAX; i++) object_sint[i] = gc_new_sint(i);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
   bind_special();

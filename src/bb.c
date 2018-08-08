@@ -99,3 +99,9 @@ PRIM(print)
   printf("%s\n", object_describe(*result, buf));
   return TRUE;
 }
+
+PRIM(quit)
+{
+  printf("paren exit");
+  exit(1);
+}
