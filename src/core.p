@@ -55,7 +55,7 @@
         '(quit)))
 
 (function error (:rest args)
-  (print (list 'error args))
+  (print (cons 'error args))
   (quit))
 
 ; basic predicate
@@ -191,6 +191,32 @@
 ; TODO
 ; (function even? (x))
 ; (function odd? (x))
+
+(macro unquote (:rest forms)
+  (error :comma-not-inside-backquote))
+
+(macro splice (:rest forms)
+  (unquote))
+
+(macro len (expr)
+  (print (cdr expr))
+  (if expr (list 'len (cdr expr)) 1))
+
+(<- x '(1 2 3 4 5))
+(len x)
+
+(macro backquote (:rest forms)
+  (let ((level 2)
+        (nquote (macro (forms x)
+                  (if (= x 0) x
+                    (list nquote (list quote x)))))
+        (traverse (lambda (tree)
+                    (map tree (lambda (x) (list quote x))))))
+    (nquote forms)))
+      ; (print (traverse forms))))
+
+; (<- a 0)
+; (print `1)
 
 ; pos
 ; {{{

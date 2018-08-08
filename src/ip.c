@@ -179,7 +179,7 @@ static object eval(object env, object expr)
       operator = eval(env, expr->cons.car);
       operands = expr->cons.cdr;
       if(!object_pure_list_p(operands))
-        ip_error("'%s' is not evaluate", object_describe(expr, buf));
+        ip_error("'%s' is not evaluate -- part of cdr is expected list", object_describe(expr, buf));
       argc = object_length(operands);
       result = NULL;
       switch (type(operator)) {
