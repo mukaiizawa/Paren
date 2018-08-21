@@ -198,13 +198,6 @@
 (macro splice (:rest forms)
   (unquote))
 
-(macro len (expr)
-  (print (cdr expr))
-  (if expr (list 'len (cdr expr)) 1))
-
-(<- x '(1 2 3 4 5))
-(len x)
-
 (macro backquote (:rest forms)
   (let ((level 2)
         (nquote (macro (forms x)
@@ -213,7 +206,7 @@
         (traverse (lambda (tree)
                     (map tree (lambda (x) (list quote x))))))
     (nquote forms)))
-      ; (print (traverse forms))))
+; (print (traverse forms))))
 
 ; (<- a 0)
 ; (print `1)

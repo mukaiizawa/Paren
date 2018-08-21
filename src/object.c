@@ -61,12 +61,7 @@ static void describe_pure_list(object o, struct xbarray *x)
   describe_s_expr(o->cons.car, x);
   while ((o = o->cons.cdr) != object_nil) {
     xbarray_add(x, ' ');
-    if (typep(o, Cons)) describe_s_expr(o->cons.car, x);
-    else {
-      xbarray_adds(x, ". ");
-      describe_s_expr(o, x);
-      break;
-    }
+    describe_s_expr(o->cons.car, x);
     if(x->size > MAX_STR_LEN) return;
   }
 }
