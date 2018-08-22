@@ -55,7 +55,7 @@
         '(quit)))
 
 (function error (:rest args)
-  (print (cons 'error args))
+  (print (cons :Error args))
   (quit))
 
 ; basic predicate
@@ -198,18 +198,17 @@
 (macro splice (:rest forms)
   (unquote))
 
-(macro backquote (:rest forms)
+(macro backquote (expr)
   (let ((level 2)
-        (nquote (macro (forms x)
-                  (if (= x 0) x
-                    (list nquote (list quote x)))))
+        (nquote (macro (expr l)
+                  (if (= l 0) expr
+                    (list quote (list nquote expr (-- l))))))
         (traverse (lambda (tree)
                     (map tree (lambda (x) (list quote x))))))
-    (nquote forms)))
-; (print (traverse forms))))
+    (if (atom? expr) (list quote expr)
+      (nquote expr level))))
 
-; (<- a 0)
-; (print `1)
+(print `(1 2))
 
 ; pos
 ; {{{
