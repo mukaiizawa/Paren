@@ -12,7 +12,6 @@
  * ` <s_expr> => (backquote <s_expr>)
  * , <s_expr> => (unquote <s_expr>)
  * ,@ <s_expr> => (splice <s_expr>)
- * '[' <s_expr> <s_expr> ']' => (cons <s_expr> <s_expr>)
  *
  * paren bnf
  * <paren> ::= <s_expr> ...
@@ -168,8 +167,7 @@ int lex(void)
     return lex();
   }
   if (next_ch == EOF || next_ch == '(' || next_ch == ')' || next_ch == '!'
-      || next_ch == '\'' || next_ch == '`' || next_ch == ',' || next_ch == '@'
-      || next_ch == '[' || next_ch == ']')
+      || next_ch == '\'' || next_ch == '`' || next_ch == ',' || next_ch == '@')
     return skip();
   if (next_ch != '+' && next_ch != '-') sign = 0;
   else {

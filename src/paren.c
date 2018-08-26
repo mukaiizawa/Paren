@@ -73,23 +73,12 @@ static object parse_float(void)
   return gc_new_xfloat(val);
 }
 
-static object parse_cons(void)
-{
-  object o, p;
-  parse_skip();
-  o = parse_s_expr();
-  p = parse_s_expr();
-  parse_token(']');
-  return gc_new_cons(o, p);
-}
-
 static object parse_atom(void)
 {
   switch (next_token) {
     case LEX_INT: return parse_integer();
     case LEX_FLOAT: return parse_float();
     case LEX_SYMBOL: return parse_symbol();
-    case '[': return parse_cons();
     default: lex_error("illegal token '%c'.", (char)next_token); return NULL;
   }
 }
