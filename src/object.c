@@ -13,7 +13,6 @@ object object_true;
 object object_opt;
 object object_key;
 object object_rest;
-object object_cons;
 object object_quote;
 object object_bq;
 object object_uq;

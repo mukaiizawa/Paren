@@ -128,7 +128,7 @@ static object parse_s_expr(void)
 
 static object load_rec(void)
 {
-  object o;    // function parameters are not evaluated in a defined order in C
+  object o;    // function parameters are not evaluated in a defined order in C!
   if (next_token == EOF) return object_nil;
   o = parse_s_expr();
   return gc_new_cons(o, load_rec());
@@ -170,7 +170,6 @@ static void make_initial_objects(void)
   object_opt = gc_new_symbol(":opt");
   object_key = gc_new_symbol(":key");
   object_rest = gc_new_symbol(":rest");
-  object_cons = gc_new_symbol("cons");
   object_quote = gc_new_symbol("quote");
   object_bq = gc_new_symbol("backquote");
   object_uq = gc_new_symbol("unquote");

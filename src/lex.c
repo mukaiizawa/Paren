@@ -23,7 +23,7 @@
  * <symbol> ::= <identifier>
  * <identifier> ::= <identifier_first> [<identifier_rest>] ...
  * <identifier_first> ::= [$%&*+\-/<=>:?a-zA-Z_]
- * <identifier_rest> ::= <identifier_first> | [0-9] | [!]
+ * <identifier_rest> ::= <identifier_first> | [0-9]
  * <digit> ::= [0-9]
  */
 
@@ -103,7 +103,7 @@ static int identifier_lead_char_p(void)
 
 static int identifier_trail_char_p(void)
 {
-  return identifier_lead_char_p() || isdigit(next_ch) || next_ch == '!';
+  return identifier_lead_char_p() || isdigit(next_ch);
 }
 
 static int lex_number(int sign)
