@@ -8,8 +8,6 @@
 #include "bi.h"
 #include "ip.h"
 
-#define MAX_IS_SIZE 1000
-
 static struct xsplay special_splay;
 static struct xsplay prim_splay;
 
@@ -52,18 +50,12 @@ static object eval_operands(object env, object expr)
 static object eval_sequential(object env, object expr)
 {
   object o;
+  xassert(listp(expr));
   while (expr != object_nil) {
-    if (!listp(expr)) ip_error("eval_sequential: is not a list");
     o = eval(env, expr->cons.car);
     expr = expr->cons.cdr;
   }
   return o;
-}
-
-static void next_operands(object *operands)
-{
-  *operands = (*operands)->cons.cdr;
-  if (!listp(*operands)) ip_error("illegal arguments");
 }
 
 static void bind_lambda_list(object env, object params, object operands)
@@ -99,7 +91,7 @@ static void bind_lambda_list(object env, object params, object operands)
       params = params->cons.cdr;
       if (operands != object_nil) {
         v = operands->cons.car;
-        next_operands(&operands);
+        operands = operands->cons.cdr;
         if (supply_p)
           xsplay_replace(&env->env.binding, o->cons.car, object_true);
       }
@@ -137,12 +129,12 @@ static void bind_lambda_list(object env, object params, object operands)
       k = gc_new_symbol(operands->cons.car->symbol.name + 1);    // skip ':'
       if ((v = xsplay_find(&env->env.binding, k)) == NULL)
         ip_error("undefined keyword parameter ':%s'", k->symbol.name);
-      next_operands(&operands);
+      operands = operands->cons.cdr;
       v = operands->cons.car;
       xsplay_replace(&env->env.binding, k, v);
       if ((o = xsplay_find(&s, k)) != NULL)
         xsplay_replace(&env->env.binding, o, object_true);
-      next_operands(&operands);
+      operands = operands->cons.cdr;
     }
   }
   if (!rest_p && operands != object_nil) ip_error("too many arguments");
@@ -233,7 +225,6 @@ static int parse_params(object *o)
   *o = (*o)->cons.cdr;
   while (TRUE) {
     if (*o == object_nil) break;
-    if (!typep(*o, Cons)) return FALSE;
     if (typep((*o)->cons.car, Keyword)) break;
     if (!valid_xparam_p(*o)) return FALSE;
     *o = (*o)->cons.cdr;
@@ -246,7 +237,6 @@ static int valid_lambda_list_p(int lambda_type, object params)
   int type;
   while (TRUE) {
     if (params == object_nil) return TRUE;
-    if (!typep(params, Cons)) return FALSE;
     type = type(params->cons.car);
     if (type == Keyword) break;
     else if (type == Symbol) params = params->cons.cdr;
@@ -261,7 +251,7 @@ static int valid_lambda_list_p(int lambda_type, object params)
     if (!parse_params(&params)) return FALSE;
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    if (typep(params, Cons) && typep(params->cons.car, Symbol))
+    if (typep(params->cons.car, Symbol))
       params = params->cons.cdr;
     else return FALSE;
   }
@@ -308,7 +298,7 @@ SPECIAL(assign)
     v = argv->cons.car;
     argv = argv->cons.cdr;
     if (!typep(s, Symbol)) ip_error("<-: cannot bind except symbol");
-    if (s == object_nil)ip_error("<-: cannot bind nil");
+    if (s == object_nil) ip_error("<-: cannot bind nil");
     v = eval(e, v);
     while (TRUE) {
       if (e == object_nil) {
@@ -327,11 +317,12 @@ SPECIAL(assign)
 SPECIAL(macro)
 {
   object sym, params, result;
-  if (typep((sym = argv->cons.car), Symbol))
-    params = (argv = argv->cons.cdr)->cons.car;
-  else {
-    params = sym;
+  if (listp(argv->cons.car)) {
     sym = NULL;
+    params = argv->cons.car;
+  } else {
+    sym = argv->cons.car;
+    params = (argv = argv->cons.cdr)->cons.car;
   }
   if (!valid_lambda_list_p(Macro, params))
     ip_error("macro: illegal parameter list");

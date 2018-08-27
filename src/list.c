@@ -8,7 +8,7 @@
 
 PRIM(cons)
 {
-  if (argc != 2) return FALSE;
+  if (argc != 2 || !listp(argv->cons.cdr->cons.car)) return FALSE;
   *result = gc_new_cons(argv->cons.car, argv->cons.cdr->cons.car);
   return TRUE;
 }
