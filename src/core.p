@@ -31,7 +31,7 @@
     cdddar (lambda (x) (cdr (cddar x)))
     cddddr (lambda (x) (cdr (cdddr x))))
 
-; fundamental operator
+; fundamental macro
 (macro function (name args :rest body)
   (list <- name (cons lambda (cons args body))))
 
@@ -63,11 +63,13 @@
         (list print (list list :AssertionFailed (list quote test)))
         '(quit)))
 
+; fundamental function
 (function error (:rest args)
   (print (cons :Error args))
   (quit))
 
-; basic predicate
+(function identity (x) x)
+
 (function not (x)
   (if x nil true))
 
@@ -98,26 +100,26 @@
     (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
 
 ; list processor
-(function identity (x) x)
-
 (function sublist (lis s :opt e)
   (let ((len (length lis))
         (e (or e len))
         (rec (lambda (lis n)
                (if (= n 0) nil
                  (cons (car lis) (rec (cdr lis) (-- n)))))))
-    (if (or (> s e) (< s 0) (> e len)) :error)
+    (if (or (> s e) (< s 0) (> e len)) (error :IllegalArguments))
     (rec (nthcdr lis s) (- e s))))
 
 (function copy-list (lis)
   (sublist lis 0 (length lis)))
 
 (function last-cons (lis)
+  (if !(list? lis) (error :IllegalArguments))
   (if (nil? lis) nil
     (let ((rec (lambda (lis) (if (cdr lis) (rec (cdr lis)) lis))))
       (rec lis))))
 
 (function last (lis)
+  (if !(list? lis) (error :IllegalArguments))
   (car (last-cons lis)))
 
 (function nthcdr (lis n)
@@ -157,6 +159,17 @@
 
 (function ->list (x)
   (if (list? x) x (list x)))
+
+(function flatten (lis)
+  (if !(list? lis) (error :IllegalArguments))
+  (let ((acc nil)
+        (rec (lambda (x)
+               (cond ((nil? x) (reverse acc))
+                     ((atom? x) (push acc x))
+                     (true (if (nil? (car x)) (push acc nil)
+                             (rec (car x)))
+                           (rec (cdr x)))))))
+    (rec lis)))
 
 (function map (args f)
   (if args (cons (f (car args)) (map (cdr args) f))))
@@ -233,9 +246,8 @@
                  (cons list (map tree (lambda (x)
                                         (list quote x))))))))
     (rec expr 1)))
-
-(<- a 3)
-(print ``(1 2 3))
+; (<- a 3)
+; (print ``(1 2 3))
 
 ; pos
 ; {{{
@@ -254,42 +266,49 @@
 
 ;;; cxr
 (assert (= (list 1 2 3) '(1 2 3)))
-(assert (same? (caar '((true))) true))
-(assert (same? (cadr '(x true)) true))
-(assert (= (cdar '((x true))) '(true)))
-(assert (= (cddr '(x y true)) '(true)))
-(assert (same? (caaar '(((true)))) true))
-(assert (same? (caadr '(x (true))) true))
-(assert (same? (cadar '((x true))) true))
-(assert (same? (caddr '(x y true)) true))
-(assert (= (cdaar '(((x true)))) '(true)))
-(assert (= (cdadr '(x (y true))) '(true)))
-(assert (= (cddar '((x y true))) '(true)))
-(assert (= (cdddr '(x y z true)) '(true)))
-(assert (same? (caaaar '((((true))))) true))
-(assert (same? (caaadr '(x ((true)))) true))
-(assert (same? (caadar '((x (true y)))) true))
-(assert (same? (caaddr '(x y (true))) true))
-(assert (same? (cadaar '(((x true)))) true))
-(assert (same? (cadadr '(x (y true))) true))
-(assert (same? (caddar '((x y true))) true))
-(assert (same? (cadddr '(x y z true)) true))
-(assert (= (cdaaar '((((x true))))) '(true)))
-(assert (= (cdaadr '(x ((y true)))) '(true)))
-(assert (= (cdadar '((x (y true)))) '(true)))
-(assert (= (cdaddr '(x y (z true))) '(true)))
-(assert (= (cddaar '(((x y true)))) '(true)))
-(assert (= (cddadr '(x (y z true))) '(true)))
-(assert (= (cdddar '((x y z true))) '(true)))
-(assert (= (cddddr '(w x y z true)) '(true)))
+(assert (same? (caar '((z))) 'z))
+(assert (same? (cadr '(x z)) 'z))
+(assert (= (cdar '((x z))) '(z)))
+(assert (= (cddr '(x x z)) '(z)))
+(assert (same? (caaar '(((z)))) 'z))
+(assert (same? (caadr '(x (z))) 'z))
+(assert (same? (cadar '((x z))) 'z))
+(assert (same? (caddr '(x x z)) 'z))
+(assert (= (cdaar '(((x z)))) '(z)))
+(assert (= (cdadr '(x (x z))) '(z)))
+(assert (= (cddar '((x x z))) '(z)))
+(assert (= (cdddr '(x x x z)) '(z)))
+(assert (same? (caaaar '((((z))))) 'z))
+(assert (same? (caaadr '(x ((z)))) 'z))
+(assert (same? (caadar '((x (z)))) 'z))
+(assert (same? (caaddr '(x x (z))) 'z))
+(assert (same? (cadaar '(((x z)))) 'z))
+(assert (same? (cadadr '(x (x z))) 'z))
+(assert (same? (caddar '((x x z))) 'z))
+(assert (same? (cadddr '(x x x z)) 'z))
+(assert (= (cdaaar '((((x z))))) '(z)))
+(assert (= (cdaadr '(x ((x z)))) '(z)))
+(assert (= (cdadar '((x (x z)))) '(z)))
+(assert (= (cdaddr '(x x (x z))) '(z)))
+(assert (= (cddaar '(((x x z)))) '(z)))
+(assert (= (cddadr '(x (x x z))) '(z)))
+(assert (= (cdddar '((x x x z))) '(z)))
+(assert (= (cddddr '(x x x x z)) '(z)))
 
-;;; nil?
-(assert (nil? nil))
-(assert !(nil? true))
+;;; identity
+(assert (same? (identity :a) :a))
+
+;;; not
+(assert (same? !'x nil))
+(assert (same? !nil true))
 
 ;;; /=
 (assert (/= 1 2))
 (assert !(/= 1 1))
+
+;;; nil?
+(assert (nil? nil))
+(assert !(nil? true))
 
 ;;; type?
 (assert (type? 1 :number))
@@ -317,13 +336,29 @@
 (assert (each-pair-satisfy? '(1 2 3 4 5) <))
 (assert !(each-pair-satisfy? '(1 2 3 3 5) <))
 
-;;; queue/dequeue
-(let ((lis '(1 2 3)))
-  ; (quit)
-  (assert (= (pop lis) 1))
-  (print (dequeue lis))
-  (assert (= (dequeue lis) 3))
-  )
+;;; sublist
+(assert (= (sublist '(1 2 3) 1) '(2 3)))
+(assert (= (sublist '(1 2 3) 1 2) '(2)))
+
+;;; copy-list
+(assert (= (copy-list '(1 2 3)) '(1 2 3)))
+
+;;; last-cons
+(assert (= (last-cons '(1 2 3)) '(3)))
+
+;;; last
+(assert (= (last '(1 2 3)) 3))
+
+; ;;; queue/dequeue
+; (let ((lis '(1 2 3)))
+;   ; (quit)
+;   (assert (= (pop lis) 1))
+;   (print (dequeue lis))
+;   (assert (= (dequeue lis) 3)))
+
+;;; flatten
+(assert (= (flatten '(1 (2) (3 4))) '(1 2 3 4)))
+(assert (= (flatten '(1 (nil) 2)) '(1 nil 2)))
 
 ; }}}
 
