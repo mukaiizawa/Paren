@@ -42,6 +42,15 @@
 (macro begin-if (test :rest body)
   (list if test (cons begin body)))
 
+; (macro begin0 (:rest body)
+;   (print (car body))
+;   (print (cdr body))
+;   (let ((sym (gensym)))
+;     (print 
+;       (cons let (cons (list (list sym (car body)))
+;                       (cons (cdr body)
+;                             (list sym)))))))
+
 (macro or (:rest expr)
   (if expr (list if (car expr) (car expr) (cons or (cdr expr)))))
 
@@ -124,6 +133,13 @@
                (if (nil? lis) n (rec (cdr lis) (++ n))))))
     (rec lis 0)))
 
+(function append (lis :rest args)
+  (reduce args (lambda (x y)
+                 (cdr (last-cons x)
+                      (if (list? y) (copy-list y) (->list y)))
+                 x)
+          :identity (copy-list lis)))
+
 (macro add (lis x)
   (list cdr (list last-cons lis) (list cons x nil)))
 
@@ -132,6 +148,12 @@
 
 (macro pop (lis)
   (list <- lis (list cdr lis)))
+
+(macro queue (lis x)
+  (list push lis x))
+
+(macro dequeue (lis)
+  (list cdr (list last-cons lis) nil))
 
 (function ->list (x)
   (if (list? x) x (list x)))
@@ -206,14 +228,14 @@
     (rec expr n)))
 
 (macro backquote (expr)
-  (let ((level 0)
-        (nquote (macro (expr l)
-                  (if (= l 0) expr
-                    (nquote expr (-- l)))))
-        (traverse (lambda (tree)
-                    (map tree (lambda (x) (list quote x))))))
-    (if (atom? expr) (list quote expr)
-      (nquote expr level))))
+  (let ((rec (lambda (tree level)
+               (if (atom? tree) (list quote tree)
+                 (cons list (map tree (lambda (x)
+                                        (list quote x))))))))
+    (rec expr 1)))
+
+(<- a 3)
+(print ``(1 2 3))
 
 ; pos
 ; {{{
@@ -273,6 +295,11 @@
 (assert (type? 1 :number))
 (assert !(type? :keyword :number))
 
+;;; cons?
+(assert !(cons? 1))
+(assert !(cons? nil))
+(assert (cons? '(1)))
+
 ;;; list?
 (assert !(list? 1))
 (assert (list? (cons 1 nil)))
@@ -289,6 +316,14 @@
 ;;; each-pair-satisfy?
 (assert (each-pair-satisfy? '(1 2 3 4 5) <))
 (assert !(each-pair-satisfy? '(1 2 3 3 5) <))
+
+;;; queue/dequeue
+(let ((lis '(1 2 3)))
+  ; (quit)
+  (assert (= (pop lis) 1))
+  (print (dequeue lis))
+  (assert (= (dequeue lis) 3))
+  )
 
 ; }}}
 
