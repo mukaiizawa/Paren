@@ -68,6 +68,12 @@
   (print (cons :Error args))
   (quit))
 
+(macro precondition (test)
+  (list if (list not test) (list error :PreconditionError (list quote test))))
+
+(macro postcondition (test)
+  (list if (list not test) (list error  :PostconditionError (list quote test))))
+
 (function identity (x) x)
 
 (function not (x)
@@ -100,42 +106,45 @@
     (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
 
 ; list processor
-(function sublist (lis s :opt e)
-  (let ((len (length lis))
-        (e (or e len))
-        (rec (lambda (lis n)
-               (if (= n 0) nil
-                 (cons (car lis) (rec (cdr lis) (-- n)))))))
-    (if (or (> s e) (< s 0) (> e len)) (error :IllegalArguments))
-    (rec (nthcdr lis s) (- e s))))
-
-(function copy-list (lis)
-  (sublist lis 0 (length lis)))
-
-(function last-cons (lis)
-  (if !(list? lis) (error :IllegalArguments))
-  (if (nil? lis) nil
-    (let ((rec (lambda (lis) (if (cdr lis) (rec (cdr lis)) lis))))
-      (rec lis))))
-
-(function last (lis)
-  (if !(list? lis) (error :IllegalArguments))
-  (car (last-cons lis)))
+(function nth (lis n)
+  (precondition (and (list? lis) (< n (length lis))))
+  (car (nthcdr lis n)))
 
 (function nthcdr (lis n)
   (cond ((nil? lis) nil)
         ((<= n 0) lis)
         (:default (nthcdr (cdr lis) (-- n)))))
 
-(function nth (lis n)
-  (car (nthcdr lis n)))
+(function sublist (lis s :opt e)
+  (let ((len (length lis))
+        (e (or e len))
+        (rec (lambda (lis n)
+               (if (= n 0) nil
+                 (cons (car lis) (rec (cdr lis) (-- n)))))))
+    (precondition (and (>= s 0) (<= s e) (<= e len)))
+    (rec (nthcdr lis s) (- e s))))
+
+(function copy-list (lis)
+  (sublist lis 0 (length lis)))
+
+(function last-cons (lis)
+  (precondition (list? lis))
+  (if (nil? lis) nil
+    (let ((rec (lambda (lis) (if (cdr lis) (rec (cdr lis)) lis))))
+      (rec lis))))
+
+(function last (lis)
+  (precondition (list? lis))
+  (car (last-cons lis)))
 
 (function length (lis)
+  (precondition (list? lis))
   (let ((rec (lambda (lis n)
                (if (nil? lis) n (rec (cdr lis) (++ n))))))
     (rec lis 0)))
 
 (function append (lis :rest args)
+  (precondition (and (list? lis) (all-satisfy? args list?)))
   (reduce args (lambda (x y)
                  (cdr (last-cons x)
                       (if (list? y) (copy-list y) (->list y)))
@@ -143,10 +152,16 @@
           :identity (copy-list lis)))
 
 (macro add (lis x)
-  (list cdr (list last-cons lis) (list cons x nil)))
+  (list begin
+        (list precondition (list type? (list quote lis) :symbol))
+        (list cdr (list last-cons lis) (list cons x nil))
+        lis))
 
 (macro push (lis x)
-  (list <- lis (list cons x lis)))
+  (list begin
+        (list precondition (list type? (list quote lis) :symbol))
+        (list <- lis (list cons x lis))
+        lis))
 
 (macro pop (lis)
   (list <- lis (list cdr lis)))
@@ -161,7 +176,7 @@
   (if (list? x) x (list x)))
 
 (function flatten (lis)
-  (if !(list? lis) (error :IllegalArguments))
+  (precondition (list? lis))
   (let ((acc nil)
         (rec (lambda (x)
                (cond ((nil? x) (reverse acc))
@@ -336,6 +351,12 @@
 (assert (each-pair-satisfy? '(1 2 3 4 5) <))
 (assert !(each-pair-satisfy? '(1 2 3 3 5) <))
 
+;;; nth
+(assert (= (nth '(1 2 3) 0) 1))
+
+;;; nthcdr
+(assert (= (nthcdr '(1 2 3) 1) '(2 3)))
+
 ;;; sublist
 (assert (= (sublist '(1 2 3) 1) '(2 3)))
 (assert (= (sublist '(1 2 3) 1 2) '(2)))
@@ -348,6 +369,16 @@
 
 ;;; last
 (assert (= (last '(1 2 3)) 3))
+
+;;; length
+(assert (= (length '(1 2 3)) 3))
+
+;;; append
+(assert (= (append '(1) '(2) '(3)) '(1 2 3)))
+
+;;; add
+(let ((a '(1 2)))
+  (assert (= (add a 3) '(1 2 3))))
 
 ; ;;; queue/dequeue
 ; (let ((lis '(1 2 3)))
