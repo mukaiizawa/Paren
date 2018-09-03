@@ -151,20 +151,24 @@
                  x)
           :identity (copy-list lis)))
 
-(macro add (lis x)
-  (list begin
-        (list precondition (list type? (list quote lis) :symbol))
-        (list cdr (list last-cons lis) (list cons x nil))
-        lis))
+(function add (lis x)
+  (precondition (list? lis))
+  (cdr (last-cons lis) (cons x nil))
+  lis)
 
 (macro push (lis x)
   (list begin
         (list precondition (list type? (list quote lis) :symbol))
         (list <- lis (list cons x lis))
-        lis))
+        :SideEffects))
 
 (macro pop (lis)
-  (list <- lis (list cdr lis)))
+  (precondition (type? lis :symbol))
+  (let ((g (gensym)))
+    (begin (list precondition (list type? (list quote lis) :symbol))
+           (list let (list (list g (list car lis)))
+                 (list <- lis (list cdr lis))
+                 g))))
 
 (macro queue (lis x)
   (list push lis x))
@@ -336,8 +340,8 @@
 
 ;;; list?
 (assert !(list? 1))
-(assert (list? (cons 1 nil)))
 (assert (list? nil))
+(assert (list? '(1)))
 
 ;;; all-satisfy?
 (assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (type? x :number))))
@@ -377,15 +381,14 @@
 (assert (= (append '(1) '(2) '(3)) '(1 2 3)))
 
 ;;; add
-(let ((a '(1 2)))
-  (assert (= (add a 3) '(1 2 3))))
+(assert (= (add (add '(1) 2) 3) '(1 2 3)))
 
-; ;;; queue/dequeue
-; (let ((lis '(1 2 3)))
-;   ; (quit)
-;   (assert (= (pop lis) 1))
-;   (print (dequeue lis))
-;   (assert (= (dequeue lis) 3)))
+;;; push/pop
+(let ((lis '(1)))
+  (push lis 2)
+  (push lis 3)
+  (assert (= lis '(3 2 1)))
+  (assert (= (pop lis) 3)))
 
 ;;; flatten
 (assert (= (flatten '(1 (2) (3 4))) '(1 2 3 4)))

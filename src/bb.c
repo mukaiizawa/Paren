@@ -6,6 +6,16 @@
 #include "gc.h"
 #include "bi.h"
 
+PRIM(gensym)
+{
+  static long index = 0;
+  char buf[MAX_STR_LEN];
+  if (argc != 0) return FALSE;
+  sprintf(buf, "$G%ld", index++);
+  *result = gc_new_symbol(stralloc(buf));
+  return TRUE;
+}
+
 PRIM(type)
 {
   if (argc != 1) return FALSE;
