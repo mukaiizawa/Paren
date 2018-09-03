@@ -160,6 +160,7 @@
 (macro push (lis x)
   (precondition (type? lis :symbol))
   (list begin
+        (list precondition (list list? lis))
         (list <- lis (list cons x lis))
         :SideEffects))
 
@@ -171,8 +172,7 @@
 
 (macro queue (lis x)
   (precondition (type? lis :symbol))
-  (list push lis x)
-  :SideEffects)
+  (list push lis x))
 
 (macro dequeue (lis)
   (precondition (type? lis :symbol))
@@ -270,13 +270,18 @@
                  (list quote (rec expr (-- n)))))))
     (rec expr n)))
 
+(function bqexpander (expr level)
+  (if (atom? expr) (nquote expr level)
+    (let ((first (car expr)))
+      (cond ((same? find unquote) (bqexpander (cdr expr) (-- level)))
+            ((same? find backquote) (bqexpander (cdr expr) (++ level)))
+            (true (cons (bqexpander first level)
+                        (bqexpander (cdr expr level))))))))
+
 (macro backquote (expr)
-  (let ((rec (lambda (tree level)
-               (if (atom? tree) (list quote tree)
-                 (cons list (map tree (lambda (x)
-                                        (list quote x))))))))
-    (rec expr 1)))
-; (<- a 3)
+  (bqexpander expr 0))
+
+(<- a 3)
 ; (print ``(1 2 3))
 
 ; pos
