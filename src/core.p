@@ -42,14 +42,10 @@
 (macro begin-if (test :rest body)
   (list if test (cons begin body)))
 
-; (macro begin0 (:rest body)
-;   (print (car body))
-;   (print (cdr body))
-;   (let ((sym (gensym)))
-;     (print 
-;       (cons let (cons (list (list sym (car body)))
-;                       (cons (cdr body)
-;                             (list sym)))))))
+(macro begin0 (:rest body)
+  (let ((sym (gensym)))
+    (cons let (cons (list (list sym (car body)))
+                    (append1 (cdr body) sym)))))
 
 (macro or (:rest expr)
   (if expr (list if (car expr) (car expr) (cons or (cdr expr)))))
@@ -111,6 +107,7 @@
   (car (nthcdr lis n)))
 
 (function nthcdr (lis n)
+  (precondition (>= (length lis) 0))
   (cond ((nil? lis) nil)
         ((<= n 0) lis)
         (:default (nthcdr (cdr lis) (-- n)))))
@@ -151,30 +148,43 @@
                  x)
           :identity (copy-list lis)))
 
+(function append1 (lis o)
+  (precondition (and (list? lis)))
+  (append lis (->list o)))
+
 (function add (lis x)
   (precondition (list? lis))
   (cdr (last-cons lis) (cons x nil))
   lis)
 
 (macro push (lis x)
+  (precondition (type? lis :symbol))
   (list begin
-        (list precondition (list type? (list quote lis) :symbol))
         (list <- lis (list cons x lis))
         :SideEffects))
 
 (macro pop (lis)
   (precondition (type? lis :symbol))
-  (let ((g (gensym)))
-    (begin (list precondition (list type? (list quote lis) :symbol))
-           (list let (list (list g (list car lis)))
-                 (list <- lis (list cdr lis))
-                 g))))
+  (list begin0
+        (list car lis)
+        (list <- lis (list cdr lis))))
 
 (macro queue (lis x)
+  (precondition (type? lis :symbol))
   (list push lis x))
 
 (macro dequeue (lis)
-  (list cdr (list last-cons lis) nil))
+  (precondition (type? lis :symbol))
+  (let ((len (gensym)) (top-lc (gensym)))
+    (list let (list (list len (list length lis))
+                    (list top-lc (list nthcdr lis (list - len 2))))
+          (list if (list < len 2)
+                (list begin0
+                      (list car lis)
+                      (list <- lis nil))
+                (list begin0
+                      (list cadr top-lc)
+                      (list cdr top-lc nil))))))
 
 (function ->list (x)
   (if (list? x) x (list x)))
@@ -388,7 +398,19 @@
   (push lis 2)
   (push lis 3)
   (assert (= lis '(3 2 1)))
-  (assert (= (pop lis) 3)))
+  (assert (= (pop lis) 3))
+  (assert (= lis '(2 1))))
+
+;;; queue/dequeue
+(let ((lis '(1)))
+  (queue lis 2)
+  (queue lis 3)
+  (assert (= lis '(3 2 1)))
+  (assert (= (dequeue lis) 1))
+  (assert (= lis '(3 2)))
+  (assert (= (dequeue lis) 2))
+  (assert (= (dequeue lis) 3))
+  (assert (nil? lis)))
 
 ;;; flatten
 (assert (= (flatten '(1 (2) (3 4))) '(1 2 3 4)))
