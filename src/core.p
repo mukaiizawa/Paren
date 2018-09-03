@@ -171,7 +171,8 @@
 
 (macro queue (lis x)
   (precondition (type? lis :symbol))
-  (list push lis x))
+  (list push lis x)
+  :SideEffects)
 
 (macro dequeue (lis)
   (precondition (type? lis :symbol))
