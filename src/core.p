@@ -1,6 +1,182 @@
 ; paren core library.
 
-; fundamental list processor
+;: # 概要
+;: コアライブラリはParenの基盤となるライブラリ群で、必要最低限の機能を提供する。
+
+;: # special operator
+;: スペシャルオペレーターはParenに組み込まれた特殊なオペレーターであり、ユーザが定義することはできない。また、引数の扱いはスペシャルオペレーターごとに異なる。
+
+;: ## special-operator <- :rest pairs
+;: pairsをn番目のシンボルをn+1番目の式を評価した結果で束縛し、最後にシンボルを束縛した結果を返す。ただし、pairsがnilの場合にはnilを返す。
+;:
+;: 評価は先頭から行われることが保証されている。即ち、次の二つの式は等価である。
+;:     (<- s1 v1 s2 v2 ... sn vn)
+;:     (begin (<- s1 v1)
+;:            (<- s2 v2)
+;:            ...
+;:            (<- sn vn))
+;:
+;: シンボルは、自身が束縛されている最も近い環境に束縛される。ただし、そのシンボルが現在の環境から辿れる環境に束縛されていない場合は大域環境に束縛する。
+;:
+;: pairsの長さが偶数でない場合や、奇数番目の要素がシンボルでない場合はエラーと見做す。
+
+;: ## special-operator begin :rest body
+;: bodyを逐次評価し、最後に評価した式を返す。ただし、bodyがnilの場合はnilを返す。
+
+;: ## special-operator lambda (:rest args) :rest body
+;: argsを引数に、bodyを評価する無名関数を返す。
+;:
+;: argsに指定できる書式は次の通り。
+;:     <args> ::= [<required_params>] [:opt <xparams>] [:rest <symbol>] [:key <xparams>]
+;:     <required_params> ::= <symbol> <symbol> ...
+;:     <xparams> ::= <xparam> <xparam> ...
+;:     <xparam> ::= { <symbol> | (<symbol> <initial_value> [<supplyp>]) }
+;:     <symbol> -- シンボル
+;:     <initial_value> -- 実引数が省略された場合の初期値
+;:     <supplyp> -- 関数呼び出し時に実引数が指定されたかを保持するシンボル
+
+;: ## special-operator macro macro-name (:rest args) :rest body
+;: argsを引数に、bodyを評価するマクロを生成し、シンボルmacro-nameに束縛する。
+;:
+;: macro-nameは省略可能で、その場合は生成したマクロはどこにも束縛しない。
+;:
+;: argsの書式は<required_params>に<args>を指定できる点を除いてlambdaと同じである。
+;:
+;: 即ち、上のBNFは次のように訂正される。
+;:     <required_params> ::= { <symbol> <symbol> ... | <args> }
+
+;: ## special-operator let (:rest syms) :rest body
+;: 現在の環境を親に持つ環境を新たに作成し、作成した環境にシンボルのリストsymsを順にnilで束縛する。その後、作成した環境下でbodyを逐次評価する。
+;:
+;: シンボルを束縛する値があらかじめわかっている場合は、次のようにシンボルと束縛する値をリストで指定することもできる。
+;:     (let ((s1 v1) (s2 v2) ... (sn vn))
+;:       expr1
+;:       epxr2
+;:       ...
+;:       exprn)
+;:
+;: これは次の式と等価である。
+;:     (let (s1 s2 ... sn)
+;:       (<- s1 v1 s2 v2 ... sn vn)
+;:       expr1
+;:       epxr2
+;:       ...
+;:       exprn)
+;:
+;: varには第一要素がシンボルであるような長さが二のリストを渡すこともでき、その場合は第二要素の評価結果で第一要素を束縛する。
+
+;: ## special-operator if test then :opt else
+;: testがnil以外の場合はthenを、そうでなければelseを評価する。
+;:
+;: thenがnilの場合に、elseが省略された場合はnilを返す。
+
+;: ## special-operator quote expr
+;: exprを評価せずに返す。
+;:
+;: Parenではその使用頻度からリードマクロ'が定義されており、次の二つの式は等価である。
+;:     'expr
+;:     (quote expr)
+
+;: # fundamental list processer
+;: Parenの最も基本的なリスト操作ユーティリティを定義する。
+
+;: ## function list :rest args
+;: argsを要素とするようなリストを返す。
+
+;: ## function car lis
+;: リストlisのcar部を取得する。
+;:
+;: lisがnilの場合はnilを返す。
+
+;: ## function cdr lis
+;: リストlisのcdr部を取得する。
+;:
+;: lisがnilの場合はnilを返す。
+
+;: ## function caar lis
+;: 式(car (car lis))と等価。
+
+;: ## function cadr lis
+;: 式(car (cdr lis))と等価。
+
+;: ## function cdar lis
+;: 式(cdr (car lis))と等価。
+
+;: ## function cddr lis
+;: 式(cdr (cdr lis))と等価。
+
+;: ## function caaar lis
+;: 式(car (car (car lis)))と等価。
+
+;: ## function caadr lis
+;: 式(car (car (cdr lis)))と等価。
+
+;: ## function cadar lis
+;: 式(car (cdr (car lis)))と等価。
+
+;: ## function caddr lis
+;: 式(car (cdr (cdr lis)))と等価。
+
+;: ## function cdaar lis
+;: 式(cdr (car (car lis)))と等価。
+
+;: ## function cdadr lis
+;: 式(cdr (car (cdr lis)))と等価。
+
+;: ## function cddar lis
+;: 式(cdr (cdr (car lis)))と等価。
+
+;: ## function cdddr lis
+;: 式(cdr (cdr (cdr lis)))と等価。
+
+;: ## function caaaar lis
+;: 式(car (car (car (car lis))))と等価。
+
+;: ## function caaadr lis
+;: 式(car (car (car (cdr lis))))と等価。
+
+;: ## function caadar lis
+;: 式(car (car (cdr (car lis))))と等価。
+
+;: ## function caaddr lis
+;: 式(car (car (cdr (cdr lis))))と等価。
+
+;: ## function cadaar lis
+;: 式(car (cdr (car (car lis))))と等価。
+
+;: ## function cadadr lis
+;: 式(car (cdr (car (cdr lis))))と等価。
+
+;: ## function caddar lis
+;: 式(car (cdr (cdr (car lis))))と等価。
+
+;: ## function cadddr lis
+;: 式(car (cdr (cdr (cdr lis))))と等価。
+
+;: ## function cdaaar lis
+;: 式(cdr (car (car (car lis))))と等価。
+
+;: ## function cdaadr lis
+;: 式(cdr (car (car (cdr lis))))と等価。
+
+;: ## function cdadar lis
+;: 式(cdr (car (cdr (car lis))))と等価。
+
+;: ## function cdaddr lis
+;: 式(cdr (car (cdr (cdr lis))))と等価。
+
+;: ## function cddaar lis
+;: 式(cdr (cdr (car (car lis))))と等価。
+
+;: ## function cddadr lis
+;: 式(cdr (cdr (car (cdr lis))))と等価。
+
+;: ## function cdddar lis
+;: 式(cdr (cdr (cdr (car lis))))と等価。
+
+;: ## function cddddr lis
+;: 式(cdr (cdr (cdr (cdr lis))))と等価。
+
 (<- list (lambda (:rest args) args)
     caar (lambda (x) (car (car x)))
     cadr (lambda (x) (car (cdr x)))
@@ -31,11 +207,22 @@
     cdddar (lambda (x) (cdr (cddar x)))
     cddddr (lambda (x) (cdr (cdddr x))))
 
-; fundamental macro
+;: # fundamental macro
+;: 関数定義、制御構造等Parenの基本的なマクロを定義する。
+
+;: ## macro function name args :rest body
+;: argsを引数にbodyを実行する関数をシンボルnameに束縛する。
+;:
+;: argsに指定できる書式はspecial-operator lambdaを参照のこと。
 (macro function (name args :rest body)
   (list <- name (cons lambda (cons args body))))
 
+;: ## macro cond :rest expr
+;: リストexpr
+;:
+;: exprが連想リストでない場合はエラーと見做す。
 (macro cond (:rest expr)
+  (precondition (alist? expr))
   (if (nil? expr) nil
     (list if (caar expr) (cons begin (cdar expr)) (cons cond (cdr expr)))))
 
@@ -87,10 +274,17 @@
 (function cons? (x)
   !(atom? x))
 
+(function function? (x)
+  (type? x :lambda))
+
 (function list? (x)
   (or (nil? x) (cons? x)))
 
+(function alist? (x)
+  (and (list? x) (all-satisfy? x list?)))
+
 (function all-satisfy? (lis f)
+  (precondition (and (list? lis) (function? f)))
   (if (nil? lis) true
     (and (f (car lis)) (all-satisfy? (cdr lis) f))))
 
@@ -101,7 +295,49 @@
   (if (nil? (cdr lis)) true
     (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
 
+(assert (= (list 1 2 3) '(1 2 3)))
+(assert (same? (caar '((z))) 'z))
+(assert (same? (cadr '(x z)) 'z))
+(assert (= (cdar '((x z))) '(z)))
+(assert (= (cddr '(x x z)) '(z)))
+(assert (same? (caaar '(((z)))) 'z))
+(assert (same? (caadr '(x (z))) 'z))
+(assert (same? (cadar '((x z))) 'z))
+(assert (same? (caddr '(x x z)) 'z))
+(assert (= (cdaar '(((x z)))) '(z)))
+(assert (= (cdadr '(x (x z))) '(z)))
+(assert (= (cddar '((x x z))) '(z)))
+(assert (= (cdddr '(x x x z)) '(z)))
+(assert (same? (caaaar '((((z))))) 'z))
+(assert (same? (caaadr '(x ((z)))) 'z))
+(assert (same? (caadar '((x (z)))) 'z))
+(assert (same? (caaddr '(x x (z))) 'z))
+(assert (same? (cadaar '(((x z)))) 'z))
+(assert (same? (cadadr '(x (x z))) 'z))
+(assert (same? (caddar '((x x z))) 'z))
+(assert (same? (cadddr '(x x x z)) 'z))
+(assert (= (cdaaar '((((x z))))) '(z)))
+(assert (= (cdaadr '(x ((x z)))) '(z)))
+(assert (= (cdadar '((x (x z)))) '(z)))
+(assert (= (cdaddr '(x x (x z))) '(z)))
+(assert (= (cddaar '(((x x z)))) '(z)))
+(assert (= (cddadr '(x (x x z))) '(z)))
+(assert (= (cdddar '((x x x z))) '(z)))
+(assert (= (cddddr '(x x x x z)) '(z)))
+
 ; list processor
+(function ->list (x)
+  (if (list? x) x (list x)))
+
+(function list->alist (lis)
+  (precondition (even? (length lis)))
+  (let ((acc nil)
+        (rec (lambda (lis)
+               (if (nil? lis) (reverse acc)
+                 (begin (push acc (list (car lis) (cadr lis)))
+                        (rec (cddr lis)))))))
+    (rec lis)))
+
 (function nth (lis n)
   (precondition (and (list? lis) (< n (length lis))))
   (car (nthcdr lis n)))
@@ -187,9 +423,6 @@
                       (list cadr top-lc)
                       (list cdr top-lc nil))))))
 
-(function ->list (x)
-  (if (list? x) x (list x)))
-
 (function flatten (lis)
   (precondition (list? lis))
   (let ((acc nil)
@@ -253,9 +486,11 @@
 (function >= (:rest args)
   (each-pair-satisfy? args (lambda (x y) !(< x y))))
 
-; TODO
-; (function even? (x))
-; (function odd? (x))
+(function even? (x)
+  (= (mod x 2) 0))
+
+(function odd? (x)
+  !(even? x))
 
 (macro unquote (:rest forms)
   (error :comma-not-inside-backquote))
@@ -273,15 +508,14 @@
 (function bqexpander (expr level)
   (if (atom? expr) (nquote expr level)
     (let ((first (car expr)))
-      (cond ((same? find unquote) (bqexpander (cdr expr) (-- level)))
-            ((same? find backquote) (bqexpander (cdr expr) (++ level)))
+      (cond ((same? first unquote) (bqexpander (cdr expr) (-- level)))
+            ((same? first backquote) (bqexpander (cdr expr) (++ level)))
             (true (cons (bqexpander first level)
                         (bqexpander (cdr expr level))))))))
 
 (macro backquote (expr)
   (bqexpander expr 0))
 
-(<- a 3)
 ; (print ``(1 2 3))
 
 ; pos
@@ -299,36 +533,11 @@
 ; test
 ; {{{
 
-;;; cxr
-(assert (= (list 1 2 3) '(1 2 3)))
-(assert (same? (caar '((z))) 'z))
-(assert (same? (cadr '(x z)) 'z))
-(assert (= (cdar '((x z))) '(z)))
-(assert (= (cddr '(x x z)) '(z)))
-(assert (same? (caaar '(((z)))) 'z))
-(assert (same? (caadr '(x (z))) 'z))
-(assert (same? (cadar '((x z))) 'z))
-(assert (same? (caddr '(x x z)) 'z))
-(assert (= (cdaar '(((x z)))) '(z)))
-(assert (= (cdadr '(x (x z))) '(z)))
-(assert (= (cddar '((x x z))) '(z)))
-(assert (= (cdddr '(x x x z)) '(z)))
-(assert (same? (caaaar '((((z))))) 'z))
-(assert (same? (caaadr '(x ((z)))) 'z))
-(assert (same? (caadar '((x (z)))) 'z))
-(assert (same? (caaddr '(x x (z))) 'z))
-(assert (same? (cadaar '(((x z)))) 'z))
-(assert (same? (cadadr '(x (x z))) 'z))
-(assert (same? (caddar '((x x z))) 'z))
-(assert (same? (cadddr '(x x x z)) 'z))
-(assert (= (cdaaar '((((x z))))) '(z)))
-(assert (= (cdaadr '(x ((x z)))) '(z)))
-(assert (= (cdadar '((x (x z)))) '(z)))
-(assert (= (cdaddr '(x x (x z))) '(z)))
-(assert (= (cddaar '(((x x z)))) '(z)))
-(assert (= (cddadr '(x (x x z))) '(z)))
-(assert (= (cdddar '((x x x z))) '(z)))
-(assert (= (cddddr '(x x x x z)) '(z)))
+;;; ->list
+(assert (same? (identity :a) :a))
+
+;;; list->alist
+(assert (= (list->alist '(1 2 3 4)) '((1 2) (3 4))))
 
 ;;; identity
 (assert (same? (identity :a) :a))
@@ -423,5 +632,10 @@
 (assert (= (flatten '(1 (nil) 2)) '(1 nil 2)))
 
 ; }}}
+
+(assert !(alist? '(1)))
+(assert !(alist? '(1 ())))
+(assert (alist? nil))
+(assert (alist? '((a b) (c d))))
 
 (print :finish)

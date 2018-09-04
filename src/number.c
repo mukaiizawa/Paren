@@ -1,5 +1,7 @@
 // number
 
+#include <math.h>
+
 #include "std.h"
 #include "xsplay.h"
 #include "object.h"
@@ -69,6 +71,17 @@ PRIM(number_multiply)
   return TRUE;
 }
 
+PRIM(number_modulo)
+{
+  object x, y;
+  if (argc != 2) return FALSE;
+  FETCH_NUMBER(x);
+  FETCH_NUMBER(y);
+  if (y == 0 || !typep(x, Xint) || !typep(y, Xint)) return FALSE;
+  *result = new_xint(x->xint.val % y->xint.val);
+  return TRUE;
+}
+
 PRIM(number_lt)
 {
   object x, y;
@@ -83,5 +96,14 @@ PRIM(number_lt)
     x = y;
   }
   *result = object_true;
+  return TRUE;
+}
+
+PRIM(number_ineger_p)
+{
+  object x;
+  if (argc != 1) return FALSE;
+  FETCH_NUMBER(x);
+  *result = object_bool(typep(x, Xint));
   return TRUE;
 }
