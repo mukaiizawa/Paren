@@ -3,9 +3,22 @@
 ;: # 概要
 ;: コアライブラリはParenの基盤となるライブラリ群で、必要最低限の機能を提供する。
 
+;: # global symbol
+;: ## symbol nil
+;: nilは次の特徴をもつシンボルである。
+;: - 空のリストとして扱われる
+;: - 唯一、真偽値の偽として扱われる
+;:
+;: 評価されると自信を返す。
+;:
+;: ## symbol true
+;: trueは真偽値の真を代表するシンボルである。
+;:
+;: 評価されると自信を返す。
+
 ;: # special operator
 ;: スペシャルオペレーターはParenに組み込まれた特殊なオペレーターであり、ユーザが定義することはできない。また、引数の扱いはスペシャルオペレーターごとに異なる。
-
+;:
 ;: ## special-operator <- :rest pairs
 ;: pairsをn番目のシンボルをn+1番目の式を評価した結果で束縛し、最後にシンボルを束縛した結果を返す。ただし、pairsがnilの場合にはnilを返す。
 ;:
@@ -19,10 +32,10 @@
 ;: シンボルは、自身が束縛されている最も近い環境に束縛される。ただし、そのシンボルが現在の環境から辿れる環境に束縛されていない場合は大域環境に束縛する。
 ;:
 ;: pairsの長さが偶数でない場合や、奇数番目の要素がシンボルでない場合はエラーと見做す。
-
+;:
 ;: ## special-operator begin :rest body
 ;: bodyを逐次評価し、最後に評価した式を返す。ただし、bodyがnilの場合はnilを返す。
-
+;:
 ;: ## special-operator lambda (:rest args) :rest body
 ;: argsを引数に、bodyを評価する無名関数を返す。
 ;:
@@ -34,7 +47,7 @@
 ;:     <symbol> -- シンボル
 ;:     <initial_value> -- 実引数が省略された場合の初期値
 ;:     <supplyp> -- 関数呼び出し時に実引数が指定されたかを保持するシンボル
-
+;:
 ;: ## special-operator macro macro-name (:rest args) :rest body
 ;: argsを引数に、bodyを評価するマクロを生成し、シンボルmacro-nameに束縛する。
 ;:
@@ -44,7 +57,7 @@
 ;:
 ;: 即ち、上のBNFは次のように訂正される。
 ;:     <required_params> ::= { <symbol> <symbol> ... | <args> }
-
+;:
 ;: ## special-operator let (:rest syms) :rest body
 ;: 現在の環境を親に持つ環境を新たに作成し、作成した環境にシンボルのリストsymsを順にnilで束縛する。その後、作成した環境下でbodyを逐次評価する。
 ;:
@@ -64,119 +77,118 @@
 ;:       exprn)
 ;:
 ;: varには第一要素がシンボルであるような長さが二のリストを渡すこともでき、その場合は第二要素の評価結果で第一要素を束縛する。
-
+;:
 ;: ## special-operator if test then :opt else
 ;: testがnil以外の場合はthenを、そうでなければelseを評価する。
 ;:
 ;: thenがnilの場合に、elseが省略された場合はnilを返す。
-
+;:
 ;: ## special-operator quote expr
 ;: exprを評価せずに返す。
 ;:
 ;: Parenではその使用頻度からリードマクロ'が定義されており、次の二つの式は等価である。
 ;:     'expr
 ;:     (quote expr)
-
+;:
 ;: # fundamental list processer
 ;: Parenの最も基本的なリスト操作ユーティリティを定義する。
-
+;:
 ;: ## function list :rest args
 ;: argsを要素とするようなリストを返す。
-
-;: ## function car lis
-;: リストlisのcar部を取得する。
 ;:
-;: lisがnilの場合はnilを返す。
-
-;: ## function cdr lis
-;: リストlisのcdr部を取得する。
+;: ## function car lis :opt val
+;: optが省略された場合、リストlisのcar部を取得する。ただし、lisがnilの場合はnilを返す。
 ;:
-;: lisがnilの場合はnilを返す。
-
+;: optが指定された場合は、lisのcar部の参照をvalに破壊的に変更する。
+;:
+;: ## function cdr lis :opt val
+;: optが省略された場合、リストlisのcdr部を取得する。ただし、lisがnilの場合はnilを返す。
+;:
+;: optが指定された場合は、lisのcdr部の参照をvalに破壊的に変更する。
+;:
 ;: ## function caar lis
 ;: 式(car (car lis))と等価。
-
+;:
 ;: ## function cadr lis
 ;: 式(car (cdr lis))と等価。
-
+;:
 ;: ## function cdar lis
 ;: 式(cdr (car lis))と等価。
-
+;:
 ;: ## function cddr lis
 ;: 式(cdr (cdr lis))と等価。
-
+;:
 ;: ## function caaar lis
 ;: 式(car (car (car lis)))と等価。
-
+;:
 ;: ## function caadr lis
 ;: 式(car (car (cdr lis)))と等価。
-
+;:
 ;: ## function cadar lis
 ;: 式(car (cdr (car lis)))と等価。
-
+;:
 ;: ## function caddr lis
 ;: 式(car (cdr (cdr lis)))と等価。
-
+;:
 ;: ## function cdaar lis
 ;: 式(cdr (car (car lis)))と等価。
-
+;:
 ;: ## function cdadr lis
 ;: 式(cdr (car (cdr lis)))と等価。
-
+;:
 ;: ## function cddar lis
 ;: 式(cdr (cdr (car lis)))と等価。
-
+;:
 ;: ## function cdddr lis
 ;: 式(cdr (cdr (cdr lis)))と等価。
-
+;:
 ;: ## function caaaar lis
 ;: 式(car (car (car (car lis))))と等価。
-
+;:
 ;: ## function caaadr lis
 ;: 式(car (car (car (cdr lis))))と等価。
-
+;:
 ;: ## function caadar lis
 ;: 式(car (car (cdr (car lis))))と等価。
-
+;:
 ;: ## function caaddr lis
 ;: 式(car (car (cdr (cdr lis))))と等価。
-
+;:
 ;: ## function cadaar lis
 ;: 式(car (cdr (car (car lis))))と等価。
-
+;:
 ;: ## function cadadr lis
 ;: 式(car (cdr (car (cdr lis))))と等価。
-
+;:
 ;: ## function caddar lis
 ;: 式(car (cdr (cdr (car lis))))と等価。
-
+;:
 ;: ## function cadddr lis
 ;: 式(car (cdr (cdr (cdr lis))))と等価。
-
+;:
 ;: ## function cdaaar lis
 ;: 式(cdr (car (car (car lis))))と等価。
-
+;:
 ;: ## function cdaadr lis
 ;: 式(cdr (car (car (cdr lis))))と等価。
-
+;:
 ;: ## function cdadar lis
 ;: 式(cdr (car (cdr (car lis))))と等価。
-
+;:
 ;: ## function cdaddr lis
 ;: 式(cdr (car (cdr (cdr lis))))と等価。
-
+;:
 ;: ## function cddaar lis
 ;: 式(cdr (cdr (car (car lis))))と等価。
-
+;:
 ;: ## function cddadr lis
 ;: 式(cdr (cdr (car (cdr lis))))と等価。
-
+;:
 ;: ## function cdddar lis
 ;: 式(cdr (cdr (cdr (car lis))))と等価。
-
+;:
 ;: ## function cddddr lis
 ;: 式(cdr (cdr (cdr (cdr lis))))と等価。
-
 (<- list (lambda (:rest args) args)
     caar (lambda (x) (car (car x)))
     cadr (lambda (x) (car (cdr x)))
@@ -207,7 +219,7 @@
     cdddar (lambda (x) (cdr (cddar x)))
     cddddr (lambda (x) (cdr (cdddr x))))
 
-;: # fundamental macro
+;: # fundamental operator
 ;: 関数定義、制御構造等Parenの基本的なマクロを定義する。
 
 ;: ## macro function name args :rest body
@@ -218,7 +230,9 @@
   (list <- name (cons lambda (cons args body))))
 
 ;: ## macro cond :rest expr
-;: リストexpr
+;: 連想リストexprの先頭要素からキー値を逐次評価し、nilでない値を返したキー値のcdr部を逐次評価して最後に評価した結果を返す。
+;:
+;: キー値がnilでない要素がない場合や、exprがnilの場合はnilを返す。
 ;:
 ;: exprが連想リストでない場合はエラーと見做す。
 (macro cond (:rest expr)
@@ -226,56 +240,102 @@
   (if (nil? expr) nil
     (list if (caar expr) (cons begin (cdar expr)) (cons cond (cdr expr)))))
 
-(macro begin-if (test :rest body)
-  (list if test (cons begin body)))
-
+;: ## macro begin0 :rest body
+;: 最初に評価した結果を返す点を除いてbeginと等価。
 (macro begin0 (:rest body)
   (let ((sym (gensym)))
     (cons let (cons (list (list sym (car body)))
                     (append1 (cdr body) sym)))))
 
+;: ## macro begin-if test :rest body
+;: testを評価結果がnil以外の場合にbodyを逐次評価する。
+(macro begin-if (test :rest body)
+  (list if test (cons begin body)))
+
+;: ## macro or :rest expr
+;: リストexprの要素を逐次評価し、評価結果がnilでない場合にその値を返す。この場合、後続の評価は行わない。
+;:
+;: すべての評価結果がnilの場合はnilを返す。
 (macro or (:rest expr)
   (if expr (list if (car expr) (car expr) (cons or (cdr expr)))))
 
+;: ## macro and :rest expr
+;: リストexprの要素を逐次評価し、最後に評価した値を返す。ただし、逐次評価の過程でnilが得られた場合はnilを返す。
+;:
+;: ただし、exprがnilの場合はtrueを返す。
 (macro and (:rest expr)
-  (if (nil? (cdr expr)) (car expr)
+  (if (nil? expr) true
     (list if (car expr) (cons and (cdr expr)))))
 
-(macro assert (test)
-  (list begin-if (list not test)
-        (list print (list list :AssertionFailed (list quote test)))
-        '(quit)))
-
-; fundamental function
-(function error (:rest args)
-  (print (cons :Error args))
+;: # error and exception
+;: ## function error :rest msg
+;: メッセージmsgを表示し、システムを終了する。
+(function error (:rest msg)
+  (print (cons :Error msg))
   (quit))
 
+;: ## macro precondition test
+;: testがnilの場合に、システムを終了する。
+;:
+;: 関数、マクロが評価される事前条件を定義するために使用する。
 (macro precondition (test)
   (list if (list not test) (list error :PreconditionError (list quote test))))
 
+;: ## macro postcondition test
+;: testがnilの場合に、システムを終了する。
+;:
+;: 関数、マクロ評価後の事後条件を定義するために使用する。
 (macro postcondition (test)
   (list if (list not test) (list error  :PostconditionError (list quote test))))
 
+;: ## macro assert test
+;: testがnilの場合にその旨を通知してParenを強制終了する。
+;:
+;: 状態異常の早以上期検知のために使用する。
+(macro assert (test)
+  (list if (list = test nil)
+        (list begin
+              (list print (list list :AssertionFailed (list quote test)))
+              '(quit))))
+
+;: # fundamental function
+;: ## function identity x
+;: 引数xを返す、恒等関数。
 (function identity (x) x)
 
-(function not (x)
-  (if x nil true))
+;: ## function not x
+;: 引数xの否定値を返す。即ち、xがnilの場合はtrueを、そうでなければnilを返す。
+(function not (x) (same? x nil))
+(assert !nil)
+(assert !!true)
 
-(function /= (x y)
-  !(= x y))
+;: ## function nil? x
+;: 関数notのエイリアス。
+(<- nil? not)
+(assert (nil? nil))
+(assert (nil? (nil? true)))
 
-(function nil? (x)
-  (same? x nil))
+;: ## function /= x y
+;: 式!(= x y)に等価。
+(function /= (x y) !(= x y))
+(assert (/= 1 2))
+(assert !(/= 1 1))
 
-(function type? (x k)
-  (same? (type x) k))
+;: ## function number? x
+;: 引数xが数値か否か返す。
+(function number? (x)
+  (same? (type x) :number))
+
+;: ## function symbol? x
+;: 引数xがシンボルか否か返す。
+(function symbol? (x)
+  (same? (type x) :symbol))
 
 (function cons? (x)
-  !(atom? x))
+  !(atom? x))    ; primitie!!?
 
 (function function? (x)
-  (type? x :lambda))
+  (same? (type x) :lambda))
 
 (function list? (x)
   (or (nil? x) (cons? x)))
@@ -393,32 +453,32 @@
   (cdr (last-cons lis) (cons x nil))
   lis)
 
-(macro push (lis x)
-  (precondition (type? lis :symbol))
+(macro push (sym x)
+  (precondition (symbol? sym))
   (list begin
-        (list precondition (list list? lis))
-        (list <- lis (list cons x lis))
+        (list precondition (list list? sym))
+        (list <- sym (list cons x sym))
         :SideEffects))
 
-(macro pop (lis)
-  (precondition (type? lis :symbol))
+(macro pop (sym)
+  (precondition (symbol? sym))
   (list begin0
-        (list car lis)
-        (list <- lis (list cdr lis))))
+        (list car sym)
+        (list <- sym (list cdr sym))))
 
-(macro queue (lis x)
-  (precondition (type? lis :symbol))
-  (list push lis x))
+(macro queue (sym x)
+  (precondition (symbol? sym))
+  (list push sym x))
 
-(macro dequeue (lis)
-  (precondition (type? lis :symbol))
+(macro dequeue (sym)
+  (precondition (symbol? sym))
   (let ((len (gensym)) (top-lc (gensym)))
-    (list let (list (list len (list length lis))
-                    (list top-lc (list nthcdr lis (list - len 2))))
+    (list let (list (list len (list length sym))
+                    (list top-lc (list nthcdr sym (list - len 2))))
           (list if (list < len 2)
                 (list begin0
-                      (list car lis)
-                      (list <- lis nil))
+                      (list car sym)
+                      (list <- sym nil))
                 (list begin0
                       (list cadr top-lc)
                       (list cdr top-lc nil))))))
@@ -554,10 +614,6 @@
 (assert (nil? nil))
 (assert !(nil? true))
 
-;;; type?
-(assert (type? 1 :number))
-(assert !(type? :keyword :number))
-
 ;;; cons?
 (assert !(cons? 1))
 (assert !(cons? nil))
@@ -569,12 +625,12 @@
 (assert (list? '(1)))
 
 ;;; all-satisfy?
-(assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (type? x :number))))
-(assert !(all-satisfy? '(1 :a 3 :b 5) (lambda (x) (type? x :number))))
+(assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
+(assert !(all-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
 
 ;;; any-satisfy?
-(assert (any-satisfy? '(1 2 3 4 5) (lambda (x) (type? x :number))))
-(assert (any-satisfy? '(1 :a 3 :b 5) (lambda (x) (type? x :number))))
+(assert (any-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
+(assert (any-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
 
 ;;; each-pair-satisfy?
 (assert (each-pair-satisfy? '(1 2 3 4 5) <))
@@ -637,5 +693,14 @@
 (assert !(alist? '(1 ())))
 (assert (alist? nil))
 (assert (alist? '((a b) (c d))))
+
+(assert !(or))
+(assert (or nil nil true))
+(assert !(or nil nil nil))
+(assert (and))
+(assert (and true true true))
+(assert !(and true nil true))
+
+; test frunctions
 
 (print :finish)
