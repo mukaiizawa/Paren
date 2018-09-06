@@ -287,7 +287,7 @@ SPECIAL(let)
 }
 
 SPECIAL(assign)
-{
+h
   object e, s, v;
   if (argc == 0) return object_nil;
   if (argc % 2 != 0) ip_error("<-: must be pair");

@@ -321,24 +321,61 @@
 (assert (/= 1 2))
 (assert !(/= 1 1))
 
+;: ## function cons? x
+;: 引数xがコンスか否か返す。
+(function cons? (x)
+  (same? ($$type x) :cons))
+(assert !(cons? 1))
+(assert !(cons? nil))
+(assert (cons? '(1)))
+
+;: ## function list? x
+;: 引数xがリストか否か返す。
+;:
+;: 即ち、(or (nil? x) (cons? x)))と等価。
+(function list? (x)
+  (or (nil? x) (cons? x)))
+(assert !(list? 1))
+(assert (list? nil))
+(assert (list? '(1)))
+
+;: ## function atom? x
+;: 引数xがアトムか否か返す。
+;:
+;: 即ち、式(atom? x)と等価。
+(function atom? (x)
+  !(cons? x))
+(assert (atom? 1))
+(assert (atom? nil))
+(assert !(atom? '(1)))
+
 ;: ## function number? x
 ;: 引数xが数値か否か返す。
 (function number? (x)
-  (same? (type x) :number))
+  (same? ($$type x) :number))
+(assert !(number? nil))
+(assert !(number? (lambda (x) x)))
+(assert (number? 3.14))
+(assert (number? 0x20))
 
 ;: ## function symbol? x
 ;: 引数xがシンボルか否か返す。
 (function symbol? (x)
-  (same? (type x) :symbol))
+  (same? ($$type x) :symbol))
+(assert !(symbol? (lambda (x) x)))
+(assert !(symbol? 3.14))
+(assert (symbol? (gensym)))
+(assert (symbol? nil))
 
-(function cons? (x)
-  !(atom? x))    ; primitie!!?
-
+;: ## function function? x
+;: 引数xが関数か否か返す。
 (function function? (x)
-  (same? (type x) :lambda))
-
-(function list? (x)
-  (or (nil? x) (cons? x)))
+  (same? ($$type x) :lambda))
+(assert !(function? 3.14))
+(assert !(function? (macro (x) x)))
+; (assert (function? car))
+(assert (function? function?))
+(assert (function? (lambda (x) x)))
 
 (function alist? (x)
   (and (list? x) (all-satisfy? x list?)))
@@ -447,11 +484,6 @@
 (function append1 (lis o)
   (precondition (and (list? lis)))
   (append lis (->list o)))
-
-(function add (lis x)
-  (precondition (list? lis))
-  (cdr (last-cons lis) (cons x nil))
-  lis)
 
 (macro push (sym x)
   (precondition (symbol? sym))
@@ -661,9 +693,6 @@
 ;;; append
 (assert (= (append '(1) '(2) '(3)) '(1 2 3)))
 
-;;; add
-(assert (= (add (add '(1) 2) 3) '(1 2 3)))
-
 ;;; push/pop
 (let ((lis '(1)))
   (push lis 2)
@@ -700,7 +729,5 @@
 (assert (and))
 (assert (and true true true))
 (assert !(and true nil true))
-
-; test frunctions
 
 (print :finish)

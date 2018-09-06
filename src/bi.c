@@ -21,7 +21,7 @@ static char *symbol_name_map[] = {
   "assign", "<-",
   "samep", "same?",
   "equalp", "=",
-  "atomp", "atom?",
+  "type", "$$type",
   "number_add", "+",
   "number_multiply", "*",
   "number_lt", "<",

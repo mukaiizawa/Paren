@@ -52,6 +52,9 @@ $(paren): paren.o xc.a
 core.p: $(paren)
 	./paren core.p
 
+man:
+	cat core.p | grep ';:' | cut -c 4-
+
 clean:
 	rm -f *.o *.a *.wk $(paren)
 

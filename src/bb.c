@@ -16,35 +16,6 @@ PRIM(gensym)
   return TRUE;
 }
 
-PRIM(type)
-{
-  if (argc != 1) return FALSE;
-  switch (type(argv->cons.car)) {
-    case Macro:
-      *result = gc_new_symbol(":macro");
-      break;
-    case Lambda:
-      *result = gc_new_symbol(":lambda");
-      break;
-    case Cons:
-      *result = gc_new_symbol(":cons");
-      break;
-    case Xint:
-    case Xfloat:
-      *result = gc_new_symbol(":number");
-      break;
-    case Symbol:
-      *result = gc_new_symbol(":symbol");
-      break;
-    case Keyword:
-      *result = gc_new_symbol(":keyword");
-      break;
-    default:
-      return FALSE;
-  }
-  return TRUE;
-}
-
 PRIM(samep)
 {
   int b;
@@ -93,10 +64,32 @@ PRIM(equalp)
   return TRUE;
 }
 
-PRIM(atomp)
+PRIM(type)
 {
   if (argc != 1) return FALSE;
-  *result = object_bool(!typep(argv->cons.car, Cons));
+  switch (type(argv->cons.car)) {
+    case Macro:
+      *result = gc_new_symbol(":macro");
+      break;
+    case Lambda:
+      *result = gc_new_symbol(":lambda");
+      break;
+    case Cons:
+      *result = gc_new_symbol(":cons");
+      break;
+    case Xint:
+    case Xfloat:
+      *result = gc_new_symbol(":number");
+      break;
+    case Symbol:
+      *result = gc_new_symbol(":symbol");
+      break;
+    case Keyword:
+      *result = gc_new_symbol(":keyword");
+      break;
+    default:
+      return FALSE;
+  }
   return TRUE;
 }
 
