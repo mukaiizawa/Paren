@@ -219,6 +219,36 @@
     cdddar (lambda (x) (cdr (cddar x)))
     cddddr (lambda (x) (cdr (cdddr x))))
 
+; (assert (= (list 1 2 3) '(1 2 3)))
+; (assert (same? (caar '((z))) 'z))
+; (assert (same? (cadr '(x z)) 'z))
+; (assert (= (cdar '((x z))) '(z)))
+; (assert (= (cddr '(x x z)) '(z)))
+; (assert (same? (caaar '(((z)))) 'z))
+; (assert (same? (caadr '(x (z))) 'z))
+; (assert (same? (cadar '((x z))) 'z))
+; (assert (same? (caddr '(x x z)) 'z))
+; (assert (= (cdaar '(((x z)))) '(z)))
+; (assert (= (cdadr '(x (x z))) '(z)))
+; (assert (= (cddar '((x x z))) '(z)))
+; (assert (= (cdddr '(x x x z)) '(z)))
+; (assert (same? (caaaar '((((z))))) 'z))
+; (assert (same? (caaadr '(x ((z)))) 'z))
+; (assert (same? (caadar '((x (z)))) 'z))
+; (assert (same? (caaddr '(x x (z))) 'z))
+; (assert (same? (cadaar '(((x z)))) 'z))
+; (assert (same? (cadadr '(x (x z))) 'z))
+; (assert (same? (caddar '((x x z))) 'z))
+; (assert (same? (cadddr '(x x x z)) 'z))
+; (assert (= (cdaaar '((((x z))))) '(z)))
+; (assert (= (cdaadr '(x ((x z)))) '(z)))
+; (assert (= (cdadar '((x (x z)))) '(z)))
+; (assert (= (cdaddr '(x x (x z))) '(z)))
+; (assert (= (cddaar '(((x x z)))) '(z)))
+; (assert (= (cddadr '(x (x x z))) '(z)))
+; (assert (= (cdddar '((x x x z))) '(z)))
+; (assert (= (cddddr '(x x x x z)) '(z)))
+
 ;: # fundamental operator
 ;: 関数定義、制御構造等Parenの基本的なマクロを定義する。
 
@@ -392,40 +422,12 @@
   (if (nil? (cdr lis)) true
     (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
 
-(assert (= (list 1 2 3) '(1 2 3)))
-(assert (same? (caar '((z))) 'z))
-(assert (same? (cadr '(x z)) 'z))
-(assert (= (cdar '((x z))) '(z)))
-(assert (= (cddr '(x x z)) '(z)))
-(assert (same? (caaar '(((z)))) 'z))
-(assert (same? (caadr '(x (z))) 'z))
-(assert (same? (cadar '((x z))) 'z))
-(assert (same? (caddr '(x x z)) 'z))
-(assert (= (cdaar '(((x z)))) '(z)))
-(assert (= (cdadr '(x (x z))) '(z)))
-(assert (= (cddar '((x x z))) '(z)))
-(assert (= (cdddr '(x x x z)) '(z)))
-(assert (same? (caaaar '((((z))))) 'z))
-(assert (same? (caaadr '(x ((z)))) 'z))
-(assert (same? (caadar '((x (z)))) 'z))
-(assert (same? (caaddr '(x x (z))) 'z))
-(assert (same? (cadaar '(((x z)))) 'z))
-(assert (same? (cadadr '(x (x z))) 'z))
-(assert (same? (caddar '((x x z))) 'z))
-(assert (same? (cadddr '(x x x z)) 'z))
-(assert (= (cdaaar '((((x z))))) '(z)))
-(assert (= (cdaadr '(x ((x z)))) '(z)))
-(assert (= (cdadar '((x (x z)))) '(z)))
-(assert (= (cdaddr '(x x (x z))) '(z)))
-(assert (= (cddaar '(((x x z)))) '(z)))
-(assert (= (cddadr '(x (x x z))) '(z)))
-(assert (= (cdddar '((x x x z))) '(z)))
-(assert (= (cddddr '(x x x x z)) '(z)))
-
 ; list processor
 (function ->list (x)
   (if (list? x) x (list x)))
 
+;: ## function list->alist lis
+;: リストlisを連想リストにして返す。
 (function list->alist (lis)
   (precondition (even? (length lis)))
   (let ((acc nil)
@@ -434,6 +436,9 @@
                  (begin (push acc (list (car lis) (cadr lis)))
                         (rec (cddr lis)))))))
     (rec lis)))
+; (assert (= (list->alist '(1 2 3 4)) '((1 2) (3 4))))
+; (assert !(list->alist nil))
+
 
 (function nth (lis n)
   (precondition (and (list? lis) (< n (length lis))))
@@ -624,12 +629,6 @@
 
 ; test
 ; {{{
-
-;;; ->list
-(assert (same? (identity :a) :a))
-
-;;; list->alist
-(assert (= (list->alist '(1 2 3 4)) '((1 2) (3 4))))
 
 ;;; identity
 (assert (same? (identity :a) :a))
