@@ -403,12 +403,20 @@
   (same? ($$type x) :lambda))
 (assert !(function? 3.14))
 (assert !(function? (macro (x) x)))
-; (assert (function? car))
+; todo (assert (function? car))
 (assert (function? function?))
 (assert (function? (lambda (x) x)))
 
+;: ## function alist? x
+;: 引数xが連想リストか否か返す。
+;:
+;: 連想リストとは、すべての要素がリストであるようなリストのことをいう。
 (function alist? (x)
   (and (list? x) (all-satisfy? x list?)))
+; (assert !(alist? '(1)))
+; (assert !(alist? '(1 ())))
+; (assert (alist? nil))
+; (assert (alist? '((a b) (c d))))
 
 (function all-satisfy? (lis f)
   (precondition (and (list? lis) (function? f)))
@@ -716,11 +724,6 @@
 (assert (= (flatten '(1 (nil) 2)) '(1 nil 2)))
 
 ; }}}
-
-(assert !(alist? '(1)))
-(assert !(alist? '(1 ())))
-(assert (alist? nil))
-(assert (alist? '((a b) (c d))))
 
 (assert !(or))
 (assert (or nil nil true))
