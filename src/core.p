@@ -447,16 +447,29 @@
 ; (assert (= (list->alist '(1 2 3 4)) '((1 2) (3 4))))
 ; (assert !(list->alist nil))
 
-
+;: ## function nth lis n
+;: リストlisのn番目の要素を返す。
+;:
+;: ただし、nは零から数える。
+;:
+;: nがlisの長さよりも大きい場合はnilを返す。
 (function nth (lis n)
-  (precondition (and (list? lis) (< n (length lis))))
+  (precondition (list? lis))
   (car (nthcdr lis n)))
+; (assert (= (nth '(1 2 3) 0) 1))
+; (assert (= (nth '(1 2 3) 10) nil))
 
+;: ## function nthcdr lis n
+;: リストlisをなすn番目のコンスを取得する。
+;:
+;: nがlisの長さよりも大きい場合はnilを返す。
 (function nthcdr (lis n)
-  (precondition (>= (length lis) 0))
+  (precondition (and (list? lis) (>= n 0)))
   (cond ((nil? lis) nil)
-        ((<= n 0) lis)
+        ((= n 0) lis)
         (:default (nthcdr (cdr lis) (-- n)))))
+; (assert (= (nthcdr '(1 2 3) 1) '(2 3)))
+
 
 (function sublist (lis s :opt e)
   (let ((len (length lis))
@@ -674,12 +687,6 @@
 ;;; each-pair-satisfy?
 (assert (each-pair-satisfy? '(1 2 3 4 5) <))
 (assert !(each-pair-satisfy? '(1 2 3 3 5) <))
-
-;;; nth
-(assert (= (nth '(1 2 3) 0) 1))
-
-;;; nthcdr
-(assert (= (nthcdr '(1 2 3) 1) '(2 3)))
 
 ;;; sublist
 (assert (= (sublist '(1 2 3) 1) '(2 3)))
