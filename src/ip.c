@@ -8,11 +8,62 @@
 #include "bi.h"
 #include "ip.h"
 
+static object curr_env;
+static object acc;
+
 static struct xsplay special_splay;
 static struct xsplay prim_splay;
 
+static void ip_error(char *fmt, ...)
+{
+  char buf[MAX_STR_LEN];
+  va_list va;
+  va_start(va, fmt);
+  xvsprintf(buf, fmt, va);
+  va_end(va);
+  xerror(buf);
+}
+
+// frame stack
+
+struct frame {
+  int inst;
+  object local_acc;
+};
+
+int fp;
+struct frame *fs[FRAME_STACK_SIZE];
+
+static struct frame *alloc_frame(int inst, object acc)
+{
+  struct frame *f;
+  f = xmalloc(sizeof(struct frame));
+  f->inst = inst;
+  f->local_acc = acc;
+  return f;
+}
+
+static struct frame *fs_top(void)
+{
+  xassert(fp > 0);
+  return fs[fp - 1];
+}
+
+static void push_frame(struct frame *f)
+{
+  if (fp >= FRAME_STACK_SIZE) ip_error("stack over flow.");
+  fs[fp] = f;
+  fp++;
+}
+
+static struct frame *pop_frame(void)
+{
+  return fs[--fp];
+}
+
 void ip_mark(void)
 {
+  // TODO mark fs.
 }
 
 static object symbol_find(object e, object o)
@@ -25,24 +76,15 @@ static object symbol_find(object e, object o)
   return result;
 }
 
-static void ip_error(char *fmt, ...)
-{
-  char buf[MAX_STR_LEN];
-  va_list va;
-  va_start(va, fmt);
-  xvsprintf(buf, fmt, va);
-  va_end(va);
-  xerror(buf);
-}
-
 // evaluater
-static object eval(object env, object expr);
+static object todo_eval(object env, object expr);
+static void i_eval(void);
 
 static object eval_operands(object env, object expr)
 {
   object o;
   if (expr == object_nil) return object_nil;
-  o = eval(env, expr->cons.car);
+  o = todo_eval(env, expr->cons.car);
   expr = expr->cons.cdr;
   return gc_new_cons(o, eval_operands(env, expr));
 }
@@ -52,7 +94,7 @@ static object eval_sequential(object env, object expr)
   object o;
   xassert(listp(expr));
   while (expr != object_nil) {
-    o = eval(env, expr->cons.car);
+    o = todo_eval(env, expr->cons.car);
     expr = expr->cons.cdr;
   }
   return o;
@@ -82,7 +124,7 @@ static void bind_lambda_list(object env, object params, object operands)
         v = object_nil;
       } else {
         k = o->cons.car;
-        v = eval(env, (o = o->cons.cdr)->cons.car);
+        v = todo_eval(env, (o = o->cons.cdr)->cons.car);
         if ((o = o->cons.cdr) != object_nil) {
           supply_p = TRUE;
           xsplay_add(&env->env.binding, o->cons.car, object_nil);
@@ -114,7 +156,7 @@ static void bind_lambda_list(object env, object params, object operands)
         v = object_nil;
       } else {
         k = o->cons.car;
-        v = eval(env, (o = o->cons.cdr)->cons.car);
+        v = todo_eval(env, (o = o->cons.cdr)->cons.car);
         if ((o = o->cons.cdr) != object_nil) {
           xsplay_add(&s, k, o->cons.car);
           xsplay_add(&env->env.binding, o->cons.car, object_nil);
@@ -140,7 +182,7 @@ static void bind_lambda_list(object env, object params, object operands)
   if (!rest_p && operands != object_nil) ip_error("too many arguments");
 }
 
-static object apply(object operator, object operands)
+static object i_apply(object operator, object operands)
 {
   object e;
   e = gc_new_env(operator->lambda.env);
@@ -148,7 +190,7 @@ static object apply(object operator, object operands)
   return eval_sequential(e, operator->lambda.body);
 }
 
-static object eval(object env, object expr)
+static object todo_eval(object env, object expr)
 {
   int argc;
   char buf[MAX_STR_LEN];
@@ -168,7 +210,7 @@ static object eval(object env, object expr)
         ip_error("unbind symbol '%s'", expr->symbol.name);
       break;
     case Cons:
-      operator = eval(env, expr->cons.car);
+      operator = todo_eval(env, expr->cons.car);
       operands = expr->cons.cdr;
       if(!object_pure_list_p(operands))
         ip_error("'%s' is not evaluate -- part of cdr is expected list", object_describe(expr, buf));
@@ -184,10 +226,10 @@ static object eval(object env, object expr)
           }
           break;
         case Macro:
-          result = eval(env, apply(operator, operands));
+          result = todo_eval(env, i_apply(operator, operands));
           break;
         case Lambda:
-          result = apply(operator, eval_operands(env, operands));
+          result = i_apply(operator, eval_operands(env, operands));
           break;
         default: break;
       }
@@ -195,9 +237,82 @@ static object eval(object env, object expr)
         ip_error("'%s' is not a operator", object_describe(operator, buf));
       break;
     default:
-      xerror("eval: illegal object type '%d'", type(expr));
+      xerror("todo_eval: illegal object type '%d'", type(expr));
   }
   return result;
+}
+
+static void i_eval(void)
+{
+  // int argc;
+  // char buf[MAX_STR_LEN];
+  // object (*special)(object, int, object);
+  // object (*prim)(int, object, object *);
+  object env, expr;//, operator, operands;
+  pop_frame();
+  env = curr_env;
+  expr = acc;
+  switch (type(expr)) {
+    case Macro:
+    case Lambda:
+    case Xint:
+    case Xfloat:
+    case Keyword:
+      return;
+    case Symbol:
+      if ((acc = symbol_find(env, expr)) == NULL)
+        ip_error("unbind symbol '%s'", expr->symbol.name);
+      return;
+    // case Cons:
+    //   operator = todo_eval(env, expr->cons.car);
+    //   operands = expr->cons.cdr;
+    //   if(!object_pure_list_p(operands))
+    //     ip_error("'%s' is not evaluate -- part of cdr is expected list", object_describe(expr, buf));
+    //   argc = object_length(operands);
+    //   result = NULL;
+    //   switch (type(operator)) {
+    //     case Symbol:
+    //       if ((special = xsplay_find(&special_splay, operator)) != NULL) {
+    //         result = (*special)(env, argc, operands);
+    //       } else if ((prim = xsplay_find(&prim_splay, operator)) != NULL) {
+    //         if (!(*prim)(argc, eval_operands(env, operands), &result))
+    //           ip_error("primitive '%s' failed", operator->symbol.name);
+    //       }
+    //       break;
+    //     case Macro:
+    //       result = todo_eval(env, i_apply(operator, operands));
+    //       break;
+    //     case Lambda:
+    //       result = i_apply(operator, eval_operands(env, operands));
+    //       break;
+    //     default: break;
+    //   }
+    //   if (result == NULL)
+    //     ip_error("'%s' is not a operator", object_describe(operator, buf));
+    //   break;
+    default:
+      xerror("todo_eval: illegal object type '%d'", type(expr));
+  }
+}
+
+static object eval(object expr)
+{
+  struct frame *top;
+  xassert(fp == 0);
+  acc = expr;
+  curr_env = object_toplevel;
+  top = alloc_frame(INST_EVAL, NULL);
+  push_frame(top);
+  while (fp != 0) {
+    xassert(fp > 0);
+    top = fs_top();
+    switch (top->inst) {
+      case INST_EVAL: i_eval(); break;
+      case INST_APPLY: i_eval(); break;
+      default: xassert(FALSE);
+    }
+  }
+  return acc;
 }
 
 // special forms
@@ -260,8 +375,6 @@ static int valid_lambda_list_p(int lambda_type, object params)
   return params == object_nil;
 }
 
-static object eval(object env, object o);
-
 SPECIAL(let)
 {
   object e, o, p, k, v;
@@ -280,7 +393,7 @@ SPECIAL(let)
     p = symbol_find(e, k);
     if (p == NULL) p = object_nil;
     xsplay_add(&e->env.binding, k, p);    // important regist k before eval v to define recursion!
-    if (v != object_nil) xsplay_replace(&e->env.binding, k, eval(e, v));
+    if (v != object_nil) xsplay_replace(&e->env.binding, k, todo_eval(e, v));
     o = o->cons.cdr;
   }
   return eval_sequential(e, argv->cons.cdr);
@@ -299,7 +412,7 @@ SPECIAL(assign)
     argv = argv->cons.cdr;
     if (!typep(s, Symbol)) ip_error("<-: cannot bind except symbol");
     if (s == object_nil) ip_error("<-: cannot bind nil");
-    v = eval(e, v);
+    v = todo_eval(e, v);
     while (TRUE) {
       if (e == object_nil) {
         xsplay_replace(&object_toplevel->env.binding, s, v);
@@ -353,9 +466,9 @@ SPECIAL(if)
 {
   object test;
   if (argc != 2 && argc != 3) ip_error("if: illegal arguments");
-  test = eval(env, argv->cons.car);
-  if (test != object_nil) return eval(env, argv->cons.cdr->cons.car);
-  if (argc > 2) return eval(env, argv->cons.cdr->cons.cdr->cons.car);
+  test = todo_eval(env, argv->cons.car);
+  if (test != object_nil) return todo_eval(env, argv->cons.cdr->cons.car);
+  if (argc > 2) return todo_eval(env, argv->cons.cdr->cons.cdr->cons.car);
   return object_nil;
 }
 
@@ -381,9 +494,10 @@ void ip_start(void)
   char buf[MAX_STR_LEN];
   object o, p;
   init_builtin();
+  fp = 0;
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
     p = o->cons.car;
-    eval(object_toplevel, p);
+    eval(p);
     if (VERBOSE_P) printf("%s\n", object_describe(p, buf));
   }
 }
