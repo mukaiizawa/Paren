@@ -8,8 +8,8 @@
 #include "bi.h"
 #include "ip.h"
 
-static object curr_env;
-static object acc;
+// general-purpose register.
+static object reg[3];
 
 static struct xsplay special_splay;
 static struct xsplay prim_splay;
@@ -26,20 +26,48 @@ static void ip_error(char *fmt, ...)
 
 // frame stack
 
+/*
+ * (+ 1 (- 2 3))
+ * eval
+ * eval-args[(1 (- 2 3)), nil], apply[+]
+ * eval-args[((- 2 3)), (1)], apply[+]
+ * eval-args[(2 3)], apply[-], eval-args[((- 2 3)), (1)], apply[+]
+ * eval-args[(3) (2)], apply[-], eval-args[((- 2 3)), (1)], apply[+]
+ * eval-args[nil, (2 3)], apply[-], eval-args[((- 2 3)), (1)], apply[+]
+ * eval-args[nil, (1 -1)], apply[+]
+ * 0
+ */
+
+/*
+ * each frame
+ * eval-frame[env]
+ * eval-operator-frame[env, operands]
+ * eval-operands-frame[env, expr, acc]
+ * apply-frame[env, operator]
+ * eval-sequential-frame[env, rest]
+ */
+
+#define FRAME_STACK_SIZE 1000
+// basic frame
+#define EVAL_FRAME 0
+#define EVAL_OPERATOR_FRAME 1
+#define EVAL_OPERANDS_FRAME 2
+#define APPLY_FRAME 3
+#define EVAL_SEQUENTIAL_FRAME 4
+
 struct frame {
   int inst;
-  object local_acc;
+  object local_vars[1];
 };
 
 int fp;
 struct frame *fs[FRAME_STACK_SIZE];
 
-static struct frame *alloc_frame(int inst, object acc)
+static struct frame *alloc_frame(int inst, int size)
 {
   struct frame *f;
-  f = xmalloc(sizeof(struct frame));
+  f = xmalloc(sizeof(struct frame) + sizeof(object) * (size - 1));
   f->inst = inst;
-  f->local_acc = acc;
   return f;
 }
 
@@ -58,7 +86,27 @@ static void push_frame(struct frame *f)
 
 static struct frame *pop_frame(void)
 {
-  return fs[--fp];
+  struct frame *top;
+  top = fs_top();
+  --fp;
+  return top;
+}
+
+static struct frame *make_eval_frame(object env)
+{
+  struct frame *f;
+  f = alloc_frame(EVAL_FRAME, 1);
+  f->local_vars[0] = env;
+  return f;
+}
+
+static struct frame *make_eval_operator_frame(object env, object operands)
+{
+  struct frame *f;
+  f = alloc_frame(EVAL_OPERATOR_FRAME, 2);
+  f->local_vars[0] = env;
+  f->local_vars[1] = operands;
+  return f;
 }
 
 void ip_mark(void)
@@ -78,7 +126,6 @@ static object symbol_find(object e, object o)
 
 // evaluater
 static object todo_eval(object env, object expr);
-static void i_eval(void);
 
 static object eval_operands(object env, object expr)
 {
@@ -242,17 +289,14 @@ static object todo_eval(object env, object expr)
   return result;
 }
 
-static void i_eval(void)
+static void pop_eval_frame(void)
 {
-  // int argc;
-  // char buf[MAX_STR_LEN];
-  // object (*special)(object, int, object);
-  // object (*prim)(int, object, object *);
-  object env, expr;//, operator, operands;
-  pop_frame();
-  env = curr_env;
-  expr = acc;
-  switch (type(expr)) {
+  char buf[MAX_STR_LEN];
+  struct frame *top;
+  object env, operands;
+  top = pop_frame();
+  env = top->local_vars[0];
+  switch (type(reg[0])) {
     case Macro:
     case Lambda:
     case Xint:
@@ -260,59 +304,75 @@ static void i_eval(void)
     case Keyword:
       return;
     case Symbol:
-      if ((acc = symbol_find(env, expr)) == NULL)
-        ip_error("unbind symbol '%s'", expr->symbol.name);
+      if ((reg[0] = symbol_find(env, reg[0])) == NULL)
+        ip_error("unbind symbol '%s'", reg[0]->symbol.name);
       return;
-    // case Cons:
-    //   operator = todo_eval(env, expr->cons.car);
-    //   operands = expr->cons.cdr;
-    //   if(!object_pure_list_p(operands))
-    //     ip_error("'%s' is not evaluate -- part of cdr is expected list", object_describe(expr, buf));
-    //   argc = object_length(operands);
-    //   result = NULL;
-    //   switch (type(operator)) {
-    //     case Symbol:
-    //       if ((special = xsplay_find(&special_splay, operator)) != NULL) {
-    //         result = (*special)(env, argc, operands);
-    //       } else if ((prim = xsplay_find(&prim_splay, operator)) != NULL) {
-    //         if (!(*prim)(argc, eval_operands(env, operands), &result))
-    //           ip_error("primitive '%s' failed", operator->symbol.name);
-    //       }
-    //       break;
-    //     case Macro:
-    //       result = todo_eval(env, i_apply(operator, operands));
-    //       break;
-    //     case Lambda:
-    //       result = i_apply(operator, eval_operands(env, operands));
-    //       break;
-    //     default: break;
-    //   }
-    //   if (result == NULL)
-    //     ip_error("'%s' is not a operator", object_describe(operator, buf));
-    //   break;
-    default:
-      xerror("todo_eval: illegal object type '%d'", type(expr));
+    case Cons:
+      operands = reg[0]->cons.cdr;
+      if(!object_pure_list_p(operands))
+        ip_error("'%s' is not evaluate -- part of cdr is expected list"
+            , object_describe(reg[0], buf));
+      push_frame(make_eval_operator_frame(env, operands));
+      push_frame(make_eval_frame(env));
+      reg[0] = reg[0]->cons.car;
+      return;
   }
 }
+
+static void pop_eval_operator_frame(void)
+{
+  struct frame *top;
+  int argc;
+  object env, operands;
+  object (*special)(object, int, object);
+  object (*prim)(int, object, object *);
+  top = pop_frame();
+  env = top->local_vars[0];
+  operands = top->local_vars[1];
+  switch (type(reg[0])) {
+    case Symbol:
+      argc = object_length(operands);
+      if ((special = xsplay_find(&special_splay, reg[0])) != NULL)
+        reg[0] = (*special)(env, argc, operands);
+      else if ((prim = xsplay_find(&prim_splay, reg[0])) != NULL) {
+        if (!(*prim)(argc, eval_operands(env, operands), &reg[0]))
+          ip_error("primitive '%s' failed", reg[0]->symbol.name);
+      }
+      return;
+    case Macro:
+      reg[0] = todo_eval(env, i_apply(reg[0], operands));
+      return;
+    case Lambda:
+      reg[0] = i_apply(reg[0], eval_operands(env, operands));
+      return;
+    default: xassert(FALSE);
+  }
+}
+
+// static void pop_eval_operands_frame(void)
+// {
+//   object env, operands;
+//   env = top->local_vars[0];
+//   operands = top->local_vars[1];
+// }
 
 static object eval(object expr)
 {
   struct frame *top;
   xassert(fp == 0);
-  acc = expr;
-  curr_env = object_toplevel;
-  top = alloc_frame(INST_EVAL, NULL);
-  push_frame(top);
+  reg[0] = expr;
+  push_frame(make_eval_frame(object_toplevel));
   while (fp != 0) {
     xassert(fp > 0);
     top = fs_top();
     switch (top->inst) {
-      case INST_EVAL: i_eval(); break;
-      case INST_APPLY: i_eval(); break;
+      case EVAL_FRAME: pop_eval_frame(); break;
+      case EVAL_OPERATOR_FRAME: pop_eval_operator_frame(); break;
+      // case EVAL_OPERANDS_FRAME: pop_eval_operands_frame(); break;
       default: xassert(FALSE);
     }
   }
-  return acc;
+  return reg[0];
 }
 
 // special forms
