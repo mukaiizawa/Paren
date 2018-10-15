@@ -50,10 +50,10 @@ static void mark_error(char *msg)
 #define FRAME_STACK_SIZE 1000
 
 // frame type
-#define EVAL_FRAME 0
-#define EVAL_OPERATOR_FRAME 1
+#define APPLY_PRIM_FRAME 0
+#define EVAL_FRAME 1
 #define EVAL_OPERANDS_FRAME 2
-#define APPLY_FRAME 3
+#define EVAL_OPERATOR_FRAME 3
 #define EVAL_SEQUENTIAL_FRAME 4
 
 struct frame {
@@ -67,11 +67,13 @@ struct frame *fs[FRAME_STACK_SIZE];
 static int frame_size(int type)
 {
   switch (type) {
+    case APPLY_PRIM_FRAME:
     case EVAL_FRAME:
-    case EVAL_OPERANDS_FRAME:
       return 1;
     case EVAL_OPERATOR_FRAME:
       return 2;
+    case EVAL_OPERANDS_FRAME:
+      return 3;
     default: xassert(FALSE);
   }
   return FALSE;
@@ -80,6 +82,7 @@ static int frame_size(int type)
 static char *frame_name(int type)
 {
   switch (type) {
+    case APPLY_PRIM_FRAME: return "APPLY_PRIM_FRAME";
     case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_OPERANDS_FRAME: return "EVAL_OPERANDS_FRAME";
     case EVAL_OPERATOR_FRAME: return "EVAL_OPERATOR_FRAME";
@@ -150,6 +153,24 @@ static struct frame *make_eval_operator_frame(object env, object operands)
   f = alloc_frame(EVAL_OPERATOR_FRAME);
   f->local_vars[0] = env;
   f->local_vars[1] = operands;
+  return f;
+}
+
+static struct frame *make_eval_operands_frame(object env , object operands)
+{
+  struct frame *f;
+  f = alloc_frame(EVAL_OPERANDS_FRAME);
+  f->local_vars[0] = env;
+  f->local_vars[1] = operands;
+  f->local_vars[2] = object_nil;
+  return f;
+}
+
+static struct frame *make_apply_prim_frame(object prim)
+{
+  struct frame *f;
+  f = alloc_frame(APPLY_PRIM_FRAME);
+  f->local_vars[0] = prim;
   return f;
 }
 
@@ -361,42 +382,65 @@ static void pop_eval_frame(void)
   }
 }
 
+static void push_eval_operands_frame(object env, object operands)
+{
+  if (operands == object_nil) reg[0] = object_nil;
+  else push_frame(make_eval_operands_frame(env, operands));
+}
+
 static void pop_eval_operator_frame(void)
 {
-  int argc;
   struct frame *top;
-  int (*prim)(int, object, object *);
   object (*special)(object, int, object);
   top = pop_frame();
   reg[1] = top->local_vars[0];
   reg[2] = top->local_vars[1];
   switch (type(reg[0])) {
     case Symbol:
-      argc = object_length(reg[2]);
-      if ((special = xsplay_find(&special_splay, reg[0])) != NULL)
-        reg[0] = (*special)(reg[1], argc, reg[2]);
-      else if ((prim = xsplay_find(&prim_splay, reg[0])) != NULL) {
-        // if (!(*prim)(argc, eval_operands(reg[1], reg[2]), &(reg[0])))
-        if (!(*prim)(argc, reg[2], &(reg[0])))
-          mark_error("primitive failed");
+      if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
+        reg[0] = (*special)(reg[1], object_length(reg[2]), reg[2]);
+        return;
       }
-      return;
+      if (xsplay_find(&prim_splay, reg[0]) != NULL) {
+        push_frame(make_apply_prim_frame(reg[0]));
+        push_eval_operands_frame(reg[1], reg[2]);
+        return;
+      }
+      break;
     case Macro:
       reg[0] = todo_eval(reg[1], i_apply(reg[0], reg[2]));
       return;
     case Lambda:
       reg[0] = i_apply(reg[0], eval_operands(reg[1], reg[2]));
       return;
-    default: xassert(FALSE);
+    default: break;
+  }
+  mark_error("is not a operator");
+}
+
+static void pop_apply_prim_frame(void)
+{
+  struct frame *top;
+  int (*prim)(int, object, object *);
+  top = pop_frame();
+  reg[1] = top->local_vars[0];
+  reg[2] = reg[0];
+  prim = xsplay_find(&prim_splay, reg[1]);
+  if (!(*prim)(object_length(reg[2]), reg[2], &(reg[0]))) {
+    mark_error("primitive failed");
+    return;
   }
 }
 
-// static void pop_eval_operands_frame(void)
-// {
-//   object env, operands;
-//   env = top->local_vars[0];
-//   operands = top->local_vars[1];
-// }
+static void pop_eval_operands_frame(void)
+{
+  struct frame *top;
+  top = pop_frame();
+  reg[1] = top->local_vars[0];
+  reg[2] = top->local_vars[1];
+
+  reg[0] = reg[2];
+}
 
 static void trap(void)
 {
@@ -418,8 +462,9 @@ static object eval(object expr)
     switch (top->type) {
       if(ip_trap_code != TRAP_NONE) trap();
       case EVAL_FRAME: pop_eval_frame(); break;
+      case APPLY_PRIM_FRAME: pop_apply_prim_frame(); break;
       case EVAL_OPERATOR_FRAME: pop_eval_operator_frame(); break;
-                                // case EVAL_OPERANDS_FRAME: pop_eval_operands_frame(); break;
+      case EVAL_OPERANDS_FRAME: pop_eval_operands_frame(); break;
       default: xassert(FALSE);
     }
   }

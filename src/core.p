@@ -1,6 +1,7 @@
 ; paren core library.
 
 
-(+ 1 foo)
+; (if nil 1 (+ 1 a))
+(+ 1 2)
 
 :finish
