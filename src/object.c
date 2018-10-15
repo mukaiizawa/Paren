@@ -20,12 +20,6 @@ object object_splice;
 object object_not;
 object object_sint[SINT_MAX];
 
-int object_pure_list_p(object o)
-{
-  while (typep(o, Cons)) o = o->cons.cdr;
-  return o == object_nil;
-}
-
 int symcmp(object o, object p)
 {
   intptr_t i;
@@ -55,7 +49,7 @@ object object_nth(object o, int n)
 }
 
 static void describe_s_expr(object o, struct xbarray *x);
-static void describe_pure_list(object o, struct xbarray *x)
+static void describe_cons(object o, struct xbarray *x)
 {
   describe_s_expr(o->cons.car, x);
   while ((o = o->cons.cdr) != object_nil) {
@@ -65,20 +59,14 @@ static void describe_pure_list(object o, struct xbarray *x)
   }
 }
 
-static void describe_cons(object o, struct xbarray *x)
-{
-  xbarray_add(x, '[');
-  describe_s_expr(o->cons.car, x);
-  xbarray_add(x, ' ');
-  describe_s_expr(o->cons.cdr, x);
-  xbarray_add(x, ']');
-}
-
 static void describe_s_expr(object o, struct xbarray *x)
 {
   object p;
   if(x->size > MAX_STR_LEN) return;
   switch (type(o)) {
+    case Env:
+      xbarray_addf(x, "<environment: %p>", o);
+      break;
     case Macro:
     case Lambda:
       if (typep(o, Macro)) xbarray_adds(x, "(macro ");
@@ -87,34 +75,31 @@ static void describe_s_expr(object o, struct xbarray *x)
       else describe_s_expr(o->lambda.params, x);
       if (o->lambda.body != object_nil) {
         xbarray_add(x, ' ');
-        describe_pure_list(o->lambda.body, x);
+        describe_cons(o->lambda.body, x);
       }
       xbarray_add(x, ')');
       break;
     case Cons:
-      if (!object_pure_list_p(o)) describe_cons(o, x);
-      else {
-        p = o->cons.car;
-        if (p == object_quote) {
-          xbarray_add(x, '\'');
-          describe_pure_list(o->cons.cdr, x);
-        } else if (p == object_bq) {
-          xbarray_add(x, '`');
-          describe_pure_list(o->cons.cdr, x);
-        } else if (p == object_uq) {
-          xbarray_add(x, ',');
-          describe_pure_list(o->cons.cdr, x);
-        } else if (p == object_splice) {
-          xbarray_adds(x, ",@");
-          describe_pure_list(o->cons.cdr, x);
-        } else if (p == object_not) {
-          xbarray_add(x, '!');
-          describe_pure_list(o->cons.cdr, x);
-        } else {
-          xbarray_add(x, '(');
-          describe_pure_list(o, x);
-          xbarray_add(x, ')');
-        }
+      p = o->cons.car;
+      if (p == object_quote) {
+        xbarray_add(x, '\'');
+        describe_cons(o->cons.cdr, x);
+      } else if (p == object_bq) {
+        xbarray_add(x, '`');
+        describe_cons(o->cons.cdr, x);
+      } else if (p == object_uq) {
+        xbarray_add(x, ',');
+        describe_cons(o->cons.cdr, x);
+      } else if (p == object_splice) {
+        xbarray_adds(x, ",@");
+        describe_cons(o->cons.cdr, x);
+      } else if (p == object_not) {
+        xbarray_add(x, '!');
+        describe_cons(o->cons.cdr, x);
+      } else {
+        xbarray_add(x, '(');
+        describe_cons(o, x);
+        xbarray_add(x, ')');
       }
       break;
     case Xint:

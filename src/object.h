@@ -68,7 +68,6 @@ extern object object_not;
 extern object object_sint[SINT_MAX];
 
 extern char *object_describe(object o, char *buf);
-extern int object_pure_list_p(object o);
 extern int object_length(object o);
 extern object object_nth(object o, int n);
 extern object object_bool(int b);

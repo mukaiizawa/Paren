@@ -1,7 +1,6 @@
-1
-2
-3
+; paren core library.
 
-(+ 1 2)
+
+(+ 1 foo)
 
 :finish
