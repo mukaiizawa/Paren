@@ -9,7 +9,7 @@
 #undef SPECIAL
 #undef PRIM
 
-#define SPECIAL(name) extern object special_##name(object, int, object);
+#define SPECIAL(name) extern void special_##name(object, int, object);
 #include "special.wk"
 #undef SPECIAL
 
@@ -44,7 +44,7 @@ char *prim_name_table[] = {
   NULL
 };
 
-object (*special_table[])(object env, int argc, object argv) = {
+void (*special_table[])(object env, int argc, object argv) = {
 #define SPECIAL(name) special_##name,
 #include "special.wk"
 #undef SPECIAL

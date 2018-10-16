@@ -69,5 +69,6 @@ extern object object_sint[SINT_MAX];
 
 extern char *object_describe(object o, char *buf);
 extern int object_length(object o);
-extern object object_nth(object o, int n);
 extern object object_bool(int b);
+extern object object_nth(object o, int n);
+extern object object_reverse(object o);

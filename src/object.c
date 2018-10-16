@@ -38,6 +38,12 @@ int object_length(object o)
   return i;
 }
 
+object object_bool(int b)
+{
+  if (b) return object_true;
+  return object_nil;
+}
+
 object object_nth(object o, int n)
 {
   xassert(listp(o));
@@ -46,6 +52,20 @@ object object_nth(object o, int n)
     o = o->cons.cdr;
   }
   return o->cons.car;
+}
+
+object object_reverse(object o)
+{
+  object p, acc;
+  xassert(listp(o));
+  acc = object_nil;
+  while (o != object_nil) {
+    p = o->cons.cdr;
+    o->cons.cdr = acc;
+    acc = o;
+    o = p;
+  }
+  return acc;
 }
 
 static void describe_s_expr(object o, struct xbarray *x);
@@ -130,10 +150,4 @@ char *object_describe(object o, char *buf)
   }
   xbarray_free(&x);
   return buf;
-}
-
-object object_bool(int b)
-{
-  if (b) return object_true;
-  return object_nil;
 }

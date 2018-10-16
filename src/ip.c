@@ -8,7 +8,9 @@
 #include "bi.h"
 #include "ip.h"
 
-static object reg[3]; // general-purpose register.
+// register
+#define REG_SIZE 4
+static object reg[REG_SIZE]; // general-purpose register.
 
 static struct xsplay special_splay;
 static struct xsplay prim_splay;
@@ -23,55 +25,40 @@ static void mark_error(char *msg)
   error_message = msg;
 }
 
-// frame stack
-
-/*
- * (+ 1 (- 2 3))
- * eval
- * eval-args[(1 (- 2 3)), nil], apply[+]
- * eval-args[((- 2 3)), (1)], apply[+]
- * eval-args[(2 3)], apply[-], eval-args[((- 2 3)), (1)], apply[+]
- * eval-args[(3) (2)], apply[-], eval-args[((- 2 3)), (1)], apply[+]
- * eval-args[nil, (2 3)], apply[-], eval-args[((- 2 3)), (1)], apply[+]
- * eval-args[nil, (1 -1)], apply[+]
- * 0
- */
-
-/*
- * each frame
- * eval-frame[env]
- * eval-operator-frame[env, operands]
- * eval-operands-frame[env, expr, acc]
- * apply-frame[env, operator]
- * eval-sequential-frame[env, rest]
- */
-
+// frame
 #define STACK_GAP 5
 #define FRAME_STACK_SIZE 1000
 
-// frame type
-#define APPLY_PRIM_FRAME 0
-#define EVAL_FRAME 1
-#define EVAL_OPERANDS_FRAME 2
-#define EVAL_OPERATOR_FRAME 3
-#define EVAL_SEQUENTIAL_FRAME 4
-
 struct frame {
   int type;
+#define APPLY_FRAME 0
+#define APPLY_PRIM_FRAME 1
+#define BIND_FRAME 2
+#define BIND_PROPAGATION_FRAME 3
+#define EVAL_FRAME 4
+#define EVAL_OPERANDS_FRAME 5
+#define EVAL_OPERATOR_FRAME 6
+#define EVAL_SEQUENTIAL_FRAME 7
+#define QUOTE_FRAME 8
   object local_vars[1];
 };
 
 static int sp;
 struct frame *fs[FRAME_STACK_SIZE];
+struct xarray bs;
 
 static int frame_size(int type)
 {
   switch (type) {
+    case APPLY_FRAME:
     case APPLY_PRIM_FRAME:
     case EVAL_FRAME:
       return 1;
+    case BIND_PROPAGATION_FRAME:
     case EVAL_OPERATOR_FRAME:
+    case EVAL_SEQUENTIAL_FRAME:
       return 2;
+    case BIND_FRAME:
     case EVAL_OPERANDS_FRAME:
       return 3;
     default: xassert(FALSE);
@@ -82,10 +69,14 @@ static int frame_size(int type)
 static char *frame_name(int type)
 {
   switch (type) {
+    case APPLY_FRAME: return "APPLY_FRAME";
     case APPLY_PRIM_FRAME: return "APPLY_PRIM_FRAME";
+    case BIND_FRAME: return "BIND_FRAME";
+    case BIND_PROPAGATION_FRAME: return "BIND_PROPAGATION_FRAME";
     case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_OPERANDS_FRAME: return "EVAL_OPERANDS_FRAME";
     case EVAL_OPERATOR_FRAME: return "EVAL_OPERATOR_FRAME";
+    case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
     default: xassert(FALSE);
   }
   return NULL;
@@ -139,6 +130,41 @@ static struct frame *pop_frame(void)
   return top;
 }
 
+static struct frame *make_apply_frame(object operator)
+{
+  struct frame *f;
+  f = alloc_frame(APPLY_FRAME);
+  f->local_vars[0] = operator;
+  return f;
+}
+
+static struct frame *make_apply_prim_frame(object prim)
+{
+  struct frame *f;
+  f = alloc_frame(APPLY_PRIM_FRAME);
+  f->local_vars[0] = prim;
+  return f;
+}
+
+static struct frame *make_bind_frame(object env, object sym, object val)
+{
+  struct frame *f;
+  f = alloc_frame(BIND_FRAME);
+  f->local_vars[0] = env;
+  f->local_vars[1] = sym;
+  f->local_vars[2] = val;
+  return f;
+}
+
+// static struct frame *make_bind_propagation_frame(object env, object sym)
+// {
+//   struct frame *f;
+//   f = alloc_frame(BIND_PROPAGATION_FRAME);
+//   f->local_vars[0] = env;
+//   f->local_vars[1] = sym;
+//   return f;
+// }
+
 static struct frame *make_eval_frame(object env)
 {
   struct frame *f;
@@ -166,17 +192,37 @@ static struct frame *make_eval_operands_frame(object env , object operands)
   return f;
 }
 
-static struct frame *make_apply_prim_frame(object prim)
+static struct frame *make_eval_sequential_frame(object env , object lis)
 {
   struct frame *f;
-  f = alloc_frame(APPLY_PRIM_FRAME);
-  f->local_vars[0] = prim;
+  f = alloc_frame(EVAL_SEQUENTIAL_FRAME);
+  f->local_vars[0] = env;
+  f->local_vars[1] = lis;
   return f;
 }
 
-void ip_mark(void)
+static struct frame *make_quote_frame(object o)
 {
-  // TODO mark fs.
+  struct frame *f;
+  f = alloc_frame(QUOTE_FRAME);
+  f->local_vars[0] = o;
+  return f;
+}
+
+static void push_eval_operands_frame(object env, object operands)
+{
+  if (operands == object_nil) reg[0] = object_nil;
+  else {
+    push_frame(make_eval_operands_frame(env, operands->cons.cdr));
+    push_frame(make_eval_frame(env));
+    reg[0] = operands->cons.car;
+  }
+}
+
+static void push_eval_sequential_frame(object env, object lis)
+{
+  if (lis == object_nil) reg[0] = object_nil;
+  else push_frame(make_eval_sequential_frame(env, lis));
 }
 
 static object symbol_find(object e, object o)
@@ -189,173 +235,159 @@ static object symbol_find(object e, object o)
   return result;
 }
 
-// evaluater
-static object todo_eval(object env, object expr);
-
-static object eval_operands(object env, object expr)
+// lambda-list内のシンボルが一意であることのvalidate-lambda-listに追加する。
+static void parse_lambda_list(object env, object params, object operands)
 {
-  object o;
-  if (expr == object_nil) return object_nil;
-  o = todo_eval(env, expr->cons.car);
-  expr = expr->cons.cdr;
-  return gc_new_cons(o, eval_operands(env, expr));
-}
-
-static object eval_sequential(object env, object expr)
-{
-  object o;
-  xassert(listp(expr));
-  while (expr != object_nil) {
-    o = todo_eval(env, expr->cons.car);
-    expr = expr->cons.cdr;
-  }
-  return o;
-}
-
-static void bind_lambda_list(object env, object params, object operands)
-{
-  int supply_p, rest_p;
-  object o, k, v;
-  struct xsplay s;
+  int rest_p;
+  object o, k, v, def_v, sup_k;
+  struct xsplay supply_tree;
+  xsplay_init(&supply_tree, (int(*)(void *, void *))symcmp);
   rest_p = FALSE;
+  // parse required parameter
   while (params != object_nil && !typep(params->cons.car, Keyword)) {
     if (operands == object_nil) {
       mark_error("too few arguments");
       return;
     }
-    if (typep(params->cons.car, Cons)) {
-      bind_lambda_list(env, params->cons.car, operands->cons.car);
+    if (!typep(params->cons.car, Cons)) 
+      xarray_add(&bs
+          , make_bind_frame(env, params->cons.car, operands->cons.car));
+    else {
+      parse_lambda_list(env, params->cons.car, operands->cons.car);
       if (ip_trap_code != TRAP_NONE) return;
-    } else xsplay_add(&env->env.binding, params->cons.car, operands->cons.car);
+    }
     params = params->cons.cdr;
     operands = operands->cons.cdr;
   }
+  // parse optional parameter
   if (params->cons.car == object_opt) {
     params = params->cons.cdr;
     while (params != object_nil && !typep(params->cons.car, Keyword)) {
       o = params->cons.car;
-      supply_p = FALSE;
-      if (!typep(o, Cons)) {
-        k = o;
-        v = object_nil;
-      } else {
+      def_v = sup_k = NULL;
+      if (!typep(o, Cons)) k = o;
+      else {
         k = o->cons.car;
-        v = todo_eval(env, (o = o->cons.cdr)->cons.car);
-        if ((o = o->cons.cdr) != object_nil) {
-          supply_p = TRUE;
-          xsplay_add(&env->env.binding, o->cons.car, object_nil);
-        }
+        def_v = (o = o->cons.cdr)->cons.car;
+        if ((o = o->cons.cdr) != object_nil) sup_k = o->cons.car;
       }
       params = params->cons.cdr;
+      if (sup_k != NULL)
+        xarray_add(&bs
+            , make_bind_frame(env, sup_k, object_bool(operands != object_nil)));
       if (operands != object_nil) {
-        v = operands->cons.car;
+        xarray_add(&bs, make_bind_frame(env, k, operands->cons.car));
         operands = operands->cons.cdr;
-        if (supply_p)
-          xsplay_replace(&env->env.binding, o->cons.car, object_true);
+      } else {
+        if (def_v == NULL) xarray_add(&bs, make_bind_frame(env, k, object_nil));
+        else {
+          xarray_add(&bs, make_bind_frame(env, k, NULL));
+          xarray_add(&bs, make_eval_frame(env));
+          xarray_add(&bs, make_quote_frame(def_v));
+        }
       }
-      xsplay_add(&env->env.binding, k, v);
     }
   }
+  // parse rest parameter
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    xsplay_add(&env->env.binding, params->cons.car, operands);
+    xarray_add(&bs, make_bind_frame(env, params->cons.car, operands));
     params = params->cons.cdr;
     rest_p = TRUE;
   }
+  // parse keyword parameter
   if (params->cons.car == object_key) {
     params = params->cons.cdr;
-    xsplay_init(&s, (int(*)(void *, void *))symcmp);
     while (params != object_nil) {
       o = params->cons.car;
-      if (!typep(o, Cons)) {
-        k = o;
-        v = object_nil;
-      } else {
+      v = def_v = sup_k = NULL;
+      if (!typep(o, Cons)) k = o;
+      else {
         k = o->cons.car;
-        v = todo_eval(env, (o = o->cons.cdr)->cons.car);
-        if ((o = o->cons.cdr) != object_nil) {
-          xsplay_add(&s, k, o->cons.car);
-          xsplay_add(&env->env.binding, o->cons.car, object_nil);
+        def_v = (o = o->cons.cdr)->cons.car;
+        if ((o = o->cons.cdr) != object_nil) sup_k = o->cons.car;
+      }
+      o = operands;
+      while (o != object_nil) {
+        if (o->cons.car != k) {
+          o = o->cons.cdr;
+          continue;
+        }
+        if (o->cons.cdr == object_nil) {
+          mark_error("expected keyword parameter");
+          return;
+        }
+        v = o->cons.cdr->cons.car;
+      }
+      if (sup_k != NULL)
+        xarray_add(&bs, make_bind_frame(env, sup_k, object_bool(v != NULL)));
+      k = gc_new_symbol(k->symbol.name + 1);    // skip ':'
+      if (v != NULL) xarray_add(&bs, make_bind_frame(env, k, v));
+      else {
+        if (def_v == NULL) xarray_add(&bs, make_bind_frame(env, k, object_nil));
+        else {
+          xarray_add(&bs, make_bind_frame(env, k, NULL));
+          xarray_add(&bs, make_eval_frame(env));
+          xarray_add(&bs, make_quote_frame(def_v));
         }
       }
-      xsplay_add(&env->env.binding, k, v);
       params = params->cons.cdr;
-    }
-    while (operands != object_nil) {
-      if (!typep(operands->cons.car, Keyword)) {
-        mark_error("expected keyword parameter");
-        return;
-      }
-      k = gc_new_symbol(operands->cons.car->symbol.name + 1);    // skip ':'
-      if ((v = xsplay_find(&env->env.binding, k)) == NULL) {
-        mark_error("undeclared keyword parameter");
-        return;
-      }
-      operands = operands->cons.cdr;
-      v = operands->cons.car;
-      xsplay_replace(&env->env.binding, k, v);
-      if ((o = xsplay_find(&s, k)) != NULL)
-        xsplay_replace(&env->env.binding, o, object_true);
-      operands = operands->cons.cdr;
     }
   }
   if (!rest_p && operands != object_nil) mark_error("too many arguments");
 }
 
-static object i_apply(object operator, object operands)
+static void pop_apply_frame(void)
 {
-  object e;
-  e = gc_new_env(operator->lambda.env);
-  bind_lambda_list(e, operator->lambda.params, operands);
-  return eval_sequential(e, operator->lambda.body);
+  int i;
+  struct frame *top;
+  top = pop_frame();
+  xarray_reset(&bs);
+  reg[1] = gc_new_env(top->local_vars[0]->lambda.env);
+  reg[2] = top->local_vars[0];
+  parse_lambda_list(reg[1], reg[2]->lambda.params, reg[0]);
+  push_eval_sequential_frame(reg[1], reg[2]->lambda.body);
+  for (i = bs.size - 1; i >= 0; i--) push_frame(bs.elt[i]);
 }
 
-// should be removed.
-static object todo_eval(object env, object expr)
+static void pop_apply_prim_frame(void)
 {
-  int argc;
-  object (*special)(object, int, object);
-  object (*prim)(int, object, object *);
-  object operator, operands, result;
-  switch (type(expr)) {
-    case Macro:
-    case Lambda:
-    case Xint:
-    case Xfloat:
-    case Keyword:
-      result = expr;
+  struct frame *top;
+  int (*prim)(int, object, object *);
+  top = pop_frame();
+  reg[1] = top->local_vars[0];
+  reg[2] = reg[0];
+  prim = xsplay_find(&prim_splay, reg[1]);
+  if (!(*prim)(object_length(reg[2]), reg[2], &(reg[0])))
+    mark_error("primitive failed");
+}
+
+static void pop_bind_frame(void)
+{
+  struct frame *top;
+  top = pop_frame();
+  reg[1] = top->local_vars[0];
+  reg[2] = top->local_vars[1];
+  reg[3] = top->local_vars[2];
+  if (reg[3] == NULL) reg[3] = reg[0];
+  xsplay_replace(&reg[1]->env.binding, reg[2], reg[3]);
+}
+
+static void pop_bind_propagation_frame(void)
+{
+  struct frame *top;
+  top = pop_frame();
+  reg[1] = top->local_vars[0];
+  reg[2] = top->local_vars[1];
+  while (TRUE) {
+    if (reg[1] == object_nil) {
+      xsplay_replace(&object_toplevel->env.binding, reg[2], reg[0]);
       break;
-    case Symbol:
-      if ((result = symbol_find(env, expr)) == NULL)
-        mark_error("unbind symbol");
+    } else if (xsplay_find(&reg[1]->env.binding, reg[2]) != NULL) {
+      xsplay_replace(&reg[1]->env.binding, reg[2], reg[0]);
       break;
-    case Cons:
-      operator = todo_eval(env, expr->cons.car);
-      operands = expr->cons.cdr;
-      argc = object_length(operands);
-      result = NULL;
-      switch (type(operator)) {
-        case Symbol:
-          if ((special = xsplay_find(&special_splay, operator)) != NULL) {
-            result = (*special)(env, argc, operands);
-          } else if ((prim = xsplay_find(&prim_splay, operator)) != NULL) {
-            if (!(*prim)(argc, eval_operands(env, operands), &result))
-              mark_error("primitive failed");
-          }
-          break;
-        case Macro:
-          result = todo_eval(env, i_apply(operator, operands));
-          break;
-        case Lambda:
-          result = i_apply(operator, eval_operands(env, operands));
-          break;
-        default: break;
-      }
-      if (result == NULL) mark_error("is not a operator");
-      break;
-    default: xassert(FALSE);
+    } else reg[1] = reg[1]->env.top;
   }
-  return result;
 }
 
 static void pop_eval_frame(void)
@@ -370,8 +402,10 @@ static void pop_eval_frame(void)
       return;
     case Symbol:
       reg[2] = reg[0];
-      if ((reg[0] = symbol_find(reg[1], reg[0])) == NULL)
+      if ((reg[0] = symbol_find(reg[1], reg[0])) == NULL) {
         mark_error("unbind symbol");
+        reg[0] = object_nil;
+      }
       return;
     case Cons:
       reg[2] = reg[0]->cons.cdr;
@@ -382,23 +416,17 @@ static void pop_eval_frame(void)
   }
 }
 
-static void push_eval_operands_frame(object env, object operands)
-{
-  if (operands == object_nil) reg[0] = object_nil;
-  else push_frame(make_eval_operands_frame(env, operands));
-}
-
 static void pop_eval_operator_frame(void)
 {
   struct frame *top;
-  object (*special)(object, int, object);
+  void (*special)(object, int, object);
   top = pop_frame();
   reg[1] = top->local_vars[0];
   reg[2] = top->local_vars[1];
   switch (type(reg[0])) {
     case Symbol:
       if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
-        reg[0] = (*special)(reg[1], object_length(reg[2]), reg[2]);
+        (*special)(reg[1], object_length(reg[2]), reg[2]);
         return;
       }
       if (xsplay_find(&prim_splay, reg[0]) != NULL) {
@@ -408,43 +436,70 @@ static void pop_eval_operator_frame(void)
       }
       break;
     case Macro:
-      reg[0] = todo_eval(reg[1], i_apply(reg[0], reg[2]));
+      push_frame(make_eval_frame(reg[1]));
+      push_frame(make_apply_frame(reg[0]));
+      reg[0] = reg[2];
       return;
     case Lambda:
-      reg[0] = i_apply(reg[0], eval_operands(reg[1], reg[2]));
+      push_frame(make_apply_frame(reg[0]));
+      push_eval_operands_frame(reg[1], reg[2]);
       return;
     default: break;
   }
   mark_error("is not a operator");
 }
 
-static void pop_apply_prim_frame(void)
-{
-  struct frame *top;
-  int (*prim)(int, object, object *);
-  top = pop_frame();
-  reg[1] = top->local_vars[0];
-  reg[2] = reg[0];
-  prim = xsplay_find(&prim_splay, reg[1]);
-  if (!(*prim)(object_length(reg[2]), reg[2], &(reg[0]))) {
-    mark_error("primitive failed");
-    return;
-  }
-}
-
 static void pop_eval_operands_frame(void)
 {
   struct frame *top;
-  top = pop_frame();
+  top = fs_top();
   reg[1] = top->local_vars[0];
   reg[2] = top->local_vars[1];
+  reg[3] = top->local_vars[2];
+  reg[3] = top->local_vars[2] = gc_new_cons(reg[0], reg[3]);
+  if (reg[2] == object_nil) {
+    pop_frame();
+    reg[0] = object_reverse(reg[3]);
+  } else {
+    push_frame(make_eval_frame(reg[1]));
+    reg[0] = reg[2]->cons.car;
+    top->local_vars[1] = reg[2]->cons.cdr;
+  }
+}
 
-  reg[0] = reg[2];
+static void pop_eval_sequential_frame(void)
+{
+  struct frame *top;
+  top = fs_top();
+  reg[1] = top->local_vars[0];
+  reg[2] = top->local_vars[1];
+  if (reg[2] == object_nil) pop_frame();
+  else {
+    push_frame(make_eval_frame(reg[1]));
+    reg[0] = reg[2]->cons.car;
+    top->local_vars[1] = reg[2]->cons.cdr;
+  }
+}
+
+static void pop_quote_frame(void)
+{
+  struct frame *top;
+  top = pop_frame();
+  reg[0] = top->local_vars[0];
 }
 
 static void trap(void)
 {
+  int i;
+  char buf[MAX_STR_LEN];
+  printf("ip/error: %s\n", error_message);
   if(ip_trap_code == TRAP_ERROR) {
+    printf("-- register[");
+    for (i = 0; i < REG_SIZE; i++) {
+      if (i != 0) printf(", ");
+      printf("%s", object_describe(reg[i], buf));
+    }
+    printf("]\n");
     dump_fs();
   }
   ip_trap_code=TRAP_NONE;
@@ -452,19 +507,23 @@ static void trap(void)
 
 static object eval(object expr)
 {
-  struct frame *top;
   xassert(sp == 0);
   reg[0] = expr;
   push_frame(make_eval_frame(object_toplevel));
-  while (sp != 0) {
-    xassert(sp > 0);
-    top = fs_top();
-    switch (top->type) {
-      if(ip_trap_code != TRAP_NONE) trap();
-      case EVAL_FRAME: pop_eval_frame(); break;
+  while (TRUE) {
+    xassert(sp >= 0);
+    if (ip_trap_code != TRAP_NONE) trap();
+    if (sp == 0) break;
+    switch (fs_top()->type) {
+      case APPLY_FRAME: pop_apply_frame(); break;
       case APPLY_PRIM_FRAME: pop_apply_prim_frame(); break;
+      case BIND_FRAME: pop_bind_frame(); break;
+      case BIND_PROPAGATION_FRAME: pop_bind_propagation_frame(); break;
+      case EVAL_FRAME: pop_eval_frame(); break;
       case EVAL_OPERATOR_FRAME: pop_eval_operator_frame(); break;
       case EVAL_OPERANDS_FRAME: pop_eval_operands_frame(); break;
+      case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
+      case QUOTE_FRAME: pop_quote_frame(); break;
       default: xassert(FALSE);
     }
   }
@@ -531,34 +590,36 @@ static int valid_lambda_list_p(int lambda_type, object params)
   return params == object_nil;
 }
 
+// let の構文は次のようにシンボルを束縛するだけに修正する。
+// (let (a b c d) forms)
 SPECIAL(let)
 {
-  object e, o, p, k, v;
-  if (argc <= 1) mark_error("let: too few argument");
-  e = gc_new_env(env);
-  o = argv->cons.car;
-  while (o != object_nil) {
-    if (!typep(o, Cons)) mark_error("let: parameter must be list");
-    if (!valid_xparam_p(o)) mark_error("let: illegal argument");
-    k = o->cons.car;
-    v = object_nil;
-    if (typep(k, Cons)) {
-      v = k->cons.cdr->cons.car;
-      k = k->cons.car;
-    }
-    p = symbol_find(e, k);
-    if (p == NULL) p = object_nil;
-    xsplay_add(&e->env.binding, k, p);    // important regist k before eval v to define recursion!
-    if (v != object_nil) xsplay_replace(&e->env.binding, k, todo_eval(e, v));
-    o = o->cons.cdr;
-  }
-  return eval_sequential(e, argv->cons.cdr);
+  // object e, o, p, k, v;
+  // if (argc <= 1) mark_error("let: too few argument");
+  // e = gc_new_env(env);
+  // o = argv->cons.car;
+  // push_eval_sequential_frame(e, argv->cons.cdr);
+  // while (o != object_nil) {
+  //   if (!typep(o, Cons)) mark_error("let: parameter must be list");
+  //   if (!valid_xparam_p(o)) mark_error("let: illegal argument");
+  //   k = o->cons.car;
+  //   v = object_nil;
+  //   if (typep(k, Cons)) {
+  //     v = k->cons.cdr->cons.car;
+  //     k = k->cons.car;
+  //   }
+  //   p = symbol_find(e, k);
+  //   if (p == NULL) p = object_nil;
+  //   xsplay_add(&e->env.binding, k, p);    // important regist k before eval v to define recursion!
+  //   // if (v != object_nil) xsplay_replace(&e->env.binding, k, todo_eval(e, v));
+  //   o = o->cons.cdr;
+  // }
 }
 
 SPECIAL(assign)
 {
   object e, s, v;
-  if (argc == 0) return object_nil;
+  // if (argc == 0) return object_nil;
   if (argc % 2 != 0) mark_error("<-: must be pair");
   while (argc != 0) {
     e = env;
@@ -568,7 +629,7 @@ SPECIAL(assign)
     argv = argv->cons.cdr;
     if (!typep(s, Symbol)) mark_error("<-: cannot bind except symbol");
     if (s == object_nil) mark_error("<-: cannot bind nil");
-    v = todo_eval(e, v);
+    // v = todo_eval(e, v);
     while (TRUE) {
       if (e == object_nil) {
         xsplay_replace(&object_toplevel->env.binding, s, v);
@@ -580,7 +641,7 @@ SPECIAL(assign)
     }
     argc -= 2;
   }
-  return v;
+  // return v;
 }
 
 SPECIAL(macro)
@@ -597,7 +658,7 @@ SPECIAL(macro)
     mark_error("macro: illegal parameter list");
   result = gc_new_macro(env, params, argv->cons.cdr);
   if (sym != NULL) xsplay_add(&env->env.binding, sym, result);
-  return result;
+  // return result;
 }
 
 SPECIAL(lambda)
@@ -606,7 +667,7 @@ SPECIAL(lambda)
   params = argv->cons.car;
   if (!valid_lambda_list_p(Lambda, params))
     mark_error("lambda: illegal parameter list");
-  return gc_new_lambda(env, params, argv->cons.cdr);
+  // return gc_new_lambda(env, params, argv->cons.cdr);
 }
 
 SPECIAL(quote)
@@ -615,22 +676,27 @@ SPECIAL(quote)
     if (argc == 0) mark_error("quote: requires argument");
     else mark_error("quote: too many arguments");
   }
-  return argv->cons.car;
+  // return argv->cons.car;
 }
 
 SPECIAL(if)
 {
-  object test;
+  // object test;
   if (argc != 2 && argc != 3) mark_error("if: illegal arguments");
-  test = todo_eval(env, argv->cons.car);
-  if (test != object_nil) return todo_eval(env, argv->cons.cdr->cons.car);
-  if (argc > 2) return todo_eval(env, argv->cons.cdr->cons.cdr->cons.car);
-  return object_nil;
+  // test = todo_eval(env, argv->cons.car);
+  // if (test != object_nil) return todo_eval(env, argv->cons.cdr->cons.car);
+  // if (argc > 2) return todo_eval(env, argv->cons.cdr->cons.cdr->cons.car);
+  // return object_nil;
 }
 
 SPECIAL(begin)
 {
-  return eval_sequential(env, argv);
+  push_eval_sequential_frame(env, argv);
+}
+
+void ip_mark(void)
+{
+  // TODO mark fs.
 }
 
 static void init_builtin(void)
@@ -647,11 +713,14 @@ static void init_builtin(void)
 
 void ip_start(void)
 {
+  int i;
   char buf[MAX_STR_LEN];
   object o, p;
   init_builtin();
   sp = 0;
+  xarray_init(&bs);
   ip_trap_code = TRAP_NONE;
+  for (i = 0; i < REG_SIZE; i++) reg[i] = object_nil;
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
     p = eval(o->cons.car);
     if (VERBOSE_P) printf("%s\n", object_describe(p, buf));
