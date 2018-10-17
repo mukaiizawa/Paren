@@ -40,6 +40,7 @@ struct frame {
 #define EVAL_OPERANDS_FRAME 6
 #define EVAL_OPERATOR_FRAME 7
 #define EVAL_SEQUENTIAL_FRAME 8
+#define IF_FRAME 9
   object local_vars[1];
 };
 
@@ -57,6 +58,7 @@ static int frame_size(int type)
     case EVAL_LOCAL_VAR_FRAME:
     case EVAL_OPERATOR_FRAME:
     case EVAL_SEQUENTIAL_FRAME:
+    case IF_FRAME:
       return 2;
     case BIND_FRAME:
     case EVAL_OPERANDS_FRAME:
@@ -78,6 +80,7 @@ static char *frame_name(int type)
     case EVAL_OPERANDS_FRAME: return "EVAL_OPERANDS_FRAME";
     case EVAL_OPERATOR_FRAME: return "EVAL_OPERATOR_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
+    case IF_FRAME: return "IF_FRAME";
     default: xassert(FALSE);
   }
   return NULL;
@@ -102,6 +105,12 @@ static void dump_fs(void)
   int i, j;
   char buf[MAX_STR_LEN];
   struct frame *f;
+  printf("-- register[");
+  for (i = 0; i < REG_SIZE; i++) {
+    if (i != 0) printf(", ");
+    printf("%s", object_describe(reg[i], buf));
+  }
+  printf("]\n");
   printf("-- frame stack\n");
   for (i = sp - 1; i >= 0; i--) {
     f = fs[i];
@@ -192,7 +201,7 @@ static struct frame *make_eval_operator_frame(object env, object operands)
   return f;
 }
 
-static struct frame *make_eval_operands_frame(object env , object operands)
+static struct frame *make_eval_operands_frame(object env, object operands)
 {
   struct frame *f;
   f = alloc_frame(EVAL_OPERANDS_FRAME);
@@ -202,12 +211,21 @@ static struct frame *make_eval_operands_frame(object env , object operands)
   return f;
 }
 
-static struct frame *make_eval_sequential_frame(object env , object lis)
+static struct frame *make_eval_sequential_frame(object env, object lis)
 {
   struct frame *f;
   f = alloc_frame(EVAL_SEQUENTIAL_FRAME);
   f->local_vars[0] = env;
   f->local_vars[1] = lis;
+  return f;
+}
+
+static struct frame *make_if_frame(object env, object args)
+{
+  struct frame *f;
+  f = alloc_frame(IF_FRAME);
+  f->local_vars[0] = env;
+  f->local_vars[1] = args;
   return f;
 }
 
@@ -301,8 +319,8 @@ static void parse_lambda_list(object env, object params, object operands)
       } else {
         if (def_v == NULL) bs_push(make_bind_frame(env, k, object_nil));
         else {
-          bs_push(make_bind_frame(env, k, NULL));
           bs_push(make_eval_local_var_frame(env, def_v));
+          bs_push(make_bind_frame(env, k, NULL));
         }
       }
     }
@@ -345,8 +363,8 @@ static void parse_lambda_list(object env, object params, object operands)
       else {
         if (def_v == NULL) xarray_add(&bs, make_bind_frame(env, k, object_nil));
         else {
-          bs_push(make_bind_frame(env, k, NULL));
           bs_push(make_eval_local_var_frame(env, def_v));
+          bs_push(make_bind_frame(env, k, NULL));
         }
       }
       params = params->cons.cdr;
@@ -435,7 +453,7 @@ static void pop_eval_frame(void)
 
 static void pop_eval_local_var_frame(void)
 {
-  reg[0] = pop_frame()->local_vars[1];
+  reg[0] = fs_top()->local_vars[1];
   pop_eval_frame();
 }
 
@@ -504,20 +522,25 @@ static void pop_eval_sequential_frame(void)
   }
 }
 
+static void pop_if_frame(void)
+{
+  struct frame *top;
+  top = pop_frame();
+  reg[1] = top->local_vars[0];
+  reg[2] = top->local_vars[1];
+  if (reg[0] != object_nil) {
+    push_frame(make_eval_frame(reg[1]->cons.car));
+    reg[0] = reg[2]->cons.car;
+  } else if ((reg[1] = reg[1]->cons.cdr) != object_nil) {
+    push_frame(make_eval_frame(reg[1]->cons.car));
+    reg[0] = reg[2]->cons.cdr->cons.car;
+  } else reg[0] = object_nil;
+}
+
 static void trap(void)
 {
-  int i;
-  char buf[MAX_STR_LEN];
   printf("ip/error: %s\n", error_message);
-  if(ip_trap_code == TRAP_ERROR) {
-    printf("-- register[");
-    for (i = 0; i < REG_SIZE; i++) {
-      if (i != 0) printf(", ");
-      printf("%s", object_describe(reg[i], buf));
-    }
-    printf("]\n");
-    dump_fs();
-  }
+  if(ip_trap_code == TRAP_ERROR) dump_fs();
   ip_trap_code=TRAP_NONE;
 }
 
@@ -540,8 +563,10 @@ static object eval(object expr)
       case EVAL_OPERATOR_FRAME: pop_eval_operator_frame(); break;
       case EVAL_OPERANDS_FRAME: pop_eval_operands_frame(); break;
       case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
+      case IF_FRAME: pop_if_frame(); break;
       default: xassert(FALSE);
     }
+    // dump_fs();
   }
   return reg[0];
 }
@@ -652,9 +677,9 @@ SPECIAL(assign)
     if (s == object_nil) {
       mark_error("<-: cannot bind nil");
     }
-    bs_push(make_bind_propagation_frame(env, s));
     argv = argv->cons.cdr;
     bs_push(make_eval_local_var_frame(env, argv->cons.car));
+    bs_push(make_bind_propagation_frame(env, s));
     argv = argv->cons.cdr;
     argc -= 2;
   }
@@ -698,12 +723,10 @@ SPECIAL(quote)
 
 SPECIAL(if)
 {
-  // object test;
   if (argc != 2 && argc != 3) mark_error("if: illegal arguments");
-  // test = todo_eval(env, argv->cons.car);
-  // if (test != object_nil) return todo_eval(env, argv->cons.cdr->cons.car);
-  // if (argc > 2) return todo_eval(env, argv->cons.cdr->cons.cdr->cons.car);
-  // return object_nil;
+  push_frame(make_if_frame(env, argv->cons.cdr));
+  push_frame(make_eval_frame(env));
+  reg[0] = argv->cons.car;
 }
 
 SPECIAL(begin)
