@@ -4,6 +4,5 @@
 ; (if nil 1 (+ 1 a))
 (+ 1 (+ 2 4) 3)
 
-(if nil :b :c :d)
 
 :finish

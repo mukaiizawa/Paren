@@ -277,11 +277,9 @@ static object symbol_find(object e, object o)
 // lambda-list内のシンボルが一意であることのvalidate-lambda-listに追加する。
 static void parse_lambda_list(object env, object params, object operands)
 {
-  int rest_p;
   object o, k, v, def_v, sup_k;
   struct xsplay supply_tree;
   xsplay_init(&supply_tree, (int(*)(void *, void *))symcmp);
-  rest_p = FALSE;
   // parse required parameter
   while (params != object_nil && !typep(params->cons.car, Keyword)) {
     if (operands == object_nil) {
@@ -329,8 +327,7 @@ static void parse_lambda_list(object env, object params, object operands)
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
     xarray_add(&bs, make_bind_frame(env, params->cons.car, operands));
-    params = params->cons.cdr;
-    rest_p = TRUE;
+    return;
   }
   // parse keyword parameter
   if (params->cons.car == object_key) {
@@ -370,7 +367,7 @@ static void parse_lambda_list(object env, object params, object operands)
       params = params->cons.cdr;
     }
   }
-  if (!rest_p && operands != object_nil) mark_error("too many arguments");
+  if (operands != object_nil) mark_error("too many arguments");
 }
 
 static void pop_apply_frame(void)
@@ -573,7 +570,9 @@ static object eval(object expr)
 
 // special forms
 
-// <lambda_list> ::= [<required_params>] [:opt <xparams>] [:rest <param>] [:key <xparams>]
+// <lambda_list> ::= [<required_params>] 
+//                   [:opt <xparams>]
+//                   { [:rest <param>] | [:key <xparams>] }
 // <required_params> ::= <param> <param> ...
 // <xparams> ::= <xparam> <xparam> ...
 // <xparam> ::= { <param> | (<param> <initial_value> [<supplyp>]) }
@@ -625,9 +624,9 @@ static int valid_lambda_list_p(int lambda_type, object params)
     if (typep(params->cons.car, Symbol))
       params = params->cons.cdr;
     else return FALSE;
-  }
-  if (params->cons.car == object_key)
+  } else if (params->cons.car == object_key) {
     if (!parse_params(&params)) return FALSE;
+  }
   return params == object_nil;
 }
 
