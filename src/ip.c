@@ -100,6 +100,28 @@ static struct frame *fs_top(void)
   return fs[sp - 1];
 }
 
+static void env_sweep(int depth, void *sym, void *val)
+{
+  char buf[MAX_STR_LEN];
+  printf("	%s:", object_describe(sym, buf));
+  printf("%s\n", object_describe(val, buf));
+}
+
+static void dump_env(void)
+{
+  object e;
+  printf("-- env\n");
+  e = reg[1];
+  while (e != object_nil) {
+    xassert(typep(e, Env));
+    printf("** %p **\n", e);
+    xsplay_foreach(&e->env.binding, env_sweep);
+    printf("**\n");
+    e = e->env.top;
+  }
+  printf("\n");
+}
+
 static void dump_fs(void)
 {
   int i, j;
@@ -111,6 +133,7 @@ static void dump_fs(void)
     printf("%s", object_describe(reg[i], buf));
   }
   printf("]\n");
+  dump_env();
   printf("-- frame stack\n");
   for (i = sp - 1; i >= 0; i--) {
     f = fs[i];
@@ -373,10 +396,9 @@ static void parse_lambda_list(object env, object params, object operands)
         def_v = (o = o->cons.cdr)->cons.car;
         if ((o = o->cons.cdr) != object_nil) sup_k = o->cons.car;
       }
-      k = gc_new_symbol(k->symbol.name + 1);    // skip ':'
       pre = o = operands;
       while (o != object_nil) {
-        if (o->cons.car != k) {
+        if (strcmp((o->cons.car->symbol.name + 1), k->symbol.name) == 0) {
           v = o->cons.cdr->cons.car;
           if (o == operands) {
             if (o->cons.cdr != object_nil) operands = o->cons.cdr->cons.cdr;
