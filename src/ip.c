@@ -9,8 +9,14 @@
 #include "ip.h"
 
 // register
-#define REG_SIZE 4
-static object reg[REG_SIZE]; // general-purpose register.
+
+/*
+ * general-purpose register:
+ *   0 -- result of prev frame.
+ *   1 -- current environment.
+ */
+#define REG_SIZE 2
+static object reg[REG_SIZE];
 
 static struct xsplay special_splay;
 static struct xsplay prim_splay;
@@ -41,6 +47,7 @@ struct frame {
 #define EVAL_OPERATOR_FRAME 7
 #define EVAL_SEQUENTIAL_FRAME 8
 #define IF_FRAME 9
+#define SWITCH_ENV_FRAME 10
   object local_vars[1];
 };
 
@@ -53,6 +60,7 @@ static int frame_size(int type)
     case APPLY_FRAME:
     case APPLY_PRIM_FRAME:
     case EVAL_FRAME:
+    case SWITCH_ENV_FRAME:
       return 1;
     case BIND_PROPAGATION_FRAME:
     case EVAL_LOCAL_VAR_FRAME:
@@ -81,6 +89,7 @@ static char *frame_name(int type)
     case EVAL_OPERATOR_FRAME: return "EVAL_OPERATOR_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
     case IF_FRAME: return "IF_FRAME";
+    case SWITCH_ENV_FRAME: return "SWITCH_ENV_FRAME";
     default: xassert(FALSE);
   }
   return NULL;
@@ -100,23 +109,39 @@ static struct frame *fs_top(void)
   return fs[sp - 1];
 }
 
-static void env_sweep(int depth, void *sym, void *val)
+// debug
+
+static void sweep_env(int depth, void *sym, void *val)
 {
   char buf[MAX_STR_LEN];
-  printf("	%s:", object_describe(sym, buf));
-  printf("%s\n", object_describe(val, buf));
+  printf(" (%s", object_describe(sym, buf));
+  printf(" %s)", object_describe(val, buf));
+}
+
+static void dump_reg(void)
+{
+  int i, j;
+  char buf[MAX_STR_LEN];
+  struct frame *f;
+  printf("-- register\n");
+  printf("	(");
+  for (i = 0; i < REG_SIZE; i++) {
+    if (i != 0) printf(" ");
+    printf("%s", object_describe(reg[i], buf));
+  }
+  printf(")\n");
 }
 
 static void dump_env(void)
 {
   object e;
-  printf("-- env\n");
+  printf("-- environment\n");
   e = reg[1];
   while (e != object_nil) {
     xassert(typep(e, Env));
-    printf("** %p **\n", e);
-    xsplay_foreach(&e->env.binding, env_sweep);
-    printf("**\n");
+    printf("	(<%p>", e);
+    xsplay_foreach(&e->env.binding, sweep_env);
+    printf(")\n");
     e = e->env.top;
   }
   printf("\n");
@@ -127,24 +152,22 @@ static void dump_fs(void)
   int i, j;
   char buf[MAX_STR_LEN];
   struct frame *f;
-  printf("-- register[");
-  for (i = 0; i < REG_SIZE; i++) {
-    if (i != 0) printf(", ");
-    printf("%s", object_describe(reg[i], buf));
-  }
-  printf("]\n");
-  dump_env();
   printf("-- frame stack\n");
   for (i = sp - 1; i >= 0; i--) {
     f = fs[i];
-    printf("%s[", frame_name(f->type));
-    for (j = 0; j < frame_size(f->type); j++) {
-      if (j != 0) printf(", ");
-      printf("%s", object_describe(f->local_vars[j], buf));
-    }
-    printf("]\n");
+    printf("	(%s", frame_name(f->type));
+    for (j = 0; j < frame_size(f->type); j++)
+      printf(" %s", object_describe(f->local_vars[j], buf));
+    printf(")\n");
   }
   printf("\n");
+}
+
+static void dump(void)
+{
+  dump_reg();
+  dump_env();
+  dump_fs();
 }
 
 static void push_frame(struct frame *f)
@@ -234,6 +257,16 @@ static struct frame *make_eval_operands_frame(object env, object operands)
   return f;
 }
 
+static void push_eval_operands_frame(object env, object operands)
+{
+  if (operands == object_nil) reg[0] = object_nil;
+  else {
+    push_frame(make_eval_operands_frame(env, operands->cons.cdr));
+    push_frame(make_eval_frame(env));
+    reg[0] = operands->cons.car;
+  }
+}
+
 static struct frame *make_eval_sequential_frame(object env, object lis)
 {
   struct frame *f;
@@ -241,6 +274,12 @@ static struct frame *make_eval_sequential_frame(object env, object lis)
   f->local_vars[0] = env;
   f->local_vars[1] = lis;
   return f;
+}
+
+static void push_eval_sequential_frame(object env, object lis)
+{
+  if (lis == object_nil) reg[0] = object_nil;
+  else push_frame(make_eval_sequential_frame(env, lis));
 }
 
 static struct frame *make_if_frame(object env, object args)
@@ -252,39 +291,30 @@ static struct frame *make_if_frame(object env, object args)
   return f;
 }
 
-// binding stack
-struct xarray bs;
-
-static void bs_push(struct frame *f)
+static struct frame *make_switch_env_frame(void)
 {
-  xarray_add(&bs, f);
+  struct frame *f;
+  f = alloc_frame(SWITCH_ENV_FRAME);
+  return f;
 }
 
-static void bs_reset(void)
+// frame buffer
+struct xarray fb;
+
+static void fb_add(struct frame *f)
 {
-  xarray_reset(&bs);
+  xarray_add(&fb, f);
 }
 
-static void bs_reflect(void)
+static void fb_reset(void)
+{
+  xarray_reset(&fb);
+}
+
+static void fb_flush(void)
 {
   int i;
-  for (i = bs.size - 1; i >= 0; i--) push_frame(bs.elt[i]);
-}
-
-static void push_eval_operands_frame(object env, object operands)
-{
-  if (operands == object_nil) reg[0] = object_nil;
-  else {
-    push_frame(make_eval_operands_frame(env, operands->cons.cdr));
-    push_frame(make_eval_frame(env));
-    reg[0] = operands->cons.car;
-  }
-}
-
-static void push_eval_sequential_frame(object env, object lis)
-{
-  if (lis == object_nil) reg[0] = object_nil;
-  else push_frame(make_eval_sequential_frame(env, lis));
+  for (i = fb.size - 1; i >= 0; i--) push_frame(fb.elt[i]);
 }
 
 static object symbol_find(object e, object o)
@@ -331,8 +361,6 @@ static int valid_keyword_p(object params, object operands)
 static void parse_lambda_list(object env, object params, object operands)
 {
   object o, pre, k, v, def_v, sup_k;
-  struct xsplay supply_tree;
-  xsplay_init(&supply_tree, (int(*)(void *, void *))symcmp);
   // parse required parameter
   while (params != object_nil && !typep(params->cons.car, Keyword)) {
     if (operands == object_nil) {
@@ -340,7 +368,7 @@ static void parse_lambda_list(object env, object params, object operands)
       return;
     }
     if (!typep(params->cons.car, Cons)) 
-      bs_push(make_bind_frame(env, params->cons.car, operands->cons.car));
+      fb_add(make_bind_frame(env, params->cons.car, operands->cons.car));
     else {
       parse_lambda_list(env, params->cons.car, operands->cons.car);
       if (ip_trap_code != TRAP_NONE) return;
@@ -363,16 +391,16 @@ static void parse_lambda_list(object env, object params, object operands)
       params = params->cons.cdr;
       if (sup_k != NULL) {
         v = object_bool(operands != object_nil);
-        bs_push(make_bind_frame(env, sup_k, v));
+        fb_add(make_bind_frame(env, sup_k, v));
       }
       if (operands != object_nil) {
-        bs_push(make_bind_frame(env, k, operands->cons.car));
+        fb_add(make_bind_frame(env, k, operands->cons.car));
         operands = operands->cons.cdr;
       } else {
-        if (def_v == NULL) bs_push(make_bind_frame(env, k, object_nil));
+        if (def_v == NULL) fb_add(make_bind_frame(env, k, object_nil));
         else {
-          bs_push(make_eval_local_var_frame(env, def_v));
-          bs_push(make_bind_frame(env, k, NULL));
+          fb_add(make_eval_local_var_frame(env, def_v));
+          fb_add(make_bind_frame(env, k, NULL));
         }
       }
     }
@@ -380,7 +408,7 @@ static void parse_lambda_list(object env, object params, object operands)
   // parse rest parameter
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    xarray_add(&bs, make_bind_frame(env, params->cons.car, operands));
+    xarray_add(&fb, make_bind_frame(env, params->cons.car, operands));
     return;
   }
   // parse keyword parameter
@@ -396,30 +424,27 @@ static void parse_lambda_list(object env, object params, object operands)
         def_v = (o = o->cons.cdr)->cons.car;
         if ((o = o->cons.cdr) != object_nil) sup_k = o->cons.car;
       }
-      pre = o = operands;
+      o = operands;
+      pre = NULL;
       while (o != object_nil) {
         if (strcmp((o->cons.car->symbol.name + 1), k->symbol.name) == 0) {
-          v = o->cons.cdr->cons.car;
-          if (o == operands) {
-            if (o->cons.cdr != object_nil) operands = o->cons.cdr->cons.cdr;
-            else operands = object_nil;
-          } else {
-            if (o->cons.cdr == object_nil) pre->cons.cdr = object_nil;
-            else pre->cons.cdr = o->cons.cdr->cons.cdr;
-          }
+          v = (o = o->cons.cdr)->cons.car;
+          o = o->cons.cdr;
+          if (pre == NULL) operands = o;
+          else pre->cons.cdr = o;
           break;
         }
-        pre = o;
-        o = o->cons.cdr->cons.cdr;
+        pre = o = o->cons.cdr;
+        o = o->cons.cdr;
       }
       if (sup_k != NULL)
-        bs_push(make_bind_frame(env, sup_k, object_bool(v != NULL)));
-      if (v != NULL) bs_push(make_bind_frame(env, k, v));
+        fb_add(make_bind_frame(env, sup_k, object_bool(v != NULL)));
+      if (v != NULL) fb_add(make_bind_frame(env, k, v));
       else {
-        if (def_v == NULL) bs_push(make_bind_frame(env, k, object_nil));
+        if (def_v == NULL) fb_add(make_bind_frame(env, k, object_nil));
         else {
-          bs_push(make_eval_local_var_frame(env, def_v));
-          bs_push(make_bind_frame(env, k, NULL));
+          fb_add(make_eval_local_var_frame(env, def_v));
+          fb_add(make_bind_frame(env, k, NULL));
         }
       }
       params = params->cons.cdr;
@@ -434,10 +459,10 @@ static void pop_apply_frame(void)
   top = pop_frame();
   reg[1] = gc_new_env(top->local_vars[0]->lambda.env);
   reg[2] = top->local_vars[0];
-  xarray_reset(&bs);
+  fb_reset();
   parse_lambda_list(reg[1], reg[2]->lambda.params, reg[0]);
   push_eval_sequential_frame(reg[1], reg[2]->lambda.body);
-  bs_reflect();
+  fb_flush();
 }
 
 static void pop_apply_prim_frame(void)
@@ -595,7 +620,7 @@ static void pop_if_frame(void)
 static void trap(void)
 {
   printf("ip/error: %s\n", error_message);
-  if(ip_trap_code == TRAP_ERROR) dump_fs();
+  if(ip_trap_code == TRAP_ERROR) dump();
   ip_trap_code=TRAP_NONE;
 }
 
@@ -621,7 +646,6 @@ static object eval(object expr)
       case IF_FRAME: pop_if_frame(); break;
       default: xassert(FALSE);
     }
-    // dump_fs();
   }
   return reg[0];
 }
@@ -724,7 +748,7 @@ SPECIAL(assign)
     mark_error("<-: must be pair");
     return;
   }
-  bs_reset();
+  fb_reset();
   while (argc != 0) {
     s = argv->cons.car;
     if (!typep(s, Symbol)) {
@@ -734,12 +758,12 @@ SPECIAL(assign)
       mark_error("<-: cannot bind nil");
     }
     argv = argv->cons.cdr;
-    bs_push(make_eval_local_var_frame(env, argv->cons.car));
-    bs_push(make_bind_propagation_frame(env, s));
+    fb_add(make_eval_local_var_frame(env, argv->cons.car));
+    fb_add(make_bind_propagation_frame(env, s));
     argv = argv->cons.cdr;
     argc -= 2;
   }
-  bs_reflect();
+  fb_flush();
 }
 
 SPECIAL(macro)
@@ -814,7 +838,7 @@ void ip_start(void)
   object o, p;
   init_builtin();
   sp = 0;
-  xarray_init(&bs);
+  xarray_init(&fb);
   ip_trap_code = TRAP_NONE;
   for (i = 0; i < REG_SIZE; i++) reg[i] = object_nil;
   for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {

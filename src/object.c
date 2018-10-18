@@ -132,7 +132,7 @@ static void describe_s_expr(object o, struct xbarray *x)
     case Keyword:
       xbarray_addf(x, "%s", o->symbol.name);
       break;
-    default: xerror("unknown type '%d'", type(o));
+    default: xassert(FALSE);
   }
 }
 
