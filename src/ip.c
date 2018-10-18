@@ -274,10 +274,40 @@ static object symbol_find(object e, object o)
   return result;
 }
 
+static int valid_keyword_p(object params, object operands)
+{
+  object p, s;
+  while (operands != object_nil) {
+    if (!typep(operands->cons.car, Keyword)) {
+      mark_error("expected keyword parameter");
+      return FALSE;
+    }
+    p = params;
+    while (p != object_nil) {
+      s = p->cons.car;
+      if (typep(s, Cons)) s = s->cons.car;
+      xassert(typep(s, Symbol));
+      if (strcmp(s->symbol.name, operands->cons.car->symbol.name + 1) == 0)
+        break;
+      p = p->cons.cdr;
+    }
+    if (p == object_nil) {
+      mark_error("undeclared keyword parameter");
+      return FALSE;
+    }
+    if ((operands = operands->cons.cdr) == object_nil) {
+      mark_error("expected keyword parameter value");
+      return FALSE;
+    }
+    operands = operands->cons.cdr;
+  }
+  return TRUE;
+}
+
 // lambda-list内のシンボルが一意であることのvalidate-lambda-listに追加する。
 static void parse_lambda_list(object env, object params, object operands)
 {
-  object o, k, v, def_v, sup_k;
+  object o, pre, k, v, def_v, sup_k;
   struct xsplay supply_tree;
   xsplay_init(&supply_tree, (int(*)(void *, void *))symcmp);
   // parse required parameter
@@ -308,9 +338,10 @@ static void parse_lambda_list(object env, object params, object operands)
         if ((o = o->cons.cdr) != object_nil) sup_k = o->cons.car;
       }
       params = params->cons.cdr;
-      if (sup_k != NULL)
-        bs_push(
-            make_bind_frame(env, sup_k, object_bool(operands != object_nil)));
+      if (sup_k != NULL) {
+        v = object_bool(operands != object_nil);
+        bs_push(make_bind_frame(env, sup_k, v));
+      }
       if (operands != object_nil) {
         bs_push(make_bind_frame(env, k, operands->cons.car));
         operands = operands->cons.cdr;
@@ -332,6 +363,7 @@ static void parse_lambda_list(object env, object params, object operands)
   // parse keyword parameter
   if (params->cons.car == object_key) {
     params = params->cons.cdr;
+    if(!valid_keyword_p(params, operands)) return;
     while (params != object_nil) {
       o = params->cons.car;
       v = def_v = sup_k = NULL;
@@ -341,24 +373,28 @@ static void parse_lambda_list(object env, object params, object operands)
         def_v = (o = o->cons.cdr)->cons.car;
         if ((o = o->cons.cdr) != object_nil) sup_k = o->cons.car;
       }
-      o = operands;
+      k = gc_new_symbol(k->symbol.name + 1);    // skip ':'
+      pre = o = operands;
       while (o != object_nil) {
         if (o->cons.car != k) {
-          o = o->cons.cdr;
-          continue;
+          v = o->cons.cdr->cons.car;
+          if (o == operands) {
+            if (o->cons.cdr != object_nil) operands = o->cons.cdr->cons.cdr;
+            else operands = object_nil;
+          } else {
+            if (o->cons.cdr == object_nil) pre->cons.cdr = object_nil;
+            else pre->cons.cdr = o->cons.cdr->cons.cdr;
+          }
+          break;
         }
-        if (o->cons.cdr == object_nil) {
-          mark_error("expected keyword parameter");
-          return;
-        }
-        v = o->cons.cdr->cons.car;
+        pre = o;
+        o = o->cons.cdr->cons.cdr;
       }
       if (sup_k != NULL)
-        xarray_add(&bs, make_bind_frame(env, sup_k, object_bool(v != NULL)));
-      k = gc_new_symbol(k->symbol.name + 1);    // skip ':'
-      if (v != NULL) xarray_add(&bs, make_bind_frame(env, k, v));
+        bs_push(make_bind_frame(env, sup_k, object_bool(v != NULL)));
+      if (v != NULL) bs_push(make_bind_frame(env, k, v));
       else {
-        if (def_v == NULL) xarray_add(&bs, make_bind_frame(env, k, object_nil));
+        if (def_v == NULL) bs_push(make_bind_frame(env, k, object_nil));
         else {
           bs_push(make_eval_local_var_frame(env, def_v));
           bs_push(make_bind_frame(env, k, NULL));
@@ -374,9 +410,9 @@ static void pop_apply_frame(void)
 {
   struct frame *top;
   top = pop_frame();
-  xarray_reset(&bs);
   reg[1] = gc_new_env(top->local_vars[0]->lambda.env);
   reg[2] = top->local_vars[0];
+  xarray_reset(&bs);
   parse_lambda_list(reg[1], reg[2]->lambda.params, reg[0]);
   push_eval_sequential_frame(reg[1], reg[2]->lambda.body);
   bs_reflect();
@@ -401,8 +437,8 @@ static void pop_bind_frame(void)
   reg[1] = top->local_vars[0];
   reg[2] = top->local_vars[1];
   reg[3] = top->local_vars[2];
-  if (reg[3] == NULL) reg[3] = reg[0];
-  xsplay_replace(&reg[1]->env.binding, reg[2], reg[3]);
+  if (reg[3] != NULL) reg[0] = reg[3];
+  xsplay_replace(&reg[1]->env.binding, reg[2], reg[0]);
 }
 
 static void pop_bind_propagation_frame(void)
@@ -611,9 +647,9 @@ static int valid_lambda_list_p(int lambda_type, object params)
     if (type == Keyword) break;
     else if (type == Symbol) params = params->cons.cdr;
     else if (type == Cons) {
-      if (lambda_type == Macro && valid_lambda_list_p(Macro, params->cons.car))
-        params = params->cons.cdr;
-      else return FALSE;
+      if (lambda_type != Macro || !valid_lambda_list_p(Macro, params->cons.car))
+        return FALSE;
+      params = params->cons.cdr;
     }
     else return FALSE;
   }
@@ -621,9 +657,8 @@ static int valid_lambda_list_p(int lambda_type, object params)
     if (!parse_params(&params)) return FALSE;
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    if (typep(params->cons.car, Symbol))
-      params = params->cons.cdr;
-    else return FALSE;
+    if (!typep(params->cons.car, Symbol)) return FALSE;
+    params = params->cons.cdr;
   } else if (params->cons.car == object_key) {
     if (!parse_params(&params)) return FALSE;
   }
@@ -698,8 +733,8 @@ SPECIAL(macro)
   if (!valid_lambda_list_p(Macro, params))
     mark_error("macro: illegal parameter list");
   result = gc_new_macro(env, params, argv->cons.cdr);
-  if (sym != NULL) xsplay_add(&env->env.binding, sym, result);
-  // return result;
+  if (sym != NULL) push_frame(make_bind_frame(env, sym, NULL));
+  reg[0] = result;
 }
 
 SPECIAL(lambda)
@@ -708,7 +743,7 @@ SPECIAL(lambda)
   params = argv->cons.car;
   if (!valid_lambda_list_p(Lambda, params))
     mark_error("lambda: illegal parameter list");
-  // return gc_new_lambda(env, params, argv->cons.cdr);
+  reg[0] = gc_new_lambda(env, params, argv->cons.cdr);
 }
 
 SPECIAL(quote)
@@ -717,7 +752,7 @@ SPECIAL(quote)
     if (argc == 0) mark_error("quote: requires argument");
     else mark_error("quote: too many arguments");
   }
-  // return argv->cons.car;
+  reg[0] = argv->cons.car;
 }
 
 SPECIAL(if)
