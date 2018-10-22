@@ -12,8 +12,9 @@
  * registers:
  *   0 -- frame argument.
  *   1 -- current environment.
+ *   2 -- for debug.
  */
-#define REG_SIZE 2
+#define REG_SIZE 3
 static object reg[REG_SIZE];
 
 static long cycle;
@@ -22,7 +23,7 @@ static long cycle;
 
 int ip_trap_code;
 static char *error_message;
-static void dump(void);
+static void describe_vm(void);
 
 static void mark_error(char *msg)
 {
@@ -34,17 +35,6 @@ static void mark_error(char *msg)
 
 static struct xsplay special_splay;
 static struct xsplay prim_splay;
-
-static object symbol_find(void)
-{
-  object e, result;
-  e = reg[1];
-  while (e != object_nil) {
-    if ((result = xsplay_find(&e->env.binding, reg[0])) != NULL) break;
-    e = e->env.top;
-  }
-  return result;
-}
 
 // frame
 
@@ -65,11 +55,11 @@ static void fb_reset(void)
   xarray_reset(&fb);
 }
 
-static void push_frame(struct frame *f);
+static void fs_push(struct frame *f);
 static void fb_flush(void)
 {
   int i;
-  for (i = fb.size - 1; i >= 0; i--) push_frame(fb.elt[i]);
+  for (i = fb.size - 1; i >= 0; i--) fs_push(fb.elt[i]);
 }
 
 struct frame {
@@ -82,7 +72,7 @@ struct frame {
 #define EVAL_LOCAL_VAR_FRAME 5
 #define EVAL_ARGS_FRAME 6
 #define EVAL_SEQUENTIAL_FRAME 7
-#define FETCH_OPERATOR 8
+#define FETCH_OPERATOR_FRAME 8
 #define IF_FRAME 9
 #define SWITCH_ENV_FRAME 10
   object local_vars[0];
@@ -98,7 +88,7 @@ static int frame_size(int type)
     case APPLY_PRIM_FRAME:
     case BIND_PROPAGATION_FRAME:
     case EVAL_SEQUENTIAL_FRAME:
-    case FETCH_OPERATOR:
+    case FETCH_OPERATOR_FRAME:
     case EVAL_LOCAL_VAR_FRAME:
     case IF_FRAME:
       return 1;
@@ -120,7 +110,7 @@ static char *frame_name(int type)
     case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_LOCAL_VAR_FRAME: return "EVAL_LOCAL_VAR_FRAME";
     case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
-    case FETCH_OPERATOR: return "FETCH_OPERATOR";
+    case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
     case IF_FRAME: return "IF_FRAME";
     case SWITCH_ENV_FRAME: return "SWITCH_ENV_FRAME";
@@ -160,7 +150,7 @@ static struct frame *fs_top(void)
   return fs[sp - 1];
 }
 
-static void push_frame(struct frame *f)
+static void fs_push(struct frame *f)
 {
   if (sp > FRAME_STACK_SIZE - STACK_GAP) mark_error("stack over flow.");
   else if (sp + 3 > FRAME_STACK_SIZE) xerror("stack over flow.");
@@ -168,7 +158,7 @@ static void push_frame(struct frame *f)
   sp++;
 }
 
-static struct frame *pop_frame(void)
+static struct frame *fs_pop(void)
 {
   struct frame *top;
   top = fs_top();
@@ -176,14 +166,19 @@ static struct frame *pop_frame(void)
   return top;
 }
 
-static struct frame *make_apply_frame(object operator)
+static void push_apply_frame(object operator)
 {
-  return alloc_frame1(APPLY_FRAME, operator);
+  fs_push(alloc_frame1(APPLY_FRAME, operator));
 }
 
-static struct frame *make_apply_prim_frame(object prim)
+static void push_apply_prim_frame(object prim)
 {
-  return alloc_frame1(APPLY_PRIM_FRAME, prim);
+  fs_push(alloc_frame1(APPLY_PRIM_FRAME, prim));
+}
+
+static void push_eval_frame(void)
+{
+  fs_push(alloc_frame(EVAL_FRAME));
 }
 
 static struct frame *make_bind_frame(object sym, object val)
@@ -196,27 +191,22 @@ static struct frame *make_bind_propagation_frame(object sym)
   return alloc_frame1(BIND_PROPAGATION_FRAME, sym);
 }
 
-static struct frame *make_eval_frame(void)
-{
-  return alloc_frame(EVAL_FRAME);
-}
-
 static struct frame *make_eval_local_var_frame(object o)
 {
   return alloc_frame1(EVAL_LOCAL_VAR_FRAME, o);
 }
 
-static struct frame *make_fetch_operator_frame(object args)
+static void push_fetch_operator_frame(object args)
 {
-  return alloc_frame1(FETCH_OPERATOR, args);
+  fs_push(alloc_frame1(FETCH_OPERATOR_FRAME, args));
 }
 
 static void push_eval_args_frame(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else {
-    push_frame(alloc_frame2(EVAL_ARGS_FRAME, args->cons.cdr, object_nil));
-    push_frame(make_eval_frame());
+    fs_push(alloc_frame2(EVAL_ARGS_FRAME, args->cons.cdr, object_nil));
+    push_eval_frame();
     reg[0] = args->cons.car;
   }
 }
@@ -224,25 +214,25 @@ static void push_eval_args_frame(object args)
 static void push_eval_sequential_frame(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
-  else push_frame(alloc_frame1(EVAL_SEQUENTIAL_FRAME, args));
+  else fs_push(alloc_frame1(EVAL_SEQUENTIAL_FRAME, args));
 }
 
-static struct frame *make_if_frame(object args)
+static void push_if_frame(object args)
 {
-  return alloc_frame1(IF_FRAME, args);
+  fs_push(alloc_frame1(IF_FRAME, args));
 }
 
-static struct frame *push_switch_env_frame(object env)
+static void push_switch_env_frame(object env)
 {
   reg[1] = gc_new_env(env);
-  return alloc_frame(SWITCH_ENV_FRAME);
+  fs_push(alloc_frame(SWITCH_ENV_FRAME));
 }
 
 static void parse_lambda_list(object env, object params, object args);
 static void pop_apply_frame(void)
 {
   object operator;
-  operator = pop_frame()->local_vars[0];
+  operator = fs_pop()->local_vars[0];
   push_switch_env_frame(operator->lambda.env);
   fb_reset();
   parse_lambda_list(reg[1], operator->lambda.params, reg[0]);
@@ -255,7 +245,7 @@ static void pop_apply_prim_frame(void)
   object args;
   int (*prim)(int, object, object *);
   args = reg[0];
-  prim = xsplay_find(&prim_splay, pop_frame()->local_vars[0]);
+  prim = xsplay_find(&prim_splay, fs_pop()->local_vars[0]);
   if (!(*prim)(object_length(args), args, &(reg[0])))
     mark_error("primitive failed");
 }
@@ -264,7 +254,7 @@ static void pop_bind_frame(void)
 {
   object s, v;
   struct frame *top;
-  top = pop_frame();
+  top = fs_pop();
   s = top->local_vars[0];
   v = top->local_vars[1];
   if (v != NULL) reg[0] = v;
@@ -275,7 +265,7 @@ static void pop_bind_propagation_frame(void)
 {
   object e, s;
   e = reg[1];
-  s = pop_frame()->local_vars[0];
+  s = fs_pop()->local_vars[0];
   while (e != object_toplevel) {
     xassert(typep(e, Env));
     if (xsplay_find(&e->env.binding, s) != NULL) {
@@ -287,9 +277,20 @@ static void pop_bind_propagation_frame(void)
   xsplay_replace(&object_toplevel->env.binding, s, reg[0]);
 }
 
+static object symbol_find(void)
+{
+  object e, v;
+  e = reg[1];
+  while (e != object_nil) {
+    if ((v = xsplay_find(&e->env.binding, reg[0])) != NULL) break;
+    e = e->env.top;
+  }
+  return v;
+}
+
 static void pop_eval_frame(void)
 {
-  pop_frame();
+  fs_pop();
   switch (type(reg[0])) {
     case Macro:
     case Lambda:
@@ -298,14 +299,15 @@ static void pop_eval_frame(void)
     case Keyword:
       return;
     case Symbol:
+      reg[2] = reg[0];
       if ((reg[0] = symbol_find()) == NULL) {    // TODO remove symbol_find?
         mark_error("unbind symbol");
         reg[0] = object_nil;
       }
       return;
     case Cons:
-      push_frame(make_fetch_operator_frame(reg[0]->cons.cdr));
-      push_frame(make_eval_frame());
+      push_fetch_operator_frame(reg[0]->cons.cdr);
+      push_eval_frame();
       reg[0] = reg[0]->cons.car;
       return;
     default: xassert(FALSE);
@@ -322,7 +324,7 @@ static void pop_fetch_operator_frame(void)
 {
   object args;
   void (*special)(object, int, object);
-  args = pop_frame()->local_vars[0];
+  args = fs_pop()->local_vars[0];
   switch (type(reg[0])) {
     case Symbol:
       if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
@@ -330,18 +332,18 @@ static void pop_fetch_operator_frame(void)
         return;
       }
       if (xsplay_find(&prim_splay, reg[0]) != NULL) {
-        push_frame(make_apply_prim_frame(reg[0]));
+        push_apply_prim_frame(reg[0]);
         push_eval_args_frame(args);
         return;
       }
       break;
     case Macro:
-      push_frame(make_eval_frame());
-      push_frame(make_apply_frame(reg[0]));
+      push_eval_frame();
+      push_apply_frame(reg[0]);
       reg[0] = args;
       return;
     case Lambda:
-      push_frame(make_apply_frame(reg[0]));
+      push_apply_frame(reg[0]);
       push_eval_args_frame(args);
       return;
     default: break;
@@ -357,10 +359,10 @@ static void pop_eval_args_frame(void)
   rest = top->local_vars[0];
   acc = top->local_vars[1] = gc_new_cons(reg[0], top->local_vars[1]);
   if (rest == object_nil) {
-    pop_frame();
+    fs_pop();
     reg[0] = object_reverse(acc);
   } else {
-    push_frame(make_eval_frame());
+    push_eval_frame();
     reg[0] = rest->cons.car;
     top->local_vars[0] = rest->cons.cdr;
   }
@@ -370,11 +372,11 @@ static void pop_eval_sequential_frame(void)
 {
   object args;
   args = fs_top()->local_vars[0];
-  if (args == object_nil) pop_frame();
+  if (args == object_nil) fs_pop();
   else {
-    push_frame(make_eval_frame());
+    fs_top()->local_vars[0] = args->cons.cdr;
+    push_eval_frame();
     reg[0] = args->cons.car;
-    fs_top()->local_vars[1] = args->cons.cdr;
   }
 }
 
@@ -382,13 +384,13 @@ static void pop_if_frame(void)
 {
   struct frame *top;
   object args;
-  top = pop_frame();
+  top = fs_pop();
   args = top->local_vars[1];
   if (reg[0] != object_nil) {
-    push_frame(make_eval_frame());
+    push_eval_frame();
     reg[0] = args->cons.car;
   } else if ((args = args->cons.cdr) != object_nil) {
-    push_frame(make_eval_frame());
+    push_eval_frame();
     reg[0] = args->cons.cdr->cons.car;
   } else reg[0] = object_nil;
 }
@@ -397,7 +399,7 @@ static void pop_switch_env(void)
 {
   xassert(typep(reg[1], Env));
   xassert(reg[1] != object_toplevel);
-  pop_frame();
+  fs_pop();
   reg[1] = reg[1]->env.top;
 }
 
@@ -484,7 +486,7 @@ static void parse_lambda_list(object env, object params, object args)
   // parse rest parameter
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    xarray_add(&fb, make_bind_frame(params->cons.car, args));
+    fb_add(make_bind_frame(params->cons.car, args));
     return;
   }
   // parse keyword parameter
@@ -612,7 +614,7 @@ SPECIAL(let)
       mark_error("let: argument must be symbol");
       return;
     }
-    push_frame(make_bind_frame(o->cons.car, object_nil));
+    fs_push(make_bind_frame(o->cons.car, object_nil));
     o = o->cons.cdr;
   }
 }
@@ -659,7 +661,7 @@ SPECIAL(macro)
   if (!valid_lambda_list_p(Macro, params))
     mark_error("macro: illegal parameter list");
   result = gc_new_macro(env, params, argv->cons.cdr);
-  if (sym != NULL) push_frame(make_bind_frame(sym, NULL));
+  if (sym != NULL) fs_push(make_bind_frame(sym, NULL));
   reg[0] = result;
 }
 
@@ -684,14 +686,20 @@ SPECIAL(quote)
 SPECIAL(if)
 {
   if (argc != 2 && argc != 3) mark_error("if: illegal arguments");
-  push_frame(make_if_frame(argv->cons.cdr));
-  push_frame(make_eval_frame());
+  push_if_frame(argv->cons.cdr);
+  push_eval_frame();
   reg[0] = argv->cons.car;
 }
 
 SPECIAL(begin)
 {
   push_eval_sequential_frame(argv);
+}
+
+// should be removed?
+SPECIAL(vm)
+{
+  describe_vm();
 }
 
 // trace and debug
@@ -703,7 +711,7 @@ static void sweep_env(int depth, void *sym, void *val)
   printf(" %s)", object_describe(val, buf));
 }
 
-static void dump_reg(void)
+static void describe_reg(void)
 {
   int i;
   char buf[MAX_STR_LEN];
@@ -716,7 +724,7 @@ static void dump_reg(void)
   printf(")\n");
 }
 
-static void dump_env(void)
+static void describe_env(void)
 {
   object e;
   printf("-- environment\n");
@@ -730,7 +738,7 @@ static void dump_env(void)
   }
 }
 
-static void dump_fs(void)
+static void describe_fs(void)
 {
   int i, j;
   char buf[MAX_STR_LEN];
@@ -746,17 +754,20 @@ static void dump_fs(void)
   printf("\n");
 }
 
-static void dump(void)
+static void describe_vm(void)
 {
-  dump_reg();
-  dump_env();
-  dump_fs();
+  describe_reg();
+  describe_env();
+  describe_fs();
 }
 
 static void trap(void)
 {
   printf("ip/error: %s\n", error_message);
-  if(ip_trap_code == TRAP_ERROR) dump();
+  if(ip_trap_code == TRAP_ERROR) {
+    describe_vm();
+    xassert(FALSE);
+  }
   ip_trap_code=TRAP_NONE;
 }
 
@@ -765,7 +776,7 @@ static object eval(object expr)
   xassert(sp == 0);
   reg[0] = expr;
   reg[1] = object_toplevel;
-  push_frame(make_eval_frame());
+  push_eval_frame();
   while (TRUE) {
     xassert(sp >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
@@ -779,7 +790,7 @@ static object eval(object expr)
       case EVAL_LOCAL_VAR_FRAME: pop_eval_local_var_frame(); break;
       case EVAL_ARGS_FRAME: pop_eval_args_frame(); break;
       case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
-      case FETCH_OPERATOR: pop_fetch_operator_frame(); break;
+      case FETCH_OPERATOR_FRAME: pop_fetch_operator_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
       case SWITCH_ENV_FRAME: pop_switch_env(); break;
       default: xassert(FALSE);
