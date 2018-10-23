@@ -321,7 +321,7 @@
 ;: ## macro assert test
 ;: testがnilの場合にその旨を通知してParenを強制終了する。
 ;:
-;: 状態異常の早以上期検知のために使用する。
+;: 状態異常の早期検知のために使用する。
 (macro assert (test)
   (list if (list = test nil)
         (list begin

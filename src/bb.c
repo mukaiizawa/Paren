@@ -93,7 +93,7 @@ PRIM(type)
   return TRUE;
 }
 
-// should be removed.
+// should be removed
 PRIM(print)
 {
   char buf[MAX_STR_LEN];

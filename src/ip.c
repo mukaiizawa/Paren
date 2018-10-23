@@ -12,7 +12,7 @@
  * registers:
  *   0 -- frame argument.
  *   1 -- current environment.
- *   2 -- for debug.
+ *   2 -- general purpose.
  */
 #define REG_SIZE 3
 static object reg[REG_SIZE];
@@ -67,14 +67,15 @@ struct frame {
 #define APPLY_FRAME 0
 #define APPLY_PRIM_FRAME 1
 #define BIND_FRAME 2
-#define BIND_PROPAGATION_FRAME 3
-#define EVAL_FRAME 4
-#define EVAL_LOCAL_VAR_FRAME 5
-#define EVAL_ARGS_FRAME 6
-#define EVAL_SEQUENTIAL_FRAME 7
-#define FETCH_OPERATOR_FRAME 8
-#define IF_FRAME 9
-#define SWITCH_ENV_FRAME 10
+#define BIND_LOCAL_VAR_FRAME 3
+#define BIND_PROPAGATION_FRAME 4
+#define EVAL_FRAME 5
+#define EVAL_LOCAL_VAR_FRAME 6
+#define EVAL_ARGS_FRAME 7
+#define EVAL_SEQUENTIAL_FRAME 8
+#define FETCH_OPERATOR_FRAME 9
+#define IF_FRAME 10
+#define SWITCH_ENV_FRAME 11
   object local_vars[0];
 };
 
@@ -82,17 +83,18 @@ static int frame_size(int type)
 {
   switch (type) {
     case EVAL_FRAME:
-    case SWITCH_ENV_FRAME:
       return 0;
     case APPLY_FRAME:
     case APPLY_PRIM_FRAME:
+    case BIND_FRAME:
     case BIND_PROPAGATION_FRAME:
     case EVAL_SEQUENTIAL_FRAME:
     case FETCH_OPERATOR_FRAME:
     case EVAL_LOCAL_VAR_FRAME:
     case IF_FRAME:
+    case SWITCH_ENV_FRAME:
       return 1;
-    case BIND_FRAME:
+    case BIND_LOCAL_VAR_FRAME:
     case EVAL_ARGS_FRAME:
       return 2;
     default: xassert(FALSE);
@@ -106,6 +108,7 @@ static char *frame_name(int type)
     case APPLY_FRAME: return "APPLY_FRAME";
     case APPLY_PRIM_FRAME: return "APPLY_PRIM_FRAME";
     case BIND_FRAME: return "BIND_FRAME";
+    case BIND_LOCAL_VAR_FRAME: return "BIND_LOCAL_VAR_FRAME";
     case BIND_PROPAGATION_FRAME: return "BIND_PROPAGATION_FRAME";
     case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_LOCAL_VAR_FRAME: return "EVAL_LOCAL_VAR_FRAME";
@@ -181,9 +184,14 @@ static void push_eval_frame(void)
   fs_push(alloc_frame(EVAL_FRAME));
 }
 
-static struct frame *make_bind_frame(object sym, object val)
+static struct frame *make_bind_frame(object sym)
 {
-  return alloc_frame2(BIND_FRAME, sym, val);
+  return alloc_frame1(BIND_FRAME, sym);
+}
+
+static struct frame *make_local_var_bind_frame(object sym, object val)
+{
+  return alloc_frame2(BIND_LOCAL_VAR_FRAME, sym, val);
 }
 
 static struct frame *make_bind_propagation_frame(object sym)
@@ -224,8 +232,8 @@ static void push_if_frame(object args)
 
 static void push_switch_env_frame(object env)
 {
+  fs_push(alloc_frame1(SWITCH_ENV_FRAME, reg[1]));
   reg[1] = gc_new_env(env);
-  fs_push(alloc_frame(SWITCH_ENV_FRAME));
 }
 
 static void parse_lambda_list(object env, object params, object args);
@@ -252,13 +260,18 @@ static void pop_apply_prim_frame(void)
 
 static void pop_bind_frame(void)
 {
+  xsplay_replace(&reg[1]->env.binding, fs_pop()->local_vars[0], reg[0]);
+}
+
+static void pop_bind_local_var_frame(void)
+{
   object s, v;
   struct frame *top;
   top = fs_pop();
   s = top->local_vars[0];
   v = top->local_vars[1];
-  if (v != NULL) reg[0] = v;
-  xsplay_replace(&reg[1]->env.binding, s, reg[0]);
+  reg[0] = v;
+  xsplay_replace(&reg[1]->env.binding, s, v);
 }
 
 static void pop_bind_propagation_frame(void)
@@ -300,7 +313,7 @@ static void pop_eval_frame(void)
       return;
     case Symbol:
       reg[2] = reg[0];
-      if ((reg[0] = symbol_find()) == NULL) {    // TODO remove symbol_find?
+      if ((reg[0] = symbol_find()) == NULL) {
         mark_error("unbind symbol");
         reg[0] = object_nil;
       }
@@ -385,7 +398,7 @@ static void pop_if_frame(void)
   struct frame *top;
   object args;
   top = fs_pop();
-  args = top->local_vars[1];
+  args = top->local_vars[0];
   if (reg[0] != object_nil) {
     push_eval_frame();
     reg[0] = args->cons.car;
@@ -397,10 +410,7 @@ static void pop_if_frame(void)
 
 static void pop_switch_env(void)
 {
-  xassert(typep(reg[1], Env));
-  xassert(reg[1] != object_toplevel);
-  fs_pop();
-  reg[1] = reg[1]->env.top;
+  reg[1] = fs_pop()->local_vars[0];
 }
 
 // validation etc.
@@ -446,7 +456,7 @@ static void parse_lambda_list(object env, object params, object args)
       return;
     }
     if (!typep(params->cons.car, Cons)) 
-      fb_add(make_bind_frame(params->cons.car, args->cons.car));
+      fb_add(make_local_var_bind_frame(params->cons.car, args->cons.car));
     else {
       parse_lambda_list(env, params->cons.car, args->cons.car);
       if (ip_trap_code != TRAP_NONE) return;
@@ -469,16 +479,16 @@ static void parse_lambda_list(object env, object params, object args)
       params = params->cons.cdr;
       if (sup_k != NULL) {
         v = object_bool(args != object_nil);
-        fb_add(make_bind_frame(sup_k, v));
+        fb_add(make_local_var_bind_frame(sup_k, v));
       }
       if (args != object_nil) {
-        fb_add(make_bind_frame(k, args->cons.car));
+        fb_add(make_local_var_bind_frame(k, args->cons.car));
         args = args->cons.cdr;
       } else {
-        if (def_v == NULL) fb_add(make_bind_frame(k, object_nil));
+        if (def_v == NULL) fb_add(make_local_var_bind_frame(k, object_nil));
         else {
           fb_add(make_eval_local_var_frame(def_v));
-          fb_add(make_bind_frame(k, NULL));
+          fb_add(make_bind_frame(k));
         }
       }
     }
@@ -486,7 +496,7 @@ static void parse_lambda_list(object env, object params, object args)
   // parse rest parameter
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    fb_add(make_bind_frame(params->cons.car, args));
+    fb_add(make_local_var_bind_frame(params->cons.car, args));
     return;
   }
   // parse keyword parameter
@@ -516,13 +526,13 @@ static void parse_lambda_list(object env, object params, object args)
         o = o->cons.cdr;
       }
       if (sup_k != NULL)
-        fb_add(make_bind_frame(sup_k, object_bool(v != NULL)));
-      if (v != NULL) fb_add(make_bind_frame(k, v));
+        fb_add(make_local_var_bind_frame(sup_k, object_bool(v != NULL)));
+      if (v != NULL) fb_add(make_local_var_bind_frame(k, v));
       else {
-        if (def_v == NULL) fb_add(make_bind_frame(k, object_nil));
+        if (def_v == NULL) fb_add(make_local_var_bind_frame(k, object_nil));
         else {
           fb_add(make_eval_local_var_frame(def_v));
-          fb_add(make_bind_frame(k, NULL));
+          fb_add(make_bind_frame(k));
         }
       }
       params = params->cons.cdr;
@@ -614,7 +624,7 @@ SPECIAL(let)
       mark_error("let: argument must be symbol");
       return;
     }
-    fs_push(make_bind_frame(o->cons.car, object_nil));
+    fs_push(make_local_var_bind_frame(o->cons.car, object_nil));
     o = o->cons.cdr;
   }
 }
@@ -635,9 +645,11 @@ SPECIAL(assign)
     s = argv->cons.car;
     if (!typep(s, Symbol)) {
       mark_error("<-: cannot bind except symbol");
+      return;
     }
     if (s == object_nil) {
       mark_error("<-: cannot bind nil");
+      return;
     }
     argv = argv->cons.cdr;
     fb_add(make_eval_local_var_frame(argv->cons.car));
@@ -658,10 +670,12 @@ SPECIAL(macro)
     sym = argv->cons.car;
     params = (argv = argv->cons.cdr)->cons.car;
   }
-  if (!valid_lambda_list_p(Macro, params))
+  if (!valid_lambda_list_p(Macro, params)) {
     mark_error("macro: illegal parameter list");
+    return;
+  }
   result = gc_new_macro(env, params, argv->cons.cdr);
-  if (sym != NULL) fs_push(make_bind_frame(sym, NULL));
+  if (sym != NULL) fs_push(make_bind_frame(sym));
   reg[0] = result;
 }
 
@@ -669,8 +683,10 @@ SPECIAL(lambda)
 {
   object params;
   params = argv->cons.car;
-  if (!valid_lambda_list_p(Lambda, params))
+  if (!valid_lambda_list_p(Lambda, params)) {
     mark_error("lambda: illegal parameter list");
+    return;
+  }
   reg[0] = gc_new_lambda(env, params, argv->cons.cdr);
 }
 
@@ -679,13 +695,17 @@ SPECIAL(quote)
   if (argc != 1) {
     if (argc == 0) mark_error("quote: requires argument");
     else mark_error("quote: too many arguments");
+    return;
   }
   reg[0] = argv->cons.car;
 }
 
 SPECIAL(if)
 {
-  if (argc != 2 && argc != 3) mark_error("if: illegal arguments");
+  if (argc != 2 && argc != 3) {
+    mark_error("if: illegal arguments");
+    return;
+  }
   push_if_frame(argv->cons.cdr);
   push_eval_frame();
   reg[0] = argv->cons.car;
@@ -696,7 +716,7 @@ SPECIAL(begin)
   push_eval_sequential_frame(argv);
 }
 
-// should be removed?
+// TODO should be removed
 SPECIAL(vm)
 {
   describe_vm();
@@ -763,10 +783,9 @@ static void describe_vm(void)
 
 static void trap(void)
 {
-  printf("ip/error: %s\n", error_message);
   if(ip_trap_code == TRAP_ERROR) {
     describe_vm();
-    xassert(FALSE);
+    xerror("%s\n", error_message);
   }
   ip_trap_code=TRAP_NONE;
 }
@@ -776,6 +795,7 @@ static object eval(object expr)
   xassert(sp == 0);
   reg[0] = expr;
   reg[1] = object_toplevel;
+  reg[2] = object_nil;
   push_eval_frame();
   while (TRUE) {
     xassert(sp >= 0);
@@ -785,6 +805,7 @@ static object eval(object expr)
       case APPLY_FRAME: pop_apply_frame(); break;
       case APPLY_PRIM_FRAME: pop_apply_prim_frame(); break;
       case BIND_FRAME: pop_bind_frame(); break;
+      case BIND_LOCAL_VAR_FRAME: pop_bind_local_var_frame(); break;
       case BIND_PROPAGATION_FRAME: pop_bind_propagation_frame(); break;
       case EVAL_FRAME: pop_eval_frame(); break;
       case EVAL_LOCAL_VAR_FRAME: pop_eval_local_var_frame(); break;
