@@ -101,21 +101,16 @@ static void describe_s_expr(object o, struct xbarray *x)
       break;
     case Cons:
       p = o->cons.car;
-      if (p == object_quote) {
-        xbarray_add(x, '\'');
-        describe_cons(o->cons.cdr, x);
-      } else if (p == object_bq) {
-        xbarray_add(x, '`');
-        describe_cons(o->cons.cdr, x);
-      } else if (p == object_uq) {
-        xbarray_add(x, ',');
-        describe_cons(o->cons.cdr, x);
-      } else if (p == object_splice) {
-        xbarray_adds(x, ",@");
-        describe_cons(o->cons.cdr, x);
-      } else if (p == object_not) {
-        xbarray_add(x, '!');
-        describe_cons(o->cons.cdr, x);
+      if ((p == object_quote || p == object_bq || p == object_uq
+            || p == object_splice || p == object_not)
+          && typep(o->cons.cdr, Cons) && o->cons.cdr->cons.cdr == object_nil)
+      {
+        if (p == object_quote) xbarray_add(x, '\'');
+        if (p == object_bq) xbarray_add(x, '`');
+        if (p == object_uq) xbarray_add(x, ',');
+        if (p == object_splice) xbarray_adds(x, ",@");
+        if (p == object_not) xbarray_add(x, '!');
+        describe_s_expr(o->cons.cdr, x);
       } else {
         xbarray_add(x, '(');
         describe_cons(o, x);

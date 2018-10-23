@@ -375,9 +375,9 @@ static void pop_eval_args_frame(void)
     fs_pop();
     reg[0] = object_reverse(acc);
   } else {
+    top->local_vars[0] = rest->cons.cdr;
     push_eval_frame();
     reg[0] = rest->cons.car;
-    top->local_vars[0] = rest->cons.cdr;
   }
 }
 
@@ -395,16 +395,14 @@ static void pop_eval_sequential_frame(void)
 
 static void pop_if_frame(void)
 {
-  struct frame *top;
   object args;
-  top = fs_pop();
-  args = top->local_vars[0];
+  args = fs_pop()->local_vars[0];
   if (reg[0] != object_nil) {
     push_eval_frame();
     reg[0] = args->cons.car;
   } else if ((args = args->cons.cdr) != object_nil) {
     push_eval_frame();
-    reg[0] = args->cons.cdr->cons.car;
+    reg[0] = args->cons.car;
   } else reg[0] = object_nil;
 }
 
@@ -662,21 +660,16 @@ SPECIAL(assign)
 
 SPECIAL(macro)
 {
-  object sym, params, result;
-  if (listp(argv->cons.car)) {
-    sym = NULL;
-    params = argv->cons.car;
-  } else {
-    sym = argv->cons.car;
-    params = (argv = argv->cons.cdr)->cons.car;
+  object params;
+  if (typep(argv->cons.car, Symbol)) {
+    fs_push(make_bind_frame(argv->cons.car));
+    argv = argv->cons.cdr;
   }
-  if (!valid_lambda_list_p(Macro, params)) {
+  if (!valid_lambda_list_p(Macro, params = argv->cons.car)) {
     mark_error("macro: illegal parameter list");
     return;
   }
-  result = gc_new_macro(env, params, argv->cons.cdr);
-  if (sym != NULL) fs_push(make_bind_frame(sym));
-  reg[0] = result;
+  reg[0] = gc_new_macro(env, params, argv->cons.cdr);
 }
 
 SPECIAL(lambda)
@@ -720,6 +713,12 @@ SPECIAL(begin)
 SPECIAL(vm)
 {
   describe_vm();
+}
+
+// TODO should be removed
+SPECIAL(break)
+{
+  printf("%s\n", "break");
 }
 
 // trace and debug

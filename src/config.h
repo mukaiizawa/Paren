@@ -1,6 +1,6 @@
 // paren configure.
 
-#define VERBOSE_P TRUE
+#define VERBOSE_P FALSE
 
 #define CALL_STACK_SIZE (1 * 1024)
 
