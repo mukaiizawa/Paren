@@ -76,6 +76,7 @@ struct frame {
 #define FETCH_OPERATOR_FRAME 9
 #define IF_FRAME 10
 #define SWITCH_ENV_FRAME 11
+#define RETURN_FRAME 12
   object local_vars[0];
 };
 
@@ -83,6 +84,7 @@ static int frame_size(int type)
 {
   switch (type) {
     case EVAL_FRAME:
+    case RETURN_FRAME:
       return 0;
     case APPLY_FRAME:
     case APPLY_PRIM_FRAME:
@@ -116,6 +118,7 @@ static char *frame_name(int type)
     case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
     case IF_FRAME: return "IF_FRAME";
+    case RETURN_FRAME: return "RETURN_FRAME";
     case SWITCH_ENV_FRAME: return "SWITCH_ENV_FRAME";
     default: xassert(FALSE);
   }
@@ -236,6 +239,11 @@ static void push_switch_env_frame(object env)
   reg[1] = gc_new_env(env);
 }
 
+static void push_return_frame(void)
+{
+  fs_push(alloc_frame(RETURN_FRAME));
+}
+
 static void parse_lambda_list(object env, object params, object args);
 static void pop_apply_frame(void)
 {
@@ -351,11 +359,13 @@ static void pop_fetch_operator_frame(void)
       }
       break;
     case Macro:
+      push_return_frame();
       push_eval_frame();
       push_apply_frame(reg[0]);
       reg[0] = args;
       return;
     case Lambda:
+      push_return_frame();
       push_apply_frame(reg[0]);
       push_eval_args_frame(args);
       return;
@@ -601,30 +611,46 @@ static int valid_lambda_list_p(int lambda_type, object params)
   return params == object_nil;
 }
 
-// <let> ::= (let (<sym> ...) <expr> ...)
-// <sym> -- symbol
-// <expr> -- s-expression
 SPECIAL(let)
 {
-  object o;
+  object params, p, s, v;
   if (argc <= 1) {
     mark_error("let: too few argument");
     return;
   }
-  if (!listp((o = argv->cons.car))) {
+  if (!listp((params = argv->cons.car))) {
     mark_error("let: argument must be list");
     return;
   }
   push_switch_env_frame(env);
   push_eval_sequential_frame(argv->cons.cdr);
-  while (o != object_nil) {
-    if (!typep(o->cons.car, Symbol)) {
+  fb_reset();
+  while (params != object_nil) {
+    v = NULL;
+    if (!typep((p = params->cons.car), Cons)) s = p;
+    else {
+      s = p->cons.car;
+      if ((p = p->cons.cdr) != object_nil) {
+        v = p->cons.car;
+        if (p->cons.cdr != object_nil) {
+          mark_error("let: illegal parameter list");
+          return;
+        }
+      }
+    }
+    if (!typep(s, Symbol)) {
       mark_error("let: argument must be symbol");
       return;
     }
-    fs_push(make_local_var_bind_frame(o->cons.car, object_nil));
-    o = o->cons.cdr;
+    if (v == NULL)
+      fb_add(make_local_var_bind_frame(s, object_nil));
+    else {
+      fb_add(make_eval_local_var_frame(v));
+      fb_add(make_bind_propagation_frame(s));
+    }
+    params = params->cons.cdr;
   }
+  fb_flush();
 }
 
 // <assign> ::= (<- [<sym> <val>] ...)
@@ -707,6 +733,14 @@ SPECIAL(if)
 SPECIAL(begin)
 {
   push_eval_sequential_frame(argv);
+}
+
+SPECIAL(return)
+{
+  while (fs_top()->type != RETURN_FRAME) {
+    if (sp == 0) return;
+    fs_pop();
+  }
 }
 
 // TODO should be removed
@@ -813,6 +847,7 @@ static object eval(object expr)
       case FETCH_OPERATOR_FRAME: pop_fetch_operator_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
       case SWITCH_ENV_FRAME: pop_switch_env(); break;
+      case RETURN_FRAME: fs_pop(); break;
       default: xassert(FALSE);
     }
   }
