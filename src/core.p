@@ -464,12 +464,11 @@
 ;:
 ;: nがlisの長さよりも大きい場合はnilを返す。
 (function nthcdr (lis n)
-  (precondition (and (list? lis) (>= n 0)))
+  (precondition (list? lis))
   (cond ((nil? lis) nil)
         ((= n 0) lis)
         (:default (nthcdr (cdr lis) (-- n)))))
 ; (assert (= (nthcdr '(1 2 3) 1) '(2 3)))
-
 
 (function sublist (lis s :opt e)
   (let ((len (length lis))
@@ -634,8 +633,6 @@
 (macro backquote (expr)
   (bqexpander expr 0))
 
-; (print ``(1 2 3))
-
 ; pos
 ; {{{
 ; (<- Object '((:super nil)
@@ -689,8 +686,8 @@
 (assert !(each-pair-satisfy? '(1 2 3 3 5) <))
 
 ;;; sublist
-(assert (= (sublist '(1 2 3) 1) '(2 3)))
-(assert (= (sublist '(1 2 3) 1 2) '(2)))
+; (assert (= (sublist '(1 2 3) 1) '(2 3)))
+; (assert (= (sublist '(1 2 3) 1 2) '(2)))
 
 ;;; copy-list
 (assert (= (copy-list '(1 2 3)) '(1 2 3)))
@@ -740,4 +737,3 @@
 (assert !(and true nil true))
 
 (print :finish)
-

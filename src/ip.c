@@ -646,7 +646,7 @@ SPECIAL(let)
       fb_add(make_local_var_bind_frame(s, object_nil));
     else {
       fb_add(make_eval_local_var_frame(v));
-      fb_add(make_bind_propagation_frame(s));
+      fb_add(make_bind_frame(s));
     }
     params = params->cons.cdr;
   }
