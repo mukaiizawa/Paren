@@ -74,9 +74,11 @@ struct frame {
 #define EVAL_ARGS_FRAME 7
 #define EVAL_SEQUENTIAL_FRAME 8
 #define FETCH_OPERATOR_FRAME 9
-#define IF_FRAME 10
-#define SWITCH_ENV_FRAME 11
-#define RETURN_FRAME 12
+#define GOTO_FRAME 10
+#define IF_FRAME 11
+#define LABELS_FRAME 12
+#define SWITCH_ENV_FRAME 13
+#define RETURN_FRAME 14
   object local_vars[0];
 };
 
@@ -84,6 +86,7 @@ static int frame_size(int type)
 {
   switch (type) {
     case EVAL_FRAME:
+    case GOTO_FRAME:
     case RETURN_FRAME:
       return 0;
     case APPLY_FRAME:
@@ -94,6 +97,7 @@ static int frame_size(int type)
     case FETCH_OPERATOR_FRAME:
     case EVAL_LOCAL_VAR_FRAME:
     case IF_FRAME:
+    case LABELS_FRAME:
     case SWITCH_ENV_FRAME:
       return 1;
     case BIND_LOCAL_VAR_FRAME:
@@ -115,9 +119,11 @@ static char *frame_name(int type)
     case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_LOCAL_VAR_FRAME: return "EVAL_LOCAL_VAR_FRAME";
     case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
-    case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
+    case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
+    case GOTO_FRAME: return "GOTO_FRAME";
     case IF_FRAME: return "IF_FRAME";
+    case LABELS_FRAME: return "LABELS_FRAME";
     case RETURN_FRAME: return "RETURN_FRAME";
     case SWITCH_ENV_FRAME: return "SWITCH_ENV_FRAME";
     default: xassert(FALSE);
@@ -207,11 +213,6 @@ static struct frame *make_eval_local_var_frame(object o)
   return alloc_frame1(EVAL_LOCAL_VAR_FRAME, o);
 }
 
-static void push_fetch_operator_frame(object args)
-{
-  fs_push(alloc_frame1(FETCH_OPERATOR_FRAME, args));
-}
-
 static void push_eval_args_frame(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
@@ -228,9 +229,24 @@ static void push_eval_sequential_frame(object args)
   else fs_push(alloc_frame1(EVAL_SEQUENTIAL_FRAME, args));
 }
 
+static void push_fetch_operator_frame(object args)
+{
+  fs_push(alloc_frame1(FETCH_OPERATOR_FRAME, args));
+}
+
+static void push_goto_frame(void)
+{
+  fs_push(alloc_frame(GOTO_FRAME));
+}
+
 static void push_if_frame(object args)
 {
   fs_push(alloc_frame1(IF_FRAME, args));
+}
+
+static void push_labels_frame(object args)
+{
+  fs_push(alloc_frame1(LABELS_FRAME, args));
 }
 
 static void push_switch_env_frame(object env)
@@ -401,6 +417,33 @@ static void pop_eval_sequential_frame(void)
     push_eval_frame();
     reg[0] = args->cons.car;
   }
+}
+
+static void pop_goto_frame(void)
+{
+  object o;
+  if (!typep(reg[0], Keyword)) {
+    mark_error("goto: arguments must be keyword");
+    return;
+  }
+  fs_pop();
+  while (fs_top()->type != LABELS_FRAME) {
+    fs_pop();
+    if (sp == 0) {
+      mark_error("goto: not found labels context");
+      return;
+    }
+  }
+  o = fs_top()->local_vars[0];
+  while (o != object_nil) {
+    if (o->cons.car == reg[0]) break;
+    o = o->cons.cdr;
+  }
+  if (o == object_nil) {
+    mark_error("goto: not found label");
+    return;
+  }
+  push_eval_sequential_frame(o);
 }
 
 static void pop_if_frame(void)
@@ -730,6 +773,25 @@ SPECIAL(if)
   reg[0] = argv->cons.car;
 }
 
+SPECIAL(labels)
+{
+  push_labels_frame(argv);
+  push_eval_sequential_frame(argv);
+  reg[0] = argv->cons.car;
+}
+
+SPECIAL(goto)
+{
+  if (argc != 1) {
+    if (argc == 0) mark_error("goto: requires arguments");
+    else mark_error("goto: too many arguments");
+    return;
+  }
+  push_goto_frame();
+  push_eval_frame();
+  reg[0] = argv->cons.car;
+}
+
 SPECIAL(begin)
 {
   push_eval_sequential_frame(argv);
@@ -845,7 +907,9 @@ static object eval(object expr)
       case EVAL_ARGS_FRAME: pop_eval_args_frame(); break;
       case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
       case FETCH_OPERATOR_FRAME: pop_fetch_operator_frame(); break;
+      case GOTO_FRAME: pop_goto_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
+      case LABELS_FRAME: fs_pop(); break;
       case SWITCH_ENV_FRAME: pop_switch_env(); break;
       case RETURN_FRAME: fs_pop(); break;
       default: xassert(FALSE);
