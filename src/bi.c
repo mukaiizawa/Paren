@@ -19,6 +19,8 @@
 
 static char *symbol_name_map[] = {
   "assign", "<-",
+  "throw", "basic-throw",
+  "catch", "basic-catch",
   "samep", "same?",
   "equalp", "=",
   "type", "$$type",

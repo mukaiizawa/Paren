@@ -275,7 +275,7 @@
 (macro begin0 (:rest body)
   (let ((sym (gensym)))
     (cons let (cons (list (list sym (car body)))
-                    (append1 (cdr body) sym)))))
+                    (add (cdr body) sym)))))
 
 ;: ## macro begin-if test :rest body
 ;: testを評価結果がnil以外の場合にbodyを逐次評価する。
@@ -296,6 +296,17 @@
 (macro and (:rest expr)
   (if (nil? expr) true
     (list if (car expr) (cons and (cdr expr)))))
+
+;: ## macro while test :rest body
+;: testがnilでない間bodyを逐次評価する。
+;:
+;: whileはlambdaを含む式に展開される。そのためreturnオペレータを使用することによりwhileコンテキストを抜けることができる。
+(macro while (test :rest body)
+  (list (list lambda nil
+              (cons labels
+                    (cons :while
+                          (cons (list if (list not test) (list return nil))
+                                (add body '(goto :while))))))))
 
 ;: # error and exception
 ;: ## function error :rest msg
@@ -506,9 +517,10 @@
                  x)
           :identity (copy-list lis)))
 
-(function append1 (lis o)
-  (precondition (and (list? lis)))
-  (append lis (->list o)))
+(function add (lis o)
+  (precondition (list? lis))
+  (cdr (last-cons lis) (cons o nil))
+  lis)
 
 (macro push (sym x)
   (precondition (symbol? sym))
@@ -735,5 +747,12 @@
 (assert (and))
 (assert (and true true true))
 (assert !(and true nil true))
+
+(<- a 0)
+(while !(= a 8)
+       (if (= a 4) (return))
+       (print (<- a (++ a))))
+
+(let ())
 
 (print :finish)

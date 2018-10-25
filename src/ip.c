@@ -69,16 +69,19 @@ struct frame {
 #define BIND_FRAME 2
 #define BIND_LOCAL_VAR_FRAME 3
 #define BIND_PROPAGATION_FRAME 4
-#define EVAL_FRAME 5
-#define EVAL_LOCAL_VAR_FRAME 6
-#define EVAL_ARGS_FRAME 7
-#define EVAL_SEQUENTIAL_FRAME 8
-#define FETCH_OPERATOR_FRAME 9
-#define GOTO_FRAME 10
-#define IF_FRAME 11
-#define LABELS_FRAME 12
-#define SWITCH_ENV_FRAME 13
+#define CATCH_FRAME 5
+#define EVAL_FRAME 6
+#define EVAL_LOCAL_VAR_FRAME 7
+#define EVAL_ARGS_FRAME 8
+#define EVAL_SEQUENTIAL_FRAME 9
+#define FETCH_OPERATOR_FRAME 10
+#define GOTO_FRAME 11
+#define IF_FRAME 12
+#define LABELS_FRAME 13
 #define RETURN_FRAME 14
+#define SWITCH_ENV_FRAME 15
+#define THROW_FRAME 16
+#define TRY_FRAME 17
   object local_vars[0];
 };
 
@@ -88,11 +91,14 @@ static int frame_size(int type)
     case EVAL_FRAME:
     case GOTO_FRAME:
     case RETURN_FRAME:
+    case THROW_FRAME:
+    case TRY_FRAME:
       return 0;
     case APPLY_FRAME:
     case APPLY_PRIM_FRAME:
     case BIND_FRAME:
     case BIND_PROPAGATION_FRAME:
+    case CATCH_FRAME:
     case EVAL_SEQUENTIAL_FRAME:
     case FETCH_OPERATOR_FRAME:
     case EVAL_LOCAL_VAR_FRAME:
@@ -126,6 +132,7 @@ static char *frame_name(int type)
     case LABELS_FRAME: return "LABELS_FRAME";
     case RETURN_FRAME: return "RETURN_FRAME";
     case SWITCH_ENV_FRAME: return "SWITCH_ENV_FRAME";
+    case TRY_FRAME: return "TRY_FRAME";
     default: xassert(FALSE);
   }
   return NULL;
@@ -208,6 +215,11 @@ static struct frame *make_bind_propagation_frame(object sym)
   return alloc_frame1(BIND_PROPAGATION_FRAME, sym);
 }
 
+static struct frame *make_catch_frame(object e, object body)
+{
+  return alloc_frame2(CATCH_FRAME, e, body);
+}
+
 static struct frame *make_eval_local_var_frame(object o)
 {
   return alloc_frame1(EVAL_LOCAL_VAR_FRAME, o);
@@ -249,15 +261,20 @@ static void push_labels_frame(object args)
   fs_push(alloc_frame1(LABELS_FRAME, args));
 }
 
+static void push_return_frame(void)
+{
+  fs_push(alloc_frame(RETURN_FRAME));
+}
+
 static void push_switch_env_frame(object env)
 {
   fs_push(alloc_frame1(SWITCH_ENV_FRAME, reg[1]));
   reg[1] = gc_new_env(env);
 }
 
-static void push_return_frame(void)
+static void push_throw_frame(object e)
 {
-  fs_push(alloc_frame(RETURN_FRAME));
+  fs_push(alloc_frame1(THROW_FRAME, e));
 }
 
 static void parse_lambda_list(object env, object params, object args);
@@ -464,6 +481,39 @@ static void pop_switch_env(void)
   reg[1] = fs_pop()->local_vars[0];
 }
 
+static void pop_throw_frame(void)
+{
+  int rp;
+  object te, targ, ce, cs, cbody;
+  te = fs_pop()->local_vars[0];
+  targ = reg[0];
+  rp = sp;
+  while (TRUE) {
+    if (sp == 0) {
+      sp = rp;
+      mark_error("error");
+      return;
+    }
+    if (fs_top()->type == CATCH_FRAME) {
+      if (!typep((ce = fs_top()->local_vars[0]), Cons)) cs = NULL;
+      else {
+        cs = ce->cons.cdr->cons.car;
+        ce = ce->cons.car;
+      } 
+      if (ce == te) {
+        cbody = fs_top()->local_vars[1];
+        while (fs_top()->type != TRY_FRAME) fs_pop();
+        break;
+      }
+    }
+    fs_pop();
+  }
+  fs_pop();
+  if (cs != NULL) push_switch_env_frame(reg[1]);
+  push_eval_sequential_frame(cbody);
+  if (cs != NULL) make_local_var_bind_frame(cs, targ);
+}
+
 // validation etc.
 
 static int valid_keyword_p(object params, object args)
@@ -657,7 +707,7 @@ static int valid_lambda_list_p(int lambda_type, object params)
 SPECIAL(let)
 {
   object params, p, s, v;
-  if (argc <= 1) {
+  if (argc < 1) {
     mark_error("let: too few argument");
     return;
   }
@@ -727,6 +777,11 @@ SPECIAL(assign)
   fb_flush();
 }
 
+SPECIAL(begin)
+{
+  push_eval_sequential_frame(argv);
+}
+
 SPECIAL(macro)
 {
   object params;
@@ -777,7 +832,6 @@ SPECIAL(labels)
 {
   push_labels_frame(argv);
   push_eval_sequential_frame(argv);
-  reg[0] = argv->cons.car;
 }
 
 SPECIAL(goto)
@@ -792,17 +846,67 @@ SPECIAL(goto)
   reg[0] = argv->cons.car;
 }
 
-SPECIAL(begin)
+SPECIAL(throw)
 {
-  push_eval_sequential_frame(argv);
+  if (argc == 0 || argc > 2) {
+    if (argc == 0) mark_error("throw: too few arguments");
+    else mark_error("throw: too many arguments");
+    return;
+  }
+  if (!typep(argv->cons.car, Keyword)) {
+    mark_error("throw: type must be keyword");
+    return;
+  }
+  push_throw_frame(argv->cons.car);
+  push_eval_frame();
+  reg[0] = argv->cons.cdr->cons.car;
+}
+
+// (try (({ type | (type sym) } body ...) ...) body ...)したが、
+SPECIAL(try)
+{
+  object params, p, e;
+  if (argc < 1) {
+    mark_error("try: too few argument");
+    return;
+  }
+  if (!listp((params = argv->cons.car))) {
+    mark_error("try: argument must be list");
+    return;
+  }
+  fb_reset();
+  while (params != object_nil) {
+    if (!typep((p = params->cons.car), Cons)) e = p;
+    else {
+      e = p->cons.car;
+      if ((p = p->cons.cdr) == object_nil || p->cons.cdr != object_nil) {
+        mark_error("try: illegal parameter list");
+        return;
+      }
+    }
+    if (!typep(e, Keyword)) {
+      mark_error("try: type must be keyword");
+      return;
+    }
+    fb_add(make_catch_frame(e, p->cons.cdr));
+    params = params->cons.cdr;
+  }
+  fb_flush();
+  push_eval_sequential_frame(argv->cons.cdr);
 }
 
 SPECIAL(return)
 {
+  if (argc > 1) {
+    mark_error("return: too many arguments");
+    return;
+  }
   while (fs_top()->type != RETURN_FRAME) {
     if (sp == 0) return;
     fs_pop();
   }
+  if (argc == 0) reg[0] = object_nil;
+  else reg[0] = argv->cons.car;
 }
 
 // TODO should be removed
@@ -902,6 +1006,7 @@ static object eval(object expr)
       case BIND_FRAME: pop_bind_frame(); break;
       case BIND_LOCAL_VAR_FRAME: pop_bind_local_var_frame(); break;
       case BIND_PROPAGATION_FRAME: pop_bind_propagation_frame(); break;
+      case CATCH_FRAME: fs_pop(); break;
       case EVAL_FRAME: pop_eval_frame(); break;
       case EVAL_LOCAL_VAR_FRAME: pop_eval_local_var_frame(); break;
       case EVAL_ARGS_FRAME: pop_eval_args_frame(); break;
@@ -910,8 +1015,10 @@ static object eval(object expr)
       case GOTO_FRAME: pop_goto_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
       case LABELS_FRAME: fs_pop(); break;
-      case SWITCH_ENV_FRAME: pop_switch_env(); break;
       case RETURN_FRAME: fs_pop(); break;
+      case SWITCH_ENV_FRAME: pop_switch_env(); break;
+      case THROW_FRAME: pop_throw_frame(); break;
+      case TRY_FRAME: fs_pop(); break;
       default: xassert(FALSE);
     }
   }
