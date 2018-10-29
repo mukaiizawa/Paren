@@ -53,19 +53,21 @@ union s_expr {
 extern int symcmp(object o, object p);
 
 // global object
-extern object object_toplevel;
 extern object object_boot;
-extern object object_nil;
-extern object object_true;
-extern object object_opt;
-extern object object_key;
-extern object object_rest;
-extern object object_quote;
 extern object object_bq;
-extern object object_uq;
-extern object object_splice;
+extern object object_catch;
+extern object object_finally;
+extern object object_key;
+extern object object_nil;
 extern object object_not;
+extern object object_opt;
+extern object object_quote;
+extern object object_rest;
 extern object object_sint[SINT_MAX];
+extern object object_splice;
+extern object object_toplevel;
+extern object object_true;
+extern object object_uq;
 
 extern char *object_describe(object o, char *buf);
 extern int object_length(object o);

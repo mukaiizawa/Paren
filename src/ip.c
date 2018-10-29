@@ -92,23 +92,24 @@ static int frame_size(int type)
     case GOTO_FRAME:
     case RETURN_FRAME:
     case THROW_FRAME:
-    case TRY_FRAME:
       return 0;
     case APPLY_FRAME:
     case APPLY_PRIM_FRAME:
     case BIND_FRAME:
     case BIND_PROPAGATION_FRAME:
-    case CATCH_FRAME:
     case EVAL_SEQUENTIAL_FRAME:
     case FETCH_OPERATOR_FRAME:
     case EVAL_LOCAL_VAR_FRAME:
     case IF_FRAME:
     case LABELS_FRAME:
     case SWITCH_ENV_FRAME:
+    case TRY_FRAME:
       return 1;
     case BIND_LOCAL_VAR_FRAME:
     case EVAL_ARGS_FRAME:
       return 2;
+    case CATCH_FRAME:
+      return 3;
     default: xassert(FALSE);
   }
   return FALSE;
@@ -122,6 +123,7 @@ static char *frame_name(int type)
     case BIND_FRAME: return "BIND_FRAME";
     case BIND_LOCAL_VAR_FRAME: return "BIND_LOCAL_VAR_FRAME";
     case BIND_PROPAGATION_FRAME: return "BIND_PROPAGATION_FRAME";
+    case CATCH_FRAME: return "CATCH_FRAME";
     case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_LOCAL_VAR_FRAME: return "EVAL_LOCAL_VAR_FRAME";
     case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
@@ -215,9 +217,14 @@ static struct frame *make_bind_propagation_frame(object sym)
   return alloc_frame1(BIND_PROPAGATION_FRAME, sym);
 }
 
-static struct frame *make_catch_frame(object e, object body)
+static struct frame *make_catch_frame(object e, object s, object body)
 {
-  return alloc_frame2(CATCH_FRAME, e, body);
+  struct frame *f;
+  f = alloc_frame(CATCH_FRAME);
+  f->local_vars[0] = e;
+  f->local_vars[1] = s;
+  f->local_vars[2] = body;
+  return f;
 }
 
 static struct frame *make_eval_local_var_frame(object o)
@@ -275,6 +282,11 @@ static void push_switch_env_frame(object env)
 static void push_throw_frame(object e)
 {
   fs_push(alloc_frame1(THROW_FRAME, e));
+}
+
+static void push_try_frame(object f)
+{
+  fs_push(alloc_frame1(TRY_FRAME, f));
 }
 
 static void parse_lambda_list(object env, object params, object args);
@@ -495,23 +507,22 @@ static void pop_throw_frame(void)
       return;
     }
     if (fs_top()->type == CATCH_FRAME) {
-      if (!typep((ce = fs_top()->local_vars[0]), Cons)) cs = NULL;
-      else {
-        cs = ce->cons.cdr->cons.car;
-        ce = ce->cons.car;
-      } 
-      if (ce == te) {
-        cbody = fs_top()->local_vars[1];
-        while (fs_top()->type != TRY_FRAME) fs_pop();
-        break;
+      ce = fs_top()->local_vars[0];
+      cs = fs_top()->local_vars[1];
+      cbody = fs_top()->local_vars[2];
+      while (ce != object_nil) {
+        if (te == ce->cons.car) break;
+        ce = ce->cons.cdr;
       }
+      while (fs_top()->type != TRY_FRAME) fs_pop();
+      break;
     }
     fs_pop();
   }
-  fs_pop();
-  if (cs != NULL) push_switch_env_frame(reg[1]);
+  fs_pop();    // skip TRY_FRAME
+  if (cs != object_nil) push_switch_env_frame(reg[1]);
   push_eval_sequential_frame(cbody);
-  if (cs != NULL) make_local_var_bind_frame(cs, targ);
+  if (cs != object_nil) fs_push(make_local_var_bind_frame(cs, targ));
 }
 
 // validation etc.
@@ -862,10 +873,9 @@ SPECIAL(throw)
   reg[0] = argv->cons.cdr->cons.car;
 }
 
-// (try (({ type | (type sym) } body ...) ...) body ...)したが、
 SPECIAL(try)
 {
-  object params, p, e;
+  object p, s, params, cparams, finally;
   if (argc < 1) {
     mark_error("try: too few argument");
     return;
@@ -874,23 +884,49 @@ SPECIAL(try)
     mark_error("try: argument must be list");
     return;
   }
+  finally = NULL;
   fb_reset();
   while (params != object_nil) {
-    if (!typep((p = params->cons.car), Cons)) e = p;
-    else {
-      e = p->cons.car;
-      if ((p = p->cons.cdr) == object_nil || p->cons.cdr != object_nil) {
+    p = params->cons.car;
+    if (!typep(p, Cons)) {
+      mark_error("try: illegal arguments");
+      return;
+    }
+    if (p->cons.car == object_catch) {
+      s = object_nil;
+      p = p->cons.cdr;
+      if (!typep((cparams = p->cons.car), Cons)) {
+        mark_error("try: illegal catch clause");
+        return;
+      }
+      while (cparams != object_nil) {
+        if (typep(cparams->cons.car, Keyword)) {
+          cparams = cparams->cons.cdr;
+          continue;
+        }
+        if (typep(cparams->cons.car, Symbol) && cparams->cons.cdr == object_nil)
+        {
+          s = cparams->cons.car;
+          break;
+        }
         mark_error("try: illegal parameter list");
         return;
       }
-    }
-    if (!typep(e, Keyword)) {
-      mark_error("try: type must be keyword");
+      fb_add(make_catch_frame(p->cons.car, s, p->cons.cdr));
+    } else if (p->cons.car == object_finally) {
+      if (finally != NULL) {
+        mark_error("try: too many finally clause");
+        return;
+      }
+      finally = p->cons.cdr;
+    } else {
+      mark_error("try: illegal arguments");
       return;
     }
-    fb_add(make_catch_frame(e, p->cons.cdr));
     params = params->cons.cdr;
   }
+  if (finally == NULL) finally = object_nil;
+  push_try_frame(finally);
   fb_flush();
   push_eval_sequential_frame(argv->cons.cdr);
 }

@@ -6,19 +6,21 @@
 #include "xsplay.h"
 #include "object.h"
 
-object object_toplevel;
 object object_boot;
-object object_nil;
-object object_true;
-object object_opt;
-object object_key;
-object object_rest;
-object object_quote;
 object object_bq;
-object object_uq;
-object object_splice;
+object object_catch;
+object object_finally;
+object object_key;
+object object_nil;
 object object_not;
+object object_opt;
+object object_quote;
+object object_rest;
 object object_sint[SINT_MAX];
+object object_splice;
+object object_toplevel;
+object object_true;
+object object_uq;
 
 int symcmp(object o, object p)
 {

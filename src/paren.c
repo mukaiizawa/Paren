@@ -166,15 +166,17 @@ static void make_initial_objects(void)
 {
   int i;
   object_nil = gc_new_symbol("nil");
-  object_true = gc_new_symbol("true");
-  object_opt = gc_new_symbol(":opt");
-  object_key = gc_new_symbol(":key");
-  object_rest = gc_new_symbol(":rest");
-  object_quote = gc_new_symbol("quote");
   object_bq = gc_new_symbol("backquote");
-  object_uq = gc_new_symbol("unquote");
-  object_splice = gc_new_symbol("splice");
+  object_catch = gc_new_symbol("catch");
+  object_finally = gc_new_symbol("finally");
+  object_key = gc_new_symbol(":key");
   object_not = gc_new_symbol("not");
+  object_opt = gc_new_symbol(":opt");
+  object_quote = gc_new_symbol("quote");
+  object_rest = gc_new_symbol(":rest");
+  object_splice = gc_new_symbol("splice");
+  object_true = gc_new_symbol("true");
+  object_uq = gc_new_symbol("unquote");
   object_toplevel = gc_new_env(object_nil);
   for (i = 0; i < SINT_MAX; i++) object_sint[i] = gc_new_sint(i);
   bind_pseudo_symbol(object_nil);
