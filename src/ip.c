@@ -514,8 +514,10 @@ static void pop_throw_frame(void)
         if (te == ce->cons.car) break;
         ce = ce->cons.cdr;
       }
-      while (fs_top()->type != TRY_FRAME) fs_pop();
-      break;
+      if (ce != object_nil) {
+        while (fs_top()->type != TRY_FRAME) fs_pop();
+        break;
+      }
     }
     fs_pop();
   }
