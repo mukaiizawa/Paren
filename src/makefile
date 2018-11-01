@@ -31,7 +31,10 @@ endif
 .c.o:
 	$(cc) $(cflags) $<
 
-all: $(paren) core.p
+paren=paren$(exe)
+
+all: $(paren) core.wk
+	./paren -f core.wk
 
 special=ip.c
 special.wk: $(special)
@@ -42,15 +45,15 @@ prim.wk: $(prim)
 	cat $+ | grep ^PRIM>$@
 
 xc.a: std.o xarray.o xbarray.o xsplay.o xgetopt.o gc.o object.o lex.o  bi.o\
-	ip.o $(prim:%.c=%.o) 
+	$(special:%.c=%.o) $(prim:%.c=%.o) 
 	ar -ru xc.a $+
 
-paren=paren$(exe)
 $(paren): paren.o xc.a
 	$(link)
 
-core.p: $(paren)
-	./paren core.p
+core.wk: core.p
+	cat $+ | sed '/^(assert/d' | sed '/^;/d' >$@
+	cat $+ | sed '/^(assert/!d' >>$@
 
 man:
 	cat core.p | grep ';:' | cut -c 4-

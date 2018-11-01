@@ -12,9 +12,8 @@
  * registers:
  *   0 -- frame argument.
  *   1 -- current environment.
- *   2 -- general purpose.
  */
-#define REG_SIZE 3
+#define REG_SIZE 2
 static object reg[REG_SIZE];
 
 static long cycle;
@@ -356,6 +355,7 @@ static object symbol_find(void)
 
 static void pop_eval_frame(void)
 {
+  object s;
   fs_pop();
   switch (type(reg[0])) {
     case Macro:
@@ -365,11 +365,8 @@ static void pop_eval_frame(void)
     case Keyword:
       return;
     case Symbol:
-      reg[2] = reg[0];
-      if ((reg[0] = symbol_find()) == NULL) {
-        mark_error("unbind symbol");
-        reg[0] = object_nil;
-      }
+      if ((s = symbol_find()) == NULL) mark_error("unbind symbol");
+      else reg[0] = s;
       return;
     case Cons:
       push_fetch_operator_frame(reg[0]->cons.cdr);
@@ -871,8 +868,11 @@ SPECIAL(throw)
     return;
   }
   push_throw_frame(argv->cons.car);
-  push_eval_frame();
-  reg[0] = argv->cons.cdr->cons.car;
+  if (argc == 1) reg[0] = object_exception;
+  else {
+    push_eval_frame();
+    reg[0] = argv->cons.cdr->cons.car;
+  }
 }
 
 SPECIAL(try)
@@ -1032,7 +1032,6 @@ static object eval(object expr)
   xassert(sp == 0);
   reg[0] = expr;
   reg[1] = object_toplevel;
-  reg[2] = object_nil;
   push_eval_frame();
   while (TRUE) {
     xassert(sp >= 0);

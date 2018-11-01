@@ -18,7 +18,7 @@ int dump_object_table_p;
 static void parse_opt(int argc,char *argv[])
 {
   int ch;
-  core_fn = "./core.p";
+  core_fn = "./core.wk";
   dump_object_table_p = FALSE;
   while((ch = xgetopt(argc, argv, "f:o")) != EOF)
     switch(ch) {
@@ -168,6 +168,7 @@ static void make_initial_objects(void)
   object_nil = gc_new_symbol("nil");
   object_bq = gc_new_symbol("backquote");
   object_catch = gc_new_symbol("catch");
+  object_exception = gc_new_symbol(":Exception");
   object_finally = gc_new_symbol("finally");
   object_key = gc_new_symbol(":key");
   object_not = gc_new_symbol("not");

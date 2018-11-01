@@ -56,6 +56,7 @@ extern int symcmp(object o, object p);
 extern object object_boot;
 extern object object_bq;
 extern object object_catch;
+extern object object_exception;
 extern object object_finally;
 extern object object_key;
 extern object object_nil;
