@@ -55,9 +55,9 @@ core.wk: core.p
 	cat $+ | sed '/^(assert/!d' >>$@
 
 man:
-	cat core.p | grep ';:' | cut -c 4-
+	cat core.p | grep ';:' | cut -c 4- > core.man
 
 clean:
-	rm -f *.o *.a *.wk $(paren)
+	rm -f *.o *.a *.wk *.man $(paren)
 
 include cdep.d

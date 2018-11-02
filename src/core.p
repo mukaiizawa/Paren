@@ -9,12 +9,12 @@
 ;: - 空のリストとして扱われる
 ;: - 唯一、真偽値の偽として扱われる
 ;:
-;: 評価されると自信を返す。
+;: 評価されると自身を返す。
 ;:
 ;: ## symbol true
 ;: trueは真偽値の真を代表するシンボルである。
 ;:
-;: 評価されると自信を返す。
+;: 評価されると自身を返す。
 
 ;: # special operator
 ;: スペシャルオペレーターはParenに組み込まれた特殊なオペレーターであり、ユーザが定義することはできない。また、引数の扱いはスペシャルオペレーターごとに異なる。
@@ -315,25 +315,22 @@
                                 (add body '(goto :while))))))))
 
 ;: # error and exception
-;: ## function error :rest msg
-;: メッセージmsgを表示し、システムを終了する。
-(function error (:rest msg)
-  (print (cons :Error msg))
-  (quit))
 
 ;: ## macro precondition test
 ;: testがnilの場合に、システムを終了する。
 ;:
 ;: 関数、マクロが評価される事前条件を定義するために使用する。
 (macro precondition (test)
-  (list if (list not test) (list error :PreconditionError (list quote test))))
+  (list if (list not test)
+        (list basic-throw :PreconditionException (list quote test))))
 
 ;: ## macro postcondition test
 ;: testがnilの場合に、システムを終了する。
 ;:
 ;: 関数、マクロ評価後の事後条件を定義するために使用する。
 (macro postcondition (test)
-  (list if (list not test) (list error  :PostconditionError (list quote test))))
+  (list if (list not test)
+        (list basic-throw  :PostconditionException (list quote test))))
 
 ;: ## macro assert test
 ;: testがnilの場合にその旨を通知してParenを強制終了する。
