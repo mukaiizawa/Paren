@@ -32,7 +32,6 @@ endif
 	$(cc) $(cflags) $<
 
 paren=paren$(exe)
-
 all: $(paren) core.wk
 	./paren -f core.wk
 

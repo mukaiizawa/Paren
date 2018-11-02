@@ -219,35 +219,35 @@
     cdddar (lambda (x) (cdr (cddar x)))
     cddddr (lambda (x) (cdr (cdddr x))))
 
-; (assert (= (list 1 2 3) '(1 2 3)))
-; (assert (same? (caar '((z))) 'z))
-; (assert (same? (cadr '(x z)) 'z))
-; (assert (= (cdar '((x z))) '(z)))
-; (assert (= (cddr '(x x z)) '(z)))
-; (assert (same? (caaar '(((z)))) 'z))
-; (assert (same? (caadr '(x (z))) 'z))
-; (assert (same? (cadar '((x z))) 'z))
-; (assert (same? (caddr '(x x z)) 'z))
-; (assert (= (cdaar '(((x z)))) '(z)))
-; (assert (= (cdadr '(x (x z))) '(z)))
-; (assert (= (cddar '((x x z))) '(z)))
-; (assert (= (cdddr '(x x x z)) '(z)))
-; (assert (same? (caaaar '((((z))))) 'z))
-; (assert (same? (caaadr '(x ((z)))) 'z))
-; (assert (same? (caadar '((x (z)))) 'z))
-; (assert (same? (caaddr '(x x (z))) 'z))
-; (assert (same? (cadaar '(((x z)))) 'z))
-; (assert (same? (cadadr '(x (x z))) 'z))
-; (assert (same? (caddar '((x x z))) 'z))
-; (assert (same? (cadddr '(x x x z)) 'z))
-; (assert (= (cdaaar '((((x z))))) '(z)))
-; (assert (= (cdaadr '(x ((x z)))) '(z)))
-; (assert (= (cdadar '((x (x z)))) '(z)))
-; (assert (= (cdaddr '(x x (x z))) '(z)))
-; (assert (= (cddaar '(((x x z)))) '(z)))
-; (assert (= (cddadr '(x (x x z))) '(z)))
-; (assert (= (cdddar '((x x x z))) '(z)))
-; (assert (= (cddddr '(x x x x z)) '(z)))
+(assert (= (list 1 2 3) '(1 2 3)))
+(assert (same? (caar '((z))) 'z))
+(assert (same? (cadr '(x z)) 'z))
+(assert (= (cdar '((x z))) '(z)))
+(assert (= (cddr '(x x z)) '(z)))
+(assert (same? (caaar '(((z)))) 'z))
+(assert (same? (caadr '(x (z))) 'z))
+(assert (same? (cadar '((x z))) 'z))
+(assert (same? (caddr '(x x z)) 'z))
+(assert (= (cdaar '(((x z)))) '(z)))
+(assert (= (cdadr '(x (x z))) '(z)))
+(assert (= (cddar '((x x z))) '(z)))
+(assert (= (cdddr '(x x x z)) '(z)))
+(assert (same? (caaaar '((((z))))) 'z))
+(assert (same? (caaadr '(x ((z)))) 'z))
+(assert (same? (caadar '((x (z)))) 'z))
+(assert (same? (caaddr '(x x (z))) 'z))
+(assert (same? (cadaar '(((x z)))) 'z))
+(assert (same? (cadadr '(x (x z))) 'z))
+(assert (same? (caddar '((x x z))) 'z))
+(assert (same? (cadddr '(x x x z)) 'z))
+(assert (= (cdaaar '((((x z))))) '(z)))
+(assert (= (cdaadr '(x ((x z)))) '(z)))
+(assert (= (cdadar '((x (x z)))) '(z)))
+(assert (= (cdaddr '(x x (x z))) '(z)))
+(assert (= (cddaar '(((x x z)))) '(z)))
+(assert (= (cddadr '(x (x x z))) '(z)))
+(assert (= (cdddar '((x x x z))) '(z)))
+(assert (= (cddddr '(x x x x z)) '(z)))
 
 ;: # fundamental operator
 ;: 関数定義、制御構造等Parenの基本的なマクロを定義する。
@@ -288,6 +288,9 @@
 ;: すべての評価結果がnilの場合はnilを返す。
 (macro or (:rest expr)
   (if expr (list if (car expr) (car expr) (cons or (cdr expr)))))
+(assert !(or))
+(assert (or nil nil true))
+(assert !(or nil nil nil))
 
 ;: ## macro and :rest expr
 ;: リストexprの要素を逐次評価し、最後に評価した値を返す。ただし、逐次評価の過程でnilが得られた場合はnilを返す。
@@ -296,6 +299,9 @@
 (macro and (:rest expr)
   (if (nil? expr) true
     (list if (car expr) (cons and (cdr expr)))))
+(assert (and))
+(assert (and true true true))
+(assert !(and true nil true))
 
 ;: ## macro while test :rest body
 ;: testがnilでない間bodyを逐次評価する。
@@ -336,25 +342,29 @@
 (macro assert (test)
   (list if (list = test nil)
         (list begin
-              (list print (list list :AssertionFailed (list quote test)))
-              '(quit))))
+              (list basic-throw :AssertionFailed (list quote test)))))
 
 ;: # fundamental function
 ;: ## function identity x
 ;: 引数xを返す、恒等関数。
 (function identity (x) x)
+(assert (same? (identity :a) :a))
 
 ;: ## function not x
 ;: 引数xの否定値を返す。即ち、xがnilの場合はtrueを、そうでなければnilを返す。
 (function not (x) (same? x nil))
 (assert !nil)
 (assert !!true)
+(assert (same? !'x nil))
+(assert (same? !nil true))
 
 ;: ## function nil? x
 ;: 関数notのエイリアス。
 (<- nil? not)
 (assert (nil? nil))
 (assert (nil? (nil? true)))
+(assert (nil? nil))
+(assert !(nil? true))
 
 ;: ## function /= x y
 ;: 式!(= x y)に等価。
@@ -424,22 +434,28 @@
 ;: 連想リストとは、すべての要素がリストであるようなリストのことをいう。
 (function alist? (x)
   (and (list? x) (all-satisfy? x list?)))
-; (assert !(alist? '(1)))
-; (assert !(alist? '(1 ())))
-; (assert (alist? nil))
-; (assert (alist? '((a b) (c d))))
+(assert !(alist? '(1)))
+(assert !(alist? '(1 ())))
+(assert (alist? nil))
+(assert (alist? '((a b) (c d))))
 
 (function all-satisfy? (lis f)
   (precondition (and (list? lis) (function? f)))
   (if (nil? lis) true
     (and (f (car lis)) (all-satisfy? (cdr lis) f))))
+(assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
+(assert !(all-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
 
 (function any-satisfy? (lis f)
   (if lis (or (f (car lis)) (any-satisfy? (cdr lis) f))))
+(assert (any-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
+(assert (any-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
 
 (function each-pair-satisfy? (lis f)
   (if (nil? (cdr lis)) true
     (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
+(assert (each-pair-satisfy? '(1 2 3 4 5) <))
+(assert !(each-pair-satisfy? '(1 2 3 3 5) <))
 
 ; list processor
 (function ->list (x)
@@ -455,8 +471,8 @@
                  (begin (push acc (list (car lis) (cadr lis)))
                         (rec (cddr lis)))))))
     (rec lis)))
-; (assert (= (list->alist '(1 2 3 4)) '((1 2) (3 4))))
-; (assert !(list->alist nil))
+(assert (= (list->alist '(1 2 3 4)) '((1 2) (3 4))))
+(assert !(list->alist nil))
 
 ;: ## function nth lis n
 ;: リストlisのn番目の要素を返す。
@@ -467,8 +483,8 @@
 (function nth (lis n)
   (precondition (list? lis))
   (car (nthcdr lis n)))
-; (assert (= (nth '(1 2 3) 0) 1))
-; (assert (= (nth '(1 2 3) 10) nil))
+(assert (= (nth '(1 2 3) 0) 1))
+(assert (= (nth '(1 2 3) 10) nil))
 
 ;: ## function nthcdr lis n
 ;: リストlisをなすn番目のコンスを取得する。
@@ -479,7 +495,7 @@
   (cond ((nil? lis) nil)
         ((= n 0) lis)
         (:default (nthcdr (cdr lis) (-- n)))))
-; (assert (= (nthcdr '(1 2 3) 1) '(2 3)))
+(assert (= (nthcdr '(1 2 3) 1) '(2 3)))
 
 (function sublist (lis s :opt e)
   (let ((len (length lis))
@@ -489,25 +505,31 @@
                  (cons (car lis) (rec (cdr lis) (-- n)))))))
     (precondition (and (>= s 0) (<= s e) (<= e len)))
     (rec (nthcdr lis s) (- e s))))
+(assert (= (sublist '(1 2 3) 1) '(2 3)))
+(assert (= (sublist '(1 2 3) 1 2) '(2)))
 
 (function copy-list (lis)
   (sublist lis 0 (length lis)))
+(assert (= (copy-list '(1 2 3)) '(1 2 3)))
 
 (function last-cons (lis)
   (precondition (list? lis))
   (if (nil? lis) nil
     (let ((rec (lambda (lis) (if (cdr lis) (rec (cdr lis)) lis))))
       (rec lis))))
+(assert (= (last-cons '(1 2 3)) '(3)))
 
 (function last (lis)
   (precondition (list? lis))
   (car (last-cons lis)))
+(assert (= (last '(1 2 3)) 3))
 
 (function length (lis)
   (precondition (list? lis))
   (let ((rec (lambda (lis n)
                (if (nil? lis) n (rec (cdr lis) (++ n))))))
     (rec lis 0)))
+(assert (= (length '(1 2 3)) 3))
 
 (function append (lis :rest args)
   (precondition (and (list? lis) (all-satisfy? args list?)))
@@ -516,6 +538,7 @@
                       (if (list? y) (copy-list y) (->list y)))
                  x)
           :identity (copy-list lis)))
+(assert (= (append '(1) '(2) '(3)) '(1 2 3)))
 
 (function add (lis o)
   (precondition (list? lis))
@@ -562,6 +585,8 @@
                              (rec (car x)))
                            (rec (cdr x)))))))
     (rec lis)))
+(assert (= (flatten '(1 (2) (3 4))) '(1 2 3 4)))
+(assert (= (flatten '(1 (nil) 2)) '(1 nil 2)))
 
 (function map (args f)
   (if args (cons (f (car args)) (map (cdr args) f))))
@@ -621,32 +646,7 @@
 (function odd? (x)
   !(even? x))
 
-(macro unquote (:rest forms)
-  (error :comma-not-inside-backquote))
-
-(macro splice (:rest forms)
-  (unquote))
-
-; quote n-times
-(macro nquote (expr n)
-  (let ((rec (lambda (expr n)
-               (if (<= n 0) expr
-                 (list quote (rec expr (-- n)))))))
-    (rec expr n)))
-
-(function bqexpander (expr level)
-  (if (atom? expr) (nquote expr level)
-    (let ((first (car expr)))
-      (cond ((same? first unquote) (bqexpander (cdr expr) (-- level)))
-            ((same? first backquote) (bqexpander (cdr expr) (++ level)))
-            (true (cons (bqexpander first level)
-                        (bqexpander (cdr expr level))))))))
-
-(macro backquote (expr)
-  (bqexpander expr 0))
-
 ; pos
-; {{{
 ; (<- Object '((:super nil)
 ;              (:type :Object)))
 ; (function . (object property :opt (val nil val?))
@@ -655,68 +655,7 @@
 ;     (if val? (cdr pair val) (cdr pair))))
 ; (print (. Object :type)) ; :Object
 ; (print (. Object :type)) ; :Object
-; }}}
 
-; test
-; {{{
-
-;;; identity
-(assert (same? (identity :a) :a))
-
-;;; not
-(assert (same? !'x nil))
-(assert (same? !nil true))
-
-;;; /=
-(assert (/= 1 2))
-(assert !(/= 1 1))
-
-;;; nil?
-(assert (nil? nil))
-(assert !(nil? true))
-
-;;; cons?
-(assert !(cons? 1))
-(assert !(cons? nil))
-(assert (cons? '(1)))
-
-;;; list?
-(assert !(list? 1))
-(assert (list? nil))
-(assert (list? '(1)))
-
-;;; all-satisfy?
-(assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
-(assert !(all-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
-
-;;; any-satisfy?
-(assert (any-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
-(assert (any-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
-
-;;; each-pair-satisfy?
-(assert (each-pair-satisfy? '(1 2 3 4 5) <))
-(assert !(each-pair-satisfy? '(1 2 3 3 5) <))
-
-;;; sublist
-; (assert (= (sublist '(1 2 3) 1) '(2 3)))
-; (assert (= (sublist '(1 2 3) 1 2) '(2)))
-
-;;; copy-list
-(assert (= (copy-list '(1 2 3)) '(1 2 3)))
-
-;;; last-cons
-(assert (= (last-cons '(1 2 3)) '(3)))
-
-;;; last
-(assert (= (last '(1 2 3)) 3))
-
-;;; length
-(assert (= (length '(1 2 3)) 3))
-
-;;; append
-(assert (= (append '(1) '(2) '(3)) '(1 2 3)))
-
-;;; push/pop
 (let ((lis '(1)))
   (push lis 2)
   (push lis 3)
@@ -724,7 +663,6 @@
   (assert (= (pop lis) 3))
   (assert (= lis '(2 1))))
 
-;;; queue/dequeue
 (let ((lis '(1)))
   (queue lis 2)
   (queue lis 3)
@@ -734,25 +672,3 @@
   (assert (= (dequeue lis) 2))
   (assert (= (dequeue lis) 3))
   (assert (nil? lis)))
-
-;;; flatten
-(assert (= (flatten '(1 (2) (3 4))) '(1 2 3 4)))
-(assert (= (flatten '(1 (nil) 2)) '(1 nil 2)))
-
-; }}}
-
-(assert !(or))
-(assert (or nil nil true))
-(assert !(or nil nil nil))
-(assert (and))
-(assert (and true true true))
-(assert !(and true nil true))
-
-(<- a 0)
-(while !(= a 8)
-       (if (= a 4) (return))
-       (print (<- a (++ a))))
-
-(let ())
-
-(print :finish)
