@@ -26,8 +26,8 @@ object object_uq;
 int symcmp(object o, object p)
 {
   intptr_t i;
-  xassert((typep(o, Symbol) && typep(p, Symbol))
-      || (typep(o, Keyword) && typep(p, Keyword)));
+  xassert((typep(o, SYMBOL) && typep(p, SYMBOL))
+      || (typep(o, KEYWORD) && typep(p, KEYWORD)));
   if ((i = (intptr_t)o - (intptr_t)p) == 0) return 0;
   if (i > 0) return 1;
   return -1;
@@ -37,7 +37,7 @@ int object_length(object o)
 {
   int i;
   xassert(listp(o));
-  for (i = 0; typep(o, Cons); i++) o = o->cons.cdr;
+  for (i = 0; typep(o, CONS); i++) o = o->cons.cdr;
   return i;
 }
 
@@ -87,12 +87,12 @@ static void describe_s_expr(object o, struct xbarray *x)
   object p;
   if(x->size > MAX_STR_LEN) return;
   switch (type(o)) {
-    case Env:
+    case ENV:
       xbarray_addf(x, "<environment: %p>", o);
       break;
-    case Macro:
-    case Lambda:
-      if (typep(o, Macro)) xbarray_adds(x, "(macro ");
+    case MACRO:
+    case LAMBDA:
+      if (typep(o, MACRO)) xbarray_adds(x, "(macro ");
       else xbarray_adds(x, "(lambda ");
       if (o->lambda.params == object_nil) xbarray_adds(x, "()");
       else describe_s_expr(o->lambda.params, x);
@@ -102,11 +102,11 @@ static void describe_s_expr(object o, struct xbarray *x)
       }
       xbarray_add(x, ')');
       break;
-    case Cons:
+    case CONS:
       p = o->cons.car;
       if ((p == object_quote || p == object_bq || p == object_uq
             || p == object_splice || p == object_not)
-          && typep(o->cons.cdr, Cons) && o->cons.cdr->cons.cdr == object_nil)
+          && typep(o->cons.cdr, CONS) && o->cons.cdr->cons.cdr == object_nil)
       {
         if (p == object_quote) xbarray_add(x, '\'');
         if (p == object_bq) xbarray_add(x, '`');
@@ -120,14 +120,14 @@ static void describe_s_expr(object o, struct xbarray *x)
         xbarray_add(x, ')');
       }
       break;
-    case Xint:
+    case XINT:
       xbarray_addf(x, "%d", o->xint.val);
       break;
-    case Xfloat:
+    case XFLOAT:
       xbarray_addf(x, "%f", o->xfloat.val);
       break;
-    case Symbol:
-    case Keyword:
+    case SYMBOL:
+    case KEYWORD:
       xbarray_addf(x, "%s", o->symbol.name);
       break;
     default: xassert(FALSE);

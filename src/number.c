@@ -16,8 +16,8 @@
 static int numberp(object o)
 {
   switch (type(o)) {
-    case Xint:
-    case Xfloat:
+    case XINT:
+    case XFLOAT:
       return TRUE;
     default: 
       return FALSE;
@@ -26,7 +26,7 @@ static int numberp(object o)
 
 static double double_val(object o)
 {
-  if (typep(o, Xint)) return (double)o->xint.val;
+  if (typep(o, XINT)) return (double)o->xint.val;
   return o->xfloat.val;
 }
 
@@ -47,7 +47,7 @@ PRIM(number_add)
   x = object_sint[0];
   while (argv != object_nil) {
     FETCH_NUMBER(y);
-    if (typep(x, Xint) && typep(y, Xint))
+    if (typep(x, XINT) && typep(y, XINT))
       x = new_xint(x->xint.val + y->xint.val);
     else
       x = new_xfloat(double_val(x) + double_val(y));
@@ -62,7 +62,7 @@ PRIM(number_multiply)
   x = object_sint[1];
   while (argv != object_nil) {
     FETCH_NUMBER(y);
-    if (typep(x, Xint) && typep(y, Xint))
+    if (typep(x, XINT) && typep(y, XINT))
       x = new_xint(x->xint.val * y->xint.val);
     else
       x = new_xfloat(double_val(x) * double_val(y));
@@ -77,7 +77,7 @@ PRIM(number_modulo)
   if (argc != 2) return FALSE;
   FETCH_NUMBER(x);
   FETCH_NUMBER(y);
-  if (y == 0 || !typep(x, Xint) || !typep(y, Xint)) return FALSE;
+  if (y == 0 || !typep(x, XINT) || !typep(y, XINT)) return FALSE;
   *result = new_xint(x->xint.val % y->xint.val);
   return TRUE;
 }
@@ -104,6 +104,6 @@ PRIM(number_ineger_p)
   object x;
   if (argc != 1) return FALSE;
   FETCH_NUMBER(x);
-  *result = object_bool(typep(x, Xint));
+  *result = object_bool(typep(x, XINT));
   return TRUE;
 }

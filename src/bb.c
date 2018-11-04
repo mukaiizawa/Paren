@@ -42,9 +42,9 @@ static int equal_s_expr(object o, object p)
   if (o == p) return TRUE;
   if ((t = type(o)) != type(p)) return FALSE;
   switch (t) {
-    case Cons: return equal_cons_p(o, p);
-    case Xint: return o->xint.val == p->xint.val;
-    case Xfloat: return o->xfloat.val == p->xfloat.val;
+    case CONS: return equal_cons_p(o, p);
+    case XINT: return o->xint.val == p->xint.val;
+    case XFLOAT: return o->xfloat.val == p->xfloat.val;
     default: return FALSE;
   }
 }
@@ -68,23 +68,23 @@ PRIM(type)
 {
   if (argc != 1) return FALSE;
   switch (type(argv->cons.car)) {
-    case Macro:
+    case MACRO:
       *result = gc_new_symbol(":macro");
       break;
-    case Lambda:
+    case LAMBDA:
       *result = gc_new_symbol(":lambda");
       break;
-    case Cons:
+    case CONS:
       *result = gc_new_symbol(":cons");
       break;
-    case Xint:
-    case Xfloat:
+    case XINT:
+    case XFLOAT:
       *result = gc_new_symbol(":number");
       break;
-    case Symbol:
+    case SYMBOL:
       *result = gc_new_symbol(":symbol");
       break;
-    case Keyword:
+    case KEYWORD:
       *result = gc_new_symbol(":keyword");
       break;
     default:

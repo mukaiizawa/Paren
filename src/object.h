@@ -4,14 +4,15 @@ typedef union s_expr *object;
 
 #define ALIVE_MASK 0xf000
 #define TYPE_MASK  0x0fff
-#define   Env      0x0001
-#define   Macro    0x0002
-#define   Lambda   0x0004
-#define   Cons     0x0008
-#define   Xint     0x0010
-#define   Xfloat   0x0020
-#define   Symbol   0x0040
-#define   Keyword  0x0080
+#define   ENV      0x0001
+#define   MACRO    0x0002
+#define   LAMBDA   0x0004
+#define   CONS     0x0008
+#define   XINT     0x0010
+#define   XFLOAT   0x0020
+#define   SYMBOL   0x0040
+#define   KEYWORD  0x0080
+#define   BARRAY   0x0100
 
 #define XINT_MAX 0x3fffffff
 #define XINT_MIN (- XINT_MAX - 1)
@@ -19,7 +20,7 @@ typedef union s_expr *object;
 
 #define type(o) ((o)->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
-#define listp(o) (o == object_nil || typep(o, Cons))
+#define listp(o) (o == object_nil || typep(o, CONS))
 
 union s_expr {
   int header;
@@ -48,6 +49,11 @@ union s_expr {
     int header;
     char *name; 
   } symbol;
+  struct barray {
+    int header;
+    int size;
+    char elt[1];
+  } barray;
 };
 
 extern int symcmp(object o, object p);

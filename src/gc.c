@@ -46,12 +46,12 @@ static object gc_alloc(int size)
 static int byte_size(object o)
 {
   switch (type(o)) {
-    case Env: return sizeof(struct env);
-    case Macro: case Lambda: return sizeof(struct lambda);
-    case Cons: return sizeof(struct cons);
-    case Xint: return sizeof(struct xint);
-    case Xfloat: return sizeof(struct xfloat);
-    case Symbol: case Keyword: return sizeof(struct symbol);
+    case ENV: return sizeof(struct env);
+    case MACRO: case LAMBDA: return sizeof(struct lambda);
+    case CONS: return sizeof(struct cons);
+    case XINT: return sizeof(struct xint);
+    case XFLOAT: return sizeof(struct xfloat);
+    case SYMBOL: case KEYWORD: return sizeof(struct symbol);
     default: xerror("illegal object");
   }
   return -1;
@@ -67,7 +67,7 @@ object gc_new_env(object top)
   object o;
   if (free_env == NULL) {
     o = gc_alloc(sizeof(struct env));
-    set_type(o, Env);
+    set_type(o, ENV);
     xsplay_init(&o->env.binding, (int(*)(void *, void *))symcmp);
   } else {
     o = free_env;
@@ -82,8 +82,8 @@ static object new_lambda(object env, object params, object body, int macro_p)
 {
   object o;
   o = gc_alloc(sizeof(struct lambda));
-  if (macro_p) set_type(o, Macro);
-  else set_type(o, Lambda);
+  if (macro_p) set_type(o, MACRO);
+  else set_type(o, LAMBDA);
   o->lambda.env = env;
   o->lambda.params = params;
   o->lambda.body = body;
@@ -105,7 +105,7 @@ object gc_new_sint(int val)
 {
   object o;
   o = gc_alloc(sizeof(struct xint));
-  set_type(o, Xint);
+  set_type(o, XINT);
   o->xint.val = val;
   regist(o);
   return o;
@@ -121,7 +121,7 @@ object gc_new_xfloat(double val)
 {
   object o;
   o = gc_alloc(sizeof(struct xfloat));
-  set_type(o, Xfloat);
+  set_type(o, XFLOAT);
   o->xfloat.val = val;
   regist(o);
   return o;
@@ -141,7 +141,7 @@ object gc_new_cons(object car, object cdr)
   }
   o = free_cons;
   free_cons = o->cons.cdr;
-  set_type(o, Cons);
+  set_type(o, CONS);
   o->cons.car = car;
   o->cons.cdr = cdr;
   regist(o);
@@ -153,8 +153,8 @@ object gc_new_symbol(char *name)
   object o;
   if ((o = xsplay_find(&symbol_table, name)) == NULL) {
     o = gc_alloc(sizeof(struct symbol));
-    if (name[0] != ':') set_type(o, Symbol);
-    else set_type(o, Keyword);
+    if (name[0] != ':') set_type(o, SYMBOL);
+    else set_type(o, KEYWORD);
     o->symbol.name = name;
     xsplay_add(&symbol_table, name, o);
   }
@@ -171,17 +171,17 @@ void gc_mark(object o)
   if (alivep(o)) return;
   set_alive(o, TRUE);
   switch (type(o)) {
-    case Env:
+    case ENV:
       gc_mark(o->env.top);
       xsplay_foreach(&o->env.binding, sweep_env);
       break;
-    case Macro:
-    case Lambda:
+    case MACRO:
+    case LAMBDA:
       gc_mark(o->lambda.env);
       gc_mark(o->lambda.params);
       gc_mark(o->lambda.body);
       break;
-    case Cons:
+    case CONS:
       gc_mark(o->cons.car);
       gc_mark(o->cons.cdr);
       break;
@@ -192,12 +192,12 @@ void gc_mark(object o)
 static void gc_free(object o)
 {
   switch (type(o)) {
-    case Env:
+    case ENV:
       xsplay_reset(&o->env.binding);
       o->env.top = free_env;
       free_env = o;
       return;    // reuse.
-    case Cons:
+    case CONS:
       o->cons.cdr = free_cons;
       free_cons = o;
       return;    // reuse.
@@ -261,8 +261,8 @@ void gc_dump_table(void)
   for(i = 0; i < table.size; i++) {
     o = table.elt[i];
     printf("; \t%p\t", o);
-    if (typep(o, Cons)) printf("(%p . %p)\n", o->cons.car, o->cons.cdr);
-    else if (typep(o, Env)) printf("-> %p\n", o->env.top);
+    if (typep(o, CONS)) printf("(%p . %p)\n", o->cons.car, o->cons.cdr);
+    else if (typep(o, ENV)) printf("-> %p\n", o->env.top);
     else object_describe(o, buf);
   }
   printf("; }}}\n");
