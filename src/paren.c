@@ -57,6 +57,15 @@ static object parse_symbol(void)
   return gc_new_symbol(s);
 }
 
+static object parse_string(void)
+{
+  object o;
+  o = gc_new_barray(lex_str.size);
+  memcpy(o->barray.elt, lex_str.elt, lex_str.size);
+  parse_skip();
+  return o;
+}
+
 static object parse_integer(void)
 {
   int val;
@@ -76,9 +85,10 @@ static object parse_float(void)
 static object parse_atom(void)
 {
   switch (next_token) {
+    case LEX_SYMBOL: return parse_symbol();
+    case LEX_STRING: return parse_string();
     case LEX_INT: return parse_integer();
     case LEX_FLOAT: return parse_float();
-    case LEX_SYMBOL: return parse_symbol();
     default: lex_error("illegal token '%c'.", (char)next_token); return NULL;
   }
 }

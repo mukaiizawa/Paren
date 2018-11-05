@@ -17,7 +17,7 @@
  * <paren> ::= <s_expr> ...
  * <s_expr> ::= <list> | <atom>
  * <list> ::= '(' [<s_expr>] ... ')'
- * <atom> ::= <number> | <symbol> | <keyword>
+ * <atom> ::= <number> | <symbol> | <keyword> | <string>
  * <number> ::= [- | +] <digit> <digit> ... 'x' [0-9a-z] ...
  *            | [- | +] <digit> <digit> ... [ '.' <digit> ... ]
  * <symbol> ::= <identifier>
@@ -25,6 +25,18 @@
  * <identifier_first> ::= [$%&*+\-/<=>:?a-zA-Z_]
  * <identifier_rest> ::= <identifier_first> | [0-9]
  * <digit> ::= [0-9]
+ * <string> ::= '"' <char> ... '"'
+ * <char> ::= '"' <char> ... '"'
+ *    \a -- 0x07(bell)
+ *    \b -- 0x08(back space)
+ *    \e -- 0x1B(escape)
+ *    \f -- 0x0c(form feed)
+ *    \n -- 0x0a(line feed)
+ *    \r -- 0x0d(carriage return)
+ *    \t -- 0x09(horizontal tab)
+ *    \v -- 0x0b(vertical tab)
+ *    \x -- interpret the following two letters as a hexadecimal number.
+ *    \ -- interpret the following letter as a 
  */
 
 struct xbarray lex_str;
@@ -89,6 +101,37 @@ static int digit_val(int ch, int radix)
   else result = -1;
   if (!(0 <= result && result < radix)) lex_error("illegal digit %c", ch);
   return result;
+}
+
+static void get_quoted(void)
+{
+  int quote, val;
+  quote = skip();
+  while (next_ch != quote) {
+    if (next_ch == EOF) lex_error("quote not closed");
+    if (next_ch != '\\') get();
+    else {
+      skip();
+      val = skip();
+      switch(next_ch) {
+        case 'a': add('\a'); break;
+        case 'b': add('\b'); break;
+        case 'e': add(0x1b); break;
+        case 'f': add('\f'); break;
+        case 'n': add('\n'); break;
+        case 'r': add('\r'); break;
+        case 't': add('\t'); break;
+        case 'v': add('\v'); break;
+        case 'x': val = digit_val(skip(), 16) * 16;
+                  val += digit_val(skip(), 16);
+                  add(val);
+                  break;
+        default: add(val); break;
+      }
+    }
+  }
+  skip();
+  add('\0');
 }
 
 static int identifier_lead_char_p(void)
@@ -169,6 +212,10 @@ int lex(void)
   if (next_ch == EOF || next_ch == '(' || next_ch == ')' || next_ch == '!'
       || next_ch == '\'' || next_ch == '`' || next_ch == ',' || next_ch == '@')
     return skip();
+  if (next_ch == '"') {
+    get_quoted();
+    return LEX_STRING;
+  }
   if (next_ch != '+' && next_ch != '-') sign = 0;
   else {
     if (next_ch == '+') sign = 1;

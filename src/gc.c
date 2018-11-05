@@ -161,6 +161,15 @@ object gc_new_symbol(char *name)
   return o;
 }
 
+object gc_new_barray(int size)
+{
+  object o;
+  o = gc_alloc(sizeof(struct barray) + size - 1);
+  set_type(o, BARRAY);
+  o->barray.size = size;
+  return o;
+}
+
 static void sweep_env(int depth, void *key, void *data)
 {
   gc_mark(data);
