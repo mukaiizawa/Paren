@@ -106,6 +106,7 @@ static int digit_val(int ch, int radix)
 static void get_quoted(void)
 {
   int quote, val;
+  xbarray_reset(&lex_str);
   quote = skip();
   while (next_ch != quote) {
     if (next_ch == EOF) lex_error("quote not closed");

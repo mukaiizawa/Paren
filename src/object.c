@@ -126,6 +126,9 @@ static void describe_s_expr(object o, struct xbarray *x)
     case XFLOAT:
       xbarray_addf(x, "%f", o->xfloat.val);
       break;
+    case BARRAY:
+      xbarray_addf(x, "\"%s\"", o->barray.elt);
+      break;
     case SYMBOL:
     case KEYWORD:
       xbarray_addf(x, "%s", o->symbol.name);

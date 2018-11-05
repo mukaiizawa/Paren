@@ -363,6 +363,7 @@ static void pop_eval_frame(void)
     case XINT:
     case XFLOAT:
     case KEYWORD:
+    case BARRAY:
       return;
     case SYMBOL:
       if ((s = symbol_find()) == NULL) mark_error("unbind symbol");
