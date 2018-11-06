@@ -268,3 +268,14 @@ parenをプロトタイプベースの言語に仕上げる構想があったが
     (+ "abc" "cde") ; "abcde"
     (<- p (.init (new Point) :x 0 :y 1) q (.init (new Point) :x 1 :y 0))
     (+ p q) ; (Point :x 1 :y 1)
+
+# parenによるparenコンパイラ作成までの流れ
+Cによるparenコンパイラでcore.pを解釈できるようになっため、今後はparenによるparenコンパイラを実装することになる。
+
+このとき、parenによるparenコンパイラはCによるparenコンパイラよりも十分に強力なため、同じcore.pを読み込む際に次の問題点が生じる。
+- Cによるparenコンパイラはリードマクロが貧弱なため、文字列リーダー等実装が困難。
+下は展開イメージ
+    "hello" <=> (.init (.new :String) :val (byte-array 104 101 108 108 111 119))
+
+結論
+Cによるparenコンパイラで実装が困難なリードマクロは単純に無視すればよいか。
