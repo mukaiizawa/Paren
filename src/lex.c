@@ -215,7 +215,7 @@ int lex(void)
     return skip();
   if (next_ch == '"') {
     get_quoted();
-    return LEX_STRING;
+    return lex();    // treat as a comment.
   }
   if (next_ch != '+' && next_ch != '-') sign = 0;
   else {

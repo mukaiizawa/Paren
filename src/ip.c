@@ -717,7 +717,7 @@ static int valid_lambda_list_p(int lambda_type, object params)
 
 SPECIAL(let)
 {
-  object params, p, s, v;
+  object params, s;
   if (argc < 1) {
     mark_error("let: too few argument");
     return;
@@ -730,28 +730,16 @@ SPECIAL(let)
   push_eval_sequential_frame(argv->cons.cdr);
   fb_reset();
   while (params != object_nil) {
-    v = NULL;
-    if (!typep((p = params->cons.car), CONS)) s = p;
-    else {
-      s = p->cons.car;
-      if ((p = p->cons.cdr) != object_nil) {
-        v = p->cons.car;
-        if (p->cons.cdr != object_nil) {
-          mark_error("let: illegal parameter list");
-          return;
-        }
-      }
-    }
-    if (!typep(s, SYMBOL)) {
+    if (!typep((s = params->cons.car), SYMBOL)) {
       mark_error("let: argument must be symbol");
       return;
     }
-    if (v == NULL)
-      fb_add(make_local_var_bind_frame(s, object_nil));
-    else {
-      fb_add(make_eval_local_var_frame(v));
-      fb_add(make_bind_frame(s));
+    if ((params = params->cons.cdr) == object_nil) {
+      mark_error("let: argument must be association list");
+      return;
     }
+    fb_add(make_eval_local_var_frame(params->cons.car));
+    fb_add(make_bind_frame(s));
     params = params->cons.cdr;
   }
   fb_flush();

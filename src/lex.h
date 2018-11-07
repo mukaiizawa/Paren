@@ -4,9 +4,8 @@
 
 // token types -- -1..255 as single character
 #define LEX_SYMBOL 256
-#define LEX_STRING 257
-#define LEX_INT 258
-#define LEX_FLOAT 259
+#define LEX_INT 257
+#define LEX_FLOAT 258
 
 extern struct xbarray lex_str;
 extern int lex_ival;
