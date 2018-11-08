@@ -259,7 +259,12 @@ static void push_goto_frame(void)
 
 static void push_if_frame(object args)
 {
-  fs_push(alloc_frame1(IF_FRAME, args));
+  if (args == object_nil) return;
+  if (args->cons.cdr != object_nil) {
+    fs_push(alloc_frame1(IF_FRAME, args->cons.cdr));
+  }
+  push_eval_frame();
+  reg[0] = args->cons.car;
 }
 
 static void push_labels_frame(object args)
@@ -480,10 +485,7 @@ static void pop_if_frame(void)
   if (reg[0] != object_nil) {
     push_eval_frame();
     reg[0] = args->cons.car;
-  } else if ((args = args->cons.cdr) != object_nil) {
-    push_eval_frame();
-    reg[0] = args->cons.car;
-  } else reg[0] = object_nil;
+  } else if ((args = args->cons.cdr) != object_nil) push_if_frame(args);
 }
 
 static void pop_switch_env(void)
@@ -818,13 +820,11 @@ SPECIAL(quote)
 
 SPECIAL(if)
 {
-  if (argc != 2 && argc != 3) {
-    mark_error("if: illegal arguments");
+  if (argc < 2) {
+    mark_error("if: too few arguments");
     return;
   }
-  push_if_frame(argv->cons.cdr);
-  push_eval_frame();
-  reg[0] = argv->cons.car;
+  push_if_frame(argv);
 }
 
 SPECIAL(labels)

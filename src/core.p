@@ -66,14 +66,6 @@
   argsに指定できる書式はspecial-operator lambdaを参照のこと。"
   (list <- name (cons lambda (cons args body))))
 
-(macro cond (:rest expr)
-  "連想リストexprの先頭要素からキー値を逐次評価し、nilでない値を返したキー値のcdr部を逐次評価して最後に評価した結果を返す。
-  キー値がnilでない要素がない場合や、exprがnilの場合はnilを返す。
-  exprが連想リストでない場合はエラーと見做す。"
-  (precondition (alist? expr))
-  (if (nil? expr) nil
-    (list if (caar expr) (cons begin (cdar expr)) (cons cond (cdr expr)))))
-
 (macro begin0 (:rest body)
   "最初に評価した結果を返す点を除いてbeginと等価。"
   (let (sym (gensym))
@@ -96,7 +88,7 @@
   "リストexprの要素を逐次評価し、最後に評価した値を返す。ただし、逐次評価の過程でnilが得られた場合はnilを返す。
   ただし、exprがnilの場合はtrueを返す。"
   (if (nil? expr) true
-    (list if (car expr) (cons and (cdr expr)))))
+      (list if (car expr) (cons and (cdr expr)))))
 (assert (and))
 (assert (and true true true))
 (assert !(and true nil true))
@@ -208,20 +200,11 @@
 (assert (function? function?))
 (assert (function? (lambda (x) x)))
 
-(function alist? (x)
-  "引数xが連想リストか否か返す。
-  連想リストとは、すべての要素がリストであるようなリストのことをいう。"
-  (and (list? x) (all-satisfy? x list?)))
-(assert !(alist? '(1)))
-(assert !(alist? '(1 ())))
-(assert (alist? nil))
-(assert (alist? '((a b) (c d))))
-
 (function all-satisfy? (lis f)
   "リストlisの任意の要素に対して関数fの評価結果が真であるか返す。"
   (precondition (and (list? lis) (function? f)))
   (if (nil? lis) true
-    (and (f (car lis)) (all-satisfy? (cdr lis) f))))
+      (and (f (car lis)) (all-satisfy? (cdr lis) f))))
 (assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
 (assert !(all-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
 
@@ -234,7 +217,7 @@
 (function each-pair-satisfy? (lis f)
   "リストの隣接するすべての要素に対して関数fの評価が真か否か返す。"
   (if (nil? (cdr lis)) true
-    (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
+      (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
 (assert (each-pair-satisfy? '(1 2 3 4 5) <))
 (assert !(each-pair-satisfy? '(1 2 3 3 5) <))
 
@@ -247,9 +230,9 @@
   (precondition (even? (length lis)))
   (let (acc nil rec (lambda (lis)
                       (if (nil? lis) (reverse acc)
-                        (begin (push acc (list (car lis) (cadr lis)))
-                               (rec (cddr lis))))))
-    (rec lis)))
+                          (begin (push acc (list (car lis) (cadr lis)))
+                                 (rec (cddr lis))))))
+       (rec lis)))
 (assert (= (list->alist '(1 2 3 4)) '((1 2) (3 4))))
 (assert !(list->alist nil))
 
@@ -266,9 +249,9 @@
   "リストlisをなすn番目のコンスを取得する。
   nがlisの長さよりも大きい場合はnilを返す。"
   (precondition (list? lis))
-  (cond ((nil? lis) nil)
-        ((= n 0) lis)
-        (:default (nthcdr (cdr lis) (-- n)))))
+  (if (nil? lis) nil
+      (= n 0) lis
+      :default (nthcdr (cdr lis) (-- n))))
 (assert (= (nthcdr '(1 2 3) 1) '(2 3)))
 
 (function sublist (lis s :opt e)
@@ -279,9 +262,9 @@
         e (or e len)
         rec (lambda (lis n)
               (if (= n 0) nil
-                (cons (car lis) (rec (cdr lis) (-- n))))))
-    (precondition (and (>= s 0) (<= s e) (<= e len)))
-    (rec (nthcdr lis s) (- e s))))
+                  (cons (car lis) (rec (cdr lis) (-- n))))))
+       (precondition (and (>= s 0) (<= s e) (<= e len)))
+       (rec (nthcdr lis s) (- e s))))
 (assert (= (sublist '(1 2 3) 1) '(2 3)))
 (assert (= (sublist '(1 2 3) 1 2) '(2)))
 
@@ -296,8 +279,8 @@
   ただし、リストの要素は複製されない。"
   (precondition (list? lis))
   (if (nil? lis) nil
-    (let (rec (lambda (lis) (if (cdr lis) (rec (cdr lis)) lis)))
-      (rec lis))))
+      (let (rec (lambda (lis) (if (cdr lis) (rec (cdr lis)) lis)))
+        (rec lis))))
 (assert (= (last-cons '(1 2 3)) '(3)))
 
 (function last (lis)
@@ -360,13 +343,11 @@
 
 (function flatten (lis)
   (precondition (list? lis))
-  (let (acc nil
-        rec (lambda (x)
-               (cond ((nil? x) (reverse acc))
-                     ((atom? x) (push acc x))
-                     (true (if (nil? (car x)) (push acc nil)
-                             (rec (car x)))
-                           (rec (cdr x))))))
+  (let (acc nil rec (lambda (x)
+                      (if (nil? x) (reverse acc)
+                          (atom? x) (push acc x)
+                          (nil? (car x)) (push acc nil)
+                          (begin (rec (car x))) (rec (cdr x)))))
     (rec lis)))
 (assert (= (flatten '(1 (2) (3 4))) '(1 2 3 4)))
 (assert (= (flatten '(1 (nil) 2)) '(1 nil 2)))
@@ -376,24 +357,24 @@
 
 (function reverse (lis)
   (let (rec (lambda (lis acc)
-               (if (nil? lis) acc (rec (cdr lis) (cons (car lis) acc)))))
+              (if (nil? lis) acc (rec (cdr lis) (cons (car lis) acc)))))
     (rec lis nil)))
 
 (function reduce (args f :key (identity nil identity?))
   (let (rec (lambda (args)
-               (if (nil? (cdr args)) (car args)
-                 (rec (cons (f (car args) (cadr args)) (cddr args))))))
+              (if (nil? (cdr args)) (car args)
+                  (rec (cons (f (car args) (cadr args)) (cddr args))))))
     (rec (if identity? (cons identity args) args))))
 
 (function find (lis e :key (test =) (key identity))
   (if (nil? lis) nil
-    (if (test (key (car lis)) e) (car lis)
-      (find (cdr lis) e :test test :key key))))
+      (if (test (key (car lis)) e) (car lis)
+          (find (cdr lis) e :test test :key key))))
 
 (function find-if (lis f :key (key identity))
   (if (nil? lis) nil
-    (if (f (key (car lis))) (car lis)
-      (find-if (cdr lis) f :key key))))
+      (if (f (key (car lis))) (car lis)
+          (find-if (cdr lis) f :key key))))
 
 ; numeric
 (macro inc (x :opt (y 1))
