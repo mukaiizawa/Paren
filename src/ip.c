@@ -77,10 +77,11 @@ struct frame {
 #define GOTO_FRAME 11
 #define IF_FRAME 12
 #define LABELS_FRAME 13
-#define RETURN_FRAME 14
-#define SWITCH_ENV_FRAME 15
-#define THROW_FRAME 16
-#define TRY_FRAME 17
+#define RETURN_ADDR_FRAME 14
+#define RETURN_FRAME 15
+#define SWITCH_ENV_FRAME 16
+#define THROW_FRAME 17
+#define TRY_FRAME 18
   object local_vars[0];
 };
 
@@ -89,6 +90,7 @@ static int frame_size(int type)
   switch (type) {
     case EVAL_FRAME:
     case GOTO_FRAME:
+    case RETURN_ADDR_FRAME:
     case RETURN_FRAME:
     case THROW_FRAME:
       return 0;
@@ -131,6 +133,7 @@ static char *frame_name(int type)
     case GOTO_FRAME: return "GOTO_FRAME";
     case IF_FRAME: return "IF_FRAME";
     case LABELS_FRAME: return "LABELS_FRAME";
+    case RETURN_ADDR_FRAME: return "RETURN_ADDR_FRAME";
     case RETURN_FRAME: return "RETURN_FRAME";
     case SWITCH_ENV_FRAME: return "SWITCH_ENV_FRAME";
     case TRY_FRAME: return "TRY_FRAME";
@@ -272,6 +275,11 @@ static void push_labels_frame(object args)
   fs_push(alloc_frame1(LABELS_FRAME, args));
 }
 
+static void push_return_addr_frame(void)
+{
+  fs_push(alloc_frame(RETURN_ADDR_FRAME));
+}
+
 static void push_return_frame(void)
 {
   fs_push(alloc_frame(RETURN_FRAME));
@@ -407,13 +415,13 @@ static void pop_fetch_operator_frame(void)
       }
       break;
     case MACRO:
-      push_return_frame();
+      push_return_addr_frame();
       push_eval_frame();
       push_apply_frame(reg[0]);
       reg[0] = args;
       return;
     case LAMBDA:
-      push_return_frame();
+      push_return_addr_frame();
       push_apply_frame(reg[0]);
       push_eval_args_frame(args);
       return;
@@ -486,6 +494,14 @@ static void pop_if_frame(void)
     push_eval_frame();
     reg[0] = args->cons.car;
   } else if ((args = args->cons.cdr) != object_nil) push_if_frame(args);
+}
+
+static void pop_return_frame(void)
+{
+  while (fs_top()->type != RETURN_ADDR_FRAME) {
+    if (sp == 0) return;
+    fs_pop();
+  }
 }
 
 static void pop_switch_env(void)
@@ -928,12 +944,12 @@ SPECIAL(return)
     mark_error("return: too many arguments");
     return;
   }
-  while (fs_top()->type != RETURN_FRAME) {
-    if (sp == 0) return;
-    fs_pop();
-  }
+  push_return_frame();
   if (argc == 0) reg[0] = object_nil;
-  else reg[0] = argv->cons.car;
+  else {
+    reg[0] = argv->cons.car;
+    push_eval_frame();
+  }
 }
 
 // TODO should be removed
@@ -1041,7 +1057,8 @@ static object eval(object expr)
       case GOTO_FRAME: pop_goto_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
       case LABELS_FRAME: fs_pop(); break;
-      case RETURN_FRAME: fs_pop(); break;
+      case RETURN_FRAME: pop_return_frame(); break;
+      case RETURN_ADDR_FRAME: fs_pop(); break;
       case SWITCH_ENV_FRAME: pop_switch_env(); break;
       case THROW_FRAME: pop_throw_frame(); break;
       case TRY_FRAME: fs_pop(); break;
