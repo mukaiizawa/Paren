@@ -304,17 +304,21 @@
   lis)
 
 (macro push (sym x)
+  "シンボルsymを束縛しているリストの先頭に破壊的にxを追加する。"
   (precondition (symbol? sym))
   (list begin
         (list precondition (list list? sym))
         (list <- sym (list cons x sym))
         :SideEffects))
+(assert (= (begin (<- l nil) (push l 1) (push l 2) l) '(2 1)))
 
 (macro pop (sym)
+  "シンボルsymを束縛しているリストの先頭を返し、symをリストのcdrで再束縛する。"
   (precondition (symbol? sym))
   (list begin0
         (list car sym)
         (list <- sym (list cdr sym))))
+(assert (= (begin (<- l '(1 2 3)) (pop l)) 1))
 
 (function flatten (lis)
   (precondition (list? lis))
@@ -394,10 +398,3 @@
 ;     (if val? (cdr pair val) (cdr pair))))
 ; (print (. Object :type)) ; :Object
 ; (print (. Object :type)) ; :Object
-
-(let (lis '(1))
-  (push lis 2)
-  (push lis 3)
-  (assert (= lis '(3 2 1)))
-  (assert (= (pop lis) 3))
-  (assert (= lis '(2 1))))
