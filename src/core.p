@@ -321,6 +321,8 @@
 (assert (= (begin (<- l '(1 2 3)) (pop l)) 1))
 
 (function flatten (lis)
+  "リストlisを構成するすべてのコンスのcar部が要素であるような新しいリストを返す。
+  作成されるリストの要素の順は、元のリストのcar優先探索となる。"
   (precondition (list? lis))
   (let (acc nil rec (lambda (x)
                       (if (nil? x) (reverse acc)
