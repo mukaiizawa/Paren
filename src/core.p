@@ -290,12 +290,12 @@
   "リストlisの末尾にリストargsのすべての要素を追加する。"
   (precondition (and (list? lis) (all-satisfy? args list?)))
   (reduce args (lambda (x y)
-                 (if (nil? x) (begin (vm) (return y)))
+                 (if (nil? x) (return y))
                  (cdr (last-cons x) (copy-list y))
                  x)
           :identity (copy-list lis)))
 (assert (= (append '(1) '(2) '(3 4)) '(1 2 3 4)))
-(assert (= (print (append nil '(1) '(2 3))) '(1 2 3)))
+(assert (= (append nil '(1) '(2 3)) '(1 2 3)))
 
 (function add (lis o)
   "リストlisの末尾に引数oを破壊的に追加する。"

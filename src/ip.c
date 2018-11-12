@@ -496,17 +496,21 @@ static void pop_if_frame(void)
   } else if ((args = args->cons.cdr) != object_nil) push_if_frame(args);
 }
 
-static void pop_return_frame(void)
-{
-  while (fs_top()->type != RETURN_ADDR_FRAME) {
-    if (sp == 0) return;
-    fs_pop();
-  }
-}
-
 static void pop_switch_env(void)
 {
   reg[1] = fs_pop()->local_vars[0];
+}
+
+static void pop_return_frame(void)
+{
+  struct frame *top;
+  while (sp != 0) {
+    switch ((top = fs_top())->type) {
+      case RETURN_ADDR_FRAME: return;
+      case SWITCH_ENV_FRAME: pop_switch_env(); break;
+      default: fs_pop(); break;
+    }
+  }
 }
 
 static void pop_throw_frame(void)
@@ -940,16 +944,13 @@ SPECIAL(try)
 
 SPECIAL(return)
 {
-  if (argc > 1) {
-    mark_error("return: too many arguments");
+  if (argc != 1) {
+    mark_error("return: illegal arguments");
     return;
   }
   push_return_frame();
-  if (argc == 0) reg[0] = object_nil;
-  else {
-    reg[0] = argv->cons.car;
-    push_eval_frame();
-  }
+  push_eval_frame();
+  reg[0] = argv->cons.car;
 }
 
 // TODO should be removed
