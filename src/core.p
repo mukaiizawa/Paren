@@ -334,14 +334,19 @@
 (assert (= (flatten '(1 (nil) 2)) '(1 nil 2)))
 
 (function map (args f)
+  "リストargsの各々の要素を関数fで写像した結果をリストにして返す。"
+  (precondition (list? args))
   (if args (cons (f (car args)) (map (cdr args) f))))
 
 (function reverse (lis)
+  "リストlisの要素を逆の順で持つリストを新たに作成して返す。"
+  (precondition (list? lis))
   (let (rec (lambda (lis acc)
               (if (nil? lis) acc (rec (cdr lis) (cons (car lis) acc)))))
     (rec lis nil)))
 
 (function reduce (args f :key (identity nil identity?))
+  (precondition (list? args))
   (let (rec (lambda (args)
               (if (nil? (cdr args)) (car args)
                   (rec (cons (f (car args) (cadr args)) (cddr args))))))
