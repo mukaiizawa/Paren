@@ -337,6 +337,7 @@
   "リストargsの各々の要素を関数fで写像した結果をリストにして返す。"
   (precondition (list? args))
   (if args (cons (f (car args)) (map (cdr args) f))))
+(assert (= (map '(1 2 3) (lambda (x) (+ x 10))) '(11 12 13)))
 
 (function reverse (lis)
   "リストlisの要素を逆の順で持つリストを新たに作成して返す。"
@@ -344,8 +345,12 @@
   (let (rec (lambda (lis acc)
               (if (nil? lis) acc (rec (cdr lis) (cons (car lis) acc)))))
     (rec lis nil)))
+(assert (= (reverse nil) nil))
+(assert (= (reverse '(1 2 3)) '(3 2 1)))
 
 (function reduce (args f :key (identity nil identity?))
+  "リストargsを二変数関数fで畳み込んだ結果を返す。
+  キーワードパラメターidentityが指定された場合は単位元として使用する。"
   (precondition (list? args))
   (let (rec (lambda (args)
               (if (nil? (cdr args)) (car args)
@@ -353,14 +358,28 @@
     (rec (if identity? (cons identity args) args))))
 
 (function find (lis e :key (test =) (key identity))
+  "リストlisの先頭から要素eが存在する場合にeを返す。
+  eが存在しない場合はnilを返す。
+  比較は=関数で行われ、パラメーターtestで指定された場合はそれを用いる。
+  パラメーターkeyが指定された場合は要素をkey関数で評価した後に比較を行う。"
   (if (nil? lis) nil
-      (if (test (key (car lis)) e) (car lis)
-          (find (cdr lis) e :test test :key key))))
+      (test (key (car lis)) e) (car lis)
+      (find (cdr lis) e :test test :key key)))
+(assert (= (find nil true) nil))
+(assert (= (find '(true nil true) nil) nil))
+(assert (= (find '(1 2 3) 2) 2))
+(assert (= (find '(1 (2 3) 4) '(2 3)) '(2 3)))
+(assert (= (find '(1 (2 3) 4) '(2 3) :test same?) nil))
+(assert (= (find '((1 :a) (2 :b) (3 :c)) :b :key cadr) '(2 :b)))
 
 (function find-if (lis f :key (key identity))
+  ""
   (if (nil? lis) nil
-      (if (f (key (car lis))) (car lis)
-          (find-if (cdr lis) f :key key))))
+      (f (key (car lis))) (car lis)
+      (find-if (cdr lis) f :key key)))
+(assert (= (find-if nil identity) nil))
+(assert (= (find-if '(1 2 3) (lambda (x) (> x 2))) 3))
+(assert (= (find-if '((:a 1) (:b 2)) (lambda (x) (= x :b)) :key car) '(:b 2)))
 
 ; numeric
 (macro inc (x :opt (y 1))

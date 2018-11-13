@@ -978,8 +978,8 @@ static void describe_reg(void)
 {
   int i;
   char buf[MAX_STR_LEN];
-  printf("-- register\n");
-  printf("	(");
+  printf("; register\n");
+  printf("(");
   for (i = 0; i < REG_SIZE; i++) {
     if (i != 0) printf(" ");
     printf("%s", object_describe(reg[i], buf));
@@ -990,11 +990,11 @@ static void describe_reg(void)
 static void describe_env(void)
 {
   object e;
-  printf("-- environment\n");
+  printf("; environment\n");
   e = reg[1];
   while (e != object_nil) {
     xassert(typep(e, ENV));
-    printf("	(<%p>", e);
+    printf("(<%p>", e);
     xsplay_foreach(&e->env.binding, sweep_env);
     printf(")\n");
     e = e->env.top;
@@ -1006,10 +1006,10 @@ static void describe_fs(void)
   int i, j;
   char buf[MAX_STR_LEN];
   struct frame *f;
-  printf("-- frame stack\n");
+  printf("; frame stack\n");
   for (i = sp - 1; i >= 0; i--) {
     f = fs[i];
-    printf("	(%s", frame_name(f->type));
+    printf("(%s", frame_name(f->type));
     for (j = 0; j < frame_size(f->type); j++)
       printf(" %s", object_describe(f->local_vars[j], buf));
     printf(")\n");
