@@ -74,14 +74,13 @@ struct frame {
 #define EVAL_ARGS_FRAME 8
 #define EVAL_SEQUENTIAL_FRAME 9
 #define FETCH_OPERATOR_FRAME 10
-#define GOTO_FRAME 11
-#define IF_FRAME 12
-#define LABELS_FRAME 13
-#define RETURN_ADDR_FRAME 14
-#define RETURN_FRAME 15
-#define SWITCH_ENV_FRAME 16
-#define THROW_FRAME 17
-#define TRY_FRAME 18
+#define IF_FRAME 11
+#define LABELS_FRAME 12
+#define RETURN_ADDR_FRAME 13
+#define RETURN_FRAME 14
+#define SWITCH_ENV_FRAME 15
+#define THROW_FRAME 16
+#define TRY_FRAME 17
   object local_vars[0];
 };
 
@@ -89,7 +88,6 @@ static int frame_size(int type)
 {
   switch (type) {
     case EVAL_FRAME:
-    case GOTO_FRAME:
     case RETURN_ADDR_FRAME:
     case RETURN_FRAME:
     case THROW_FRAME:
@@ -130,7 +128,6 @@ static char *frame_name(int type)
     case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
     case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
-    case GOTO_FRAME: return "GOTO_FRAME";
     case IF_FRAME: return "IF_FRAME";
     case LABELS_FRAME: return "LABELS_FRAME";
     case RETURN_ADDR_FRAME: return "RETURN_ADDR_FRAME";
@@ -187,6 +184,15 @@ static struct frame *fs_pop(void)
   top = fs_top();
   --sp;
   return top;
+}
+
+static void pop_switch_env(void);
+static void fs_rewind_pop(void)
+{
+  switch (fs_top()->type) {
+    case SWITCH_ENV_FRAME: pop_switch_env(); break;
+    default: fs_pop(); break;
+  }
 }
 
 static void push_apply_frame(object operator)
@@ -253,11 +259,6 @@ static void push_eval_sequential_frame(object args)
 static void push_fetch_operator_frame(object args)
 {
   fs_push(alloc_frame1(FETCH_OPERATOR_FRAME, args));
-}
-
-static void push_goto_frame(void)
-{
-  fs_push(alloc_frame(GOTO_FRAME));
 }
 
 static void push_if_frame(object args)
@@ -459,33 +460,6 @@ static void pop_eval_sequential_frame(void)
   }
 }
 
-static void pop_goto_frame(void)
-{
-  object o;
-  if (!typep(reg[0], KEYWORD)) {
-    mark_error("goto: arguments must be keyword");
-    return;
-  }
-  fs_pop();
-  while (fs_top()->type != LABELS_FRAME) {
-    fs_pop();
-    if (sp == 0) {
-      mark_error("goto: not found labels context");
-      return;
-    }
-  }
-  o = fs_top()->local_vars[0];
-  while (o != object_nil) {
-    if (o->cons.car == reg[0]) break;
-    o = o->cons.cdr;
-  }
-  if (o == object_nil) {
-    mark_error("goto: not found label");
-    return;
-  }
-  push_eval_sequential_frame(o);
-}
-
 static void pop_if_frame(void)
 {
   object args;
@@ -503,13 +477,9 @@ static void pop_switch_env(void)
 
 static void pop_return_frame(void)
 {
-  struct frame *top;
   while (sp != 0) {
-    switch ((top = fs_top())->type) {
-      case RETURN_ADDR_FRAME: return;
-      case SWITCH_ENV_FRAME: pop_switch_env(); break;
-      default: fs_pop(); break;
-    }
+    if (fs_top()->type == RETURN_ADDR_FRAME) return;
+    fs_rewind_pop();
   }
 }
 
@@ -535,11 +505,11 @@ static void pop_throw_frame(void)
         ce = ce->cons.cdr;
       }
       if (ce != object_nil) {
-        while (fs_top()->type != TRY_FRAME) fs_pop();
+        while (fs_top()->type != TRY_FRAME) fs_rewind_pop();
         break;
       }
     }
-    fs_pop();
+    fs_rewind_pop();
   }
   fs_pop();    // skip TRY_FRAME
   if (cs != object_nil) push_switch_env_frame(reg[1]);
@@ -855,14 +825,34 @@ SPECIAL(labels)
 
 SPECIAL(goto)
 {
+  object o;
   if (argc != 1) {
     if (argc == 0) mark_error("goto: requires arguments");
     else mark_error("goto: too many arguments");
     return;
   }
-  push_goto_frame();
-  push_eval_frame();
   reg[0] = argv->cons.car;
+  if (!typep(reg[0], KEYWORD)) {
+    mark_error("goto: arguments must be keyword");
+    return;
+  }
+  while (fs_top()->type != LABELS_FRAME) {
+    if (sp == 0) {
+      mark_error("goto: not found labels context");
+      return;
+    }
+    fs_rewind_pop();
+  }
+  o = fs_top()->local_vars[0];
+  while (TRUE) {
+    if (o == object_nil) {
+      mark_error("goto: not found label");
+      return;
+    }
+    if (o->cons.car == reg[0]) break;
+    o = o->cons.cdr;
+  }
+  push_eval_sequential_frame(o);
 }
 
 SPECIAL(throw)
@@ -1055,7 +1045,6 @@ static object eval(object expr)
       case EVAL_ARGS_FRAME: pop_eval_args_frame(); break;
       case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
       case FETCH_OPERATOR_FRAME: pop_fetch_operator_frame(); break;
-      case GOTO_FRAME: pop_goto_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
       case LABELS_FRAME: fs_pop(); break;
       case RETURN_FRAME: pop_return_frame(); break;

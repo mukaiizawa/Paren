@@ -1,13 +1,8 @@
 ; goto statement
 
-(macro while (test :rest body)
-  (list (list lambda nil
-              (cons labels
-                    (cons :while
-                          (cons (list if (list not test) (list return nil))
-                                (add body '(goto :while))))))))
+(<- x 0 y 0)
+(labels :x (<- x (+ x 1))
+        :y (if (< x 3) (goto :x))
+        (if (= y 0) (begin (<- y (+ y 1)) (goto :x))))
 
-(<- a 0)
-(while !(= a 8)
-       (if (= a 4) (return))
-       (print (<- a (++ a))))
+(print (= x 4))
