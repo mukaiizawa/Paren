@@ -305,20 +305,21 @@
 (assert (= (reverse nil) nil))
 (assert (= (reverse '(1 2 3)) '(3 2 1)))
 
-(function reduce (args f :key (identity nil identity?))
-  "リストargsを二変数関数fで畳み込んだ結果を返す。
+(function reduce (lis f :key (identity nil identity?))
+  "リストlisを二変数関数fで畳み込んだ結果を返す。
   キーワードパラメターidentityが指定された場合は単位元として使用する。"
-  (precondition (list? args))
-  (let (rec (lambda (args)
-              (if (nil? (cdr args)) (car args)
-                  (rec (cons (f (car args) (cadr args)) (cddr args))))))
-    (rec (if identity? (cons identity args) args))))
+  (precondition (list? lis))
+  (let (rec (lambda (lis)
+              (if (nil? (cdr lis)) (car lis)
+                  (rec (cons (f (car lis) (cadr lis)) (cddr lis))))))
+    (rec (if identity? (cons identity lis) lis))))
 
 (function find (lis e :key (test =) (key identity))
-  "リストlisの先頭から要素eが存在する場合にeを返す。
+  "リストlisの先頭からeに等しい要素を返す。
   eが存在しない場合はnilを返す。
-  比較は=関数で行われ、パラメーターtestで指定された場合はそれを用いる。
-  パラメーターkeyが指定された場合は要素をkey関数で評価した後に比較を行う。"
+  比較は=で行われ、testで指定された場合はそれを用いる。
+  keyが指定された場合は要素をkey関数で評価した後に比較を行う。"
+  (precondition (list? lis))
   (if (nil? lis) nil
       (test (key (car lis)) e) (car lis)
       (find (cdr lis) e :test test :key key)))
@@ -330,7 +331,10 @@
 (assert (= (find '((1 :a) (2 :b) (3 :c)) :b :key cadr) '(2 :b)))
 
 (function find-if (lis f :key (key identity))
-  ""
+  "リストlisの先頭から関数fがnilを返さない最初の要素を返す。
+  該当する要素が存在しない場合はnilを返す。
+  keyが指定された場合は要素をkey関数で評価した後に比較を行う。"
+  (precondition (list? lis))
   (if (nil? lis) nil
       (f (key (car lis))) (car lis)
       (find-if (cdr lis) f :key key)))
@@ -339,44 +343,48 @@
 (assert (= (find-if '((:a 1) (:b 2)) (lambda (x) (= x :b)) :key car) '(:b 2)))
 
 (function all-satisfy? (lis f)
-  "リストlisの任意の要素に対して関数fの評価結果が真であるか返す。"
+  "リストlisのすべての要素が関数fの引数として評価したときに、nilでない値を返す場合にtrueを返す。
+  そうでなければnilを返す。"
   (precondition (and (list? lis) (function? f)))
   (if (nil? lis) true
       (and (f (car lis)) (all-satisfy? (cdr lis) f))))
+(assert (all-satisfy? nil cons?))
 (assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
 (assert !(all-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
 
 (function any-satisfy? (lis f)
-  "リストlisの要素に関数fの評価結果が真であるかものが存在するか否か返す。"
+  "リストlisのいずれかの要素が関数fの引数として評価したときにnil以外の値を返す場合はtrueを返す。
+  そうでなければnilを返す。
+  なお、lisが空の場合はnilを返す。"
+  ; (precondition (and (list? lis) (function? f)))
   (if lis (or (f (car lis)) (any-satisfy? (cdr lis) f))))
-(assert (any-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
-(assert (any-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
+(assert !(any-satisfy? nil number?))
+(assert (any-satisfy? '(1 2 3 4 5) number?))
+(assert !(any-satisfy? '(:a :b :c) number?))
 
 (function each-pair-satisfy? (lis f)
-  "リストの隣接するすべての要素に対して関数fの評価が真か否か返す。"
+  "リストの隣接するすべての二要素に対して二変数関数fの評価が真か否か返す。"
+  ; (precondition (and (list? lis) (function? f)))
   (if (nil? (cdr lis)) true
       (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
 (assert (each-pair-satisfy? '(1 2 3 4 5) <))
 (assert !(each-pair-satisfy? '(1 2 3 3 5) <))
 
 ; numeric
-(macro inc (x :opt (y 1))
-  (list <- x (list + x y)))
-
-(macro dec (x :opt (y 1))
-  (list <- x (list - x y)))
-
-(function ++ (x)
-  (+ x 1))
-
-(function - (:rest args)
-  (reduce (map (cdr args) negated) + :identity (car args)))
-
-(function -- (x)
-  (+ x -1))
+(function - (x :rest args)
+  "xからargsの合計を引いた値を返す。
+  argsがnilの場合はxを負にした値を返す。"
+  (precondition (and (number? x) (all-satisfy? args number?)))
+  (if (nil? args) (negated x)
+      (+ x (negated (reduce args +)))))
+(assert (= (- 1) -1))
+(assert (= (- 3 2 1) 0))
 
 (function negated (x)
+  "xの符号を反転させた値を返す。"
   (* x -1))
+(assert (= (negated 1) -1))
+(assert (= (negated -1) 1))
 
 (function > (:rest args)
   (each-pair-satisfy? args (lambda (x y) (< y x))))
@@ -386,6 +394,17 @@
 
 (function >= (:rest args)
   (each-pair-satisfy? args (lambda (x y) !(< x y))))
+
+(function ++ (x)
+  "xに1を加えた結果を返す。"
+  (precondition (number? x))
+  (+ x 1))
+(assert (= (++ 0) 1))
+
+(function -- (x)
+  "xから1を引いた結果を返す。"
+  (precondition (number? x))
+  (+ x -1))
 
 (function even? (x)
   (= (mod x 2) 0))
