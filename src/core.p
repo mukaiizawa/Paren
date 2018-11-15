@@ -1,126 +1,102 @@
 ; paren core library.
 
-; fundamental operators
+; fundamental macro
 
 (<- list (lambda (:rest args) args))
 (assert (= (list 1 2 3) '(1 2 3)))
 
 (macro function (name args :rest body)
-  "argsを引数にbodyを実行する関数をシンボルnameに束縛する。
-  argsに指定できる書式はspecial-operator lambdaを参照のこと。"
+  "仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
+  argsの書式はspecial operatorのlambdaに準ずる。"
   (list <- name (cons lambda (cons args body))))
 
 (macro begin0 (:rest body)
-  "最初に評価した結果を返す点を除いてbeginと等価。"
+  "bodyを逐次評価し、最初に評価した結果を返す。"
   (let (sym (gensym))
     (cons let (cons (list sym (car body))
                     (add (cdr body) sym)))))
+(assert (= (begin0 1 2 3) 1))
 
 (macro when (test :rest body)
-  "testを評価結果がnil以外の場合にbodyを逐次評価する。"
+  "testを評価しnil以外の場合にbodyを逐次評価し、最後に評価した結果を返す。
+  testがnil偽の場合はnilを返す。"
   (list if test (cons begin body)))
+(assert (= (when true 1 2 3) 3))
+(assert (= (when nil 1 2 3) nil))
 
-(macro or (:rest expr)
-  "リストexprの要素を逐次評価し、評価結果がnilでない場合にその値を返す。この場合、後続の評価は行わない。
+(macro or (:rest args)
+  "argsを逐次評価し、ある評価結果がnil以外だった場合にその値を返す。
+  この場合、後続の評価は行わない。
   すべての評価結果がnilの場合はnilを返す。"
-  (if expr (list if (car expr) (car expr) (cons or (cdr expr)))))
+  (if args (list if (car args) (car args) (cons or (cdr args)))))
 (assert !(or))
-(assert (or nil nil true))
-(assert !(or nil nil nil))
+(assert !(or nil))
+(assert (or nil true))
 
-(macro and (:rest expr)
-  "リストexprの要素を逐次評価し、最後に評価した値を返す。ただし、逐次評価の過程でnilが得られた場合はnilを返す。
-  ただし、exprがnilの場合はtrueを返す。"
-  (if (nil? expr) true
-      (list if (car expr) (cons and (cdr expr)))))
+(macro and (:rest args)
+  "argsを逐次評価し、すべてnil出ない場合にのみ最後に評価した結果を返す。
+  逐次評価の過程でnilが得られた場合は後続の評価を中断し即nilを返す。
+  ただし、argsがnilの場合はtrueを返す。"
+  (if (nil? args) true
+      (list if (car args) (cons and (cdr args)))))
 (assert (and))
 (assert (and true true true))
 (assert !(and true nil true))
 
 (macro while (test :rest body)
-  "testがnilでない間bodyを逐次評価する。
-  whileはlambdaを含む式に展開される。そのためreturnオペレータを使用することによりwhileコンテキストを抜けることができる。"
+  "引数testがnilでない間bodyを逐次評価する。
+  lambdaを含む式に展開されるため、returnオペレータを使用することによりwhileコンテキストを抜けることができる。"
   (list (list lambda nil
               (cons labels
                     (cons :while
                           (cons (list if (list not test) (list return nil))
                                 (add body '(goto :while))))))))
 
-; error and exception
-
-(macro precondition (test)
-  "testがnilの場合に、システムを終了する。
-  関数、マクロが評価される事前条件を定義するために使用する。"
-  (list if (list not test)
-        (list basic-throw :PreconditionException (list quote test))))
-
-(macro postcondition (test)
-  "testがnilの場合に、システムを終了する。
-  関数、マクロ評価後の事後条件を定義するために使用する。"
-  (list if (list not test)
-        (list basic-throw  :PostconditionException (list quote test))))
-
-(macro assert (test)
-  "testがnilの場合にその旨を通知してParenを強制終了する。
-  状態異常の早期検知のために使用する。"
-  (list if (list = test nil)
-        (list begin
-              (list basic-throw :AssertionFailed (list quote test)))))
-
 ; fundamental function
 
 (function identity (x)
-  "引数xを返す、恒等関数。"
+  "xを返す。恒等関数。"
   x)
 (assert (same? (identity :a) :a))
 
 (function not (x)
-  "引数xの否定値を返す。即ち、xがnilの場合はtrueを、そうでなければnilを返す。"
+  "xがnilの場合はtrueを、そうでなければnilを返す。"
   (same? x nil))
 (assert !nil)
 (assert !!true)
 (assert (same? !'x nil))
 (assert (same? !nil true))
 
-(macro nil? (arg)
-  "関数notのエイリアス。"
-  (list not arg))
-(assert (nil? nil))
+(macro nil? (x)
+  "式(not x)に等価。"
+  (list not x))
 (assert (nil? (nil? true)))
 (assert (nil? nil))
 (assert !(nil? true))
 
-(function /= (x y)
-  "式!(= x y)に等価。"
-  !(= x y))
-(assert (/= 1 2))
-(assert !(/= 1 1))
-
 (function cons? (x)
-  "引数xがコンスか否か返す。"
+  "xがコンスの場合はtrueを、そうでなければnilを返す。"
   (same? ($$type x) :cons))
 (assert !(cons? 1))
 (assert !(cons? nil))
 (assert (cons? '(1)))
 
 (function list? (x)
-  "引数xがリストか否か返す。
-  即ち、(or (nil? x) (cons? x)))と等価。"
-(or (nil? x) (cons? x)))
+  "xがコンスまたはnilの場合はtrueを、そうでなければnilを返す。"
+  (or (nil? x) (cons? x)))
 (assert !(list? 1))
 (assert (list? nil))
 (assert (list? '(1)))
 
 (function atom? (x)
-  "引数xがアトムか否か返す。
-  即ち、式(atom? x)と等価。"
+  "xがアトムの場合にtrueを、そうでなければnilを返す。"
   !(cons? x))
 (assert (atom? 1))
 (assert (atom? nil))
 (assert !(atom? '(1)))
 
 (function number? (x)
-  "引数xが数値か否か返す。"
+  "xが数値の場合にtrueを、そうでなければnilを返す。"
   (same? ($$type x) :number))
 (assert !(number? nil))
 (assert !(number? (lambda (x) x)))
@@ -128,7 +104,7 @@
 (assert (number? 0x20))
 
 (function symbol? (x)
-  "引数xがシンボルか否か返す。"
+  "xがシンボルの場合にtrueを、そうでなければnilを返す。"
   (same? ($$type x) :symbol))
 (assert !(symbol? (lambda (x) x)))
 (assert !(symbol? 3.14))
@@ -136,7 +112,7 @@
 (assert (symbol? nil))
 
 (function function? (x)
-  "引数xが関数か否か返す。"
+  "xが関数の場合にtrueを、そうでなければnilを返す。"
   (same? ($$type x) :lambda))
 (assert !(function? 3.14))
 (assert !(function? (macro (x) x)))
@@ -144,28 +120,6 @@
 (assert (function? function?))
 (assert (function? (lambda (x) x)))
 
-(function all-satisfy? (lis f)
-  "リストlisの任意の要素に対して関数fの評価結果が真であるか返す。"
-  (precondition (and (list? lis) (function? f)))
-  (if (nil? lis) true
-      (and (f (car lis)) (all-satisfy? (cdr lis) f))))
-(assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
-(assert !(all-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
-
-(function any-satisfy? (lis f)
-  "リストlisの要素に関数fの評価結果が真であるかものが存在するか否か返す。"
-  (if lis (or (f (car lis)) (any-satisfy? (cdr lis) f))))
-(assert (any-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
-(assert (any-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
-
-(function each-pair-satisfy? (lis f)
-  "リストの隣接するすべての要素に対して関数fの評価が真か否か返す。"
-  (if (nil? (cdr lis)) true
-      (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
-(assert (each-pair-satisfy? '(1 2 3 4 5) <))
-(assert !(each-pair-satisfy? '(1 2 3 3 5) <))
-
-; list processor
 (<- caar (lambda (x) (car (car x)))
     cadr (lambda (x) (car (cdr x)))
     cdar (lambda (x) (cdr (car x)))
@@ -224,6 +178,7 @@
 (assert (= (cddddr '(x x x x z)) '(z)))
 
 (function ->list (x)
+  "xがリストの場合にxを、そうでなければxをリストにして返す。"
   (if (list? x) x (list x)))
 
 (function nth (lis n)
@@ -236,7 +191,7 @@
 (assert (= (nth '(1 2 3) 10) nil))
 
 (function nthcdr (lis n)
-  "リストlisをなすn番目のコンスを取得する。
+  "リストlisを構成するn番目のコンスを取得する。
   nがlisの長さよりも大きい場合はnilを返す。"
   (precondition (list? lis))
   (if (nil? lis) nil
@@ -247,7 +202,7 @@
 (function sublist (lis s :opt e)
   "リストlisのs番目からe - 1番目までを要素に持つ部分リストを返す。
   sが零未満、eがリストの長さ以上、sがeより大きい場合はエラーと見做す。
-  部分リストは元のリストとは別に作成される。"
+  部分リストはlisとは別に作成される。"
   (let (len (length lis)
         e (or e len)
         rec (lambda (lis n)
@@ -255,18 +210,19 @@
                   (cons (car lis) (rec (cdr lis) (-- n))))))
     (precondition (and (>= s 0) (<= s e) (<= e len)))
     (rec (nthcdr lis s) (- e s))))
+(assert (= (sublist nil 0) nil))
 (assert (= (sublist '(1 2 3) 1) '(2 3)))
 (assert (= (sublist '(1 2 3) 1 2) '(2)))
 
 (function copy-list (lis)
-  "リストの複製を作成して返す。
-  ただし、リストの要素は複製されない。"
+  "リストlisの複製を作成して返す。
+  ただし、要素は複製されない。"
+  (precondition (list? lis))
   (sublist lis 0 (length lis)))
 (assert (= (copy-list '(1 2 3)) '(1 2 3)))
 
 (function last-cons (lis)
-  "リストの複製を作成して返す。
-  ただし、リストの要素は複製されない。"
+  "リストlisを構成する最後のコンスを返す。"
   (precondition (list? lis))
   (if (nil? lis) nil
       (let (rec (lambda (lis) (if (cdr lis) (rec (cdr lis)) lis)))
@@ -274,7 +230,7 @@
 (assert (= (last-cons '(1 2 3)) '(3)))
 
 (function last (lis)
-  "リストの最後の要素を返す。"
+  "リストlisの最後の要素を返す。"
   (precondition (list? lis))
   (car (last-cons lis)))
 (assert (= (last '(1 2 3)) 3))
@@ -284,24 +240,25 @@
   (precondition (list? lis))
   (let (rec (lambda (lis n) (if (nil? lis) n (rec (cdr lis) (++ n)))))
     (rec lis 0)))
+(assert (= (length nil) 0))
 (assert (= (length '(1 2 3)) 3))
 
-(function append (lis :rest args)
-  "リストlisの末尾にリストargsのすべての要素を追加する。"
-  (precondition (and (list? lis) (all-satisfy? args list?)))
-  (reduce args (lambda (x y)
-                 (if (nil? x) (return y))
-                 (cdr (last-cons x) (copy-list y))
-                 x)
-          :identity (copy-list lis)))
-(assert (= (append '(1) '(2) '(3 4)) '(1 2 3 4)))
-(assert (= (append nil '(1) '(2 3)) '(1 2 3)))
+(function adds (lis l)
+  "リストlisの末尾にリストargsのすべての要素を追加する。
+  lisは破壊的に変更される。"
+  (precondition (and (list? lis) (list? l)))
+  (if (nil? lis) (<- lis l)
+      (cdr (last-cons lis) l))
+  lis)
+(assert (= (adds '(1) '(2 3 4)) '(1 2 3 4)))
+(assert (= (adds nil '(1 2 3)) '(1 2 3)))
 
 (function add (lis o)
   "リストlisの末尾に引数oを破壊的に追加する。"
   (precondition (list? lis))
-  (cdr (last-cons lis) (cons o nil))
-  lis)
+  (adds lis (list o)))
+(assert (= (add nil 1) '(1)))
+(assert (= (add '(1) '(2 3 4)) '(1 (2 3 4))))
 
 (macro push (sym x)
   "シンボルsymを束縛しているリストの先頭に破壊的にxを追加する。"
@@ -381,6 +338,27 @@
 (assert (= (find-if '(1 2 3) (lambda (x) (> x 2))) 3))
 (assert (= (find-if '((:a 1) (:b 2)) (lambda (x) (= x :b)) :key car) '(:b 2)))
 
+(function all-satisfy? (lis f)
+  "リストlisの任意の要素に対して関数fの評価結果が真であるか返す。"
+  (precondition (and (list? lis) (function? f)))
+  (if (nil? lis) true
+      (and (f (car lis)) (all-satisfy? (cdr lis) f))))
+(assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
+(assert !(all-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
+
+(function any-satisfy? (lis f)
+  "リストlisの要素に関数fの評価結果が真であるかものが存在するか否か返す。"
+  (if lis (or (f (car lis)) (any-satisfy? (cdr lis) f))))
+(assert (any-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
+(assert (any-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
+
+(function each-pair-satisfy? (lis f)
+  "リストの隣接するすべての要素に対して関数fの評価が真か否か返す。"
+  (if (nil? (cdr lis)) true
+      (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
+(assert (each-pair-satisfy? '(1 2 3 4 5) <))
+(assert !(each-pair-satisfy? '(1 2 3 3 5) <))
+
 ; numeric
 (macro inc (x :opt (y 1))
   (list <- x (list + x y)))
@@ -414,6 +392,26 @@
 
 (function odd? (x)
   !(even? x))
+
+; error and exception
+
+(macro precondition (test)
+  "引数testがnilの場合に、例外を発生させる。
+  関数、マクロの事前条件を定義するために使用する。"
+  (list if (list not test)
+        (list basic-throw :PreconditionException (list quote test))))
+
+(macro postcondition (test)
+  "引数testがnilの場合に、例外を発生させる。
+  関数、マクロの事後条件を定義するために使用する。"
+  (list if (list not test)
+        (list basic-throw  :PostconditionException (list quote test))))
+
+(macro assert (test)
+  "testがnilの場合に例外を発生させる。
+  状態異常の早期検知のために使用する。"
+  (list if (list = test nil)
+        (list basic-throw :AssertionFailed (list quote test))))
 
 ; pos
 ; (<- Object '((:super nil)
