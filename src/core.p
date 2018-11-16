@@ -181,82 +181,81 @@
   "xがリストの場合にxを、そうでなければxをリストにして返す。"
   (if (list? x) x (list x)))
 
-(function nth (lis n)
-  "リストlisのn番目の要素を返す。
+(function nth (l n)
+  "リストlのn番目の要素を返す。
   ただし、nは零から数える。
-  nがlisの長さよりも大きい場合はnilを返す。"
-  (precondition (list? lis))
-  (car (nthcdr lis n)))
+  nがlの長さよりも大きい場合はnilを返す。"
+  (precondition (list? l))
+  (car (nthcdr l n)))
 (assert (= (nth '(1 2 3) 0) 1))
 (assert (= (nth '(1 2 3) 10) nil))
 
-(function nthcdr (lis n)
-  "リストlisを構成するn番目のコンスを取得する。
-  nがlisの長さよりも大きい場合はnilを返す。"
-  (precondition (list? lis))
-  (if (nil? lis) nil
-      (= n 0) lis
-      :default (nthcdr (cdr lis) (-- n))))
+(function nthcdr (l n)
+  "リストlを構成するn番目のコンスを取得する。
+  nがlの長さよりも大きい場合はnilを返す。"
+  (precondition (list? l))
+  (if (nil? l) nil
+      (= n 0) l
+      :default (nthcdr (cdr l) (-- n))))
 (assert (= (nthcdr '(1 2 3) 1) '(2 3)))
 
-(function sublist (lis s :opt e)
-  "リストlisのs番目からe - 1番目までを要素に持つ部分リストを返す。
+(function sublist (l s :opt e)
+  "リストlのs番目からe - 1番目までを要素に持つ部分リストを返す。
   sが零未満、eがリストの長さ以上、sがeより大きい場合はエラーと見做す。
-  部分リストはlisとは別に作成される。"
-  (let (len (length lis)
+  部分リストはlとは別に作成される。"
+  (let (len (length l)
         e (or e len)
-        rec (lambda (lis n)
+        rec (lambda (l n)
               (if (= n 0) nil
-                  (cons (car lis) (rec (cdr lis) (-- n))))))
+                  (cons (car l) (rec (cdr l) (-- n))))))
     (precondition (and (>= s 0) (<= s e) (<= e len)))
-    (rec (nthcdr lis s) (- e s))))
+    (rec (nthcdr l s) (- e s))))
 (assert (= (sublist nil 0) nil))
 (assert (= (sublist '(1 2 3) 1) '(2 3)))
 (assert (= (sublist '(1 2 3) 1 2) '(2)))
 
-(function copy-list (lis)
-  "リストlisの複製を作成して返す。
+(function copy-list (l)
+  "リストlの複製を作成して返す。
   ただし、要素は複製されない。"
-  (precondition (list? lis))
-  (sublist lis 0 (length lis)))
+  (precondition (list? l))
+  (sublist l 0 (length l)))
 (assert (= (copy-list '(1 2 3)) '(1 2 3)))
 
-(function last-cons (lis)
-  "リストlisを構成する最後のコンスを返す。"
-  (precondition (list? lis))
-  (if (nil? lis) nil
-      (let (rec (lambda (lis) (if (cdr lis) (rec (cdr lis)) lis)))
-        (rec lis))))
+(function last-cons (l)
+  "リストlを構成する最後のコンスを返す。"
+  (precondition (list? l))
+  (if (nil? l) nil
+      (let (rec (lambda (l) (if (cdr l) (rec (cdr l)) l)))
+        (rec l))))
 (assert (= (last-cons '(1 2 3)) '(3)))
 
-(function last (lis)
-  "リストlisの最後の要素を返す。"
-  (precondition (list? lis))
-  (car (last-cons lis)))
+(function last (l)
+  "リストlの最後の要素を返す。"
+  (precondition (list? l))
+  (car (last-cons l)))
 (assert (= (last '(1 2 3)) 3))
 
-(function length (lis)
+(function length (l)
   "リストの要素数を返す。"
-  (precondition (list? lis))
-  (let (rec (lambda (lis n) (if (nil? lis) n (rec (cdr lis) (++ n)))))
-    (rec lis 0)))
+  (precondition (list? l))
+  (let (rec (lambda (l n) (if (nil? l) n (rec (cdr l) (++ n)))))
+    (rec l 0)))
 (assert (= (length nil) 0))
 (assert (= (length '(1 2 3)) 3))
 
-(function adds (lis l)
-  "リストlisの末尾にリストargsのすべての要素を追加する。
-  lisは破壊的に変更される。"
-  (precondition (and (list? lis) (list? l)))
-  (if (nil? lis) (<- lis l)
-      (cdr (last-cons lis) l))
-  lis)
+(function adds (l args)
+  "リストlの末尾にリストargsのすべての要素を追加する。
+  lは破壊的に変更される。"
+  (precondition (and (list? l) (list? args)))
+  (if (nil? l) args
+      (begin (cdr (last-cons l) args) l)))
 (assert (= (adds '(1) '(2 3 4)) '(1 2 3 4)))
 (assert (= (adds nil '(1 2 3)) '(1 2 3)))
 
-(function add (lis o)
-  "リストlisの末尾に引数oを破壊的に追加する。"
-  (precondition (list? lis))
-  (adds lis (list o)))
+(function add (l x)
+  "リストlの末尾に引数xを破壊的に追加する。"
+  (precondition (list? l))
+  (adds l (list x)))
 (assert (= (add nil 1) '(1)))
 (assert (= (add '(1) '(2 3 4)) '(1 (2 3 4))))
 
@@ -277,16 +276,16 @@
         (list <- sym (list cdr sym))))
 (assert (= (begin (<- l '(1 2 3)) (pop l)) 1))
 
-(function flatten (lis)
+(function flatten (l)
   "リストlisを構成するすべてのコンスのcar部が要素であるような新しいリストを返す。
   作成されるリストの要素の順は、元のリストのcar優先探索となる。"
-  (precondition (list? lis))
+  (precondition (list? l))
   (let (acc nil rec (lambda (x)
                       (if (nil? x) (reverse acc)
                           (atom? x) (push acc x)
                           (nil? (car x)) (push acc nil)
                           (begin (rec (car x))) (rec (cdr x)))))
-    (rec lis)))
+    (rec l)))
 (assert (= (flatten '(1 (2) (3 4))) '(1 2 3 4)))
 (assert (= (flatten '(1 (nil) 2)) '(1 nil 2)))
 
@@ -296,33 +295,33 @@
   (if args (cons (f (car args)) (map (cdr args) f))))
 (assert (= (map '(1 2 3) (lambda (x) (+ x 10))) '(11 12 13)))
 
-(function reverse (lis)
-  "リストlisの要素を逆の順で持つリストを新たに作成して返す。"
-  (precondition (list? lis))
-  (let (rec (lambda (lis acc)
-              (if (nil? lis) acc (rec (cdr lis) (cons (car lis) acc)))))
-    (rec lis nil)))
+(function reverse (l)
+  "リストlの要素を逆の順で持つリストを新たに作成して返す。"
+  (precondition (list? l))
+  (let (rec (lambda (l acc)
+              (if (nil? l) acc (rec (cdr l) (cons (car l) acc)))))
+    (rec l nil)))
 (assert (= (reverse nil) nil))
 (assert (= (reverse '(1 2 3)) '(3 2 1)))
 
-(function reduce (lis f :key (identity nil identity?))
-  "リストlisを二変数関数fで畳み込んだ結果を返す。
+(function reduce (l f :key (identity nil identity?))
+  "リストlを二変数関数fで畳み込んだ結果を返す。
   キーワードパラメターidentityが指定された場合は単位元として使用する。"
-  (precondition (list? lis))
-  (let (rec (lambda (lis)
-              (if (nil? (cdr lis)) (car lis)
-                  (rec (cons (f (car lis) (cadr lis)) (cddr lis))))))
-    (rec (if identity? (cons identity lis) lis))))
+  (precondition (list? l))
+  (let (rec (lambda (l)
+              (if (nil? (cdr l)) (car l)
+                  (rec (cons (f (car l) (cadr l)) (cddr l))))))
+    (rec (if identity? (cons identity l) l))))
 
-(function find (lis e :key (test =) (key identity))
-  "リストlisの先頭からeに等しい要素を返す。
+(function find (l e :key (test =) (key identity))
+  "リストlの先頭からeに等しい要素を返す。
   eが存在しない場合はnilを返す。
   比較は=で行われ、testで指定された場合はそれを用いる。
   keyが指定された場合は要素をkey関数で評価した後に比較を行う。"
-  (precondition (list? lis))
-  (if (nil? lis) nil
-      (test (key (car lis)) e) (car lis)
-      (find (cdr lis) e :test test :key key)))
+  (precondition (list? l))
+  (if (nil? l) nil
+      (test (key (car l)) e) (car l)
+      (find (cdr l) e :test test :key key)))
 (assert (= (find nil true) nil))
 (assert (= (find '(true nil true) nil) nil))
 (assert (= (find '(1 2 3) 2) 2))
@@ -330,43 +329,43 @@
 (assert (= (find '(1 (2 3) 4) '(2 3) :test same?) nil))
 (assert (= (find '((1 :a) (2 :b) (3 :c)) :b :key cadr) '(2 :b)))
 
-(function find-if (lis f :key (key identity))
-  "リストlisの先頭から関数fがnilを返さない最初の要素を返す。
+(function find-if (l f :key (key identity))
+  "リストlの先頭から関数fがnilを返さない最初の要素を返す。
   該当する要素が存在しない場合はnilを返す。
   keyが指定された場合は要素をkey関数で評価した後に比較を行う。"
-  (precondition (list? lis))
-  (if (nil? lis) nil
-      (f (key (car lis))) (car lis)
-      (find-if (cdr lis) f :key key)))
+  (precondition (list? l))
+  (if (nil? l) nil
+      (f (key (car l))) (car l)
+      (find-if (cdr l) f :key key)))
 (assert (= (find-if nil identity) nil))
 (assert (= (find-if '(1 2 3) (lambda (x) (> x 2))) 3))
 (assert (= (find-if '((:a 1) (:b 2)) (lambda (x) (= x :b)) :key car) '(:b 2)))
 
-(function all-satisfy? (lis f)
-  "リストlisのすべての要素が関数fの引数として評価したときに、nilでない値を返す場合にtrueを返す。
+(function all-satisfy? (l f)
+  "リストlのすべての要素が関数fの引数として評価したときに、nilでない値を返す場合にtrueを返す。
   そうでなければnilを返す。"
-  (precondition (and (list? lis) (function? f)))
-  (if (nil? lis) true
-      (and (f (car lis)) (all-satisfy? (cdr lis) f))))
+  (precondition (and (list? l) (function? f)))
+  (if (nil? l) true
+      (and (f (car l)) (all-satisfy? (cdr l) f))))
 (assert (all-satisfy? nil cons?))
 (assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
 (assert !(all-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
 
-(function any-satisfy? (lis f)
-  "リストlisのいずれかの要素が関数fの引数として評価したときにnil以外の値を返す場合はtrueを返す。
+(function any-satisfy? (l f)
+  "リストlのいずれかの要素が関数fの引数として評価したときにnil以外の値を返す場合はtrueを返す。
   そうでなければnilを返す。
-  なお、lisが空の場合はnilを返す。"
-  ; (precondition (and (list? lis) (function? f)))
-  (if lis (or (f (car lis)) (any-satisfy? (cdr lis) f))))
+  なお、lが空の場合はnilを返す。"
+  ; (precondition (and (list? l) (function? f)))
+  (if l (or (f (car l)) (any-satisfy? (cdr l) f))))
 (assert !(any-satisfy? nil number?))
 (assert (any-satisfy? '(1 2 3 4 5) number?))
 (assert !(any-satisfy? '(:a :b :c) number?))
 
-(function each-pair-satisfy? (lis f)
+(function each-pair-satisfy? (l f)
   "リストの隣接するすべての二要素に対して二変数関数fの評価が真か否か返す。"
-  ; (precondition (and (list? lis) (function? f)))
-  (if (nil? (cdr lis)) true
-      (and (f (car lis) (cadr lis)) (each-pair-satisfy? (cdr lis) f))))
+  ; (precondition (and (list? l) (function? f)))
+  (if (nil? (cdr l)) true
+      (and (f (car l) (cadr l)) (each-pair-satisfy? (cdr l) f))))
 (assert (each-pair-satisfy? '(1 2 3 4 5) <))
 (assert !(each-pair-satisfy? '(1 2 3 3 5) <))
 
@@ -432,12 +431,71 @@
   (list if (list = test nil)
         (list basic-throw :AssertionFailed (list quote test))))
 
-; pos
-; (<- Object '((:super nil)
-;              (:type :Object)))
-; (function . (object property :opt (val nil val?))
-;   (let ((pair (find object property :key car)))
-;     (if (nil? pair) (assert (list :NotFountProperty property)))
-;     (if val? (cdr pair val) (cdr pair))))
-; (print (. Object :type)) ; :Object
-; (print (. Object :type)) ; :Object
+(function alist? (x)
+  "xが連想リストの場合trueを、そうでなければnilを返す。"
+  (and (list? x) (even? (length x))))
+(assert (alist? nil))
+(assert (alist? '(1 1 2 2 3 3)))
+(assert !(alist? '(1 1 2 2 3)))
+
+; paren obejct system
+
+(function . (al k :opt (v nil v?))
+  "連想リストalのキー値kに対応する値を返す。
+  値がない場合は例外を発生させる。
+  vが指定された場合はkに対応する値をvで上書きする。"
+  (precondition (alist? al))
+  (let (find-key (lambda (al)
+                   (if (nil? al) (basic-throw :MissingPropertyException)
+                       (= (car al) k) al
+                       (find-key (cddr al))))
+        c (find-key al))
+    (if (nil? v?) (cadr c)
+        (car (cdr c) v))))
+(assert (= (. '(:a 1 :b 2 :c 3) :a) 1))
+(assert (= (begin (<- al '(:a 1 :b 2)) (. al :b -2) al) '(:a 1 :b -2)))
+
+(function object? (x)
+  "xがオブジェクトの場合trueを、そうでなければnilを返す。"
+  (and (list? x) (= (car x) :class)))
+
+(<- $class nil)
+
+; (macro class () :should-be-implement)
+; (macro method () :should-be-implement)
+; (function new () :should-be-implement)
+;
+; (class String ()
+;        "文字列クラス"
+;        _val)
+;
+; (method String .init (val)
+;         (._val this val))
+;
+; (method String ->string ()
+;         this)
+;
+; (method String + (o)
+;         (._val this (barray-add (._val this) (._val (->string o)))))
+;
+; (class Point ()
+;        "二次元直交座標クラス"
+;        x y)
+;
+; (method Point .init (:key (x 0) (y 0))
+;         (.x this x)
+;         (.y this y)
+;         this)
+;
+; (method Point ->string ()
+;         (+ "(" (.x this)  "," (.y this) ")"))
+;
+; (method Point + (p)
+;         (.init (new Point)
+;                :x (+ (.x this) (.x p))
+;                :y (+ (.y this) (.y p))))
+;
+; (<- p (.init (new Point) :x 1 :y 2)
+;     q (.init (new Point) :x 3 :y 4))
+;
+; (->string (+ p q))
