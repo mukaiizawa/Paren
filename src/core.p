@@ -459,9 +459,38 @@
   "xがオブジェクトの場合trueを、そうでなければnilを返す。"
   (and (list? x) (= (car x) :class)))
 
+
+;; global var
 (<- $class nil)
 
-; (macro class () :should-be-implement)
+(macro class (cls (:opt (super :Object) :rest features) :rest vars)
+  (list begin
+        (list <- cls (list quote (list :class cls
+                                       :super super
+                                       :features features
+                                       :vars vars
+                                       :methods nil)))
+        (list add $class cls)))
+
+(class String (:AbstructString :Magunitude :X)
+       a b c)
+
+(print String)
+
+
+;; classマクロの展開結果
+;; classクラスのインスタンス変数(Stringクラスの例)
+; (<- String '(:class :String
+;              :super :Object
+;              :features '(:Magnitude)
+;              :vars '(val)
+;              :methods '(->number ->string ->symbol substring)))
+; (add $class String)
+
+; 実装しなければならないこと
+;
+
+
 ; (macro method () :should-be-implement)
 ; (function new () :should-be-implement)
 ;
