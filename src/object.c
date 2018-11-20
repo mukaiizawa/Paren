@@ -82,6 +82,17 @@ static void describe_cons(object o, struct xbarray *x)
   }
 }
 
+static void describe_barray(object o, struct xbarray *x)
+{
+  int i;
+  xbarray_adds(x, "#b[");
+  for (i = 0; i < o->barray.size; i++) {
+    if (i != 0) xbarray_add(x, ' ');
+    xbarray_addf(x, "0x%d", (int)(o->barray.elt[i]));
+  }
+  xbarray_add(x, ']');
+}
+
 static void describe_s_expr(object o, struct xbarray *x)
 {
   object p;
@@ -127,7 +138,7 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_addf(x, "%f", o->xfloat.val);
       break;
     case BARRAY:
-      xbarray_addf(x, "\"%s\"", o->barray.elt);
+      describe_barray(o, x);
       break;
     case SYMBOL:
     case KEYWORD:
