@@ -459,6 +459,12 @@
   "xがオブジェクトの場合trueを、そうでなければnilを返す。"
   (and (list? x) (= (car x) :class)))
 
+; byte-aray
+(print (byte-array 3))
+
+
+; (barray-intern)
+; (barray-extern)
 
 ;; global var
 (<- $class nil)

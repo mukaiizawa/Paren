@@ -1,4 +1,5 @@
-bb.o: bb.c bi.h object.h xsplay.h config.h std.h
+barray.o: barray.c bi.h gc.h object.h xsplay.h config.h std.h
+bb.o: bb.c bi.h gc.h object.h xsplay.h config.h std.h
 bi.o: bi.c prim.wk special.wk bi.h gc.h object.h xsplay.h config.h std.h
 gc.o: gc.c gc.h ip.h xbarray.h lex.h object.h xarray.h xsplay.h config.h std.h
 ip.o: ip.c ip.h bi.h gc.h object.h xarray.h xsplay.h config.h std.h

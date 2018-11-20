@@ -29,6 +29,7 @@ static char *symbol_name_map[] = {
   "number_lt", "<",
   "number_modulo", "mod",
   "number_ineger_p", "integer?",
+  "barray_new", "byte-array",
   NULL
 };
 
