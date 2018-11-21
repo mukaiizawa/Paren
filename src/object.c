@@ -9,7 +9,6 @@
 object object_boot;
 object object_bq;
 object object_catch;
-object object_exception;
 object object_finally;
 object object_key;
 object object_nil;

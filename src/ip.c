@@ -493,7 +493,7 @@ static void pop_throw_frame(void)
   while (TRUE) {
     if (sp == 0) {
       sp = rp;
-      mark_error("error");
+      mark_error("uncaught exception");
       return;
     }
     if (fs_top()->type == CATCH_FRAME) {
@@ -867,8 +867,7 @@ SPECIAL(throw)
     return;
   }
   push_throw_frame(argv->cons.car);
-  if (argc == 1) reg[0] = object_exception;
-  else {
+  if (argc > 1) {
     push_eval_frame();
     reg[0] = argv->cons.cdr->cons.car;
   }
