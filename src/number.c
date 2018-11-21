@@ -9,19 +9,9 @@
 #include "bi.h"
 
 #define FETCH_NUMBER(x) { \
-  if (!numberp(x = argv->cons.car)) return FALSE; \
+  x = argv->cons.car; \
+  if (!numberp(x)) return FALSE; \
   argv = argv->cons.cdr; \
-}
-
-static int numberp(object o)
-{
-  switch (type(o)) {
-    case XINT:
-    case XFLOAT:
-      return TRUE;
-    default: 
-      return FALSE;
-  }
 }
 
 static double double_val(object o)

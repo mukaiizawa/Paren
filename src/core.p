@@ -369,6 +369,27 @@
 (assert (each-pair-satisfy? '(1 2 3 4 5) <))
 (assert !(each-pair-satisfy? '(1 2 3 3 5) <))
 
+; association list
+;; parenでは、キーワードと任意のS式の対を保持するデータ構造を連想リストという。
+;; 探索は線形時間必要になるが、比較はアドレスで行われるため高速。
+;; 任意のオブジェクトの対応を保持する場合はMapクラスを利用する。
+
+(function . (al k :opt (v nil v?))
+  "連想リストalのキー値kに対応する値を返す。
+  値がない場合は例外を発生させる。
+  vが指定された場合はkに対応する値をvで上書きする。"
+  (precondition (list? al))
+  (let (rec (lambda (al)
+              (if (nil? al) (basic-throw :MissingPropertyException)
+                  (same? (car al) k) al
+                  (rec (cddr al))))
+        pair (rec al))
+    (if (nil? v?) (cadr pair)
+        (car (cdr pair) v))))
+(assert (= (. '(:a 1 :b 2 :c 3) :a) 1))
+(assert (= (begin (<- al '(:a 1 :b 2)) (. al :b -2) al) '(:a 1 :b -2)))
+
+
 ; numeric
 (function - (x :rest args)
   "xからargsの合計を引いた値を返す。
@@ -423,7 +444,7 @@
   "引数testがnilの場合に、例外を発生させる。
   関数、マクロの事後条件を定義するために使用する。"
   (list if (list not test)
-        (list basic-throw  :PostconditionException (list quote test))))
+        (list basic-throw :PostconditionException (list quote test))))
 
 (macro assert (test)
   "testがnilの場合に例外を発生させる。
@@ -431,67 +452,48 @@
   (list if (list = test nil)
         (list basic-throw :AssertionFailed (list quote test))))
 
-(function alist? (x)
-  "xが連想リストの場合trueを、そうでなければnilを返す。"
-  (and (list? x) (even? (length x))))
-(assert (alist? nil))
-(assert (alist? '(1 1 2 2 3 3)))
-(assert !(alist? '(1 1 2 2 3)))
-
-; paren obejct system
-
-(function . (al k :opt (v nil v?))
-  "連想リストalのキー値kに対応する値を返す。
-  値がない場合は例外を発生させる。
-  vが指定された場合はkに対応する値をvで上書きする。"
-  (precondition (alist? al))
-  (let (find-key (lambda (al)
-                   (if (nil? al) (basic-throw :MissingPropertyException)
-                       (= (car al) k) al
-                       (find-key (cddr al))))
-        c (find-key al))
-    (if (nil? v?) (cadr c)
-        (car (cdr c) v))))
-(assert (= (. '(:a 1 :b 2 :c 3) :a) 1))
-(assert (= (begin (<- al '(:a 1 :b 2)) (. al :b -2) al) '(:a 1 :b -2)))
-
-(function object? (x)
-  "xがオブジェクトの場合trueを、そうでなければnilを返す。"
-  (and (list? x) (= (car x) :class)))
-
-; byte-aray
-(print (byte-array 3))
-
-
+; byte-array
+; (array a 3)
+; (byte-array a 3)
+; (print (byte-array 3))
 ; (barray-intern)
 ; (barray-extern)
 
+; paren obejct system
+
+; オブジェクトが持っていなければならない最低限の情報は自身のクラスのみ
+
+; クラスクラスが持っていなければならない情報は
+;    superclass;
+;    features;
+;    instance_vars;
+;    methods;
+
 ;; global var
-(<- $class nil)
 
-(macro class (cls (:opt (super :Object) :rest features) :rest vars)
-  (list begin
-        (list <- cls (list quote (list :class cls
-                                       :super super
-                                       :features features
-                                       :vars vars
-                                       :methods nil)))
-        (list add $class cls)))
+(function object? (x)
+  "xがオブジェクトの場合trueを、そうでなければnilを返す。
+  paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。"
+  (and (list? x) (= (car x) :class)))
 
-(class String (:AbstructString :Magunitude :X)
-       a b c)
+(function instance-of? (o cls)
+  "オブジェクトoがclsクラスもしくはそのサブクラスのインスタンスの場合にtrueを返す。
+  そうでない場合はnilを返す。"
+  (precondition (object? o))
+  (if (same? cls (. o :class)) true
+      (instance-of? (. o :super) cls)))
 
-(print String)
+(macro class (cls (:opt (super Object) :rest features) :rest vars)
+  (list <- cls (list quote (list :super super
+                                 :features features
+                                 :vars vars
+                                 :methods nil))))
 
+(class Object (nil))
+(class Class () :super :features :vars :methods)
 
-;; classマクロの展開結果
-;; classクラスのインスタンス変数(Stringクラスの例)
-; (<- String '(:class :String
-;              :super :Object
-;              :features '(:Magnitude)
-;              :vars '(val)
-;              :methods '(->number ->string ->symbol substring)))
-; (add $class String)
+(instance-of? '(:class Class) 'Object)
+
 
 ; 実装しなければならないこと
 ;

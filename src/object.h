@@ -21,6 +21,7 @@ typedef union s_expr *object;
 #define type(o) ((o)->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
 #define listp(o) (o == object_nil || typep(o, CONS))
+#define numberp(o) (typep(o, XINT) || typep(o, XFLOAT))
 
 union s_expr {
   int header;
