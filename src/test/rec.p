@@ -1,16 +1,12 @@
 ; recursion
 
-(<- + (lambda (x y) (xint_add x y))
-    = (lambda (x y) (xint_eq x y))
-    < (lambda (x y) (xint_lt x y))
-    <= (lambda (x y) (if (= x y) true (< x y)))
-    -- (lambda (x) (xint_add x -1)))
+(<- <= (lambda (x y) (if (= x y) true (< x y)))
+    - (lambda (x y) (+ x (* y -1))))
 
 :fib
 (<- fib (lambda (x)
-   (if (<= x 2)
-     1
-     (+ (fib (+ x -1)) (fib (+ x -2))))))
+   (if (<= x 2) 1
+       (+ (fib (- x 1)) (fib (- x 2))))))
 (fib 1)
 (fib 2)
 (fib 3)
@@ -24,6 +20,6 @@
       (tarai (tarai (-- x) y z)
              (tarai (-- y) z x)
              (tarai (-- z) x y)))))
-(tarai 6 3 0)    ; 6
-(tarai 10 5 0)    ; 10
-(tarai 12 6 0)    ; 12
+; (tarai 6 3 0)    ; 6
+; (tarai 10 5 0)    ; 10
+; (tarai 12 6 0)    ; 12
