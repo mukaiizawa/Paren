@@ -492,7 +492,7 @@
 (class Object (nil))
 (class Class () :super :features :vars :methods)
 
-(instance-of? '(:class Class) 'Object)
+; (instance-of? '(:class Class) 'Object)
 
 
 ; 実装しなければならないこと
