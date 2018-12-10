@@ -7,7 +7,6 @@
 #include "object.h"
 
 object object_boot;
-object object_bq;
 object object_catch;
 object object_finally;
 object object_key;
@@ -17,10 +16,8 @@ object object_opt;
 object object_quote;
 object object_rest;
 object object_sint[SINT_MAX];
-object object_splice;
 object object_toplevel;
 object object_true;
-object object_uq;
 
 int symcmp(object o, object p)
 {
@@ -114,14 +111,10 @@ static void describe_s_expr(object o, struct xbarray *x)
       break;
     case CONS:
       p = o->cons.car;
-      if ((p == object_quote || p == object_bq || p == object_uq
-            || p == object_splice || p == object_not)
+      if ((p == object_quote || p == object_not)
           && typep(o->cons.cdr, CONS) && o->cons.cdr->cons.cdr == object_nil)
       {
         if (p == object_quote) xbarray_add(x, '\'');
-        if (p == object_bq) xbarray_add(x, '`');
-        if (p == object_uq) xbarray_add(x, ',');
-        if (p == object_splice) xbarray_adds(x, ",@");
         if (p == object_not) xbarray_add(x, '!');
         describe_s_expr(o->cons.cdr, x);
       } else {

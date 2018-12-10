@@ -106,18 +106,10 @@ static object parse_list(void)
 static object parse_s_expr(void)
 {
   object o;
-  if (next_token == '\'' || next_token == '`' || next_token == ','
-      || next_token == '!')
-  {
+  if (next_token == '\'' || next_token == '!') {
     if (next_token == '\'') o = object_quote;
-    else if (next_token == '`') o = object_bq;
-    else if (next_token == ',') o = object_uq;
     else o = object_not;
     parse_skip();
-    if (o == object_uq && next_token == '@') {
-      o = object_splice;
-      parse_skip();
-    }
     return gc_new_cons(o, gc_new_cons(parse_s_expr(), object_nil));
   }
   if (next_token == '(') return parse_list();
@@ -166,7 +158,6 @@ static void make_initial_objects(void)
 {
   int i;
   object_nil = gc_new_symbol("nil");
-  object_bq = gc_new_symbol("backquote");
   object_catch = gc_new_symbol("catch");
   object_finally = gc_new_symbol("finally");
   object_key = gc_new_symbol(":key");
@@ -174,9 +165,7 @@ static void make_initial_objects(void)
   object_opt = gc_new_symbol(":opt");
   object_quote = gc_new_symbol("quote");
   object_rest = gc_new_symbol(":rest");
-  object_splice = gc_new_symbol("splice");
   object_true = gc_new_symbol("true");
-  object_uq = gc_new_symbol("unquote");
   object_toplevel = gc_new_env(object_nil);
   for (i = 0; i < SINT_MAX; i++) object_sint[i] = gc_new_sint(i);
   bind_pseudo_symbol(object_nil);

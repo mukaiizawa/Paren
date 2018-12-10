@@ -5,40 +5,6 @@
 #include "std.h"
 #include "lex.h"
 
-/*
- * reader macro
- * ! <s_expr> => (not <s_expr>)
- * ' <s_expr> => (quote <s_expr>)
- * ` <s_expr> => (backquote <s_expr>)
- * , <s_expr> => (unquote <s_expr>)
- * ,@ <s_expr> => (splice <s_expr>)
- *
- * paren bnf
- * <paren> ::= <s_expr> ...
- * <s_expr> ::= <list> | <atom>
- * <list> ::= '(' [<s_expr>] ... ')'
- * <atom> ::= <number> | <symbol> | <keyword> | <string>
- * <number> ::= [- | +] <digit> <digit> ... 'x' [0-9a-z] ...
- *            | [- | +] <digit> <digit> ... [ '.' <digit> ... ]
- * <symbol> ::= <identifier>
- * <identifier> ::= <identifier_first> [<identifier_rest>] ...
- * <identifier_first> ::= [$%&*+\-/<=>:?a-zA-Z_]
- * <identifier_rest> ::= <identifier_first> | [0-9]
- * <digit> ::= [0-9]
- * <string> ::= '"' <char> ... '"'
- * <char> ::= '"' <char> ... '"'
- *    \a -- 0x07(bell)
- *    \b -- 0x08(back space)
- *    \e -- 0x1B(escape)
- *    \f -- 0x0c(form feed)
- *    \n -- 0x0a(line feed)
- *    \r -- 0x0d(carriage return)
- *    \t -- 0x09(horizontal tab)
- *    \v -- 0x0b(vertical tab)
- *    \x -- interpret the following two letters as a hexadecimal number.
- *    \ -- interpret the following letter as a 
- */
-
 struct xbarray lex_str;
 int lex_ival;
 double lex_fval;
