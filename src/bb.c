@@ -36,17 +36,30 @@ static int equal_cons_p(object o, object p)
     && equal_s_expr(o->cons.cdr, p->cons.cdr);
 }
 
+static int equal_numebrp(object o, object p)
+{
+  double x, y;
+  if (!numberp(p)) return FALSE;
+  if (typep(o, XINT) && typep(p, XINT)) return o->xint.val == p->xint.val;
+  if (typep(o, XFLOAT) && typep(p, XFLOAT))
+    return o->xfloat.val == p->xfloat.val;
+  if (typep(o, XFLOAT)) {
+    x = o->xfloat.val;
+    y = (double)p->xint.val;
+  } else {
+    x = (double)o->xint.val;
+    y = p->xfloat.val;
+  }
+  return x == y;
+}
+
 static int equal_s_expr(object o, object p)
 {
-  int t;
   if (o == p) return TRUE;
-  if ((t = type(o)) != type(p)) return FALSE;
-  switch (t) {
-    case CONS: return equal_cons_p(o, p);
-    case XINT: return o->xint.val == p->xint.val;
-    case XFLOAT: return o->xfloat.val == p->xfloat.val;
-    default: return FALSE;
-  }
+  if (numberp(o)) return equal_numebrp(o, p);
+  if (type(o) != type(p)) return FALSE;
+  if (typep(o, CONS)) return equal_cons_p(o, p);
+  return FALSE;
 }
 
 // compare built-in object.

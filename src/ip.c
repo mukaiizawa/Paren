@@ -12,23 +12,48 @@
  * registers:
  *   0 -- frame argument.
  *   1 -- current environment.
+ *   2 -- exception.
  */
-#define REG_SIZE 2
+#define REG_SIZE 3
 static object reg[REG_SIZE];
 
 static long cycle;
 
-// error
+// exception
 
 int ip_trap_code;
-static char *error_message;
+static char *exception_msg;
 static void describe_vm(void);
 
-static void mark_error(char *msg)
+static void mark_exception(char *msg)
 {
-  ip_trap_code = TRAP_ERROR;
-  error_message = msg;
+  ip_trap_code = TRAP_EXCEPTION;
+  exception_msg = msg;
 }
+
+#define mark_too_few_arguments_exception()\
+{\
+  mark_exception("too few arguments.");\
+  return;\
+}\
+
+#define mark_too_many_arguments_exception()\
+{\
+  mark_exception("too many arguments.");\
+  return;\
+}\
+
+#define mark_illegal_arguments_exception(min, max)\
+  if (argc < min || argc > max) {\
+    if (argc < min) mark_too_few_arguments_exception();\
+    mark_too_many_arguments_exception();\
+  }\
+
+#define mark_illegal_parameter_list_exception()\
+{\
+    mark_exception("illegal parameter list.");\
+    return;\
+}\
 
 // gloval environment
 
@@ -224,7 +249,7 @@ static struct frame *fs_top(void)
 
 static void fs_push(struct frame *f)
 {
-  if (sp > FRAME_STACK_SIZE - STACK_GAP) mark_error("stack over flow.");
+  if (sp > FRAME_STACK_SIZE - STACK_GAP) mark_exception("stack over flow.");
   else if (sp + 3 > FRAME_STACK_SIZE) xerror("stack over flow.");
   fs[sp] = f;
   sp++;
@@ -348,7 +373,8 @@ static void push_switch_env_frame(object env)
 
 static void push_throw_frame(object e)
 {
-  fs_push(alloc_frame1(THROW_FRAME, e));
+  fs_push(alloc_frame(THROW_FRAME));
+  reg[2] = e;
 }
 
 static void push_try_frame(object f)
@@ -374,8 +400,8 @@ static void pop_apply_prim_frame(void)
   int (*prim)(int, object, object *);
   args = reg[0];
   prim = xsplay_find(&prim_splay, fs_pop()->local_vars[0]);
-  if (!(*prim)(object_length(args), args, &(reg[0])))
-    mark_error("primitive failed");
+  if ((*prim)(object_length(args), args, &(reg[0]))) st_pop();
+  else mark_exception("primitive failed.");
 }
 
 static void pop_bind_frame(void)
@@ -413,7 +439,8 @@ static void pop_eval_frame(void)
       return;
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
-        mark_error("unbind symbol");
+        st_push(reg[0]);
+        mark_exception("unbind symbol.");
         return;
       }
       reg[0] = s;
@@ -439,11 +466,11 @@ static void pop_fetch_operator_frame(void)
   object args;
   void (*special)(object, int, object);
   args = fs_pop()->local_vars[0];
-  push_return_addr_frame();
   switch (type(reg[0])) {
     case SYMBOL:
       if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
         (*special)(reg[1], object_length(args), args);
+        if (ip_trap_code != TRAP_EXCEPTION) st_pop();
         return;
       }
       if (xsplay_find(&prim_splay, reg[0]) != NULL) {
@@ -453,17 +480,19 @@ static void pop_fetch_operator_frame(void)
       }
       break;
     case MACRO:
+      push_return_addr_frame();
       push_eval_frame();
       push_apply_frame(reg[0]);
       reg[0] = args;
       return;
     case LAMBDA:
+      push_return_addr_frame();
       push_apply_frame(reg[0]);
       push_eval_args_frame(args);
       return;
     default: break;
   }
-  mark_error("is not a operator");
+  mark_exception("is not a operator.");
 }
 
 static void pop_eval_args_frame(void)
@@ -526,17 +555,16 @@ static void pop_return_frame(void)
 
 static void pop_throw_frame(void)
 {
-  int rp;
-  object te, targ, ce, cs, cbody, rst;
-  te = fs_pop()->local_vars[0];
+  int rewind_rp;
+  object targ, ce, cs, cbody, rewind_st;
   targ = reg[0];
-  rp = sp;
-  rst = symbol_find(object_toplevel, object_st);
+  rewind_rp = sp;
+  rewind_st = symbol_find(object_toplevel, object_st);
   while (TRUE) {
     if (sp == 0) {
-      sp = rp;
-      symbol_bind(object_toplevel, object_st, rst);
-      mark_error("uncaught exception");
+      sp = rewind_rp;
+      symbol_bind(object_toplevel, object_st, rewind_st);
+      mark_exception(NULL);
       return;
     }
     if (fs_top()->type == CATCH_FRAME) {
@@ -544,7 +572,7 @@ static void pop_throw_frame(void)
       cs = fs_top()->local_vars[1];
       cbody = fs_top()->local_vars[2];
       while (ce != object_nil) {
-        if (te == ce->cons.car) break;
+        if (reg[2] == ce->cons.car) break;
         ce = ce->cons.cdr;
       }
       if (ce != object_nil) {
@@ -567,7 +595,7 @@ static int valid_keyword_p(object params, object args)
   object p, s;
   while (args != object_nil) {
     if (!typep(args->cons.car, KEYWORD)) {
-      mark_error("expected keyword parameter");
+      mark_exception("expected keyword parameter.");
       return FALSE;
     }
     p = params;
@@ -580,11 +608,11 @@ static int valid_keyword_p(object params, object args)
       p = p->cons.cdr;
     }
     if (p == object_nil) {
-      mark_error("undeclared keyword parameter");
+      mark_exception("undeclared keyword parameter.");
       return FALSE;
     }
     if ((args = args->cons.cdr) == object_nil) {
-      mark_error("expected keyword parameter value");
+      mark_exception("expected keyword parameter value.");
       return FALSE;
     }
     args = args->cons.cdr;
@@ -598,10 +626,7 @@ static void parse_lambda_list(object env, object params, object args)
   object o, pre, k, v, def_v, sup_k;
   // parse required parameter
   while (params != object_nil && !typep(params->cons.car, KEYWORD)) {
-    if (args == object_nil) {
-      mark_error("too few arguments");
-      return;
-    }
+    if (args == object_nil) mark_too_few_arguments_exception();
     if (!typep(params->cons.car, CONS)) 
       fb_add(make_local_var_bind_frame(params->cons.car, args->cons.car));
     else {
@@ -685,7 +710,7 @@ static void parse_lambda_list(object env, object params, object args)
       params = params->cons.cdr;
     }
   }
-  if (args != object_nil) mark_error("too many arguments");
+  if (args != object_nil) mark_too_many_arguments_exception();
 }
 
 // special forms
@@ -753,12 +778,9 @@ static int valid_lambda_list_p(int lambda_type, object params)
 SPECIAL(let)
 {
   object params, s;
-  if (argc < 1) {
-    mark_error("let: too few argument");
-    return;
-  }
+  if (argc < 1) mark_too_few_arguments_exception();
   if (!listp((params = argv->cons.car))) {
-    mark_error("let: argument must be list");
+    mark_exception("argument must be list.");
     return;
   }
   push_switch_env_frame(env);
@@ -766,11 +788,11 @@ SPECIAL(let)
   fb_reset();
   while (params != object_nil) {
     if (!typep((s = params->cons.car), SYMBOL)) {
-      mark_error("let: argument must be symbol");
+      mark_exception("argument must be symbol.");
       return;
     }
     if ((params = params->cons.cdr) == object_nil) {
-      mark_error("let: argument must be association list");
+      mark_exception("argument must be association list.");
       return;
     }
     fb_add(make_eval_local_var_frame(params->cons.car));
@@ -788,18 +810,18 @@ SPECIAL(assign)
   object s;
   if (argc == 0) return;
   if (argc % 2 != 0) {
-    mark_error("<-: must be pair");
+    mark_exception("must be pair.");
     return;
   }
   fb_reset();
   while (argc != 0) {
     s = argv->cons.car;
     if (!typep(s, SYMBOL)) {
-      mark_error("<-: cannot bind except symbol");
+      mark_exception("cannot bind except symbol.");
       return;
     }
     if (s == object_nil) {
-      mark_error("<-: cannot bind nil");
+      mark_exception("cannot bind nil.");
       return;
     }
     argv = argv->cons.cdr;
@@ -823,10 +845,8 @@ SPECIAL(macro)
     fs_push(make_bind_frame(argv->cons.car));
     argv = argv->cons.cdr;
   }
-  if (!valid_lambda_list_p(MACRO, params = argv->cons.car)) {
-    mark_error("macro: illegal parameter list");
-    return;
-  }
+  if (!valid_lambda_list_p(MACRO, params = argv->cons.car))
+    mark_illegal_parameter_list_exception();
   reg[0] = gc_new_macro(env, params, argv->cons.cdr);
 }
 
@@ -834,29 +854,20 @@ SPECIAL(lambda)
 {
   object params;
   params = argv->cons.car;
-  if (!valid_lambda_list_p(LAMBDA, params)) {
-    mark_error("lambda: illegal parameter list");
-    return;
-  }
+  if (!valid_lambda_list_p(LAMBDA, params))
+    mark_illegal_parameter_list_exception();
   reg[0] = gc_new_lambda(env, params, argv->cons.cdr);
 }
 
 SPECIAL(quote)
 {
-  if (argc != 1) {
-    if (argc == 0) mark_error("quote: requires argument");
-    else mark_error("quote: too many arguments");
-    return;
-  }
+  mark_illegal_arguments_exception(1, 1);
   reg[0] = argv->cons.car;
 }
 
 SPECIAL(if)
 {
-  if (argc < 2) {
-    mark_error("if: too few arguments");
-    return;
-  }
+  if (argc < 2) mark_too_few_arguments_exception();
   push_if_frame(argv);
 }
 
@@ -869,19 +880,15 @@ SPECIAL(labels)
 SPECIAL(goto)
 {
   object o;
-  if (argc != 1) {
-    if (argc == 0) mark_error("goto: requires arguments");
-    else mark_error("goto: too many arguments");
-    return;
-  }
+  mark_illegal_arguments_exception(1, 1);
   reg[0] = argv->cons.car;
   if (!typep(reg[0], KEYWORD)) {
-    mark_error("goto: arguments must be keyword");
+    mark_exception("arguments must be keyword.");
     return;
   }
   while (fs_top()->type != LABELS_FRAME) {
     if (sp == 0) {
-      mark_error("goto: not found labels context");
+      mark_exception("not found labels context.");
       return;
     }
     fs_rewind_pop();
@@ -889,7 +896,7 @@ SPECIAL(goto)
   o = fs_top()->local_vars[0];
   while (TRUE) {
     if (o == object_nil) {
-      mark_error("goto: not found label");
+      mark_exception("not found label.");
       return;
     }
     if (o->cons.car == reg[0]) break;
@@ -900,31 +907,24 @@ SPECIAL(goto)
 
 SPECIAL(throw)
 {
-  if (argc == 0 || argc > 2) {
-    if (argc == 0) mark_error("throw: too few arguments");
-    else mark_error("throw: too many arguments");
-    return;
-  }
+  mark_illegal_arguments_exception(1, 2);
   if (!typep(argv->cons.car, KEYWORD)) {
-    mark_error("throw: type must be keyword");
+    mark_exception("type must be keyword.");
     return;
   }
   push_throw_frame(argv->cons.car);
   if (argc > 1) {
     push_eval_frame();
     reg[0] = argv->cons.cdr->cons.car;
-  }
+  } else reg[0] = object_nil;
 }
 
 SPECIAL(try)
 {
   object p, s, params, cparams, finally;
-  if (argc < 1) {
-    mark_error("try: too few argument");
-    return;
-  }
+  if (argc < 1) mark_too_few_arguments_exception();
   if (!listp((params = argv->cons.car))) {
-    mark_error("try: argument must be list");
+    mark_exception("argument must be list.");
     return;
   }
   finally = NULL;
@@ -932,14 +932,14 @@ SPECIAL(try)
   while (params != object_nil) {
     p = params->cons.car;
     if (!typep(p, CONS)) {
-      mark_error("try: illegal arguments");
+      mark_exception("illegal arguments.");
       return;
     }
     if (p->cons.car == object_catch) {
       s = object_nil;
       p = p->cons.cdr;
       if (!typep((cparams = p->cons.car), CONS)) {
-        mark_error("try: illegal catch clause");
+        mark_exception("illegal catch clause.");
         return;
       }
       while (cparams != object_nil) {
@@ -952,18 +952,18 @@ SPECIAL(try)
           s = cparams->cons.car;
           break;
         }
-        mark_error("try: illegal parameter list");
+        mark_exception("illegal parameter list.");
         return;
       }
       fb_add(make_catch_frame(p->cons.car, s, p->cons.cdr));
     } else if (p->cons.car == object_finally) {
       if (finally != NULL) {
-        mark_error("try: too many finally clause");
+        mark_exception("too many finally clause.");
         return;
       }
       finally = p->cons.cdr;
     } else {
-      mark_error("try: illegal arguments");
+      mark_exception("illegal arguments.");
       return;
     }
     params = params->cons.cdr;
@@ -976,10 +976,7 @@ SPECIAL(try)
 
 SPECIAL(return)
 {
-  if (argc != 1) {
-    mark_error("return: illegal arguments");
-    return;
-  }
+  mark_illegal_arguments_exception(1, 1);
   push_return_frame();
   push_eval_frame();
   reg[0] = argv->cons.car;
@@ -1011,7 +1008,9 @@ static void describe_st(void)
   object o;
   char buf[MAX_STR_LEN];
   o = symbol_find(object_toplevel, object_st);
-  printf("Exception: %s\n", error_message);
+  printf("Exception has occurred. %s", object_describe(reg[2], buf));
+  if (exception_msg != NULL) printf(" -- %s", exception_msg);
+  printf("\n");
   while (o != object_nil) {
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
@@ -1070,12 +1069,16 @@ static void describe_vm(void)
 
 static void trap(void)
 {
-  if(ip_trap_code == TRAP_ERROR) {
-    describe_vm();
-    describe_st();
-    exit(1);
+  switch (ip_trap_code) {
+    case TRAP_EXCEPTION:
+      // describe_vm();
+      describe_st();
+      exit(1);
+      break;
+    default:
+      ip_trap_code=TRAP_NONE;
+      break;
   }
-  ip_trap_code=TRAP_NONE;
 }
 
 static object eval(object expr)
@@ -1083,6 +1086,7 @@ static object eval(object expr)
   xassert(sp == 0);
   reg[0] = expr;
   reg[1] = object_toplevel;
+  reg[2] = object_snbhe;
   push_eval_frame();
   while (TRUE) {
     xassert(sp >= 0);

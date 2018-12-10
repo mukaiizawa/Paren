@@ -44,12 +44,12 @@
 (assert !(and true nil true))
 
 (macro while (test :rest body)
-  "引数testがnilでない間bodyを逐次評価する。
+  "引数testがnilでない間bodyを逐次評価し、nilを返す。
   lambdaを含む式に展開されるため、returnオペレータを使用することによりwhileコンテキストを抜けることができる。"
-  (list (list lambda nil
+  (list (list lambda ()
               (cons labels
                     (cons :while
-                          (cons (list if (list not test) (list return nil))
+                          (cons (list if (list not test) '(return nil))
                                 (add body '(goto :while))))))))
 
 ; fundamental function
@@ -243,6 +243,21 @@
 (assert (= (length nil) 0))
 (assert (= (length '(1 2 3)) 3))
 
+(function .. (s e :opt (step 1))
+  "整数sから整数eまでstep刻みの要素を持つリストを返す。"
+  (precondition (and (number? s) (number? e) (number? step) !(= step 0)
+                     (or (and (< step 0) (>= s e))
+                         (and (> step 0) (<= s e)))))
+  (let (acc nil test (if (> step 0) <= >=))
+    (while (test s e)
+      (push acc s)
+      (<- s (+ s step)))
+    (reverse acc)))
+(assert (= (.. 0 0) '(0)))
+(assert (= (.. 0 2) '(0 1 2)))
+(assert (= (.. 0 2 0.5) '(0 0.5 1 1.5 2)))
+(assert (= (.. 0 2 10) '(0)))
+
 (function adds (l args)
   "リストlの末尾にリストargsのすべての要素を追加する。
   lは破壊的に変更される。"
@@ -408,12 +423,28 @@
 
 (function > (:rest args)
   (each-pair-satisfy? args (lambda (x y) (< y x))))
+(assert (> 1 0))
+(assert !(> 0 0))
+(assert !(> 0 1))
+(assert (> 2 1 0))
+(assert !(> 2 0 1))
 
 (function <= (:rest args)
   (each-pair-satisfy? args (lambda (x y) !(< y x))))
+(assert (<= 0 0))
+(assert (<= 0 1))
+(assert !(<= 1 0))
+(assert (<= 0 1 2))
+(assert !(<= 2 0 1))
 
 (function >= (:rest args)
   (each-pair-satisfy? args (lambda (x y) !(< x y))))
+(assert (>= 0 0))
+(assert (>= 1 0))
+(assert !(>= 0 1))
+(assert (>= 0 0 0))
+(assert (>= 2 1 0))
+(assert !(>= 2 0 1))
 
 (function ++ (x)
   "xに1を加えた結果を返す。"
@@ -450,7 +481,7 @@
   "testがnilの場合に例外を発生させる。
   状態異常の早期検知のために使用する。"
   (list if (list = test nil)
-        (list basic-throw :AssertionFailed (list quote test))))
+        (list basic-throw :AssertionFailedException (list quote test))))
 
 ; byte-array
 ; (array a 3)
@@ -492,6 +523,13 @@
 (class Object (nil))
 (class Class () :super :features :vars :methods)
 
+(<- x 1)
+(while !(< x 10)
+  (print (<- x (++ x)))
+  (return nil))
+
+; (print Object)
+; (print Class)
 ; (instance-of? '(:class Class) 'Object)
 
 

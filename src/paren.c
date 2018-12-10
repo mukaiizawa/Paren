@@ -170,6 +170,7 @@ static void make_initial_objects(void)
   object_opt = gc_new_symbol(":opt");
   object_quote = gc_new_symbol("quote");
   object_rest = gc_new_symbol(":rest");
+  object_snbhe = gc_new_symbol(":ShouldNotBeHandledException");
   object_st = gc_new_symbol("$stack-trace");
   object_toplevel = gc_new_env(object_nil);
   object_true = gc_new_symbol("true");
