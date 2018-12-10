@@ -279,3 +279,20 @@ Cによるparenコンパイラでcore.pを解釈できるようになっため�
 
 結論
 Cによるparenコンパイラで実装が困難なリードマクロは単純に無視すればよいか。
+
+# 例外のクラス階層
+現在考えている例外の階層は次の通り。
+
+    Exception
+        ShouldNotBeHandledException
+            AssertionFailedException
+            OutOfMemoryException
+            QuitException
+        IOException
+        ArithmeticException
+        PreconditionException
+        PostconditionException
+
+すべての例外はExceptionクラスを継承している。
+
+アプリケーションで補足すべきでない例外はShouldNotBeHandledExceptionを継承する。
