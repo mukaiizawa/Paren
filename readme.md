@@ -124,5 +124,15 @@ functionは関数を作成し、指定したシンボルに対応づける。
     ) (fib 5)
     5
 
+# ビルド
+Parenのビルド例を示す。
+
+    $ git clone https://github.com/mukaiizawa/Paren your/favorite/dir
+    $ cd your/favorite/dir/src
+    $ make os=windows
+    $ paren
+    ) (print hello-world)
+    hello-world
+
 # Special Thanks
 Ken'ichi Tokuoka.
