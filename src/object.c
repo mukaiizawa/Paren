@@ -16,6 +16,7 @@ object object_opt;
 object object_quote;
 object object_rest;
 object object_sint[SINT_MAX];
+object object_st;
 object object_toplevel;
 object object_true;
 

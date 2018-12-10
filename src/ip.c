@@ -35,6 +35,58 @@ static void mark_error(char *msg)
 static struct xsplay special_splay;
 static struct xsplay prim_splay;
 
+// symbol
+
+static object symbol_find(object e, object s)
+{
+  xassert(typep(e, ENV));
+  return xsplay_find(&e->env.binding, s);
+}
+
+static object symbol_find_propagation(object e, object s)
+{
+  object v;
+  while (e != object_nil) {
+    if ((v = symbol_find(e, s)) != NULL) break;
+    e = e->env.top;
+  }
+  return v;
+}
+
+static void symbol_bind(object e, object s, object v)
+{
+  xassert(typep(e, ENV));
+  xsplay_replace(&e->env.binding, s, v);
+}
+
+static void symbol_bind_propagation(object e, object s, object v)
+{
+  while (e != object_toplevel) {
+    if (symbol_find(e, s) != NULL) {
+      symbol_bind(e, s, v);
+      return;
+    }
+    e = e->env.top;
+  }
+  symbol_bind(object_toplevel, s, v);
+}
+
+static void st_push(object o)
+{
+  object p;
+  p = symbol_find(object_toplevel, object_st);
+  xassert(p != NULL);
+  symbol_bind(object_toplevel, object_st, gc_new_cons(o, p));
+}
+
+static void st_pop(void)
+{
+  object o;
+  o = symbol_find(object_toplevel, object_st);
+  xassert(o != object_nil);
+  symbol_bind(object_toplevel, object_st, o->cons.cdr);
+}
+
 // frame
 
 #define STACK_GAP 5
@@ -187,10 +239,12 @@ static struct frame *fs_pop(void)
 }
 
 static void pop_switch_env(void);
+static void pop_return_addr_frame(void);
 static void fs_rewind_pop(void)
 {
   switch (fs_top()->type) {
     case SWITCH_ENV_FRAME: pop_switch_env(); break;
+    case RETURN_ADDR_FRAME: pop_return_addr_frame(); break;
     default: fs_pop(); break;
   }
 }
@@ -326,7 +380,7 @@ static void pop_apply_prim_frame(void)
 
 static void pop_bind_frame(void)
 {
-  xsplay_replace(&reg[1]->env.binding, fs_pop()->local_vars[0], reg[0]);
+  symbol_bind(reg[1], fs_pop()->local_vars[0], reg[0]);
 }
 
 static void pop_bind_local_var_frame(void)
@@ -337,34 +391,12 @@ static void pop_bind_local_var_frame(void)
   s = top->local_vars[0];
   v = top->local_vars[1];
   reg[0] = v;
-  xsplay_replace(&reg[1]->env.binding, s, v);
+  symbol_bind(reg[1], s, v);
 }
 
 static void pop_bind_propagation_frame(void)
 {
-  object e, s;
-  e = reg[1];
-  s = fs_pop()->local_vars[0];
-  while (e != object_toplevel) {
-    xassert(typep(e, ENV));
-    if (xsplay_find(&e->env.binding, s) != NULL) {
-      xsplay_replace(&e->env.binding, s, reg[0]);
-      return;
-    }
-    e = e->env.top;
-  }
-  xsplay_replace(&object_toplevel->env.binding, s, reg[0]);
-}
-
-static object symbol_find(void)
-{
-  object e, v;
-  e = reg[1];
-  while (e != object_nil) {
-    if ((v = xsplay_find(&e->env.binding, reg[0])) != NULL) break;
-    e = e->env.top;
-  }
-  return v;
+  symbol_bind_propagation(reg[1], fs_pop()->local_vars[0], reg[0]);
 }
 
 static void pop_eval_frame(void)
@@ -380,10 +412,14 @@ static void pop_eval_frame(void)
     case BARRAY:
       return;
     case SYMBOL:
-      if ((s = symbol_find()) == NULL) mark_error("unbind symbol");
-      else reg[0] = s;
+      if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
+        mark_error("unbind symbol");
+        return;
+      }
+      reg[0] = s;
       return;
     case CONS:
+      st_push(reg[0]);
       push_fetch_operator_frame(reg[0]->cons.cdr);
       push_eval_frame();
       reg[0] = reg[0]->cons.car;
@@ -403,6 +439,7 @@ static void pop_fetch_operator_frame(void)
   object args;
   void (*special)(object, int, object);
   args = fs_pop()->local_vars[0];
+  push_return_addr_frame();
   switch (type(reg[0])) {
     case SYMBOL:
       if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
@@ -416,13 +453,11 @@ static void pop_fetch_operator_frame(void)
       }
       break;
     case MACRO:
-      push_return_addr_frame();
       push_eval_frame();
       push_apply_frame(reg[0]);
       reg[0] = args;
       return;
     case LAMBDA:
-      push_return_addr_frame();
       push_apply_frame(reg[0]);
       push_eval_args_frame(args);
       return;
@@ -470,6 +505,12 @@ static void pop_if_frame(void)
   } else if ((args = args->cons.cdr) != object_nil) push_if_frame(args);
 }
 
+static void pop_return_addr_frame(void)
+{
+  fs_pop();
+  st_pop();
+}
+
 static void pop_switch_env(void)
 {
   reg[1] = fs_pop()->local_vars[0];
@@ -486,13 +527,15 @@ static void pop_return_frame(void)
 static void pop_throw_frame(void)
 {
   int rp;
-  object te, targ, ce, cs, cbody;
+  object te, targ, ce, cs, cbody, rst;
   te = fs_pop()->local_vars[0];
   targ = reg[0];
   rp = sp;
+  rst = symbol_find(object_toplevel, object_st);
   while (TRUE) {
     if (sp == 0) {
       sp = rp;
+      symbol_bind(object_toplevel, object_st, rst);
       mark_error("uncaught exception");
       return;
     }
@@ -963,6 +1006,18 @@ static void sweep_env(int depth, void *sym, void *val)
   printf(" %s)", object_describe(val, buf));
 }
 
+static void describe_st(void)
+{
+  object o;
+  char buf[MAX_STR_LEN];
+  o = symbol_find(object_toplevel, object_st);
+  printf("Exception: %s\n", error_message);
+  while (o != object_nil) {
+    printf("	at: %s\n", object_describe(o->cons.car, buf));
+    o = o->cons.cdr;
+  }
+}
+
 static void describe_reg(void)
 {
   int i;
@@ -1017,7 +1072,8 @@ static void trap(void)
 {
   if(ip_trap_code == TRAP_ERROR) {
     describe_vm();
-    xerror("%s\n", error_message);
+    describe_st();
+    exit(1);
   }
   ip_trap_code=TRAP_NONE;
 }
@@ -1047,7 +1103,7 @@ static object eval(object expr)
       case IF_FRAME: pop_if_frame(); break;
       case LABELS_FRAME: fs_pop(); break;
       case RETURN_FRAME: pop_return_frame(); break;
-      case RETURN_ADDR_FRAME: fs_pop(); break;
+      case RETURN_ADDR_FRAME: pop_return_addr_frame(); break;
       case SWITCH_ENV_FRAME: pop_switch_env(); break;
       case THROW_FRAME: pop_throw_frame(); break;
       case TRY_FRAME: fs_pop(); break;

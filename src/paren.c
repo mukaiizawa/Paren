@@ -139,9 +139,14 @@ static object load(void)
   return o;
 }
 
+static void bind_symbol(object o, object v)
+{
+  xsplay_add(&object_toplevel->env.binding, o, v);
+}
+
 static void bind_pseudo_symbol(object o)
 {
-  xsplay_add(&object_toplevel->env.binding, o, o);
+  bind_symbol(o, o);
 }
 
 static void bind_special(void)
@@ -165,11 +170,13 @@ static void make_initial_objects(void)
   object_opt = gc_new_symbol(":opt");
   object_quote = gc_new_symbol("quote");
   object_rest = gc_new_symbol(":rest");
-  object_true = gc_new_symbol("true");
+  object_st = gc_new_symbol("$stack-trace");
   object_toplevel = gc_new_env(object_nil);
+  object_true = gc_new_symbol("true");
   for (i = 0; i < SINT_MAX; i++) object_sint[i] = gc_new_sint(i);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
+  bind_symbol(object_st, object_nil);
   bind_special();
 }
 
