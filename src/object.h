@@ -16,12 +16,13 @@ typedef union s_expr *object;
 
 #define XINT_MAX 0x3fffffff
 #define XINT_MIN (- XINT_MAX - 1)
-#define SINT_MAX 255
 
 #define type(o) ((o)->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
 #define listp(o) (o == object_nil || typep(o, CONS))
 #define numberp(o) (typep(o, XINT) || typep(o, XFLOAT))
+#define byte_range_p(x) ((x >= 0) && (x < 256))
+#define bytep(o) (typep(o, XINT) && byte_range_p(o->xint.val))
 
 union s_expr {
   int header;
@@ -69,7 +70,7 @@ extern object object_not;
 extern object object_opt;
 extern object object_quote;
 extern object object_rest;
-extern object object_sint[SINT_MAX];
+extern object object_bytes[];
 extern object object_snbhe;
 extern object object_st;
 extern object object_toplevel;

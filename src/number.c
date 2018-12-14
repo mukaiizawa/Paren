@@ -8,12 +8,6 @@
 #include "gc.h"
 #include "bi.h"
 
-#define FETCH_NUMBER(x) { \
-  x = argv->cons.car; \
-  if (!numberp(x)) return FALSE; \
-  argv = argv->cons.cdr; \
-}
-
 static double double_val(object o)
 {
   if (typep(o, XINT)) return (double)o->xint.val;
@@ -34,7 +28,7 @@ static object new_xint(int64_t val)
 PRIM(number_add)
 {
   object x, y;
-  x = object_sint[0];
+  x = object_bytes[0];
   while (argv != object_nil) {
     FETCH_NUMBER(y);
     if (typep(x, XINT) && typep(y, XINT))
@@ -49,7 +43,7 @@ PRIM(number_add)
 PRIM(number_multiply)
 {
   object x, y;
-  x = object_sint[1];
+  x = object_bytes[1];
   while (argv != object_nil) {
     FETCH_NUMBER(y);
     if (typep(x, XINT) && typep(y, XINT))

@@ -458,10 +458,26 @@
   (+ x -1))
 
 (function even? (x)
+  "xが偶数の場合にtrueを、そうでなければnilを返す。"
   (= (mod x 2) 0))
+(assert (even? 0))
+(assert (even? 2))
+(assert !(even? 3))
 
 (function odd? (x)
+  "xが奇数の場合にtrueを、そうでなければnilを返す。"
   !(even? x))
+(assert !(odd? 0))
+(assert (odd? 1))
+(assert !(odd? 2))
+
+; fixed byte array
+
+(<- ba (byte-array 3))
+(print ([] ba 0 0x16))
+(print ([] ba 1 0x20))
+(print ([] ba 0))
+(print ba)
 
 ; error and exception
 
@@ -502,35 +518,49 @@
 
 ;; global var
 
+(macro class (cls (:opt (super Object) :rest features) :rest vars)
+  (list <- cls (list quote (list :class 'Class
+                                 :name cls
+                                 :super super
+                                 :features features
+                                 :vars vars
+                                 :methods nil))))
+
 (function object? (x)
   "xがオブジェクトの場合trueを、そうでなければnilを返す。
   paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。"
   (and (list? x) (= (car x) :class)))
 
+(function class? (x)
+  "xがクラスの場合trueを、そうでなければnilを返す。"
+  (and (same? (car x) :class)
+       (same? (car (<- x (cddr x))) :name)
+       (same? (car (<- x (cddr x))) :super)
+       (same? (car (<- x (cddr x))) :features)
+       (same? (car (<- x (cddr x))) :vars)
+       (same? (car (<- x (cddr x))) :methods)))
+
 (function instance-of? (o cls)
   "オブジェクトoがclsクラスもしくはそのサブクラスのインスタンスの場合にtrueを返す。
   そうでない場合はnilを返す。"
-  (precondition (object? o))
-  (if (same? cls (. o :class)) true
+  (precondition (and (object? o) (class? cls)))
+  (if (same? (. o :class) (. cls :name)) true
+      (same? (. o :super) nil) nil
       (instance-of? (. o :super) cls)))
+; (assert (instance-of? Class Object))
+; (assert (instance-of? Object Object))
+; (assert !(instance-of? Class String))
 
-(macro class (cls (:opt (super Object) :rest features) :rest vars)
-  (list <- cls (list quote (list :super super
-                                 :features features
-                                 :vars vars
-                                 :methods nil))))
+(function new (c)
+  (precondition (instance-of? c Class))
+                )
 
 (class Object (nil))
 (class Class () :super :features :vars :methods)
-
-(<- x 1)
-(while !(< x 10)
-  (print (<- x (++ x)))
-  (return nil))
+(class Sting () :val)
 
 ; (print Object)
 ; (print Class)
-; (instance-of? '(:class Class) 'Object)
 
 
 ; 実装しなければならないこと

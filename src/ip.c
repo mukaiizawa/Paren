@@ -1113,6 +1113,7 @@ static object eval(object expr)
       case TRY_FRAME: fs_pop(); break;
       default: xassert(FALSE);
     }
+    cycle++;
   }
   return reg[0];
 }

@@ -101,7 +101,7 @@ object gc_new_lambda(object env, object params, object body)
   return new_lambda(env, params, body, FALSE);
 }
 
-object gc_new_sint(int val)
+object gc_new_bytes(int val)
 {
   object o;
   o = gc_alloc(sizeof(struct xint));
@@ -113,8 +113,8 @@ object gc_new_sint(int val)
 
 object gc_new_xint(int val)
 {
-  if (0 <= val && val < SINT_MAX) return gc_new_sint(val);
-  return gc_new_sint(val);
+  if (byte_range_p(val)) return object_bytes[val];
+  return gc_new_bytes(val);
 }
 
 object gc_new_xfloat(double val)

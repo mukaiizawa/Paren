@@ -106,6 +106,19 @@ PRIM(type)
   return TRUE;
 }
 
+PRIM(symbol_to_barray)
+{
+  if (argc != 1) return FALSE;
+  switch (type(argv->cons.car)) {
+    case SYMBOL:
+    case KEYWORD:
+      *result = gc_new_symbol(":keyword");
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
 // should be removed
 PRIM(print)
 {

@@ -15,7 +15,7 @@ object object_not;
 object object_opt;
 object object_quote;
 object object_rest;
-object object_sint[SINT_MAX];
+object object_bytes[256];
 object object_snbhe;
 object object_st;
 object object_toplevel;

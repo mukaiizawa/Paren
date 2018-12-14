@@ -174,7 +174,7 @@ static void make_initial_objects(void)
   object_st = gc_new_symbol("$stack-trace");
   object_toplevel = gc_new_env(object_nil);
   object_true = gc_new_symbol("true");
-  for (i = 0; i < SINT_MAX; i++) object_sint[i] = gc_new_sint(i);
+  for (i = 0; i < 256; i++) object_bytes[i] = gc_new_bytes(i);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
   bind_symbol(object_st, object_nil);

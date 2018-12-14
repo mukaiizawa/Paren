@@ -18,20 +18,22 @@
 #undef PRIM
 
 static char *symbol_name_map[] = {
+  "array_access", "[]",
+  "array_new", "array",
   "assign", "<-",
-  "try", "basic-try",
-  "throw", "basic-throw",
-  "samep", "same?",
+  "barray_new", "byte-array",
+  "barray_to_symbol", "barray->symbol",
   "equalp", "=",
-  "type", "$$type",
   "number_add", "+",
-  "number_multiply", "*",
+  "number_ineger_p", "integer?",
   "number_lt", "<",
   "number_modulo", "mod",
-  "number_ineger_p", "integer?",
-  "array_new", "array",
-  "barray_new", "byte-array",
-  "array_access", "[]",
+  "number_multiply", "*",
+  "samep", "same?",
+  "symbol_to_barray", "symbol->barray",
+  "throw", "basic-throw",
+  "try", "basic-try",
+  "type", "$$type",
   NULL
 };
 

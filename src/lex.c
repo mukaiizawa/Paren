@@ -106,6 +106,7 @@ static int identifier_lead_char_p(void)
   switch (next_ch) {
     case '$': case '%': case '&': case '*': case '+': case '-': case '/':
     case ':': case '<': case '=': case '>': case '?': case '_': case '.':
+    case '[': case ']':
       return TRUE;
     default: return isalpha(next_ch);
   }
