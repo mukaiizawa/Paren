@@ -500,13 +500,6 @@
   (list if (list = test nil)
         (list basic-throw :AssertionFailedException (list quote test))))
 
-; byte-array
-; (array a 3)
-; (byte-array a 3)
-; (print (byte-array 3))
-; (barray-intern)
-; (barray-extern)
-
 ; paren obejct system
 
 ; オブジェクトが持っていなければならない最低限の情報は自身のクラスのみ
