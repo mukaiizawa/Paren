@@ -260,7 +260,7 @@
 (assert (= (.. -1 1 0.5) '(-1 -0.5 0 0.5 1)))
 
 (function adds (l args)
-  "リストlの末尾にリストargsのすべての要素を追加する。
+  "リストlの末尾にリストargsのすべての要素を追加し、lを返す。
   lは破壊的に変更される。"
   (precondition (and (list? l) (list? args)))
   (if (nil? l) args
@@ -269,7 +269,7 @@
 (assert (= (adds nil '(1 2 3)) '(1 2 3)))
 
 (function add (l x)
-  "リストlの末尾に引数xを破壊的に追加する。"
+  "リストlの末尾に引数xを破壊的に追加しlを返す。"
   (precondition (list? l))
   (adds l (list x)))
 (assert (= (add nil 1) '(1)))
@@ -474,11 +474,11 @@
 
 ; fixed byte array
 
-(<- ba (byte-array 3))
-(print ([] ba 0 0x16))
-(print ([] ba 1 0x20))
-(print ([] ba 0))
-(print ba)
+; (<- ba (byte-array 3))
+; (print ([] ba 0 0x16))
+; (print ([] ba 1 0x20))
+; (print ([] ba 0))
+; (print ba)
 
 ; error and exception
 
@@ -512,35 +512,55 @@
 
 ;; global var
 
-(macro class (cls (:opt (super Object) :rest features) :rest vars)
-  (list <- cls (list quote (list :class 'Class
-                                 :name cls
-                                 :super super
-                                 :features features
-                                 :vars vars
-                                 :methods nil))))
+(<- pos._class nil)
+
+; A
+;   B     C
+;     D E   F
+; (A (B (D) (E)) (C (F)))
+
+(function pos._add-class (cls)
+  (assert (and (object? cls) (= (. cls :class) 'Class)))
+  (let (rec (lambda (hierarchy)
+              (if (nil? hierarchy) nil
+                  (= (. cls :super) (. (car hierarchy) :symbol))
+                      (add hierarchy (list cls))
+                  (find-if (cdr hierarchy) rec))))
+    (postcondition (rec pos._class))))
+
+(function pos._find-class (s)
+  (assert (symbol? s))
+  (let (rec (lambda (hierarchy)
+              (if (nil? hierarchy) nil
+                  (= s (. (car hierarchy) :symbol)) (car hierarchy)
+                  (find-if (cdr hierarchy) rec))))
+    (rec pos._class)))
+
+(macro class (cls-sym (:opt (super 'Object) :rest features) :rest vars)
+  (precondition !(pos._find-class cls-sym))
+  (let (Object? (= cls-sym 'Object))
+    (list begin
+          (list <- cls-sym (list quote (list :class 'Class
+                                         :symbol cls-sym
+                                         :super (if (not Object?) super)
+                                         :features features
+                                         :vars vars)))
+          (if Object? (list push 'pos._class cls-sym)
+              (list pos._add-class cls-sym))
+          cls-sym)))
 
 (function object? (x)
   "xがオブジェクトの場合trueを、そうでなければnilを返す。
   paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。"
   (and (list? x) (= (car x) :class)))
 
-(function class? (x)
-  "xがクラスの場合trueを、そうでなければnilを返す。"
-  (and (same? (car x) :class)
-       (same? (car (<- x (cddr x))) :name)
-       (same? (car (<- x (cddr x))) :super)
-       (same? (car (<- x (cddr x))) :features)
-       (same? (car (<- x (cddr x))) :vars)
-       (same? (car (<- x (cddr x))) :methods)))
-
 (function instance-of? (o cls)
   "オブジェクトoがclsクラスもしくはそのサブクラスのインスタンスの場合にtrueを返す。
   そうでない場合はnilを返す。"
-  (precondition (and (object? o) (class? cls)))
-  (if (same? (. o :class) (. cls :name)) true
+  (precondition (and (object? o) (object? cls) (= (. cls :class) 'Class)))
+  (if (same? (. o :class) (. cls :symbol)) true
       (same? (. o :super) nil) nil
-      (instance-of? (. o :super) cls)))
+      (instance-of? (. o :super) (. cls :symbol))))
 ; (assert (instance-of? Class Object))
 ; (assert (instance-of? Object Object))
 ; (assert !(instance-of? Class String))
@@ -551,7 +571,9 @@
 
 (class Object (nil))
 (class Class () :super :features :vars :methods)
-(class Sting () :val)
+(class String () :val)
+
+(print pos._class)
 
 ; (print Object)
 ; (print Class)

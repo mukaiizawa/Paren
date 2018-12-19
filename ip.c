@@ -841,6 +841,7 @@ SPECIAL(begin)
 SPECIAL(macro)
 {
   object params;
+  if (argc < 2) mark_too_few_arguments_exception();
   if (typep(argv->cons.car, SYMBOL)) {
     fs_push(make_bind_frame(argv->cons.car));
     argv = argv->cons.cdr;
@@ -853,6 +854,7 @@ SPECIAL(macro)
 SPECIAL(lambda)
 {
   object params;
+  if (argc < 2) mark_too_few_arguments_exception();
   params = argv->cons.car;
   if (!valid_lambda_list_p(LAMBDA, params))
     mark_illegal_parameter_list_exception();
