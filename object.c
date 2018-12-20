@@ -118,7 +118,7 @@ static void describe_s_expr(object o, struct xbarray *x)
       {
         if (p == object_quote) xbarray_add(x, '\'');
         if (p == object_not) xbarray_add(x, '!');
-        describe_s_expr(o->cons.cdr, x);
+        describe_s_expr(o->cons.cdr->cons.car, x);
       } else {
         xbarray_add(x, '(');
         describe_cons(o, x);
