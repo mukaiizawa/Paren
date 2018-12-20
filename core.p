@@ -32,15 +32,19 @@
 (assert !(or))
 (assert !(or nil))
 (assert (or nil true))
+(assert (= (or 1 2) 1))
 
 (macro and (:rest args)
   "argsを逐次評価し、すべてnil出ない場合にのみ最後に評価した結果を返す。
   逐次評価の過程でnilが得られた場合は後続の評価を中断し即nilを返す。
   ただし、argsがnilの場合はtrueを返す。"
   (if (nil? args) true
-      (list if (car args) (cons and (cdr args)))))
-(assert (and))
-(assert (and true true true))
+      (let (rec (lambda (l)
+                  (if (cdr l) (list if (car l) (rec (cdr l)))
+                      (car l))))
+        (rec args))))
+(assert (same? (and) true))
+(assert (= (and 1 2 3) 3))
 (assert !(and true nil true))
 
 (macro while (test :rest body)
@@ -329,15 +333,43 @@
                   (rec (cons (f (car l) (cadr l)) (cddr l))))))
     (rec (if identity? (cons identity l) l))))
 
+(function find-cons (l e :key (test =) (key identity))
+  "リストlをなすコンスのうち、car部がeに等しいコンスを返す。
+  探索はリストの先頭から順に行われる。
+  該当するコンスが存在しない場合はnilを返す。
+  比較は=で行われ、testで指定された場合はそれを用いる。
+  keyが指定された場合は要素をkey関数で評価した後に比較を行う。"
+  (precondition (list? l))
+  (if (nil? l) nil
+      (test (key (car l)) e) l
+      (find-cons (cdr l) e :test test :key key)))
+(assert (= (find-cons nil true) nil))
+(assert (= (find-cons '(true nil true) nil) '(nil true)))
+(assert (= (find-cons '(1 2 3) 2) '(2 3)))
+(assert (= (find-cons '(1 (2 3) 4) '(2 3)) '((2 3) 4)))
+(assert (= (find-cons '(1 (2 3) 4) '(2 3) :test same?) nil))
+(assert (= (find-cons '((1 :a) (2 :b) (3 :c)) :b :key cadr) '((2 :b) (3 :c))))
+
+(function find-cons-if (l f :key (key identity))
+  "リストlをなすコンスのうち、car部が関数fの引数として評価されたときにnilとならないものを返す。
+  探索はリストの先頭から順に行われる。
+  該当するコンスが存在しない場合はnilを返す。
+  keyが指定された場合はcar部をkey関数で評価した後に比較を行う。"
+  (precondition (list? l))
+  (if (nil? l) nil
+      (f (key (car l))) l
+      (find-cons-if (cdr l) f :key key)))
+(assert (= (find-cons-if nil identity) nil))
+(assert (= (find-cons-if '(1 2 3) (lambda (x) (> x 2))) '(3)))
+(assert (= (find-cons-if '((:a 1)) (lambda (x) (= x :a)) :key car) '((:a 1))))
+
 (function find (l e :key (test =) (key identity))
   "リストlの先頭からeに等しい要素を返す。
   eが存在しない場合はnilを返す。
   比較は=で行われ、testで指定された場合はそれを用いる。
   keyが指定された場合は要素をkey関数で評価した後に比較を行う。"
   (precondition (list? l))
-  (if (nil? l) nil
-      (test (key (car l)) e) (car l)
-      (find (cdr l) e :test test :key key)))
+  (car (find-cons l e :test test :key key)))
 (assert (= (find nil true) nil))
 (assert (= (find '(true nil true) nil) nil))
 (assert (= (find '(1 2 3) 2) 2))
@@ -350,9 +382,7 @@
   該当する要素が存在しない場合はnilを返す。
   keyが指定された場合は要素をkey関数で評価した後に比較を行う。"
   (precondition (list? l))
-  (if (nil? l) nil
-      (f (key (car l))) (car l)
-      (find-if (cdr l) f :key key)))
+  (car (find-cons-if l f :key key)))
 (assert (= (find-if nil identity) nil))
 (assert (= (find-if '(1 2 3) (lambda (x) (> x 2))) 3))
 (assert (= (find-if '((:a 1) (:b 2)) (lambda (x) (= x :b)) :key car) '(:b 2)))
@@ -386,7 +416,7 @@
 (assert !(each-pair-satisfy? '(1 2 3 3 5) <))
 
 ; association list
-;; parenでは、キーワードと任意のS式の対を保持するデータ構造を連想リストという。
+;; parenでは、キーワードと任意のS式の対を保持するリストを連想リストという。
 ;; 探索は線形時間必要になるが、比較はアドレスで行われるため高速。
 ;; 任意のオブジェクトの対応を保持する場合はMapクラスを利用する。
 
@@ -500,105 +530,89 @@
   (list if (list = test nil)
         (list basic-throw :AssertionFailedException (list quote test))))
 
-; paren obejct system
+; paren object system
 
-; オブジェクトが持っていなければならない最低限の情報は自身のクラスのみ
+;; registered classes
+;; <hierarchy> ::= '(' <root_class> <hierarchy> ... ')'
+(<- POS._class nil)
 
-; クラスクラスが持っていなければならない情報は
-;    superclass;
-;    features;
-;    instance_vars;
-;    methods;
-
-;; global var
-
-(<- pos._class nil)
-
-; A
-;   B     C
-;     D E   F
-; (A (B (D) (E)) (C (F)))
-
-(function pos._add-class (cls)
-  (assert (and (object? cls) (= (. cls :class) 'Class)))
+(function POS._find-hierarchy-root (cls-sym)
+  (precondition (symbol? cls-sym))
   (let (rec (lambda (hierarchy)
               (if (nil? hierarchy) nil
-                  (= (. cls :super) (. (car hierarchy) :symbol))
-                      (add hierarchy (list cls))
-                  (find-if (cdr hierarchy) rec))))
-    (postcondition (rec pos._class))))
+                  (= cls-sym (. (car hierarchy) :symbol)) hierarchy
+                  (while (<- hierarchy (cdr hierarchy))
+                    (let (result (rec (car hierarchy)))
+                      (if result (return result)))))))
+    (rec POS._class)))
 
-(function pos._find-class (s)
-  (assert (symbol? s))
-  (let (rec (lambda (hierarchy)
-              (if (nil? hierarchy) nil
-                  (= s (. (car hierarchy) :symbol)) (car hierarchy)
-                  (find-if (cdr hierarchy) rec))))
-    (rec pos._class)))
+(function POS._add-class (cls)
+  (precondition (and (object? cls) (= (. cls :class) 'Class)))
+  (let (super-root (POS._find-hierarchy-root (. cls :super)))
+    (postcondition super-root)
+    (add super-root (list cls))))
+
+(function POS._find-class (cls-sym)
+  (precondition (symbol? cls-sym))
+  (car (POS._find-hierarchy-root cls-sym)))
+
+(function POS._find-method (o method-sym)
+  (precondition (and (object? o) (symbol? method-sym)))
+  (let (find-class-method
+            (lambda (cls)
+              (cadr (find-cons (. cls :methods) method-sym)))
+        find-feature-method
+            (lambda (features)
+              (and features
+                  (or (find-class-method (POS._find-class (car features)))
+                      (find-feature-method (cdr features)))))
+        rec
+            (lambda (cls-sym)
+              (let (cls (POS._find-class cls-sym))
+                (or (find-class-method cls)
+                    (find-feature-method (. cls :features))
+                    (let (super (. cls :super))
+                      (and super (rec super)))))))
+      (or (rec (. o :class)) (basic-throw :MissingMethodException))))
+
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest vars)
-  (precondition !(pos._find-class cls-sym))
+  (precondition !(POS._find-class cls-sym))
   (let (Object? (= cls-sym 'Object))
     (list begin
           (list <- cls-sym (list quote (list :class 'Class
-                                         :symbol cls-sym
-                                         :super (if (not Object?) super)
-                                         :features features
-                                         :vars vars)))
-          (if Object? (list push 'pos._class cls-sym)
-              (list pos._add-class cls-sym))
+                                             :symbol cls-sym
+                                             :super (if (not Object?) super)
+                                             :features features
+                                             :vars vars
+                                             :methods nil)))
+          (if Object? (list push 'POS._class cls-sym)
+              (list POS._add-class cls-sym))
           cls-sym)))
+
+(macro method (cls f args :rest body)
+  (precondition (POS._find-class cls-sym))
+  ; todo
+  )
 
 (function object? (x)
   "xがオブジェクトの場合trueを、そうでなければnilを返す。
   paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。"
   (and (list? x) (= (car x) :class)))
 
-(function instance-of? (o cls)
-  "オブジェクトoがclsクラスもしくはそのサブクラスのインスタンスの場合にtrueを返す。
-  そうでない場合はnilを返す。"
-  (precondition (and (object? o) (object? cls) (= (. cls :class) 'Class)))
-  (if (same? (. o :class) (. cls :symbol)) true
-      (same? (. o :super) nil) nil
-      (instance-of? (. o :super) (. cls :symbol))))
-; (assert (instance-of? Class Object))
-; (assert (instance-of? Object Object))
-; (assert !(instance-of? Class String))
-
-(function new (c)
-  (precondition (instance-of? c Class))
-                )
-
-(class Object (nil))
+(class Object (nil) :class)
 (class Class () :super :features :vars :methods)
 (class String () :val)
+(class XString (Object String) :xval)
+(class YString (XString) :val)
 
-(print pos._class)
-
+(car (last-cons String) '(.xval (lambda (self) (. self :xval))))
+(print (POS._find-method '(:class YString) '.xval))
 ; (print Object)
 ; (print Class)
 
+; (print POS._class)
 
-; 実装しなければならないこと
-;
-
-
-; (macro method () :should-be-implement)
-; (function new () :should-be-implement)
-;
-; (class String ()
-;        "文字列クラス"
-;        _val)
-;
-; (method String .init (val)
-;         (._val this val))
-;
-; (method String ->string ()
-;         this)
-;
-; (method String + (o)
-;         (._val this (barray-add (._val this) (._val (->string o)))))
-;
 ; (class Point ()
 ;        "二次元直交座標クラス"
 ;        x y)
