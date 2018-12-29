@@ -115,6 +115,12 @@
 (assert (symbol? (gensym)))
 (assert (symbol? nil))
 
+(function keyword? (x)
+  "xがキーワードの場合にtrueを、そうでなければnilを返す。"
+  (same? ($$type x) :keyword))
+(assert (keyword? :a))
+(assert !(keyword? nil))
+
 (function function? (x)
   "xが関数の場合にtrueを、そうでなければnilを返す。"
   (same? ($$type x) :lambda))
@@ -504,11 +510,24 @@
 
 ; fixed byte array
 
-; (<- ba (byte-array 3))
-; (print ([] ba 0 0x16))
-; (print ([] ba 1 0x20))
-; (print ([] ba 0))
-; (print ba)
+(function symbol->keyword (s)
+  "シンボルsをキーワードに変換する。"
+  (precondition (symbol? s))
+  (let (sba (symbol->byte-array s)
+        copy-len (array-size sba)
+        kba (byte-array (++ copy-len)))
+    ([] kba 0 0x3a)
+    (byte-array->symbol/keyword (array-copy sba 0 kba 1 copy-len))))
+(assert (same? (symbol->keyword 'a) :a))
+
+(function keyword->symbol (k)
+  "キーワードkをシンボルに変換する。"
+  (precondition (keyword? k))
+  (let (kba (keyword->byte-array k)
+        copy-len (-- (array-size kba))
+        sba (byte-array copy-len))
+    (byte-array->symbol/keyword (array-copy kba 1 sba 0 copy-len))))
+(assert (same? (keyword->symbol :a) 'a))
 
 ; error and exception
 

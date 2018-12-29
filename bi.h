@@ -3,22 +3,24 @@
 #define SPECIAL(name) void special_##name(object env, int argc, object argv)
 #define PRIM(name) int prim_##name(int argc, object argv, object *result)
 
-#define FETCH_NUMBER(x) { \
+#define FETCH_ARG(x) { \
   x = argv->cons.car; \
-  if (!numberp(x)) return FALSE; \
   argv = argv->cons.cdr; \
 }
 
-#define FETCH_INTEGER(x) { \
-  x = argv->cons.car; \
-  if (!typep(x, XINT)) return FALSE; \
-  argv = argv->cons.cdr; \
+#define FETCH_ARG_AS(x, type) { \
+  FETCH_ARG(x); \
+  if (!typep(x, type)) return FALSE; \
+}
+
+#define FETCH_NUMBER(x) { \
+  FETCH_ARG(x); \
+  if (!numberp(x)) return FALSE; \
 }
 
 #define FETCH_BYTE(x) { \
-  x = argv->cons.car; \
+  FETCH_ARG(x); \
   if (!bytep(x)) return FALSE; \
-  argv = argv->cons.cdr; \
 }
 
 extern char *special_name_table[];

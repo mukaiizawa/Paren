@@ -148,6 +148,7 @@ object gc_new_cons(object car, object cdr)
   return o;
 }
 
+// TODO free name?
 object gc_new_symbol(char *name)
 {
   object o;
@@ -164,6 +165,7 @@ object gc_new_symbol(char *name)
 object gc_new_barray(int size)
 {
   object o;
+  xassert(size > 0);
   o = gc_alloc(sizeof(struct barray) + size - 1);
   set_type(o, BARRAY);
   o->barray.size = size;
