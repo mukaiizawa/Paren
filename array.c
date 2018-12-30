@@ -84,10 +84,14 @@ PRIM(array_copy)
 
 PRIM(barray_to_symbol_keyword)
 {
+  char *s;
   object x;
   if (argc != 1) return FALSE;
   FETCH_ARG_AS(x, BARRAY);
-  *result = gc_new_symbol(x->barray.elt);
+  s = xmalloc(x->barray.size + 1);
+  memcpy(s, x->barray.elt, x->barray.size);
+  s[x->barray.size] = '\0';
+  *result = gc_new_symbol(s);
   return TRUE;
 }
 
