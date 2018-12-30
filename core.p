@@ -609,10 +609,15 @@
               (list POS._add-class cls-sym))
           cls-sym)))
 
-(macro method (cls f args :rest body)
+(macro method (cls-sym f args :rest body)
   (precondition (POS._find-class cls-sym))
-  ; todo
-  )
+  (list begin
+        (print (list macro f '(:rest args)
+              (list cons (list 'POS._find-method cls-sym (list quote f)) 'args)))
+        (list . cls-sym :methods
+              (list cons (list quote f)
+                    (list cons (cons lambda (cons (cons 'self args) body))
+                          (list . cls-sym :methods))))))
 
 (function object? (x)
   "xがオブジェクトの場合trueを、そうでなければnilを返す。
@@ -621,16 +626,21 @@
 
 (class Object (nil) :class)
 (class Class () :super :features :vars :methods)
-(class String () :val)
-(class XString (Object String) :xval)
-(class YString (XString) :val)
 
-(car (last-cons String) '(.xval (lambda (self) (. self :xval))))
-(print (POS._find-method '(:class YString) '.xval))
-; (print Object)
-; (print Class)
+(method Class .new ()
+        (let (o nil cls self vars nil)
+          (while cls
+            (<- vars (reverse (copy-list (. cls :vars))))
+            (while vars
+              (push o (if (same? (car vars) :class) (. self :class)))
+              (push o (car vars))
+              (<- vars (cdr vars)))
+            (<- cls (and (. cls :super) (POS._find-class (. cls :super)))))
+          o))
 
-; (print POS._class)
+(print Object)
+(print Class)
+(print (.new Class))
 
 ; (class Point ()
 ;        "二次元直交座標クラス"
