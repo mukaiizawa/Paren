@@ -86,7 +86,7 @@ static void describe_barray(object o, struct xbarray *x)
   xbarray_adds(x, "#b[");
   for (i = 0; i < o->barray.size; i++) {
     if (i != 0) xbarray_add(x, ' ');
-    xbarray_addf(x, "0x%d", (int)(o->barray.elt[i]));
+    xbarray_addf(x, "0x%x", (int)(o->barray.elt[i]));
   }
   xbarray_add(x, ']');
 }
