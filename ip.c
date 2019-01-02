@@ -843,7 +843,7 @@ SPECIAL(macro)
   object params;
   if (argc < 2) mark_too_few_arguments_exception();
   if (typep(argv->cons.car, SYMBOL)) {
-    fs_push(make_bind_frame(argv->cons.car));
+    fs_push(make_bind_propagation_frame(argv->cons.car));
     argv = argv->cons.cdr;
   }
   if (!valid_lambda_list_p(MACRO, params = argv->cons.car))
