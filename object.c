@@ -76,7 +76,7 @@ static void describe_cons(object o, struct xbarray *x)
   while ((o = o->cons.cdr) != object_nil) {
     xbarray_add(x, ' ');
     describe_s_expr(o->cons.car, x);
-    if(x->size > MAX_STR_LEN) return;
+    if (x->size > MAX_STR_LEN) return;
   }
 }
 
@@ -87,6 +87,7 @@ static void describe_barray(object o, struct xbarray *x)
   for (i = 0; i < o->barray.size; i++) {
     if (i != 0) xbarray_add(x, ' ');
     xbarray_addf(x, "0x%x", (int)(o->barray.elt[i]));
+    if (x->size > MAX_STR_LEN) return;
   }
   xbarray_add(x, ']');
 }

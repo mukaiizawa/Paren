@@ -56,6 +56,21 @@
                           (cons (list if (list not test) '(return nil))
                                 (add body '(goto :while))))))))
 
+(macro dolist ((i l) :rest body)
+  "リストlをインデックスiを用いてイテレーションする。nilを返す。
+  returnオペレータを使用するとdolistを指定した値を返却して処理を終了する。"
+  (precondition (symbol? i))
+  (let (gl (gensym))
+    (list (list lambda ()
+                (list <- gl l)
+                (cons labels
+                      (cons :dolist
+                            (cons (list if (list not gl) '(return nil))
+                                  (cons (list <- i (list car gl))
+                                        (adds body
+                                              (list (list <- gl (list cdr gl))
+                                                    '(goto :dolist)))))))))))
+
 ; fundamental function
 
 (function identity (x)
@@ -237,12 +252,14 @@
   (if (nil? l) nil
       (let (rec (lambda (l) (if (cdr l) (rec (cdr l)) l)))
         (rec l))))
+(assert (= (last-cons nil) nil))
 (assert (= (last-cons '(1 2 3)) '(3)))
 
 (function last (l)
   "リストlの最後の要素を返す。"
   (precondition (list? l))
   (car (last-cons l)))
+(assert (= (last nil) nil))
 (assert (= (last '(1 2 3)) 3))
 
 (function length (l)
@@ -270,28 +287,30 @@
 (assert (= (.. -1 1 0.5) '(-1 -0.5 0 0.5 1)))
 
 (function adds (l args)
-  "リストlの末尾にリストargsのすべての要素を追加し、lを返す。
-  lは破壊的に変更される。"
+  "リストlの末尾にリストargsのすべての要素を追加したようなリストを返す。"
   (precondition (and (list? l) (list? args)))
   (if (nil? l) args
-      (begin (cdr (last-cons l) args) l)))
+      (let (result (copy-list l))
+        (cdr (last-cons result) args)
+        result)))
 (assert (= (adds '(1) '(2 3 4)) '(1 2 3 4)))
 (assert (= (adds nil '(1 2 3)) '(1 2 3)))
 
 (function add (l x)
-  "リストlの末尾に引数xを破壊的に追加しlを返す。"
+  "リストlの末尾に引数xが追加されたようなリストを返す。"
   (precondition (list? l))
   (adds l (list x)))
 (assert (= (add nil 1) '(1)))
 (assert (= (add '(1) '(2 3 4)) '(1 (2 3 4))))
 
 (macro push (sym x)
-  "シンボルsymを束縛しているリストの先頭に破壊的にxを追加する。"
+  "シンボルsymを束縛しているリストの先頭に破壊的にxを追加する。
+  式としてxを返す。"
   (precondition (symbol? sym))
   (list begin
         (list precondition (list list? sym))
         (list <- sym (list cons x sym))
-        :SideEffects))
+        x))
 (assert (= (begin (<- l nil) (push l 1) (push l 2) l) '(2 1)))
 
 (macro pop (sym)
@@ -308,8 +327,8 @@
   (precondition (list? l))
   (let (acc nil rec (lambda (x)
                       (if (nil? x) (reverse acc)
-                          (atom? x) (push acc x)
-                          (nil? (car x)) (push acc nil)
+                          (atom? x) (begin (push acc x) acc)
+                          (nil? (car x)) (begin (push acc nil) acc)
                           (begin (rec (car x))) (rec (cdr x)))))
     (rec l)))
 (assert (= (flatten '(1 (2) (3 4))) '(1 2 3 4)))
@@ -414,7 +433,7 @@
 (assert !(any-satisfy? '(:a :b :c) number?))
 
 (function each-pair-satisfy? (l f)
-  "リストの隣接するすべての二要素に対して二変数関数fの評価が真か否か返す。"
+  "リストの隣接するすべての二要素に対して二変数関数fの評価がnil以外の場合は"
   ; (precondition (and (list? l) (function? f)))
   (if (nil? (cdr l)) true
       (and (f (car l) (cadr l)) (each-pair-satisfy? (cdr l) f))))
@@ -551,32 +570,17 @@
 
 ; paren object system
 
-;; registered classes
-;; <hierarchy> ::= '(' <root_class> <hierarchy> ... ')'
 (<- POS._class nil)
 
-(function POS._find-hierarchy-root (cls-sym)
-  (precondition (symbol? cls-sym))
-  (let (rec (lambda (hierarchy)
-              (if (nil? hierarchy) nil
-                  (= cls-sym (. (car hierarchy) :symbol)) hierarchy
-                  (while (<- hierarchy (cdr hierarchy))
-                    (let (result (rec (car hierarchy)))
-                      (if result (return result)))))))
-    (rec POS._class)))
-
-(function POS._add-class (cls)
-  (precondition (and (object? cls) (= (. cls :class) 'Class)))
-  (let (super-root (POS._find-hierarchy-root (. cls :super)))
-    (postcondition super-root)
-    (add super-root (list cls))))
+(function POS._registered? (cls-sym)
+  (find POS._class cls-sym))
 
 (function POS._find-class (cls-sym)
-  (precondition (symbol? cls-sym))
-  (car (POS._find-hierarchy-root cls-sym)))
+  (precondition (and (symbol? cls-sym) (POS._registered? cls-sym)))
+  (. POS._class cls-sym))
 
-(function POS._find-method (o method-sym)
-  (precondition (and (object? o) (symbol? method-sym)))
+(function POS._find-method (cls-sym method-sym)
+  (precondition (and (symbol? cls-sym) (symbol? method-sym)))
   (let (find-class-method
             (lambda (cls)
               (cadr (find-cons (. cls :methods) method-sym)))
@@ -586,80 +590,113 @@
                   (or (find-class-method (POS._find-class (car features)))
                       (find-feature-method (cdr features)))))
         rec
-            (lambda (cls-sym)
-              (let (cls (POS._find-class cls-sym))
+            (lambda (cls)
                 (or (find-class-method cls)
                     (find-feature-method (. cls :features))
                     (let (super (. cls :super))
-                      (and super (rec super)))))))
-      (or (rec (. o :class)) (basic-throw :MissingMethodException))))
+                      (and super (rec (POS._find-class super)))))))
+    (or (rec (POS._find-class cls-sym)) (basic-throw :MissingMethodException))))
 
+(macro POS._make-accesser (cls-sym var)
+  (let (sba (keyword->byte-array var)
+        copy-len (-- (array-size sba))
+        ba (byte-array (++ copy-len))
+        val (gensym)
+        val? (gensym))
+    ([] ba 0 0x2e)
+    (list method cls-sym (byte-array->symbol/keyword
+                           (array-copy sba 1 ba 1 copy-len))
+          (list :opt (list val nil val?))
+          (list if val? (list '. 'self var val)
+              (list '. 'self var)))))
+
+(macro POS._make-method-dispatcher (method-sym)
+  (let (args (gensym))
+    (list macro method-sym (list :rest args)
+          (list cons (list 'list 'POS._find-method
+                           (list 'list '. (list car args) :class)
+                           (list quote (list quote method-sym)))
+                args))))
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest vars)
-  (precondition !(POS._find-class cls-sym))
+  (precondition (and (all-satisfy? vars keyword?) !(POS._registered? cls-sym)))
   (let (Object? (= cls-sym 'Object))
-    (list begin
-          (list <- cls-sym (list quote (list :class 'Class
-                                             :symbol cls-sym
-                                             :super (if (not Object?) super)
-                                             :features features
-                                             :vars vars
-                                             :methods nil)))
-          (if Object? (list push 'POS._class cls-sym)
-              (list POS._add-class cls-sym))
-          cls-sym)))
+    (adds
+      (list begin0
+            (list quote cls-sym)
+            (list <- cls-sym (list quote (list :class 'Class
+                                               :symbol cls-sym
+                                               :super (if (not Object?) super)
+                                               :features features
+                                               :vars vars
+                                               :methods nil)))
+            (list 'push 'POS._class cls-sym)
+            (list 'push 'POS._class (list quote cls-sym)))
+      (map vars (lambda (var)
+                  (list 'POS._make-accesser cls-sym var))))))
 
-(macro method (cls-sym f args :rest body)
-  (precondition (POS._find-class cls-sym))
+(macro method (cls-sym method-sym args :rest body)
+  (precondition (POS._registered? cls-sym))
   (list begin
-        (print (list macro f '(:rest args)
-              (list cons (list 'POS._find-method cls-sym (list quote f)) 'args)))
+        (list POS._make-method-dispatcher method-sym)
         (list . cls-sym :methods
-              (list cons (list quote f)
+              (list cons (list quote method-sym)
                     (list cons (cons lambda (cons (cons 'self args) body))
-                          (list . cls-sym :methods))))))
+                          (list '. cls-sym :methods))))))
 
 (function object? (x)
   "xがオブジェクトの場合trueを、そうでなければnilを返す。
   paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。"
   (and (list? x) (= (car x) :class)))
 
-(class Object (nil) :class)
-(class Class () :super :features :vars :methods)
+(function is-a? (o cls)
+  "xがclsクラスのインスタンスの場合trueを、そうでなければnilを返す。"
+  (precondition (and (object? o) (object? cls)))
+  (let (rec (lambda (o-cls cls)
+              (or (same? o-cls (. cls :symbol))
+                  (let (super (. cls :super))
+                    (and super (rec o-cls (POS._find-class super)))))))
+    (rec (. o :class) cls)))
+
+
+(class Object () :class)
+
+(method Object .equal? (o)
+  "レシーバとoが同一オブジェクトの場合にtrueを、"
+  (same? self o))
+
+(class Class () :symbol :super :features :vars :methods)
 
 (method Class .new ()
-        (let (o nil cls self vars nil)
-          (while cls
-            (<- vars (reverse (copy-list (. cls :vars))))
-            (while vars
-              (push o (if (same? (car vars) :class) (. self :class)))
-              (push o (car vars))
-              (<- vars (cdr vars)))
-            (<- cls (and (. cls :super) (POS._find-class (. cls :super)))))
-          o))
+  (let (o nil cls self vars nil)
+    (while cls
+      (<- vars (reverse (copy-list (. cls :vars))))
+      (while vars
+        (push o (if (same? (car vars) :class) (. self :symbol)))
+        (push o (car vars))
+        (<- vars (cdr vars)))
+      (<- cls (and (. cls :super) (POS._find-class (. cls :super)))))
+    o))
 
-(print Object)
-(print Class)
-(print (.new Class))
+(class Point ()
+  "二次元直交座標クラス
+  このクラスのオブジェクトはイミュータブルである。"
+  :x :y)
 
-; (class Point ()
-;        "二次元直交座標クラス"
-;        x y)
-;
-; (method Point .init (:key (x 0) (y 0))
-;         (.x this x)
-;         (.y this y)
-;         this)
-;
-; (method Point ->string ()
-;         (+ "(" (.x this)  "," (.y this) ")"))
-;
-; (method Point + (p)
-;         (.init (new Point)
-;                :x (+ (.x this) (.x p))
-;                :y (+ (.y this) (.y p))))
-;
-; (<- p (.init (new Point) :x 1 :y 2)
-;     q (.init (new Point) :x 3 :y 4))
-;
-; (->string (+ p q))
+(method Point .init (:key (x 0) (y 0))
+  (.x self x)
+  (.y self y)
+  self)
+
+(method Point .equal? (p)
+  (precondition (is-a? p Point))
+  (and (= (.x self) (.x p)) (= (.y self) (.y p))))
+(assert (.equal? (.init (.new Point)) (.init (.new Point))))
+(assert !(.equal? (.init (.new Point)) (.init (.new Point) :x 1 :y 2)))
+
+(method Point .add (p)
+  (precondition (is-a? p Point))
+  (.init (.new Point)
+         :x (+ (.x self) (.x p))
+         :y (+ (.y self) (.y p))))
+(assert (.equal? (.add (.init (.new Point) :x 1) (.init (.new Point) :y 1)) (.init (.new Point) :x 1 :y 1)))
