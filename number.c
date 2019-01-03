@@ -1,8 +1,9 @@
 // number
 
+#include "std.h"
+
 #include <math.h>
 
-#include "std.h"
 #include "xsplay.h"
 #include "object.h"
 #include "gc.h"

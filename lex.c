@@ -1,8 +1,9 @@
 // lexical analysis
 
+#include "std.h"
+
 #include <ctype.h>
 
-#include "std.h"
 #include "lex.h"
 
 struct xbarray lex_str;

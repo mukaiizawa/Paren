@@ -569,7 +569,6 @@
         (list basic-throw :AssertionFailedException (list quote test))))
 
 ; paren object system
-
 (<- POS._class nil)
 
 (function POS._registered? (cls-sym)
@@ -618,8 +617,9 @@
                            (list quote (list quote method-sym)))
                 args))))
 
-(macro class (cls-sym (:opt (super 'Object) :rest features) :rest vars)
-  (precondition (and (all-satisfy? vars keyword?) !(POS._registered? cls-sym)))
+(macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
+  (precondition (and (all-satisfy? fields keyword?)
+                     !(POS._registered? cls-sym)))
   (let (Object? (= cls-sym 'Object))
     (adds
       (list begin0
@@ -628,11 +628,11 @@
                                                :symbol cls-sym
                                                :super (if (not Object?) super)
                                                :features features
-                                               :vars vars
+                                               :fields fields
                                                :methods nil)))
             (list 'push 'POS._class cls-sym)
             (list 'push 'POS._class (list quote cls-sym)))
-      (map vars (lambda (var)
+      (map fields (lambda (var)
                   (list 'POS._make-accesser cls-sym var))))))
 
 (macro method (cls-sym method-sym args :rest body)
@@ -643,6 +643,14 @@
               (list cons (list quote method-sym)
                     (list cons (cons lambda (cons (cons 'self args) body))
                           (list '. cls-sym :methods))))))
+
+(macro feature (f-sym)
+  "フィーチャーはクラスを横断して共通のメソッドを定義する仕組みである。
+  フィーチャーを割り当てられたクラスはクラスで定義されたメソッドの他に、フィーチャーで定義されたメソッドを実行できる。
+  クラスに同名のメソッドがあればクラスのメソッドが優先して実行される。
+  スーパークラスに同名のメソッドがあった場合はフィーチャーのメソッドが優先される。"
+  (precondition (symbol? f-sym))
+  (list class f-sym (list 'Feature)))
 
 (function object? (x)
   "xがオブジェクトの場合trueを、そうでなければnilを返す。
@@ -659,22 +667,46 @@
     (rec (. o :class) cls)))
 
 
-(class Object () :class)
+(class Object ()
+  "唯一スーパークラスを持たない、クラス階層の最上位クラス。
+  スーパークラスを指定しない場合は暗黙的にObjectクラスを継承する。"
+  :class)
 
 (method Object .equal? (o)
-  "レシーバとoが同一オブジェクトの場合にtrueを、"
+  "レシーバとoが同一オブジェクトの場合にtrueを、そうでなければnilを返す。
+  サブクラスで同等性を定義する場合はこのメソッドをオーバーロードする。"
   (same? self o))
 
-(class Class () :symbol :super :features :vars :methods)
+(class Class ()
+  "レシーバとoが同一オブジェクトの場合にtrueを、"
+  :symbol :super :features :fields :methods)
 
 (method Class .new ()
-  (let (o nil cls self vars nil)
+  (let (o nil cls self fields nil)
     (while cls
-      (<- vars (reverse (copy-list (. cls :vars))))
-      (while vars
-        (push o (if (same? (car vars) :class) (. self :symbol)))
-        (push o (car vars))
-        (<- vars (cdr vars)))
+      (<- fields (reverse (copy-list (. cls :fields))))
+      (while fields
+        (push o (if (same? (car fields) :class) (. self :symbol)))
+        (push o (car fields))
+        (<- fields (cdr fields)))
       (<- cls (and (. cls :super) (POS._find-class (. cls :super)))))
     o))
 
+(class Feature (Class)
+  "フィーチャーの基底クラス。
+  すべてのフィーチャーはこのクラスを継承しなければならない。")
+
+(class OS ()
+  "OSクラス。
+  ファイルのオープンなどオペレーティングシステムに関する情報を扱う。
+  基本的にインスタンスを生成することはせずに、グローバルシンボルのosを参照する。")
+
+(<- os (.new OS)
+    OS._fp-list nil
+    OS.stdin nil
+    OS.stdout nil)
+
+; (method OS .fp ()
+;   )
+; (<- OS.stdin (.fp os 0)
+;     OS.stdout (.fp os 1))
