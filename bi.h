@@ -28,3 +28,6 @@ extern char *prim_name_table[];
 extern void (*special_table[])(object env, int argc, object argv);
 extern int (*prim_table[])(int argc, object argv, object *result);
 extern char *bi_as_symbol_name(char *name);
+
+extern double bi_double_val(object o);
+extern object bi_xint(int64_t val);

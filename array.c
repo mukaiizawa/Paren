@@ -13,7 +13,7 @@ PRIM(array_size)
   FETCH_ARG(x);
   switch (type(x)) {
     case BARRAY:
-      *result = gc_new_xint(x->barray.size);
+      *result = bi_xint(x->barray.size);
       return TRUE;
     default:
       return FALSE;

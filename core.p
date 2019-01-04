@@ -706,7 +706,14 @@
     OS.stdin nil
     OS.stdout nil)
 
-; (method OS .fp ()
-;   )
-; (<- OS.stdin (.fp os 0)
-;     OS.stdout (.fp os 1))
+(method OS .fp (fd)
+  (OS._fp fd))
+
+(method OS .fopen (file-name mode)
+  (push OS._fp-list (OS._fopen fn mode)))
+
+(method OS .fgetc (file-name mode)
+  (push OS._fp-list (OS._fopen fn mode)))
+
+(<- OS.stdin (.fp os 0)
+    OS.stdout (.fp os 1))

@@ -31,6 +31,8 @@ static char *symbol_name_map[] = {
   "number_lt", "<",
   "number_modulo", "mod",
   "number_multiply", "*",
+  "os_fp", "OS._fp",
+  "os_fopen", "OS._fopen",
   "samep", "same?",
   "symbol_to_barray", "symbol->byte-array",
   "throw", "basic-throw",
@@ -75,3 +77,26 @@ char *bi_as_symbol_name(char *name)
     if (strcmp(name, symbol_name_map[i]) == 0) return symbol_name_map[i + 1];
   return name;
 }
+
+double bi_double_val(object o)
+{
+  xassert(o != NULL);
+  switch (type(o)) {
+    case XINT: return (double)o->xint.val;
+    case XFLOAT: return o->xfloat.val;
+    default: xerror("illegal state");
+  }
+  return -1;
+}
+
+object bi_xint(int64_t val)
+{
+  if (XINT_MIN <= val && val <= XINT_MAX) return gc_new_xint(val);
+  return gc_new_xfloat((double)val);
+}
+
+// object bi_intptr_val(int64_t val)
+// {
+//   if (XINT_MIN <= val && val <= XINT_MAX) return gc_new_xint(val);
+//   return gc_new_xfloat((double)val);
+// }
