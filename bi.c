@@ -27,7 +27,6 @@ static char *symbol_name_map[] = {
   "equalp", "=",
   "keyword_to_barray", "keyword->byte-array",
   "number_add", "+",
-  "number_ineger_p", "integer?",
   "number_lt", "<",
   "number_modulo", "mod",
   "number_multiply", "*",
@@ -78,25 +77,24 @@ char *bi_as_symbol_name(char *name)
   return name;
 }
 
-double bi_double_val(object o)
-{
-  xassert(o != NULL);
-  switch (type(o)) {
-    case XINT: return (double)o->xint.val;
-    case XFLOAT: return o->xfloat.val;
-    default: xerror("illegal state");
-  }
-  return -1;
+int bi_int64(object o, int64_t *p) {
+  if (!typep(o, XINT)) return FALSE;
+  *p = o->xint.val;
+  return TRUE;
 }
 
-object bi_xint(int64_t val)
-{
-  if (XINT_MIN <= val && val <= XINT_MAX) return gc_new_xint(val);
-  return gc_new_xfloat((double)val);
+int bi_intptr(object o, intptr_t *p) {
+  int64_t i;
+  if (!bi_int64(o, &i)) return FALSE;
+  if (i < INTPTR_MIN || i > INTPTR_MAX) return FALSE;
+  *p = (intptr_t)i;
+  return TRUE;
 }
 
-// object bi_intptr_val(int64_t val)
-// {
-//   if (XINT_MIN <= val && val <= XINT_MAX) return gc_new_xint(val);
-//   return gc_new_xfloat((double)val);
-// }
+int bi_double(object o, double *p) {
+  int64_t i;
+  if (bi_int64(o, &i)) *p = (double)i;
+  else if (typep(o, XFLOAT)) *p = o->xfloat.val;
+  else return FALSE;
+  return TRUE;
+}

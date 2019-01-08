@@ -223,6 +223,7 @@
       (= n 0) l
       :default (nthcdr (cdr l) (-- n))))
 (assert (= (nthcdr '(1 2 3) 1) '(2 3)))
+(assert (= (nthcdr '(1 2 3) 3) nil))
 
 (function sublist (l s :opt e)
   "リストlのs番目からe - 1番目までを要素に持つ部分リストを返す。

@@ -7,7 +7,7 @@ lex.o: lex.c xbarray.h lex.h config.h std.h
 list.o: list.c bi.h gc.h object.h xsplay.h config.h std.h
 number.o: number.c bi.h gc.h object.h xsplay.h config.h std.h
 object.o: object.c object.h xsplay.h xbarray.h xarray.h config.h std.h
-os.o: os.c bi.h gc.h object.h xsplay.h pf.h config.h std.h
+os.o: os.c pf.h bi.h gc.h object.h xsplay.h xbarray.h config.h std.h
 paren.o: paren.c bi.h ip.h gc.h xbarray.h lex.h object.h xarray.h xsplay.h xgetopt.h config.h std.h
 pf.o: pf.c pf.h xbarray.h config.h std.h
 std.o: std.c config.h std.h

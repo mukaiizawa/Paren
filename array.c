@@ -10,10 +10,9 @@ PRIM(array_size)
 {
   object x;
   if (argc != 1) return FALSE;
-  FETCH_ARG(x);
-  switch (type(x)) {
+  switch (type(x = argv->cons.car)) {
     case BARRAY:
-      *result = bi_xint(x->barray.size);
+      *result = gc_new_xint(x->barray.size);
       return TRUE;
     default:
       return FALSE;
@@ -23,29 +22,26 @@ PRIM(array_size)
 
 PRIM(barray_new)
 {
-  object x;
+  int64_t size;
   if (argc != 1) return FALSE;
-  FETCH_ARG_AS(x, XINT);
-  *result = gc_new_barray(x->xint.val);
+  if (!bi_int64(argv->cons.car, &size)) return FALSE;
+  *result = gc_new_barray(size);
   return TRUE;
 }
 
-// refer/assign
 PRIM(array_access)
 {
-  int i;
-  object a, k, v;
+  int64_t i;
+  object a, v;
   if (argc < 2 || argc > 3) return FALSE;
   a = argv->cons.car;
-  argv = argv->cons.cdr;
-  FETCH_ARG_AS(k, XINT);
-  i = k->xint.val;
+  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &i))  return FALSE;
   switch (type(a)) {
     case BARRAY:
       if (i < 0 || i >= a->barray.size) return FALSE;
       if (argc == 2) *result = object_bytes[(int)(a->barray.elt[i])];
       else {
-        FETCH_BYTE(v);
+        if (!bytep(v = argv->cons.cdr->cons.car)) return FALSE;
         a->barray.elt[i] = v->xint.val;
         *result = v;
       }
@@ -57,18 +53,15 @@ PRIM(array_access)
 
 PRIM(array_copy)
 {
-  int fp, tp, size;
-  object from, ofp, to, otp, osize;
+  int64_t fp, tp, size;
+  object from, to;
   if (argc != 5) return FALSE;
-  FETCH_ARG(from);
-  FETCH_ARG_AS(ofp, XINT);
-  FETCH_ARG(to);
+  from = argv->cons.car;
+  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &fp))  return FALSE;
+  to = (argv = argv->cons.cdr)->cons.car;
   if (type(from) != type(to)) return FALSE;
-  FETCH_ARG_AS(otp, XINT);
-  FETCH_ARG_AS(osize, XINT);
-  fp = ofp->xint.val;
-  tp = otp->xint.val;
-  size = osize->xint.val;
+  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &tp))  return FALSE;
+  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &size))  return FALSE;
   switch (type(from)) {
     case BARRAY:
       if (fp < 0 || tp < 0 || size <= 0) return FALSE;
@@ -87,7 +80,7 @@ PRIM(barray_to_symbol_keyword)
   char *s;
   object x;
   if (argc != 1) return FALSE;
-  FETCH_ARG_AS(x, BARRAY);
+  if (!typep(x = argv->cons.car, BARRAY)) return FALSE;
   s = xmalloc(x->barray.size + 1);
   memcpy(s, x->barray.elt, x->barray.size);
   s[x->barray.size] = '\0';
@@ -100,7 +93,7 @@ PRIM(barray_to_symbol_keyword)
   int size; \
   object x; \
   if (argc != 1) return FALSE; \
-  FETCH_ARG_AS(x, type); \
+  if (!typep(x = argv->cons.car, type)) return FALSE; \
   *result = gc_new_barray(size = strlen(x->symbol.name)); \
   memcpy((*result)->barray.elt, x->symbol.name, size); \
   return TRUE; \

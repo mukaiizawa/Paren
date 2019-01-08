@@ -14,15 +14,12 @@ typedef union s_expr *object;
 #define   KEYWORD  0x0080
 #define   BARRAY   0x0100
 
-#define XINT_MAX 0x3fffffff
-#define XINT_MIN (- XINT_MAX - 1)
-
 #define type(o) ((o)->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
 #define listp(o) (o == object_nil || typep(o, CONS))
 #define numberp(o) (typep(o, XINT) || typep(o, XFLOAT))
 #define byte_range_p(x) ((x >= 0) && (x < 256))
-#define bytep(o) (typep(o, XINT) && byte_range_p(o->xint.val))
+#define bytep(o) (typep(o, XINT) && byte_range_p((o)->xint.val))
 
 union s_expr {
   int header;
