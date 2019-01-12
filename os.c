@@ -49,3 +49,17 @@ PRIM(os_fopen)
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;
 }
+
+PRIM(os_fgetc)
+{
+  int ch;
+  FILE *fp;
+  if (!bi_intptr(argv->cons.car,(intptr_t *)&fp)) return FALSE;
+  ch = fgetc(fp);
+  if (ch == EOF && ferror(fp)) {
+    clearerr(fp);
+    return FALSE;
+  }
+  *result = gc_new_xint(ch);
+  return TRUE;
+}
