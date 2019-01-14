@@ -41,6 +41,7 @@ PRIM(os_fopen)
   int64_t mode;
   FILE *fp;
   object ofn;
+  if (argc != 2) return FALSE;
   if (!typep(ofn = argv->cons.car, BARRAY)) return FALSE;
   fn = ofn->barray.elt;
   if (!bi_int64((argv = argv->cons.cdr)->cons.car, &mode)) return FALSE;
@@ -54,6 +55,7 @@ PRIM(os_fgetc)
 {
   int ch;
   FILE *fp;
+  if (argc != 1) return FALSE;
   if (!bi_intptr(argv->cons.car,(intptr_t *)&fp)) return FALSE;
   ch = fgetc(fp);
   if (ch == EOF && ferror(fp)) {
@@ -61,5 +63,16 @@ PRIM(os_fgetc)
     return FALSE;
   }
   *result = gc_new_xint(ch);
+  return TRUE;
+}
+
+PRIM(os_fputc)
+{
+  int64_t byte;
+  FILE *fp;
+  if (argc != 2) return FALSE;
+  if (!bi_int64(argv->cons.car, &byte) || !byte_range_p(byte)) return FALSE;
+  if (!bi_intptr(argv->cons.cdr->cons.car,(intptr_t *)&fp)) return FALSE;
+  if (fputc((int)byte, fp) == EOF) return FALSE;
   return TRUE;
 }

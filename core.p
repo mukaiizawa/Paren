@@ -716,5 +716,13 @@
 (method OS .fgetc (fp)
   (OS._fgetc fp))
 
+(method OS .fputc (byte fp)
+  (OS._fputc byte fp))
+
 (<- OS.stdin (.fp os 0)
     OS.stdout (.fp os 1))
+
+(<- i 40)
+(while (< (<- i (++ i)) 0x7f)
+  (.fputc os i OS.stdout)
+  (.fputc os 0x0a OS.stdout))
