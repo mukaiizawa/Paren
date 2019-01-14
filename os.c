@@ -76,3 +76,21 @@ PRIM(os_fputc)
   if (fputc((int)byte, fp) == EOF) return FALSE;
   return TRUE;
 }
+
+PRIM(os_fgets)
+{
+  char *s;
+  FILE *fp;
+  struct xbarray x;
+  if (argc != 1) return FALSE;
+  if(!bi_intptr(argv->cons.car,(intptr_t *)&fp)) return FALSE;
+  xbarray_init(&x);
+  s = xbarray_fgets(&x, fp);
+  if (s == NULL) *result = object_nil;
+  else {
+    *result = gc_new_barray(x.size--); // remove NUL
+    memcpy((*result)->barray.elt, x.elt, x.size);
+  }
+  xbarray_free(&x);
+  return TRUE;
+}

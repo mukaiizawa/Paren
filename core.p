@@ -703,9 +703,7 @@
   基本的にインスタンスを生成することはせずに、グローバルシンボルのosを参照する。")
 
 (<- os (.new OS)
-    OS._fp-list nil
-    OS.stdin nil
-    OS.stdout nil)
+    OS._fp-list nil)
 
 (method OS .fp (fd)
   (OS._fp fd))
@@ -716,13 +714,14 @@
 (method OS .fgetc (fp)
   (OS._fgetc fp))
 
+(method OS .fgets (fp)
+  (OS._fgets fp))
+
 (method OS .fputc (byte fp)
   (OS._fputc byte fp))
 
-(<- OS.stdin (.fp os 0)
-    OS.stdout (.fp os 1))
-
-(<- i 40)
-(while (< (<- i (++ i)) 0x7f)
-  (.fputc os i OS.stdout)
-  (.fputc os 0x0a OS.stdout))
+; 入出力
+(<- $stdin (.fp os 0)
+    $stdout (.fp os 1)
+    $in $stdin
+    $out $stdout)

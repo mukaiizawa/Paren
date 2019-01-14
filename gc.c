@@ -52,7 +52,7 @@ static int byte_size(object o)
     case XINT: return sizeof(struct xint);
     case XFLOAT: return sizeof(struct xfloat);
     case SYMBOL: case KEYWORD: return sizeof(struct symbol);
-    default: xerror("illegal object");
+    default: xassert(FALSE);
   }
   return -1;
 }
