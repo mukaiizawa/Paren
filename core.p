@@ -720,7 +720,7 @@
 (method OS .fputc (byte fp)
   (OS._fputc byte fp))
 
-; 入出力
+; I/O
 (<- $stdin (.fp os 0)
     $stdout (.fp os 1)
     $in $stdin
