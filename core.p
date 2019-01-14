@@ -88,14 +88,14 @@
 
 (macro nil? (x)
   "式(not x)に等価。"
-  (list not x))
+  (list 'not x))
 (assert (nil? (nil? true)))
 (assert (nil? nil))
 (assert !(nil? true))
 
 (function cons? (x)
   "xがコンスの場合はtrueを、そうでなければnilを返す。"
-  (same? ($$type x) :cons))
+  !(atom? x))
 (assert !(cons? 1))
 (assert !(cons? nil))
 (assert (cons? '(1)))
@@ -106,44 +106,6 @@
 (assert !(list? 1))
 (assert (list? nil))
 (assert (list? '(1)))
-
-(function atom? (x)
-  "xがアトムの場合にtrueを、そうでなければnilを返す。"
-  !(cons? x))
-(assert (atom? 1))
-(assert (atom? nil))
-(assert !(atom? '(1)))
-
-(function number? (x)
-  "xが数値の場合にtrueを、そうでなければnilを返す。"
-  (same? ($$type x) :number))
-(assert !(number? nil))
-(assert !(number? (lambda (x) x)))
-(assert (number? 3.14))
-(assert (number? 0x20))
-
-(function symbol? (x)
-  "xがシンボルの場合にtrueを、そうでなければnilを返す。"
-  (same? ($$type x) :symbol))
-(assert !(symbol? (lambda (x) x)))
-(assert !(symbol? 3.14))
-(assert (symbol? (gensym)))
-(assert (symbol? nil))
-
-(function keyword? (x)
-  "xがキーワードの場合にtrueを、そうでなければnilを返す。"
-  (same? ($$type x) :keyword))
-(assert (keyword? :a))
-(assert !(keyword? nil))
-
-(function function? (x)
-  "xが関数の場合にtrueを、そうでなければnilを返す。"
-  (same? ($$type x) :lambda))
-(assert !(function? 3.14))
-(assert !(function? (macro (x) x)))
-; todo (assert (function? car))
-(assert (function? function?))
-(assert (function? (lambda (x) x)))
 
 (<- caar (lambda (x) (car (car x)))
     cadr (lambda (x) (car (cdr x)))
@@ -416,7 +378,7 @@
 (function all-satisfy? (l f)
   "リストlのすべての要素が関数fの引数として評価したときに、nilでない値を返す場合にtrueを返す。
   そうでなければnilを返す。"
-  (precondition (and (list? l) (function? f)))
+  (precondition (and (list? l) (operator? f)))
   (if (nil? l) true
       (and (f (car l)) (all-satisfy? (cdr l) f))))
 (assert (all-satisfy? nil cons?))
@@ -427,7 +389,7 @@
   "リストlのいずれかの要素が関数fの引数として評価したときにnil以外の値を返す場合はtrueを返す。
   そうでなければnilを返す。
   なお、lが空の場合はnilを返す。"
-  ; (precondition (and (list? l) (function? f)))
+  (precondition (and (list? l) (operator? f)))
   (if l (or (f (car l)) (any-satisfy? (cdr l) f))))
 (assert !(any-satisfy? nil number?))
 (assert (any-satisfy? '(1 2 3 4 5) number?))
@@ -435,7 +397,7 @@
 
 (function each-pair-satisfy? (l f)
   "リストの隣接するすべての二要素に対して二変数関数fの評価がnil以外の場合は"
-  ; (precondition (and (list? l) (function? f)))
+  (precondition (and (list? l) (operator? f)))
   (if (nil? (cdr l)) true
       (and (f (car l) (cadr l)) (each-pair-satisfy? (cdr l) f))))
 (assert (each-pair-satisfy? '(1 2 3 4 5) <))
@@ -725,3 +687,4 @@
     $stdout (.fp os 1)
     $in $stdin
     $out $stdout)
+
