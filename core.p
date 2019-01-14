@@ -713,8 +713,8 @@
 (method OS .fopen (file-name mode)
   (push OS._fp-list (OS._fopen fn mode)))
 
-(method OS .fgetc (file-name mode)
-  (push OS._fp-list (OS._fopen fn mode)))
+(method OS .fgetc (fp)
+  (OS._fgetc fp))
 
 (<- OS.stdin (.fp os 0)
     OS.stdout (.fp os 1))

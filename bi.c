@@ -32,6 +32,7 @@ static char *symbol_name_map[] = {
   "number_multiply", "*",
   "os_fp", "OS._fp",
   "os_fopen", "OS._fopen",
+  "os_fgetc", "OS._fgetc",
   "samep", "same?",
   "symbol_to_barray", "symbol->byte-array",
   "throw", "basic-throw",
