@@ -44,7 +44,7 @@ static int double_multiply(object argv, object *result)
   if (argv == object_nil) return TRUE;
   if (!bi_double(*result, &x)) return FALSE;
   if (!bi_double(argv->cons.car, &y)) return FALSE;
-  if (!isfinite(z = x + y)) return FALSE;
+  if (!isfinite(z = x * y)) return FALSE;
   *result = gc_new_xfloat(z);
   return double_multiply(argv->cons.cdr, result);
 }
