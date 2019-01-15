@@ -511,6 +511,12 @@
     (byte-array->symbol/keyword (array-copy kba 1 sba 0 copy-len))))
 (assert (same? (keyword->symbol :a) 'a))
 
+; I/O
+(<- $stdin (fp 0)
+    $stdout (fp 1)
+    $in $stdin
+    $out $stdout)
+
 ; error and exception
 
 (macro precondition (test)
@@ -629,7 +635,6 @@
                     (and super (rec o-cls (POS._find-class super)))))))
     (rec (. o :class) cls)))
 
-
 (class Object ()
   "唯一スーパークラスを持たない、クラス階層の最上位クラス。
   スーパークラスを指定しない場合は暗黙的にObjectクラスを継承する。"
@@ -658,33 +663,3 @@
 (class Feature (Class)
   "フィーチャーの基底クラス。
   すべてのフィーチャーはこのクラスを継承しなければならない。")
-
-(class OS ()
-  "OSクラス。
-  ファイルのオープンなどオペレーティングシステムに関する情報を扱う。
-  基本的にインスタンスを生成することはせずに、グローバルシンボルのosを参照する。")
-
-(<- os (.new OS)
-    OS._fp-list nil)
-
-(method OS .fp (fd)
-  (OS._fp fd))
-
-(method OS .fopen (file-name mode)
-  (push OS._fp-list (OS._fopen fn mode)))
-
-(method OS .fgetc (fp)
-  (OS._fgetc fp))
-
-(method OS .fgets (fp)
-  (OS._fgets fp))
-
-(method OS .fputc (byte fp)
-  (OS._fputc byte fp))
-
-; I/O
-(<- $stdin (.fp os 0)
-    $stdout (.fp os 1)
-    $in $stdin
-    $out $stdout)
-
