@@ -94,3 +94,23 @@ PRIM(os_fgets)
   xbarray_free(&x);
   return TRUE;
 }
+
+PRIM(os_fread)
+{
+  object o;
+  int64_t from, size;
+  FILE *fp;
+  if (argc != 4) return FALSE;
+  if (!typep((o = argv->cons.car), BARRAY)) return FALSE;
+  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!(0 <= from && from + size <= o->barray.size)) return FALSE;
+  if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  size = fread(o->barray.elt + from, 1, size, fp);
+  if (size == 0 && ferror(fp)) {
+    clearerr(fp);
+    return FALSE;
+  }
+  *result = gc_new_xint(size);
+  return TRUE;
+}
