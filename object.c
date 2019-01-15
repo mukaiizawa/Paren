@@ -130,7 +130,7 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_addf(x, "%d", o->xint.val);
       break;
     case XFLOAT:
-      xbarray_addf(x, "%f", o->xfloat.val);
+      xbarray_addf(x, "%g", o->xfloat.val);
       break;
     case BARRAY:
       describe_barray(o, x);
