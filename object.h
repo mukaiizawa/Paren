@@ -12,7 +12,9 @@ typedef union s_expr *object;
 #define   XFLOAT   0x0020
 #define   SYMBOL   0x0040
 #define   KEYWORD  0x0080
-#define   BARRAY   0x0100
+#define   STRING   0x0100
+#define   BARRAY   0x0200
+#define   ARRAY    0x0400
 
 #define type(o) ((o)->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
@@ -48,11 +50,21 @@ union s_expr {
     int header;
     char *name; 
   } symbol;
+  struct string {
+    int header;
+    int size;
+    char elt[1];
+  } string;
   struct barray {
     int header;
     int size;
     char elt[1];
   } barray;
+  struct array {
+    int header;
+    int size;
+    object elt[1];
+  } array;
 };
 
 extern int symcmp(object o, object p);
