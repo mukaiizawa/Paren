@@ -105,7 +105,7 @@ PRIM(os_fread)
   if (!bi_int64((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_int64((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!(0 <= from && from + size <= o->barray.size)) return FALSE;
-  if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   size = fread(o->barray.elt + from, 1, size, fp);
   if (size == 0 && ferror(fp)) {
     clearerr(fp);
@@ -113,4 +113,35 @@ PRIM(os_fread)
   }
   *result = gc_new_xint(size);
   return TRUE;
+}
+
+PRIM(os_fwrite)
+{
+  object o;
+  int64_t from, size;
+  FILE *fp;
+  if (argc != 4) return FALSE;
+  if (!typep((o = argv->cons.car), BARRAY)) return FALSE;
+  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!(0 <= from && from + size <= o->barray.size)) return FALSE;
+  if (!bi_intptr(argv->cons.cdr->cons.car,(intptr_t *)&fp)) return FALSE;
+  size = fwrite(o->barray.elt + from, 1, size, fp);
+  if (size == 0 && ferror(fp)) {
+    clearerr(fp);
+    return FALSE;
+  }
+  *result = gc_new_xint(size);
+  return TRUE;
+}
+
+PRIM(os_fseek)
+{
+  int64_t off;
+  FILE *fp;
+  if (argc != 2) return FALSE;
+  if (!bi_intptr(argv->cons.car,(intptr_t *)&fp)) return FALSE;
+  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &off)) return FALSE;
+  if (off == -1) return fseek(fp, 0, SEEK_END) == 0;
+  return fseek(fp, off, SEEK_SET)==0;
 }

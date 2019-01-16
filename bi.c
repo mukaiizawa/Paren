@@ -42,6 +42,7 @@ static char *symbol_name_map[] = {
   "os_fp", "fp",
   "os_fputc", "fputc",
   "os_fread", "fread",
+  "os_fwrite", "fwrite",
   "samep", "same?",
   "special_operator_p", "special-operator?",
   "symbol_p", "symbol?",
