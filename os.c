@@ -165,4 +165,3 @@ PRIM(fclose)
   fclose(fp);
   return TRUE;
 }
-
