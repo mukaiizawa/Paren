@@ -13,7 +13,7 @@
 #include "bi.h"
 #include "pf.h"
 
-PRIM(os_fp)
+PRIM(fp)
 {
   int64_t fd;
   FILE *fp;
@@ -35,7 +35,7 @@ static char *mode_table[] = {
   "rb+"
 };
 
-PRIM(os_fopen)
+PRIM(fopen)
 {
   char *fn;
   int64_t mode;
@@ -51,7 +51,7 @@ PRIM(os_fopen)
   return TRUE;
 }
 
-PRIM(os_fgetc)
+PRIM(fgetc)
 {
   int ch;
   FILE *fp;
@@ -66,7 +66,7 @@ PRIM(os_fgetc)
   return TRUE;
 }
 
-PRIM(os_fputc)
+PRIM(fputc)
 {
   int64_t byte;
   FILE *fp;
@@ -77,7 +77,7 @@ PRIM(os_fputc)
   return TRUE;
 }
 
-PRIM(os_fgets)
+PRIM(fgets)
 {
   char *s;
   FILE *fp;
@@ -95,7 +95,7 @@ PRIM(os_fgets)
   return TRUE;
 }
 
-PRIM(os_fread)
+PRIM(fread)
 {
   object o;
   int64_t from, size;
@@ -115,7 +115,7 @@ PRIM(os_fread)
   return TRUE;
 }
 
-PRIM(os_fwrite)
+PRIM(fwrite)
 {
   object o;
   int64_t from, size;
@@ -135,7 +135,7 @@ PRIM(os_fwrite)
   return TRUE;
 }
 
-PRIM(os_fseek)
+PRIM(fseek)
 {
   int64_t off;
   FILE *fp;
@@ -145,3 +145,15 @@ PRIM(os_fseek)
   if (off == -1) return fseek(fp, 0, SEEK_END) == 0;
   return fseek(fp, off, SEEK_SET)==0;
 }
+
+PRIM(ftell)
+{
+  int64_t pos;
+  FILE *fp;
+  if (argc != 1) return FALSE;
+  if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  if ((pos = ftell(fp)) == -1) return FALSE;
+  *result = gc_new_xint(pos);
+  return TRUE;
+}
+
