@@ -157,3 +157,12 @@ PRIM(ftell)
   return TRUE;
 }
 
+PRIM(fclose)
+{
+  FILE *fp;
+  if (argc != 1) return FALSE;
+  if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  fclose(fp);
+  return TRUE;
+}
+
