@@ -105,6 +105,13 @@ PRIM(keyword_p)
   return TRUE;
 }
 
+PRIM(string_p)
+{
+  if (argc != 1) return FALSE;
+  *result = object_bool(typep(argv->cons.car, STRING));
+  return TRUE;
+}
+
 PRIM(lambda_p)
 {
   if (argc != 1) return FALSE;
@@ -123,6 +130,13 @@ PRIM(byte_array_p)
 {
   if (argc != 1) return FALSE;
   *result = object_bool(typep(argv->cons.car, BARRAY));
+  return TRUE;
+}
+
+PRIM(array_p)
+{
+  if (argc != 1) return FALSE;
+  *result = object_bool(typep(argv->cons.car, ARRAY));
   return TRUE;
 }
 

@@ -20,6 +20,7 @@
 static char *symbol_name_map[] = {
   "array_access", "[]",
   "array_copy", "array-copy",
+  "array_p", "array?",
   "array_size", "array-size",
   "assign", "<-",
   "atom_p", "atom?",
@@ -38,6 +39,7 @@ static char *symbol_name_map[] = {
   "operator_p", "operator?",
   "samep", "same?",
   "special_operator_p", "special-operator?",
+  "string_p", "string?",
   "symbol_p", "symbol?",
   "symbol_to_barray", "symbol->byte-array",
   "throw", "basic-throw",
