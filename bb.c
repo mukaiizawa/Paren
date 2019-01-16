@@ -29,20 +29,37 @@ PRIM(samep)
   return TRUE;
 }
 
-static int equal_s_expr(object o, object p);
+static int equal_s_expr_p(object o, object p);
 static int equal_cons_p(object o, object p)
 {
-  return equal_s_expr(o->cons.car, p->cons.car)
-    && equal_s_expr(o->cons.cdr, p->cons.cdr);
+  if (!equal_s_expr_p(o->cons.car, p->cons.car)) return FALSE;
+  return equal_s_expr_p(o->cons.cdr, p->cons.cdr);
 }
 
-static int equal_s_expr(object o, object p)
+static int equal_barray(object o, object p)
+{
+  int size;
+  if ((size = o->barray.size) != p->barray.size) return FALSE;
+  return  memcmp(o->barray.elt, p->barray.elt, size) == 0;
+}
+
+static int equal_s_expr_p(object o, object p)
 {
   double x, y;
   if (o == p) return TRUE;
-  if (bi_double(o, &x) && bi_double(p, &y) && x == y) return TRUE;
-  if (typep(o, CONS) && typep(p, CONS)) return equal_cons_p(o, p);
-  return FALSE;
+  switch (type(o)) {
+    case XINT:
+    case XFLOAT:
+      return bi_double(o, &x) && bi_double(p, &y) && x == y;
+    case CONS:
+      return typep(p, CONS) && equal_cons_p(o, p);
+    case BARRAY:
+      return typep(p, BARRAY) && equal_barray(o, p);
+    case STRING:
+      return typep(p, STRING) && equal_barray(o, p);
+    default:
+      return FALSE;
+  }
 }
 
 // compare built-in object.
@@ -54,7 +71,7 @@ PRIM(equalp)
   o = argv->cons.car;
   while ((argv = argv->cons.cdr) != object_nil) {
     p = argv->cons.car;
-    if (!(b = equal_s_expr(o, p))) break;
+    if (!(b = equal_s_expr_p(o, p))) break;
   }
   *result = object_bool(b);
   return TRUE;
