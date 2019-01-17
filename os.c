@@ -47,7 +47,7 @@ PRIM(fopen)
   if (!bi_int64((argv = argv->cons.cdr)->cons.car, &mode)) return FALSE;
   if (0 < mode || mode >= sizeof(mode_table) / sizeof(char *)) return FALSE;
   if ((fp = fopen(fn, mode_table[mode])) == NULL) return FALSE;
-  *result = gc_new_xint((intptr_t)fp);
+  *result = gc_new_xint((intptr_t) fp);
   return TRUE;
 }
 

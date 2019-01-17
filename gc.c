@@ -43,20 +43,6 @@ static object gc_alloc(int size)
   return xmalloc(size);
 }
 
-static int byte_size(object o)
-{
-  switch (type(o)) {
-    case ENV: return sizeof(struct env);
-    case MACRO: case LAMBDA: return sizeof(struct lambda);
-    case CONS: return sizeof(struct cons);
-    case XINT: return sizeof(struct xint);
-    case XFLOAT: return sizeof(struct xfloat);
-    case SYMBOL: case KEYWORD: return sizeof(struct symbol);
-    default: xassert(FALSE);
-  }
-  return -1;
-}
-
 static void regist(object o)
 { 
   xarray_add(&table, o);
@@ -214,7 +200,7 @@ static void gc_free(object o)
       return;    // reuse.
     default: break;
   }
-  gc_used_memory -= byte_size(o);
+  gc_used_memory -= object_byte_size(o);
   xfree(o);
 }
 

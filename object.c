@@ -69,6 +69,34 @@ object object_reverse(object o)
   return acc;
 }
 
+int object_byte_size(object o)
+{
+  switch (type(o)) {
+    case ENV:
+      return sizeof(struct env);
+    case MACRO:
+    case LAMBDA:
+      return sizeof(struct lambda);
+    case CONS:
+      return sizeof(struct cons);
+    case XINT:
+      return sizeof(struct xint);
+    case XFLOAT:
+      return sizeof(struct xfloat);
+    case SYMBOL:
+    case KEYWORD:
+      return sizeof(struct symbol);
+    case STRING:
+    case BARRAY:
+      return sizeof(struct barray) + o->barray.size - 1;
+    case ARRAY:
+      return sizeof(struct array) + (o->array.size - 1) * sizeof(object);
+    default:
+      xassert(FALSE);
+      return -1;
+  }
+}
+
 static void describe_s_expr(object o, struct xbarray *x);
 static void describe_cons(object o, struct xbarray *x)
 {
