@@ -29,7 +29,7 @@
 
 (macro POS._make-accesser (cls-sym var)
   (let (sba (keyword->byte-array var)
-        copy-len (-- (array-size sba))
+        copy-len (-- (length sba))
         ba (byte-array (++ copy-len))
         val (gensym)
         val? (gensym))

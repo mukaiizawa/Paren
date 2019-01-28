@@ -33,7 +33,7 @@ int symcmp(object o, object p)
   return -1;
 }
 
-int object_length(object o)
+int object_list_len(object o)
 {
   int i;
   xassert(listp(o));

@@ -395,7 +395,7 @@ static void pop_apply_prim_frame(void)
   int (*prim)(int, object, object *);
   args = reg[0];
   prim = xsplay_find(&prim_splay, fs_pop()->local_vars[0]);
-  if ((*prim)(object_length(args), args, &(reg[0]))) st_pop();
+  if ((*prim)(object_list_len(args), args, &(reg[0]))) st_pop();
   else mark_exception("primitive failed.");
 }
 
@@ -466,7 +466,7 @@ static void pop_fetch_operator_frame(void)
   switch (type(reg[0])) {
     case SYMBOL:
       if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
-        (*special)(reg[1], object_length(args), args);
+        (*special)(reg[1], object_list_len(args), args);
         if (ip_trap_code != TRAP_EXCEPTION) st_pop();
         return;
       }

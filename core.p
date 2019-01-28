@@ -230,14 +230,6 @@
 (assert (= (last nil) nil))
 (assert (= (last '(1 2 3)) 3))
 
-(function length (l)
-  "リストの要素数を返す。"
-  (precondition (list? l))
-  (let (rec (lambda (l n) (if (nil? l) n (rec (cdr l) (++ n)))))
-    (rec l 0)))
-(assert (= (length nil) 0))
-(assert (= (length '(1 2 3)) 3))
-
 (function .. (s e :opt (step 1))
   "整数sから整数eまでstep刻みの要素を持つリストを返す。"
   (precondition (and (number? s) (number? e) (number? step) !(= step 0)

@@ -81,7 +81,7 @@ extern object object_true;
 
 extern int object_byte_size(object o);
 extern char *object_describe(object o, char *buf);
-extern int object_length(object o);
+extern int object_list_len(object o);
 extern object object_bool(int b);
 extern object object_nth(object o, int n);
 extern object object_reverse(object o);

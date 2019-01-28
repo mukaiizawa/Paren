@@ -36,7 +36,7 @@ static int equal_barray(object o, object p)
 {
   int size;
   if ((size = o->barray.size) != p->barray.size) return FALSE;
-  return  memcmp(o->barray.elt, p->barray.elt, size) == 0;
+  return memcmp(o->barray.elt, p->barray.elt, size) == 0;
 }
 
 static int equal_s_expr_p(object o, object p)
@@ -185,11 +185,27 @@ PRIM(print)
   return TRUE;
 }
 
-// TODO should be removed
-PRIM(quit)
+PRIM(length)
 {
-  printf("paren exit");
-  exit(1);
+  int len;
+  if (argc != 1) return FALSE;
+  if (argv->cons.car == object_nil) len = 0;
+  else {
+    switch (type(argv->cons.car)) {
+      case CONS:
+        len = object_list_len(argv->cons.car);
+        break;
+      case STRING: // TODO count as utf-8
+      case BARRAY:
+      case ARRAY:
+        len = argv->cons.car->array.size;
+        break;
+      default:
+        return FALSE;
+    }
+  }
+  *result = gc_new_xint(len);
+  return TRUE;
 }
 
 // list
@@ -400,20 +416,6 @@ PRIM(number_lt)
 
 // byte-array/array
 
-PRIM(array_size)
-{
-  object x;
-  if (argc != 1) return FALSE;
-  switch (type(x = argv->cons.car)) {
-    case BARRAY:
-      *result = gc_new_xint(x->barray.size);
-      return TRUE;
-    default:
-      return FALSE;
-  }
-  return TRUE;
-}
-
 PRIM(barray_new)
 {
   int64_t size;
@@ -533,7 +535,6 @@ static char *symbol_name_map[] = {
   "array_access", "[]",
   "array_copy", "array-copy",
   "array_p", "array?",
-  "array_size", "array-size",
   "assign", "<-",
   "atom_p", "atom?",
   "barray_new", "byte-array",
