@@ -13,7 +13,7 @@
   "システム内で重複することのないシンボルを生成して返す。"
   (let (count 0
         count-up (lambda () (<- count (+ count 1))))
-    (byte-array->symbol (->byte-array (+ "#G" (number->string (count-up)))))))
+    (byte-array->symbol (->byte-array (+ "#G" (->string (count-up)))))))
 
 (macro begin0 (:rest body)
   "bodyを逐次評価し、最初に評価した結果を返す。"

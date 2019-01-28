@@ -185,6 +185,172 @@ PRIM(print)
   return TRUE;
 }
 
+// generic function
+
+static void xbarray_add_barray(struct xbarray *x, object o)
+{
+  memcpy(xbarray_reserve(x, o->barray.size), o->barray.elt, o->barray.size);
+}
+
+static void s_expr_to_string(object o, struct xbarray *x);
+static void describe_cons(object o, struct xbarray *x)
+{
+  s_expr_to_string(o->cons.car, x);
+  while ((o = o->cons.cdr) != object_nil) {
+    xbarray_add(x, ' ');
+    s_expr_to_string(o->cons.car, x);
+    if (x->size > MAX_STR_LEN) return;
+  }
+}
+
+static void describe_barray(object o, struct xbarray *x)
+{
+  int i;
+  xbarray_adds(x, "#<");
+  for (i = 0; i < o->barray.size; i++) {
+    if (i != 0) xbarray_add(x, ' ');
+    xbarray_addf(x, "0x%x", (int)(o->barray.elt[i]));
+    if (x->size > MAX_STR_LEN) return;
+  }
+  xbarray_add(x, '>');
+}
+
+static void describe_array(object o, struct xbarray *x)
+{
+  int i;
+  xbarray_adds(x, "#[");
+  for (i = 0; i < o->array.size; i++) {
+    if (i != 0) xbarray_add(x, ' ');
+    s_expr_to_string(o->array.elt[i], x);
+    if (x->size > MAX_STR_LEN) return;
+  }
+  xbarray_add(x, ']');
+}
+
+static void s_expr_to_string(object o, struct xbarray *x)
+{
+  object p;
+  if (x->size > MAX_STR_LEN) return;
+  switch (type(o)) {
+    case MACRO:
+    case LAMBDA:
+      if (typep(o, MACRO)) xbarray_adds(x, "(macro ");
+      else xbarray_adds(x, "(lambda ");
+      if (o->lambda.params == object_nil) xbarray_adds(x, "()");
+      else s_expr_to_string(o->lambda.params, x);
+      if (o->lambda.body != object_nil) {
+        xbarray_add(x, ' ');
+        describe_cons(o->lambda.body, x);
+      }
+      xbarray_add(x, ')');
+      break;
+    case CONS:
+      p = o->cons.car;
+      if ((p == object_quote || p == object_not)
+          && typep(o->cons.cdr, CONS) && o->cons.cdr->cons.cdr == object_nil)
+      {
+        if (p == object_quote) xbarray_add(x, '\'');
+        if (p == object_not) xbarray_add(x, '!');
+        s_expr_to_string(o->cons.cdr->cons.car, x);
+      } else {
+        xbarray_add(x, '(');
+        describe_cons(o, x);
+        xbarray_add(x, ')');
+      }
+      break;
+    case XINT:
+      xbarray_addf(x, "%d", o->xint.val);
+      break;
+    case XFLOAT:
+      xbarray_addf(x, "%g", o->xfloat.val);
+      break;
+    case SYMBOL:
+    case KEYWORD:
+    case STRING:
+      xbarray_add_barray(x, o);
+      break;
+    case BARRAY:
+      describe_barray(o, x);
+      break;
+    case ARRAY:
+      describe_array(o, x);
+      break;
+    default: xassert(FALSE);
+  }
+}
+
+static object to_string(object o)
+{
+  struct xbarray x;
+  xbarray_init(&x);
+  s_expr_to_string(o, &x);
+  o = gc_new_barray_from(STRING, x.size, x.elt);
+  xbarray_free(&x);
+  return o;
+}
+
+PRIM(to_string)
+{
+  if (argc != 1) return FALSE;
+  *result = to_string(argv->cons.car);
+  return TRUE;
+}
+
+static int barray_add(object argv, object *result)
+{
+  object x, y;
+  if (argv == object_nil) return TRUE;
+  x = to_string(*result);
+  y = to_string(argv->cons.car);
+  *result = gc_new_barray(STRING, x->barray.size + y->barray.size);
+  memcpy((*result)->barray.elt, x->barray.elt, x->barray.size);
+  memcpy((*result)->barray.elt + x->barray.size, y->barray.elt, y->barray.size);
+  return barray_add(argv->cons.cdr, result);
+}
+
+static int double_add(object argv, object *result)
+{
+  double x, y, z;
+  if (argv == object_nil) return TRUE;
+  if (bi_double(*result, &x) && bi_double(argv->cons.car, &y)) {
+    if (!isfinite(z = x + y)) return FALSE;
+    *result = gc_new_xfloat(z);
+    return double_add(argv->cons.cdr, result);
+  }
+  return barray_add(argv, result);
+}
+
+static int int64_add(object argv, object *result)
+{
+  int64_t x, y;
+  if (argv == object_nil) return TRUE;
+  if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y)) {
+    if (y > 0 && x > INT64_MAX - y) return FALSE;
+    if (y < 0 && x < INT64_MIN - y) return FALSE;
+    *result = gc_new_xint(x + y);
+    return int64_add(argv->cons.cdr, result);
+  }
+  return double_add(argv, result);
+}
+
+static int cons_add(object argv, object *result)
+{
+  object o;
+  o = *result;
+  while (o->cons.cdr != object_nil) o = o->cons.cdr;
+  o->cons.cdr = argv; // destructive
+  return TRUE;
+}
+
+PRIM(add)
+{
+  if (argv == 0) return FALSE;
+  *result = argv->cons.car;
+  if (typep(*result, CONS)) return cons_add(argv->cons.cdr, result);
+  if (numberp(*result)) return int64_add(argv->cons.cdr, result);
+  return barray_add(argv->cons.cdr, result);
+}
+
 PRIM(length)
 {
   int len;
@@ -269,82 +435,6 @@ PRIM(number_to_integer)
       return FALSE;
   }
   return TRUE;
-}
-
-static int to_string(object o, object *result)
-{
-  int64_t i;
-  double d;
-  struct xbarray x;
-  xbarray_init(&x);
-  switch (type(o)) {
-    case XINT:
-      if (!bi_int64(o, &i)) return FALSE;
-      xbarray_addf(&x, "%d", i);
-      break;
-    case XFLOAT:
-      if (!bi_double(o, &d)) return FALSE;
-      xbarray_addf(&x, "%g", d);
-      break;
-    default:
-      return FALSE;
-  }
-  *result = gc_new_barray_from(STRING, x.size, x.elt);
-  xbarray_free(&x);
-  return TRUE;
-}
-
-PRIM(number_to_string)
-{
-  if (argc != 1) return FALSE;
-  return to_string(argv->cons.car, result);
-}
-
-static int barray_add(object argv, object *result)
-{
-  object x, y;
-  if (argv == object_nil) return TRUE;
-  if (typep(*result, STRING)) x = *result;
-  else if (!to_string(*result, &x)) return FALSE;
-  if (typep(argv->cons.car, STRING)) y = argv->cons.car;
-  else if (!to_string(argv->cons.car, &y)) return FALSE;
-  *result = gc_new_barray(STRING, x->barray.size + y->barray.size);
-  memcpy((*result)->barray.elt, x->barray.elt, x->barray.size);
-  memcpy((*result)->barray.elt + x->barray.size, y->barray.elt, y->barray.size);
-  return barray_add(argv->cons.cdr, result);
-}
-
-static int double_add(object argv, object *result)
-{
-  double x, y, z;
-  if (argv == object_nil) return TRUE;
-  if (bi_double(*result, &x) && bi_double(argv->cons.car, &y)) {
-    if (!isfinite(z = x + y)) return FALSE;
-    *result = gc_new_xfloat(z);
-    return double_add(argv->cons.cdr, result);
-  }
-  return barray_add(argv, result);
-}
-
-static int int64_add(object argv, object *result)
-{
-  int64_t x, y;
-  if (argv == object_nil) return TRUE;
-  if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y)) {
-    if (y > 0 && x > INT64_MAX - y) return FALSE;
-    if (y < 0 && x < INT64_MIN - y) return FALSE;
-    *result = gc_new_xint(x + y);
-    return int64_add(argv->cons.cdr, result);
-  }
-  return double_add(argv, result);
-}
-
-PRIM(number_add)
-{
-  if (argv == 0) return FALSE;
-  *result = argv->cons.car;
-  if (numberp(*result)) return int64_add(argv->cons.cdr, result);
-  return barray_add(argv->cons.cdr, result);
 }
 
 static int double_multiply(object argv, object *result)
@@ -532,6 +622,7 @@ PRIM(to_barray)
 #undef PRIM
 
 static char *symbol_name_map[] = {
+  "add", "+",
   "array_access", "[]",
   "array_copy", "array-copy",
   "array_p", "array?",
@@ -545,13 +636,10 @@ static char *symbol_name_map[] = {
   "equalp", "=",
   "keyword_p", "keyword?",
   "macro_p", "macro?",
-  "number_add", "+",
   "number_lt", "<",
   "number_modulo", "mod",
   "number_multiply", "*",
   "number_p", "number?",
-  "number_to_integer", "number->integer",
-  "number_to_string", "number->string",
   "operator_p", "operator?",
   "samep", "same?",
   "special_operator_p", "special-operator?",
@@ -559,7 +647,9 @@ static char *symbol_name_map[] = {
   "symbol_p", "symbol?",
   "throw", "basic-throw",
   "to_barray", "->byte-array",
+  "to_string", "->string",
   "try", "basic-try",
+  // "number_to_integer", "number->integer",
   NULL
 };
 
