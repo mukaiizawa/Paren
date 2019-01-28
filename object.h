@@ -46,15 +46,6 @@ union s_expr {
     int header;
     double val; 
   } xfloat;
-  struct symbol {
-    int header;
-    char *name; 
-  } symbol;
-  struct string {
-    int header;
-    int size;
-    char elt[1];
-  } string;
   struct barray {
     int header;
     int size;
@@ -69,8 +60,12 @@ union s_expr {
 
 extern int symcmp(object o, object p);
 
+extern struct xsplay special_splay;
+extern struct xsplay prim_splay;
+
 // global object
 extern object object_boot;
+extern object object_bytes[];
 extern object object_catch;
 extern object object_finally;
 extern object object_key;
@@ -79,7 +74,6 @@ extern object object_not;
 extern object object_opt;
 extern object object_quote;
 extern object object_rest;
-extern object object_bytes[];
 extern object object_snbhe;
 extern object object_st;
 extern object object_toplevel;

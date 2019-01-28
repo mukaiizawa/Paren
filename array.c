@@ -25,7 +25,7 @@ PRIM(barray_new)
   int64_t size;
   if (argc != 1) return FALSE;
   if (!bi_int64(argv->cons.car, &size)) return FALSE;
-  *result = gc_new_barray(size);
+  *result = gc_new_barray(BARRAY, size);
   return TRUE;
 }
 
@@ -75,36 +75,49 @@ PRIM(array_copy)
   }
 }
 
-PRIM(barray_to_symbol_keyword)
+PRIM(barray_to_symbol)
 {
-  char *s;
   object x;
   if (argc != 1) return FALSE;
   if (!typep(x = argv->cons.car, BARRAY)) return FALSE;
-  s = xmalloc(x->barray.size + 1);
-  memcpy(s, x->barray.elt, x->barray.size);
-  s[x->barray.size] = '\0';
-  *result = gc_new_symbol(s);
+  if (x->barray.elt[0] == ':') return FALSE;
+  *result = gc_new_barray_from(SYMBOL, x->barray.size, x->barray.elt);
   return TRUE;
 }
 
-#define x_to_barray(type) \
-{ \
-  int size; \
-  object x; \
-  if (argc != 1) return FALSE; \
-  if (!typep(x = argv->cons.car, type)) return FALSE; \
-  *result = gc_new_barray(size = strlen(x->symbol.name)); \
-  memcpy((*result)->barray.elt, x->symbol.name, size); \
-  return TRUE; \
-} \
-
-PRIM(symbol_to_barray)
+PRIM(barray_to_keyword)
 {
-  x_to_barray(SYMBOL);
+  object x;
+  if (argc != 1) return FALSE;
+  if (!typep(x = argv->cons.car, BARRAY)) return FALSE;
+  if (x->barray.elt[0] != ':') return FALSE;
+  *result = gc_new_barray_from(KEYWORD, x->barray.size, x->barray.elt);
+  return TRUE;
 }
 
-PRIM(keyword_to_barray)
+PRIM(barray_to_string)
 {
-  x_to_barray(KEYWORD);
+  object x;
+  if (argc != 1) return FALSE;
+  if (!typep(x = argv->cons.car, BARRAY)) return FALSE;
+  *result = gc_new_barray_from(STRING, x->barray.size, x->barray.elt);
+  return TRUE;
+}
+
+PRIM(to_barray)
+{
+  object x;
+  if (argc != 1) return FALSE;
+  switch (type(x = argv->cons.car)) {
+    case BARRAY:
+      *result = x;
+      break;
+    case SYMBOL:
+    case KEYWORD:
+    case STRING:
+      *result = gc_new_barray_from(BARRAY, x->barray.size, x->barray.elt);
+      break;
+    default: return FALSE;
+  }
+  return TRUE;
 }

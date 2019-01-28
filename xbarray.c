@@ -57,8 +57,8 @@ static void extend(struct xbarray *x, int size)
 char *xbarray_reserve(struct xbarray *x, int size)
 {
   char *p;
-  if(x->alloc_size<x->size+size) extend(x, x->size+size);
-  p = x->elt+x->size;
+  if (x->alloc_size < x->size + size) extend(x, x->size + size);
+  p = x->elt + x->size;
   x->size += size;
   return p;
 }
@@ -83,6 +83,12 @@ void xbarray_addf(struct xbarray *x, char *fmt, ...)
   xvsprintf(buf, fmt, va);
   va_end(va);
   xbarray_adds(x, buf);
+}
+
+void xbarray_copy(struct xbarray *dst, struct xbarray *src)
+{
+  xbarray_reserve(dst, src->size);
+  memcpy(dst->elt, src->elt, dst->size = src->size);
 }
 
 char *xbarray_fgets(struct xbarray *x, FILE *fp)

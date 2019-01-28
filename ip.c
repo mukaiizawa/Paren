@@ -55,11 +55,6 @@ static void mark_exception(char *msg)
     return;\
 }\
 
-// gloval environment
-
-static struct xsplay special_splay;
-static struct xsplay prim_splay;
-
 // symbol
 
 static object symbol_find(object e, object s)
@@ -435,7 +430,9 @@ static void pop_eval_frame(void)
     case XINT:
     case XFLOAT:
     case KEYWORD:
+    case STRING:
     case BARRAY:
+    case ARRAY:
       return;
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
@@ -590,6 +587,13 @@ static void pop_throw_frame(void)
 
 // validation etc.
 
+static int same_symbol_keyword_p(object sym, object key)
+{
+  int size;
+  if ((size = sym->barray.size) != key->barray.size - 1) return FALSE;
+  return memcmp(sym->barray.elt, key->barray.elt + 1, size) == 0;
+}
+
 static int valid_keyword_p(object params, object args)
 {
   object p, s;
@@ -603,8 +607,7 @@ static int valid_keyword_p(object params, object args)
       s = p->cons.car;
       if (typep(s, CONS)) s = s->cons.car;
       xassert(typep(s, SYMBOL));
-      if (strcmp(s->symbol.name, args->cons.car->symbol.name + 1) == 0)
-        break;
+      if (same_symbol_keyword_p(s, args->cons.car)) break;
       p = p->cons.cdr;
     }
     if (p == object_nil) {
@@ -674,7 +677,7 @@ static void parse_lambda_list(object env, object params, object args)
   // parse keyword parameter
   if (params->cons.car == object_key) {
     params = params->cons.cdr;
-    if(!valid_keyword_p(params, args)) return;
+    if (!valid_keyword_p(params, args)) return;
     while (params != object_nil) {
       o = params->cons.car;
       v = def_v = sup_k = NULL;
@@ -687,7 +690,7 @@ static void parse_lambda_list(object env, object params, object args)
       o = args;
       pre = NULL;
       while (o != object_nil) {
-        if (strcmp((o->cons.car->symbol.name + 1), k->symbol.name) == 0) {
+        if (same_symbol_keyword_p(k,o->cons.car)) {
           v = (o = o->cons.cdr)->cons.car;
           o = o->cons.cdr;
           if (pre == NULL) args = o;
@@ -1125,23 +1128,10 @@ void ip_mark(void)
   // TODO mark fs, regs, ....
 }
 
-static void init_builtin(void)
-{
-  int i;
-  char *s;
-  xsplay_init(&special_splay, (int(*)(void *, void *))symcmp);
-  xsplay_init(&prim_splay, (int(*)(void *, void *))symcmp);
-  for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++)
-    xsplay_add(&special_splay, gc_new_symbol(s), special_table[i]);
-  for (i = 0; (s = bi_as_symbol_name(prim_name_table[i])) != NULL; i++)
-    xsplay_add(&prim_splay, gc_new_symbol(s), prim_table[i]);
-}
-
 void ip_start(void)
 {
   char buf[MAX_STR_LEN];
   object o, p;
-  init_builtin();
   cycle = sp = 0;
   xarray_init(&fb);
   ip_trap_code = TRAP_NONE;

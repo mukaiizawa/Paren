@@ -6,6 +6,9 @@
 #include "xsplay.h"
 #include "object.h"
 
+struct xsplay special_splay;
+struct xsplay prim_splay;
+
 object object_boot;
 object object_catch;
 object object_finally;
@@ -24,8 +27,7 @@ object object_true;
 int symcmp(object o, object p)
 {
   intptr_t i;
-  xassert((typep(o, SYMBOL) && typep(p, SYMBOL))
-      || (typep(o, KEYWORD) && typep(p, KEYWORD)));
+  xassert(typep(o, SYMBOL));
   if ((i = (intptr_t)o - (intptr_t)p) == 0) return 0;
   if (i > 0) return 1;
   return -1;
@@ -85,7 +87,6 @@ int object_byte_size(object o)
       return sizeof(struct xfloat);
     case SYMBOL:
     case KEYWORD:
-      return sizeof(struct symbol);
     case STRING:
     case BARRAY:
       return sizeof(struct barray) + o->barray.size - 1;
@@ -95,6 +96,11 @@ int object_byte_size(object o)
       xassert(FALSE);
       return -1;
   }
+}
+
+static void xbarray_add_barray(struct xbarray *x, object o)
+{
+  memcpy(xbarray_reserve(x, o->barray.size), o->barray.elt, o->barray.size);
 }
 
 static void describe_s_expr(object o, struct xbarray *x);
@@ -111,10 +117,22 @@ static void describe_cons(object o, struct xbarray *x)
 static void describe_barray(object o, struct xbarray *x)
 {
   int i;
-  xbarray_adds(x, "#b[");
+  xbarray_adds(x, "#<");
   for (i = 0; i < o->barray.size; i++) {
     if (i != 0) xbarray_add(x, ' ');
     xbarray_addf(x, "0x%x", (int)(o->barray.elt[i]));
+    if (x->size > MAX_STR_LEN) return;
+  }
+  xbarray_add(x, '>');
+}
+
+static void describe_array(object o, struct xbarray *x)
+{
+  int i;
+  xbarray_adds(x, "#[");
+  for (i = 0; i < o->array.size; i++) {
+    if (i != 0) xbarray_add(x, ' ');
+    describe_s_expr(o->array.elt[i], x);
     if (x->size > MAX_STR_LEN) return;
   }
   xbarray_add(x, ']');
@@ -123,10 +141,10 @@ static void describe_barray(object o, struct xbarray *x)
 static void describe_s_expr(object o, struct xbarray *x)
 {
   object p;
-  if(x->size > MAX_STR_LEN) return;
+  if (x->size > MAX_STR_LEN) return;
   switch (type(o)) {
     case ENV:
-      xbarray_addf(x, "<environment: %p>", o);
+      xbarray_addf(x, "#(:environment %p :top %p)", o, o->env.top);
       break;
     case MACRO:
     case LAMBDA:
@@ -160,12 +178,20 @@ static void describe_s_expr(object o, struct xbarray *x)
     case XFLOAT:
       xbarray_addf(x, "%g", o->xfloat.val);
       break;
-    case BARRAY:
-      describe_barray(o, x);
+    case STRING:
+      xbarray_add(x, '"');
+      xbarray_add_barray(x, o);
+      xbarray_add(x, '"');
       break;
     case SYMBOL:
     case KEYWORD:
-      xbarray_addf(x, "%s", o->symbol.name);
+      xbarray_add_barray(x, o);
+      break;
+    case BARRAY:
+      describe_barray(o, x);
+      break;
+    case ARRAY:
+      describe_array(o, x);
       break;
     default: xassert(FALSE);
   }

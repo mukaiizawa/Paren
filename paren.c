@@ -34,6 +34,7 @@ static void parse_opt(int argc,char *argv[])
 // parser
 
 static int next_token;
+struct xbarray token_str;
 
 static int parse_skip(void)
 {
@@ -43,18 +44,35 @@ static int parse_skip(void)
 static int parse_token(int token)
 {
   char buf[MAX_STR_LEN];
-  if(next_token != token) lex_error("missing %s", lex_token_name(buf, token));
+  if (next_token != token) lex_error("missing %s", lex_token_name(buf, token));
+  switch (token) {
+    case LEX_SYMBOL:
+    case LEX_KEYWORD:
+    case LEX_STRING:
+      xbarray_copy(&token_str, &lex_str);
+      break;
+    default:
+      break;
+  }
   return parse_skip();
 }
 
-static object parse_s_expr(void);
-
 static object parse_symbol(void)
 {
-  char *s;
-  s = stralloc(lex_str.elt);
-  parse_skip();
-  return gc_new_symbol(s);
+  parse_token(LEX_SYMBOL);
+  return gc_new_barray_from(SYMBOL, token_str.size, token_str.elt);
+}
+
+static object parse_keyword(void)
+{
+  parse_token(LEX_KEYWORD);
+  return gc_new_barray_from(KEYWORD, token_str.size, token_str.elt);
+}
+
+static object parse_string(void)
+{
+  parse_token(LEX_STRING);
+  return gc_new_barray_from(STRING, token_str.size, token_str.elt);
 }
 
 static object parse_integer(void)
@@ -77,11 +95,15 @@ static object parse_atom(void)
 {
   switch (next_token) {
     case LEX_SYMBOL: return parse_symbol();
+    case LEX_KEYWORD: return parse_keyword();
+    case LEX_STRING: return parse_string();
     case LEX_INT: return parse_integer();
     case LEX_FLOAT: return parse_float();
     default: lex_error("illegal token '%c'.", (char)next_token); return NULL;
   }
 }
+
+static object parse_s_expr(void);
 
 static object parse_cdr(void)
 {
@@ -149,31 +171,46 @@ static void bind_pseudo_symbol(object o)
   bind_symbol(o, o);
 }
 
+static object symbol_new(char *name)
+{
+  int type;
+  if (name[0] == ':') type = KEYWORD;
+  else type = SYMBOL;
+  return gc_new_barray_from(type, strlen(name), name);
+}
+
 static void bind_special(void)
 {
   int i;
   char *s;
-  for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++)
-    bind_pseudo_symbol(gc_new_symbol(s));
-  for (i = 0; (s = bi_as_symbol_name(prim_name_table[i])) != NULL; i++)
-    bind_pseudo_symbol(gc_new_symbol(s));
+  object o;
+  xsplay_init(&special_splay, (int(*)(void *, void *))symcmp);
+  xsplay_init(&prim_splay, (int(*)(void *, void *))symcmp);
+  for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++) {
+    bind_pseudo_symbol(o = symbol_new(s));
+    xsplay_add(&special_splay, o, special_table[i]);
+  }
+  for (i = 0; (s = bi_as_symbol_name(prim_name_table[i])) != NULL; i++) {
+    bind_pseudo_symbol(o = symbol_new(s));
+    xsplay_add(&prim_splay, o, prim_table[i]);
+  }
 }
 
 static void make_initial_objects(void)
 {
   int i;
-  object_nil = gc_new_symbol("nil");
-  object_catch = gc_new_symbol("catch");
-  object_finally = gc_new_symbol("finally");
-  object_key = gc_new_symbol(":key");
-  object_not = gc_new_symbol("not");
-  object_opt = gc_new_symbol(":opt");
-  object_quote = gc_new_symbol("quote");
-  object_rest = gc_new_symbol(":rest");
-  object_snbhe = gc_new_symbol(":ShouldNotBeHandledException");
-  object_st = gc_new_symbol("$stack-trace");
+  object_nil = symbol_new("nil");
+  object_catch = symbol_new("catch");
+  object_finally = symbol_new("finally");
+  object_key = symbol_new(":key");
+  object_not = symbol_new("not");
+  object_opt = symbol_new(":opt");
+  object_quote = symbol_new("quote");
+  object_rest = symbol_new(":rest");
+  object_snbhe = symbol_new(":ShouldNotBeHandledException");
+  object_st = symbol_new("$stack-trace");
   object_toplevel = gc_new_env(object_nil);
-  object_true = gc_new_symbol("true");
+  object_true = symbol_new("true");
   for (i = 0; i < 256; i++) object_bytes[i] = gc_new_bytes(i);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
@@ -187,6 +224,7 @@ int main(int argc, char *argv[])
   parse_opt(argc, argv);
   gc_init();
   make_initial_objects();
+  xbarray_init(&token_str);
   object_boot = gc_new_lambda(object_toplevel, object_nil, load());
   ip_start();
   if (dump_object_table_p) gc_dump_table();

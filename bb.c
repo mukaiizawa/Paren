@@ -6,16 +6,6 @@
 #include "gc.h"
 #include "bi.h"
 
-PRIM(gensym)
-{
-  static long index = 0;
-  char buf[MAX_STR_LEN];
-  if (argc != 0) return FALSE;
-  sprintf(buf, "$G%ld", index++);
-  *result = gc_new_symbol(stralloc(buf));
-  return TRUE;
-}
-
 PRIM(samep)
 {
   int b;
@@ -142,24 +132,24 @@ PRIM(array_p)
 
 static int special_p(object o)
 {
-  int i;
-  char *s, *t;
+  int i, size;
+  char *s;
   if (!typep(o, SYMBOL)) return FALSE;
-  s = o->symbol.name;
-  for (i = 0; (t = bi_as_symbol_name(special_name_table[i])) != NULL; i++) {
-    if (strcmp(s, t) == 0) return TRUE;
+  size = o->barray.size;
+  for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++) {
+    if (size  == strlen(s) && memcmp(o->barray.elt, s, size) == 0) return TRUE;
   }
   return FALSE;
 }
 
 static int prim_p(object o)
 {
-  int i;
-  char *s, *t;
+  int i, size;
+  char *s;
   if (!typep(o, SYMBOL)) return FALSE;
-  s = o->symbol.name;
-  for (i = 0; (t = bi_as_symbol_name(prim_name_table[i])) != NULL; i++) {
-    if (strcmp(s, t) == 0) return TRUE;
+  size = o->barray.size;
+  for (i = 0; (s = bi_as_symbol_name(prim_name_table[i])) != NULL; i++) {
+    if (size  == strlen(s) && memcmp(o->barray.elt, s, size) == 0) return TRUE;
   }
   return FALSE;
 }

@@ -4,20 +4,83 @@
 
 #include <math.h>
 
+#include "xbarray.h"
 #include "xsplay.h"
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
 
+PRIM(number_to_integer)
+{
+  double x;
+  if (argc != 1) return FALSE;
+  switch (type(argv->cons.car)) {
+    case XINT:
+      *result = argv->cons.car;
+      break;
+    case XFLOAT:
+      if (!bi_double(argv->cons.car, &x)) return FALSE;
+      *result = gc_new_xint((int64_t)x);
+      break;
+    default:
+      return FALSE;
+  }
+  return TRUE;
+}
+
+static int to_string(object o, object *result)
+{
+  int64_t i;
+  double d;
+  struct xbarray x;
+  xbarray_init(&x);
+  switch (type(o)) {
+    case XINT:
+      if (!bi_int64(o, &i)) return FALSE;
+      xbarray_addf(&x, "%d", i);
+      break;
+    case XFLOAT:
+      if (!bi_double(o, &d)) return FALSE;
+      xbarray_addf(&x, "%g", d);
+      break;
+    default:
+      return FALSE;
+  }
+  *result = gc_new_barray_from(STRING, x.size, x.elt);
+  xbarray_free(&x);
+  return TRUE;
+}
+
+PRIM(number_to_string)
+{
+  if (argc != 1) return FALSE;
+  return to_string(argv->cons.car, result);
+}
+
+static int barray_add(object argv, object *result)
+{
+  object x, y;
+  if (argv == object_nil) return TRUE;
+  if (typep(*result, STRING)) x = *result;
+  else if (!to_string(*result, &x)) return FALSE;
+  if (typep(argv->cons.car, STRING)) y = argv->cons.car;
+  else if (!to_string(argv->cons.car, &y)) return FALSE;
+  *result = gc_new_barray(STRING, x->barray.size + y->barray.size);
+  memcpy((*result)->barray.elt, x->barray.elt, x->barray.size);
+  memcpy((*result)->barray.elt + x->barray.size, y->barray.elt, y->barray.size);
+  return barray_add(argv->cons.cdr, result);
+}
+
 static int double_add(object argv, object *result)
 {
   double x, y, z;
   if (argv == object_nil) return TRUE;
-  if (!bi_double(*result, &x)) return FALSE;
-  if (!bi_double(argv->cons.car, &y)) return FALSE;
-  if (!isfinite(z = x + y)) return FALSE;
-  *result = gc_new_xfloat(z);
-  return double_add(argv->cons.cdr, result);
+  if (bi_double(*result, &x) && bi_double(argv->cons.car, &y)) {
+    if (!isfinite(z = x + y)) return FALSE;
+    *result = gc_new_xfloat(z);
+    return double_add(argv->cons.cdr, result);
+  }
+  return barray_add(argv, result);
 }
 
 static int int64_add(object argv, object *result)
@@ -29,13 +92,16 @@ static int int64_add(object argv, object *result)
     if (y < 0 && x < INT64_MIN - y) return FALSE;
     *result = gc_new_xint(x + y);
     return int64_add(argv->cons.cdr, result);
-  } else return double_add(argv, result);
+  }
+  return double_add(argv, result);
 }
 
 PRIM(number_add)
 {
-  *result = object_bytes[0];
-  return int64_add(argv, result);
+  if (argv == 0) return FALSE;
+  *result = argv->cons.car;
+  if (numberp(*result)) return int64_add(argv->cons.cdr, result);
+  return barray_add(argv->cons.cdr, result);
 }
 
 static int double_multiply(object argv, object *result)

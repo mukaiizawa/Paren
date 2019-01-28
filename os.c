@@ -88,7 +88,7 @@ PRIM(fgets)
   s = xbarray_fgets(&x, fp);
   if (s == NULL) *result = object_nil;
   else {
-    *result = gc_new_barray(x.size--); // remove NUL
+    *result = gc_new_barray(BARRAY, x.size--); // remove NUL
     memcpy((*result)->barray.elt, x.elt, x.size);
   }
   xbarray_free(&x);

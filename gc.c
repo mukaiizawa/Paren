@@ -134,28 +134,47 @@ object gc_new_cons(object car, object cdr)
   return o;
 }
 
-// TODO free name?
-object gc_new_symbol(char *name)
+static object new_barray(int type, int size)
 {
   object o;
-  if ((o = xsplay_find(&symbol_table, name)) == NULL) {
-    o = gc_alloc(sizeof(struct symbol));
-    if (name[0] != ':') set_type(o, SYMBOL);
-    else set_type(o, KEYWORD);
-    o->symbol.name = name;
-    xsplay_add(&symbol_table, name, o);
-  }
+  xassert(size >= 0);
+  o = gc_alloc(sizeof(struct barray) + size - 1);
+  set_type(o, type);
+  o->barray.size = size;
   return o;
 }
 
-object gc_new_barray(int size)
+object gc_new_barray(int type, int size)
+{
+  return new_barray(type, size);
+}
+
+
+object gc_new_barray_from(int type, int size, char *val)
 {
   object o;
-  xassert(size > 0);
-  o = gc_alloc(sizeof(struct barray) + size - 1);
-  set_type(o, BARRAY);
-  o->barray.size = size;
-  return o;
+  char *symbol_name;
+  switch (type) {
+    case SYMBOL:
+    case KEYWORD:
+      symbol_name = xmalloc(size + 1);
+      memcpy(symbol_name, val, size);
+      symbol_name[size] = '\0';
+      if ((o = xsplay_find(&symbol_table, symbol_name)) == NULL) {
+        o = new_barray(type, size);
+        memcpy(o->barray.elt, val, size);
+        xsplay_add(&symbol_table, symbol_name, o);
+      } else xfree(symbol_name);
+      return o;
+    case STRING:
+    case BARRAY:
+      o = new_barray(type, size);
+      memcpy(o->barray.elt, val, size);
+      return o;
+    default:
+      xassert(FALSE);
+      return NULL;
+  }
 }
 
 static void sweep_env(int depth, void *key, void *data)

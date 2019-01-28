@@ -90,16 +90,16 @@ static void get_quoted(void)
         case 'r': add('\r'); break;
         case 't': add('\t'); break;
         case 'v': add('\v'); break;
-        case 'x': val = digit_val(skip(), 16) * 16;
-                  val += digit_val(skip(), 16);
-                  add(val);
-                  break;
+        case 'x':
+          val = digit_val(skip(), 16) * 16;
+          val += digit_val(skip(), 16);
+          add(val);
+          break;
         default: add(val); break;
       }
     }
   }
   skip();
-  add('\0');
 }
 
 static int identifier_lead_char_p(void)
@@ -152,7 +152,7 @@ static int lex_identifier(int sign)
   if (sign == 1) add('+');
   else if (sign == -1) add('-');
   while (identifier_trail_char_p()) get();
-  add('\0');
+  if (lex_str.elt[0] == ':') return LEX_KEYWORD;
   return LEX_SYMBOL;
 }
 
@@ -183,7 +183,7 @@ int lex(void)
     return skip();
   if (next_ch == '"') {
     get_quoted();
-    return lex();    // treat as a comment.
+    return LEX_STRING;
   }
   if (next_ch != '+' && next_ch != '-') sign = 0;
   else {
