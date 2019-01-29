@@ -4,16 +4,16 @@
 (<- list (lambda (:rest args) args))
 (assert (= (list 1 2 3) '(1 2 3)))
 
+(<- gensym (let (c 0)
+             (lambda ()
+               (->symbol (+ "#G" (<- c (+ c 1)))))))
+"システム内で重複することのないシンボルを生成して返す。"
+(assert !(same? (gensym) (gensym)))
+
 (macro function (name args :rest body)
   "仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
   argsの書式はspecial operatorのlambdaに準ずる。"
   (list <- name (cons lambda (cons args body))))
-
-(function gensym ()
-  "システム内で重複することのないシンボルを生成して返す。"
-  (let (count 0
-        count-up (lambda () (<- count (+ count 1))))
-    (byte-array->symbol (->byte-array (+ "#G" (->string (count-up)))))))
 
 (macro begin0 (:rest body)
   "bodyを逐次評価し、最初に評価した結果を返す。"
@@ -246,6 +246,7 @@
 (assert (= (.. 0 2 10) '(0)))
 (assert (= (.. -1 1 0.5) '(-1 -0.5 0 0.5 1)))
 
+; todo
 (function adds (l args)
   "リストlの末尾にリストargsのすべての要素を追加したようなリストを返す。"
   (precondition (and (list? l) (list? args)))
@@ -256,6 +257,7 @@
 (assert (= (adds '(1) '(2 3 4)) '(1 2 3 4)))
 (assert (= (adds nil '(1 2 3)) '(1 2 3)))
 
+; todo
 (function add (l x)
   "リストlの末尾に引数xが追加されたようなリストを返す。"
   (precondition (list? l))
@@ -514,3 +516,6 @@
   状態異常の早期検知のために使用する。"
   (list if (list = test nil)
         (list basic-throw :AssertionFailedException (list quote test))))
+
+
+; paren compiler

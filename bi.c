@@ -289,14 +289,7 @@ static object to_string(object o)
   return o;
 }
 
-PRIM(to_string)
-{
-  if (argc != 1) return FALSE;
-  *result = to_string(argv->cons.car);
-  return TRUE;
-}
-
-static int barray_add(object argv, object *result)
+static int string_add(object argv, object *result)
 {
   object x, y;
   if (argv == object_nil) return TRUE;
@@ -305,7 +298,7 @@ static int barray_add(object argv, object *result)
   *result = gc_new_barray(STRING, x->barray.size + y->barray.size);
   memcpy((*result)->barray.elt, x->barray.elt, x->barray.size);
   memcpy((*result)->barray.elt + x->barray.size, y->barray.elt, y->barray.size);
-  return barray_add(argv->cons.cdr, result);
+  return string_add(argv->cons.cdr, result);
 }
 
 static int double_add(object argv, object *result)
@@ -317,7 +310,7 @@ static int double_add(object argv, object *result)
     *result = gc_new_xfloat(z);
     return double_add(argv->cons.cdr, result);
   }
-  return barray_add(argv, result);
+  return FALSE;
 }
 
 static int int64_add(object argv, object *result)
@@ -346,9 +339,17 @@ PRIM(add)
 {
   if (argv == 0) return FALSE;
   *result = argv->cons.car;
-  if (typep(*result, CONS)) return cons_add(argv->cons.cdr, result);
-  if (numberp(*result)) return int64_add(argv->cons.cdr, result);
-  return barray_add(argv->cons.cdr, result);
+  switch (type(*result)) {
+    case CONS:
+      return cons_add(argv->cons.cdr, result);
+    case XINT:
+    case XFLOAT:
+      return int64_add(argv->cons.cdr, result);
+    case STRING:
+      return string_add(argv->cons.cdr, result);
+    default:
+      return FALSE;
+  }
 }
 
 PRIM(length)
@@ -371,6 +372,57 @@ PRIM(length)
     }
   }
   *result = gc_new_xint(len);
+  return TRUE;
+}
+
+// conversion
+
+PRIM(to_string)
+{
+  if (argc != 1) return FALSE;
+  *result = to_string(argv->cons.car);
+  return TRUE;
+}
+
+PRIM(to_barray)
+{
+  object x;
+  if (argc != 1) return FALSE;
+  switch (type(x = argv->cons.car)) {
+    case BARRAY:
+      *result = x;
+      break;
+    case SYMBOL:
+    case KEYWORD:
+    case STRING:
+      *result = gc_new_barray_from(BARRAY, x->barray.size, x->barray.elt);
+      break;
+    default: return FALSE;
+  }
+  return TRUE;
+}
+
+PRIM(to_symbol)
+{
+  int size;
+  char *s;
+  object x;
+  if (argc != 1) return FALSE;
+  switch (type(x = argv->cons.car)) {
+    case KEYWORD:
+      size = x->barray.size - 1;
+      s = x->barray.elt + 1;
+      break;
+    case SYMBOL:
+    case BARRAY:
+    case STRING:
+      size = x->barray.size;
+      s = x->barray.elt;
+      break;
+    default:
+      return FALSE;
+  }
+  *result = gc_new_barray_from(SYMBOL, size, s);
   return TRUE;
 }
 
@@ -418,24 +470,6 @@ PRIM(cdr)
 }
 
 // number
-
-PRIM(number_to_integer)
-{
-  double x;
-  if (argc != 1) return FALSE;
-  switch (type(argv->cons.car)) {
-    case XINT:
-      *result = argv->cons.car;
-      break;
-    case XFLOAT:
-      if (!bi_double(argv->cons.car, &x)) return FALSE;
-      *result = gc_new_xint((int64_t)x);
-      break;
-    default:
-      return FALSE;
-  }
-  return TRUE;
-}
 
 static int double_multiply(object argv, object *result)
 {
@@ -561,55 +595,6 @@ PRIM(array_copy)
   }
 }
 
-PRIM(barray_to_symbol)
-{
-  object x;
-  if (argc != 1) return FALSE;
-  if (!typep(x = argv->cons.car, BARRAY)) return FALSE;
-  if (x->barray.elt[0] == ':') return FALSE;
-  *result = gc_new_barray_from(SYMBOL, x->barray.size, x->barray.elt);
-  return TRUE;
-}
-
-PRIM(barray_to_keyword)
-{
-  object x;
-  if (argc != 1) return FALSE;
-  if (!typep(x = argv->cons.car, BARRAY)) return FALSE;
-  if (x->barray.elt[0] != ':') return FALSE;
-  *result = gc_new_barray_from(KEYWORD, x->barray.size, x->barray.elt);
-  return TRUE;
-}
-
-PRIM(barray_to_string)
-{
-  object x;
-  if (argc != 1) return FALSE;
-  if (!typep(x = argv->cons.car, BARRAY)) return FALSE;
-  *result = gc_new_barray_from(STRING, x->barray.size, x->barray.elt);
-  return TRUE;
-}
-
-PRIM(to_barray)
-{
-  object x;
-  if (argc != 1) return FALSE;
-  switch (type(x = argv->cons.car)) {
-    case BARRAY:
-      *result = x;
-      break;
-    case SYMBOL:
-    case KEYWORD:
-    case STRING:
-      *result = gc_new_barray_from(BARRAY, x->barray.size, x->barray.elt);
-      break;
-    default: return FALSE;
-  }
-  return TRUE;
-}
-
-
-
 #undef SPECIAL
 #undef PRIM
 
@@ -629,9 +614,6 @@ static char *symbol_name_map[] = {
   "assign", "<-",
   "atom_p", "atom?",
   "barray_new", "byte-array",
-  "barray_to_keyword", "byte-array->keyword",
-  "barray_to_string", "byte-array->string",
-  "barray_to_symbol", "byte-array->symbol",
   "byte_array_p", "byte-array?",
   "equalp", "=",
   "keyword_p", "keyword?",
@@ -648,8 +630,8 @@ static char *symbol_name_map[] = {
   "throw", "basic-throw",
   "to_barray", "->byte-array",
   "to_string", "->string",
+  "to_symbol", "->symbol",
   "try", "basic-try",
-  // "number_to_integer", "number->integer",
   NULL
 };
 
