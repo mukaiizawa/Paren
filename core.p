@@ -6,7 +6,7 @@
 
 (<- gensym (let (c 0)
              (lambda ()
-               (->symbol (+ "#G" (<- c (+ c 1)))))))
+               (->symbol (+ ":G" (<- c (+ c 1)))))))
 "システム内で重複することのないシンボルを生成して返す。"
 (assert !(same? (gensym) (gensym)))
 
@@ -538,8 +538,8 @@
   (let (val (gensym) val? (gensym))
     (list method cls-sym (->symbol (+ "." var))
           (list :opt (list val nil val?))
-          (list if val? (list '. 'self var val)
-                (list '. 'self var)))))
+          (list if val? (list '. 'self (->keyword var) val)
+                (list '. 'self (->keyword var))))))
 
 (macro make-method-dispatcher (method-sym)
   (let (args (gensym))
@@ -563,7 +563,7 @@
                                                :symbol cls-sym
                                                :super (if (not Object?) super)
                                                :features features
-                                               :fields (map fields ->keyword)
+                                               :fields fields
                                                :methods nil)))
             (list 'push '$class cls-sym)
             (list 'push '$class (list quote cls-sym)))
@@ -615,7 +615,7 @@
 (method Class .new ()
   (let (o nil cls self fields nil)
     (while cls
-      (<- fields (reverse (copy-list (. cls :fields))))
+      (<- fields (reverse (copy-list (map (. cls :fields) ->keyword))))
       (while fields
         (push o (if (same? (car fields) :class) (. self :symbol)))
         (push o (car fields))
@@ -628,6 +628,10 @@
 (class FileStream (Stream)
   "ファイルストリームクラス"
   fp)
+
+(method FileStream .init (fp)
+  (.fp self fp)
+  self)
 
 (class MemoryStream (Stream) "ストリームクラス")
 
@@ -650,15 +654,11 @@
   (begin0 (.nextChar self)
           (.nextChar self (.getChar (.reader self)))))
 
-
 ; I/O
-(<- $stdin (fp 0)
-    $stdout (fp 1)
+(<- $stdin (.init (.new FileStream) (fp 0))
+    $stdout (.init (.new FileStream) (fp 1))
     $in $stdin
     $out $stdout)
-
-(print (.new FileStream))
-
 
 ; ./paren
 ; )
