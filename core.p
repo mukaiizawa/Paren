@@ -112,6 +112,13 @@
 (assert (list? nil))
 (assert (list? '(1)))
 
+(function byte? (x)
+  "xが0から255の整数の場合はtrueを、そうでなければnilを返す。"
+  (<= 0 x 255))
+(assert (byte? 0))
+(assert (byte? 255))
+(assert !(byte? 256))
+
 (<- caar (lambda (x) (car (car x)))
     cadr (lambda (x) (car (cdr x)))
     cdar (lambda (x) (cdr (car x)))
@@ -596,7 +603,6 @@
   (precondition (and (object? o) (object? cls) (same? (cadr cls) 'Class)))
   (let (cls-sym (. cls :symbol)
         rec (lambda (o-cls-sym)
-              (print (list o-cls-sym cls-sym))
               (and o-cls-sym
                    (or (same? o-cls-sym cls-sym)
                        (rec (. (find-class o-cls-sym) :super))))))
@@ -638,12 +644,20 @@
 (method FileStream .readByte ()
   (fgetc (.fp self)))
 
+(method FileStream .writeByte (byte)
+  (precondition (byte? byte))
+  (fputc byte (.fp self)))
+
 (class MemoryStream (Stream) "ストリームクラス")
+; todo
 
 (function read-byte (:opt (fs $stdin))
-  (print fs)
   (precondition (is-a? fs Stream))
   (.readByte fs))
+
+(function write-byte (byte :opt (fs $stdout))
+  (precondition (and (byte? byte) (is-a? fs Stream)))
+  (.writeByte fs byte))
 
 (class AheadReader ()
   "フィーチャーの基底クラス。
@@ -665,8 +679,18 @@
     $in $stdin
     $out $stdout)
 
+(write-byte 0x68)
+(write-byte 0x65)
+(write-byte 0x6c)
+(write-byte 0x6c)
+(write-byte 0x6f)
+
 ; ./paren
 ; )
+;
 ; ./paren xxx.p
+; load xxx.p
+;
+;
 ; (if $args (loop (print (eval (read))))
 ;     (load xxx.p))
