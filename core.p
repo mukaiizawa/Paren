@@ -592,13 +592,15 @@
   (and (list? x) (= (car x) :class)))
 
 (function is-a? (o cls)
-  "xがclsクラスのインスタンスの場合trueを、そうでなければnilを返す。"
-  (precondition (and (object? o) (object? cls)))
-  (let (rec (lambda (o-cls cls)
-              (or (same? o-cls (. cls :symbol))
-                  (let (super (. cls :super))
-                    (and super (rec o-cls (find-class super)))))))
-    (rec (. o :class) cls)))
+  "oがclsクラスのインスタンスの場合trueを、そうでなければnilを返す。"
+  (precondition (and (object? o) (object? cls) (same? (cadr cls) 'Class)))
+  (let (cls-sym (. cls :symbol)
+        rec (lambda (o-cls-sym)
+              (print (list o-cls-sym cls-sym))
+              (and o-cls-sym
+                   (or (same? o-cls-sym cls-sym)
+                       (rec (. (find-class o-cls-sym) :super))))))
+    (rec (. o :class))))
 
 (class Object ()
   "唯一スーパークラスを持たない、クラス階層の最上位クラス。
@@ -633,12 +635,15 @@
   (.fp self fp)
   self)
 
+(method FileStream .readByte ()
+  (fgetc (.fp self)))
+
 (class MemoryStream (Stream) "ストリームクラス")
 
-(class Reader ()
-  "ストリームからデータを入力する機能を提供する")
-
-(method Reader .readByte () (assert nil))
+(function read-byte (:opt (fs $stdin))
+  (print fs)
+  (precondition (is-a? fs Stream))
+  (.readByte fs))
 
 (class AheadReader ()
   "フィーチャーの基底クラス。
