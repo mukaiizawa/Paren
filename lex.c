@@ -70,10 +70,9 @@ static int digit_val(int ch, int radix)
   return result;
 }
 
-static void get_quoted(void)
+static int lex_string(void)
 {
   int quote, val;
-  xbarray_reset(&lex_str);
   quote = skip();
   while (next_ch != quote) {
     if (next_ch == EOF) lex_error("quote not closed");
@@ -100,13 +99,14 @@ static void get_quoted(void)
     }
   }
   skip();
+  return LEX_STRING;
 }
 
 static int identifier_lead_char_p(void)
 {
   switch (next_ch) {
     case '$': case '%': case '&': case '*': case '+': case '-': case '/':
-    case ':': case '<': case '=': case '>': case '?': case '_': case '.':
+    case '<': case '=': case '>': case '?': case '_': case '.':
     case '[': case ']':
       return TRUE;
     default: return isalpha(next_ch);
@@ -146,14 +146,9 @@ static int lex_number(int sign)
   return LEX_INT;
 }
 
-static int lex_identifier(int sign)
+static void lex_identifier(void)
 {
-  xbarray_reset(&lex_str);
-  if (sign == 1) add('+');
-  else if (sign == -1) add('-');
   while (identifier_trail_char_p()) get();
-  if (lex_str.elt[0] == ':') return LEX_KEYWORD;
-  return LEX_SYMBOL;
 }
 
 char *lex_token_name(char *buf, int token)
@@ -172,6 +167,7 @@ char *lex_token_name(char *buf, int token)
 int lex(void)
 {
   int sign;
+  xbarray_reset(&lex_str);
   while (isspace(next_ch)) skip();
   if (next_ch == ';') {
     while (next_ch != '\n') skip();
@@ -181,9 +177,11 @@ int lex(void)
   if (next_ch == EOF || next_ch == '(' || next_ch == ')' || next_ch == '!'
       || next_ch == '\'' || next_ch == '`' || next_ch == ',' || next_ch == '@')
     return skip();
-  if (next_ch == '"') {
-    get_quoted();
-    return LEX_STRING;
+  if (next_ch == '"') return lex_string();
+  if (next_ch == ':') {
+    skip();
+    lex_identifier();
+    return LEX_KEYWORD;
   }
   if (next_ch != '+' && next_ch != '-') sign = 0;
   else {
@@ -192,7 +190,12 @@ int lex(void)
     skip();
   }
   if (isdigit(next_ch)) return lex_number(sign);
-  if (identifier_lead_char_p() || sign != 0) return lex_identifier(sign);
+  else if (sign == 1) add('+');
+  else if (sign == -1) add('-');
+  if (sign != 0 || identifier_lead_char_p()) {
+    lex_identifier();
+    return LEX_SYMBOL;
+  }
   lex_error("illegal char '%c'", next_ch);
   return -1;
 }

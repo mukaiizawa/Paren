@@ -18,6 +18,7 @@ static object free_env;
 static struct xarray table;
 static struct xarray work_table;
 static struct xsplay symbol_table;
+static struct xsplay keyword_table;
 
 static int alivep(object o)
 {
@@ -153,18 +154,27 @@ object gc_new_barray(int type, int size)
 object gc_new_barray_from(int type, int size, char *val)
 {
   object o;
-  char *symbol_name;
+  char *name;
   switch (type) {
     case SYMBOL:
-    case KEYWORD:
-      symbol_name = xmalloc(size + 1);
-      memcpy(symbol_name, val, size);
-      symbol_name[size] = '\0';
-      if ((o = xsplay_find(&symbol_table, symbol_name)) == NULL) {
+      name = xmalloc(size + 1);
+      memcpy(name, val, size);
+      name[size] = '\0';
+      if ((o = xsplay_find(&symbol_table, name)) == NULL) {
         o = new_barray(type, size);
         memcpy(o->barray.elt, val, size);
-        xsplay_add(&symbol_table, symbol_name, o);
-      } else xfree(symbol_name);
+        xsplay_add(&symbol_table, name, o);
+      } else xfree(name);
+      return o;
+    case KEYWORD:
+      name = xmalloc(size + 1);
+      memcpy(name, val, size);
+      name[size] = '\0';
+      if ((o = xsplay_find(&keyword_table, name)) == NULL) {
+        o = new_barray(type, size);
+        memcpy(o->barray.elt, val, size);
+        xsplay_add(&keyword_table, name, o);
+      } else xfree(name);
       return o;
     case STRING:
     case BARRAY:
@@ -264,6 +274,7 @@ void gc_init(void)
   xarray_init(&table);
   xarray_init(&work_table);
   xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
+  xsplay_init(&keyword_table, (int(*)(void *, void *))strcmp);
 }
 
 void gc_dump_table(void)

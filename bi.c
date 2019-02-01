@@ -264,8 +264,11 @@ static void s_expr_to_string(object o, struct xbarray *x)
     case XFLOAT:
       xbarray_addf(x, "%g", o->xfloat.val);
       break;
-    case SYMBOL:
     case KEYWORD:
+      xbarray_add(x, ':');
+      xbarray_add_barray(x, o);
+      break;
+    case SYMBOL:
     case STRING:
       xbarray_add_barray(x, o);
       break;
@@ -397,32 +400,45 @@ PRIM(to_barray)
     case STRING:
       *result = gc_new_barray_from(BARRAY, x->barray.size, x->barray.elt);
       break;
-    default: return FALSE;
+    default:
+      return FALSE;
   }
   return TRUE;
 }
 
 PRIM(to_symbol)
 {
-  int size;
-  char *s;
   object x;
   if (argc != 1) return FALSE;
   switch (type(x = argv->cons.car)) {
-    case KEYWORD:
-      size = x->barray.size - 1;
-      s = x->barray.elt + 1;
-      break;
     case SYMBOL:
-    case BARRAY:
+      *result = x;
+      break;
+    case KEYWORD:
     case STRING:
-      size = x->barray.size;
-      s = x->barray.elt;
+      *result = gc_new_barray_from(SYMBOL, x->barray.size, x->barray.elt);
       break;
     default:
       return FALSE;
   }
-  *result = gc_new_barray_from(SYMBOL, size, s);
+  return TRUE;
+}
+
+PRIM(to_keyword)
+{
+  object x;
+  if (argc != 1) return FALSE;
+  switch (type(x = argv->cons.car)) {
+    case KEYWORD:
+      *result = x;
+      break;
+    case SYMBOL:
+    case STRING:
+      *result = gc_new_barray_from(KEYWORD, x->barray.size, x->barray.elt);
+      break;
+    default:
+      return FALSE;
+  }
   return TRUE;
 }
 
@@ -549,6 +565,8 @@ PRIM(barray_new)
   return TRUE;
 }
 
+// TODO array new
+
 PRIM(array_access)
 {
   int64_t i;
@@ -629,6 +647,7 @@ static char *symbol_name_map[] = {
   "symbol_p", "symbol?",
   "throw", "basic-throw",
   "to_barray", "->byte-array",
+  "to_keyword", "->keyword",
   "to_string", "->string",
   "to_symbol", "->symbol",
   "try", "basic-try",

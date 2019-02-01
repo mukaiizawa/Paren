@@ -19,7 +19,7 @@
   "bodyを逐次評価し、最初に評価した結果を返す。"
   (let (sym (gensym))
     (cons let (cons (list sym (car body))
-                    (add (cdr body) sym)))))
+                    (+ (cdr body) sym)))))
 (assert (= (begin0 1 2 3) 1))
 
 (macro when (test :rest body)
@@ -59,7 +59,7 @@
               (cons labels
                     (cons :while
                           (cons (list if (list not test) '(return nil))
-                                (add body '(goto :while))))))))
+                                (+ body '(goto :while))))))))
 
 (macro dolist ((i l) :rest body)
   "リストlをインデックスiを用いてイテレーションする。nilを返す。
@@ -72,9 +72,9 @@
                       (cons :dolist
                             (cons (list if (list not gl) '(return nil))
                                   (cons (list <- i (list car gl))
-                                        (adds body
-                                              (list (list <- gl (list cdr gl))
-                                                    '(goto :dolist)))))))))))
+                                        (append body
+                                                (list (list <- gl (list cdr gl))
+                                                      '(goto :dolist)))))))))))
 
 ; fundamental function
 
@@ -246,24 +246,14 @@
 (assert (= (.. 0 2 10) '(0)))
 (assert (= (.. -1 1 0.5) '(-1 -0.5 0 0.5 1)))
 
-; todo
-(function adds (l args)
-  "リストlの末尾にリストargsのすべての要素を追加したようなリストを返す。"
-  (precondition (and (list? l) (list? args)))
-  (if (nil? l) args
-      (let (result (copy-list l))
-        (cdr (last-cons result) args)
-        result)))
-(assert (= (adds '(1) '(2 3 4)) '(1 2 3 4)))
-(assert (= (adds nil '(1 2 3)) '(1 2 3)))
-
-; todo
-(function add (l x)
-  "リストlの末尾に引数xが追加されたようなリストを返す。"
-  (precondition (list? l))
-  (adds l (list x)))
-(assert (= (add nil 1) '(1)))
-(assert (= (add '(1) '(2 3 4)) '(1 (2 3 4))))
+(function append (l :rest args)
+  "リストlの要素としてargsの各要素を追加する。
+  argsの任意の要素はリストでなければならない。"
+  (precondition (all-satisfy? args list?))
+  (reduce args (lambda (acc rest)
+                 (reduce rest + :identity acc))
+                 :identity l))
+(assert (= (append '(1 2) '((3 4) (5)) '(6)) '(1 2 (3 4) (5) 6)))
 
 (macro push (sym x)
   "シンボルsymを束縛しているリストの先頭に破壊的にxを追加する。
@@ -422,6 +412,11 @@
 (assert (= (. '(:a 1 :b 2 :c 3) :a) 1))
 (assert (= (begin (<- al '(:a 1 :b 2)) (. al :b -2) al) '(:a 1 :b -2)))
 
+(function push-pair (al k v)
+  "連想リストに対を追加する。"
+  (precondition (list? al))
+  (push al v)
+  (push al k))
 
 ; numeric
 (function - (x :rest args)
@@ -489,14 +484,6 @@
 (assert (odd? 1))
 (assert !(odd? 2))
 
-; fixed byte array
-
-; I/O
-(<- $stdin (fp 0)
-    $stdout (fp 1)
-    $in $stdin
-    $out $stdout)
-
 ; error and exception
 
 (macro precondition (test)
@@ -518,4 +505,163 @@
         (list basic-throw :AssertionFailedException (list quote test))))
 
 
-; paren compiler
+; paren object system
+
+(<- $class nil)
+
+(function class-exists? (cls-sym)
+  (find $class cls-sym))
+
+(function find-class (cls-sym)
+  (precondition (and (symbol? cls-sym) (class-exists? cls-sym)))
+  (. $class cls-sym))
+
+(function find-method (cls-sym method-sym)
+  (precondition (and (symbol? cls-sym) (symbol? method-sym)))
+  (let (find-class-method
+            (lambda (cls)
+              (cadr (find-cons (. cls :methods) method-sym)))
+        find-feature-method
+            (lambda (features)
+              (and features
+                  (or (find-class-method (find-class (car features)))
+                      (find-feature-method (cdr features)))))
+        rec
+            (lambda (cls)
+                (or (find-class-method cls)
+                    (find-feature-method (. cls :features))
+                    (let (super (. cls :super))
+                      (and super (rec (find-class super)))))))
+    (or (rec (find-class cls-sym)) (basic-throw :MissingMethodException))))
+
+(macro make-accessor (cls-sym var)
+  (let (val (gensym) val? (gensym))
+    (list method cls-sym (->symbol (+ "." var))
+          (list :opt (list val nil val?))
+          (list if val? (list '. 'self var val)
+                (list '. 'self var)))))
+
+(macro make-method-dispatcher (method-sym)
+  (let (args (gensym))
+    (list macro method-sym (list :rest args)
+          (list cons (list 'list 'find-method
+                           (list 'list '. (list car args) :class)
+                           (list quote (list quote method-sym)))
+                args))))
+
+(macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
+  (let (Object? (= cls-sym 'Object)
+        has-desc? (string? (car fields))
+        desc (and has-desc? (car fields))
+        fields (if has-desc? (cdr fields) fields))
+    (precondition (and (all-satisfy? fields symbol?) !(class-exists? cls-sym)))
+    (append
+      (list begin0
+            (list quote cls-sym)
+            (list <- cls-sym (list quote (list :class 'Class
+                                               :desc desc
+                                               :symbol cls-sym
+                                               :super (if (not Object?) super)
+                                               :features features
+                                               :fields (map fields ->keyword)
+                                               :methods nil)))
+            (list 'push '$class cls-sym)
+            (list 'push '$class (list quote cls-sym)))
+      (map fields (lambda (var) (list 'make-accessor cls-sym var))))))
+
+(macro method (cls-sym method-sym args :rest body)
+  (precondition (class-exists? cls-sym))
+  (list begin
+        (list make-method-dispatcher method-sym)
+        (list . cls-sym :methods
+              (list cons (list quote method-sym)
+                    (list cons (cons lambda (cons (cons 'self args) body))
+                          (list '. cls-sym :methods))))))
+
+(macro feature (f-sym)
+  "フィーチャーはクラスを横断して共通のメソッドを定義する仕組みである。
+  フィーチャーを割り当てられたクラスはクラスで定義されたメソッドの他に、フィーチャーで定義されたメソッドを実行できる。
+  クラスに同名のメソッドがあればクラスのメソッドが優先して実行される。
+  スーパークラスに同名のメソッドがあった場合はフィーチャーのメソッドが優先される。"
+  (precondition (symbol? f-sym))
+  (list class f-sym (list 'Feature)))
+
+(function object? (x)
+  "xがオブジェクトの場合trueを、そうでなければnilを返す。
+  paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。"
+  (and (list? x) (= (car x) :class)))
+
+(function is-a? (o cls)
+  "xがclsクラスのインスタンスの場合trueを、そうでなければnilを返す。"
+  (precondition (and (object? o) (object? cls)))
+  (let (rec (lambda (o-cls cls)
+              (or (same? o-cls (. cls :symbol))
+                  (let (super (. cls :super))
+                    (and super (rec o-cls (find-class super)))))))
+    (rec (. o :class) cls)))
+
+(class Object ()
+  "唯一スーパークラスを持たない、クラス階層の最上位クラス。
+  スーパークラスを指定しない場合は暗黙的にObjectクラスを継承する。"
+  class)
+
+(method Object .equal? (o)
+  "レシーバとoが同一オブジェクトの場合にtrueを、そうでなければnilを返す。
+  サブクラスで同等性を定義する場合はこのメソッドをオーバーロードする。"
+  (same? self o))
+
+(class Class () symbol desc super features fields methods)
+
+(method Class .new ()
+  (let (o nil cls self fields nil)
+    (while cls
+      (<- fields (reverse (copy-list (. cls :fields))))
+      (while fields
+        (push o (if (same? (car fields) :class) (. self :symbol)))
+        (push o (car fields))
+        (<- fields (cdr fields)))
+      (<- cls (and (. cls :super) (find-class (. cls :super)))))
+    o))
+
+(class Stream (Object Reader Writer) "ストリームクラス")
+
+(class FileStream (Stream)
+  "ファイルストリームクラス"
+  fp)
+
+(class MemoryStream (Stream) "ストリームクラス")
+
+(class Reader ()
+  "ストリームからデータを入力する機能を提供する")
+
+(method Reader .readByte () (assert nil))
+
+(class AheadReader ()
+  "フィーチャーの基底クラス。
+  すべてのフィーチャーはこのクラスを継承しなければならない。"
+  reader nextChar)
+
+(method AheadReader .init (:key reader)
+  (precondition reader)
+  (.reader self reader)
+  self)
+
+(method AheadReader .skipChar (:key reader)
+  (begin0 (.nextChar self)
+          (.nextChar self (.getChar (.reader self)))))
+
+
+; I/O
+(<- $stdin (fp 0)
+    $stdout (fp 1)
+    $in $stdin
+    $out $stdout)
+
+(print (.new FileStream))
+
+
+; ./paren
+; )
+; ./paren xxx.p
+; (if $args (loop (print (eval (read))))
+;     (load xxx.p))

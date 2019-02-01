@@ -173,10 +173,12 @@ static void bind_pseudo_symbol(object o)
 
 static object symbol_new(char *name)
 {
-  int type;
-  if (name[0] == ':') type = KEYWORD;
-  else type = SYMBOL;
-  return gc_new_barray_from(type, strlen(name), name);
+  return gc_new_barray_from(SYMBOL, strlen(name), name);
+}
+
+static object keyword_new(char *name)
+{
+  return gc_new_barray_from(KEYWORD, strlen(name), name);
 }
 
 static void bind_special(void)
@@ -202,12 +204,12 @@ static void make_initial_objects(void)
   object_nil = symbol_new("nil");
   object_catch = symbol_new("catch");
   object_finally = symbol_new("finally");
-  object_key = symbol_new(":key");
+  object_key = keyword_new("key");
   object_not = symbol_new("not");
-  object_opt = symbol_new(":opt");
+  object_opt = keyword_new("opt");
   object_quote = symbol_new("quote");
-  object_rest = symbol_new(":rest");
-  object_snbhe = symbol_new(":ShouldNotBeHandledException");
+  object_rest = keyword_new("rest");
+  object_snbhe = keyword_new("ShouldNotBeHandledException");
   object_st = symbol_new("$stack-trace");
   object_toplevel = gc_new_env(object_nil);
   object_true = symbol_new("true");

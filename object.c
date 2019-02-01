@@ -183,8 +183,11 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_add_barray(x, o);
       xbarray_add(x, '"');
       break;
-    case SYMBOL:
     case KEYWORD:
+      xbarray_add(x, ':');
+      xbarray_add_barray(x, o);
+      break;
+    case SYMBOL:
       xbarray_add_barray(x, o);
       break;
     case BARRAY:

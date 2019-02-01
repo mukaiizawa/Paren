@@ -589,9 +589,9 @@ static void pop_throw_frame(void)
 
 static int same_symbol_keyword_p(object sym, object key)
 {
-  int size;
-  if ((size = sym->barray.size) != key->barray.size - 1) return FALSE;
-  return memcmp(sym->barray.elt, key->barray.elt + 1, size) == 0;
+  xassert(typep(sym, SYMBOL) && typep(key, KEYWORD));
+  if (sym->barray.size != key->barray.size) return FALSE;
+  return memcmp(sym->barray.elt, key->barray.elt, sym->barray.size) == 0;
 }
 
 static int valid_keyword_p(object params, object args)
