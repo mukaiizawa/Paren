@@ -141,6 +141,7 @@ static object new_barray(int type, int size)
   xassert(size >= 0);
   o = gc_alloc(sizeof(struct barray) + size - 1);
   set_type(o, type);
+  memset(o->barray.elt,0, size);
   o->barray.size = size;
   return o;
 }

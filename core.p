@@ -631,7 +631,11 @@
       (<- cls (and (. cls :super) (find-class (. cls :super)))))
     o))
 
-(class Stream (Object Reader Writer) "ストリームクラス")
+(class Stream (Object Reader Writer)
+  "ストリームクラス。
+  入出力の基本的なメソッドを持つ。")
+(method Stream .readByte (:rest args) (basic-throw :NotImplementedException))
+(method Stream .writeByte (:rest args) (basic-throw :NotImplementedException))
 
 (class FileStream (Stream)
   "ファイルストリームクラス"
@@ -648,16 +652,55 @@
   (precondition (byte? byte))
   (fputc byte (.fp self)))
 
-(class MemoryStream (Stream) "ストリームクラス")
-; todo
+(class MemoryStream (Stream)
+  "メモリ上に内容を保持するストリームクラス。
+  文字列などから構築する。"
+  buf buf-size rd-pos wr-pos)
 
-(function read-byte (:opt (fs $stdin))
-  (precondition (is-a? fs Stream))
-  (.readByte fs))
+(method MemoryStream .init ()
+  (let (buf-size 256)
+    (.buf-size self buf-size)
+    (.buf self (byte-array buf-size))
+    (.rd-pos self 0)
+    (.wr-pos self 0))
+  self)
 
-(function write-byte (byte :opt (fs $stdout))
-  (precondition (and (byte? byte) (is-a? fs Stream)))
-  (.writeByte fs byte))
+(method MemoryStream .extend (size)
+  (precondition (integer? size))
+  (let (req (+ (.wr-pos self) size) new-buf nil)
+    (while (< (.buf-size self) req)
+      (.buf-size self (* (.buf-size self) 2)))
+    (<- new-buf (byte-array (.buf-size self)))
+    (array-copy (.buf self) 0 new-buf 0  (.buf-size self))
+    (.buf self new-buf)
+    self))
+
+(method MemoryStream .writeByte (byte)
+  (precondition (byte? byte))
+  (let (pos (.wr-pos self))
+    (if (< pos (.buf-size self))
+        (begin ([] (.buf self) pos byte)
+               (.wr-pos self (++ pos)))
+        (.writeByte (.extend self 1) byte))))
+
+(method MemoryStream .readByte (byte)
+  (precondition (byte? byte))
+  (let (pos (.rd-pos self))
+    (if (>= pos (.wr-pos self)) -1
+        (begin0 ([] (.buf self) pos)
+                (.rd-pos self (++ pos))))))
+
+(method MemoryStream .toString ()
+  (let (pos (.wr-pos self) str (byte-array pos))
+    (->string (array-copy (.buf self) 0 str 0 pos))))
+
+(function read-byte (:opt (stream $stdin))
+  (precondition (is-a? stream Stream))
+  (.readByte stream))
+
+(function write-byte (byte :opt (stream $stdout))
+  (precondition (and (byte? byte) (is-a? stream Stream)))
+  (.writeByte stream byte))
 
 (class AheadReader ()
   "フィーチャーの基底クラス。
@@ -679,11 +722,13 @@
     $in $stdin
     $out $stdout)
 
-(write-byte 0x68)
-(write-byte 0x65)
-(write-byte 0x6c)
-(write-byte 0x6c)
-(write-byte 0x6f)
+(<- s (.init (.new MemoryStream)))
+
+(write-byte 0x68 s)
+(write-byte 0x65 s)
+(write-byte 0x6c s)
+(write-byte 0x6c s)
+(write-byte 0x6f s)
 
 ; ./paren
 ; )

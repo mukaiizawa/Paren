@@ -18,7 +18,7 @@ typedef union s_expr *object;
 
 #define type(o) ((o)->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
-#define listp(o) (o == object_nil || typep(o, CONS))
+#define listp(o) ((o) == object_nil || typep(o, CONS))
 #define numberp(o) (typep(o, XINT) || typep(o, XFLOAT))
 #define byte_range_p(x) ((x >= 0) && (x < 256))
 #define bytep(o) (typep(o, XINT) && byte_range_p((o)->xint.val))
@@ -83,5 +83,4 @@ extern int object_byte_size(object o);
 extern char *object_describe(object o, char *buf);
 extern int object_list_len(object o);
 extern object object_bool(int b);
-extern object object_nth(object o, int n);
 extern object object_reverse(object o);

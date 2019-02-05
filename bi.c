@@ -86,6 +86,13 @@ PRIM(number_p)
   return TRUE;
 }
 
+PRIM(integer_p)
+{
+  if (argc != 1) return FALSE;
+  *result = object_bool(typep(argv->cons.car, XINT));
+  return TRUE;
+}
+
 PRIM(symbol_p)
 {
   if (argc != 1) return FALSE;
@@ -121,7 +128,7 @@ PRIM(macro_p)
   return TRUE;
 }
 
-PRIM(byte_array_p)
+PRIM(barray_p)
 {
   if (argc != 1) return FALSE;
   *result = object_bool(typep(argv->cons.car, BARRAY));
@@ -203,18 +210,6 @@ static void describe_cons(object o, struct xbarray *x)
   }
 }
 
-static void describe_barray(object o, struct xbarray *x)
-{
-  int i;
-  xbarray_adds(x, "#<");
-  for (i = 0; i < o->barray.size; i++) {
-    if (i != 0) xbarray_add(x, ' ');
-    xbarray_addf(x, "0x%x", (int)(o->barray.elt[i]));
-    if (x->size > MAX_STR_LEN) return;
-  }
-  xbarray_add(x, '>');
-}
-
 static void describe_array(object o, struct xbarray *x)
 {
   int i;
@@ -270,10 +265,8 @@ static void s_expr_to_string(object o, struct xbarray *x)
       break;
     case SYMBOL:
     case STRING:
-      xbarray_add_barray(x, o);
-      break;
     case BARRAY:
-      describe_barray(o, x);
+      xbarray_add_barray(x, o);
       break;
     case ARRAY:
       describe_array(o, x);
@@ -454,14 +447,14 @@ PRIM(cons)
 PRIM(car)
 {
   object o, p;
-  o = object_nth(argv, 0);
-  if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
+  if (argc != 1 && argc != 2) return FALSE;
+  if (!listp(o = argv->cons.car)) return FALSE;
   if (argc == 1) {
     if (o == object_nil) *result = object_nil;
     else *result = o->cons.car;
   } else {
     if (o == object_nil) return FALSE;
-    p = object_nth(argv, 1);
+    p = argv->cons.cdr->cons.car;
     o->cons.car = p;
     *result = p;
   }
@@ -471,14 +464,14 @@ PRIM(car)
 PRIM(cdr)
 {
   object o, p;
-  o = object_nth(argv, 0);
-  if ((argc != 1 && argc != 2) || !listp(o)) return FALSE;
+  if (argc != 1 && argc != 2) return FALSE;
+  if (!listp(o = argv->cons.car)) return FALSE;
   if (argc == 1) {
     if (o == object_nil) *result = object_nil;
     else *result = o->cons.cdr;
   } else {
     if (o == object_nil) return FALSE;
-    p = object_nth(argv, 1);
+    p = argv->cons.cdr->cons.car;
     o->cons.cdr = p;
     *result = p;
   }
@@ -632,8 +625,9 @@ static char *symbol_name_map[] = {
   "assign", "<-",
   "atom_p", "atom?",
   "barray_new", "byte-array",
-  "byte_array_p", "byte-array?",
+  "barray_p", "byte-array?",
   "equalp", "=",
+  "integer_p", "integer?",
   "keyword_p", "keyword?",
   "macro_p", "macro?",
   "number_lt", "<",

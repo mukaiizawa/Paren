@@ -47,16 +47,6 @@ object object_bool(int b)
   return object_nil;
 }
 
-object object_nth(object o, int n)
-{
-  xassert(listp(o));
-  while (n-- != 0) {
-    if (o == object_nil) return object_nil;
-    o = o->cons.cdr;
-  }
-  return o->cons.car;
-}
-
 object object_reverse(object o)
 {
   object p, acc;
