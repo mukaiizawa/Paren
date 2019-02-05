@@ -634,8 +634,41 @@
 (class Stream (Object Reader Writer)
   "ストリームクラス。
   入出力の基本的なメソッドを持つ。")
-(method Stream .readByte (:rest args) (basic-throw :NotImplementedException))
-(method Stream .writeByte (:rest args) (basic-throw :NotImplementedException))
+
+(method Stream .readByte (:rest args)
+  (basic-throw :NotImplementedException))
+
+(method Stream .writeByte (:rest args)
+  (basic-throw :NotImplementedException))
+
+(<- $utf-8.table '(xx 0xF1
+                   as 0xF0
+                   s1 0x02
+                   s2 0x13
+                   s3 0x03
+                   s4 0x23
+                   s5 0x34
+                   s6 0x04
+                   s7 0x44)
+    $utf-8.first '(as as as as as as as as as as as as as as as as
+                   as as as as as as as as as as as as as as as as
+                   as as as as as as as as as as as as as as as as
+                   as as as as as as as as as as as as as as as as
+                   as as as as as as as as as as as as as as as as
+                   as as as as as as as as as as as as as as as as
+                   as as as as as as as as as as as as as as as as
+                   as as as as as as as as as as as as as as as as
+                   xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx
+                   xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx
+                   xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx
+                   xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx
+                   xx xx s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1
+                   s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1
+                   s2 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s4 s3 s3
+                   s5 s6 s6 s6 s7 xx xx xx xx xx xx xx xx xx xx xx))
+
+(method Stream .readChar (:rest args)
+  (print 3))
 
 (class FileStream (Stream)
   "ファイルストリームクラス"
@@ -694,6 +727,30 @@
   (let (pos (.wr-pos self) str (byte-array pos))
     (->string (array-copy (.buf self) 0 str 0 pos))))
 
+(method MemoryStream .reset ()
+  (.rd-pos self 0)
+  (.wr-pos self 0)
+  self)
+
+(class AheadReader ()
+  "先読みリーダー"
+  stream nextChar)
+
+(method AheadReader .init (:key stream)
+  (precondition (is-a? stream Stream))
+  (.stream self stream)
+  self)
+
+(method AheadReader .skipChar (:key stream)
+  (begin0 (.nextChar self)
+          (.nextChar self (.getChar (.stream self)))))
+
+; I/O
+(<- $stdin (.init (.new FileStream) (fp 0))
+    $stdout (.init (.new FileStream) (fp 1))
+    $in $stdin
+    $out $stdout)
+
 (function read-byte (:opt (stream $stdin))
   (precondition (is-a? stream Stream))
   (.readByte stream))
@@ -702,26 +759,6 @@
   (precondition (and (byte? byte) (is-a? stream Stream)))
   (.writeByte stream byte))
 
-(class AheadReader ()
-  "フィーチャーの基底クラス。
-  すべてのフィーチャーはこのクラスを継承しなければならない。"
-  reader nextChar)
-
-(method AheadReader .init (:key reader)
-  (precondition reader)
-  (.reader self reader)
-  self)
-
-(method AheadReader .skipChar (:key reader)
-  (begin0 (.nextChar self)
-          (.nextChar self (.getChar (.reader self)))))
-
-; I/O
-(<- $stdin (.init (.new FileStream) (fp 0))
-    $stdout (.init (.new FileStream) (fp 1))
-    $in $stdin
-    $out $stdout)
-
 (<- s (.init (.new MemoryStream)))
 
 (write-byte 0x68 s)
@@ -729,6 +766,7 @@
 (write-byte 0x6c s)
 (write-byte 0x6c s)
 (write-byte 0x6f s)
+(print (.toString s))
 
 ; ./paren
 ; )

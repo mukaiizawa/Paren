@@ -16,6 +16,8 @@ typedef union s_expr *object;
 #define   BARRAY   0x0200
 #define   ARRAY    0x0400
 
+#define LINT_BITS 63
+
 #define type(o) ((o)->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
 #define listp(o) ((o) == object_nil || typep(o, CONS))

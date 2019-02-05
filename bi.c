@@ -514,6 +514,64 @@ static int int64_multiply(object argv, object *result)
   } else return double_multiply(argv, result);
 }
 
+PRIM(bit_and)
+{
+  int64_t x, y;
+  if (argc != 2) return FALSE;
+  if (!bi_int64(argv->cons.car, &x)) return FALSE;
+  if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (x < 0 || y < 0) return FALSE;
+  *result = gc_new_xint(x & y);
+  return TRUE;
+}
+
+PRIM(bit_or)
+{
+  int64_t x, y;
+  if (argc != 2) return FALSE;
+  if (!bi_int64(argv->cons.car, &x)) return FALSE;
+  if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (x < 0 || y < 0) return FALSE;
+  *result = gc_new_xint(x | y);
+  return TRUE;
+}
+
+PRIM(bit_xor)
+{
+  int64_t x, y;
+  if (argc != 2) return FALSE;
+  if (!bi_int64(argv->cons.car, &x)) return FALSE;
+  if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (x < 0 || y < 0) return FALSE;
+  *result = gc_new_xint(x ^ y);
+  return TRUE;
+}
+
+static int bits(int64_t x)
+{
+  int i;
+  for (i = 0; i < LINT_BITS; i++)
+    if (x < (1LL << i)) return i;
+  return LINT_BITS;
+}
+
+PRIM(bit_shift)
+{
+  int64_t x, y;
+  if (argc != 2) return FALSE;
+  if (!bi_int64(argv->cons.car, &x)) return FALSE;
+  if (x < 0) return FALSE;
+  if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (x != 0) {
+    if (y > 0) {
+      if ((bits(x) + y) > LINT_BITS) return FALSE;
+      x <<= y;
+    } else x >>= -y;
+  }
+  *result = gc_new_xint(x);
+  return TRUE;
+}
+
 PRIM(number_multiply)
 {
   *result = object_bytes[1];
@@ -626,6 +684,10 @@ static char *symbol_name_map[] = {
   "atom_p", "atom?",
   "barray_new", "byte-array",
   "barray_p", "byte-array?",
+  "bit_and", "bit-and",
+  "bit_or", "bit-or",
+  "bit_xor", "bit-xor",
+  "bit_shift", "bit-shift",
   "equalp", "=",
   "integer_p", "integer?",
   "keyword_p", "keyword?",
