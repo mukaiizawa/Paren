@@ -19,7 +19,7 @@
   "bodyを逐次評価し、最初に評価した結果を返す。"
   (let (sym (gensym))
     (cons let (cons (list sym (car body))
-                    (+ (cdr body) sym)))))
+                    (+ (copy-list (cdr body)) sym)))))
 (assert (= (begin0 1 2 3) 1))
 
 (macro when (test :rest body)
@@ -641,34 +641,37 @@
 (method Stream .writeByte (:rest args)
   (basic-throw :NotImplementedException))
 
-(<- $utf-8.table '(xx 0xF1
-                   as 0xF0
-                   s1 0x02
-                   s2 0x13
-                   s3 0x03
-                   s4 0x23
-                   s5 0x34
-                   s6 0x04
-                   s7 0x44)
-    $utf-8.first '(as as as as as as as as as as as as as as as as
-                   as as as as as as as as as as as as as as as as
-                   as as as as as as as as as as as as as as as as
-                   as as as as as as as as as as as as as as as as
-                   as as as as as as as as as as as as as as as as
-                   as as as as as as as as as as as as as as as as
-                   as as as as as as as as as as as as as as as as
-                   as as as as as as as as as as as as as as as as
-                   xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx
-                   xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx
-                   xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx
-                   xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx
-                   xx xx s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1
-                   s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1
-                   s2 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s4 s3 s3
-                   s5 s6 s6 s6 s7 xx xx xx xx xx xx xx xx xx xx xx))
-
-(method Stream .readChar (:rest args)
-  (print 3))
+(method Stream .readChar ()
+  (let (throw (lambda () (basic-throw :IllegalUTF-8Exception))
+        trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
+        mem (.init (.new MemoryStream))
+        b1 (.readByte self) b2 nil b3 nil b4 nil)
+    (if (< b1 0x80) (.writeByte mem b1)
+        (< b1 0xc2) (throw)
+        !(trail? (<- b2 (.readByte self))) (throw)
+        (< b1 0xe0)    ; 2-byte character
+            (begin (if (= (bit-and b1 0x3e) 0) (throw))
+                   (.writeByte mem b1)
+                   (.writeByte mem b2))
+        (< b1 0xf0)    ; 3-byte character
+            (begin (<- b3 (.readByte self))
+                   (if (or (and (= b1 0xe0) (= (bit-and b2 0x20) 0))
+                           !(trail? b3))
+                       (throw))
+                   (.writeByte mem b1)
+                   (.writeByte mem b2)
+                   (.writeByte mem b3))
+        (< b1 0xf8)    ; 4-byte character
+            (begin (<- b3 (.readByte self) b4 (.readByte self))
+                   (if (or !(trail? b3) !(trail? b4)
+                           (and (= b1 0xf0) (= (bit-and b2 0x30) 0)))
+                       (throw))
+                   (.writeByte mem b1)
+                   (.writeByte mem b2)
+                   (.writeByte mem b3)
+                   (.writeByte mem b4))
+        (throw))
+    (.toString mem)))
 
 (class FileStream (Stream)
   "ファイルストリームクラス"
@@ -716,8 +719,7 @@
                (.wr-pos self (++ pos)))
         (.writeByte (.extend self 1) byte))))
 
-(method MemoryStream .readByte (byte)
-  (precondition (byte? byte))
+(method MemoryStream .readByte ()
   (let (pos (.rd-pos self))
     (if (>= pos (.wr-pos self)) -1
         (begin0 ([] (.buf self) pos)
@@ -755,18 +757,27 @@
   (precondition (is-a? stream Stream))
   (.readByte stream))
 
+(function read-char (:opt (stream $stdin))
+  (precondition (is-a? stream Stream))
+  (.readChar stream))
+
 (function write-byte (byte :opt (stream $stdout))
   (precondition (and (byte? byte) (is-a? stream Stream)))
   (.writeByte stream byte))
 
 (<- s (.init (.new MemoryStream)))
 
+(write-byte 0xe3 s)
+(write-byte 0x81 s)
+(write-byte 0x82 s)
+
 (write-byte 0x68 s)
 (write-byte 0x65 s)
 (write-byte 0x6c s)
 (write-byte 0x6c s)
 (write-byte 0x6f s)
-(print (.toString s))
+
+(print (read-char s))
 
 ; ./paren
 ; )

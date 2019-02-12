@@ -618,20 +618,22 @@ PRIM(barray_new)
 
 // TODO array new
 
+#define LC(p) (*(unsigned char*)(p))
+
 PRIM(array_access)
 {
   int64_t i;
   object a, v;
   if (argc < 2 || argc > 3) return FALSE;
   a = argv->cons.car;
-  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &i))  return FALSE;
+  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
   switch (type(a)) {
     case BARRAY:
       if (i < 0 || i >= a->barray.size) return FALSE;
-      if (argc == 2) *result = object_bytes[(int)(a->barray.elt[i])];
+      if (argc == 2) *result = object_bytes[(unsigned char)(a->barray.elt[i])];
       else {
         if (!bytep(v = argv->cons.cdr->cons.car)) return FALSE;
-        a->barray.elt[i] = v->xint.val;
+        a->barray.elt[i] = (unsigned char)(v->xint.val);
         *result = v;
       }
       return TRUE;
