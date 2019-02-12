@@ -751,7 +751,10 @@
 (<- $stdin (.init (.new FileStream) (fp 0))
     $stdout (.init (.new FileStream) (fp 1))
     $in $stdin
-    $out $stdout)
+    $out $stdout
+    $input-encoding :UTF-8
+    $output-encoding (if (same? $os :Windows) :CP932 :UTF-8)
+    $encodings '(:UTF-8 :CP932))
 
 (function read-byte (:opt (stream $stdin))
   (precondition (is-a? stream Stream))
@@ -764,20 +767,6 @@
 (function write-byte (byte :opt (stream $stdout))
   (precondition (and (byte? byte) (is-a? stream Stream)))
   (.writeByte stream byte))
-
-(<- s (.init (.new MemoryStream)))
-
-(write-byte 0xe3 s)
-(write-byte 0x81 s)
-(write-byte 0x82 s)
-
-(write-byte 0x68 s)
-(write-byte 0x65 s)
-(write-byte 0x6c s)
-(write-byte 0x6c s)
-(write-byte 0x6f s)
-
-(print (read-char s))
 
 ; ./paren
 ; )

@@ -213,6 +213,18 @@ static void make_initial_objects(void)
   object_st = symbol_new("$stack-trace");
   object_toplevel = gc_new_env(object_nil);
   object_true = symbol_new("true");
+  object_os = symbol_new("$os");
+#if WINDOWS_P
+  bind_symbol(object_os, keyword_new("Windows"));
+#elif OS_CODE == OS_LINUX
+  bind_symbol(object_os, keyword_new("Linux"));
+#elif OS_CODE == OS_ANDROID
+  bind_symbol(object_os, keyword_new("Android"));
+#elif OS_CODE == OS_MACOSX
+  bind_symbol(object_os, keyword_new("Mac"));
+#else
+  xassert(FALSE);
+#endif
   for (i = 0; i < 256; i++) object_bytes[i] = gc_new_bytes(i);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);

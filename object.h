@@ -74,6 +74,7 @@ extern object object_key;
 extern object object_nil;
 extern object object_not;
 extern object object_opt;
+extern object object_os;
 extern object object_quote;
 extern object object_rest;
 extern object object_snbhe;

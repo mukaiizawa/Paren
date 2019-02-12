@@ -10,15 +10,16 @@ struct xsplay special_splay;
 struct xsplay prim_splay;
 
 object object_boot;
+object object_bytes[256];
 object object_catch;
 object object_finally;
 object object_key;
 object object_nil;
 object object_not;
 object object_opt;
+object object_os;
 object object_quote;
 object object_rest;
-object object_bytes[256];
 object object_snbhe;
 object object_st;
 object object_toplevel;
