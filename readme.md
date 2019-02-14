@@ -130,10 +130,10 @@ functionは関数を作成し、指定したシンボルに対応づける。
 Parenのビルド例を示す。
 
     $ git clone https://github.com/mukaiizawa/Paren your/favorite/dir
-    $ cd your/favorite/dir/src
+    $ cd your/favorite/dir
     $ make os=windows
     $ paren
-    ) (print hello-world)
+    ) (print :hello-world)
     hello-world
 
 # Special Thanks
