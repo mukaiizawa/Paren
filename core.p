@@ -585,14 +585,6 @@
                     (list cons (cons lambda (cons (cons 'self args) body))
                           (list '. cls-sym :methods))))))
 
-(macro feature (f-sym)
-  "フィーチャーはクラスを横断して共通のメソッドを定義する仕組みである。
-  フィーチャーを割り当てられたクラスはクラスで定義されたメソッドの他に、フィーチャーで定義されたメソッドを実行できる。
-  クラスに同名のメソッドがあればクラスのメソッドが優先して実行される。
-  スーパークラスに同名のメソッドがあった場合はフィーチャーのメソッドが優先される。"
-  (precondition (symbol? f-sym))
-  (list class f-sym (list 'Feature)))
-
 (function object? (x)
   "xがオブジェクトの場合trueを、そうでなければnilを返す。
   paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。"
@@ -631,7 +623,7 @@
       (<- cls (and (. cls :super) (find-class (. cls :super)))))
     o))
 
-(class Stream (Object Reader Writer)
+(class Stream (Object)
   "ストリームクラス。
   入出力の基本的なメソッドを持つ。")
 
@@ -641,8 +633,8 @@
 (method Stream .writeByte (:rest args)
   (basic-throw :NotImplementedException))
 
-(method Stream .readChar ()
-  (if (same? $encoding :UTF-8)
+(method Stream .readChar (:opt (encoding $encoding))
+  (if (same? encoding :UTF-8)
           (let (throw (lambda () (basic-throw :IllegalUTF-8Exception))
                 trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
                 mem (.init (.new MemoryStream))
@@ -673,9 +665,9 @@
                            (.writeByte mem b4))
                 (throw))
             (.toString mem))
-          (same? $encoding :CP932)
+          (same? encoding :CP932)
               (assert nil)    ; not implemented yet.
-              ))
+          (basic-throw :UnsupportEncodingException)))
 
 (class FileStream (Stream)
   "ファイルストリームクラス"
