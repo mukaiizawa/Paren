@@ -763,6 +763,11 @@
   (precondition (and (byte? byte) (is-a? stream Stream)))
   (.writeByte stream byte))
 
+(<- mem (.init (.new MemoryStream)))
+(.writeByte mem 0x20)
+(.readChar mem :UTF-8)
+
+
 ; ./paren
 ; )
 ;

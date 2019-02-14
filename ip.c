@@ -44,10 +44,10 @@ static void mark_exception(char *msg)
 }\
 
 #define mark_illegal_arguments_exception(min, max)\
-  if (argc < min || argc > max) {\
-    if (argc < min) mark_too_few_arguments_exception();\
-    mark_too_many_arguments_exception();\
-  }\
+{\
+  if (argc < min) mark_too_few_arguments_exception();\
+  mark_too_many_arguments_exception();\
+}\
 
 #define mark_illegal_parameter_list_exception()\
 {\
@@ -866,7 +866,7 @@ SPECIAL(lambda)
 
 SPECIAL(quote)
 {
-  mark_illegal_arguments_exception(1, 1);
+  if (argc != 1) mark_illegal_arguments_exception(1, 1);
   reg[0] = argv->cons.car;
 }
 
@@ -885,7 +885,7 @@ SPECIAL(labels)
 SPECIAL(goto)
 {
   object o;
-  mark_illegal_arguments_exception(1, 1);
+  if (argc != 1) mark_illegal_arguments_exception(1, 1);
   reg[0] = argv->cons.car;
   if (!typep(reg[0], KEYWORD)) {
     mark_exception("arguments must be keyword.");
@@ -912,7 +912,7 @@ SPECIAL(goto)
 
 SPECIAL(throw)
 {
-  mark_illegal_arguments_exception(1, 2);
+  if (argc < 1 || argc > 2) mark_illegal_arguments_exception(1, 2);
   if (!typep(argv->cons.car, KEYWORD)) {
     mark_exception("type must be keyword.");
     return;
@@ -981,7 +981,7 @@ SPECIAL(try)
 
 SPECIAL(return)
 {
-  mark_illegal_arguments_exception(1, 1);
+  if (argc != 1) mark_illegal_arguments_exception(1, 1);
   push_return_frame();
   push_eval_frame();
   reg[0] = argv->cons.car;
