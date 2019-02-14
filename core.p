@@ -642,36 +642,40 @@
   (basic-throw :NotImplementedException))
 
 (method Stream .readChar ()
-  (let (throw (lambda () (basic-throw :IllegalUTF-8Exception))
-        trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
-        mem (.init (.new MemoryStream))
-        b1 (.readByte self) b2 nil b3 nil b4 nil)
-    (if (< b1 0x80) (.writeByte mem b1)
-        (< b1 0xc2) (throw)
-        !(trail? (<- b2 (.readByte self))) (throw)
-        (< b1 0xe0)    ; 2-byte character
-            (begin (if (= (bit-and b1 0x3e) 0) (throw))
-                   (.writeByte mem b1)
-                   (.writeByte mem b2))
-        (< b1 0xf0)    ; 3-byte character
-            (begin (<- b3 (.readByte self))
-                   (if (or (and (= b1 0xe0) (= (bit-and b2 0x20) 0))
-                           !(trail? b3))
-                       (throw))
-                   (.writeByte mem b1)
-                   (.writeByte mem b2)
-                   (.writeByte mem b3))
-        (< b1 0xf8)    ; 4-byte character
-            (begin (<- b3 (.readByte self) b4 (.readByte self))
-                   (if (or !(trail? b3) !(trail? b4)
-                           (and (= b1 0xf0) (= (bit-and b2 0x30) 0)))
-                       (throw))
-                   (.writeByte mem b1)
-                   (.writeByte mem b2)
-                   (.writeByte mem b3)
-                   (.writeByte mem b4))
-        (throw))
-    (.toString mem)))
+  (if (same? $encoding :UTF-8)
+          (let (throw (lambda () (basic-throw :IllegalUTF-8Exception))
+                trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
+                mem (.init (.new MemoryStream))
+                b1 (.readByte self) b2 nil b3 nil b4 nil)
+            (if (< b1 0x80) (.writeByte mem b1)
+                (< b1 0xc2) (throw)
+                !(trail? (<- b2 (.readByte self))) (throw)
+                (< b1 0xe0)    ; 2-byte character
+                    (begin (if (= (bit-and b1 0x3e) 0) (throw))
+                           (.writeByte mem b1)
+                           (.writeByte mem b2))
+                (< b1 0xf0)    ; 3-byte character
+                    (begin (<- b3 (.readByte self))
+                           (if (or (and (= b1 0xe0) (= (bit-and b2 0x20) 0))
+                                   !(trail? b3))
+                               (throw))
+                           (.writeByte mem b1)
+                           (.writeByte mem b2)
+                           (.writeByte mem b3))
+                (< b1 0xf8)    ; 4-byte character
+                    (begin (<- b3 (.readByte self) b4 (.readByte self))
+                           (if (or !(trail? b3) !(trail? b4)
+                                   (and (= b1 0xf0) (= (bit-and b2 0x30) 0)))
+                               (throw))
+                           (.writeByte mem b1)
+                           (.writeByte mem b2)
+                           (.writeByte mem b3)
+                           (.writeByte mem b4))
+                (throw))
+            (.toString mem))
+          (same? $encoding :CP932)
+              (assert nil)    ; not implemented yet.
+              ))
 
 (class FileStream (Stream)
   "ファイルストリームクラス"
@@ -752,9 +756,8 @@
     $stdout (.init (.new FileStream) (fp 1))
     $in $stdin
     $out $stdout
-    $input-encoding :UTF-8
-    $output-encoding (if (same? $os :Windows) :CP932 :UTF-8)
-    $encodings '(:UTF-8 :CP932))
+    $encoding (if (same? $os :Windows) :CP932 :UTF-8)
+    $support-encodings '(:UTF-8 :CP932))
 
 (function read-byte (:opt (stream $stdin))
   (precondition (is-a? stream Stream))
