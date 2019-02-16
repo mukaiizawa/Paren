@@ -639,7 +639,8 @@
                 trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
                 mem (.init (.new MemoryStream))
                 b1 (.readByte self) b2 nil b3 nil b4 nil)
-            (if (< b1 0x80) (.writeByte mem b1)
+            (if (< b1 0) (return :EOF)
+                (< b1 0x80) (.writeByte mem b1)
                 (< b1 0xc2) (throw)
                 !(trail? (<- b2 (.readByte self))) (throw)
                 (< b1 0xe0)    ; 2-byte character
@@ -685,8 +686,7 @@
   (fputc byte (.fp self)))
 
 (class MemoryStream (Stream)
-  "メモリ上に内容を保持するストリームクラス。
-  文字列などから構築する。"
+  "メモリ上に内容を保持するストリームクラス。"
   buf buf-size rd-pos wr-pos)
 
 (method MemoryStream .init ()
@@ -730,25 +730,40 @@
   (.wr-pos self 0)
   self)
 
+(class StringStream (MemoryStream)
+  "メモリ上に内容を保持する文字列ストリームクラス。")
+
+(method StringStream .init (s)
+  (.buf self (->byte-array s))
+  (.wr-pos self (length (.buf self)))
+  (.rd-pos self 0)
+  self)
+
 (class AheadReader ()
   "先読みリーダー"
   stream nextChar)
 
-(method AheadReader .init (:key stream)
-  (precondition (is-a? stream Stream))
-  (.stream self stream)
+(method AheadReader .init (s)
+  (precondition (or (string? s) (is-a? s Stream)))
+  (.stream self (if (string? s) (.init (.new StringStream) s) s))
+  (.nextChar self (.readChar (.stream self)))
   self)
 
-(method AheadReader .skipChar (:key stream)
+(method AheadReader .checkEOF ()
+  (if (same? (.nextChar self) :EOF) (basic-throw :EOFReachedException)))
+
+(method AheadReader .skipChar ()
+  (.checkEOF self)
   (begin0 (.nextChar self)
-          (.nextChar self (.getChar (.stream self)))))
+          (.nextChar self (.readChar (.stream self)))))
 
 ; I/O
 (<- $stdin (.init (.new FileStream) (fp 0))
     $stdout (.init (.new FileStream) (fp 1))
     $in $stdin
     $out $stdout
-    $encoding (if (same? $os :Windows) :CP932 :UTF-8)
+    ; $encoding (if (same? $os :Windows) :CP932 :UTF-8)
+    $encoding :UTF-8
     $support-encodings '(:UTF-8 :CP932))
 
 (function read-byte (:opt (stream $stdin))
@@ -764,8 +779,18 @@
   (.writeByte stream byte))
 
 (<- mem (.init (.new MemoryStream)))
-(.writeByte mem 0x20)
-(.readChar mem :UTF-8)
+; (.writeByte mem 0x20)
+; (.readChar mem :UTF-8)
+
+(<- ar (.init (.new AheadReader) "abcd"))
+(print (.nextChar ar))
+(print (.skipChar ar))
+(print (.skipChar ar))
+(print (.skipChar ar))
+(print (.skipChar ar))
+(print (.skipChar ar))
+(print (.nextChar ar))
+(print (.nextChar ar))
 
 
 ; ./paren
