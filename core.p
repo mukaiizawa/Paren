@@ -76,6 +76,16 @@
                                                 (list (list <- gl (list cdr gl))
                                                       '(goto :dolist)))))))))))
 
+(macro dotimes ((i n) :rest body)
+  "シンボルiを0から順にn - 1まで束縛しながらbodyを反復評価する。"
+  (precondition (symbol? i))
+  (let (gn (gensym))
+    (append '(let) (list (list i 0 gn n)
+                         (list precondition (list integer? gn))
+                         (append '(while) (append (list (list '< i gn))
+                                                  (append body
+                                                          (list (list <- i (list '++ i))))))))))
+
 ; fundamental function
 
 (function identity (x)
@@ -703,7 +713,7 @@
     (while (< (.buf-size self) req)
       (.buf-size self (* (.buf-size self) 2)))
     (<- new-buf (byte-array (.buf-size self)))
-    (array-copy (.buf self) 0 new-buf 0  (.buf-size self))
+    (array-copy (.buf self) 0 new-buf 0  (.wr-pos self))
     (.buf self new-buf)
     self))
 
@@ -714,6 +724,12 @@
         (begin ([] (.buf self) pos byte)
                (.wr-pos self (++ pos)))
         (.writeByte (.extend self 1) byte))))
+
+(method MemoryStream .writeString (s)
+  (precondition (string? s))
+  (let (ba (->byte-array s))
+    (dotimes (i (length ba))
+             (.writeByte self ([] ba i)))))
 
 (method MemoryStream .readByte ()
   (let (pos (.rd-pos self))
@@ -733,20 +749,26 @@
 (class StringStream (MemoryStream)
   "メモリ上に内容を保持する文字列ストリームクラス。")
 
-(method StringStream .init (s)
-  (.buf self (->byte-array s))
+(method StringStream .init (:opt (str ""))
+  (precondition (string? str))
+  (if (= str "")
+      (begin (.buf self (byte-array 256))
+             (.buf-size self 256))
+      (begin (.buf self (->byte-array str))
+             (.buf-size self (length (.buf self)))))
   (.wr-pos self (length (.buf self)))
   (.rd-pos self 0)
   self)
 
 (class AheadReader ()
   "先読みリーダー"
-  stream nextChar)
+  stream nextChar mem)
 
 (method AheadReader .init (s)
   (precondition (or (string? s) (is-a? s Stream)))
   (.stream self (if (string? s) (.init (.new StringStream) s) s))
   (.nextChar self (.readChar (.stream self)))
+  (.mem self (.init (.new StringStream)))
   self)
 
 (method AheadReader .checkEOF ()
@@ -756,6 +778,11 @@
   (.checkEOF self)
   (begin0 (.nextChar self)
           (.nextChar self (.readChar (.stream self)))))
+
+(method AheadReader .addString (s)
+  (precondition (string? s))
+  (.writeString (.mem self) s)
+  s)
 
 ; I/O
 (<- $stdin (.init (.new FileStream) (fp 0))
@@ -785,13 +812,7 @@
 (<- ar (.init (.new AheadReader) "abcd"))
 (print (.nextChar ar))
 (print (.skipChar ar))
-(print (.skipChar ar))
-(print (.skipChar ar))
-(print (.skipChar ar))
-(print (.skipChar ar))
-(print (.nextChar ar))
-(print (.nextChar ar))
-
+(print (.addString ar "abc"))
 
 ; ./paren
 ; )
