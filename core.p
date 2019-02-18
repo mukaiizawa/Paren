@@ -80,11 +80,13 @@
   "シンボルiを0から順にn - 1まで束縛しながらbodyを反復評価する。"
   (precondition (symbol? i))
   (let (gn (gensym))
-    (append '(let) (list (list i 0 gn n)
-                         (list precondition (list integer? gn))
-                         (append '(while) (append (list (list '< i gn))
-                                                  (append body
-                                                          (list (list <- i (list '++ i))))))))))
+    (append '(let)
+            (list (list i 0 gn n)
+                  (list precondition (list integer? gn))
+                  (append '(while)
+                          (append (list (list '< i gn))
+                                  (append body
+                                          (list (list <- i (list '++ i))))))))))
 
 ; fundamental function
 
@@ -268,8 +270,8 @@
   argsの任意の要素はリストでなければならない。"
   (precondition (all-satisfy? args list?))
   (reduce args (lambda (acc rest)
-                 (reduce rest + :identity acc))
-                 :identity l))
+                 (reduce (copy-list rest) + :identity (copy-list acc)))
+          :identity l))
 (assert (= (append '(1 2) '((3 4) (5)) '(6)) '(1 2 (3 4) (5) 6)))
 
 (macro push (sym x)
@@ -549,7 +551,7 @@
                     (find-feature-method (. cls :features))
                     (let (super (. cls :super))
                       (and super (rec (find-class super)))))))
-    (or (rec (find-class cls-sym)) (basic-throw :MissingMethodException))))
+    (or (rec (find-class cls-sym)) (basic-throw :MissingMethodException ))))
 
 (macro make-accessor (cls-sym var)
   (let (val (gensym) val? (gensym))
@@ -615,6 +617,11 @@
   スーパークラスを指定しない場合は暗黙的にObjectクラスを継承する。"
   class)
 
+(method Object .init ()
+  "オブジェクトの初期化メソッド。
+  クラスごとに必要に応じて固有の初期化処理を上書きする。"
+  self)
+
 (method Object .equal? (o)
   "レシーバとoが同一オブジェクトの場合にtrueを、そうでなければnilを返す。
   サブクラスで同等性を定義する場合はこのメソッドをオーバーロードする。"
@@ -631,7 +638,7 @@
         (push o (car fields))
         (<- fields (cdr fields)))
       (<- cls (and (. cls :super) (find-class (. cls :super)))))
-    o))
+    (.init o)))
 
 (class Stream (Object)
   "ストリームクラス。
@@ -647,7 +654,7 @@
   (if (same? encoding :UTF-8)
           (let (throw (lambda () (basic-throw :IllegalUTF-8Exception))
                 trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
-                mem (.init (.new MemoryStream))
+                mem (.new MemoryStream)
                 b1 (.readByte self) b2 nil b3 nil b4 nil)
             (if (< b1 0) (return :EOF)
                 (< b1 0x80) (.writeByte mem b1)
@@ -684,7 +691,8 @@
   "ファイルストリームクラス"
   fp)
 
-(method FileStream .init (fp)
+(method FileStream .initWith (:key fp)
+  (precondition fp)
   (.fp self fp)
   self)
 
@@ -746,29 +754,19 @@
   (.wr-pos self 0)
   self)
 
-(class StringStream (MemoryStream)
-  "メモリ上に内容を保持する文字列ストリームクラス。")
-
-(method StringStream .init (:opt (str ""))
-  (precondition (string? str))
-  (if (= str "")
-      (begin (.buf self (byte-array 256))
-             (.buf-size self 256))
-      (begin (.buf self (->byte-array str))
-             (.buf-size self (length (.buf self)))))
-  (.wr-pos self (length (.buf self)))
-  (.rd-pos self 0)
-  self)
-
 (class AheadReader ()
   "先読みリーダー"
-  stream nextChar mem)
+  stream nextChar buf)
 
-(method AheadReader .init (s)
-  (precondition (or (string? s) (is-a? s Stream)))
-  (.stream self (if (string? s) (.init (.new StringStream) s) s))
+(method AheadReader .initWith (:key string stream)
+  (precondition (or (and string (string? string))
+                    (and (object? stream) (is-a? stream Stream))))
+  (when string
+    (<- stream (.new MemoryStream))
+    (.writeString stream string))
+  (.stream self stream)
   (.nextChar self (.readChar (.stream self)))
-  (.mem self (.init (.new StringStream)))
+  (.buf self (.new MemoryStream))
   self)
 
 (method AheadReader .checkEOF ()
@@ -781,12 +779,12 @@
 
 (method AheadReader .addString (s)
   (precondition (string? s))
-  (.writeString (.mem self) s)
+  (.writeString (.buf self) s)
   s)
 
 ; I/O
-(<- $stdin (.init (.new FileStream) (fp 0))
-    $stdout (.init (.new FileStream) (fp 1))
+(<- $stdin (.initWith (.new FileStream) :fp (fp 0))
+    $stdout (.initWith (.new FileStream) :fp (fp 1))
     $in $stdin
     $out $stdout
     ; $encoding (if (same? $os :Windows) :CP932 :UTF-8)
@@ -805,11 +803,11 @@
   (precondition (and (byte? byte) (is-a? stream Stream)))
   (.writeByte stream byte))
 
-(<- mem (.init (.new MemoryStream)))
+(<- mem (.new MemoryStream))
 ; (.writeByte mem 0x20)
 ; (.readChar mem :UTF-8)
 
-(<- ar (.init (.new AheadReader) "abcd"))
+(<- ar (.initWith (.new AheadReader) :string "abcd"))
 (print (.nextChar ar))
 (print (.skipChar ar))
 (print (.addString ar "abc"))
