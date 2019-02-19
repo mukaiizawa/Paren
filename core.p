@@ -86,17 +86,17 @@
            (list '(goto :start)
                  :break)))))))
      nil))
-(assert (= (let (sum 0) (for (i 0) (< i 3) (<- i (++ i)) (<- sum (+ sum i))) sum) 3))
-(assert (= (let (sum 0) (for (i 0) (< i 3) (<- i (++ i)) (if (= i 1) (break)) (<- sum (+ sum i))) sum) 0))
-(assert (= (let (sum 0) (for (i 0) (< i 3) (<- i (++ i)) (if (= i 1) (continue)) (<- sum (+ sum i))) sum) 2))
+(assert (= (let (sum 0) (for (i 0) (< i 3) (<-+ i 1) (<-+ sum i)) sum) 3))
+(assert (= (let (sum 0) (for (i 0) (< i 3) (<-+ i 1) (if (= i 1) (break)) (<-+ sum i)) sum) 0))
+(assert (= (let (sum 0) (for (i 0) (< i 3) (<-+ i 1) (if (= i 1) (continue)) (<-+ sum i)) sum) 2))
 
 (macro while (test :rest body)
   "引数testがnilでない間bodyを逐次評価し、nilを返す。
   continueマクロとbreakマクロをサポートしている。"
   (cons 'for (cons nil (cons test (cons nil body)))))
-(assert (= (let (a 0) (while (< a 5) (<- a (++ a))) a) 5))
+(assert (= (let (a 0) (while (< a 5) (<-+ a 1)) a) 5))
 (assert (= (let (a 0) (while true (<- a 1) (break) (<- a 2)) a) 1))
-(assert (= (let (a 0) (while (< (<- a (++ a)) 5) (if (< a 5) (continue)) (<- a 9)) a) 5))
+(assert (= (let (a 0) (while (< (<-+ a 1) 5) (if (< a 5) (continue)) (<- a 9)) a) 5))
 
 (macro dolist ((i l) :rest body)
   "リストlをインデックスiを用いてイテレーションする。
@@ -104,12 +104,12 @@
   (precondition (symbol? i))
   (let (gl (gensym))
     (cons for (cons (list gl l i (list car gl))
-              (cons gl
-              (cons (list <- gl (list cdr gl) i (list car gl))
-                    body))))))
+                    (cons gl
+                          (cons (list <- gl (list cdr gl) i (list car gl))
+                                body))))))
 (assert (= (let (l '(1 2 3) acc nil) (dolist (i l) (push acc i)) acc) '(3 2 1)))
 (assert (= (let (l '(1 2 3) x nil) (dolist (i l) (if (= (<- x i) 2) (break))) x) 2))
-(assert (= (let (l '(1 2 3) sum 0) (dolist (i l) (if (= i 2) (continue)) (<- sum (+ sum i))) sum) 4))
+(assert (= (let (l '(1 2 3) sum 0) (dolist (i l) (if (= i 2) (continue)) (<-+ sum i)) sum) 4))
 
 (macro dotimes ((i n) :rest body)
   "シンボルiを0から順にn - 1まで束縛しながらbodyを反復評価する。
@@ -118,11 +118,11 @@
   (let (gn (gensym))
     (cons for (cons (list i 0 gn n)
               (cons (list < i gn)
-              (cons (list <- i (list ++ i))
+              (cons (list <-+ i 1)
                     body))))))
 (assert (= (let (acc nil) (dotimes (i 3) (push acc i)) acc) '(2 1 0)))
 (assert (= (let (x nil) (dotimes (i 3) (if (= (<- x i) 1) (break))) x) 1))
-(assert (= (let (sum 0) (dotimes (i 3) (if (= i 1) (continue)) (<- sum (+ sum i))) sum) 2))
+(assert (= (let (sum 0) (dotimes (i 3) (if (= i 1) (continue)) (<-+ sum i)) sum) 2))
 
 ; fundamental function
 
@@ -524,6 +524,26 @@
   "xから1を引いた結果を返す。"
   (precondition (number? x))
   (+ x -1))
+
+(macro <-+ (s v)
+  "sの値にvを加えた値をsに束縛する式に展開する。"
+  (precondition (symbol? s))
+  (list <- s (list + s v)))
+
+(macro <-- (s v)
+  "sの値からvを引いた値をsに束縛する式に展開する。"
+  (precondition (symbol? s))
+  (list <- s (list - s v)))
+
+(macro <-* (s v)
+  "sの値にvをかけた値をsに束縛する式に展開する。"
+  (precondition (symbol? s))
+  (list <- s (list * s v)))
+
+(macro <-/ (s v)
+  "sの値をvをで割った値をsに束縛する式に展開する。"
+  (precondition (symbol? s))
+  (list <- s (list * s v)))
 
 (function even? (x)
   "xが偶数の場合にtrueを、そうでなければnilを返す。"
