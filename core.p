@@ -56,41 +56,50 @@
   ":continueというラベルにジャンプする。
   反復系のマクロはコンテキスト内でcontinueを使用したときに
   後続の処理をスキップし反復処理を再開するように実装することが望ましい。"
-  (list goto :continue))
+  '(goto :continue))
 
 (macro break ()
   ":breakというラベルにジャンプする。
   反復系のマクロはコンテキスト内でbreakを使用したときに
   反復処理を終了するように実装することが望ましい。"
-  (list goto :break))
+  '(goto :break))
+
+(macro for (binding test update :rest body)
+  "bindingをletで束縛し、testが真の場合にbody、updateを反復評価する。
+  continueマクロとbreakマクロをサポートしている。
+  nilを返す。"
+  (list let binding
+     (cons labels
+           (cons :start
+           (cons (list if (list not test) '(goto :break))
+           (append body
+           (cons :continue
+           (cons update
+           (list '(goto :start)
+                 :break)))))))
+     nil))
+(assert (= (let (sum 0) (for (i 0) (< i 3) (<- i (++ i)) (<- sum (+ sum i))) sum) 3))
+(assert (= (let (sum 0) (for (i 0) (< i 3) (<- i (++ i)) (if (= i 1) (break)) (<- sum (+ sum i))) sum) 0))
+(assert (= (let (sum 0) (for (i 0) (< i 3) (<- i (++ i)) (if (= i 1) (continue)) (<- sum (+ sum i))) sum) 2))
 
 (macro while (test :rest body)
   "引数testがnilでない間bodyを逐次評価し、nilを返す。
   continueマクロとbreakマクロをサポートしている。"
-  (cons labels
-        (cons :continue
-              (cons (list if (list not test) (list goto :break))
-                    (append body
-                            (list (list goto :continue)
-                                  :break))))))
+  (cons 'for (cons nil (cons test (cons nil body)))))
 (assert (= (let (a 0) (while (< a 5) (<- a (++ a))) a) 5))
 (assert (= (let (a 0) (while true (<- a 1) (break) (<- a 2)) a) 1))
-(assert (= (let (a 0) (while (< (<- a (++ a)) 5) (if (< a 5) (continue)) (<- a 100)) a) 5))
+(assert (= (let (a 0) (while (< (<- a (++ a)) 5) (if (< a 5) (continue)) (<- a 9)) a) 5))
 
 (macro dolist ((i l) :rest body)
   "リストlをインデックスiを用いてイテレーションする。
-  nilを返す。
-  returnオペレータを使用するとdolistを指定した値を返却して処理を終了する。"
+  nilを返す。"
   (precondition (symbol? i))
   (let (gl (gensym))
-    (cons let
-          (list (list i nil gl l)
-                (list precondition (list list? gl))
-                (cons while
-                      (cons (list <- i (list car gl))
-                            (cons (list <- gl (list cdr gl))
-                                  body)))))))
-(assert (= (let (l '(1 2 3) acc nil) (dolist (i l) (push acc i)) acc) '(3 2 1)))
+    (cons for (cons (list gl l i (list car gl))
+              (cons gl
+              (cons (list <- gl (list cdr gl) i (list car gl))
+                    body))))))
+(assert (= (let (l '(1 2 3) acc nil) (dolist (i l) (push acc i)) (print acc)) '(3 2 1)))
 (assert (= (let (l '(1 2 3) x nil) (dolist (i l) (if (= (<- x i) 2) (break))) x) 2))
 (assert (= (let (l '(1 2 3) sum 0) (dolist (i l) (if (= i 2) (continue)) (<- sum (+ sum i))) sum) 4))
 
@@ -99,16 +108,13 @@
   nilを返す。"
   (precondition (symbol? i))
   (let (gn (gensym))
-    (cons let
-          (list (list i -1 gn n)
-                (list precondition (list integer? gn))
-                (cons while
-                      (cons (list '< (list <- i (list '++ i)) gn)
-                            body))))))
+    (cons for (cons (list i 0 gn n)
+              (cons (list < i gn)
+              (cons (list <- i (list ++ i))
+                    body))))))
 (assert (= (let (acc nil) (dotimes (i 3) (push acc i)) acc) '(2 1 0)))
 (assert (= (let (x nil) (dotimes (i 3) (if (= (<- x i) 1) (break))) x) 1))
 (assert (= (let (sum 0) (dotimes (i 3) (if (= i 1) (continue)) (<- sum (+ sum i))) sum) 2))
-
 
 ; fundamental function
 
@@ -544,7 +550,6 @@
   状態異常の早期検知のために使用する。"
   (list if (list = test nil)
         (list basic-throw :AssertionFailedException (list quote test))))
-
 
 ; paren object system
 
