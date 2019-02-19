@@ -29,6 +29,14 @@
 (assert (= (when true 1 2 3) 3))
 (assert (= (when nil 1 2 3) nil))
 
+(macro unless (test :rest body)
+  "testを評価しnilの場合にbodyを逐次評価し、最後に評価した結果を返す。
+  testがnil偽の場合はnilを返す。"
+  (cons when (cons (list not test)
+                   body)))
+(assert (= (unless true 1 2 3) nil))
+(assert (= (unless nil 1 2 3) 3))
+
 (macro or (:rest args)
   "argsを逐次評価し、ある評価結果がnil以外だった場合にその値を返す。
   この場合、後続の評価は行わない。
@@ -99,7 +107,7 @@
               (cons gl
               (cons (list <- gl (list cdr gl) i (list car gl))
                     body))))))
-(assert (= (let (l '(1 2 3) acc nil) (dolist (i l) (push acc i)) (print acc)) '(3 2 1)))
+(assert (= (let (l '(1 2 3) acc nil) (dolist (i l) (push acc i)) acc) '(3 2 1)))
 (assert (= (let (l '(1 2 3) x nil) (dolist (i l) (if (= (<- x i) 2) (break))) x) 2))
 (assert (= (let (l '(1 2 3) sum 0) (dolist (i l) (if (= i 2) (continue)) (<- sum (+ sum i))) sum) 4))
 
