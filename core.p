@@ -52,41 +52,63 @@
 (assert (= (and 1 2 3) 3))
 (assert !(and true nil true))
 
+(macro continue ()
+  ":continueというラベルにジャンプする。
+  反復系のマクロはコンテキスト内でcontinueを使用したときに
+  後続の処理をスキップし反復処理を再開するように実装することが望ましい。"
+  (list goto :continue))
+
+(macro break ()
+  ":breakというラベルにジャンプする。
+  反復系のマクロはコンテキスト内でbreakを使用したときに
+  反復処理を終了するように実装することが望ましい。"
+  (list goto :break))
+
 (macro while (test :rest body)
   "引数testがnilでない間bodyを逐次評価し、nilを返す。
-  lambdaを含む式に展開されるため、returnオペレータを使用することによりwhileコンテキストを抜けることができる。"
-  (list (list lambda ()
-              (cons labels
-                    (cons :while
-                          (cons (list if (list not test) '(return nil))
-                                (+ body '(goto :while))))))))
+  continueマクロとbreakマクロをサポートしている。"
+  (cons labels
+        (cons :continue
+              (cons (list if (list not test) (list goto :break))
+                    (append body
+                            (list (list goto :continue)
+                                  :break))))))
+(assert (= (let (a 0) (while (< a 5) (<- a (++ a))) a) 5))
+(assert (= (let (a 0) (while true (<- a 1) (break) (<- a 2)) a) 1))
+(assert (= (let (a 0) (while (< (<- a (++ a)) 5) (if (< a 5) (continue)) (<- a 100)) a) 5))
 
 (macro dolist ((i l) :rest body)
-  "リストlをインデックスiを用いてイテレーションする。nilを返す。
+  "リストlをインデックスiを用いてイテレーションする。
+  nilを返す。
   returnオペレータを使用するとdolistを指定した値を返却して処理を終了する。"
   (precondition (symbol? i))
   (let (gl (gensym))
-    (list (list lambda ()
-                (list <- gl l)
-                (cons labels
-                      (cons :dolist
-                            (cons (list if (list not gl) '(return nil))
-                                  (cons (list <- i (list car gl))
-                                        (append body
-                                                (list (list <- gl (list cdr gl))
-                                                      '(goto :dolist)))))))))))
+    (cons let
+          (list (list i nil gl l)
+                (list precondition (list list? gl))
+                (cons while
+                      (cons (list <- i (list car gl))
+                            (cons (list <- gl (list cdr gl))
+                                  body)))))))
+(assert (= (let (l '(1 2 3) acc nil) (dolist (i l) (push acc i)) acc) '(3 2 1)))
+(assert (= (let (l '(1 2 3) x nil) (dolist (i l) (if (= (<- x i) 2) (break))) x) 2))
+(assert (= (let (l '(1 2 3) sum 0) (dolist (i l) (if (= i 2) (continue)) (<- sum (+ sum i))) sum) 4))
 
 (macro dotimes ((i n) :rest body)
-  "シンボルiを0から順にn - 1まで束縛しながらbodyを反復評価する。"
+  "シンボルiを0から順にn - 1まで束縛しながらbodyを反復評価する。
+  nilを返す。"
   (precondition (symbol? i))
   (let (gn (gensym))
-    (append '(let)
-            (list (list i 0 gn n)
-                  (list precondition (list integer? gn))
-                  (append '(while)
-                          (append (list (list '< i gn))
-                                  (append body
-                                          (list (list <- i (list '++ i))))))))))
+    (cons let
+          (list (list i -1 gn n)
+                (list precondition (list integer? gn))
+                (cons while
+                      (cons (list '< (list <- i (list '++ i)) gn)
+                            body))))))
+(assert (= (let (acc nil) (dotimes (i 3) (push acc i)) acc) '(2 1 0)))
+(assert (= (let (x nil) (dotimes (i 3) (if (= (<- x i) 1) (break))) x) 1))
+(assert (= (let (sum 0) (dotimes (i 3) (if (= i 1) (continue)) (<- sum (+ sum i))) sum) 2))
+
 
 ; fundamental function
 
