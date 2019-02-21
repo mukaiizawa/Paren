@@ -12,7 +12,7 @@
  * registers:
  *   0 -- frame argument.
  *   1 -- current environment.
- *   2 -- exception.
+ *   2 -- thrown object.
  */
 #define REG_SIZE 3
 static object reg[REG_SIZE];
@@ -23,7 +23,6 @@ static long cycle;
 
 int ip_trap_code;
 static char *exception_msg;
-static void describe_vm(void);
 
 static void mark_exception(char *msg)
 {
@@ -140,19 +139,19 @@ struct frame {
 #define BIND_FRAME 2
 #define BIND_LOCAL_VAR_FRAME 3
 #define BIND_PROPAGATION_FRAME 4
-#define CATCH_FRAME 5
-#define EVAL_FRAME 6
-#define EVAL_LOCAL_VAR_FRAME 7
-#define EVAL_ARGS_FRAME 8
-#define EVAL_SEQUENTIAL_FRAME 9
+#define EVAL_FRAME 5
+#define EVAL_LOCAL_VAR_FRAME 6
+#define EVAL_ARGS_FRAME 7
+#define EVAL_SEQUENTIAL_FRAME 8
+#define FETCH_HANDLER_FRAME 9
 #define FETCH_OPERATOR_FRAME 10
-#define IF_FRAME 11
-#define LABELS_FRAME 12
-#define RETURN_ADDR_FRAME 13
-#define RETURN_FRAME 14
-#define SWITCH_ENV_FRAME 15
-#define THROW_FRAME 16
-#define TRY_FRAME 17
+#define HANDLER_FRAME 11
+#define IF_FRAME 12
+#define LABELS_FRAME 13
+#define RETURN_ADDR_FRAME 14
+#define RETURN_FRAME 15
+#define SWITCH_ENV_FRAME 16
+#define THROW_FRAME 17
   object local_vars[0];
 };
 
@@ -168,22 +167,22 @@ static int frame_size(int type)
     case APPLY_PRIM_FRAME:
     case BIND_FRAME:
     case BIND_PROPAGATION_FRAME:
-    case EVAL_SEQUENTIAL_FRAME:
-    case FETCH_OPERATOR_FRAME:
     case EVAL_LOCAL_VAR_FRAME:
+    case EVAL_SEQUENTIAL_FRAME:
+    case FETCH_HANDLER_FRAME:
+    case FETCH_OPERATOR_FRAME:
+    case HANDLER_FRAME:
     case IF_FRAME:
     case LABELS_FRAME:
     case SWITCH_ENV_FRAME:
-    case TRY_FRAME:
       return 1;
     case BIND_LOCAL_VAR_FRAME:
     case EVAL_ARGS_FRAME:
       return 2;
-    case CATCH_FRAME:
-      return 3;
-    default: xassert(FALSE);
+    default:
+      xassert(FALSE);
+      return FALSE;
   }
-  return FALSE;
 }
 
 static char *frame_name(int type)
@@ -194,21 +193,21 @@ static char *frame_name(int type)
     case BIND_FRAME: return "BIND_FRAME";
     case BIND_LOCAL_VAR_FRAME: return "BIND_LOCAL_VAR_FRAME";
     case BIND_PROPAGATION_FRAME: return "BIND_PROPAGATION_FRAME";
-    case CATCH_FRAME: return "CATCH_FRAME";
     case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_LOCAL_VAR_FRAME: return "EVAL_LOCAL_VAR_FRAME";
     case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
     case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
+    case FETCH_HANDLER_FRAME: return "FETCH_HANDLER_FRAME";
     case IF_FRAME: return "IF_FRAME";
+    case HANDLER_FRAME: return "HANDLER_FRAME";
     case LABELS_FRAME: return "LABELS_FRAME";
     case RETURN_ADDR_FRAME: return "RETURN_ADDR_FRAME";
     case RETURN_FRAME: return "RETURN_FRAME";
     case SWITCH_ENV_FRAME: return "SWITCH_ENV_FRAME";
-    case TRY_FRAME: return "TRY_FRAME";
-    default: xassert(FALSE);
+    case THROW_FRAME: return "THROW_FRAME";
+    default: xassert(FALSE); return NULL;
   }
-  return NULL;
 }
 
 static struct frame *alloc_frame(int type)
@@ -289,24 +288,9 @@ static struct frame *make_bind_frame(object sym)
   return alloc_frame1(BIND_FRAME, sym);
 }
 
-static struct frame *make_local_var_bind_frame(object sym, object val)
-{
-  return alloc_frame2(BIND_LOCAL_VAR_FRAME, sym, val);
-}
-
 static struct frame *make_bind_propagation_frame(object sym)
 {
   return alloc_frame1(BIND_PROPAGATION_FRAME, sym);
-}
-
-static struct frame *make_catch_frame(object e, object s, object body)
-{
-  struct frame *f;
-  f = alloc_frame(CATCH_FRAME);
-  f->local_vars[0] = e;
-  f->local_vars[1] = s;
-  f->local_vars[2] = body;
-  return f;
 }
 
 static struct frame *make_eval_local_var_frame(object o)
@@ -330,9 +314,19 @@ static void push_eval_sequential_frame(object args)
   else fs_push(alloc_frame1(EVAL_SEQUENTIAL_FRAME, args));
 }
 
+static void push_fetch_handler_frame(object body)
+{
+  fs_push(alloc_frame1(FETCH_HANDLER_FRAME, body));
+}
+
 static void push_fetch_operator_frame(object args)
 {
   fs_push(alloc_frame1(FETCH_OPERATOR_FRAME, args));
+}
+
+static void push_handler_frame(object handler)
+{
+  fs_push(alloc_frame1(HANDLER_FRAME, handler));
 }
 
 static void push_if_frame(object args)
@@ -343,6 +337,11 @@ static void push_if_frame(object args)
   }
   push_eval_frame();
   reg[0] = args->cons.car;
+}
+
+static struct frame *make_local_var_bind_frame(object sym, object val)
+{
+  return alloc_frame2(BIND_LOCAL_VAR_FRAME, sym, val);
 }
 
 static void push_labels_frame(object args)
@@ -366,15 +365,9 @@ static void push_switch_env_frame(object env)
   reg[1] = gc_new_env(env);
 }
 
-static void push_throw_frame(object e)
+static void push_throw_frame(void)
 {
   fs_push(alloc_frame(THROW_FRAME));
-  reg[2] = e;
-}
-
-static void push_try_frame(object f)
-{
-  fs_push(alloc_frame1(TRY_FRAME, f));
 }
 
 static void parse_lambda_list(object env, object params, object args);
@@ -456,6 +449,23 @@ static void pop_eval_local_var_frame(void)
 {
   reg[0] = fs_top()->local_vars[0];
   pop_eval_frame();
+}
+
+static void pop_fetch_handler_frame(void)
+{
+  object handler, body;
+  handler = reg[0];
+  body = fs_pop()->local_vars[0];
+  if (!typep(handler, LAMBDA)) {
+    mark_exception("require exception handler.");
+    return;
+  }
+  if (object_list_len(handler->lambda.params) != 1) {
+    mark_exception("handler parameter must be one required parameter.");
+    return;
+  }
+  push_handler_frame(reg[0]);
+  push_eval_sequential_frame(body);
 }
 
 static void pop_fetch_operator_frame(void)
@@ -552,9 +562,8 @@ static void pop_return_frame(void)
 
 static void pop_throw_frame(void)
 {
+  object handler, rewind_st;
   int rewind_rp;
-  object targ, ce, cs, cbody, rewind_st;
-  targ = reg[0];
   rewind_rp = sp;
   rewind_st = symbol_find(object_toplevel, object_st);
   while (TRUE) {
@@ -564,25 +573,16 @@ static void pop_throw_frame(void)
       mark_exception(NULL);
       return;
     }
-    if (fs_top()->type == CATCH_FRAME) {
-      ce = fs_top()->local_vars[0];
-      cs = fs_top()->local_vars[1];
-      cbody = fs_top()->local_vars[2];
-      while (ce != object_nil) {
-        if (reg[2] == ce->cons.car) break;
-        ce = ce->cons.cdr;
-      }
-      if (ce != object_nil) {
-        while (fs_top()->type != TRY_FRAME) fs_rewind_pop();
-        break;
-      }
+    if (fs_top()->type == HANDLER_FRAME) {
+      handler = fs_top()->local_vars[0];
+      break;
     }
     fs_rewind_pop();
   }
-  fs_pop();    // skip TRY_FRAME
-  if (cs != object_nil) push_switch_env_frame(reg[1]);
-  push_eval_sequential_frame(cbody);
-  if (cs != object_nil) fs_push(make_local_var_bind_frame(cs, targ));
+  fs_pop();    // skip HANDLER_FRAME
+  push_return_addr_frame();
+  push_apply_frame(handler);
+  reg[0] = gc_new_cons(reg[0], object_nil);
 }
 
 // validation etc.
@@ -939,71 +939,19 @@ SPECIAL(goto)
 
 SPECIAL(throw)
 {
-  if (argc < 1 || argc > 2) mark_illegal_arguments_exception(1, 2);
-  if (!typep(argv->cons.car, KEYWORD)) {
-    mark_exception("type must be keyword.");
-    return;
-  }
-  push_throw_frame(argv->cons.car);
-  if (argc > 1) {
-    push_eval_frame();
-    reg[0] = argv->cons.cdr->cons.car;
-  } else reg[0] = object_nil;
+  if (argc != 1) mark_illegal_arguments_exception(1, 1);
+  push_throw_frame();
+  push_eval_frame();
+  reg[0] = argv->cons.car;
 }
 
-SPECIAL(try)
+SPECIAL(catch)
 {
-  object p, s, params, cparams, finally;
-  if (argc < 1) mark_too_few_arguments_exception();
-  if (!listp((params = argv->cons.car))) {
-    mark_exception("argument must be list.");
-    return;
-  }
-  finally = NULL;
-  fb_reset();
-  while (params != object_nil) {
-    p = params->cons.car;
-    if (!typep(p, CONS)) {
-      mark_exception("illegal arguments.");
-      return;
-    }
-    if (p->cons.car == object_catch) {
-      s = object_nil;
-      p = p->cons.cdr;
-      if (!typep((cparams = p->cons.car), CONS)) {
-        mark_exception("illegal catch clause.");
-        return;
-      }
-      while (cparams != object_nil) {
-        if (typep(cparams->cons.car, KEYWORD)) {
-          cparams = cparams->cons.cdr;
-          continue;
-        }
-        if (typep(cparams->cons.car, SYMBOL) && cparams->cons.cdr == object_nil)
-        {
-          s = cparams->cons.car;
-          break;
-        }
-        mark_exception("illegal parameter list.");
-        return;
-      }
-      fb_add(make_catch_frame(p->cons.car, s, p->cons.cdr));
-    } else if (p->cons.car == object_finally) {
-      if (finally != NULL) {
-        mark_exception("too many finally clause.");
-        return;
-      }
-      finally = p->cons.cdr;
-    } else {
-      mark_exception("illegal arguments.");
-      return;
-    }
-    params = params->cons.cdr;
-  }
-  if (finally == NULL) finally = object_nil;
-  push_try_frame(finally);
-  fb_flush();
-  push_eval_sequential_frame(argv->cons.cdr);
+  if (argc < 2) mark_too_few_arguments_exception();
+  st_push(reg[0]);
+  push_fetch_handler_frame(argv->cons.cdr);
+  push_eval_frame();
+  reg[0] = argv->cons.car;
 }
 
 SPECIAL(return)
@@ -1012,18 +960,6 @@ SPECIAL(return)
   push_return_frame();
   push_eval_frame();
   reg[0] = argv->cons.car;
-}
-
-// TODO should be removed
-SPECIAL(vm)
-{
-  describe_vm();
-}
-
-// TODO should be removed
-SPECIAL(break)
-{
-  printf("%s\n", "break");
 }
 
 // trace and debug
@@ -1103,7 +1039,7 @@ static void trap(void)
 {
   switch (ip_trap_code) {
     case TRAP_EXCEPTION:
-      // describe_vm();
+      describe_vm();
       describe_st();
       exit(1);
       break;
@@ -1130,19 +1066,19 @@ static object eval(object expr)
       case BIND_FRAME: pop_bind_frame(); break;
       case BIND_LOCAL_VAR_FRAME: pop_bind_local_var_frame(); break;
       case BIND_PROPAGATION_FRAME: pop_bind_propagation_frame(); break;
-      case CATCH_FRAME: fs_pop(); break;
       case EVAL_FRAME: pop_eval_frame(); break;
       case EVAL_LOCAL_VAR_FRAME: pop_eval_local_var_frame(); break;
       case EVAL_ARGS_FRAME: pop_eval_args_frame(); break;
       case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
+      case FETCH_HANDLER_FRAME: pop_fetch_handler_frame(); break;
       case FETCH_OPERATOR_FRAME: pop_fetch_operator_frame(); break;
+      case HANDLER_FRAME: fs_pop(); break;
       case IF_FRAME: pop_if_frame(); break;
       case LABELS_FRAME: fs_pop(); break;
       case RETURN_FRAME: pop_return_frame(); break;
       case RETURN_ADDR_FRAME: pop_return_addr_frame(); break;
       case SWITCH_ENV_FRAME: pop_switch_env(); break;
       case THROW_FRAME: pop_throw_frame(); break;
-      case TRY_FRAME: fs_pop(); break;
       default: xassert(FALSE);
     }
     cycle++;

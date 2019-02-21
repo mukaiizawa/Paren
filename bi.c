@@ -703,12 +703,10 @@ static char *symbol_name_map[] = {
   "special_operator_p", "special-operator?",
   "string_p", "string?",
   "symbol_p", "symbol?",
-  "throw", "basic-throw",
   "to_barray", "->byte-array",
   "to_keyword", "->keyword",
   "to_string", "->string",
   "to_symbol", "->symbol",
-  "try", "basic-try",
   NULL
 };
 
