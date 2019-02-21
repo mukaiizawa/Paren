@@ -23,7 +23,6 @@
 (throw obj)
 (throw (.new ShouldNotHandledException))
 
-
 (ensure (close fp)
         (catch (lambda ()
                  ; handler

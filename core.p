@@ -705,7 +705,7 @@
 (method Stream .writeByte (:rest args)
   (basic-throw :NotImplementedException))
 
-(method Stream .readChar (:opt (encoding $encoding))
+(method Stream .readChar (:opt (encoding (dynamic $encoding)))
   (if (same? encoding :UTF-8)
           (let (throw (lambda () (basic-throw :IllegalUTF-8Exception))
                 trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
@@ -842,8 +842,7 @@
     $stdout (.initWith (.new FileStream) :fp (fp 1))
     $in $stdin
     $out $stdout
-    ; $encoding (if (same? $os :Windows) :CP932 :UTF-8)
-    $encoding :UTF-8
+    $encoding (if (same? $os :Windows) :CP932 :UTF-8)
     $support-encodings '(:UTF-8 :CP932))
 
 (function read-byte (:opt (stream $stdin))

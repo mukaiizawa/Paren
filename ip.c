@@ -805,6 +805,33 @@ SPECIAL(let)
   fb_flush();
 }
 
+SPECIAL(dynamic)
+{
+  int i;
+  object e, s, v;
+  if (argc != 1) mark_illegal_arguments_exception(1, 1);
+  if (!typep((s = argv->cons.car), SYMBOL)) {
+    mark_exception("argument must be symbol.");
+    return;
+  }
+  i = sp - 1;
+  e = reg[1];
+  while (TRUE) {
+    if ((v = symbol_find(e, s)) != NULL) break;
+    while (--i >= 0) {
+      if (fs[i]->type == SWITCH_ENV_FRAME) {
+        e = fs[i]->local_vars[0];
+        break;
+      }
+    }
+    if (i < 0) {
+      mark_exception("unbind symbol.");
+      return;
+    }
+  }
+  reg[0] = v;
+}
+
 // <assign> ::= (<- [<sym> <val>] ...)
 // <sym> -- symbol
 // <val> -- value
