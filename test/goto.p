@@ -1,4 +1,4 @@
-; goto statement
+; labels/goto
 
 (<- x 0 y 0)
 (labels :x (<- x (+ x 1))
