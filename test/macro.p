@@ -1,3 +1,5 @@
+; macro
+
 (<- list (lambda (:rest args) args)
     same? (lambda (x) (samep x))
     null (lambda (x) (samep x nil)))

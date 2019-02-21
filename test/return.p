@@ -1,4 +1,4 @@
-; return statement
+; return
 
 ((lambda ()
   (print 0)

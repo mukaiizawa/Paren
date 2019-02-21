@@ -1,5 +1,4 @@
-; special if
-
+; if
 
 (print (if nil 1))
 (print (if true 1))

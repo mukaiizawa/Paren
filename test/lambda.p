@@ -1,4 +1,4 @@
-; lambda list test.
+; lambda
 
 (<- list (lambda (:rest x) x))
 
