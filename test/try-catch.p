@@ -1,4 +1,4 @@
-; try/catch
+; throw/catch
 
 ; (basic-try ((catch (:E4 e)
 ;               (print 8)))
