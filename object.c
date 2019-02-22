@@ -20,7 +20,6 @@ object object_opt;
 object object_os;
 object object_quote;
 object object_rest;
-object object_snbhe;
 object object_st;
 object object_toplevel;
 object object_true;

@@ -458,7 +458,9 @@
   vが指定された場合はkに対応する値をvで上書きする。"
   (precondition (list? al))
   (let (rec (lambda (al)
-              (if (nil? al) (throw :MissingPropertyException)
+              (if (nil? al)
+                      (throw (.message (.new PostconditionException)
+                                       "property not found"))
                   (same? (car al) k) al
                   (rec (cddr al))))
         pair (rec al))
@@ -561,23 +563,26 @@
 
 ; error and exception
 
+(macro assert (test)
+  "testがnilの場合に例外を発生させる。
+  状態異常の早期検知のために使用する。"
+  (list if (list not test)
+        (list throw (list '.expr (list '.new 'AssertFailedException)
+                          (list quote test)))))
+
 (macro precondition (test)
   "引数testがnilの場合に、例外を発生させる。
   関数、マクロの事前条件を定義するために使用する。"
   (list if (list not test)
-        (list throw (list :PreconditionException (list quote test)))))
+        (list throw (list '.expr (list '.new 'PreconditionException)
+                          (list quote test)))))
 
 (macro postcondition (test)
   "引数testがnilの場合に、例外を発生させる。
   関数、マクロの事後条件を定義するために使用する。"
   (list if (list not test)
-        (list throw (list :PostconditionException (list quote test)))))
-
-(macro assert (test)
-  "testがnilの場合に例外を発生させる。
-  状態異常の早期検知のために使用する。"
-  (list if (list = test nil)
-        (list throw (list :AssertionFailedException (list quote test)))))
+        (list throw (list '.expr (list '.new 'PostconditionException)
+                          (list quote test)))))
 
 ; paren object system
 
@@ -606,13 +611,18 @@
                     (find-feature-method (. cls :features))
                     (let (super (. cls :super))
                       (and super (rec (find-class super)))))))
-    (or (rec (find-class cls-sym)) (throw :MissingMethodException))))
+    (or (rec (find-class cls-sym))
+        (throw (.message (.new PostconditionException)
+                         "method not found")))))
 
 (macro make-accessor (cls-sym var)
   (let (val (gensym) val? (gensym))
     (list method cls-sym (->symbol (+ "." var))
           (list :opt (list val nil val?))
-          (list if val? (list '. 'self (->keyword var) val)
+          (list if val?
+                (list begin
+                      (list '. 'self (->keyword var) val)
+                      'self)
                 (list '. 'self (->keyword var))))))
 
 (macro make-method-dispatcher (method-sym)
@@ -695,52 +705,88 @@
       (<- cls (and (. cls :super) (find-class (. cls :super)))))
     (.init o)))
 
-(class Stream (Object)
+; exception
+
+(class Exception ()
+  "例外クラス。
+  すべての例外クラスはこのクラスを継承する。"
+  message)
+
+(class ShouldNotBeHandledException (Exception)
+  "非補足例外。補足すべきでない例外はこのクラスを継承する。")
+
+(class AssertFailedException (ShouldNotBeHandledException)
+  "アサーション例外クラス。"
+  expr)
+
+(method AssertFailedException .init ()
+  (.message self "assert failed"))
+
+(class PreconditionException (AssertFailedException)
+  "事前条件例外クラス。")
+
+(method PreconditionException .init ()
+  (.message self "precondition not satisfied"))
+
+(class PostconditionException (AssertFailedException)
+  "事後条件例外クラス。")
+
+(method PostconditionException .init ()
+  (.message self "postcondition not satisfied"))
+
+(class ShouldBeImplementedException (ShouldNotBeHandledException)
+  "未実装例外クラス。")
+
+(method ShouldBeImplementedException .init ()
+  (.message self "should be implemented"))
+
+; stream I/O
+
+(class Stream ()
   "ストリームクラス。
   入出力の基本的なメソッドを持つ。")
 
 (method Stream .readByte (:rest args)
-  (throw :NotImplementedException))
+  (throw (.new ShouldBeImplementedException)))
 
 (method Stream .writeByte (:rest args)
-  (throw :NotImplementedException))
+  (throw (.new ShouldBeImplementedException)))
 
 (method Stream .readChar (:opt (encoding (dynamic $encoding)))
   (if (same? encoding :UTF-8)
-          (let (xthrow (lambda () (throw :IllegalUTF-8Exception))
+          (let (utf8-exception
+                   (lambda ()
+                     (throw (.message (.new PreconditionException)
+                                      "illegal UTF-8")))
                 trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
                 mem (.new MemoryStream)
                 b1 (.readByte self) b2 nil b3 nil b4 nil)
             (if (< b1 0) (return :EOF)
                 (< b1 0x80) (.writeByte mem b1)
-                (< b1 0xc2) (xthrow)
-                !(trail? (<- b2 (.readByte self))) (xthrow)
+                (< b1 0xc2) (utf8-exception)
+                !(trail? (<- b2 (.readByte self))) (utf8-exception)
                 (< b1 0xe0)    ; 2-byte character
-                    (begin (if (= (bit-and b1 0x3e) 0) (xthrow))
-                           (.writeByte mem b1)
-                           (.writeByte mem b2))
+                    (begin (if (= (bit-and b1 0x3e) 0) (utf8-exception))
+                           (.writeByte (.writeByte mem b1) b2))
                 (< b1 0xf0)    ; 3-byte character
                     (begin (<- b3 (.readByte self))
                            (if (or (and (= b1 0xe0) (= (bit-and b2 0x20) 0))
                                    !(trail? b3))
-                               (xthrow))
-                           (.writeByte mem b1)
-                           (.writeByte mem b2)
-                           (.writeByte mem b3))
+                               (utf8-exception))
+                           (.writeByte (.writeByte (.writeByte mem b1) b2) b3))
                 (< b1 0xf8)    ; 4-byte character
                     (begin (<- b3 (.readByte self) b4 (.readByte self))
                            (if (or !(trail? b3) !(trail? b4)
                                    (and (= b1 0xf0) (= (bit-and b2 0x30) 0)))
-                               (xthrow))
-                           (.writeByte mem b1)
-                           (.writeByte mem b2)
-                           (.writeByte mem b3)
-                           (.writeByte mem b4))
-                (xthrow))
+                               (utf8-exception))
+                           (.writeByte
+                             (.writeByte
+                               (.writeByte
+                                 (.writeByte mem b1) b2) b3) b4))
+                (utf8-exception))
             (.toString mem))
-          (same? encoding :CP932)
-              (assert nil)    ; not implemented yet.
-          (throw :UnsupportEncodingException)))
+          (throw (.message (.new ShouldNotBeHandledException)
+                           "unsupport encoding"))))
 
 (class FileStream (Stream)
   "ファイルストリームクラス"
@@ -792,7 +838,8 @@
   (precondition (string? s))
   (let (ba (->byte-array s))
     (dotimes (i (length ba))
-             (.writeByte self ([] ba i)))))
+      (.writeByte self ([] ba i))))
+  self)
 
 (method MemoryStream .readByte ()
   (let (pos (.rd-pos self))
@@ -825,7 +872,9 @@
   self)
 
 (method AheadReader .checkEOF ()
-  (if (same? (.nextChar self) :EOF) (throw :EOFReachedException)))
+  (if (same? (.nextChar self) :EOF)
+      (throw (.message (.new PostconditionException)
+                       "EOF reached"))))
 
 (method AheadReader .skipChar ()
   (.checkEOF self)
@@ -850,23 +899,21 @@
   (.readByte stream))
 
 (function read-char (:opt (stream $stdin))
+  "streamから1byte読み込み返す。"
   (precondition (is-a? stream Stream))
   (.readChar stream))
 
 (function write-byte (byte :opt (stream $stdout))
+  "streamに1byte書き込みbyteを返す。"
   (precondition (and (byte? byte) (is-a? stream Stream)))
-  (.writeByte stream byte))
-
-(<- mem (.new MemoryStream))
-; (.writeByte mem 0x20)
-; (.readChar mem :UTF-8)
+  (.writeByte stream byte)
+  byte)
 
 (let ($encoding :UTF-8)
   (<- ar (.initWith (.new AheadReader) :string "abcd"))
   (print (.nextChar ar))
   (print (.skipChar ar))
-  (print (.addString ar "abc"))
-  )
+  (print (.addString ar "abc")))
 
 ; ./paren
 ; )

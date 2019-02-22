@@ -185,7 +185,7 @@ static int frame_size(int type)
   }
 }
 
-static char *frame_name(int type)
+char *frame_name(int type)
 {
   switch (type) {
     case APPLY_FRAME: return "APPLY_FRAME";
@@ -564,6 +564,7 @@ static void pop_throw_frame(void)
 {
   object handler, rewind_st;
   int rewind_rp;
+  reg[2] = reg[0];
   rewind_rp = sp;
   rewind_st = symbol_find(object_toplevel, object_st);
   while (TRUE) {
@@ -582,7 +583,7 @@ static void pop_throw_frame(void)
   fs_pop();    // skip HANDLER_FRAME
   push_return_addr_frame();
   push_apply_frame(handler);
-  reg[0] = gc_new_cons(reg[0], object_nil);
+  reg[0] = gc_new_cons(reg[2], object_nil);
 }
 
 // validation etc.
@@ -976,16 +977,16 @@ static void describe_st(void)
   object o;
   char buf[MAX_STR_LEN];
   o = symbol_find(object_toplevel, object_st);
-  printf("Exception has occurred. %s", object_describe(reg[2], buf));
-  if (exception_msg != NULL) printf(" -- %s", exception_msg);
-  printf("\n");
+  printf("Exception has occurred. -- %s\n", (exception_msg != NULL)?
+      exception_msg:
+      object_describe(reg[2], buf));
   while (o != object_nil) {
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
 }
 
-static void describe_reg(void)
+void describe_reg(void)
 {
   int i;
   char buf[MAX_STR_LEN];
@@ -998,7 +999,7 @@ static void describe_reg(void)
   printf(")\n");
 }
 
-static void describe_env(void)
+void describe_env(void)
 {
   object e;
   printf("; environment\n");
@@ -1012,7 +1013,7 @@ static void describe_env(void)
   }
 }
 
-static void describe_fs(void)
+void describe_fs(void)
 {
   int i, j;
   char buf[MAX_STR_LEN];
@@ -1028,18 +1029,11 @@ static void describe_fs(void)
   printf("\n");
 }
 
-static void describe_vm(void)
-{
-  describe_reg();
-  describe_env();
-  describe_fs();
-}
-
 static void trap(void)
 {
   switch (ip_trap_code) {
     case TRAP_EXCEPTION:
-      describe_vm();
+      // describe_vm();
       describe_st();
       exit(1);
       break;
@@ -1054,7 +1048,7 @@ static object eval(object expr)
   xassert(sp == 0);
   reg[0] = expr;
   reg[1] = object_toplevel;
-  reg[2] = object_snbhe;
+  reg[2] = object_nil;
   push_eval_frame();
   while (TRUE) {
     xassert(sp >= 0);

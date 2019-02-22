@@ -77,7 +77,6 @@ extern object object_opt;
 extern object object_os;
 extern object object_quote;
 extern object object_rest;
-extern object object_snbhe;
 extern object object_st;
 extern object object_toplevel;
 extern object object_true;

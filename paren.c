@@ -209,7 +209,6 @@ static void make_initial_objects(void)
   object_opt = keyword_new("opt");
   object_quote = symbol_new("quote");
   object_rest = keyword_new("rest");
-  object_snbhe = keyword_new("ShouldNotBeHandledException");
   object_st = symbol_new("$stack-trace");
   object_toplevel = gc_new_env(object_nil);
   object_true = symbol_new("true");
