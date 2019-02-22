@@ -478,6 +478,26 @@ PRIM(cdr)
   return TRUE;
 }
 
+// lambda
+
+PRIM(lambda_parameter)
+{
+  object o;
+  if (argc != 1) return FALSE;
+  if (!typep(o = argv->cons.car, LAMBDA)) return FALSE;
+  *result = o->lambda.params;
+  return TRUE;
+}
+
+PRIM(lambda_body)
+{
+  object o;
+  if (argc != 1) return FALSE;
+  if (!typep(o = argv->cons.car, LAMBDA)) return FALSE;
+  *result = o->lambda.body;
+  return TRUE;
+}
+
 // number
 
 static int double_multiply(object argv, object *result)
@@ -693,6 +713,8 @@ static char *symbol_name_map[] = {
   "equalp", "=",
   "integer_p", "integer?",
   "keyword_p", "keyword?",
+  "lambda_parameter", "lambda-parameter",
+  "lambda_body", "lambda-body",
   "macro_p", "macro?",
   "number_lt", "<",
   "number_modulo", "mod",

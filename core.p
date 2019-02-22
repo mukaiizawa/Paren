@@ -126,6 +126,26 @@
 
 ; fundamental function
 
+(function assert (test)
+  "testがnilの場合に例外を発生させる。
+  状態異常の早期検知のために使用する。"
+  (if (same? test nil)
+      (throw '(:class Error :message "assert failed"))))
+
+(function precondition (test :opt message)
+  "引数testがnilの場合に、例外を発生させる。
+  関数、マクロの事前条件を定義するために使用する。
+  testがnil以外の場合はtrueを返す。"
+  (if test true
+      (throw (list :class 'Error :message message))))
+
+(function postcondition (test :opt message)
+  "引数testがnilの場合に、例外を発生させる。
+  関数、マクロの事後条件を定義するために使用する。
+  testがnilでない場合はtestを返す。"
+  (if test test
+      (throw (list :class 'Error :message message))))
+
 (function identity (x)
   "xを返す。恒等関数。"
   x)
@@ -458,10 +478,8 @@
   vが指定された場合はkに対応する値をvで上書きする。"
   (precondition (list? al))
   (let (rec (lambda (al)
-              (if (nil? al)
-                      (throw (.message (.new PostconditionException)
-                                       "property not found"))
-                  (same? (car al) k) al
+              (precondition al (+ "property '" k "' not found"))
+              (if (same? (car al) k) al
                   (rec (cddr al))))
         pair (rec al))
     (if (nil? v?) (cadr pair)
@@ -561,29 +579,6 @@
 (assert (odd? 1))
 (assert !(odd? 2))
 
-; error and exception
-
-(macro assert (test)
-  "testがnilの場合に例外を発生させる。
-  状態異常の早期検知のために使用する。"
-  (list if (list not test)
-        (list throw (list '.expr (list '.new 'AssertFailedException)
-                          (list quote test)))))
-
-(macro precondition (test)
-  "引数testがnilの場合に、例外を発生させる。
-  関数、マクロの事前条件を定義するために使用する。"
-  (list if (list not test)
-        (list throw (list '.expr (list '.new 'PreconditionException)
-                          (list quote test)))))
-
-(macro postcondition (test)
-  "引数testがnilの場合に、例外を発生させる。
-  関数、マクロの事後条件を定義するために使用する。"
-  (list if (list not test)
-        (list throw (list '.expr (list '.new 'PostconditionException)
-                          (list quote test)))))
-
 ; paren object system
 
 (<- $class nil)
@@ -611,9 +606,7 @@
                     (find-feature-method (. cls :features))
                     (let (super (. cls :super))
                       (and super (rec (find-class super)))))))
-    (or (rec (find-class cls-sym))
-        (throw (.message (.new PostconditionException)
-                         "method not found")))))
+    (postcondition (rec (find-class cls-sym)))))
 
 (macro make-accessor (cls-sym var)
   (let (val (gensym) val? (gensym))
@@ -703,38 +696,39 @@
         (push o (car fields))
         (<- fields (cdr fields)))
       (<- cls (and (. cls :super) (find-class (. cls :super)))))
-    (.init o)))
+    (if (= (lambda-parameter (find-method (. o :class) '.init)) '(self))
+        (.init o)
+        o)))
 
 ; exception
 
 (class Exception ()
   "例外クラス。
-  すべての例外クラスはこのクラスを継承する。"
+  すべての例外クラスはこのクラスを継承する。
+  補足すべきでない例外を表す場合はErrorクラスを継承すること。"
   message)
 
-(class ShouldNotBeHandledException (Exception)
-  "非補足例外。補足すべきでない例外はこのクラスを継承する。")
+(method Exception .addMessage (msg)
+  (precondition (string? msg))
+  (.message self (+ (.message self) msg)))
 
-(class AssertFailedException (ShouldNotBeHandledException)
+(method Exception .toString ()
+  (let (class-name (->string (.class self)) msg (.message self))
+    (if msg (+ class-name " -- " msg)
+        class-name)))
+
+(class Error (Exception)
+  "エラークラス。
+  補足すべきでない例外はこのクラスを継承する。")
+
+(class AssertionError (Error)
   "アサーション例外クラス。"
   expr)
 
-(method AssertFailedException .init ()
+(method AssertionError .init ()
   (.message self "assert failed"))
 
-(class PreconditionException (AssertFailedException)
-  "事前条件例外クラス。")
-
-(method PreconditionException .init ()
-  (.message self "precondition not satisfied"))
-
-(class PostconditionException (AssertFailedException)
-  "事後条件例外クラス。")
-
-(method PostconditionException .init ()
-  (.message self "postcondition not satisfied"))
-
-(class ShouldBeImplementedException (ShouldNotBeHandledException)
+(class ShouldBeImplementedException (Error)
   "未実装例外クラス。")
 
 (method ShouldBeImplementedException .init ()
@@ -756,8 +750,7 @@
   (if (same? encoding :UTF-8)
           (let (utf8-exception
                    (lambda ()
-                     (throw (.message (.new PreconditionException)
-                                      "illegal UTF-8")))
+                     (throw (.message (.new Exception) "illegal UTF-8")))
                 trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
                 mem (.new MemoryStream)
                 b1 (.readByte self) b2 nil b3 nil b4 nil)
@@ -785,17 +778,15 @@
                                  (.writeByte mem b1) b2) b3) b4))
                 (utf8-exception))
             (.toString mem))
-          (throw (.message (.new ShouldNotBeHandledException)
-                           "unsupport encoding"))))
+          (throw (.message (.new Error) "unsupport encoding"))))
 
 (class FileStream (Stream)
   "ファイルストリームクラス"
   fp)
 
-(method FileStream .initWith (:key fp)
+(method FileStream .init (:key fp)
   (precondition fp)
-  (.fp self fp)
-  self)
+  (.fp self fp))
 
 (method FileStream .readByte ()
   (fgetc (.fp self)))
@@ -860,7 +851,7 @@
   "先読みリーダー"
   stream nextChar buf)
 
-(method AheadReader .initWith (:key string stream)
+(method AheadReader .init (:key string stream)
   (precondition (or (and string (string? string))
                     (and (object? stream) (is-a? stream Stream))))
   (when string
@@ -872,9 +863,7 @@
   self)
 
 (method AheadReader .checkEOF ()
-  (if (same? (.nextChar self) :EOF)
-      (throw (.message (.new PostconditionException)
-                       "EOF reached"))))
+  (postcondition !(same? (.nextChar self) :EOF) "eof reached"))
 
 (method AheadReader .skipChar ()
   (.checkEOF self)
@@ -887,8 +876,8 @@
   s)
 
 ; I/O
-(<- $stdin (.initWith (.new FileStream) :fp (fp 0))
-    $stdout (.initWith (.new FileStream) :fp (fp 1))
+(<- $stdin (.init (.new FileStream) :fp (fp 0))
+    $stdout (.init (.new FileStream) :fp (fp 1))
     $in $stdin
     $out $stdout
     $encoding (if (same? $os :Windows) :CP932 :UTF-8)
@@ -910,7 +899,7 @@
   byte)
 
 (let ($encoding :UTF-8)
-  (<- ar (.initWith (.new AheadReader) :string "abcd"))
+  (<- ar (.init (.new AheadReader) :string "abcd"))
   (print (.nextChar ar))
   (print (.skipChar ar))
   (print (.addString ar "abc")))
