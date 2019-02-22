@@ -1,19 +1,16 @@
 ; paren core library.
 
 ; fundamental macro
-(<- list (lambda (:rest args) args))
-(assert (= (list 1 2 3) '(1 2 3)))
-
-(<- gensym (let (c 0)
-             (lambda ()
-               (->symbol (+ ":G" (<- c (+ c 1)))))))
-"システム内で重複することのないシンボルを生成して返す。"
-(assert !(same? (gensym) (gensym)))
-
 (macro function (name args :rest body)
   "仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
   argsの書式はspecial operatorのlambdaに準ずる。"
-  (list <- name (cons lambda (cons args body))))
+  (cons <- (cons name (cons (cons lambda (cons args body)) nil))))
+
+(<- $gensym-count 0)
+(function gensym ()
+  (->symbol (+ ":G" (<- $gensym-count (+ $gensym-count 1)))))
+"システム内で重複することのないシンボルを生成して返す。"
+(assert !(same? (gensym) (gensym)))
 
 (macro begin0 (:rest body)
   "bodyを逐次評価し、最初に評価した結果を返す。"
@@ -126,6 +123,152 @@
 
 ; fundamental function
 
+(function list (:rest args)
+  "引数をリストにして返す。"
+  args)
+(assert (= (list) '()))
+(assert (= (list 1 2 3) '(1 2 3)))
+
+(function caar (x)
+  "(car (car x))に等価"
+  (car (car x)))
+(assert (same? (caar '((z))) 'z))
+
+(function cadr (x)
+  "(car (cdr x))に等価"
+  (car (cdr x)))
+(assert (same? (cadr '(x z)) 'z))
+
+(function cdar (x)
+  "(cdr (car x))に等価"
+  (cdr (car x)))
+(assert (= (cdar '((x z))) '(z)))
+
+(function cddr (x)
+  "(cdr (cdr x))に等価"
+  (cdr (cdr x)))
+(assert (= (cddr '(x x z)) '(z)))
+
+(function caaar (x)
+  "(car (caar x))に等価"
+  (car (caar x)))
+(assert (same? (caaar '(((z)))) 'z))
+
+(function caadr (x)
+  "(car (cadr x))に等価"
+  (car (cadr x)))
+(assert (same? (caadr '(x (z))) 'z))
+
+(function cadar (x)
+  "(car (cdar x))に等価"
+  (car (cdar x)))
+(assert (same? (cadar '((x z))) 'z))
+
+(function caddr (x)
+  "(car (cddr x))に等価"
+  (car (cddr x)))
+(assert (same? (caddr '(x x z)) 'z))
+
+(function cdaar (x)
+  "(cdr (caar x))に等価"
+  (cdr (caar x)))
+(assert (= (cdaar '(((x z)))) '(z)))
+
+(function cdadr (x)
+  "(cdr (cadr x))に等価"
+  (cdr (cadr x)))
+(assert (= (cdadr '(x (x z))) '(z)))
+
+(function cddar (x)
+  "(cdr (cdar x))に等価"
+  (cdr (cdar x)))
+(assert (= (cddar '((x x z))) '(z)))
+
+(function cdddr (x)
+  "(cdr (cddr x))に等価"
+  (cdr (cddr x)))
+(assert (= (cdddr '(x x x z)) '(z)))
+
+(function caaaar (x)
+  "(car (caaar x))に等価"
+  (car (caaar x)))
+(assert (same? (caaaar '((((z))))) 'z))
+
+(function caaadr (x)
+  "(car (caadr x))に等価"
+  (car (caadr x)))
+(assert (same? (caaadr '(x ((z)))) 'z))
+
+(function caadar (x)
+  "(car (cadar x))に等価"
+  (car (cadar x)))
+(assert (same? (caadar '((x (z)))) 'z))
+
+(function caaddr (x)
+  "(car (caddr x))に等価"
+  (car (caddr x)))
+(assert (same? (caaddr '(x x (z))) 'z))
+
+(function cadaar (x)
+  "(car (cdaar x))に等価"
+  (car (cdaar x)))
+(assert (same? (cadaar '(((x z)))) 'z))
+
+(function cadadr (x)
+  "(car (cdadr x))に等価"
+  (car (cdadr x)))
+(assert (same? (cadadr '(x (x z))) 'z))
+
+(function caddar (x)
+  "(car (cddar x))に等価"
+  (car (cddar x)))
+(assert (same? (caddar '((x x z))) 'z))
+
+(function cadddr (x)
+  "(car (cdddr x))に等価"
+  (car (cdddr x)))
+(assert (same? (cadddr '(x x x z)) 'z))
+
+(function cdaaar (x)
+  "(cdr (caaar x))に等価"
+  (cdr (caaar x)))
+(assert (= (cdaaar '((((x z))))) '(z)))
+
+(function cdaadr (x)
+  "(cdr (caadr x))に等価"
+  (cdr (caadr x)))
+(assert (= (cdaadr '(x ((x z)))) '(z)))
+
+(function cdadar (x)
+  "(cdr (cadar x))に等価"
+  (cdr (cadar x)))
+(assert (= (cdadar '((x (x z)))) '(z)))
+
+(function cdaddr (x)
+  "(cdr (caddr x))に等価"
+  (cdr (caddr x)))
+(assert (= (cdaddr '(x x (x z))) '(z)))
+
+(function cddaar (x)
+  "(cdr (cdaar x))に等価"
+  (cdr (cdaar x)))
+(assert (= (cddaar '(((x x z)))) '(z)))
+
+(function cddadr (x)
+  "(cdr (cdadr x))に等価"
+  (cdr (cdadr x)))
+(assert (= (cddadr '(x (x x z))) '(z)))
+
+(function cdddar (x)
+  "(cdr (cddar x))に等価"
+  (cdr (cddar x)))
+(assert (= (cdddar '((x x x z))) '(z)))
+
+(function cddddr (x)
+  "(cdr (cdddr x))に等価"
+  (cdr (cdddr x)))
+(assert (= (cddddr '(x x x x z)) '(z)))
+
 (function assert (test)
   "testがnilの場合に例外を発生させる。
   状態異常の早期検知のために使用する。"
@@ -186,63 +329,6 @@
 (assert (byte? 0))
 (assert (byte? 255))
 (assert !(byte? 256))
-
-(<- caar (lambda (x) (car (car x)))
-    cadr (lambda (x) (car (cdr x)))
-    cdar (lambda (x) (cdr (car x)))
-    cddr (lambda (x) (cdr (cdr x)))
-    caaar (lambda (x) (car (caar x)))
-    caadr (lambda (x) (car (cadr x)))
-    cadar (lambda (x) (car (cdar x)))
-    caddr (lambda (x) (car (cddr x)))
-    cdaar (lambda (x) (cdr (caar x)))
-    cdadr (lambda (x) (cdr (cadr x)))
-    cddar (lambda (x) (cdr (cdar x)))
-    cdddr (lambda (x) (cdr (cddr x)))
-    caaaar (lambda (x) (car (caaar x)))
-    caaadr (lambda (x) (car (caadr x)))
-    caadar (lambda (x) (car (cadar x)))
-    caaddr (lambda (x) (car (caddr x)))
-    cadaar (lambda (x) (car (cdaar x)))
-    cadadr (lambda (x) (car (cdadr x)))
-    caddar (lambda (x) (car (cddar x)))
-    cadddr (lambda (x) (car (cdddr x)))
-    cdaaar (lambda (x) (cdr (caaar x)))
-    cdaadr (lambda (x) (cdr (caadr x)))
-    cdadar (lambda (x) (cdr (cadar x)))
-    cdaddr (lambda (x) (cdr (caddr x)))
-    cddaar (lambda (x) (cdr (cdaar x)))
-    cddadr (lambda (x) (cdr (cdadr x)))
-    cdddar (lambda (x) (cdr (cddar x)))
-    cddddr (lambda (x) (cdr (cdddr x))))
-(assert (same? (caar '((z))) 'z))
-(assert (same? (cadr '(x z)) 'z))
-(assert (= (cdar '((x z))) '(z)))
-(assert (= (cddr '(x x z)) '(z)))
-(assert (same? (caaar '(((z)))) 'z))
-(assert (same? (caadr '(x (z))) 'z))
-(assert (same? (cadar '((x z))) 'z))
-(assert (same? (caddr '(x x z)) 'z))
-(assert (= (cdaar '(((x z)))) '(z)))
-(assert (= (cdadr '(x (x z))) '(z)))
-(assert (= (cddar '((x x z))) '(z)))
-(assert (= (cdddr '(x x x z)) '(z)))
-(assert (same? (caaaar '((((z))))) 'z))
-(assert (same? (caaadr '(x ((z)))) 'z))
-(assert (same? (caadar '((x (z)))) 'z))
-(assert (same? (caaddr '(x x (z))) 'z))
-(assert (same? (cadaar '(((x z)))) 'z))
-(assert (same? (cadadr '(x (x z))) 'z))
-(assert (same? (caddar '((x x z))) 'z))
-(assert (same? (cadddr '(x x x z)) 'z))
-(assert (= (cdaaar '((((x z))))) '(z)))
-(assert (= (cdaadr '(x ((x z)))) '(z)))
-(assert (= (cdadar '((x (x z)))) '(z)))
-(assert (= (cdaddr '(x x (x z))) '(z)))
-(assert (= (cddaar '(((x x z)))) '(z)))
-(assert (= (cddadr '(x (x x z))) '(z)))
-(assert (= (cdddar '((x x x z))) '(z)))
-(assert (= (cddddr '(x x x x z)) '(z)))
 
 (function ->list (x)
   "xがリストの場合にxを、そうでなければxをリストにして返す。"
