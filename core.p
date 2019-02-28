@@ -629,27 +629,27 @@
 (function -- (x)
   "xから1を引いた結果を返す。"
   (precondition (number? x))
-  (+ x -1))
+  (- x 1))
 
 (macro <-+ (s v)
   "sの値にvを加えた値をsに束縛する式に展開する。"
   (precondition (symbol? s))
-  (list <- s (list + s v)))
+  (list <- s (list '+ s v)))
 
 (macro <-- (s v)
   "sの値からvを引いた値をsに束縛する式に展開する。"
   (precondition (symbol? s))
-  (list <- s (list - s v)))
+  (list <- s (list '- s v)))
 
 (macro <-* (s v)
   "sの値にvをかけた値をsに束縛する式に展開する。"
   (precondition (symbol? s))
-  (list <- s (list * s v)))
+  (list <- s (list '* s v)))
 
 (macro <-/ (s v)
   "sの値をvをで割った値をsに束縛する式に展開する。"
   (precondition (symbol? s))
-  (list <- s (list * s v)))
+  (list <- s (list '/ s v)))
 
 (function even? (x)
   "xが偶数の場合にtrueを、そうでなければnilを返す。"
@@ -950,14 +950,17 @@
   (.buf self (.new MemoryStream))
   self)
 
-(method AheadReader .ensureNotEOF ()
+(method AheadReader .eof? (:key string stream)
+  "ストリームが終端に達している場合にtrueを、そうでなければnilを返す。"
+  (same? (.next self) :EOF))
+
+(method AheadReader .ensureNotEOFReached ()
   "ストリームが終端に達していた場合は例外をスローする。"
-  (if (same? (.next self) :EOF)
-      (throw (.message (.new Error) "eof reached"))))
+  (if (.eof? self) (throw (.message (.new Error) "EOF reached"))))
 
 (method AheadReader .skip ()
   "次の一文字を読み飛ばし、その文字を返す。"
-  (.ensureNotEOF self)
+  (.ensureNotEOFReached self)
   (begin0 (.next self)
           (.next self (.readChar (.stream self)))))
 
@@ -982,8 +985,9 @@
   self)
 
 (method AheadReader .skipSpace ()
-  "スペース、改行文字を読み飛ばし、レシーバを返す。。"
-  (while (find '(" " "\r" "\n") (.next self)) (.skip self))
+  "スペース、改行文字を読み飛ばし、レシーバを返す。"
+  (while (and !(.eof? self) (find '(" " "\r" "\n") (.next self)))
+    (.skip self))
   self)
 
 ; I/O
