@@ -72,15 +72,15 @@ static int digit_val(int ch, int radix)
 
 static int lex_string(void)
 {
-  int quote, val;
+  int quote, next;
   quote = skip();
   while (next_ch != quote) {
     if (next_ch == EOF) lex_error("quote not closed");
     if (next_ch != '\\') get();
     else {
       skip();
-      val = skip();
-      switch(next_ch) {
+      next = skip();
+      switch (next) {
         case 'a': add('\a'); break;
         case 'b': add('\b'); break;
         case 'e': add(0x1b); break;
@@ -90,11 +90,11 @@ static int lex_string(void)
         case 't': add('\t'); break;
         case 'v': add('\v'); break;
         case 'x':
-          val = digit_val(skip(), 16) * 16;
-          val += digit_val(skip(), 16);
-          add(val);
+          next = digit_val(skip(), 16) * 16;
+          next += digit_val(skip(), 16);
+          add(next);
           break;
-        default: add(val); break;
+        default: add(next); break;
       }
     }
   }

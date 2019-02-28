@@ -981,6 +981,11 @@
   (.reset (.buf self))
   self)
 
+(method AheadReader .skipSpace ()
+  "スペース、改行文字を読み飛ばし、レシーバを返す。。"
+  (while (find '(" " "\r" "\n") (.next self)) (.skip self))
+  self)
+
 ; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
     $stdout (.init (.new FileStream) :fp (fp 1))
@@ -1005,13 +1010,12 @@
   byte)
 
 (let ($encoding :UTF-8)
-  (<- ar (.init (.new AheadReader) :string "abcd"))
+  (<- ar (.init (.new AheadReader) :string "a
+                b
+                c"))
   (print (.next ar))
-  (print (.skip ar))
   (print (.get ar))
-  (print (.put ar "abc"))
-  (print (.token (.reset ar)))
-  (print (.put ar "abc"))
+  (print (.get (.skipSpace ar)))
   (print (.token ar)))
 
 ; ./paren
