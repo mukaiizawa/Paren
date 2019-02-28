@@ -705,12 +705,12 @@
                 (list '. 'self (->keyword var))))))
 
 (macro make-method-dispatcher (method-sym)
-  (let (args (gensym))
-    (list macro method-sym (list :rest args)
+  (let (receiver (gensym) args (gensym))
+    (list macro method-sym (list receiver :rest args)
           (list cons (list 'list 'find-method
-                           (list 'list '. (list car args) :class)
+                           (list 'list '. receiver :class)
                            (list quote (list quote method-sym)))
-                args))))
+                (list cons receiver args)))))
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
   (let (Object? (= cls-sym 'Object)
@@ -900,8 +900,7 @@
       (.buf-size self (* (.buf-size self) 2)))
     (<- new-buf (byte-array (.buf-size self)))
     (array-copy (.buf self) 0 new-buf 0  (.wr-pos self))
-    (.buf self new-buf)
-    self))
+    (.buf self new-buf)))
 
 (method MemoryStream .writeByte (byte)
   (precondition (byte? byte))
@@ -926,40 +925,61 @@
 
 (method MemoryStream .toString ()
   (let (pos (.wr-pos self) str (byte-array pos))
-    (->string (array-copy (.buf self) 0 str 0 pos))))
+    (if (= pos 0) ""
+        (->string (array-copy (.buf self) 0 str 0 pos)))))
 
 (method MemoryStream .reset ()
   (.rd-pos self 0)
-  (.wr-pos self 0)
-  self)
+  (.wr-pos self 0))
 
 (class AheadReader ()
-  "先読みリーダー"
-  stream nextChar buf)
+  "先読みリーダー。
+  文字列やストリームから一文字先読みを行う機能を提供するクラス。
+  字句解析器として使用できる。"
+  stream next buf)
 
 (method AheadReader .init (:key string stream)
+  "文字列または、ストリームのいずれかを用いてレシーバを初期化する。"
   (precondition (or (and string (string? string))
                     (and (object? stream) (is-a? stream Stream))))
   (when string
     (<- stream (.new MemoryStream))
     (.writeString stream string))
   (.stream self stream)
-  (.nextChar self (.readChar (.stream self)))
+  (.next self (.readChar (.stream self)))
   (.buf self (.new MemoryStream))
   self)
 
-(method AheadReader .checkEOF ()
-  (postcondition !(same? (.nextChar self) :EOF) "eof reached"))
+(method AheadReader .ensureNotEOF ()
+  "ストリームが終端に達していた場合は例外をスローする。"
+  (if (same? (.next self) :EOF)
+      (throw (.message (.new Error) "eof reached"))))
 
-(method AheadReader .skipChar ()
-  (.checkEOF self)
-  (begin0 (.nextChar self)
-          (.nextChar self (.readChar (.stream self)))))
+(method AheadReader .skip ()
+  "次の一文字を読み飛ばし、その文字を返す。"
+  (.ensureNotEOF self)
+  (begin0 (.next self)
+          (.next self (.readChar (.stream self)))))
 
-(method AheadReader .addString (s)
+(method AheadReader .get ()
+  "次の一文字をトークンの末尾に追加し、その文字を返す。"
+  (let (c (.skip self))
+    (.put self c)
+    c))
+
+(method AheadReader .put (s)
+  "ストリームとは無関係にトークンの末尾に文字列sを追加する。"
   (precondition (string? s))
-  (.writeString (.buf self) s)
-  s)
+  (.writeString (.buf self) s))
+
+(method AheadReader .token ()
+  "現在切り出しているトークン文字列を返す。"
+  (.toString (.buf self)))
+
+(method AheadReader .reset ()
+  "現在切り出しているトークン文字列を返す。"
+  (.reset (.buf self))
+  self)
 
 ; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
@@ -986,9 +1006,13 @@
 
 (let ($encoding :UTF-8)
   (<- ar (.init (.new AheadReader) :string "abcd"))
-  (print (.nextChar ar))
-  (print (.skipChar ar))
-  (print (.addString ar "abc")))
+  (print (.next ar))
+  (print (.skip ar))
+  (print (.get ar))
+  (print (.put ar "abc"))
+  (print (.token (.reset ar)))
+  (print (.put ar "abc"))
+  (print (.token ar)))
 
 ; ./paren
 ; )
