@@ -1025,8 +1025,15 @@
 ; ./paren
 ; )
 ;
-; ./paren xxx.p
-; load xxx.p
+; ./paren -s xxx.p arg1 arg2 ...
+;   -s scripting mode
+;      invoke main method
+;
+;  /paren xxx.p
+;      load xxx.p
+;
+;  /paren
+;      invoke repl
 ;
 ;
 ; (if $args (loop (print (eval (read))))
