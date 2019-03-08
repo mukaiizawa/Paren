@@ -1022,6 +1022,9 @@
   (print (.get (.skipSpace ar)))
   (print (.token ar)))
 
+(print (length "1ｘ2"))
+(print (length "1ｘ平成2"))
+
 ; ./paren
 ; )
 ;

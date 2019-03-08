@@ -348,6 +348,22 @@ PRIM(add)
   }
 }
 
+static int string_length(object o, int *result)
+{
+  int i;
+  unsigned char first;
+  i = *result = 0;
+  while (i < o->barray.size) {
+    if ((first = o->barray.elt[i]) < 0x80) i += 1;
+    else if (first < 0xe0) i += 2;
+    else if (first < 0xf0) i += 3;
+    else i += 4;
+    printf("%d\n", first);
+    *result += 1;
+  }
+  return i == o->barray.size;
+}
+
 PRIM(length)
 {
   int len;
@@ -358,7 +374,9 @@ PRIM(length)
       case CONS:
         len = object_list_len(argv->cons.car);
         break;
-      case STRING: // TODO count as utf-8
+      case STRING:
+        if (!string_length(argv->cons.car, &len)) return FALSE;
+        break;
       case BARRAY:
       case ARRAY:
         len = argv->cons.car->array.size;
