@@ -10,7 +10,15 @@
 #include "gc.h"
 #include "bi.h"
 
-// basic functions
+// basic built-in
+
+int utf8_trail_size(unsigned char c)
+{
+  if (c < 0x80) return 1;
+  if (c < 0xe0) return 2;
+  if (c < 0xf0) return 3;
+  return 4;
+}
 
 PRIM(samep)
 {
@@ -351,14 +359,9 @@ PRIM(add)
 static int string_length(object o, int *result)
 {
   int i;
-  unsigned char first;
   i = *result = 0;
   while (i < o->barray.size) {
-    if ((first = o->barray.elt[i]) < 0x80) i += 1;
-    else if (first < 0xe0) i += 2;
-    else if (first < 0xf0) i += 3;
-    else i += 4;
-    printf("%d\n", first);
+    i += utf8_trail_size(o->barray.elt[i]);
     *result += 1;
   }
   return i == o->barray.size;
@@ -645,6 +648,8 @@ PRIM(number_lt)
 
 // byte-array/array
 
+// TODO array_new
+
 PRIM(barray_new)
 {
   int64_t size;
@@ -654,29 +659,52 @@ PRIM(barray_new)
   return TRUE;
 }
 
-// TODO array new
+static int barray_access(object a, int64_t i, object v, object *result)
+{
+  if (i >= a->barray.size) return FALSE;
+  if (v == NULL) *result = object_bytes[(unsigned char)(a->barray.elt[i])];
+  else {
+    if (!bytep(v)) return FALSE;
+    a->barray.elt[i] = (unsigned char)(v->xint.val);
+    *result = v;
+  }
+  return TRUE;
+}
 
-#define LC(p) (*(unsigned char*)(p))
+static int string_access(object a, int64_t i, object v, object *result)
+{
+  int from, len;
+  from = 0;
+  if (i >= a->barray.size) return FALSE;
+  while (i != 0) {
+    i--;
+    from += utf8_trail_size(a->barray.elt[from]);
+    if (from >= a->barray.size) return FALSE;
+  }
+  len = utf8_trail_size(a->barray.elt[from]);
+  if (from + len > a->barray.size) return FALSE;
+  if (v == NULL) {
+    //
+  } else {
+    //
+  }
+  return TRUE;
+}
 
-PRIM(array_access)
+PRIM(access)
 {
   int64_t i;
   object a, v;
   if (argc < 2 || argc > 3) return FALSE;
   a = argv->cons.car;
   if (!bi_int64((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
+  if (i < 0) return FALSE;
+  if (argc == 2) v = NULL;
+  else v = argv->cons.cdr->cons.car;
   switch (type(a)) {
-    case BARRAY:
-      if (i < 0 || i >= a->barray.size) return FALSE;
-      if (argc == 2) *result = object_bytes[(unsigned char)(a->barray.elt[i])];
-      else {
-        if (!bytep(v = argv->cons.cdr->cons.car)) return FALSE;
-        a->barray.elt[i] = (unsigned char)(v->xint.val);
-        *result = v;
-      }
-      return TRUE;
-    default:
-      return FALSE;
+    case BARRAY: return barray_access(a, i, v, result);
+    case STRING: return string_access(a, i, v, result);
+    default: return FALSE;
   }
 }
 
@@ -717,7 +745,7 @@ PRIM(array_copy)
 
 static char *symbol_name_map[] = {
   "add", "+",
-  "array_access", "[]",
+  "access", "[]",
   "array_copy", "array-copy",
   "array_p", "array?",
   "assign", "<-",
