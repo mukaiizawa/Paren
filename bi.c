@@ -673,7 +673,7 @@ static int barray_access(object a, int64_t i, object v, object *result)
 
 static int string_access(object a, int64_t i, object v, object *result)
 {
-  int from, len;
+  int from, trail_size;
   from = 0;
   if (i >= a->barray.size) return FALSE;
   while (i != 0) {
@@ -681,12 +681,22 @@ static int string_access(object a, int64_t i, object v, object *result)
     from += utf8_trail_size(a->barray.elt[from]);
     if (from >= a->barray.size) return FALSE;
   }
-  len = utf8_trail_size(a->barray.elt[from]);
-  if (from + len > a->barray.size) return FALSE;
+  trail_size = utf8_trail_size(a->barray.elt[from]);
+  if (from + trail_size > a->barray.size) return FALSE;
   if (v == NULL) {
-    //
+    *result = gc_new_barray(STRING, trail_size);
+    memcpy((*result)->barray.elt, a->barray.elt + from, trail_size);
   } else {
-    //
+    if (!typep(v, STRING)) return FALSE;
+    *result = gc_new_barray(STRING, a->barray.size - trail_size
+        + v->barray.size);
+    if (from != 0)
+      memcpy((*result)->barray.elt, a->barray.elt, from);
+    memcpy((*result)->barray.elt + from, v->barray.elt, v->barray.size);
+    if (from + trail_size != a->barray.size)
+      memcpy((*result)->barray.elt + from + v->barray.size
+          , a->barray.elt + from + trail_size
+          , a->barray.size - from - trail_size + 1);
   }
   return TRUE;
 }
