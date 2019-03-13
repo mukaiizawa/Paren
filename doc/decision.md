@@ -29,10 +29,12 @@ throwされた場合はcatchオペレーターでは補足できず、即座に�
 
 原則として継承は許さず、どのようなエラーかはメッセージフィールドを用いて表現する。
 
-    Error out of memory.
-    Error illegal arguments.
-    Error precondition not satisfied.
-    ...
+例えば次のような事態はErrorクラスをthrowするのが適切である。
+- メモリ不足
+- スタックオーバーフロー
+- 不正な引数による関数呼び出し
+- 事前条件を満たさない関数呼び出し
+- 事後条件を満たさない関数呼び出し
 
 Exceptionクラスは大域脱出機構を提供するためのクラスである。
 
