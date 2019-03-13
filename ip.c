@@ -22,12 +22,12 @@ static long cycle;
 // exception
 
 int ip_trap_code;
-static char *exception_msg;
+static char *error_msg;
 
 static void mark_exception(char *msg)
 {
   ip_trap_code = TRAP_EXCEPTION;
-  exception_msg = msg;
+  error_msg = msg;
 }
 
 #define mark_too_few_arguments_exception()\
@@ -974,15 +974,21 @@ static void sweep_env(int depth, void *sym, void *val)
 
 static void describe_st(void)
 {
-  object o;
+  object st, e, msg;
   char buf[MAX_STR_LEN];
-  o = symbol_find(object_toplevel, object_st);
-  printf("Exception has occurred. -- %s\n", (exception_msg != NULL)?
-      exception_msg:
-      object_describe(reg[2], buf));
-  while (o != object_nil) {
-    printf("	at: %s\n", object_describe(o->cons.car, buf));
-    o = o->cons.cdr;
+  if (error_msg != NULL) {
+    e = object_error;
+    msg = gc_new_barray_from(STRING, strlen(error_msg), error_msg);
+  } else  {
+    e = reg[2]->cons.cdr->cons.car;
+    msg = reg[2]->cons.cdr->cons.cdr->cons.cdr->cons.car;
+  }
+  printf("%s", object_describe(e, buf));
+  printf(" -- %s.\n", object_describe(msg, buf));
+  st = symbol_find(object_toplevel, object_st);
+  while (st != object_nil) {
+    printf("	at: %s\n", object_describe(st->cons.car, buf));
+    st = st->cons.cdr;
   }
 }
 

@@ -203,6 +203,7 @@ static void make_initial_objects(void)
   int i;
   object_nil = symbol_new("nil");
   object_catch = symbol_new("catch");
+  object_error = symbol_new("Error");
   object_finally = symbol_new("finally");
   object_key = keyword_new("key");
   object_not = symbol_new("not");
