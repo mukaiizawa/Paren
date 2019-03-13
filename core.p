@@ -1013,15 +1013,14 @@
   (.writeByte stream byte)
   byte)
 
-(let ($encoding :UTF-8)
-  (<- ar (.init (.new AheadReader) :string "a
-                b
-                c"))
-  (print (.next ar))
-  (print (.get ar))
-  (print (.get (.skipSpace ar)))
-  (print (.token ar)))
-
+; (let ($encoding :UTF-8)
+;   (<- ar (.init (.new AheadReader) :string "a
+;                 b
+;                 c"))
+;   (print (.next ar))
+;   (print (.get ar))
+;   (print (.get (.skipSpace ar)))
+;   (print (.token ar)))
 ; (print (length "1ｘ2"))
 ; (print (length "1ｘ平成2"))
 
