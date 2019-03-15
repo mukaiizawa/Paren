@@ -468,13 +468,12 @@ static void pop_fetch_handler_frame(void)
 static void pop_fetch_operator_frame(void)
 {
   object args;
-  void (*special)(object, int, object);
+  int (*special)(int, object);
   args = fs_pop()->local_vars[0];
   switch (type(reg[0])) {
     case SYMBOL:
       if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
-        (*special)(reg[1], object_list_len(args), args);
-        if (ip_trap_code != TRAP_ERROR) st_pop();
+        if ((*special)(object_list_len(args), args)) st_pop();
         return;
       }
       if (xsplay_find(&prim_splay, reg[0]) != NULL) {
@@ -621,7 +620,7 @@ static int valid_keyword_p(object params, object args)
   return TRUE;
 }
 
-// lambda-list内のシンボルが一意であることのvalidate-lambda-listに追加する。
+// TODO lambda-list内のシンボルが一意であることのvalidate-lambda-listに追加する。
 static void parse_lambda_list(object env, object params, object args)
 {
   object o, pre, k, v, def_v, sup_k;
@@ -711,7 +710,10 @@ static void parse_lambda_list(object env, object params, object args)
       params = params->cons.cdr;
     }
   }
-  if (args != object_nil) ip_mark_too_many_arguments_error();
+  if (args != object_nil) {
+    ip_mark_too_many_arguments_error();
+    return;
+  }
 }
 
 // special forms
@@ -782,25 +784,26 @@ SPECIAL(let)
   if (argc < 1) ip_mark_too_few_arguments_error();
   if (!listp((params = argv->cons.car))) {
     ip_mark_error("argument must be list.");
-    return;
+    return FALSE;
   }
-  push_switch_env_frame(env);
+  push_switch_env_frame(reg[1]);
   push_eval_sequential_frame(argv->cons.cdr);
   fb_reset();
   while (params != object_nil) {
     if (!typep((s = params->cons.car), SYMBOL)) {
       ip_mark_error("argument must be symbol.");
-      return;
+      return FALSE;
     }
     if ((params = params->cons.cdr) == object_nil) {
       ip_mark_error("argument must be association list.");
-      return;
+      return FALSE;
     }
     fb_add(make_eval_local_var_frame(params->cons.car));
     fb_add(make_bind_frame(s));
     params = params->cons.cdr;
   }
   fb_flush();
+  return TRUE;
 }
 
 SPECIAL(dynamic)
@@ -809,11 +812,11 @@ SPECIAL(dynamic)
   object e, s, v;
   if (argc != 1) {
     ip_mark_illegal_arguments_error(argc, 1, 1);
-    return;
+    return FALSE;
   }
   if (!typep((s = argv->cons.car), SYMBOL)) {
     ip_mark_error("argument must be symbol.");
-    return;
+    return FALSE;
   }
   i = sp - 1;
   e = reg[1];
@@ -827,10 +830,11 @@ SPECIAL(dynamic)
     }
     if (i < 0) {
       ip_mark_error("unbind symbol.");
-      return;
+      return FALSE;
     }
   }
   reg[0] = v;
+  return TRUE;
 }
 
 // <assign> ::= (<- [<sym> <val>] ...)
@@ -839,21 +843,21 @@ SPECIAL(dynamic)
 SPECIAL(assign)
 {
   object s;
-  if (argc == 0) return;
+  if (argc == 0) return TRUE;
   if (argc % 2 != 0) {
     ip_mark_error("must be pair.");
-    return;
+    return FALSE;
   }
   fb_reset();
   while (argc != 0) {
     s = argv->cons.car;
     if (!typep(s, SYMBOL)) {
       ip_mark_error("cannot bind except symbol.");
-      return;
+      return FALSE;
     }
     if (s == object_nil) {
       ip_mark_error("cannot bind nil.");
-      return;
+      return FALSE;
     }
     argv = argv->cons.cdr;
     fb_add(make_eval_local_var_frame(argv->cons.car));
@@ -862,59 +866,75 @@ SPECIAL(assign)
     argc -= 2;
   }
   fb_flush();
+  return TRUE;
 }
 
 SPECIAL(begin)
 {
   push_eval_sequential_frame(argv);
+  return TRUE;
 }
 
 SPECIAL(macro)
 {
   object params;
-  if (argc < 2) ip_mark_too_few_arguments_error();
+  if (argc < 2) {
+    ip_mark_too_few_arguments_error();
+    return FALSE;
+  }
   if (typep(argv->cons.car, SYMBOL)) {
     fs_push(make_bind_propagation_frame(argv->cons.car));
     argv = argv->cons.cdr;
   }
   if (!valid_lambda_list_p(MACRO, params = argv->cons.car)) {
     mark_illegal_parameter_error();
-    return;
+    return FALSE;
   }
-  reg[0] = gc_new_macro(env, params, argv->cons.cdr);
+  reg[0] = gc_new_macro(reg[1], params, argv->cons.cdr);
+  return TRUE;
 }
 
 SPECIAL(lambda)
 {
   object params;
-  if (argc < 2) ip_mark_too_few_arguments_error();
+  if (argc < 2) {
+    ip_mark_too_few_arguments_error();
+    return FALSE;
+  }
   params = argv->cons.car;
   if (!valid_lambda_list_p(LAMBDA, params)) {
     mark_illegal_parameter_error();
-    return;
+    return FALSE;
   }
-  reg[0] = gc_new_lambda(env, params, argv->cons.cdr);
+  reg[0] = gc_new_lambda(reg[1], params, argv->cons.cdr);
+  return TRUE;
 }
 
 SPECIAL(quote)
 {
   if (argc != 1) {
     ip_mark_illegal_arguments_error(argc, 1, 1);
-    return;
+    return FALSE;
   }
   reg[0] = argv->cons.car;
+  return TRUE;
 }
 
 SPECIAL(if)
 {
-  if (argc < 2) ip_mark_too_few_arguments_error();
+  if (argc < 2) {
+    ip_mark_too_few_arguments_error();
+    return FALSE;
+  }
   push_if_frame(argv);
+  return TRUE;
 }
 
 SPECIAL(labels)
 {
   push_labels_frame(argv);
   push_eval_sequential_frame(argv);
+  return TRUE;
 }
 
 SPECIAL(goto)
@@ -922,17 +942,17 @@ SPECIAL(goto)
   object o;
   if (argc != 1) {
     ip_mark_illegal_arguments_error(argc, 1, 1);
-    return;
+    return FALSE;
   }
   reg[0] = argv->cons.car;
   if (!typep(reg[0], KEYWORD)) {
     ip_mark_error("arguments must be keyword.");
-    return;
+    return FALSE;
   }
   while (fs_top()->type != LABELS_FRAME) {
     if (sp == 0) {
       ip_mark_error("not found labels context.");
-      return;
+      return FALSE;
     }
     fs_rewind_pop();
   }
@@ -940,43 +960,50 @@ SPECIAL(goto)
   while (TRUE) {
     if (o == object_nil) {
       ip_mark_error("not found label.");
-      return;
+      return FALSE;
     }
     if (o->cons.car == reg[0]) break;
     o = o->cons.cdr;
   }
   push_eval_sequential_frame(o);
+  return TRUE;
 }
 
 SPECIAL(throw)
 {
   if (argc != 1) {
     ip_mark_illegal_arguments_error(argc, 1, 1);
-    return;
+    return FALSE;
   }
   push_throw_frame();
   push_eval_frame();
   reg[0] = argv->cons.car;
+  return TRUE;
 }
 
 SPECIAL(catch)
 {
-  if (argc < 2) ip_mark_too_few_arguments_error();
+  if (argc < 2) {
+    ip_mark_too_few_arguments_error();
+    return FALSE;
+  }
   st_push(reg[0]);
   push_fetch_handler_frame(argv->cons.cdr);
   push_eval_frame();
   reg[0] = argv->cons.car;
+  return TRUE;
 }
 
 SPECIAL(return)
 {
   if (argc != 1) {
     ip_mark_illegal_arguments_error(argc, 1, 1);
-    return;
+    return FALSE;
   }
   push_return_frame();
   push_eval_frame();
   reg[0] = argv->cons.car;
+  return TRUE;
 }
 
 // trace and debug

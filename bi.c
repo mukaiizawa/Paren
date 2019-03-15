@@ -745,7 +745,7 @@ PRIM(array_copy)
 #undef SPECIAL
 #undef PRIM
 
-#define SPECIAL(name) extern void special_##name(object, int, object);
+#define SPECIAL(name) extern int special_##name(int, object);
 #include "special.wk"
 #undef SPECIAL
 
@@ -802,7 +802,7 @@ char *prim_name_table[] = {
   NULL
 };
 
-void (*special_table[])(object env, int argc, object argv) = {
+int (*special_table[])(int argc, object argv) = {
 #define SPECIAL(name) special_##name,
 #include "special.wk"
 #undef SPECIAL

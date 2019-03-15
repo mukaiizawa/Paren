@@ -275,19 +275,19 @@
   (if (same? test nil)
       (throw '(:class Error :message "assert failed"))))
 
-(function precondition (test :opt message)
+(function precondition (test)
   "引数testがnilの場合に、例外を発生させる。
   関数、マクロの事前条件を定義するために使用する。
   testがnil以外の場合はtrueを返す。"
   (if test true
-      (throw (list :class 'Error :message message))))
+      (throw (list :class 'Error :message "precondition not satisfied"))))
 
-(function postcondition (test :opt message)
+(function postcondition (test)
   "引数testがnilの場合に、例外を発生させる。
   関数、マクロの事後条件を定義するために使用する。
   testがnilでない場合はtestを返す。"
   (if test test
-      (throw (list :class 'Error :message message))))
+      (throw (list :class 'Error :message "postcondition not satisfied"))))
 
 (function identity (x)
   "xを返す。恒等関数。"
@@ -563,10 +563,13 @@
   値がない場合は例外を発生させる。
   vが指定された場合はkに対応する値をvで上書きする。"
   (precondition (list? al))
-  (let (rec (lambda (al)
-              (precondition al (+ "property '" k "' not found"))
-              (if (same? (car al) k) al
-                  (rec (cddr al))))
+  (let (rec (lambda (rest)
+              (if (nil? rest)
+                      (throw (list :class 'Error
+                                   :message
+                                       (+ "property '" k "' not found in " al)))
+                  (same? (car rest) k) rest
+                  (rec (cddr rest))))
         pair (rec al))
     (if (nil? v?) (cadr pair)
         (car (cdr pair) v))))
