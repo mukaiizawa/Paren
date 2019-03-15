@@ -545,13 +545,13 @@
 (assert (any-satisfy? '(1 2 3 4 5) number?))
 (assert !(any-satisfy? '(:a :b :c) number?))
 
-(function each-pair-satisfy? (l f)
+(function adjacent-satisfy? (l f)
   "リストの隣接するすべての二要素に対して二変数関数fの評価がnil以外の場合は"
   (precondition (and (list? l) (operator? f)))
   (if (nil? (cdr l)) true
-      (and (f (car l) (cadr l)) (each-pair-satisfy? (cdr l) f))))
-(assert (each-pair-satisfy? '(1 2 3 4 5) <))
-(assert !(each-pair-satisfy? '(1 2 3 3 5) <))
+      (and (f (car l) (cadr l)) (adjacent-satisfy? (cdr l) f))))
+(assert (adjacent-satisfy? '(1 2 3 4 5) <))
+(assert !(adjacent-satisfy? '(1 2 3 3 5) <))
 
 ; association list
 ;; parenでは、キーワードと任意のS式の対を保持するリストを連想リストという。
@@ -599,7 +599,7 @@
 (assert (= (negated -1) 1))
 
 (function > (:rest args)
-  (each-pair-satisfy? args (lambda (x y) (< y x))))
+  (adjacent-satisfy? args (lambda (x y) (< y x))))
 (assert (> 1 0))
 (assert !(> 0 0))
 (assert !(> 0 1))
@@ -607,7 +607,7 @@
 (assert !(> 2 0 1))
 
 (function <= (:rest args)
-  (each-pair-satisfy? args (lambda (x y) !(< y x))))
+  (adjacent-satisfy? args (lambda (x y) !(< y x))))
 (assert (<= 0 0))
 (assert (<= 0 1))
 (assert !(<= 1 0))
@@ -615,7 +615,7 @@
 (assert !(<= 2 0 1))
 
 (function >= (:rest args)
-  (each-pair-satisfy? args (lambda (x y) !(< x y))))
+  (adjacent-satisfy? args (lambda (x y) !(< x y))))
 (assert (>= 0 0))
 (assert (>= 1 0))
 (assert !(>= 0 1))

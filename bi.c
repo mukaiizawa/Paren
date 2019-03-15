@@ -9,6 +9,12 @@
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
+#include "ip.h"
+
+void mark_numeric_over_flow(void)
+{
+  ip_mark_error("numeric overflow");
+}
 
 // basic built-in
 
@@ -24,7 +30,7 @@ PRIM(samep)
 {
   int b;
   object o;
-  if (argc < 2) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   o = argv->cons.car;
   while ((argv = argv->cons.cdr) != object_nil) {
     if (!(b = (o == argv->cons.car))) break;
@@ -70,7 +76,7 @@ PRIM(equalp)
 {
   int b;
   object o, p;
-  if (argc < 2) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   o = argv->cons.car;
   while ((argv = argv->cons.cdr) != object_nil) {
     p = argv->cons.car;
@@ -82,70 +88,70 @@ PRIM(equalp)
 
 PRIM(atom_p)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(!typep(argv->cons.car, CONS));
   return TRUE;
 }
 
 PRIM(number_p)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(numberp(argv->cons.car));
   return TRUE;
 }
 
 PRIM(integer_p)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, XINT));
   return TRUE;
 }
 
 PRIM(symbol_p)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, SYMBOL));
   return TRUE;
 }
 
 PRIM(keyword_p)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, KEYWORD));
   return TRUE;
 }
 
 PRIM(string_p)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, STRING));
   return TRUE;
 }
 
 PRIM(lambda_p)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, LAMBDA));
   return TRUE;
 }
 
 PRIM(macro_p)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, MACRO));
   return TRUE;
 }
 
 PRIM(barray_p)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, BARRAY));
   return TRUE;
 }
 
 PRIM(array_p)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, ARRAY));
   return TRUE;
 }
@@ -176,7 +182,7 @@ static int prim_p(object o)
 
 PRIM(special_operator_p)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(special_p(argv->cons.car));
   return TRUE;
 }
@@ -184,9 +190,9 @@ PRIM(special_operator_p)
 PRIM(operator_p)
 {
   object o;
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   o = argv->cons.car;
-  *result = object_bool(special_p(o) || prim_p(o) || typep(o, LAMBDA));
+  *result = object_bool(prim_p(o) || typep(o, LAMBDA));
   return TRUE;
 }
 
@@ -310,10 +316,14 @@ static int double_add(object argv, object *result)
   double x, y, z;
   if (argv == object_nil) return TRUE;
   if (bi_double(*result, &x) && bi_double(argv->cons.car, &y)) {
-    if (!isfinite(z = x + y)) return FALSE;
+    if (!isfinite(z = x + y)) {
+      mark_numeric_over_flow();
+      return FALSE;
+    }
     *result = gc_new_xfloat(z);
     return double_add(argv->cons.cdr, result);
   }
+  ip_mark_error("is not a number");
   return FALSE;
 }
 
@@ -322,8 +332,10 @@ static int int64_add(object argv, object *result)
   int64_t x, y;
   if (argv == object_nil) return TRUE;
   if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y)) {
-    if (y > 0 && x > INT64_MAX - y) return FALSE;
-    if (y < 0 && x < INT64_MIN - y) return FALSE;
+    if ((y > 0 && x > INT64_MAX - y) || (y < 0 && x < INT64_MIN - y)) {
+      mark_numeric_over_flow();
+      return FALSE;
+    }
     *result = gc_new_xint(x + y);
     return int64_add(argv->cons.cdr, result);
   }
@@ -335,7 +347,7 @@ static int cons_add(object argv, object *result)
   object o;
   o = *result;
   while (o->cons.cdr != object_nil) o = o->cons.cdr;
-  o->cons.cdr = argv; // destructive
+  o->cons.cdr = argv; // TODO avoid destructive
   return TRUE;
 }
 
@@ -347,8 +359,9 @@ PRIM(add)
     case CONS:
       return cons_add(argv->cons.cdr, result);
     case XINT:
-    case XFLOAT:
       return int64_add(argv->cons.cdr, result);
+    case XFLOAT:
+      return double_add(argv->cons.cdr, result);
     case STRING:
       return string_add(argv->cons.cdr, result);
     default:
@@ -396,7 +409,7 @@ PRIM(length)
 
 PRIM(to_string)
 {
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = to_string(argv->cons.car);
   return TRUE;
 }
@@ -404,7 +417,7 @@ PRIM(to_string)
 PRIM(to_barray)
 {
   object x;
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   switch (type(x = argv->cons.car)) {
     case BARRAY:
       *result = x;
@@ -423,7 +436,7 @@ PRIM(to_barray)
 PRIM(to_symbol)
 {
   object x;
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   switch (type(x = argv->cons.car)) {
     case SYMBOL:
       *result = x;
@@ -441,7 +454,7 @@ PRIM(to_symbol)
 PRIM(to_keyword)
 {
   object x;
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   switch (type(x = argv->cons.car)) {
     case KEYWORD:
       *result = x;
@@ -460,7 +473,11 @@ PRIM(to_keyword)
 
 PRIM(cons)
 {
-  if (argc != 2 || !listp(argv->cons.cdr->cons.car)) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!listp(argv->cons.cdr->cons.car)) {
+    ip_mark_error("part of cdr must be list");
+    return FALSE;
+  }
   *result = gc_new_cons(argv->cons.car, argv->cons.cdr->cons.car);
   return TRUE;
 }
@@ -468,7 +485,7 @@ PRIM(cons)
 PRIM(car)
 {
   object o, p;
-  if (argc != 1 && argc != 2) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 2)) return FALSE;
   if (!listp(o = argv->cons.car)) return FALSE;
   if (argc == 1) {
     if (o == object_nil) *result = object_nil;
@@ -485,7 +502,7 @@ PRIM(car)
 PRIM(cdr)
 {
   object o, p;
-  if (argc != 1 && argc != 2) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 2)) return FALSE;
   if (!listp(o = argv->cons.car)) return FALSE;
   if (argc == 1) {
     if (o == object_nil) *result = object_nil;
@@ -504,7 +521,7 @@ PRIM(cdr)
 PRIM(lambda_parameter)
 {
   object o;
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!typep(o = argv->cons.car, LAMBDA)) return FALSE;
   *result = o->lambda.params;
   return TRUE;
@@ -513,7 +530,7 @@ PRIM(lambda_parameter)
 PRIM(lambda_body)
 {
   object o;
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!typep(o = argv->cons.car, LAMBDA)) return FALSE;
   *result = o->lambda.body;
   return TRUE;
@@ -558,7 +575,7 @@ static int int64_multiply(object argv, object *result)
 PRIM(bit_and)
 {
   int64_t x, y;
-  if (argc != 2) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
   if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (x < 0 || y < 0) return FALSE;
@@ -569,7 +586,7 @@ PRIM(bit_and)
 PRIM(bit_or)
 {
   int64_t x, y;
-  if (argc != 2) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
   if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (x < 0 || y < 0) return FALSE;
@@ -580,7 +597,7 @@ PRIM(bit_or)
 PRIM(bit_xor)
 {
   int64_t x, y;
-  if (argc != 2) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
   if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (x < 0 || y < 0) return FALSE;
@@ -599,7 +616,7 @@ static int bits(int64_t x)
 PRIM(bit_shift)
 {
   int64_t x, y;
-  if (argc != 2) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
   if (x < 0) return FALSE;
   if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
@@ -622,7 +639,7 @@ PRIM(number_multiply)
 PRIM(number_modulo)
 {
   int64_t x, y;
-  if (argc != 2) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
   if (!bi_int64(argv->cons.cdr->cons.car, &y) || y == 0) return FALSE;
   *result = gc_new_xint(x % y);
@@ -632,7 +649,7 @@ PRIM(number_modulo)
 PRIM(number_lt)
 {
   double x, y;
-  if (argc < 2) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) return FALSE;
   while ((argv = argv->cons.cdr) != object_nil) {
     if (!bi_double(argv->cons.car, &y)) return FALSE;
@@ -653,7 +670,7 @@ PRIM(number_lt)
 PRIM(barray_new)
 {
   int64_t size;
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!bi_int64(argv->cons.car, &size)) return FALSE;
   *result = gc_new_barray(BARRAY, size);
   return TRUE;
@@ -705,7 +722,7 @@ PRIM(access)
 {
   int64_t i;
   object a, v;
-  if (argc < 2 || argc > 3) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, 3)) return FALSE;
   a = argv->cons.car;
   if (!bi_int64((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
   if (i < 0) return FALSE;
@@ -722,7 +739,7 @@ PRIM(array_copy)
 {
   int64_t fp, tp, size;
   object from, to;
-  if (argc != 5) return FALSE;
+  if (!ip_ensure_arguments(argc, 5, 5)) return FALSE;
   from = argv->cons.car;
   if (!bi_int64((argv = argv->cons.cdr)->cons.car, &fp))  return FALSE;
   to = (argv = argv->cons.cdr)->cons.car;
