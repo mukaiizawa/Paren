@@ -1,14 +1,18 @@
 ; if
 
-(print (if nil 1))
-(print (if true 1))
-(print (if nil 1
-           2))
-(print (if nil 1
-           nil 2))
-(print (if nil 1
-           nil 2
-           3))
-(print (if nil 1
-           true 2
-           3))
+(print (same? (if nil :x) nil))
+(print (same? (if true :x) :x))
+(print (same? (if nil :x
+                  :y)
+              :y))
+(print (same? (if nil :x
+                  nil :y)
+              nil))
+(print (same? (if nil :x
+                  true :y
+                  :z)
+              :y))
+(print (same? (if nil :x
+                  nil :y
+                  :z)
+              :z ))

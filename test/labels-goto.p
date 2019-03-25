@@ -1,8 +1,11 @@
 ; labels/goto
 
-(<- x 0 y 0)
-(labels :x (<- x (+ x 1))
-        :y (if (< x 3) (goto :x))
-        (if (= y 0) (begin (<- y (+ y 1)) (goto :x))))
+(symbol-bind x 0 y 0)
 
-(print (= x 4))
+(labels :x (symbol-bind x (number+ x 1))
+        :y (if (< x 3) (goto :x))
+        (if (number= y 0)
+            (begin (symbol-bind y (number+ y 1))
+                   (goto :x))))
+
+(print (number= x 4))

@@ -1,7 +1,3 @@
 ; return
 
-((lambda ()
-  (print 0)
-  (print 1)
-  (return nil)
-  (print 2)))
+(print (same? ((lambda () :x (return :y) :z)) :y))

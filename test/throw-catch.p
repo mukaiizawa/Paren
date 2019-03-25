@@ -1,7 +1,7 @@
 ; throw/catch
 
 (catch (lambda (e)
-         (print (+ e 1)))
+         (print (number+ e 1)))
   (catch (lambda (e)
            (print e)
            (throw e))

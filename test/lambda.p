@@ -1,26 +1,27 @@
 ; lambda
 
-(<- list (lambda (:rest x) x))
-
 ;; required parameter
-((lambda (x) x) true)
-((lambda (x y z) (list x y z)) 1 2 3)
+(print (same? ((lambda (x) x) :x) :x))
+(print (same? ((lambda (x y) x) :x :y) :x))
+(print (same? ((lambda (x y) y) :x :y) :y))
 
 ;; optional parameter
-((lambda (:opt x) (list x)))
-((lambda (:opt x (y 2)) (list x)) 1)
-((lambda (:opt (x 1) (y 2)) (list x y)) :x)
-((lambda (:opt (x 1) (y 2)) (list x y)) :x :y)
-((lambda (:opt (x 1 x?) (y 2 y?)) (list (list x x?) (list y y?))) :x)
+(print (same? ((lambda (x :opt o) o) :x) nil))
+(print (same? ((lambda (x :opt o p) p) :x :o) nil))
+(print (same? ((lambda (x :opt o (p :p)) p) :x :o) :p))
+(print (same? ((lambda (x :opt o (p :p p?)) p?) :x :o) nil))
+(print (same? ((lambda (x :opt o (p :p p?)) p?) :x :o :p) true))
 
 ;; rest parameter
-((lambda (:rest rest) rest) 1 2 3 4 5)
+(print (same? ((lambda (x :rest r) r) :x) nil))
+(print (same? (car ((lambda (x :rest r) r) :x :r1 :r2)) :r1))
+(print (same? (car (cdr ((lambda (x :rest r) r) :x :r1 :r2))) :r2))
 
 ;; keyword parameter
-((lambda (:key x y z) (list x y z)) :x 1 :y 2 :z 3)
-((lambda (:key (x 1) (y 2) (z 3)) (list x y z)) :x 1 :y -2 :z 3)
-((lambda (:key (x 1) (y 2) (z 3)) (list x y z)) :z 1 :y -2 :x 3)
-((lambda (:key (x 1 x?) (y 2 y?) (z 3 z?))
-   (list (list x x?) (list y y?) (list z z?))) :z 1 :y -2 :x 3)
-((lambda (:key (x 1 x?) (y 2 y?) (z 3 z?))
-   (list (list x x?) (list y y?) (list z z?))) :z 1)
+(print (same? ((lambda (x :key k) k) :x) nil))
+(print (same? ((lambda (x :key k) k) :x :k :k) :k))
+(print (same? ((lambda (x :key (k :k)) k) :x) :k))
+(print (same? ((lambda (x :key (k :k k?)) k?) :x) nil))
+(print (same? ((lambda (x :key (k :k k?)) k?) :x :k :k) true))
+(print (same? ((lambda (:key k1 k2) k1) :k2 :k2 :k1 :k1) :k1))
+(print (same? ((lambda (:key k1 k2) k2) :k2 :k2 :k1 :k1) :k2))

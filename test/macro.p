@@ -1,12 +1,15 @@
 ; macro
 
-(<- list (lambda (:rest args) args)
-    same? (lambda (x) (samep x))
-    null (lambda (x) (samep x nil)))
+(macro and (:rest args)
+  (if (same? args nil) true
+      (let (rec (lambda (l)
+                  (if (cdr l)
+                          (cons if (cons (car l)
+                                         (cons (rec (cdr l))
+                                               nil)))
+                      (car l))))
+        (rec args))))
 
-(macro progn (:rest body)
-  (list (cons lambda (cons nil body))))
-
-(progn 1 2 3)
-
-(progn (<- a 5) 2 a)
+(print (and))
+(print (same? (and :x :y :z) :z))
+(print (same? (and :x nil :z) nil))
