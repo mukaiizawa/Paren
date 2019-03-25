@@ -836,10 +836,7 @@ SPECIAL(dynamic)
   return TRUE;
 }
 
-// <assign> ::= (<- [<sym> <val>] ...)
-// <sym> -- symbol
-// <val> -- value
-SPECIAL(assign)
+SPECIAL(symbol_bind)
 {
   object s;
   if (argc == 0) return TRUE;
