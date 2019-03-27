@@ -497,16 +497,16 @@
 (assert (= (.. 0 2 10) '(0)))
 (assert (= (.. -1 1 0.5) '(-1 -0.5 0 0.5 1)))
 
-; # function addlast (l x)
+; # function append-atom (l x)
 ; リストlの末尾にxを追加したような新たなリストを返す。
-(function addlast (l x)
+(function append-atom (l x)
   (precondition (list? l))
   (let (rec (lambda (l)
               (if l (cons (car l) (rec (cdr l)))
                   (list x))))
     (rec l)))
-(assert (= (addlast '() 1) '(1)))
-(assert (= (addlast '(1 2) 3) '(1 2 3)))
+(assert (= (append-atom '() 1) '(1)))
+(assert (= (append-atom '(1 2) 3) '(1 2 3)))
 
 ; # function append (l :rest args)
 ; リストlの要素としてargsの各要素を追加する。
@@ -514,7 +514,7 @@
 (function append (l :rest args)
   (precondition (and (list? l) (all-satisfy? args list?)))
   (reduce args (lambda (acc rest)
-                 (reduce rest addlast :identity acc))
+                 (reduce rest append-atom :identity acc))
           :identity l))
 (assert (= (append '(1 2) '((3 4) (5)) '(6)) '(1 2 (3 4) (5) 6)))
 
@@ -1223,7 +1223,6 @@
       (.init (.new AheadReader)
              :string
              "a
-             
              b c"))
   (.get ar)
   (.get (.skipSpace ar))
