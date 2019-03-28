@@ -151,7 +151,6 @@ object gc_new_barray(int type, int size)
   return new_barray(type, size);
 }
 
-
 object gc_new_barray_from(int type, int size, char *val)
 {
   object o;
