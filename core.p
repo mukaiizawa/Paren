@@ -1218,6 +1218,8 @@
   (.writeByte stream byte)
   byte)
 
+(print (os_clock))
+
 (let ($encoding :UTF-8)
   (<- ar
       (.init (.new AheadReader)
@@ -1227,6 +1229,8 @@
   (.get ar)
   (.get (.skipSpace ar))
   (print (.token ar)))
+
+(print (os_clock))
 
 ; ./paren
 ; )

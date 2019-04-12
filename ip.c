@@ -43,7 +43,8 @@ static void ip_mark_too_many_arguments_error(void)
 int ip_ensure_arguments(int argc, int min, int max)
 {
   if (argc < min) ip_mark_too_few_arguments_error();
-  else if (max && argc > max) ip_mark_too_many_arguments_error();
+  else if ((!min && !max && argc != 0) || (max && argc > max))
+    ip_mark_too_many_arguments_error();
   else return TRUE;
   return FALSE;
 }
