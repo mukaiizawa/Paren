@@ -50,12 +50,12 @@ union s_expr {
   } xfloat;
   struct barray {
     int header;
-    int size;
+    int64_t size;
     char elt[1];
   } barray;
   struct array {
     int header;
-    int size;
+    int64_t size;
     object elt[1];
   } array;
 };
