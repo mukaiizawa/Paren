@@ -28,7 +28,7 @@
 (macro begin0 (:rest body)
   (let (sym (gensym))
     (cons let (cons (list sym (car body))
-                    (list-add-last (cdr body) sym)))))
+                    (append-atom (cdr body) sym)))))
 (assert (= (begin0 1 2 3) 1))
 
 ; # macro when (test :rest body)
@@ -319,16 +319,6 @@
 (function cddddr (x)
   (cdr (cdddr x)))
 (assert (= (cddddr '(x x x x z)) '(z)))
-
-; # function list-add-last (l x)
-; リストlの末尾にxを追加したような新たなリストを返す。
-(function list-add-last (l x)
-  (let (rec (lambda (l)
-              (if (nil? l) (list x)
-                  (cons (car l) (rec (cdr l))))))
-    (rec l)))
-(assert (= (list-add-last nil 1) '(1)))
-(assert (= (list-add-last '(1 2) 3) '(1 2 3)))
 
 ; # function assert (test)
 ; testがnilの場合に例外を発生させる。
