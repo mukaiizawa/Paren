@@ -119,7 +119,7 @@
 ; リストlをインデックスiを用いてイテレーションする。
 ; nilを返す。
 (macro dolist ((i l) :rest body)
-  (precondition (symbol? i))
+  (assert (symbol? i))
   (let (gl (gensym))
     (cons for (cons (list gl l i (list car gl))
                     (cons gl
@@ -133,7 +133,7 @@
 ; シンボルiを0から順にn - 1まで束縛しながらbodyを反復評価する。
 ; nilを返す。
 (macro dotimes ((i n) :rest body)
-  (precondition (symbol? i))
+  (assert (symbol? i))
   (let (gn (gensym))
     (cons for (cons (list i 0 gn n)
               (cons (list < i gn)
@@ -320,28 +320,13 @@
   (cdr (cdddr x)))
 (assert (= (cddddr '(x x x x z)) '(z)))
 
-; # function assert (test)
+; # macro assert (test)
 ; testがnilの場合に例外を発生させる。
 ; 状態異常の早期検知のために使用する。
-(function assert (test)
-  (if (same? test nil)
-      (throw '(:class Error :message "assert failed"))))
-
-; # function precondition (test)
-; 引数testがnilの場合に、例外を発生させる。
-; 関数、マクロの事前条件を定義するために使用する。
-; testがnil以外の場合はtrueを返す。
-(function precondition (test)
-  (if test true
-      (throw (list :class 'Error :message "precondition not satisfied"))))
-
-; # function postcondition (test)
-; 引数testがnilの場合に、例外を発生させる。
-; 関数、マクロの事後条件を定義するために使用する。
-; testがnilでない場合はtestを返す。
-(function postcondition (test)
-  (if test test
-      (throw (list :class 'Error :message "postcondition not satisfied"))))
+(macro assert (test)
+  (list if (list same? test nil)
+        (list throw ''(:class Error
+                              :message "assert failed"))))
 
 ; # function identity (x)
 ; xを返す。恒等関数。
@@ -400,7 +385,7 @@
 ; ただし、nは零から数える。
 ; nがlの長さよりも大きい場合はnilを返す。
 (function nth (l n)
-  (precondition (list? l))
+  (assert (list? l))
   (car (nthcdr l n)))
 (assert (= (nth '(1 2 3) 0) 1))
 (assert (= (nth '(1 2 3) 10) nil))
@@ -409,7 +394,7 @@
 ; リストlを構成するn番目のコンスを取得する。
 ; nがlの長さよりも大きい場合はnilを返す。
 (function nthcdr (l n)
-  (precondition (and (list? l) !(minus? n)))
+  (assert (and (list? l) !(minus? n)))
   (if (nil? l) nil
       (= n 0) l
       :default (nthcdr (cdr l) (-- n))))
@@ -436,7 +421,7 @@
         rec (lambda (l n)
               (if (= n 0) nil
                   (cons (car l) (rec (cdr l) (-- n))))))
-    (precondition (and (>= s 0) (<= s e) (<= e len)))
+    (assert (and (>= s 0) (<= s e) (<= e len)))
     (rec (nthcdr l s) (- e s))))
 (assert (= (sublist nil 0) nil))
 (assert (= (sublist '(1 2 3) 1) '(2 3)))
@@ -446,7 +431,7 @@
 ; リストlの複製を作成して返す。
 ; ただし、要素は複製されない。
 (function copy-list (l)
-  (precondition (list? l))
+  (assert (list? l))
   (if (nil? l) nil
       (sublist l 0 (list-length l))))
 (assert (= (copy-list nil) nil))
@@ -455,7 +440,7 @@
 ; # function last-cons (l)
 ; リストlを構成する最後のコンスを返す。
 (function last-cons (l)
-  (precondition (list? l))
+  (assert (list? l))
   (if (nil? l) nil
       (let (rec (lambda (l) (if (cdr l) (rec (cdr l)) l)))
         (rec l))))
@@ -465,7 +450,7 @@
 ; # function last (l)
 ; リストlの最後の要素を返す。
 (function last (l)
-  (precondition (list? l))
+  (assert (list? l))
   (car (last-cons l)))
 (assert (= (last nil) nil))
 (assert (= (last '(1 2 3)) 3))
@@ -473,7 +458,7 @@
 ; # function .. (s e :opt (step 1))
 ; 整数sから整数eまでstep刻みの要素を持つリストを返す。
 (function .. (s e :opt (step 1))
-  (precondition (and (number? s) (number? e) (number? step) !(= step 0)
+  (assert (and (number? s) (number? e) (number? step) !(= step 0)
                      (or (and (< step 0) (>= s e))
                          (and (> step 0) (<= s e)))))
   (let (acc nil test (if (> step 0) <= >=))
@@ -490,7 +475,7 @@
 ; # function append-atom (l x)
 ; リストlの末尾にxを追加したような新たなリストを返す。
 (function append-atom (l x)
-  (precondition (list? l))
+  (assert (list? l))
   (let (rec (lambda (l)
               (if l (cons (car l) (rec (cdr l)))
                   (list x))))
@@ -502,7 +487,7 @@
 ; リストlの要素としてargsの各要素を追加する。
 ; argsの任意の要素はリストでなければならない。
 (function append (l :rest args)
-  (precondition (and (list? l) (all-satisfy? args list?)))
+  (assert (and (list? l) (all-satisfy? args list?)))
   (reduce args (lambda (acc rest)
                  (reduce rest append-atom :identity acc))
           :identity l))
@@ -512,9 +497,9 @@
 ; シンボルsymを束縛しているリストの先頭に破壊的にxを追加する。
 ; 式としてxを返す。
 (macro push (sym x)
-  (precondition (symbol? sym))
+  (assert (symbol? sym))
   (list begin
-        (list precondition (list list? sym))
+        (list assert (list list? sym))
         (list <- sym (list cons x sym))
         x))
 (assert (= (begin (<- l nil) (push l 1) (push l 2) l) '(2 1)))
@@ -522,7 +507,7 @@
 ; # macro pop (sym)
 ; シンボルsymを束縛しているリストの先頭を返し、symをリストのcdrで再束縛する。
 (macro pop (sym)
-  (precondition (symbol? sym))
+  (assert (symbol? sym))
   (list begin0
         (list car sym)
         (list <- sym (list cdr sym))))
@@ -532,7 +517,7 @@
 ; リストlisを構成するすべてのコンスのcar部が要素であるような新しいリストを返す。
 ; 作成されるリストの要素の順は、元のリストのcar優先探索となる。
 (function flatten (l)
-  (precondition (list? l))
+  (assert (list? l))
   (let (acc nil
         rec (lambda (x)
                (if (nil? x) (reverse acc)
@@ -546,14 +531,14 @@
 ; # function map (args f)
 ; リストargsの各々の要素を関数fで写像した結果をリストにして返す。
 (function map (args f)
-  (precondition (list? args))
+  (assert (list? args))
   (if args (cons (f (car args)) (map (cdr args) f))))
 (assert (= (map '(1 2 3) (lambda (x) (+ x 10))) '(11 12 13)))
 
 ; # function reverse (l)
 ; リストlの要素を逆の順で持つリストを新たに作成して返す。
 (function reverse (l)
-  (precondition (list? l))
+  (assert (list? l))
   (let (rec (lambda (l acc)
               (if (nil? l) acc
                   (rec (cdr l) (cons (car l) acc)))))
@@ -565,7 +550,7 @@
 ; リストlを二変数関数fで畳み込んだ結果を返す。
 ; キーワードパラメターidentityが指定された場合は単位元として使用する。
 (function reduce (l f :key (identity nil identity?))
-  (precondition (list? l))
+  (assert (list? l))
   (let (rec (lambda (l)
               (if (nil? (cdr l)) (car l)
                   (rec (cons (f (car l) (cadr l)) (cddr l))))))
@@ -578,7 +563,7 @@
 ; 比較は=で行われ、testで指定された場合はそれを用いる。
 ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
 (function find-cons (l e :key (test =) (key identity))
-  (precondition (list? l))
+  (assert (list? l))
   (if (nil? l) nil
       (test (key (car l)) e) l
       (find-cons (cdr l) e :test test :key key)))
@@ -595,7 +580,7 @@
 ; 該当するコンスが存在しない場合はnilを返す。
 ; keyが指定された場合はcar部をkey関数で評価した後に比較を行う。
 (function find-cons-if (l f :key (key identity))
-  (precondition (list? l))
+  (assert (list? l))
   (if (nil? l) nil
       (f (key (car l))) l
       (find-cons-if (cdr l) f :key key)))
@@ -609,7 +594,7 @@
 ; 比較は=で行われ、testで指定された場合はそれを用いる。
 ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
 (function find (l e :key (test =) (key identity))
-  (precondition (list? l))
+  (assert (list? l))
   (car (find-cons l e :test test :key key)))
 (assert (= (find nil true) nil))
 (assert (= (find '(true nil true) nil) nil))
@@ -623,7 +608,7 @@
 ; 該当する要素が存在しない場合はnilを返す。
 ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
 (function find-if (l f :key (key identity))
-  (precondition (list? l))
+  (assert (list? l))
   (car (find-cons-if l f :key key)))
 (assert (= (find-if nil identity) nil))
 (assert (= (find-if '(1 2 3) (lambda (x) (> x 2))) 3))
@@ -633,7 +618,7 @@
 ; リストlのすべての要素が関数fの引数として評価したときに、nilでない値を返す場合にtrueを返す。
 ; そうでなければnilを返す。
 (function all-satisfy? (l f)
-  (precondition (and (list? l) (operator? f)))
+  (assert (and (list? l) (operator? f)))
   (if (nil? l) true
       (and (f (car l)) (all-satisfy? (cdr l) f))))
 (assert (all-satisfy? nil cons?))
@@ -645,7 +630,7 @@
 ; そうでなければnilを返す。
 ; なお、lが空の場合はnilを返す。
 (function any-satisfy? (l f)
-  (precondition (and (list? l) (operator? f)))
+  (assert (and (list? l) (operator? f)))
   (if l (or (f (car l)) (any-satisfy? (cdr l) f))))
 (assert !(any-satisfy? nil number?))
 (assert (any-satisfy? '(1 2 3 4 5) number?))
@@ -654,7 +639,7 @@
 ; # function adjacent-satisfy? (l f)
 ; リストの隣接するすべての二要素に対して二変数関数fの評価がnil以外の場合は
 (function adjacent-satisfy? (l f)
-  (precondition (and (list? l) (operator? f)))
+  (assert (and (list? l) (operator? f)))
   (if (nil? (cdr l)) true
       (and (f (car l) (cadr l)) (adjacent-satisfy? (cdr l) f))))
 (assert (adjacent-satisfy? '(1 2 3 4 5) <))
@@ -670,7 +655,7 @@
 ; 値がない場合は例外を発生させる。
 ; vが指定された場合はkに対応する値をvで上書きする。
 (function . (al k :opt (v nil v?))
-  (precondition (list? al))
+  (assert (list? al))
   (let (rec (lambda (rest)
               (if (nil? rest)
                       (throw (list :class 'Error
@@ -690,7 +675,7 @@
 ; xからargsの合計を引いた値を返す。
 ; argsがnilの場合はxを負にした値を返す。
 (function - (x :rest args)
-  (precondition (and (number? x) (all-satisfy? args number?)))
+  (assert (and (number? x) (all-satisfy? args number?)))
   (if (nil? args) (negated x)
       (number+ x (negated (reduce args number+)))))
 (assert (= (- 1) -1))
@@ -733,26 +718,26 @@
 ; # function ++ (x)
 ; xに1を加えた結果を返す。
 (function ++ (x)
-  (precondition (number? x))
+  (assert (number? x))
   (number+ x 1))
 (assert (= (++ 0) 1))
 
 ; # function -- (x)
 ; xから1を引いた結果を返す。
 (function -- (x)
-  (precondition (number? x))
+  (assert (number? x))
   (- x 1))
 
 ; # macro inc (s v)
 ; sの値にvを加えた値をsに束縛する式に展開する。
 (macro inc (s v)
-  (precondition (symbol? s))
+  (assert (symbol? s))
   (list <- s (list 'number+ s v)))
 
 ; # macro dec (s v)
 ; sの値からvを引いた値をsに束縛する式に展開する。
 (macro dec (s v)
-  (precondition (symbol? s))
+  (assert (symbol? s))
   (list <- s (list '- s v)))
 
 ; # function even? (x)
@@ -774,7 +759,7 @@
 ; # function plus? (x)
 ; xが正の数の場合にtrueを、そうでなければnilを返す。
 (function plus? (x)
-  (precondition (number? x))
+  (assert (number? x))
   (> x 0))
 (assert !(plus? -1))
 (assert !(plus? 0))
@@ -783,7 +768,7 @@
 ; # function zero? (x)
 ; xが0の場合はtrueを、そうでなければnilを返す。
 (function zero? (x)
-  (precondition (number? x))
+  (assert (number? x))
   (= x 0))
 (assert !(zero? -1))
 (assert (zero? 0))
@@ -792,7 +777,7 @@
 ; # function minus? (x)
 ; xが負の数の場合はtrueを、そうでなければnilを返す。
 (function minus? (x)
-  (precondition (number? x))
+  (assert (number? x))
   (< x 0))
 (assert (minus? -1))
 (assert !(minus? 0))
@@ -847,7 +832,6 @@
                          (string? x) (string+ x (->string y))
                          (throw (.message (.new Error) "illegal state")))))))
 (assert (= (+ 1 2 3) 6))
-(assert (= (+ 1 2 3) 6))
 
 ; paren object system
 
@@ -857,11 +841,11 @@
   (find $class cls-sym))
 
 (function find-class (cls-sym)
-  (precondition (and (symbol? cls-sym) (class-exists? cls-sym)))
+  (assert (and (symbol? cls-sym) (class-exists? cls-sym)))
   (. $class cls-sym))
 
 (function find-method (cls-sym method-sym)
-  (precondition (and (symbol? cls-sym) (symbol? method-sym)))
+  (assert (and (symbol? cls-sym) (symbol? method-sym)))
   (let (find-class-method
             (lambda (cls)
               (cadr (find-cons (. cls :methods) method-sym)))
@@ -876,7 +860,9 @@
                     (find-feature-method (. cls :features))
                     (let (super (. cls :super))
                       (and super (rec (find-class super)))))))
-    (postcondition (rec (find-class cls-sym)))))
+    (let (m (rec (find-class cls-sym)))
+      (if m m
+          (throw '(:class 'Error :message "method not found"))))))
 
 (macro make-accessor (cls-sym var)
   (let (val (gensym) val? (gensym))
@@ -901,7 +887,7 @@
         has-desc? (string? (car fields))
         desc (and has-desc? (car fields))
         fields (if has-desc? (cdr fields) fields))
-    (precondition (and (all-satisfy? fields symbol?) !(class-exists? cls-sym)))
+    (assert (and (all-satisfy? fields symbol?) !(class-exists? cls-sym)))
     (append
       (list begin0
             (list quote cls-sym)
@@ -917,7 +903,7 @@
       (map fields (lambda (var) (list 'make-accessor cls-sym var))))))
 
 (macro method (cls-sym method-sym args :rest body)
-  (precondition (class-exists? cls-sym))
+  (assert (class-exists? cls-sym))
   (list begin
         (list make-method-dispatcher method-sym)
         (list . cls-sym :methods
@@ -934,7 +920,7 @@
 ; # function is-a? (o cls)
 ; oがclsクラスのインスタンスの場合trueを、そうでなければnilを返す。
 (function is-a? (o cls)
-  (precondition (and (object? o) (object? cls) (same? (cadr cls) 'Class)))
+  (assert (and (object? o) (object? cls) (same? (cadr cls) 'Class)))
   (let (cls-sym (. cls :symbol)
         rec (lambda (o-cls-sym)
               (and o-cls-sym
@@ -986,7 +972,7 @@
   message)
 
 (method Exception .addMessage (msg)
-  (precondition (string? msg))
+  (assert (string? msg))
   (.message self (+ (.message self) msg)))
 
 (method Exception .toString ()
@@ -1053,14 +1039,14 @@
   fp)
 
 (method FileStream .init (:key fp)
-  (precondition fp)
+  (assert fp)
   (.fp self fp))
 
 (method FileStream .readByte ()
   (fgetc (.fp self)))
 
 (method FileStream .writeByte (byte)
-  (precondition (byte? byte))
+  (assert (byte? byte))
   (fputc byte (.fp self)))
 
 ; # class MemoryStream (Stream)
@@ -1077,7 +1063,7 @@
   self)
 
 (method MemoryStream .extend (size)
-  (precondition (integer? size))
+  (assert (integer? size))
   (let (req (+ (.wr-pos self) size) new-buf nil)
     (while (< (.buf-size self) req)
       (.buf-size self (* (.buf-size self) 2)))
@@ -1086,7 +1072,7 @@
     (.buf self new-buf)))
 
 (method MemoryStream .writeByte (byte)
-  (precondition (byte? byte))
+  (assert (byte? byte))
   (let (pos (.wr-pos self))
     (if (< pos (.buf-size self))
         (begin ([] (.buf self) pos byte)
@@ -1094,7 +1080,7 @@
         (.writeByte (.extend self 1) byte))))
 
 (method MemoryStream .writeString (s)
-  (precondition (string? s))
+  (assert (string? s))
   (let (ba (string->byte-array s))
     (dotimes (i (byte-array-length ba))
       (.writeByte self ([] ba i))))
@@ -1125,7 +1111,7 @@
 ; # method AheadReader .init (:key string stream)
 ; 文字列または、ストリームのいずれかを用いてレシーバを初期化する。
 (method AheadReader .init (:key string stream)
-  (precondition (or (and string (string? string))
+  (assert (or (and string (string? string))
                     (and (object? stream) (is-a? stream Stream))))
   (when string
     (<- stream (.new MemoryStream))
@@ -1162,7 +1148,7 @@
 ; # method AheadReader .put (s)
 ; ストリームとは無関係にトークンの末尾に文字列sを追加する。
 (method AheadReader .put (s)
-  (precondition (string? s))
+  (assert (string? s))
   (.writeString (.buf self) s))
 
 ; # method AheadReader .token ()
@@ -1192,19 +1178,19 @@
     $support-encodings '(:UTF-8 :CP932))
 
 (function read-byte (:opt (stream $stdin))
-  (precondition (is-a? stream Stream))
+  (assert (is-a? stream Stream))
   (.readByte stream))
 
 ; # function read-char (:opt (stream $stdin))
 ; streamから1byte読み込み返す。
 (function read-char (:opt (stream $stdin))
-  (precondition (is-a? stream Stream))
+  (assert (is-a? stream Stream))
   (.readChar stream))
 
 ; # function write-byte (byte :opt (stream $stdout))
 ; streamに1byte書き込みbyteを返す。
 (function write-byte (byte :opt (stream $stdout))
-  (precondition (and (byte? byte) (is-a? stream Stream)))
+  (assert (and (byte? byte) (is-a? stream Stream)))
   (.writeByte stream byte)
   byte)
 
