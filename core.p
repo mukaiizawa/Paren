@@ -8,21 +8,6 @@
 (macro function (name args :rest body)
   (cons symbol-bind (cons name (cons (cons lambda (cons args body)) nil))))
 
-; # symbol $gensym-count
-; gensymの専用カウンタ。
-; 特別な事情がない限りは束縛してはならない。
-(symbol-bind $gensym-count 0)
-
-; # function gensym ()
-; $gensym-xxxという名称のシンボルを生成する。
-; 意図的に$gensym-countを束縛したり、$gensym-xxxという名称のシンボルを生成することがなければ、
-; 生成したシンボルはシステム内で一意であることが保証される。
-(function gensym ()
-  (string->symbol
-    (string+ "$gensym"
-             (number->string (<- $gensym-count (number+ $gensym-count 1))))))
-(assert !(same? (gensym) (gensym)))
-
 ; # macro begin0 (:rest body)
 ; bodyを逐次評価し、最初に評価した結果を返す。
 (macro begin0 (:rest body)
@@ -1202,8 +1187,8 @@
              :string
              "a
              b c"))
-  (.get ar)
-  (.get (.skipSpace ar))
+  ; (.get ar)
+  ; (.get (.skipSpace ar))
   (print (.token ar)))
 
 (print (os_clock))

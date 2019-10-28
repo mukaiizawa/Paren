@@ -65,6 +65,16 @@ PRIM(operator_p)
   return TRUE;
 }
 
+PRIM(gensym)
+{
+  static int c = 0;
+  struct xbarray x;
+  xbarray_init(&x);
+  xbarray_addf(&x, "#G%d", ++c);
+  *result = gc_new_barray_from(SYMBOL, x.size, x.elt);
+  return TRUE;
+}
+
 // TODO should be removed
 PRIM(print)
 {
