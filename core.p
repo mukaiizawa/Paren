@@ -89,7 +89,7 @@
   (let (gn (gensym))
     (cons for (cons (list i 0 gn n)
               (cons (list < i gn)
-              (cons (list inc! i 1)
+              (cons (list inc! i)
                     body))))))
 
 ; fundamental function
@@ -486,12 +486,12 @@
   (assert (number? x))
   (- x 1))
 
-(macro inc! (s v)
+(macro inc! (s :opt (v 1))
   ; sの値にvを加えた値をsに束縛する式に展開する。
   (assert (symbol? s))
   (list <- s (list '+ s v)))
 
-(macro dec! (s v)
+(macro dec! (s :opt (v 1))
   ; sの値からvを引いた値をsに束縛する式に展開する。
   (assert (symbol? s))
   (list <- s (list '- s v)))
@@ -600,7 +600,7 @@
 (function object? (x)
   ; xがオブジェクトの場合trueを、そうでなければnilを返す。
   ; paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。
-  (and (list? x) (= (car x) :class)))
+  (and (list? x) (same? (car x) :class)))
 
 (function is-a? (o cls)
   ; oがclsクラスのインスタンスの場合trueを、そうでなければnilを返す。
@@ -715,9 +715,15 @@
             (.toString mem))
           (throw (.message (.new Error) "unsupport encoding"))))
 
-; # class FileStream (Stream)
-; ファイルストリームクラス
+(method Stream .writeString (s)
+  (assert (string? s))
+  (let (ba (string->byte-array s))
+    (dotimes (i (byte-array-length ba))
+      (.writeByte self ([] ba i))))
+  self)
+
 (class FileStream (Stream)
+  ; ファイルストリームクラス
   fp)
 
 (method FileStream .init (:key fp)
@@ -731,9 +737,8 @@
   (assert (byte? byte))
   (fputc byte (.fp self)))
 
-; # class MemoryStream (Stream)
-; メモリ上に内容を保持するストリームクラス。
 (class MemoryStream (Stream)
+  ; メモリ上に内容を保持するストリームクラス。
   buf buf-size rd-pos wr-pos)
 
 (method MemoryStream .init ()
@@ -761,13 +766,6 @@
                (.wr-pos self (++ pos)))
         (.writeByte (.extend self 1) byte))))
 
-(method MemoryStream .writeString (s)
-  (assert (string? s))
-  (let (ba (string->byte-array s))
-    (dotimes (i (byte-array-length ba))
-      (.writeByte self ([] ba i))))
-  self)
-
 (method MemoryStream .readByte ()
   (let (pos (.rd-pos self))
     (if (>= pos (.wr-pos self)) -1
@@ -783,12 +781,12 @@
   (.rd-pos self 0)
   (.wr-pos self 0))
 
-(class AheadReader ()
+(class ByteAheadReader ()
   ; 先読みリーダー。
-  ; 文字列やストリームから一文字先読みを行う機能を提供するクラス。
+  ; 文字列やストリームから1byte先読みを行う機能を提供するクラス。
   stream next buf)
 
-(method AheadReader .init (:key string stream)
+(method ByteAheadReader .init (:key string stream)
   ; 文字列または、ストリームのいずれかを用いてレシーバを初期化する。
   (assert (or (and string (string? string))
               (and (object? stream) (is-a? stream Stream))))
@@ -796,48 +794,48 @@
     (<- stream (.new MemoryStream))
     (.writeString stream string))
   (.stream self stream)
-  (.next self (.readChar (.stream self)))
+  (.next self (.readByte (.stream self)))
   (.buf self (.new MemoryStream))
   self)
 
-(method AheadReader .eof? (:key string stream)
+(method ByteAheadReader .eof? (:key string stream)
   ; ストリームが終端に達している場合にtrueを、そうでなければnilを返す。
   (same? (.next self) :EOF))
 
-(method AheadReader .ensureNotEOFReached ()
+(method ByteAheadReader .ensureNotEOFReached ()
   ; ストリームが終端に達していた場合は例外をスローする。
   (if (.eof? self) (throw (.message (.new Error) "EOF reached"))))
 
-(method AheadReader .skip ()
+(method ByteAheadReader .skip ()
   ; 次の一文字を読み飛ばし、その文字を返す。
   (.ensureNotEOFReached self)
   (begin0 (.next self)
-          (.next self (.readChar (.stream self)))))
+          (.next self (.readByte (.stream self)))))
 
-(method AheadReader .get ()
+(method ByteAheadReader .get ()
   ; 次の一文字をトークンの末尾に追加し、その文字を返す。
   (let (c (.skip self))
     (.put self c)
     c))
 
-(method AheadReader .put (s)
+(method ByteAheadReader .put (s)
   ; ストリームとは無関係にトークンの末尾に文字列sを追加する。
-  (assert (string? s))
-  (.writeString (.buf self) s))
+  (assert (byte? s))
+  (.writeByte (.buf self) s))
 
-(method AheadReader .token ()
+(method ByteAheadReader .token ()
   ; 現在切り出しているトークン文字列を返す。
   (.toString (.buf self)))
 
-(method AheadReader .reset ()
+(method ByteAheadReader .reset ()
   ; 現在切り出しているトークン文字列を返す。
   (.reset (.buf self))
   self)
 
-(method AheadReader .skipSpace ()
+(method ByteAheadReader .skipSpace ()
   ; スペース、改行文字を読み飛ばし、レシーバを返す。
   (while (and (not (.eof? self))
-              (find '(" " "\r" "\n") (.next self) :test string=))
+              (find '(0x20 0x0a 0x0d) (.next self) :test =))
     (.skip self))
   self)
 
@@ -864,10 +862,16 @@
   (.writeByte stream byte)
   byte)
 
+(function write-string (s :opt (stream $stdout))
+  ; streamに文字列を書き込みsを返す。
+  (assert (and (string? s) (is-a? stream Stream)))
+  (.writeString stream s)
+  s)
+
 (print (os_clock))
 
 (let ($encoding :UTF-8)
-  (<- ar (.init (.new AheadReader)
+  (<- ar (.init (.new ByteAheadReader)
                 :string
                 "a
                 b c"

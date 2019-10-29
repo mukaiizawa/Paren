@@ -1009,6 +1009,14 @@ SPECIAL(assert)
   return TRUE;
 }
 
+PRIM(eval)
+{
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  push_eval_frame();
+  reg[0] = argv->cons.car;
+  return TRUE;
+}
+
 // trace and debug
 
 static void sweep_env(int depth, void *sym, void *val)
