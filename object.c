@@ -16,7 +16,6 @@ object object_error;
 object object_finally;
 object object_key;
 object object_nil;
-object object_not;
 object object_opt;
 object object_os;
 object object_quote;
@@ -151,11 +150,10 @@ static void describe_s_expr(object o, struct xbarray *x)
       break;
     case CONS:
       p = o->cons.car;
-      if ((p == object_quote || p == object_not)
-          && typep(o->cons.cdr, CONS) && o->cons.cdr->cons.cdr == object_nil)
+      if (p == object_quote && typep(o->cons.cdr, CONS)
+          && o->cons.cdr->cons.cdr == object_nil)
       {
-        if (p == object_quote) xbarray_add(x, '\'');
-        if (p == object_not) xbarray_add(x, '!');
+        xbarray_add(x, '\'');
         describe_s_expr(o->cons.cdr->cons.car, x);
       } else {
         xbarray_add(x, '(');

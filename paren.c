@@ -18,7 +18,7 @@ int dump_object_table_p;
 static void parse_opt(int argc,char *argv[])
 {
   int ch;
-  core_fn = "./core.wk";
+  core_fn = "./core.p";
   dump_object_table_p = FALSE;
   while((ch = xgetopt(argc, argv, "f:o")) != EOF)
     switch(ch) {
@@ -128,9 +128,8 @@ static object parse_list(void)
 static object parse_s_expr(void)
 {
   object o;
-  if (next_token == '\'' || next_token == '!') {
-    if (next_token == '\'') o = object_quote;
-    else o = object_not;
+  if (next_token == '\'') {
+    o = object_quote;
     parse_skip();
     return gc_new_cons(o, gc_new_cons(parse_s_expr(), object_nil));
   }
@@ -206,7 +205,6 @@ static void make_initial_objects(void)
   object_error = symbol_new("Error");
   object_finally = symbol_new("finally");
   object_key = keyword_new("key");
-  object_not = symbol_new("not");
   object_opt = keyword_new("opt");
   object_quote = symbol_new("quote");
   object_rest = keyword_new("rest");

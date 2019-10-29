@@ -3,6 +3,7 @@
 #include "std.h"
 #include "xsplay.h"
 #include "xarray.h"
+#include "xbarray.h"
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
@@ -136,28 +137,30 @@ struct frame {
   int type;
 #define APPLY_FRAME 0
 #define APPLY_PRIM_FRAME 1
-#define BIND_FRAME 2
-#define BIND_LOCAL_VAR_FRAME 3
-#define BIND_PROPAGATION_FRAME 4
-#define EVAL_FRAME 5
-#define EVAL_LOCAL_VAR_FRAME 6
-#define EVAL_ARGS_FRAME 7
-#define EVAL_SEQUENTIAL_FRAME 8
-#define FETCH_HANDLER_FRAME 9
-#define FETCH_OPERATOR_FRAME 10
-#define HANDLER_FRAME 11
-#define IF_FRAME 12
-#define LABELS_FRAME 13
-#define RETURN_ADDR_FRAME 14
-#define RETURN_FRAME 15
-#define SWITCH_ENV_FRAME 16
-#define THROW_FRAME 17
+#define ASSERT_FRAME 2
+#define BIND_FRAME 3
+#define BIND_LOCAL_VAR_FRAME 4
+#define BIND_PROPAGATION_FRAME 5
+#define EVAL_FRAME 6
+#define EVAL_LOCAL_VAR_FRAME 7
+#define EVAL_ARGS_FRAME 8
+#define EVAL_SEQUENTIAL_FRAME 9
+#define FETCH_HANDLER_FRAME 10
+#define FETCH_OPERATOR_FRAME 11
+#define HANDLER_FRAME 12
+#define IF_FRAME 13
+#define LABELS_FRAME 14
+#define RETURN_ADDR_FRAME 15
+#define RETURN_FRAME 16
+#define SWITCH_ENV_FRAME 17
+#define THROW_FRAME 18
   object local_vars[0];
 };
 
 static int frame_size(int type)
 {
   switch (type) {
+    case ASSERT_FRAME:
     case EVAL_FRAME:
     case RETURN_ADDR_FRAME:
     case RETURN_FRAME:
@@ -190,17 +193,18 @@ char *frame_name(int type)
   switch (type) {
     case APPLY_FRAME: return "APPLY_FRAME";
     case APPLY_PRIM_FRAME: return "APPLY_PRIM_FRAME";
+    case ASSERT_FRAME: return "ASSERT_FRAME";
     case BIND_FRAME: return "BIND_FRAME";
     case BIND_LOCAL_VAR_FRAME: return "BIND_LOCAL_VAR_FRAME";
     case BIND_PROPAGATION_FRAME: return "BIND_PROPAGATION_FRAME";
+    case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
     case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_LOCAL_VAR_FRAME: return "EVAL_LOCAL_VAR_FRAME";
-    case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
-    case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
     case FETCH_HANDLER_FRAME: return "FETCH_HANDLER_FRAME";
-    case IF_FRAME: return "IF_FRAME";
+    case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
     case HANDLER_FRAME: return "HANDLER_FRAME";
+    case IF_FRAME: return "IF_FRAME";
     case LABELS_FRAME: return "LABELS_FRAME";
     case RETURN_ADDR_FRAME: return "RETURN_ADDR_FRAME";
     case RETURN_FRAME: return "RETURN_FRAME";
@@ -277,6 +281,13 @@ static void push_apply_prim_frame(object prim)
 {
   fs_push(alloc_frame1(APPLY_PRIM_FRAME, prim));
 }
+
+#ifndef NDEBUG
+static void push_assert_frame(void)
+{
+  fs_push(alloc_frame(ASSERT_FRAME));
+}
+#endif
 
 static void push_eval_frame(void)
 {
@@ -391,6 +402,14 @@ static void pop_apply_prim_frame(void)
   if ((*prim)(object_list_len(args), args, &(reg[0]))) st_pop();
   else if (error_msg == NULL) ip_mark_error("primitive failed");
 }
+
+#ifndef NDEBUG
+static void pop_assert_frame(void)
+{
+  fs_pop();
+  if (reg[0] == object_nil) ip_mark_error("assert failed");
+}
+#endif
 
 static void pop_bind_frame(void)
 {
@@ -979,6 +998,17 @@ SPECIAL(return)
   return TRUE;
 }
 
+SPECIAL(assert)
+{
+#ifndef NDEBUG
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  push_assert_frame();
+  push_eval_frame();
+  reg[0] = argv->cons.car;
+#endif
+  return TRUE;
+}
+
 // trace and debug
 
 static void sweep_env(int depth, void *sym, void *val)
@@ -1084,6 +1114,9 @@ static object eval(object expr)
     switch (fs_top()->type) {
       case APPLY_FRAME: pop_apply_frame(); break;
       case APPLY_PRIM_FRAME: pop_apply_prim_frame(); break;
+#ifndef NDEBUG
+      case ASSERT_FRAME: pop_assert_frame(); break;
+#endif
       case BIND_FRAME: pop_bind_frame(); break;
       case BIND_LOCAL_VAR_FRAME: pop_bind_local_var_frame(); break;
       case BIND_PROPAGATION_FRAME: pop_bind_propagation_frame(); break;

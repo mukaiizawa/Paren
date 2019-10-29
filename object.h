@@ -73,7 +73,6 @@ extern object object_error;
 extern object object_finally;
 extern object object_key;
 extern object object_nil;
-extern object object_not;
 extern object object_opt;
 extern object object_os;
 extern object object_quote;

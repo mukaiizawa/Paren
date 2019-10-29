@@ -105,8 +105,8 @@ static int lex_string(void)
 static int identifier_lead_char_p(void)
 {
   switch (next_ch) {
-    case '$': case '%': case '&': case '*': case '+': case '-': case '/':
-    case '<': case '=': case '>': case '?': case '_': case '.':
+    case '!': case '$': case '%': case '&': case '*': case '+': case '-':
+    case '/': case '<': case '=': case '>': case '?': case '_': case '.':
     case '[': case ']':
       return TRUE;
     default: return isalpha(next_ch);
@@ -174,7 +174,7 @@ int lex(void)
     skip();
     return lex();
   }
-  if (next_ch == EOF || next_ch == '(' || next_ch == ')' || next_ch == '!'
+  if (next_ch == EOF || next_ch == '(' || next_ch == ')'
       || next_ch == '\'' || next_ch == '`' || next_ch == ',' || next_ch == '@')
     return skip();
   if (next_ch == '"') return lex_string();

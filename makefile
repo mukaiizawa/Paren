@@ -24,7 +24,7 @@ ifeq ($(debug),on)
 uflags+=-g
 else
 cflags+=-O3 -DNDEBUG
-link+= ; $(strip) $(sflags) $@
+link+= ; strip $(sflags) $@
 endif
 
 .SUFFIXES: .c .o
@@ -32,8 +32,8 @@ endif
 	$(cc) $(cflags) $<
 
 paren=paren$(exe)
-all: $(paren) core.wk
-	./paren -f core.wk
+all: $(paren)
+	./paren
 
 special=ip.c
 special.wk: $(special)
@@ -49,10 +49,6 @@ xc.a: std.o xarray.o xbarray.o xsplay.o xgetopt.o gc.o object.o lex.o pf.o \
 
 $(paren): paren.o xc.a
 	$(link)
-
-core.wk: core.p
-	cat $+ | sed '/^(assert/d' | sed '/^;/d' >$@
-	cat $+ | sed '/^(assert/!d' >>$@
 
 man:
 	cat core.p | grep ';:' | cut -c 4- > core.man

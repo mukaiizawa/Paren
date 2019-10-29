@@ -38,14 +38,17 @@ PRIM(integer_p)
 PRIM(number_equal_p)
 {
   double x, y;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) mark_required_number();
-  else if (!bi_double(argv->cons.cdr->cons.car, &y)) mark_required_number();
-  else {
-    *result = object_bool(x == y);
-    return TRUE;
+  *result = object_true;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (!bi_double(argv->cons.car, &y)) mark_required_number();
+    if (x != y) {
+      *result = object_nil;
+      break;
+    }
   }
-  return FALSE;
+  return TRUE;
 }
 
 static int double_add(object o, object p, object *result)

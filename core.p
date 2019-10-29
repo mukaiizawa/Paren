@@ -2,81 +2,60 @@
 
 ; fundamental macro
 
-; # macro function (name args :rest body)
-; 仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
-; argsの書式はspecial operatorのlambdaに準ずる。
 (macro function (name args :rest body)
-  (cons symbol-bind (cons name (cons (cons lambda (cons args body)) nil))))
+  ; 仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
+  ; argsの書式はspecial operatorのlambdaに準ずる。
+  (cons <- (cons name (cons (cons lambda (cons args body)) nil))))
 
-; # macro begin0 (:rest body)
-; bodyを逐次評価し、最初に評価した結果を返す。
 (macro begin0 (:rest body)
+  ; bodyを逐次評価し、最初に評価した結果を返す。
   (let (sym (gensym))
     (cons let (cons (list sym (car body))
                     (append-atom (cdr body) sym)))))
-(assert (= (begin0 1 2 3) 1))
 
-; # macro when (test :rest body)
-; testを評価しnil以外の場合にbodyを逐次評価し、最後に評価した結果を返す。
-; testがnil偽の場合はnilを返す。
 (macro when (test :rest body)
+  ; testを評価しnil以外の場合にbodyを逐次評価し、最後に評価した結果を返す。
+  ; testがnil偽の場合はnilを返す。
   (list if test (cons begin body)))
-(assert (= (when true 1 2 3) 3))
-(assert (= (when nil 1 2 3) nil))
 
-; # macro unless (test :rest body)
-; testを評価しnilの場合にbodyを逐次評価し、最後に評価した結果を返す。
-; testがnil偽の場合はnilを返す。
 (macro unless (test :rest body)
+  ; testを評価しnilの場合にbodyを逐次評価し、最後に評価した結果を返す。
+  ; testがnil偽の場合はnilを返す。
   (cons when (cons (list not test)
                    body)))
-(assert (= (unless true 1 2 3) nil))
-(assert (= (unless nil 1 2 3) 3))
 
-; # macro or (:rest args)
-; argsを逐次評価し、ある評価結果がnil以外だった場合にその値を返す。
-; この場合、後続の評価は行わない。
-; すべての評価結果がnilの場合はnilを返す。
 (macro or (:rest args)
+  ; argsを逐次評価し、ある評価結果がnil以外だった場合にその値を返す。
+  ; この場合、後続の評価は行わない。
+  ; すべての評価結果がnilの場合はnilを返す。
   (if args (list if (car args) (car args) (cons or (cdr args)))))
-(assert !(or))
-(assert !(or nil))
-(assert (or nil true))
-(assert (= (or 1 2) 1))
 
-; # macro and (:rest args)
-; argsを逐次評価し、すべてnil出ない場合にのみ最後に評価した結果を返す。
-; 逐次評価の過程でnilが得られた場合は後続の評価を中断し即nilを返す。
-; ただし、argsがnilの場合はtrueを返す。
 (macro and (:rest args)
+  ; argsを逐次評価し、すべてnil出ない場合にのみ最後に評価した結果を返す。
+  ; 逐次評価の過程でnilが得られた場合は後続の評価を中断し即nilを返す。
+  ; ただし、argsがnilの場合はtrueを返す。
   (if (nil? args) true
       (let (rec (lambda (l)
                   (if (cdr l) (list if (car l) (rec (cdr l)))
                       (car l))))
         (rec args))))
-(assert (same? (and) true))
-(assert (= (and 1 2 3) 3))
-(assert !(and true nil true))
 
-; # macro continue ()
-; :continueというラベルにジャンプする。
-; 反復系のマクロはコンテキスト内でcontinueを使用したときに
-; 後続の処理をスキップし反復処理を再開するように実装することが望ましい。
 (macro continue ()
+  ; :continueというラベルにジャンプする。
+  ; 反復系のマクロはコンテキスト内でcontinueを使用したときに
+  ; 後続の処理をスキップし反復処理を再開するように実装することが望ましい。
   '(goto :continue))
 
-; # macro break ()
-; :breakというラベルにジャンプする。
-; 反復系のマクロはコンテキスト内でbreakを使用したときに
-; 反復処理を終了するように実装することが望ましい。
 (macro break ()
+  ; :breakというラベルにジャンプする。
+  ; 反復系のマクロはコンテキスト内でbreakを使用したときに
+  ; 反復処理を終了するように実装することが望ましい。
   '(goto :break))
 
-; # macro for (binding test update :rest body)
-; bindingをletで束縛し、testが真の場合にbody、updateを反復評価する。
-; continueマクロとbreakマクロをサポートしている。
-; nilを返す。
 (macro for (binding test update :rest body)
+  ; bindingをletで束縛し、testが真の場合にbody、updateを反復評価する。
+  ; continueマクロとbreakマクロをサポートしている。
+  ; nilを返す。
   (list let binding
      (cons labels
            (cons :start
@@ -87,736 +66,458 @@
            (list '(goto :start)
                  :break)))))))
      nil))
-(assert (= (let (sum 0) (for (i 0) (< i 3) (inc i 1) (inc sum i)) sum) 3))
-(assert (= (let (sum 0) (for (i 0) (< i 3) (inc i 1) (if (= i 1) (break)) (inc sum i)) sum) 0))
-(assert (= (let (sum 0) (for (i 0) (< i 3) (inc i 1) (if (= i 1) (continue)) (inc sum i)) sum) 2))
 
-; # macro while (test :rest body)
-; 引数testがnilでない間bodyを逐次評価し、nilを返す。
-; continueマクロとbreakマクロをサポートしている。
 (macro while (test :rest body)
+  ; 引数testがnilでない間bodyを逐次評価し、nilを返す。
+  ; continueマクロとbreakマクロをサポートしている。
   (cons 'for (cons nil (cons test (cons nil body)))))
-(assert (= (let (a 0) (while (< a 5) (inc a 1)) a) 5))
-(assert (= (let (a 0) (while true (<- a 1) (break) (<- a 2)) a) 1))
-(assert (= (let (a 0) (while (< (inc a 1) 5) (if (< a 5) (continue)) (<- a 9)) a) 5))
 
-; # macro dolist ((i l) :rest body)
-; リストlをインデックスiを用いてイテレーションする。
-; nilを返す。
 (macro dolist ((i l) :rest body)
+  ; リストlをインデックスiを用いてイテレーションする。
+  ; nilを返す。
   (assert (symbol? i))
   (let (gl (gensym))
     (cons for (cons (list gl l i (list car gl))
                     (cons gl
                     (cons (list <- gl (list cdr gl) i (list car gl))
                           body))))))
-(assert (= (let (l '(1 2 3) acc nil) (dolist (i l) (push acc i)) acc) '(3 2 1)))
-(assert (= (let (l '(1 2 3) x nil) (dolist (i l) (if (= (<- x i) 2) (break))) x) 2))
-(assert (= (let (l '(1 2 3) sum 0) (dolist (i l) (if (= i 2) (continue)) (inc sum i)) sum) 4))
 
-; # macro dotimes ((i n) :rest body)
-; シンボルiを0から順にn - 1まで束縛しながらbodyを反復評価する。
-; nilを返す。
 (macro dotimes ((i n) :rest body)
+  ; シンボルiを0から順にn - 1まで束縛しながらbodyを反復評価する。
+  ; nilを返す。
   (assert (symbol? i))
   (let (gn (gensym))
     (cons for (cons (list i 0 gn n)
               (cons (list < i gn)
-              (cons (list inc i 1)
+              (cons (list inc! i 1)
                     body))))))
-(assert (= (let (acc nil) (dotimes (i 3) (push acc i)) acc) '(2 1 0)))
-(assert (= (let (x nil) (dotimes (i 3) (if (= (<- x i) 1) (break))) x) 1))
-(assert (= (let (sum 0) (dotimes (i 3) (if (= i 1) (continue)) (inc sum i)) sum) 2))
 
 ; fundamental function
 
-; # function list (:rest args)
-; 引数をリストにして返す。
 (function list (:rest args)
+  ; 引数をリストにして返す。
   args)
-(assert (= (list) '()))
-(assert (= (list 1 2 3) '(1 2 3)))
 
-; # function caar (x)
-; (car (car x))に等価
 (function caar (x)
+  ; (car (car x))に等価
   (car (car x)))
-(assert (same? (caar '((z))) 'z))
 
-; # function cadr (x)
-; (car (cdr x))に等価
 (function cadr (x)
+  ; (car (cdr x))に等価
   (car (cdr x)))
-(assert (same? (cadr '(x z)) 'z))
 
-; # function cdar (x)
-; (cdr (car x))に等価
 (function cdar (x)
+  ; (cdr (car x))に等価
   (cdr (car x)))
-(assert (= (cdar '((x z))) '(z)))
 
-; # function cddr (x)
-; (cdr (cdr x))に等価
 (function cddr (x)
+  ; (cdr (cdr x))に等価
   (cdr (cdr x)))
-(assert (= (cddr '(x x z)) '(z)))
 
-; # function caaar (x)
-; (car (caar x))に等価
 (function caaar (x)
+  ; (car (caar x))に等価
   (car (caar x)))
-(assert (same? (caaar '(((z)))) 'z))
 
-; # function caadr (x)
-; (car (cadr x))に等価
 (function caadr (x)
+  ; (car (cadr x))に等価
   (car (cadr x)))
-(assert (same? (caadr '(x (z))) 'z))
 
-; # function cadar (x)
-; (car (cdar x))に等価
 (function cadar (x)
+  ; (car (cdar x))に等価
   (car (cdar x)))
-(assert (same? (cadar '((x z))) 'z))
 
-; # function caddr (x)
-; (car (cddr x))に等価
 (function caddr (x)
+  ; (car (cddr x))に等価
   (car (cddr x)))
-(assert (same? (caddr '(x x z)) 'z))
 
-; # function cdaar (x)
-; (cdr (caar x))に等価
 (function cdaar (x)
+  ; (cdr (caar x))に等価
   (cdr (caar x)))
-(assert (= (cdaar '(((x z)))) '(z)))
 
-; # function cdadr (x)
-; (cdr (cadr x))に等価
 (function cdadr (x)
+  ; (cdr (cadr x))に等価
   (cdr (cadr x)))
-(assert (= (cdadr '(x (x z))) '(z)))
 
-; # function cddar (x)
-; (cdr (cdar x))に等価
 (function cddar (x)
+  ; (cdr (cdar x))に等価
   (cdr (cdar x)))
-(assert (= (cddar '((x x z))) '(z)))
 
-; # function cdddr (x)
-; (cdr (cddr x))に等価
 (function cdddr (x)
+  ; (cdr (cddr x))に等価
   (cdr (cddr x)))
-(assert (= (cdddr '(x x x z)) '(z)))
 
-; # function caaaar (x)
-; (car (caaar x))に等価
 (function caaaar (x)
+  ; (car (caaar x))に等価
   (car (caaar x)))
-(assert (same? (caaaar '((((z))))) 'z))
 
-; # function caaadr (x)
-; (car (caadr x))に等価
 (function caaadr (x)
+  ; (car (caadr x))に等価
   (car (caadr x)))
-(assert (same? (caaadr '(x ((z)))) 'z))
 
-; # function caadar (x)
-; (car (cadar x))に等価
 (function caadar (x)
+  ; (car (cadar x))に等価
   (car (cadar x)))
-(assert (same? (caadar '((x (z)))) 'z))
 
-; # function caaddr (x)
-; (car (caddr x))に等価
 (function caaddr (x)
+  ; (car (caddr x))に等価
   (car (caddr x)))
-(assert (same? (caaddr '(x x (z))) 'z))
 
-; # function cadaar (x)
-; (car (cdaar x))に等価
 (function cadaar (x)
+  ; (car (cdaar x))に等価
   (car (cdaar x)))
-(assert (same? (cadaar '(((x z)))) 'z))
 
-; # function cadadr (x)
-; (car (cdadr x))に等価
 (function cadadr (x)
+  ; (car (cdadr x))に等価
   (car (cdadr x)))
-(assert (same? (cadadr '(x (x z))) 'z))
 
-; # function caddar (x)
-; (car (cddar x))に等価
 (function caddar (x)
+  ; (car (cddar x))に等価
   (car (cddar x)))
-(assert (same? (caddar '((x x z))) 'z))
 
-; # function cadddr (x)
-; (car (cdddr x))に等価
 (function cadddr (x)
+  ; (car (cdddr x))に等価
   (car (cdddr x)))
-(assert (same? (cadddr '(x x x z)) 'z))
 
-; # function cdaaar (x)
-; (cdr (caaar x))に等価
 (function cdaaar (x)
+  ; (cdr (caaar x))に等価
   (cdr (caaar x)))
-(assert (= (cdaaar '((((x z))))) '(z)))
 
-; # function cdaadr (x)
-; (cdr (caadr x))に等価
 (function cdaadr (x)
+  ; (cdr (caadr x))に等価
   (cdr (caadr x)))
-(assert (= (cdaadr '(x ((x z)))) '(z)))
 
-; # function cdadar (x)
-; (cdr (cadar x))に等価
 (function cdadar (x)
+  ; (cdr (cadar x))に等価
   (cdr (cadar x)))
-(assert (= (cdadar '((x (x z)))) '(z)))
 
-; # function cdaddr (x)
-; (cdr (caddr x))に等価
 (function cdaddr (x)
+  ; (cdr (caddr x))に等価
   (cdr (caddr x)))
-(assert (= (cdaddr '(x x (x z))) '(z)))
 
-; # function cddaar (x)
-; (cdr (cdaar x))に等価
 (function cddaar (x)
+  ; (cdr (cdaar x))に等価
   (cdr (cdaar x)))
-(assert (= (cddaar '(((x x z)))) '(z)))
 
-; # function cddadr (x)
-; (cdr (cdadr x))に等価
 (function cddadr (x)
+  ; (cdr (cdadr x))に等価
   (cdr (cdadr x)))
-(assert (= (cddadr '(x (x x z))) '(z)))
 
-; # function cdddar (x)
-; (cdr (cddar x))に等価
 (function cdddar (x)
+  ; (cdr (cddar x))に等価
   (cdr (cddar x)))
-(assert (= (cdddar '((x x x z))) '(z)))
 
-; # function cddddr (x)
-; (cdr (cdddr x))に等価
 (function cddddr (x)
+  ; (cdr (cdddr x))に等価
   (cdr (cdddr x)))
-(assert (= (cddddr '(x x x x z)) '(z)))
 
-; # macro assert (test)
-; testがnilの場合に例外を発生させる。
-; 状態異常の早期検知のために使用する。
-(macro assert (test)
-  (list if (list same? test nil)
-        (list throw ''(:class Error
-                              :message "assert failed"))))
-
-; # function identity (x)
-; xを返す。恒等関数。
 (function identity (x)
+  ; xを返す。恒等関数。
   x)
-(assert (same? (identity :a) :a))
 
-; # function not (x)
-; xがnilの場合はtrueを、そうでなければnilを返す。
-(function not (x)
-  (same? x nil))
-(assert !nil)
-(assert !!true)
-(assert (same? !'x nil))
-(assert (same? !nil true))
-
-; # macro nil? (x)
-; 式(not x)に等価。
 (function nil? (x)
+  ; 式(not x)に等価。
   (not x))
-(assert (nil? (nil? true)))
-(assert (nil? nil))
-(assert !(nil? true))
 
-; # function atom? (x)
-; xがアトムの場合はtrueを、そうでなければnilを返す。
 (function atom? (x)
-  !(cons? x))
-(assert (atom? 1))
-(assert (atom? nil))
-(assert !(atom? '(1)))
+  ; xがアトムの場合はtrueを、そうでなければnilを返す。
+  (not (cons? x)))
 
-; # function list? (x)
-; xがコンスまたはnilの場合はtrueを、そうでなければnilを返す。
 (function list? (x)
+  ; xがコンスまたはnilの場合はtrueを、そうでなければnilを返す。
   (or (nil? x) (cons? x)))
-(assert !(list? 1))
-(assert (list? nil))
-(assert (list? '(1)))
 
-; # function byte? (x)
-; xが0から255の整数の場合はtrueを、そうでなければnilを返す。
 (function byte? (x)
+  ; xが0から255の整数の場合はtrueを、そうでなければnilを返す。
   (and (integer? x ) (<= 0 x 255)))
-(assert (byte? 0))
-(assert (byte? 255))
-(assert !(byte? 256))
 
-; # function ->list (x)
-; xがリストの場合にxを、そうでなければxをリストにして返す。
 (function ->list (x)
+  ; xがリストの場合にxを、そうでなければxをリストにして返す。
   (if (list? x) x (list x)))
 
-; # function nth (l n)
-; リストlのn番目の要素を返す。
-; ただし、nは零から数える。
-; nがlの長さよりも大きい場合はnilを返す。
 (function nth (l n)
+  ; リストlのn番目の要素を返す。
+  ; ただし、nは零から数える。
+  ; nがlの長さよりも大きい場合はnilを返す。
   (assert (list? l))
   (car (nthcdr l n)))
-(assert (= (nth '(1 2 3) 0) 1))
-(assert (= (nth '(1 2 3) 10) nil))
 
-; # function nthcdr (l n)
-; リストlを構成するn番目のコンスを取得する。
-; nがlの長さよりも大きい場合はnilを返す。
 (function nthcdr (l n)
-  (assert (and (list? l) !(minus? n)))
+  ; リストlを構成するn番目のコンスを取得する。
+  ; nがlの長さよりも大きい場合はnilを返す。
+  (assert (and (list? l) (not (minus? n))))
   (if (nil? l) nil
       (= n 0) l
       :default (nthcdr (cdr l) (-- n))))
-(assert (= (nthcdr '(1 2 3) 1) '(2 3)))
-(assert (= (nthcdr '(1 2 3) 3) nil))
 
-; # function list-length (l)
-; リストlの要素数を返す。
-(function list-length (l)
+(function list= (x y :key (test same?))
+  ; listの要素がすべて関数testでtrueを返す場合はtrueを、そうでなければnilを返す。
+  (assert (and (list? x) (list? y)))
+  (let (rec (lambda (x y)
+              (if (and (nil? x) (nil? y)) true
+                  (or (nil? x) (nil? y)) nil
+                  (and (test (car x) (car y))
+                       (rec (cdr x) (cdr y))))))
+    (rec x y)))
+
+(function length (l)
+  ; リストlの要素数を返す。
+  (assert (list? l))
   (let (rec (lambda (l)
               (if (nil? l) 0
-                  (number+ 1 (rec (cdr l))))))
+                  (+ 1 (rec (cdr l))))))
     (rec l)))
-(assert (= (list-length nil) 0))
-(assert (= (list-length '(nil)) 1))
 
-; # function sublist (l s :opt e)
-; リストlのs番目からe - 1番目までを要素に持つ部分リストを返す。
-; sが零未満、eがリストの長さ以上、sがeより大きい場合はエラーと見做す。
-; 部分リストはlとは別に作成される。
 (function sublist (l s :opt e)
-  (let (len (list-length l)
+  ; リストlのs番目からe - 1番目までを要素に持つ部分リストを返す。
+  ; sが零未満、eがリストの長さ以上、sがeより大きい場合はエラーと見做す。
+  ; 部分リストはlとは別に作成される。
+  (let (len (length l)
         e (or e len)
         rec (lambda (l n)
               (if (= n 0) nil
                   (cons (car l) (rec (cdr l) (-- n))))))
     (assert (and (>= s 0) (<= s e) (<= e len)))
     (rec (nthcdr l s) (- e s))))
-(assert (= (sublist nil 0) nil))
-(assert (= (sublist '(1 2 3) 1) '(2 3)))
-(assert (= (sublist '(1 2 3) 1 2) '(2)))
 
-; # function copy-list (l)
-; リストlの複製を作成して返す。
-; ただし、要素は複製されない。
 (function copy-list (l)
+  ; リストlの複製を作成して返す。
+  ; ただし、要素は複製されない。
   (assert (list? l))
   (if (nil? l) nil
-      (sublist l 0 (list-length l))))
-(assert (= (copy-list nil) nil))
-(assert (= (copy-list '(1 2 3)) '(1 2 3)))
+      (sublist l 0 (length l))))
 
-; # function last-cons (l)
-; リストlを構成する最後のコンスを返す。
 (function last-cons (l)
+  ; リストlを構成する最後のコンスを返す。
   (assert (list? l))
   (if (nil? l) nil
       (let (rec (lambda (l) (if (cdr l) (rec (cdr l)) l)))
         (rec l))))
-(assert (= (last-cons nil) nil))
-(assert (= (last-cons '(1 2 3)) '(3)))
 
-; # function last (l)
-; リストlの最後の要素を返す。
 (function last (l)
+  ; リストlの最後の要素を返す。
   (assert (list? l))
   (car (last-cons l)))
-(assert (= (last nil) nil))
-(assert (= (last '(1 2 3)) 3))
 
-; # function .. (s e :opt (step 1))
-; 整数sから整数eまでstep刻みの要素を持つリストを返す。
 (function .. (s e :opt (step 1))
-  (assert (and (number? s) (number? e) (number? step) !(= step 0)
-                     (or (and (< step 0) (>= s e))
-                         (and (> step 0) (<= s e)))))
+  ; 整数sから整数eまでstep刻みの要素を持つリストを返す。
+  (assert (and (number? s) (number? e) (number? step) (/= step 0)
+               (or (and (< step 0) (>= s e))
+                   (and (> step 0) (<= s e)))))
   (let (acc nil test (if (> step 0) <= >=))
     (while (test s e)
-      (push acc s)
-      (<- s (number+ s step)))
+      (push! acc s)
+      (<- s (+ s step)))
     (reverse acc)))
-(assert (= (.. 0 0) '(0)))
-(assert (= (.. 0 2) '(0 1 2)))
-(assert (= (.. 0 2 0.5) '(0 0.5 1 1.5 2)))
-(assert (= (.. 0 2 10) '(0)))
-(assert (= (.. -1 1 0.5) '(-1 -0.5 0 0.5 1)))
 
-; # function append-atom (l x)
-; リストlの末尾にxを追加したような新たなリストを返す。
 (function append-atom (l x)
+  ; リストlの末尾にxを追加したような新たなリストを返す。
   (assert (list? l))
   (let (rec (lambda (l)
               (if l (cons (car l) (rec (cdr l)))
                   (list x))))
     (rec l)))
-(assert (= (append-atom '() 1) '(1)))
-(assert (= (append-atom '(1 2) 3) '(1 2 3)))
 
-; # function append (l :rest args)
-; リストlの要素としてargsの各要素を追加する。
-; argsの任意の要素はリストでなければならない。
 (function append (l :rest args)
+  ; リストlの要素としてargsの各要素を追加する。
+  ; argsの任意の要素はリストでなければならない。
   (assert (and (list? l) (all-satisfy? args list?)))
   (reduce args (lambda (acc rest)
                  (reduce rest append-atom :identity acc))
           :identity l))
-(assert (= (append '(1 2) '((3 4) (5)) '(6)) '(1 2 (3 4) (5) 6)))
 
-; # macro push (sym x)
-; シンボルsymを束縛しているリストの先頭に破壊的にxを追加する。
-; 式としてxを返す。
-(macro push (sym x)
+(macro push! (sym x)
+  ; シンボルsymを束縛しているリストの先頭に破壊的にxを追加する。
+  ; 式としてxを返す。
   (assert (symbol? sym))
   (list begin
         (list assert (list list? sym))
         (list <- sym (list cons x sym))
         x))
-(assert (= (begin (<- l nil) (push l 1) (push l 2) l) '(2 1)))
 
-; # macro pop (sym)
-; シンボルsymを束縛しているリストの先頭を返し、symをリストのcdrで再束縛する。
-(macro pop (sym)
+(macro pop! (sym)
+  ; シンボルsymを束縛しているリストの先頭を返し、symをリストのcdrで再束縛する。
   (assert (symbol? sym))
   (list begin0
         (list car sym)
         (list <- sym (list cdr sym))))
-(assert (= (begin (<- l '(1 2 3)) (pop l)) 1))
 
-; # function flatten (l)
-; リストlisを構成するすべてのコンスのcar部が要素であるような新しいリストを返す。
-; 作成されるリストの要素の順は、元のリストのcar優先探索となる。
 (function flatten (l)
+  ; リストlisを構成するすべてのコンスのcar部が要素であるような新しいリストを返す。
+  ; 作成されるリストの要素の順は、元のリストのcar優先探索となる。
   (assert (list? l))
   (let (acc nil
         rec (lambda (x)
                (if (nil? x) (reverse acc)
-                   (atom? x) (begin (push acc x) acc)
-                   (nil? (car x)) (begin (push acc nil) acc)
+                   (atom? x) (begin (push! acc x) acc)
+                   (nil? (car x)) (begin (push! acc nil) acc)
                    (begin (rec (car x))) (rec (cdr x)))))
     (rec l)))
-(assert (= (flatten '(1 (2) (3 4))) '(1 2 3 4)))
-(assert (= (flatten '(1 (nil) 2)) '(1 nil 2)))
 
-; # function map (args f)
-; リストargsの各々の要素を関数fで写像した結果をリストにして返す。
 (function map (args f)
+  ; リストargsの各々の要素を関数fで写像した結果をリストにして返す。
   (assert (list? args))
   (if args (cons (f (car args)) (map (cdr args) f))))
-(assert (= (map '(1 2 3) (lambda (x) (+ x 10))) '(11 12 13)))
 
-; # function reverse (l)
-; リストlの要素を逆の順で持つリストを新たに作成して返す。
 (function reverse (l)
+  ; リストlの要素を逆の順で持つリストを新たに作成して返す。
   (assert (list? l))
   (let (rec (lambda (l acc)
               (if (nil? l) acc
                   (rec (cdr l) (cons (car l) acc)))))
     (rec l nil)))
-(assert (= (reverse nil) nil))
-(assert (= (reverse '(1 2 3)) '(3 2 1)))
 
-; # function reduce (l f :key (identity nil identity?))
-; リストlを二変数関数fで畳み込んだ結果を返す。
-; キーワードパラメターidentityが指定された場合は単位元として使用する。
 (function reduce (l f :key (identity nil identity?))
+  ; リストlを二変数関数fで畳み込んだ結果を返す。
+  ; キーワードパラメターidentityが指定された場合は単位元として使用する。
   (assert (list? l))
   (let (rec (lambda (l)
               (if (nil? (cdr l)) (car l)
                   (rec (cons (f (car l) (cadr l)) (cddr l))))))
     (rec (if identity? (cons identity l) l))))
 
-; # function find-cons (l e :key (test =) (key identity))
-; リストlをなすコンスのうち、car部がeに等しいコンスを返す。
-; 探索はリストの先頭から順に行われる。
-; 該当するコンスが存在しない場合はnilを返す。
-; 比較は=で行われ、testで指定された場合はそれを用いる。
-; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
-(function find-cons (l e :key (test =) (key identity))
+(function find-cons (l e :key (test same?) (key identity))
+  ; リストlをなすコンスのうち、car部がeに等しいコンスを返す。
+  ; 探索はリストの先頭から順に行われる。
+  ; 該当するコンスが存在しない場合はnilを返す。
+  ; 比較は=で行われ、testで指定された場合はそれを用いる。
+  ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
   (assert (list? l))
   (if (nil? l) nil
       (test (key (car l)) e) l
       (find-cons (cdr l) e :test test :key key)))
-(assert (= (find-cons nil true) nil))
-(assert (= (find-cons '(true nil true) nil) '(nil true)))
-(assert (= (find-cons '(1 2 3) 2) '(2 3)))
-(assert (= (find-cons '(1 (2 3) 4) '(2 3)) '((2 3) 4)))
-(assert (= (find-cons '(1 (2 3) 4) '(2 3) :test same?) nil))
-(assert (= (find-cons '((1 :a) (2 :b) (3 :c)) :b :key cadr) '((2 :b) (3 :c))))
 
-; # function find-cons-if (l f :key (key identity))
-; リストlをなすコンスのうち、car部が関数fの引数として評価されたときにnilとならないものを返す。
-; 探索はリストの先頭から順に行われる。
-; 該当するコンスが存在しない場合はnilを返す。
-; keyが指定された場合はcar部をkey関数で評価した後に比較を行う。
 (function find-cons-if (l f :key (key identity))
+  ; リストlをなすコンスのうち、car部が関数fの引数として評価されたときにnilとならないものを返す。
+  ; 探索はリストの先頭から順に行われる。
+  ; 該当するコンスが存在しない場合はnilを返す。
+  ; keyが指定された場合はcar部をkey関数で評価した後に比較を行う。
   (assert (list? l))
   (if (nil? l) nil
       (f (key (car l))) l
       (find-cons-if (cdr l) f :key key)))
-(assert (= (find-cons-if nil identity) nil))
-(assert (= (find-cons-if '(1 2 3) (lambda (x) (> x 2))) '(3)))
-(assert (= (find-cons-if '((:a 1)) (lambda (x) (= x :a)) :key car) '((:a 1))))
 
-; # function find (l e :key (test =) (key identity))
-; リストlの先頭からeに等しい要素を返す。
-; eが存在しない場合はnilを返す。
-; 比較は=で行われ、testで指定された場合はそれを用いる。
-; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
-(function find (l e :key (test =) (key identity))
+(function find (l e :key (test same?) (key identity))
+  ; リストlの先頭からeに等しい要素を返す。
+  ; eが存在しない場合はnilを返す。
+  ; 比較は=で行われ、testで指定された場合はそれを用いる。
+  ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
   (assert (list? l))
   (car (find-cons l e :test test :key key)))
-(assert (= (find nil true) nil))
-(assert (= (find '(true nil true) nil) nil))
-(assert (= (find '(1 2 3) 2) 2))
-(assert (= (find '(1 (2 3) 4) '(2 3)) '(2 3)))
-(assert (= (find '(1 (2 3) 4) '(2 3) :test same?) nil))
-(assert (= (find '((1 :a) (2 :b) (3 :c)) :b :key cadr) '(2 :b)))
 
-; # function find-if (l f :key (key identity))
-; リストlの先頭から関数fがnilを返さない最初の要素を返す。
-; 該当する要素が存在しない場合はnilを返す。
-; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
 (function find-if (l f :key (key identity))
+  ; リストlの先頭から関数fがnilを返さない最初の要素を返す。
+  ; 該当する要素が存在しない場合はnilを返す。
+  ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
   (assert (list? l))
   (car (find-cons-if l f :key key)))
-(assert (= (find-if nil identity) nil))
-(assert (= (find-if '(1 2 3) (lambda (x) (> x 2))) 3))
-(assert (= (find-if '((:a 1) (:b 2)) (lambda (x) (= x :b)) :key car) '(:b 2)))
 
-; # function all-satisfy? (l f)
-; リストlのすべての要素が関数fの引数として評価したときに、nilでない値を返す場合にtrueを返す。
-; そうでなければnilを返す。
 (function all-satisfy? (l f)
+  ; リストlのすべての要素が関数fの引数として評価したときに、nilでない値を返す場合にtrueを返す。
+  ; そうでなければnilを返す。
   (assert (and (list? l) (operator? f)))
   (if (nil? l) true
       (and (f (car l)) (all-satisfy? (cdr l) f))))
-(assert (all-satisfy? nil cons?))
-(assert (all-satisfy? '(1 2 3 4 5) (lambda (x) (number? x))))
-(assert !(all-satisfy? '(1 :a 3 :b 5) (lambda (x) (number? x))))
 
-; # function any-satisfy? (l f)
-; リストlのいずれかの要素が関数fの引数として評価したときにnil以外の値を返す場合はtrueを返す。
-; そうでなければnilを返す。
-; なお、lが空の場合はnilを返す。
 (function any-satisfy? (l f)
+  ; リストlのいずれかの要素が関数fの引数として評価したときにnil以外の値を返す場合はtrueを返す。
+  ; そうでなければnilを返す。
+  ; なお、lが空の場合はnilを返す。
   (assert (and (list? l) (operator? f)))
   (if l (or (f (car l)) (any-satisfy? (cdr l) f))))
-(assert !(any-satisfy? nil number?))
-(assert (any-satisfy? '(1 2 3 4 5) number?))
-(assert !(any-satisfy? '(:a :b :c) number?))
 
-; # function adjacent-satisfy? (l f)
-; リストの隣接するすべての二要素に対して二変数関数fの評価がnil以外の場合は
 (function adjacent-satisfy? (l f)
+  ; リストの隣接するすべての二要素に対して二変数関数fの評価がnil以外の場合は
   (assert (and (list? l) (operator? f)))
   (if (nil? (cdr l)) true
       (and (f (car l) (cadr l)) (adjacent-satisfy? (cdr l) f))))
-(assert (adjacent-satisfy? '(1 2 3 4 5) <))
-(assert !(adjacent-satisfy? '(1 2 3 3 5) <))
 
-; # association list
-; parenでは、キーワードと任意のS式の対を保持するリストを連想リストという。
-; 探索は線形時間必要になるが、比較はアドレスで行われるため高速。
-; 任意のオブジェクトの対応を保持する場合はMapクラスを利用する。
+; associated list
+;; parenでは、キーワードと任意のS式の対を保持するリストを連想リストという。
+;; 探索は線形時間必要になるが、比較はアドレスで行われるため高速。
+;; 任意のオブジェクトの対応を保持する場合はMapクラスを利用する。
 
-; # function . (al k :opt (v nil v?))
-; 連想リストalのキー値kに対応する値を返す。
-; 値がない場合は例外を発生させる。
-; vが指定された場合はkに対応する値をvで上書きする。
 (function . (al k :opt (v nil v?))
+  ; 連想リストalのキー値kに対応する値を返す。
+  ; 値がない場合は例外を発生させる。
+  ; vが指定された場合はkに対応する値をvで上書きする。
   (assert (list? al))
   (let (rec (lambda (rest)
-              (if (nil? rest)
-                      (throw (list :class 'Error
-                                   :message
-                                       (+ "property '" k "' not found in " al)))
+              (if (nil? rest) (throw
+                                '(:class 'Error :message "property not found"))
                   (same? (car rest) k) rest
                   (rec (cddr rest))))
         pair (rec al))
     (if (nil? v?) (cadr pair)
         (car (cdr pair) v))))
-(assert (= (. '(:a 1 :b 2 :c 3) :a) 1))
-(assert (= (begin (<- al '(:a 1 :b 2)) (. al :b -2) al) '(:a 1 :b -2)))
 
-; # numeric
+; number
 
-; # function - (x :rest args)
-; xからargsの合計を引いた値を返す。
-; argsがnilの場合はxを負にした値を返す。
 (function - (x :rest args)
+  ; xからargsの合計を引いた値を返す。
+  ; argsがnilの場合はxを負にした値を返す。
   (assert (and (number? x) (all-satisfy? args number?)))
   (if (nil? args) (negated x)
-      (number+ x (negated (reduce args number+)))))
-(assert (= (- 1) -1))
-(assert (= (- 3 2 1) 0))
+      (+ x (negated (reduce args +)))))
 
-; # function negated (x)
-; xの符号を反転させた値を返す。
 (function negated (x)
+  ; xの符号を反転させた値を返す。
   (* x -1))
-(assert (= (negated 1) -1))
-(assert (= (negated -1) 1))
 
-; # Comparator
+(function /= (x y)
+  ; 数値x、yを比較した結果を返す。
+  (not (= x y)))
 
 (function > (:rest args)
   (adjacent-satisfy? args (lambda (x y) (< y x))))
-(assert (> 1 0))
-(assert !(> 0 0))
-(assert !(> 0 1))
-(assert (> 2 1 0))
-(assert !(> 2 0 1))
 
 (function <= (:rest args)
-  (adjacent-satisfy? args (lambda (x y) !(< y x))))
-(assert (<= 0 0))
-(assert (<= 0 1))
-(assert !(<= 1 0))
-(assert (<= 0 1 2))
-(assert !(<= 2 0 1))
+  (adjacent-satisfy? args (lambda (x y) (not (< y x)))))
 
 (function >= (:rest args)
-  (adjacent-satisfy? args (lambda (x y) !(< x y))))
-(assert (>= 0 0))
-(assert (>= 1 0))
-(assert !(>= 0 1))
-(assert (>= 0 0 0))
-(assert (>= 2 1 0))
-(assert !(>= 2 0 1))
+  (adjacent-satisfy? args (lambda (x y) (not (< x y)))))
 
-; # function ++ (x)
-; xに1を加えた結果を返す。
 (function ++ (x)
+  ; xに1を加えた結果を返す。
   (assert (number? x))
-  (number+ x 1))
-(assert (= (++ 0) 1))
+  (+ x 1))
 
-; # function -- (x)
-; xから1を引いた結果を返す。
 (function -- (x)
+  ; xから1を引いた結果を返す。
   (assert (number? x))
   (- x 1))
 
-; # macro inc (s v)
-; sの値にvを加えた値をsに束縛する式に展開する。
-(macro inc (s v)
+(macro inc! (s v)
+  ; sの値にvを加えた値をsに束縛する式に展開する。
   (assert (symbol? s))
-  (list <- s (list 'number+ s v)))
+  (list <- s (list '+ s v)))
 
-; # macro dec (s v)
-; sの値からvを引いた値をsに束縛する式に展開する。
-(macro dec (s v)
+(macro dec! (s v)
+  ; sの値からvを引いた値をsに束縛する式に展開する。
   (assert (symbol? s))
   (list <- s (list '- s v)))
 
-; # function even? (x)
-; xが偶数の場合にtrueを、そうでなければnilを返す。
 (function even? (x)
+  ; xが偶数の場合にtrueを、そうでなければnilを返す。
   (= (mod x 2) 0))
-(assert (even? 0))
-(assert (even? 2))
-(assert !(even? 3))
 
-; # function odd? (x)
-; xが奇数の場合にtrueを、そうでなければnilを返す。
 (function odd? (x)
-  !(even? x))
-(assert !(odd? 0))
-(assert (odd? 1))
-(assert !(odd? 2))
+  ; xが奇数の場合にtrueを、そうでなければnilを返す。
+  (not (even? x)))
 
-; # function plus? (x)
-; xが正の数の場合にtrueを、そうでなければnilを返す。
 (function plus? (x)
+  ; xが正の数の場合にtrueを、そうでなければnilを返す。
   (assert (number? x))
   (> x 0))
-(assert !(plus? -1))
-(assert !(plus? 0))
-(assert (plus? 1))
 
-; # function zero? (x)
-; xが0の場合はtrueを、そうでなければnilを返す。
 (function zero? (x)
+  ; xが0の場合はtrueを、そうでなければnilを返す。
   (assert (number? x))
   (= x 0))
-(assert !(zero? -1))
-(assert (zero? 0))
-(assert !(zero? 1))
 
-; # function minus? (x)
-; xが負の数の場合はtrueを、そうでなければnilを返す。
 (function minus? (x)
+  ; xが負の数の場合はtrueを、そうでなければnilを返す。
   (assert (number? x))
   (< x 0))
-(assert (minus? -1))
-(assert !(minus? 0))
-(assert !(minus? 1))
-
-; generics
-
-; # macro <- (:rest forms)
-; 破壊的な変更手段を提供するマクロ。
-; シンボルの場合は束縛、配列やコンスの場合は参照箇所に代入をするような式に展開する。
-;
-;     (<- s 3
-;         ([] a 0) 1
-;         (car '(1 2)) 3)
-;
-;     => (begin (symbol-bind s 3)
-;               ([] a 0 1)
-;               (car '(1 2) 2))
-(macro <- (:rest forms)
-  (cons symbol-bind forms))
-
-; # function = (:rest args)
-(function = (:rest args)
-  (let (x (car args))
-    (if (number? x)
-            (and (all-satisfy? (cdr args) number?)
-                 (adjacent-satisfy? args number=))
-        (string? x)
-            (and (all-satisfy? (cdr args) string?)
-                 (adjacent-satisfy? args string=))
-        (cons? x)
-            (and (all-satisfy? (cdr args) list?)
-                 (adjacent-satisfy? args
-                                    (lambda (x y)
-                                      (and (= (car x) (car y))
-                                           (= (cdr x) (cdr y))))))
-        (adjacent-satisfy? args same?))))
-(assert (= 1 1 1))
-(assert !(= 1 2 3))
-(assert (= "a" "a" "a"))
-(assert !(= "a" "b" "c"))
-(assert (= '(1) '(1) (list 1)))
-(assert !(= '(1) '(2) '(2)))
-(assert (= nil nil nil))
-(assert !(= nil true true))
-
-; # function + (:rest args)
-(function + (:rest args)
-  (if (nil? (cdr args)) (car args)
-      (reduce args (lambda (x y)
-                     (if (and (number? x) (number? y)) (number+ x y)
-                         (string? x) (string+ x (->string y))
-                         (throw (.message (.new Error) "illegal state")))))))
-(assert (= (+ 1 2 3) 6))
 
 ; paren object system
 
@@ -868,11 +569,11 @@
                 (list cons receiver args)))))
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
-  (let (Object? (= cls-sym 'Object)
+  (let (Object? (same? cls-sym 'Object)
         has-desc? (string? (car fields))
         desc (and has-desc? (car fields))
         fields (if has-desc? (cdr fields) fields))
-    (assert (and (all-satisfy? fields symbol?) !(class-exists? cls-sym)))
+    (assert (and (all-satisfy? fields symbol?) (not (class-exists? cls-sym))))
     (append
       (list begin0
             (list quote cls-sym)
@@ -883,8 +584,8 @@
                                                :features features
                                                :fields fields
                                                :methods nil)))
-            (list 'push '$class cls-sym)
-            (list 'push '$class (list quote cls-sym)))
+            (list 'push! '$class cls-sym)
+            (list 'push! '$class (list quote cls-sym)))
       (map fields (lambda (var) (list 'make-accessor cls-sym var))))))
 
 (macro method (cls-sym method-sym args :rest body)
@@ -896,39 +597,34 @@
                     (list cons (cons lambda (cons (cons 'self args) body))
                           (list '. cls-sym :methods))))))
 
-; # function object? (x)
-; xがオブジェクトの場合trueを、そうでなければnilを返す。
-; paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。
 (function object? (x)
+  ; xがオブジェクトの場合trueを、そうでなければnilを返す。
+  ; paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。
   (and (list? x) (= (car x) :class)))
 
-; # function is-a? (o cls)
-; oがclsクラスのインスタンスの場合trueを、そうでなければnilを返す。
 (function is-a? (o cls)
+  ; oがclsクラスのインスタンスの場合trueを、そうでなければnilを返す。
   (assert (and (object? o) (object? cls) (same? (cadr cls) 'Class)))
   (let (cls-sym (. cls :symbol)
-        rec (lambda (o-cls-sym)
-              (and o-cls-sym
-                   (or (same? o-cls-sym cls-sym)
-                       (rec (. (find-class o-cls-sym) :super))))))
+                rec (lambda (o-cls-sym)
+                      (and o-cls-sym
+                           (or (same? o-cls-sym cls-sym)
+                               (rec (. (find-class o-cls-sym) :super))))))
     (rec (. o :class))))
 
-; # class Object
-; 唯一スーパークラスを持たない、クラス階層の最上位クラス。
-; スーパークラスを指定しない場合は暗黙的にObjectクラスを継承する。
 (class Object ()
+  ; 唯一スーパークラスを持たない、クラス階層の最上位クラス。
+  ; スーパークラスを指定しない場合は暗黙的にObjectクラスを継承する。
   class)
 
-; # method Object .init ()
-; オブジェクトの初期化メソッド。
-; クラスごとに必要に応じて固有の初期化処理を上書きする。
 (method Object .init ()
+  ; オブジェクトの初期化メソッド。
+  ; クラスごとに必要に応じて固有の初期化処理を上書きする。
   self)
 
-; # method Object .equal? (o)
-; レシーバとoが同一オブジェクトの場合にtrueを、そうでなければnilを返す。
-; サブクラスで同等性を定義する場合はこのメソッドをオーバーロードする。
 (method Object .equal? (o)
+  ; レシーバとoが同一オブジェクトの場合にtrueを、そうでなければnilを返す。
+  ; サブクラスで同等性を定義する場合はこのメソッドをオーバーロードする。
   (same? self o))
 
 (class Class ()
@@ -939,21 +635,20 @@
     (while cls
       (<- fields (reverse (copy-list (map (. cls :fields) symbol->keyword))))
       (while fields
-        (push o (if (same? (car fields) :class) (. self :symbol)))
-        (push o (car fields))
+        (push! o (if (same? (car fields) :class) (. self :symbol)))
+        (push! o (car fields))
         (<- fields (cdr fields)))
       (<- cls (and (. cls :super) (find-class (. cls :super)))))
-    (if (= (lambda-parameter (find-method (. o :class) '.init)) '(self))
+    (if (list= (lambda-parameter (find-method (. o :class) '.init)) '(self))
         (.init o)
         o)))
 
-; exception
+;; exception
 
-; # class Exception ()
-; 例外クラス。
-; すべての例外クラスはこのクラスを継承する。
-; 補足すべきでない例外を表す場合はErrorクラスを継承すること。
 (class Exception ()
+  ; 例外クラス。
+  ; すべての例外クラスはこのクラスを継承する。
+  ; 補足すべきでない例外を表す場合はErrorクラスを継承すること。
   message)
 
 (method Exception .addMessage (msg)
@@ -965,24 +660,26 @@
     (if msg (+ class-name " -- " msg)
         class-name)))
 
-; # class Error ()
-; エラークラス。
-; 継続が困難な状態や、到達すべきでない状態を表す。
-; throwされた場合は、原則としてcatchオペレーターで補足すべきではない。
 (class Error ()
+  ; エラークラス。
+  ; 継続が困難な状態や、到達すべきでない状態を表す。
+  ; throwされた場合は、原則としてcatchオペレーターで補足すべきではない。
   message)
 
-; stream I/O
+(function Error.shouldBeImplemented ()
+  (throw (.message (.new Error) "should be implemented")))
+
+;; stream I/O
 
 (class Stream ()
-  "ストリームクラス。
-  入出力の基本的なメソッドを持つ。")
+  ;ストリームクラス。入出力の基本的なメソッドを持つ。
+  )
 
 (method Stream .readByte (:rest args)
-  (throw (.message (.new Error) "ShouldBeImplementedException")))
+  (Error.shouldBeImplemented))
 
 (method Stream .writeByte (:rest args)
-  (throw (.new ShouldBeImplementedException)))
+  (Error.shouldBeImplemented))
 
 (method Stream .readChar (:opt (encoding (dynamic $encoding)))
   (if (same? encoding :UTF-8)
@@ -995,19 +692,19 @@
             (if (< b1 0) (return :EOF)
                 (< b1 0x80) (.writeByte mem b1)
                 (< b1 0xc2) (utf8-exception)
-                !(trail? (<- b2 (.readByte self))) (utf8-exception)
+                (not (trail? (<- b2 (.readByte self))) (utf8-exception))
                 (< b1 0xe0)    ; 2-byte character
                     (begin (if (= (bit-and b1 0x3e) 0) (utf8-exception))
                            (.writeByte (.writeByte mem b1) b2))
                 (< b1 0xf0)    ; 3-byte character
                     (begin (<- b3 (.readByte self))
                            (if (or (and (= b1 0xe0) (= (bit-and b2 0x20) 0))
-                                   !(trail? b3))
+                                   (not (trail? b3)))
                                (utf8-exception))
                            (.writeByte (.writeByte (.writeByte mem b1) b2) b3))
                 (< b1 0xf8)    ; 4-byte character
                     (begin (<- b3 (.readByte self) b4 (.readByte self))
-                           (if (or !(trail? b3) !(trail? b4)
+                           (if (or (not (trail? b3)) (not (trail? b4))
                                    (and (= b1 0xf0) (= (bit-and b2 0x30) 0)))
                                (utf8-exception))
                            (.writeByte
@@ -1086,18 +783,15 @@
   (.rd-pos self 0)
   (.wr-pos self 0))
 
-; # class AheadReader ()
-; 先読みリーダー。
-; 文字列やストリームから一文字先読みを行う機能を提供するクラス。
-; 字句解析器として使用できる。
 (class AheadReader ()
+  ; 先読みリーダー。
+  ; 文字列やストリームから一文字先読みを行う機能を提供するクラス。
   stream next buf)
 
-; # method AheadReader .init (:key string stream)
-; 文字列または、ストリームのいずれかを用いてレシーバを初期化する。
 (method AheadReader .init (:key string stream)
+  ; 文字列または、ストリームのいずれかを用いてレシーバを初期化する。
   (assert (or (and string (string? string))
-                    (and (object? stream) (is-a? stream Stream))))
+              (and (object? stream) (is-a? stream Stream))))
   (when string
     (<- stream (.new MemoryStream))
     (.writeString stream string))
@@ -1106,55 +800,48 @@
   (.buf self (.new MemoryStream))
   self)
 
-; # method AheadReader .eof? (:key string stream)
-; ストリームが終端に達している場合にtrueを、そうでなければnilを返す。
 (method AheadReader .eof? (:key string stream)
+  ; ストリームが終端に達している場合にtrueを、そうでなければnilを返す。
   (same? (.next self) :EOF))
 
-; # method AheadReader .ensureNotEOFReached ()
-; ストリームが終端に達していた場合は例外をスローする。
 (method AheadReader .ensureNotEOFReached ()
+  ; ストリームが終端に達していた場合は例外をスローする。
   (if (.eof? self) (throw (.message (.new Error) "EOF reached"))))
 
-; # method AheadReader .skip ()
-; 次の一文字を読み飛ばし、その文字を返す。
 (method AheadReader .skip ()
+  ; 次の一文字を読み飛ばし、その文字を返す。
   (.ensureNotEOFReached self)
   (begin0 (.next self)
           (.next self (.readChar (.stream self)))))
 
-; # method AheadReader .get ()
-; 次の一文字をトークンの末尾に追加し、その文字を返す。
 (method AheadReader .get ()
+  ; 次の一文字をトークンの末尾に追加し、その文字を返す。
   (let (c (.skip self))
     (.put self c)
     c))
 
-; # method AheadReader .put (s)
-; ストリームとは無関係にトークンの末尾に文字列sを追加する。
 (method AheadReader .put (s)
+  ; ストリームとは無関係にトークンの末尾に文字列sを追加する。
   (assert (string? s))
   (.writeString (.buf self) s))
 
-; # method AheadReader .token ()
-; 現在切り出しているトークン文字列を返す。
 (method AheadReader .token ()
+  ; 現在切り出しているトークン文字列を返す。
   (.toString (.buf self)))
 
-; # method AheadReader .reset ()
-; 現在切り出しているトークン文字列を返す。
 (method AheadReader .reset ()
+  ; 現在切り出しているトークン文字列を返す。
   (.reset (.buf self))
   self)
 
-; # method AheadReader .skipSpace ()
-; スペース、改行文字を読み飛ばし、レシーバを返す。
 (method AheadReader .skipSpace ()
-  (while (and !(.eof? self) (find '(" " "\r" "\n") (.next self)))
+  ; スペース、改行文字を読み飛ばし、レシーバを返す。
+  (while (and (not (.eof? self))
+              (find '(" " "\r" "\n") (.next self) :test string=))
     (.skip self))
   self)
 
-; I/O
+;; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
     $stdout (.init (.new FileStream) :fp (fp 1))
     $in $stdin
@@ -1166,15 +853,13 @@
   (assert (is-a? stream Stream))
   (.readByte stream))
 
-; # function read-char (:opt (stream $stdin))
-; streamから1byte読み込み返す。
 (function read-char (:opt (stream $stdin))
+  ; streamから1byte読み込み返す。
   (assert (is-a? stream Stream))
   (.readChar stream))
 
-; # function write-byte (byte :opt (stream $stdout))
-; streamに1byte書き込みbyteを返す。
 (function write-byte (byte :opt (stream $stdout))
+  ; streamに1byte書き込みbyteを返す。
   (assert (and (byte? byte) (is-a? stream Stream)))
   (.writeByte stream byte)
   byte)
@@ -1182,14 +867,20 @@
 (print (os_clock))
 
 (let ($encoding :UTF-8)
-  (<- ar
-      (.init (.new AheadReader)
-             :string
-             "a
-             b c"))
-  ; (.get ar)
-  ; (.get (.skipSpace ar))
+  (<- ar (.init (.new AheadReader)
+                :string
+                "a
+                b c"
+                ))
+  (.get ar)
+  (.get (.skipSpace ar))
   (print (.token ar)))
+
+; (function fib (n)
+;   (if (= n 0) 0
+;       (if (= n 1) 1
+;           (+ (fib (- n 1)) (fib (- n 2))))))
+; (print (fib 30))
 
 (print (os_clock))
 

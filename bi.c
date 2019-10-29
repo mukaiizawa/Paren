@@ -15,13 +15,16 @@
 
 PRIM(samep)
 {
-  int b;
   object o;
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   o = argv->cons.car;
-  while ((argv = argv->cons.cdr) != object_nil)
-    if (!(b = (o == argv->cons.car))) break;
-  *result = object_bool(b);
+  *result = object_true;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (o != argv->cons.car) {
+      *result = object_nil;
+      break;
+    }
+  }
   return TRUE;
 }
 
@@ -49,6 +52,13 @@ static int prim_p(object o)
   return FALSE;
 }
 
+PRIM(not)
+{
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  *result = object_bool(argv->cons.car == object_nil);
+  return TRUE;
+}
+
 PRIM(special_operator_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -72,6 +82,7 @@ PRIM(gensym)
   xbarray_init(&x);
   xbarray_addf(&x, "#G%d", ++c);
   *result = gc_new_barray_from(SYMBOL, x.size, x.elt);
+  xbarray_free(&x);
   return TRUE;
 }
 
@@ -97,7 +108,7 @@ PRIM(print)
 #undef PRIM
 
 static char *symbol_name_map[] = {
-  "symbol_bind", "symbol-bind",
+  "symbol_bind", "<-",
   "samep", "same?",
   "operator_p", "operator?",
   "special_operator_p", "special-operator?",
@@ -109,8 +120,8 @@ static char *symbol_name_map[] = {
   "bit_shift", "bit-shift",
   "bit_xor", "bit-xor",
   "integer_p", "integer?",
-  "number_add", "number+",
-  "number_equal_p", "number=",
+  "number_add", "+",
+  "number_equal_p", "=",
   "number_lt", "<",
   "number_modulo", "mod",
   "number_multiply", "*",
