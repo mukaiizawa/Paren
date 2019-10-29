@@ -519,6 +519,16 @@
   (assert (number? x))
   (< x 0))
 
+; character, string
+
+(function char->byte (s)
+  ; 文字列sをバイトに変換する。
+  ; sはascii文字でなければならない。
+  (assert (string? s))
+  (let (ba (string->byte-array s))
+    (if (= (byte-array-length ba) 1) ([] ba 0)
+        (throw '(:class Error :message "expected type ascii character")))))
+
 ; paren object system
 
 (<- $class nil)
@@ -807,25 +817,29 @@
   (if (.eof? self) (throw (.message (.new Error) "EOF reached"))))
 
 (method ByteAheadReader .skip ()
-  ; 次の一文字を読み飛ばし、その文字を返す。
+  ; 次の1byte読み飛ばし、返す。
   (.ensureNotEOFReached self)
   (begin0 (.next self)
           (.next self (.readByte (.stream self)))))
 
 (method ByteAheadReader .get ()
-  ; 次の一文字をトークンの末尾に追加し、その文字を返す。
+  ; 次の1byteをトークンの末尾に追加し、返す。
   (let (c (.skip self))
     (.put self c)
     c))
 
-(method ByteAheadReader .put (s)
-  ; ストリームとは無関係にトークンの末尾に文字列sを追加する。
-  (assert (byte? s))
-  (.writeByte (.buf self) s))
+(method ByteAheadReader .put (b)
+  ; ストリームとは無関係にトークンの末尾に1byte追加する。
+  (assert (byte? b))
+  (.writeByte (.buf self) b))
+
+(method ByteAheadReader .bytes ()
+  ; 現在切り出しているbyte列を返す。
+  (.buf self))
 
 (method ByteAheadReader .token ()
-  ; 現在切り出しているトークン文字列を返す。
-  (.toString (.buf self)))
+  ; 現在切り出しているbyte列を文字列にして返す。
+  (.toString (.bytes self)))
 
 (method ByteAheadReader .reset ()
   ; 現在切り出しているトークン文字列を返す。
@@ -835,7 +849,7 @@
 (method ByteAheadReader .skipSpace ()
   ; スペース、改行文字を読み飛ばし、レシーバを返す。
   (while (and (not (.eof? self))
-              (find '(0x20 0x0a 0x0d) (.next self) :test =))
+              (find (map '(" " "\r" "\n") char->byte) (.next self) :test =))
     (.skip self))
   self)
 
@@ -876,8 +890,8 @@
                 "a
                 b c"
                 ))
-  (.get ar)
-  (.get (.skipSpace ar))
+  (print (.get ar))
+  (print (.get (.skipSpace ar)))
   (print (.token ar)))
 
 ; (function fib (n)
