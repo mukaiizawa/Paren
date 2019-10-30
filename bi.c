@@ -194,6 +194,12 @@ char *bi_as_symbol_name(char *name)
   return name;
 }
 
+int bi_int(object o, int *p) {
+  if (!typep(o, XINT)) return FALSE;
+  *p = o->xint.val;
+  return TRUE;
+}
+
 int bi_int64(object o, int64_t *p) {
   if (!typep(o, XINT)) return FALSE;
   *p = o->xint.val;

@@ -44,14 +44,14 @@ PRIM(barray_p)
 
 PRIM(barray_new)
 {
-  int64_t size;
+  int size;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!bi_int64(argv->cons.car, &size)) return FALSE;
+  if (!bi_int(argv->cons.car, &size)) return FALSE;
   *result = gc_new_barray(BARRAY, size);
   return TRUE;
 }
 
-static int barray_access(object a, int64_t i, object v, object *result)
+static int barray_access(object a, int i, object v, object *result)
 {
   if (i >= a->barray.size) return FALSE;
   if (v == NULL) *result = object_bytes[(unsigned char)(a->barray.elt[i])];
@@ -65,11 +65,11 @@ static int barray_access(object a, int64_t i, object v, object *result)
 
 PRIM(array_access)
 {
-  int64_t i;
+  int i;
   object a, v;
   if (!ip_ensure_arguments(argc, 2, 3)) return FALSE;
   a = argv->cons.car;
-  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &i) || i < 0) {
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &i) || i < 0) {
     ip_mark_error("array index must be positive number");
     return FALSE;
   }
@@ -106,20 +106,20 @@ PRIM(array_length)
 
 PRIM(array_copy)
 {
-  int64_t fp, tp, size;
+  int fp, tp, size;
   object from, to;
   if (!ip_ensure_arguments(argc, 5, 5)) return FALSE;
   from = argv->cons.car;
-  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &fp)) {
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &fp)) {
     ip_mark_error("source array index must be integer");
     return FALSE;
   }
   to = (argv = argv->cons.cdr)->cons.car;
-  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &tp)) {
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &tp)) {
     ip_mark_error("destination array index must be integer");
     return FALSE;
   }
-  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &size)) {
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) {
     ip_mark_error("copy size must be integer");
     return FALSE;
   }

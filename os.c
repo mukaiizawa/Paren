@@ -25,10 +25,10 @@ static int ensure_file_pointer(object o, FILE **fp)
 
 PRIM(fp)
 {
-  int64_t fd;
+  int fd;
   FILE *fp;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!bi_int64(argv->cons.car, &fd)) {
+  if (!bi_int(argv->cons.car, &fd)) {
     ip_mark_error("illegal file discripter");
     return FALSE;
   }
@@ -52,7 +52,7 @@ static char *mode_table[] = {
 PRIM(fopen)
 {
   char *fn;
-  int64_t mode;
+  int mode;
   FILE *fp;
   object ofn;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
@@ -61,7 +61,7 @@ PRIM(fopen)
     return FALSE;
   }
   fn = ofn->barray.elt;
-  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &mode)
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &mode)
       || (0 < mode || mode >= sizeof(mode_table) / sizeof(char *)))
     ip_mark_error("illegal open mode");
   else if ((fp = fopen(fn, mode_table[mode])) == NULL)
@@ -90,10 +90,10 @@ PRIM(fgetc)
 
 PRIM(fputc)
 {
-  int64_t byte;
+  int byte;
   FILE *fp;
   if (argc != 2) return FALSE;
-  if (!bi_int64(argv->cons.car, &byte) || !byte_range_p(byte)) return FALSE;
+  if (!bi_int(argv->cons.car, &byte) || !byte_range_p(byte)) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   if (fputc((int)byte, fp) == EOF) return FALSE;
   return TRUE;
@@ -120,12 +120,12 @@ PRIM(fgets)
 PRIM(fread)
 {
   object o;
-  int64_t from, size;
+  int from, size;
   FILE *fp;
   if (argc != 4) return FALSE;
   if (!typep((o = argv->cons.car), BARRAY)) return FALSE;
-  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
-  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!(0 <= from && from + size <= o->barray.size)) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   size = fread(o->barray.elt + from, 1, size, fp);
@@ -140,12 +140,12 @@ PRIM(fread)
 PRIM(fwrite)
 {
   object o;
-  int64_t from, size;
+  int from, size;
   FILE *fp;
   if (argc != 4) return FALSE;
   if (!typep((o = argv->cons.car), BARRAY)) return FALSE;
-  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
-  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!(0 <= from && from + size <= o->barray.size)) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   size = fwrite(o->barray.elt + from, 1, size, fp);
@@ -159,18 +159,18 @@ PRIM(fwrite)
 
 PRIM(fseek)
 {
-  int64_t off;
+  int off;
   FILE *fp;
   if (argc != 2) return FALSE;
   if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
-  if (!bi_int64((argv = argv->cons.cdr)->cons.car, &off)) return FALSE;
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &off)) return FALSE;
   if (off == -1) return fseek(fp, 0, SEEK_END) == 0;
   return fseek(fp, off, SEEK_SET)==0;
 }
 
 PRIM(ftell)
 {
-  int64_t pos;
+  int pos;
   FILE *fp;
   if (argc != 1) return FALSE;
   if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
