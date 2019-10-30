@@ -210,6 +210,10 @@
   ; (cdr (cdddr x))に等価
   (cdr (cdddr x)))
 
+(function apply (f :opt args)
+  (assert (and (operator? f) (list? args)))
+  (eval (cons f args)))
+
 (function identity (x)
   ; xを返す。恒等関数。
   x)
@@ -558,7 +562,7 @@
                       (and super (rec (find-class super)))))))
     (let (m (rec (find-class cls-sym)))
       (if m m
-          (throw '(:class 'Error :message "method not found"))))))
+          (throw '(:class Error :message "method not found"))))))
 
 (macro make-accessor (cls-sym var)
   (let (val (gensym) val? (gensym))
@@ -572,23 +576,18 @@
 
 (macro make-method-dispatcher (method-sym)
   (let (receiver (gensym) args (gensym))
-    (list macro method-sym (list receiver :rest args)
-          (list cons (list 'list 'find-method
-                           (list 'list '. receiver :class)
-                           (list quote (list quote method-sym)))
-                (list cons receiver args)))))
+    (list function method-sym (list receiver :rest args)
+          (list 'apply
+                (list 'find-method (list '. receiver :class) (list quote method-sym))
+                (list 'cons (list list quote receiver) args)))))
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
-  (let (Object? (same? cls-sym 'Object)
-        has-desc? (string? (car fields))
-        desc (and has-desc? (car fields))
-        fields (if has-desc? (cdr fields) fields))
+  (let (Object? (same? cls-sym 'Object))
     (assert (and (all-satisfy? fields symbol?) (not (class-exists? cls-sym))))
     (append
       (list begin0
             (list quote cls-sym)
             (list <- cls-sym (list quote (list :class 'Class
-                                               :desc desc
                                                :symbol cls-sym
                                                :super (if (not Object?) super)
                                                :features features
@@ -629,6 +628,7 @@
 
 (method Object .init ()
   ; オブジェクトの初期化メソッド。
+  ; 引数なしの場合は、オブジェクト生成時に自動で初期化される。
   ; クラスごとに必要に応じて固有の初期化処理を上書きする。
   self)
 
@@ -638,7 +638,7 @@
   (same? self o))
 
 (class Class ()
-  symbol desc super features fields methods)
+  symbol super features fields methods)
 
 (method Class .new ()
   (let (o nil cls self fields nil)
@@ -697,21 +697,21 @@
                    (lambda ()
                      (throw (.message (.new Exception) "illegal UTF-8")))
                 trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
-                mem (.new MemoryStream)
+                ms (.new MemoryStream)
                 b1 (.readByte self) b2 nil b3 nil b4 nil)
             (if (< b1 0) (return :EOF)
-                (< b1 0x80) (.writeByte mem b1)
+                (< b1 0x80) (.writeByte ms b1)
                 (< b1 0xc2) (utf8-exception)
                 (not (trail? (<- b2 (.readByte self)))) (utf8-exception)
                 (< b1 0xe0)    ; 2-byte character
                     (begin (if (= (bit-and b1 0x3e) 0) (utf8-exception))
-                           (.writeByte (.writeByte mem b1) b2))
+                           (.writeByte (.writeByte ms b1) b2))
                 (< b1 0xf0)    ; 3-byte character
                     (begin (<- b3 (.readByte self))
                            (if (or (and (= b1 0xe0) (= (bit-and b2 0x20) 0))
                                    (not (trail? b3)))
                                (utf8-exception))
-                           (.writeByte (.writeByte (.writeByte mem b1) b2) b3))
+                           (.writeByte (.writeByte (.writeByte ms b1) b2) b3))
                 (< b1 0xf8)    ; 4-byte character
                     (begin (<- b3 (.readByte self) b4 (.readByte self))
                            (if (or (not (trail? b3)) (not (trail? b4))
@@ -720,9 +720,9 @@
                            (.writeByte
                              (.writeByte
                                (.writeByte
-                                 (.writeByte mem b1) b2) b3) b4))
+                                 (.writeByte ms b1) b2) b3) b4))
                 (utf8-exception))
-            (.toString mem))
+            (.toString ms))
           (throw (.message (.new Exception) "unsupport encoding"))))
 
 (method Stream .readLine (:rest args)
@@ -754,7 +754,8 @@
       (.buf-size self (* (.buf-size self) 2)))
     (<- new-buf (byte-array (.buf-size self)))
     (array-copy (.buf self) 0 new-buf 0  (.wr-pos self))
-    (.buf self new-buf)))
+    (.buf self new-buf))
+  self)
 
 (method MemoryStream .writeByte (byte)
   (assert (byte? byte))
@@ -762,7 +763,8 @@
     (if (< pos (.buf-size self))
         (begin ([] (.buf self) pos byte)
                (.wr-pos self (++ pos)))
-        (.writeByte (.extend self 1) byte))))
+        (.writeByte (.extend self 1) byte)))
+  self)
 
 (method MemoryStream .readByte ()
   (let (pos (.rd-pos self))
@@ -807,7 +809,7 @@
     (<- stream (.new MemoryStream))
     (.writeString stream string))
   (.stream self stream)
-  (.next self (.readByte (.stream self)))
+  (.next self (.readByte stream))
   (.buf self (.new MemoryStream))
   self)
 
@@ -869,7 +871,7 @@
     (<- stream (.new MemoryStream))
     (.writeString stream string))
   (.stream self stream)
-  (.next self (.readChar (.stream self)))
+  (.next self (.readChar stream))
   (.buf self (.new MemoryStream))
   self)
 
@@ -926,32 +928,14 @@
   ; parenリーダクラス
   )
 
-
-
-
-
 (print (os_clock))
 
-(let ($encoding :UTF-8)
-  (<- ar (.init (.new ByteAheadReader)
-                :string
-                "a
-                b c"
-                ))
-  (print (.get ar))
-  (print (.get (.skipSpace ar)))
-  (print (.token ar)))
-(print :aaa)
-(let ($encoding :UTF-8)
-  (<- ar (.init (.new AheadReader)
-                :string
-                "あ
-                b c"
-                ))
-  (print (.buf (.buf ar)))
-  (print (.get ar))
-  (print (.get (.skipSpace ar)))
-  (print (.token ar)))
+; (let ($encoding :UTF-8)
+;   (<- ar (.init (.new AheadReader) :string "あい"))
+;   (print :init)
+;   (print (.get ar))
+;   (print (.get ar))
+;   (print (.token ar)))
 
 ; (function fib (n)
 ;   (if (= n 0) 0
@@ -959,14 +943,19 @@
 ;           (+ (fib (- n 1)) (fib (- n 2))))))
 ; (print (fib 30))
 
+; (macro xdefmethod (method-sym)
+;   (let (receiver (gensym) args (gensym))
+;     (list 'function method-sym (list receiver :rest args)
+;           (list 'cons receiver args))))
+; (xdefmethod xnew)
+; (print (xnew '(:class Error) 1 2 3))
+; ((:class Error) 1 2 3)
+
+
 (print (os_clock))
 
 ; ./paren
 ; )
-;
-; ./paren -s xxx.p arg1 arg2 ...
-;   -s scripting mode
-;      invoke main method
 ;
 ;  /paren xxx.p
 ;      load xxx.p

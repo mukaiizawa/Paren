@@ -54,10 +54,10 @@ PRIM(barray_new)
 static int barray_access(object a, int i, object v, object *result)
 {
   if (i >= a->barray.size) return FALSE;
-  if (v == NULL) *result = object_bytes[(unsigned char)(a->barray.elt[i])];
+  if (v == NULL) *result = gc_new_xint((unsigned char)(a->barray.elt[i]));
   else {
     if (!bytep(v)) return FALSE;
-    a->barray.elt[i] = (unsigned char)(v->xint.val);
+    a->barray.elt[i] = (char)(v->xint.val);
     *result = v;
   }
   return TRUE;
