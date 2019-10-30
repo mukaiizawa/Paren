@@ -448,7 +448,7 @@
                   (rec (cddr rest))))
         pair (rec al))
     (if (nil? v?) (cadr pair)
-        (car (cdr pair) v))))
+        (car! (cdr pair) v))))
 
 ; number
 
@@ -653,7 +653,16 @@
         (.init o)
         o)))
 
-;; exception
+;; error, exception
+
+(class Error ()
+  ; エラークラス。
+  ; 継続が困難な状態や、到達すべきでない状態を表す。
+  ; throwされた場合は、原則としてcatchオペレーターで補足すべきではない。
+  message)
+
+(function Error.shouldBeImplemented ()
+  (throw (.message (.new Error) "should be implemented")))
 
 (class Exception ()
   ; 例外クラス。
@@ -670,15 +679,6 @@
     (if msg (+ class-name " -- " msg)
         class-name)))
 
-(class Error ()
-  ; エラークラス。
-  ; 継続が困難な状態や、到達すべきでない状態を表す。
-  ; throwされた場合は、原則としてcatchオペレーターで補足すべきではない。
-  message)
-
-(function Error.shouldBeImplemented ()
-  (throw (.message (.new Error) "should be implemented")))
-
 ;; stream I/O
 
 (class Stream ()
@@ -691,8 +691,8 @@
 (method Stream .writeByte (:rest args)
   (Error.shouldBeImplemented))
 
-(method Stream .readChar (:opt (encoding (dynamic $encoding)))
-  (if (same? encoding :UTF-8)
+(method Stream .readChar ()
+  (if (same? (dynamic $encoding) :UTF-8)
           (let (utf8-exception
                    (lambda ()
                      (throw (.message (.new Exception) "illegal UTF-8")))
@@ -702,7 +702,7 @@
             (if (< b1 0) (return :EOF)
                 (< b1 0x80) (.writeByte mem b1)
                 (< b1 0xc2) (utf8-exception)
-                (not (trail? (<- b2 (.readByte self))) (utf8-exception))
+                (not (trail? (<- b2 (.readByte self)))) (utf8-exception)
                 (< b1 0xe0)    ; 2-byte character
                     (begin (if (= (bit-and b1 0x3e) 0) (utf8-exception))
                            (.writeByte (.writeByte mem b1) b2))
@@ -723,7 +723,10 @@
                                  (.writeByte mem b1) b2) b3) b4))
                 (utf8-exception))
             (.toString mem))
-          (throw (.message (.new Error) "unsupport encoding"))))
+          (throw (.message (.new Exception) "unsupport encoding"))))
+
+(method Stream .readLine (:rest args)
+  (Error.shouldBeImplemented))
 
 (method Stream .writeString (s)
   (assert (string? s))
@@ -731,21 +734,6 @@
     (dotimes (i (byte-array-length ba))
       (.writeByte self ([] ba i))))
   self)
-
-(class FileStream (Stream)
-  ; ファイルストリームクラス
-  fp)
-
-(method FileStream .init (:key fp)
-  (assert fp)
-  (.fp self fp))
-
-(method FileStream .readByte ()
-  (fgetc (.fp self)))
-
-(method FileStream .writeByte (byte)
-  (assert (byte? byte))
-  (fputc byte (.fp self)))
 
 (class MemoryStream (Stream)
   ; メモリ上に内容を保持するストリームクラス。
@@ -790,6 +778,21 @@
 (method MemoryStream .reset ()
   (.rd-pos self 0)
   (.wr-pos self 0))
+
+(class FileStream (Stream)
+  ; ファイルストリームクラス
+  fp)
+
+(method FileStream .init (:key fp)
+  (assert fp)
+  (.fp self fp))
+
+(method FileStream .readByte ()
+  (fgetc (.fp self)))
+
+(method FileStream .writeByte (byte)
+  (assert (byte? byte))
+  (fputc byte (.fp self)))
 
 (class ByteAheadReader ()
   ; 先読みリーダー。
@@ -853,6 +856,41 @@
     (.skip self))
   self)
 
+(class AheadReader (ByteAheadReader)
+  ; 先読みリーダー。
+  ; 文字列やストリームから1文字先読みを行う機能を提供するクラス。
+  )
+
+(method AheadReader .init (:key string stream)
+  ; 文字列または、ストリームのいずれかを用いてレシーバを初期化する。
+  (assert (or (and string (string? string))
+              (and (object? stream) (is-a? stream Stream))))
+  (when string
+    (<- stream (.new MemoryStream))
+    (.writeString stream string))
+  (.stream self stream)
+  (.next self (.readChar (.stream self)))
+  (.buf self (.new MemoryStream))
+  self)
+
+(method AheadReader .skip ()
+  ; 次の1文字を読み飛ばし、返す。
+  (.ensureNotEOFReached self)
+  (begin0 (.next self)
+          (.next self (.readChar (.stream self)))))
+
+(method AheadReader .put (s)
+  ; ストリームとは無関係にトークンの末尾に文字列sを追加する。
+  (assert (string? s))
+  (.writeString (.buf self) s))
+
+(method AheadReader .skipSpace ()
+  ; スペース、改行文字を読み飛ばし、レシーバを返す。
+  (while (and (not (.eof? self))
+              (find '(" " "\r" "\n") (.next self) :test string=))
+    (.skip self))
+  self)
+
 ;; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
     $stdout (.init (.new FileStream) :fp (fp 1))
@@ -882,6 +920,16 @@
   (.writeString stream s)
   s)
 
+; paren reader
+
+(class ParenReader (AheadReader)
+  ; parenリーダクラス
+  )
+
+
+
+
+
 (print (os_clock))
 
 (let ($encoding :UTF-8)
@@ -890,6 +938,17 @@
                 "a
                 b c"
                 ))
+  (print (.get ar))
+  (print (.get (.skipSpace ar)))
+  (print (.token ar)))
+(print :aaa)
+(let ($encoding :UTF-8)
+  (<- ar (.init (.new AheadReader)
+                :string
+                "あ
+                b c"
+                ))
+  (print (.buf (.buf ar)))
   (print (.get ar))
   (print (.get (.skipSpace ar)))
   (print (.token ar)))
