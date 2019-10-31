@@ -14,8 +14,9 @@
  *   0 -- frame argument.
  *   1 -- current environment.
  *   2 -- thrown object.
+ *   3 -- stack frame pointer.
  */
-#define REG_SIZE 3
+#define REG_SIZE 4
 static object reg[REG_SIZE];
 
 static long cycle;
@@ -362,6 +363,7 @@ static void push_labels_frame(object args)
 
 static void push_return_addr_frame(void)
 {
+  st_push(reg[3]);
   fs_push(alloc_frame(RETURN_ADDR_FRAME));
 }
 
@@ -399,8 +401,8 @@ static void pop_apply_prim_frame(void)
   int (*prim)(int, object, object *);
   args = reg[0];
   prim = xsplay_find(&prim_splay, fs_pop()->local_vars[0]);
-  if ((*prim)(object_list_len(args), args, &(reg[0]))) st_pop();
-  else if (error_msg == NULL) ip_mark_error("primitive failed");
+  if ((*prim)(object_list_len(args), args, &(reg[0]))) return;
+  if (error_msg == NULL) ip_mark_error("primitive failed");
 }
 
 #ifndef NDEBUG
@@ -448,16 +450,15 @@ static void pop_eval_frame(void)
       return;
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
-        st_push(reg[0]);
         ip_mark_error("unbind symbol");
         return;
       }
       reg[0] = s;
       return;
     case CONS:
-      st_push(reg[0]);
       push_fetch_operator_frame(reg[0]->cons.cdr);
       push_eval_frame();
+      reg[3] = reg[0];
       reg[0] = reg[0]->cons.car;
       return;
     default: xassert(FALSE);
@@ -492,10 +493,11 @@ static void pop_fetch_operator_frame(void)
   object args;
   int (*special)(int, object);
   args = fs_pop()->local_vars[0];
+  push_return_addr_frame();
   switch (type(reg[0])) {
     case SYMBOL:
       if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
-        if ((*special)(object_list_len(args), args)) st_pop();
+        (*special)(object_list_len(args), args);
         return;
       }
       if (xsplay_find(&prim_splay, reg[0]) != NULL) {
@@ -505,13 +507,11 @@ static void pop_fetch_operator_frame(void)
       }
       break;
     case MACRO:
-      push_return_addr_frame();
       push_eval_frame();
       push_apply_frame(reg[0]);
       reg[0] = args;
       return;
     case LAMBDA:
-      push_return_addr_frame();
       push_apply_frame(reg[0]);
       push_eval_args_frame(args);
       return;
@@ -982,7 +982,6 @@ SPECIAL(throw)
 SPECIAL(catch)
 {
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
-  st_push(reg[0]);
   push_fetch_handler_frame(argv->cons.cdr);
   push_eval_frame();
   reg[0] = argv->cons.car;
@@ -1015,6 +1014,27 @@ PRIM(eval)
   push_eval_frame();
   reg[0] = argv->cons.car;
   return TRUE;
+}
+
+PRIM(apply)
+{
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  switch (type(argv->cons.car)) {
+    case SYMBOL:
+      if (xsplay_find(&prim_splay, argv->cons.car) == NULL) break;
+      else {
+        push_apply_prim_frame(argv->cons.car);
+        reg[0] = argv->cons.cdr->cons.car;
+        return TRUE;
+      }
+    case LAMBDA:
+      push_apply_frame(argv->cons.car);
+      reg[0] = argv->cons.cdr->cons.car;
+      return TRUE;
+    default: break;
+  }
+  ip_mark_error("requires function or symbol(built in function) to apply");
+  return FALSE;
 }
 
 // trace and debug
@@ -1114,6 +1134,7 @@ static object eval(object expr)
   reg[0] = expr;
   reg[1] = object_toplevel;
   reg[2] = object_nil;
+  reg[3] = object_nil;
   push_eval_frame();
   while (TRUE) {
     xassert(sp >= 0);

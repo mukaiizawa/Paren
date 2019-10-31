@@ -210,10 +210,6 @@
   ; (cdr (cdddr x))に等価
   (cdr (cdddr x)))
 
-(function apply (f :opt args)
-  (assert (and (operator? f) (list? args)))
-  (eval (cons f args)))
-
 (function identity (x)
   ; xを返す。恒等関数。
   x)
@@ -450,7 +446,7 @@
                                 '(:class 'Error :message "property not found"))
                   (same? (car rest) k) rest
                   (rec (cddr rest))))
-        pair (rec al))
+            pair (rec al))
     (if (nil? v?) (cadr pair)
         (car! (cdr pair) v))))
 
@@ -578,8 +574,10 @@
   (let (receiver (gensym) args (gensym))
     (list function method-sym (list receiver :rest args)
           (list 'apply
-                (list 'find-method (list '. receiver :class) (list quote method-sym))
-                (list 'cons (list list quote receiver) args)))))
+                (list 'find-method
+                      (list '. receiver :class)
+                      (list quote method-sym))
+                (list 'cons receiver args)))))
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
   (let (Object? (same? cls-sym 'Object))
@@ -930,27 +928,13 @@
 
 (print (os_clock))
 
-; (let ($encoding :UTF-8)
-;   (<- ar (.init (.new AheadReader) :string "あい"))
-;   (print :init)
-;   (print (.get ar))
-;   (print (.get ar))
-;   (print (.token ar)))
-
-; (function fib (n)
-;   (if (= n 0) 0
-;       (if (= n 1) 1
-;           (+ (fib (- n 1)) (fib (- n 2))))))
-; (print (fib 30))
-
-; (macro xdefmethod (method-sym)
-;   (let (receiver (gensym) args (gensym))
-;     (list 'function method-sym (list receiver :rest args)
-;           (list 'cons receiver args))))
-; (xdefmethod xnew)
-; (print (xnew '(:class Error) 1 2 3))
-; ((:class Error) 1 2 3)
-
+(let ($encoding :UTF-8)
+  (<- ar (.init (.new AheadReader) :string "あいう"))
+  (print :init)
+  (print (.get ar))
+  (print (.get ar))
+  (print (.get ar))
+  (print (.token ar)))
 
 (print (os_clock))
 
