@@ -926,17 +926,53 @@
   ; parenリーダクラス
   )
 
+; ------------------------------------------------------------------------------
+; testing for development.
 (print (os_clock))
 
-(let ($encoding :UTF-8)
-  (<- ar (.init (.new AheadReader) :string "あいう"))
-  (print :init)
-  (print (.get ar))
-  (print (.get ar))
-  (print (.get ar))
-  (print (.token ar)))
+(class Point ()
+  ; 二次元直行座標系上の点を表す。
+  x y)
+
+(method Point .init (:key (x 0) (y 0))
+  (.x self x)
+  (.y self y)
+  self)
+
+(method Point .toString ()
+  (reduce (list
+            "(" (number->string (.x self)) "," (number->string (.y self)) ")")
+          string+
+          :identity ""))
+
+(method Point .= (p)
+  (assert (is-a? p Point))
+  (and (= (.x self) (.x p)) (= (.y self) (.y p))))
+
+(method Point .+ (p)
+  (assert (is-a? p Point))
+  (.init (.new Point)
+         :x (+ (.x self) (.x p))
+         :y (+ (.y self) (.y p))))
+
+(<- p (.init (.new Point) :x 3 :y 4))
+(assert (and (= (.x p) 3) (= (.y p) 4)))
+(assert (string= (.toString p) "(3,4)"))
+(assert (.= p (.init (.new Point) :x 3 :y 4)))
+(assert (not (.= p (.init (.new Point) :x 2 :y 4))))
+(assert (not (.= p (.init (.new Point) :x 3 :y 5))))
+(assert (not (.= p (.init (.new Point) :x 2 :y 5))))
+
+; (let ($encoding :UTF-8)
+;   (<- ar (.init (.new AheadReader) :string "あいう"))
+;   (print :init)
+;   (print (.get ar))
+;   (print (.get ar))
+;   (print (.get ar))
+;   (print (.token ar)))
 
 (print (os_clock))
+; ------------------------------------------------------------------------------
 
 ; ./paren
 ; )
