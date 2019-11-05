@@ -581,13 +581,13 @@ static void pop_return_frame(void)
 static void pop_throw_frame(void)
 {
   object handler, rewind_st;
-  int rewind_rp;
+  int rewind_sp;
   reg[2] = reg[0];
-  rewind_rp = sp;
+  rewind_sp = sp;
   rewind_st = symbol_find(object_toplevel, object_st);
   while (TRUE) {
     if (sp == 0) {
-      sp = rewind_rp;
+      sp = rewind_sp;
       symbol_bind(object_toplevel, object_st, rewind_st);
       ip_mark_error(NULL);
       return;
@@ -1035,6 +1035,18 @@ PRIM(apply)
   }
   ip_mark_error("requires function or symbol(built in function) to apply");
   return FALSE;
+}
+
+PRIM(bound_p)
+{
+  object s;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!typep((s = argv->cons.car), SYMBOL)) {
+    ip_mark_error("required symbol");
+    return FALSE;
+  }
+  *result = object_bool(symbol_find_propagation(reg[1], s) != NULL);
+  return TRUE;
 }
 
 // trace and debug

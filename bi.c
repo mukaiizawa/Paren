@@ -149,9 +149,11 @@ static char *symbol_name_map[] = {
   "symbol_p", "symbol?",
   "symbol_to_keyword", "symbol->keyword",
   "symbol_to_string", "symbol->string",
+  "bound_p", "bound?",
 
-  "lambda_parameter", "lambda-parameter",
   "lambda_body", "lambda-body",
+  "lambda_p", "lambda?",
+  "lambda_parameter", "lambda-parameter",
   "macro_p", "macro?",
 
   NULL

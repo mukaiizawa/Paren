@@ -5,7 +5,11 @@
 (macro function (name args :rest body)
   ; 仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
   ; argsの書式はspecial operatorのlambdaに準ずる。
-  (cons <- (cons name (cons (cons lambda (cons args body)) nil))))
+  (if (bound? name) (throw (list :class Error
+                                 :message (string+
+                                            (symbol->string name)
+                                            " symbol already bound")))
+      (cons <- (cons name (cons (cons lambda (cons args body)) nil)))))
 
 (macro begin0 (:rest body)
   ; bodyを逐次評価し、最初に評価した結果を返す。
@@ -573,11 +577,17 @@
 (macro make-method-dispatcher (method-sym)
   (let (receiver (gensym) args (gensym))
     (list function method-sym (list receiver :rest args)
+          :method
+          (list assert (list object? receiver))
           (list 'apply
                 (list 'find-method
                       (list '. receiver :class)
                       (list quote method-sym))
                 (list 'cons receiver args)))))
+
+(function method? (o)
+  (and (lambda? o)
+       (same? (car (lambda-body o)) :method)))
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
   (let (Object? (same? cls-sym 'Object))
@@ -597,12 +607,16 @@
 
 (macro method (cls-sym method-sym args :rest body)
   (assert (class-exists? cls-sym))
-  (list begin
-        (list make-method-dispatcher method-sym)
-        (list . cls-sym :methods
-              (list cons (list quote method-sym)
-                    (list cons (cons lambda (cons (cons 'self args) body))
-                          (list '. cls-sym :methods))))))
+  (if (and (bound? method-sym)
+           (not (method? (eval method-sym))))
+      (throw '(:class Error :message "is not a method"))
+      (list begin
+            (if (not (bound? method-sym))
+                (list make-method-dispatcher method-sym))
+            (list . cls-sym :methods
+                  (list cons (list quote method-sym)
+                        (list cons (cons lambda (cons (cons 'self args) body))
+                              (list '. cls-sym :methods)))))))
 
 (function object? (x)
   ; xがオブジェクトの場合trueを、そうでなければnilを返す。
