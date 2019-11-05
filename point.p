@@ -1,24 +1,30 @@
 ; Point class
 
 (class Point ()
-  "二次元直交座標クラス
-  このクラスのオブジェクトはイミュータブルである。"
-  :x :y)
+  ; 二次元直行座標系上の点を表す。
+  x y)
 
 (method Point .init (:key (x 0) (y 0))
   (.x self x)
   (.y self y)
   self)
 
-(method Point .equal? (p)
-  (precondition (is-a? p Point))
+(method Point .toString ()
+  (string+ "(" (number->string (.x self)) "," (number->string (.y self)) ")"))
+(assert (string= (.toString p) "(3,4)"))
+
+(method Point .equal (p)
+  (assert (is-a? p Point))
   (and (= (.x self) (.x p)) (= (.y self) (.y p))))
-(assert (.equal? (.init (.new Point)) (.init (.new Point))))
-(assert !(.equal? (.init (.new Point)) (.init (.new Point) :x 1 :y 2)))
 
 (method Point .add (p)
-  (precondition (is-a? p Point))
+  (assert (is-a? p Point))
   (.init (.new Point)
          :x (+ (.x self) (.x p))
          :y (+ (.y self) (.y p))))
-(assert (.equal? (.add (.init (.new Point) :x 1) (.init (.new Point) :y 1)) (.init (.new Point) :x 1 :y 1)))
+
+(<- p (.init (.new Point) :x 3 :y 4))
+(assert (.equal p (.init (.new Point) :x 3 :y 4)))
+(assert (not (.equal p (.init (.new Point) :x 2 :y 4))))
+(assert (not (.equal p (.init (.new Point) :x 3 :y 5))))
+(assert (not (.equal p (.init (.new Point) :x 2 :y 5))))
