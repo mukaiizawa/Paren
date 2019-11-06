@@ -41,8 +41,7 @@ Parenのプログラムは演算子を前置し、被演算子と共に括弧で
 ## hello world
 あるプログラミング言語を習得する唯一の方法は、その言語でプログラムを書くことである。そしてそれは、慣習により次のプログラムを書くことから始まる。
 
-    次の文字列を印字せよ。
-    hello world
+    文字列'hello world'を印字せよ。
 
 文字列を印字するにはprintを使用する。
 
@@ -60,7 +59,7 @@ printの評価すると二行出力される。一行目がprintがコンソー�
     ; copy 第一版
     (function copy ()
       (let (ch nil)
-        (while (/= ch :EOF)
+        (while (different? ch :EOF)
           (<- ch (read-byte))
           (write-byte ch))))
 
@@ -72,13 +71,15 @@ printの評価すると二行出力される。一行目がprintがコンソー�
 
     Parenのすべての式は評価されると値を返す。
 
-という性質を用いてより簡潔に書ける。束縛オペレータ―はシンボルに束縛した値を返す。その性質を利用した版を以下に示す。
+という性質を用いてより簡潔に書ける。
 
     ; copy 第二版
     (function copy ()
       (let (ch nil)
-        (while (/= (<- c (read-byte)) :EOF)
+        (while (different? (<- c (read-byte)) :EOF)
           (write-byte ch))))
+
+束縛オペレータ―はシンボルに束縛した値を返すため、このようにdifferent?の中に記述することができる。
 
 ただし、返り値を濫用するプログラムは可読性を下げることがあるため注意が必要である。
 
