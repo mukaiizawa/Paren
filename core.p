@@ -218,6 +218,10 @@
   ; xを返す。恒等関数。
   x)
 
+(function different? (x y)
+  ; 式(not (same? x y))に等価。
+  (not (same? x y)))
+
 (function nil? (x)
   ; 式(not x)に等価。
   (not x))
