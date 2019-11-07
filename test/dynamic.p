@@ -1,16 +1,16 @@
 ; dynamic
 
-(symbol-bind $x 0)
+(<- $x 0)
 
-(symbol-bind xstatic
-             (lambda ()
-               (let (x $x)
-                 x)))
+(<- xstatic
+    (lambda ()
+      (let (x $x)
+        x)))
 
-(symbol-bind xdynamic
-             (lambda ()
-               (let (x (dynamic $x))
-                 x)))
+(<- xdynamic
+    (lambda ()
+      (let (x (dynamic $x))
+        x)))
 
-(print (number= (let ($x 1) (xstatic)) 0))
-(print (number= (let ($x 1) (xdynamic)) 1))
+(assert (= (let ($x 1) (xstatic)) 0))
+(assert (= (let ($x 1) (xdynamic)) 1))

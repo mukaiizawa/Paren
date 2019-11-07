@@ -1,15 +1,15 @@
 ; symbol-bind/let
 
-(symbol-bind a :v)
+(<- a :v)
 
-(print (same? a :v))
+(assert (same? a :v))
 
 (let ()
-  (print (same? a :v)))
+  (assert (same? a :v)))
 
 (let (a :x b :y c :z)
-  (print (same? a :x))
-  (print (same? b :y))
-  (print (same? c :z)))
+  (assert (same? a :x))
+  (assert (same? b :y))
+  (assert (same? c :z)))
 
-(print (same? a :v))
+(assert (same? a :v))

@@ -10,6 +10,6 @@
                       (car l))))
         (rec args))))
 
-(print (and))
-(print (same? (and :x :y :z) :z))
-(print (same? (and :x nil :z) nil))
+(assert (and))
+(assert (same? (and :x :y :z) :z))
+(assert (same? (and :x nil :z) nil))

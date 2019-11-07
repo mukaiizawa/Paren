@@ -1,5 +1,5 @@
 ; quote
 
-(symbol-bind a (quote a))
+(<- a (quote a))
 
-(print (same? 'a a))
+(assert (same? 'a a))

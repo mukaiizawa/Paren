@@ -1,6 +1,5 @@
 ; labels/goto
 
-(unwind-protect (return (print 0))
-                (print 1)
-                (print 2)
-                (print (+ 1 2)))
+(assert (= (unwind-protect (return 0) 1 2) 0))
+(unwind-protect (<- a 0) (<- a 1))
+(assert (= a 1))
