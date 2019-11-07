@@ -208,7 +208,6 @@ static void make_initial_objects(void)
   object_opt = keyword_new("opt");
   object_quote = symbol_new("quote");
   object_rest = keyword_new("rest");
-  object_st = symbol_new("$stack-trace");
   object_toplevel = gc_new_env(object_nil);
   object_true = symbol_new("true");
   object_os = symbol_new("$os");
@@ -226,7 +225,6 @@ static void make_initial_objects(void)
   for (i = 0; i < 256; i++) object_bytes[i] = gc_new_bytes(i);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
-  bind_symbol(object_st, object_nil);
   bind_special();
 }
 

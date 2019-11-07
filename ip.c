@@ -15,8 +15,9 @@
  *   1 -- current environment.
  *   2 -- thrown object.
  *   3 -- stack frame pointer.
+ *   4 -- stack trace
  */
-#define REG_SIZE 4
+#define REG_SIZE 5
 static object reg[REG_SIZE];
 
 static long cycle;
@@ -94,18 +95,13 @@ static void symbol_bind_propagation(object e, object s, object v)
 
 static void st_push(object o)
 {
-  object p;
-  p = symbol_find(object_toplevel, object_st);
-  xassert(p != NULL);
-  symbol_bind(object_toplevel, object_st, gc_new_cons(o, p));
+  reg[4] = gc_new_cons(o, reg[4]);
 }
 
 static void st_pop(void)
 {
-  object o;
-  o = symbol_find(object_toplevel, object_st);
-  xassert(o != object_nil);
-  symbol_bind(object_toplevel, object_st, o->cons.cdr);
+  xassert(reg[4] != object_nil);
+  reg[4] = reg[4]->cons.cdr;
 }
 
 // frame
@@ -151,10 +147,12 @@ struct frame {
 #define HANDLER_FRAME 12
 #define IF_FRAME 13
 #define LABELS_FRAME 14
-#define RETURN_ADDR_FRAME 15
-#define RETURN_FRAME 16
-#define SWITCH_ENV_FRAME 17
-#define THROW_FRAME 18
+#define QUOTE_FRAME 15
+#define RETURN_ADDR_FRAME 16
+#define RETURN_FRAME 17
+#define SWITCH_ENV_FRAME 18
+#define THROW_FRAME 19
+#define UNWIND_PROTECT_FRAME 20
   object local_vars[0];
 };
 
@@ -178,7 +176,9 @@ static int frame_size(int type)
     case HANDLER_FRAME:
     case IF_FRAME:
     case LABELS_FRAME:
+    case QUOTE_FRAME:
     case SWITCH_ENV_FRAME:
+    case UNWIND_PROTECT_FRAME:
       return 1;
     case BIND_LOCAL_VAR_FRAME:
     case EVAL_ARGS_FRAME:
@@ -207,6 +207,7 @@ char *frame_name(int type)
     case HANDLER_FRAME: return "HANDLER_FRAME";
     case IF_FRAME: return "IF_FRAME";
     case LABELS_FRAME: return "LABELS_FRAME";
+    case QUOTE_FRAME: return "QUOTE_FRAME";
     case RETURN_ADDR_FRAME: return "RETURN_ADDR_FRAME";
     case RETURN_FRAME: return "RETURN_FRAME";
     case SWITCH_ENV_FRAME: return "SWITCH_ENV_FRAME";
@@ -264,11 +265,14 @@ static struct frame *fs_pop(void)
 
 static void pop_switch_env(void);
 static void pop_return_addr_frame(void);
+static void pop_unwind_protect_frame(void);
+
 static void fs_rewind_pop(void)
 {
   switch (fs_top()->type) {
     case SWITCH_ENV_FRAME: pop_switch_env(); break;
     case RETURN_ADDR_FRAME: pop_return_addr_frame(); break;
+    case UNWIND_PROTECT_FRAME: xassert(FALSE); break;
     default: fs_pop(); break;
   }
 }
@@ -361,6 +365,11 @@ static void push_labels_frame(object args)
   fs_push(alloc_frame1(LABELS_FRAME, args));
 }
 
+static void push_quote_frame(object arg)
+{
+  fs_push(alloc_frame1(QUOTE_FRAME, arg));
+}
+
 static void push_return_addr_frame(void)
 {
   st_push(reg[3]);
@@ -381,6 +390,11 @@ static void push_switch_env_frame(object env)
 static void push_throw_frame(void)
 {
   fs_push(alloc_frame(THROW_FRAME));
+}
+
+static void push_unwind_protect_frame(object argv)
+{
+  fs_push(alloc_frame1(UNWIND_PROTECT_FRAME, argv));
 }
 
 static void parse_lambda_list(object env, object params, object args);
@@ -493,7 +507,6 @@ static void pop_fetch_operator_frame(void)
   object args;
   int (*special)(int, object);
   args = fs_pop()->local_vars[0];
-  push_return_addr_frame();
   switch (type(reg[0])) {
     case SYMBOL:
       if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
@@ -507,11 +520,13 @@ static void pop_fetch_operator_frame(void)
       }
       break;
     case MACRO:
+      push_return_addr_frame();
       push_eval_frame();
       push_apply_frame(reg[0]);
       reg[0] = args;
       return;
     case LAMBDA:
+      push_return_addr_frame();
       push_apply_frame(reg[0]);
       push_eval_args_frame(args);
       return;
@@ -559,6 +574,11 @@ static void pop_if_frame(void)
   } else if ((args = args->cons.cdr) != object_nil) push_if_frame(args);
 }
 
+static void pop_quote_frame(void)
+{
+  reg[0] = fs_pop()->local_vars[0];
+}
+
 static void pop_return_addr_frame(void)
 {
   fs_pop();
@@ -572,23 +592,32 @@ static void pop_switch_env(void)
 
 static void pop_return_frame(void)
 {
+  object args;
   while (sp != 0) {
-    if (fs_top()->type == RETURN_ADDR_FRAME) return;
-    fs_rewind_pop();
+    switch (fs_top()->type) {
+      case RETURN_ADDR_FRAME:
+        return;
+      case UNWIND_PROTECT_FRAME: 
+        args = fs_pop()->local_vars[0];
+        push_return_frame();
+        push_quote_frame(reg[0]);
+        push_eval_sequential_frame(args);
+        return;
+      default:
+        fs_rewind_pop();
+    }
   }
 }
 
 static void pop_throw_frame(void)
 {
-  object handler, rewind_st;
+  object handler;
   int rewind_sp;
   reg[2] = reg[0];
   rewind_sp = sp;
-  rewind_st = symbol_find(object_toplevel, object_st);
   while (TRUE) {
     if (sp == 0) {
       sp = rewind_sp;
-      symbol_bind(object_toplevel, object_st, rewind_st);
       ip_mark_error(NULL);
       return;
     }
@@ -602,6 +631,11 @@ static void pop_throw_frame(void)
   push_return_addr_frame();
   push_apply_frame(handler);
   reg[0] = gc_new_cons(reg[2], object_nil);
+}
+
+static void pop_unwind_protect_frame(void)
+{
+  push_eval_sequential_frame(fs_pop()->local_vars[0]);
 }
 
 // validation etc.
@@ -934,6 +968,15 @@ SPECIAL(if)
   return TRUE;
 }
 
+SPECIAL(unwind_protect)
+{
+  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
+  push_unwind_protect_frame(argv->cons.cdr);
+  push_eval_frame();
+  reg[0] = argv->cons.car;
+  return TRUE;
+}
+
 SPECIAL(labels)
 {
   push_labels_frame(argv);
@@ -1060,7 +1103,7 @@ static void sweep_env(int depth, void *sym, void *val)
 
 static void describe_st(void)
 {
-  object st, e, msg;
+  object e, msg;
   char buf[MAX_STR_LEN];
   if (error_msg != NULL) {
     e = object_error;
@@ -1076,10 +1119,9 @@ static void describe_st(void)
   printf("%s", object_describe(e, buf));
   if (msg != object_nil)
     printf(" -- %s.\n", object_describe(msg, buf));
-  st = symbol_find(object_toplevel, object_st);
-  while (st != object_nil) {
-    printf("	at: %s\n", object_describe(st->cons.car, buf));
-    st = st->cons.cdr;
+  while (reg[4] != object_nil) {
+    printf("	at: %s\n", object_describe(reg[4]->cons.car, buf));
+    reg[4] = reg[4]->cons.cdr;
   }
 }
 
@@ -1140,14 +1182,15 @@ static void trap(void)
   }
 }
 
-static object eval(object expr)
+static object ip_main(void)
 {
   xassert(sp == 0);
-  reg[0] = expr;
+  reg[0] = object_nil;
   reg[1] = object_toplevel;
   reg[2] = object_nil;
   reg[3] = object_nil;
-  push_eval_frame();
+  reg[4] = object_nil;
+  push_apply_frame(object_boot);
   while (TRUE) {
     xassert(sp >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
@@ -1170,10 +1213,12 @@ static object eval(object expr)
       case HANDLER_FRAME: fs_pop(); break;
       case IF_FRAME: pop_if_frame(); break;
       case LABELS_FRAME: fs_pop(); break;
+      case QUOTE_FRAME: pop_quote_frame(); break;
       case RETURN_FRAME: pop_return_frame(); break;
       case RETURN_ADDR_FRAME: pop_return_addr_frame(); break;
       case SWITCH_ENV_FRAME: pop_switch_env(); break;
       case THROW_FRAME: pop_throw_frame(); break;
+      case UNWIND_PROTECT_FRAME: pop_unwind_protect_frame(); break;
       default: xassert(FALSE);
     }
     cycle++;
@@ -1188,13 +1233,8 @@ void ip_mark(void)
 
 void ip_start(void)
 {
-  char buf[MAX_STR_LEN];
-  object o, p;
   cycle = sp = 0;
   xarray_init(&fb);
   ip_trap_code = TRAP_NONE;
-  for (o = object_boot->lambda.body; o != object_nil; o = o->cons.cdr) {
-    p = eval(o->cons.car);
-    if (VERBOSE_P) printf("%s\n", object_describe(p, buf));
-  }
+  ip_main();
 }

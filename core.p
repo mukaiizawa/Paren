@@ -959,6 +959,16 @@
 (print (os_clock))
 ; ------------------------------------------------------------------------------
 
+(unwind-protect (return (print 0))
+                (print 1)
+                (print 2)
+                (print (+ 1 2)))
+
+(return 0)
+(print 0)
+(print 0)
+
+
 ; ./paren
 ; )
 ;

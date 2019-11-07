@@ -50,8 +50,6 @@
 
 // runtime
 
-#define VERBOSE_P FALSE
-
 #define CALL_STACK_SIZE (1 * 1024)
 
 #define MAX_HEAP_SIZE (256 * 1024 * 1024)
