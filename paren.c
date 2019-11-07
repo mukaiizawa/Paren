@@ -4,6 +4,7 @@
 #include "xgetopt.h"
 #include "xsplay.h"
 #include "xarray.h"
+#include "pf.h"
 #include "object.h"
 #include "lex.h"
 #include "gc.h"
@@ -15,7 +16,7 @@
 char *core_fn;
 int dump_object_table_p;
 
-static void parse_opt(int argc,char *argv[])
+static void parse_opt(int argc, char *argv[])
 {
   int ch;
   core_fn = "./core.p";
@@ -230,8 +231,17 @@ static void make_initial_objects(void)
 
 int main(int argc, char *argv[])
 {
+  char buf[MAX_STR_LEN];
   setbuf(stdout, NULL);
   parse_opt(argc, argv);
+  if (core_fn == NULL) {
+    pf_exepath(argv[0], buf);
+#if !UNIX_P
+    *strrchr(buf, '.') = '\0';
+#endif
+    strcat(buf, ".p");
+    core_fn = buf;
+  }
   gc_init();
   make_initial_objects();
   xbarray_init(&token_str);

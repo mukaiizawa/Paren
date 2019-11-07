@@ -959,15 +959,10 @@
 (print (os_clock))
 ; ------------------------------------------------------------------------------
 
-(unwind-protect (return (print 0))
-                (print 1)
-                (print 2)
-                (print (+ 1 2)))
-
-(return 0)
-(print 0)
-(print 0)
-
+(labels (unwind-protect (goto :x) (<- x 1))
+        (<- x 2)
+        :x
+        (assert (= x 1)))
 
 ; ./paren
 ; )

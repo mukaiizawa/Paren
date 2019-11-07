@@ -1,5 +1,8 @@
 // xc extensible byte array.
 
+#ifndef INCLUDE_XBARRAY_H
+#define INCLUDE_XBARRAY_H
+
 struct xbarray {
   char *elt;
   int size;
@@ -15,3 +18,5 @@ extern void xbarray_adds(struct xbarray *x, char *s);
 extern void xbarray_addf(struct xbarray *x, char *fmt, ...);
 extern void xbarray_copy(struct xbarray *dst, struct xbarray *src);
 extern char *xbarray_fgets(struct xbarray *x, FILE *fp);
+
+#endif
