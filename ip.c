@@ -93,9 +93,9 @@ static void symbol_bind_propagation(object e, object s, object v)
   symbol_bind(object_toplevel, s, v);
 }
 
-static void st_push(object o)
+static void st_push(void)
 {
-  reg[4] = gc_new_cons(o, reg[4]);
+  reg[4] = gc_new_cons(reg[3], reg[4]);
 }
 
 static void st_pop(void)
@@ -287,7 +287,7 @@ static void push_apply_frame(object operator)
 
 static void push_apply_prim_frame(object prim)
 {
-  st_push(reg[3]);
+  st_push();
   fs_push(alloc_frame1(APPLY_PRIM_FRAME, prim));
 }
 
@@ -381,7 +381,7 @@ static void push_quote_frame(object arg)
 
 static void push_return_addr_frame(void)
 {
-  st_push(reg[3]);
+  st_push();
   fs_push(alloc_frame(RETURN_ADDR_FRAME));
 }
 
@@ -554,7 +554,6 @@ static void pop_fetch_operator_frame(void)
       }
       break;
     case MACRO:
-      push_return_addr_frame();
       push_eval_frame();
       push_apply_frame(reg[0]);
       reg[0] = args;
