@@ -1,13 +1,21 @@
 ; throw/catch
 
-(catch (lambda (e)
-         (print (number+ e 1)))
-  (catch (lambda (e)
-           (print e)
-           (throw e))
-    (print 1)
-    (print 2)
-    (print 3)
-    (print 4)
-    (throw 5)))
-(print 7)
+(basic-catch (lambda (e)
+               (assert (= e 3)))
+             1
+             2
+             (throw 3))
+
+(assert (=
+          (basic-catch (lambda (e)
+                         (assert nil))
+                       (basic-catch (lambda (e)
+                                      e)
+                                    (throw 1)))
+          1))
+
+(basic-catch (lambda (e)
+               (assert (= e 2)))
+             (basic-catch (lambda (e)
+                            (throw 2))
+                          (throw 1)))

@@ -5,7 +5,7 @@
 (macro function (name args :rest body)
   ; 仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
   ; argsの書式はspecial operatorのlambdaに準ずる。
-  (if (bound? name) (throw (list :class Error
+  (if (bound? name) (throw (list :class 'Error
                                  :message (string+
                                             (symbol->string name)
                                             " symbol already bound")))
@@ -454,7 +454,7 @@
                                 '(:class 'Error :message "property not found"))
                   (same? (car rest) k) rest
                   (rec (cddr rest))))
-            pair (rec al))
+        pair (rec al))
     (if (nil? v?) (cadr pair)
         (car! (cdr pair) v))))
 
@@ -909,13 +909,13 @@
     (.skip self))
   self)
 
-;; I/O
-(<- $stdin (.init (.new FileStream) :fp (fp 0))
-    $stdout (.init (.new FileStream) :fp (fp 1))
-    $in $stdin
-    $out $stdout
-    $encoding (if (same? $os :Windows) :CP932 :UTF-8)
-    $support-encodings '(:UTF-8 :CP932))
+; ;; I/O
+; (<- $stdin (.init (.new FileStream) :fp (fp 0))
+;     $stdout (.init (.new FileStream) :fp (fp 1))
+;     $in $stdin
+;     $out $stdout
+;     $encoding (if (same? $os :Windows) :CP932 :UTF-8)
+;     $support-encodings '(:UTF-8 :CP932))
 
 (function read-byte (:opt (stream $stdin))
   (assert (is-a? stream Stream))
@@ -948,21 +948,16 @@
 ; testing for development.
 (print (os_clock))
 
-; (let ($encoding :UTF-8)
-;   (<- ar (.init (.new AheadReader) :string "あいう"))
-;   (print :init)
-;   (print (.get ar))
-;   (print (.get ar))
-;   (print (.get ar))
-;   (print (.token ar)))
+(let ($encoding :UTF-8)
+  (<- ar (.init (.new AheadReader) :string "あいう"))
+  (print :init)
+  (print (.get ar))
+  (print (.get ar))
+  (print (.get ar))
+  (print (.token ar)))
 
 (print (os_clock))
 ; ------------------------------------------------------------------------------
-
-; (labels (unwind-protect (goto :x) (<- x 1))
-;         (<- x 2)
-;         :x
-;         (assert (= x 1)))
 
 ; ./paren
 ; )

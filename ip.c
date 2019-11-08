@@ -143,15 +143,16 @@ struct frame {
 #define EVAL_SEQUENTIAL_FRAME 8
 #define FETCH_HANDLER_FRAME 9
 #define FETCH_OPERATOR_FRAME 10
-#define HANDLER_FRAME 11
-#define IF_FRAME 12
-#define LABELS_FRAME 13
-#define QUOTE_FRAME 14
-#define RETURN_ADDR_FRAME 15
-#define RETURN_FRAME 16
-#define SWITCH_ENV_FRAME 17
-#define THROW_FRAME 18
-#define UNWIND_PROTECT_FRAME 19
+#define GOTO_FRAME 11
+#define HANDLER_FRAME 12
+#define IF_FRAME 13
+#define LABELS_FRAME 14
+#define QUOTE_FRAME 15
+#define RETURN_ADDR_FRAME 16
+#define RETURN_FRAME 17
+#define SWITCH_ENV_FRAME 18
+#define THROW_FRAME 19
+#define UNWIND_PROTECT_FRAME 20
   object local_vars[0];
 };
 
@@ -160,6 +161,7 @@ static int frame_size(int type)
   switch (type) {
     case ASSERT_FRAME:
     case EVAL_FRAME:
+    case GOTO_FRAME:
     case RETURN_ADDR_FRAME:
     case RETURN_FRAME:
     case THROW_FRAME:
@@ -201,6 +203,7 @@ char *frame_name(int type)
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
     case FETCH_HANDLER_FRAME: return "FETCH_HANDLER_FRAME";
     case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
+    case GOTO_FRAME: return "GOTO_FRAME";
     case HANDLER_FRAME: return "HANDLER_FRAME";
     case IF_FRAME: return "IF_FRAME";
     case LABELS_FRAME: return "LABELS_FRAME";
@@ -274,13 +277,17 @@ static void fs_rewind_pop(void)
   }
 }
 
+static void push_return_addr_frame(void);
+
 static void push_apply_frame(object operator)
 {
+  push_return_addr_frame();
   fs_push(alloc_frame1(APPLY_FRAME, operator));
 }
 
 static void push_apply_prim_frame(object prim)
 {
+  st_push(reg[3]);
   fs_push(alloc_frame1(APPLY_PRIM_FRAME, prim));
 }
 
@@ -335,6 +342,11 @@ static void push_fetch_handler_frame(object body)
 static void push_fetch_operator_frame(object args)
 {
   fs_push(alloc_frame1(FETCH_OPERATOR_FRAME, args));
+}
+
+static void push_goto_frame(void)
+{
+  fs_push(alloc_frame(GOTO_FRAME));
 }
 
 static void push_handler_frame(object handler)
@@ -410,6 +422,7 @@ static void pop_apply_prim_frame(void)
 {
   object args;
   int (*prim)(int, object, object *);
+  st_pop();
   args = reg[0];
   prim = xsplay_find(&prim_splay, fs_pop()->local_vars[0]);
   if ((*prim)(object_list_len(args), args, &(reg[0]))) return;
@@ -471,6 +484,41 @@ static void pop_eval_local_var_frame(void)
   pop_eval_frame();
 }
 
+static void pop_goto_frame(void)
+{
+  object o, label;
+  label = reg[0];
+  if (!typep(label, KEYWORD)) {
+    ip_mark_error("label must be keyword");
+    return;
+  }
+  while (TRUE) {
+    if (sp == 0) {
+      ip_mark_error("labels context not found");
+      return;
+    }
+    if (fs_top()->type == UNWIND_PROTECT_FRAME) {
+      o = fs_pop()->local_vars[0];
+      push_goto_frame();
+      push_quote_frame(label);
+      push_eval_sequential_frame(o);
+      return;
+    }
+    if (fs_top()->type == LABELS_FRAME) break;
+    fs_rewind_pop();
+  }
+  o = fs_top()->local_vars[0];
+  while (TRUE) {
+    if (o == object_nil) {
+      ip_mark_error("label not found");
+      return;
+    }
+    if (o->cons.car == label) break;
+    o = o->cons.cdr;
+  }
+  push_eval_sequential_frame(o);
+}
+
 static void pop_fetch_handler_frame(void)
 {
   object handler, body;
@@ -484,7 +532,7 @@ static void pop_fetch_handler_frame(void)
     ip_mark_error("handler parameter must be one required parameter");
     return;
   }
-  push_handler_frame(reg[0]);
+  push_handler_frame(handler);
   push_eval_sequential_frame(body);
 }
 
@@ -512,7 +560,6 @@ static void pop_fetch_operator_frame(void)
       reg[0] = args;
       return;
     case LAMBDA:
-      push_return_addr_frame();
       push_apply_frame(reg[0]);
       push_eval_args_frame(args);
       return;
@@ -598,7 +645,7 @@ static void pop_return_frame(void)
 
 static void pop_throw_frame(void)
 {
-  object handler;
+  object body, handler;
   int rewind_sp;
   reg[2] = reg[0];
   rewind_sp = sp;
@@ -608,14 +655,19 @@ static void pop_throw_frame(void)
       ip_mark_error(NULL);
       return;
     }
+    if (fs_top()->type == UNWIND_PROTECT_FRAME) {
+      body = fs_pop()->local_vars[0];
+      push_throw_frame();
+      push_quote_frame(reg[2]);
+      push_eval_sequential_frame(body);
+      return;
+    }
     if (fs_top()->type == HANDLER_FRAME) {
-      handler = fs_top()->local_vars[0];
+      handler = fs_pop()->local_vars[0];
       break;
     }
     fs_rewind_pop();
   }
-  fs_pop();    // skip HANDLER_FRAME
-  push_return_addr_frame();
   push_apply_frame(handler);
   reg[0] = gc_new_cons(reg[2], object_nil);
 }
@@ -993,34 +1045,10 @@ SPECIAL(labels)
 
 SPECIAL(goto)
 {
-  object o, p, label;
-  p = NULL;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  label = argv->cons.car;
-  if (!typep(label, KEYWORD)) {
-    ip_mark_error("arguments must be keyword");
-    return FALSE;
-  }
-  while (TRUE) {
-    if (sp == 0) {
-      ip_mark_error("labels context not found");
-      return FALSE;
-    }
-    if (fs_top()->type == UNWIND_PROTECT_FRAME) p = fs_pop()->local_vars[0];
-    else if (fs_top()->type == LABELS_FRAME) break;
-    else fs_rewind_pop();
-  }
-  o = fs_top()->local_vars[0];
-  while (TRUE) {
-    if (o == object_nil) {
-      ip_mark_error("label not found");
-      return FALSE;
-    }
-    if (o->cons.car == label) break;
-    o = o->cons.cdr;
-  }
-  push_eval_sequential_frame(o);
-  if (p != NULL) push_eval_sequential_frame(p);
+  push_goto_frame();
+  push_eval_frame();
+  reg[0] = argv->cons.car;
   return TRUE;
 }
 
@@ -1033,9 +1061,9 @@ SPECIAL(throw)
   return TRUE;
 }
 
-SPECIAL(catch)
+SPECIAL(basic_catch)
 {
-  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
   push_fetch_handler_frame(argv->cons.cdr);
   push_eval_frame();
   reg[0] = argv->cons.car;
@@ -1220,6 +1248,7 @@ static object ip_main(void)
       case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
       case FETCH_HANDLER_FRAME: pop_fetch_handler_frame(); break;
       case FETCH_OPERATOR_FRAME: pop_fetch_operator_frame(); break;
+      case GOTO_FRAME: pop_goto_frame(); break;
       case HANDLER_FRAME: fs_pop(); break;
       case IF_FRAME: pop_if_frame(); break;
       case LABELS_FRAME: fs_pop(); break;

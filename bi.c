@@ -108,6 +108,7 @@ PRIM(print)
 #undef PRIM
 
 static char *symbol_name_map[] = {
+  "basic_catch", "basic-catch",
   "operator_p", "operator?",
   "samep", "same?",
   "special_operator_p", "special-operator?",
