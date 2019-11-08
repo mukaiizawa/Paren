@@ -269,7 +269,7 @@ static void fs_rewind_pop(void)
   switch (fs_top()->type) {
     case SWITCH_ENV_FRAME: pop_switch_env(); break;
     case RETURN_ADDR_FRAME: pop_return_addr_frame(); break;
-    case UNWIND_PROTECT_FRAME: xassert(FALSE); break;
+    case UNWIND_PROTECT_FRAME: xassert(FALSE); break;    // must be protected.
     default: fs_pop(); break;
   }
 }
@@ -591,6 +591,7 @@ static void pop_return_frame(void)
         return;
       default:
         fs_rewind_pop();
+        break;
     }
   }
 }
@@ -992,30 +993,34 @@ SPECIAL(labels)
 
 SPECIAL(goto)
 {
-  object o;
+  object o, p, label;
+  p = NULL;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  reg[0] = argv->cons.car;
-  if (!typep(reg[0], KEYWORD)) {
+  label = argv->cons.car;
+  if (!typep(label, KEYWORD)) {
     ip_mark_error("arguments must be keyword");
     return FALSE;
   }
-  while (fs_top()->type != LABELS_FRAME) {
+  while (TRUE) {
     if (sp == 0) {
-      ip_mark_error("not found labels context");
+      ip_mark_error("labels context not found");
       return FALSE;
     }
-    fs_rewind_pop();
+    if (fs_top()->type == UNWIND_PROTECT_FRAME) p = fs_pop()->local_vars[0];
+    else if (fs_top()->type == LABELS_FRAME) break;
+    else fs_rewind_pop();
   }
   o = fs_top()->local_vars[0];
   while (TRUE) {
     if (o == object_nil) {
-      ip_mark_error("not found label");
+      ip_mark_error("label not found");
       return FALSE;
     }
-    if (o->cons.car == reg[0]) break;
+    if (o->cons.car == label) break;
     o = o->cons.cdr;
   }
   push_eval_sequential_frame(o);
+  if (p != NULL) push_eval_sequential_frame(p);
   return TRUE;
 }
 
