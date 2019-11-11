@@ -14,10 +14,8 @@
  *   0 -- frame argument.
  *   1 -- current environment.
  *   2 -- thrown object.
- *   3 -- stack frame pointer.
- *   4 -- stack trace
  */
-#define REG_SIZE 5
+#define REG_SIZE 3
 static object reg[REG_SIZE];
 
 static long cycle;
@@ -93,17 +91,6 @@ static void symbol_bind_propagation(object e, object s, object v)
   symbol_bind(object_toplevel, s, v);
 }
 
-static void st_push(void)
-{
-  reg[4] = gc_new_cons(reg[3], reg[4]);
-}
-
-static void st_pop(void)
-{
-  xassert(reg[4] != object_nil);
-  reg[4] = reg[4]->cons.cdr;
-}
-
 // frame
 
 #define STACK_GAP 5
@@ -138,9 +125,9 @@ struct frame {
 #define BIND_FRAME 3
 #define BIND_PROPAGATION_FRAME 4
 #define EVAL_FRAME 5
-#define EVAL_LOCAL_VAR_FRAME 6
-#define EVAL_ARGS_FRAME 7
-#define EVAL_SEQUENTIAL_FRAME 8
+#define EVAL_ARGS_FRAME 6
+#define EVAL_SEQUENTIAL_FRAME 7
+#define FENCE_FRAME 8
 #define FETCH_HANDLER_FRAME 9
 #define FETCH_OPERATOR_FRAME 10
 #define GOTO_FRAME 11
@@ -148,10 +135,10 @@ struct frame {
 #define IF_FRAME 13
 #define LABELS_FRAME 14
 #define QUOTE_FRAME 15
-#define RETURN_ADDR_FRAME 16
-#define RETURN_FRAME 17
-#define SWITCH_ENV_FRAME 18
-#define THROW_FRAME 19
+#define RETURN_FRAME 16
+#define SWITCH_ENV_FRAME 17
+#define THROW_FRAME 18
+#define TRACE_FRAME 19
 #define UNWIND_PROTECT_FRAME 20
   object local_vars[0];
 };
@@ -161,8 +148,8 @@ static int frame_size(int type)
   switch (type) {
     case ASSERT_FRAME:
     case EVAL_FRAME:
+    case FENCE_FRAME:
     case GOTO_FRAME:
-    case RETURN_ADDR_FRAME:
     case RETURN_FRAME:
     case THROW_FRAME:
       return 0;
@@ -170,7 +157,6 @@ static int frame_size(int type)
     case APPLY_PRIM_FRAME:
     case BIND_FRAME:
     case BIND_PROPAGATION_FRAME:
-    case EVAL_LOCAL_VAR_FRAME:
     case EVAL_SEQUENTIAL_FRAME:
     case FETCH_HANDLER_FRAME:
     case FETCH_OPERATOR_FRAME:
@@ -179,6 +165,7 @@ static int frame_size(int type)
     case LABELS_FRAME:
     case QUOTE_FRAME:
     case SWITCH_ENV_FRAME:
+    case TRACE_FRAME:
     case UNWIND_PROTECT_FRAME:
       return 1;
     case EVAL_ARGS_FRAME:
@@ -199,8 +186,8 @@ char *frame_name(int type)
     case BIND_PROPAGATION_FRAME: return "BIND_PROPAGATION_FRAME";
     case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
     case EVAL_FRAME: return "EVAL_FRAME";
-    case EVAL_LOCAL_VAR_FRAME: return "EVAL_LOCAL_VAR_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
+    case FENCE_FRAME: return "FENCE_FRAME";
     case FETCH_HANDLER_FRAME: return "FETCH_HANDLER_FRAME";
     case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
     case GOTO_FRAME: return "GOTO_FRAME";
@@ -208,9 +195,9 @@ char *frame_name(int type)
     case IF_FRAME: return "IF_FRAME";
     case LABELS_FRAME: return "LABELS_FRAME";
     case QUOTE_FRAME: return "QUOTE_FRAME";
-    case RETURN_ADDR_FRAME: return "RETURN_ADDR_FRAME";
     case RETURN_FRAME: return "RETURN_FRAME";
     case SWITCH_ENV_FRAME: return "SWITCH_ENV_FRAME";
+    case TRACE_FRAME: return "TRACE_FRAME";
     case THROW_FRAME: return "THROW_FRAME";
     default: xassert(FALSE); return NULL;
   }
@@ -264,30 +251,27 @@ static struct frame *fs_pop(void)
 }
 
 static void pop_switch_env(void);
-static void pop_return_addr_frame(void);
 static void pop_unwind_protect_frame(void);
 
 static void fs_rewind_pop(void)
 {
   switch (fs_top()->type) {
     case SWITCH_ENV_FRAME: pop_switch_env(); break;
-    case RETURN_ADDR_FRAME: pop_return_addr_frame(); break;
     case UNWIND_PROTECT_FRAME: xassert(FALSE); break;    // must be protected.
     default: fs_pop(); break;
   }
 }
 
-static void push_return_addr_frame(void);
+static void push_fence_frame(void);
 
 static void push_apply_frame(object operator)
 {
-  push_return_addr_frame();
+  push_fence_frame();
   fs_push(alloc_frame1(APPLY_FRAME, operator));
 }
 
 static void push_apply_prim_frame(object prim)
 {
-  st_push();
   fs_push(alloc_frame1(APPLY_PRIM_FRAME, prim));
 }
 
@@ -332,6 +316,11 @@ static void push_eval_sequential_frame(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else fs_push(alloc_frame1(EVAL_SEQUENTIAL_FRAME, args));
+}
+
+static void push_fence_frame(void)
+{
+  fs_push(alloc_frame(FENCE_FRAME));
 }
 
 static void push_fetch_handler_frame(object body)
@@ -379,12 +368,6 @@ static void push_quote_frame(object arg)
   fs_push(make_quote_frame(arg));
 }
 
-static void push_return_addr_frame(void)
-{
-  st_push();
-  fs_push(alloc_frame(RETURN_ADDR_FRAME));
-}
-
 static void push_return_frame(void)
 {
   fs_push(alloc_frame(RETURN_FRAME));
@@ -399,6 +382,11 @@ static void push_switch_env_frame(object env)
 static void push_throw_frame(void)
 {
   fs_push(alloc_frame(THROW_FRAME));
+}
+
+static void push_trace_frame(void)
+{
+  fs_push(alloc_frame1(TRACE_FRAME, reg[0]));
 }
 
 static void push_unwind_protect_frame(object argv)
@@ -422,7 +410,6 @@ static void pop_apply_prim_frame(void)
 {
   object args;
   int (*prim)(int, object, object *);
-  st_pop();
   args = reg[0];
   prim = xsplay_find(&prim_splay, fs_pop()->local_vars[0]);
   if ((*prim)(object_list_len(args), args, &(reg[0]))) return;
@@ -451,6 +438,7 @@ static void pop_eval_frame(void)
 {
   object s;
   fs_pop();
+  push_trace_frame();
   switch (type(reg[0])) {
     case MACRO:
     case LAMBDA:
@@ -471,17 +459,10 @@ static void pop_eval_frame(void)
     case CONS:
       push_fetch_operator_frame(reg[0]->cons.cdr);
       push_eval_frame();
-      reg[3] = reg[0];
       reg[0] = reg[0]->cons.car;
       return;
     default: xassert(FALSE);
   }
-}
-
-static void pop_eval_local_var_frame(void)
-{
-  reg[0] = fs_top()->local_vars[0];
-  pop_eval_frame();
 }
 
 static void pop_goto_frame(void)
@@ -611,12 +592,6 @@ static void pop_quote_frame(void)
   reg[0] = fs_pop()->local_vars[0];
 }
 
-static void pop_return_addr_frame(void)
-{
-  fs_pop();
-  st_pop();
-}
-
 static void pop_switch_env(void)
 {
   reg[1] = fs_pop()->local_vars[0];
@@ -627,7 +602,7 @@ static void pop_return_frame(void)
   object args;
   while (sp != 0) {
     switch (fs_top()->type) {
-      case RETURN_ADDR_FRAME:
+      case FENCE_FRAME:
         return;
       case UNWIND_PROTECT_FRAME: 
         args = fs_pop()->local_vars[0];
@@ -1157,23 +1132,11 @@ static void describe_st(void)
   printf("%s", object_describe(e, buf));
   if (msg != object_nil)
     printf(" -- %s.\n", object_describe(msg, buf));
-  while (reg[4] != object_nil) {
-    printf("	at: %s\n", object_describe(reg[4]->cons.car, buf));
-    reg[4] = reg[4]->cons.cdr;
+  while (sp > 0) {
+    if (fs_top()->type == TRACE_FRAME)
+      printf("	at: %s\n", object_describe(fs_top()->local_vars[0], buf));
+    fs_pop();
   }
-}
-
-void describe_reg(void)
-{
-  int i;
-  char buf[MAX_STR_LEN];
-  printf("; register\n");
-  printf("(");
-  for (i = 0; i < REG_SIZE; i++) {
-    if (i != 0) printf(" ");
-    printf("%s", object_describe(reg[i], buf));
-  }
-  printf(")\n");
 }
 
 void describe_env(void)
@@ -1210,7 +1173,6 @@ static void trap(void)
 {
   switch (ip_trap_code) {
     case TRAP_ERROR:
-      // describe_vm();
       describe_st();
       exit(1);
       break;
@@ -1222,12 +1184,9 @@ static void trap(void)
 
 static object ip_main(void)
 {
-  xassert(sp == 0);
   reg[0] = object_nil;
   reg[1] = object_toplevel;
   reg[2] = object_nil;
-  reg[3] = object_nil;
-  reg[4] = object_nil;
   push_apply_frame(object_boot);
   while (TRUE) {
     xassert(sp >= 0);
@@ -1242,9 +1201,9 @@ static object ip_main(void)
       case BIND_FRAME: pop_bind_frame(); break;
       case BIND_PROPAGATION_FRAME: pop_bind_propagation_frame(); break;
       case EVAL_FRAME: pop_eval_frame(); break;
-      case EVAL_LOCAL_VAR_FRAME: pop_eval_local_var_frame(); break;
       case EVAL_ARGS_FRAME: pop_eval_args_frame(); break;
       case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
+      case FENCE_FRAME: fs_pop(); break;
       case FETCH_HANDLER_FRAME: pop_fetch_handler_frame(); break;
       case FETCH_OPERATOR_FRAME: pop_fetch_operator_frame(); break;
       case GOTO_FRAME: pop_goto_frame(); break;
@@ -1253,9 +1212,9 @@ static object ip_main(void)
       case LABELS_FRAME: fs_pop(); break;
       case QUOTE_FRAME: pop_quote_frame(); break;
       case RETURN_FRAME: pop_return_frame(); break;
-      case RETURN_ADDR_FRAME: pop_return_addr_frame(); break;
       case SWITCH_ENV_FRAME: pop_switch_env(); break;
       case THROW_FRAME: pop_throw_frame(); break;
+      case TRACE_FRAME: fs_pop(); break;
       case UNWIND_PROTECT_FRAME: pop_unwind_protect_frame(); break;
       default: xassert(FALSE);
     }

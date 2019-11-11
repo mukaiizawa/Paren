@@ -609,6 +609,7 @@
             (list 'push! '$class (list quote cls-sym)))
       (map fields (lambda (var) (list 'make-accessor cls-sym var))))))
 
+
 (macro method (cls-sym method-sym args :rest body)
   (assert (class-exists? cls-sym))
   (if (and (bound? method-sym)
@@ -909,13 +910,13 @@
     (.skip self))
   self)
 
-; ;; I/O
-; (<- $stdin (.init (.new FileStream) :fp (fp 0))
-;     $stdout (.init (.new FileStream) :fp (fp 1))
-;     $in $stdin
-;     $out $stdout
-;     $encoding (if (same? $os :Windows) :CP932 :UTF-8)
-;     $support-encodings '(:UTF-8 :CP932))
+;; I/O
+(<- $stdin (.init (.new FileStream) :fp (fp 0))
+    $stdout (.init (.new FileStream) :fp (fp 1))
+    $in $stdin
+    $out $stdout
+    $encoding (if (same? $os :Windows) :CP932 :UTF-8)
+    $support-encodings '(:UTF-8 :CP932))
 
 (function read-byte (:opt (stream $stdin))
   (assert (is-a? stream Stream))
@@ -955,6 +956,8 @@
   (print (.get ar))
   (print (.get ar))
   (print (.token ar)))
+
+(car (car (car 40)))
 
 (print (os_clock))
 ; ------------------------------------------------------------------------------
