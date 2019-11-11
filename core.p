@@ -957,7 +957,9 @@
   (print (.get ar))
   (print (.token ar)))
 
-(car (car (car 40)))
+; (basic-catch (lambda (e)
+;                (print e))
+;              (car (car (car 40))))
 
 (print (os_clock))
 ; ------------------------------------------------------------------------------

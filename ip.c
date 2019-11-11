@@ -13,9 +13,8 @@
  * registers:
  *   0 -- frame argument.
  *   1 -- current environment.
- *   2 -- thrown object.
  */
-#define REG_SIZE 3
+#define REG_SIZE 2
 static object reg[REG_SIZE];
 
 static long cycle;
@@ -39,6 +38,13 @@ static void ip_mark_too_few_arguments_error(void)
 static void ip_mark_too_many_arguments_error(void)
 {
   ip_mark_error("too many arguments");
+}
+
+int ip_ensure_no_args(int argc)
+{
+  if (argc == 0) return TRUE;
+  ip_mark_too_many_arguments_error();
+  return FALSE;
 }
 
 int ip_ensure_arguments(int argc, int min, int max)
@@ -232,6 +238,12 @@ static struct frame *fs_top(void)
 {
   xassert(sp > 0);
   return fs[sp - 1];
+}
+
+static struct frame *fs_nth(int n)
+{
+  xassert(0 <= n && n < sp);
+  return fs[n];
 }
 
 static void fs_push(struct frame *f)
@@ -617,22 +629,23 @@ static void pop_return_frame(void)
   }
 }
 
+static void epilogue(void);
+
 static void pop_throw_frame(void)
 {
   object body, handler;
-  int rewind_sp;
-  reg[2] = reg[0];
-  rewind_sp = sp;
+  int xsp;
+  xsp = sp;
   while (TRUE) {
     if (sp == 0) {
-      sp = rewind_sp;
-      ip_mark_error(NULL);
-      return;
+      sp = xsp;
+      epilogue();
+      exit(1);
     }
     if (fs_top()->type == UNWIND_PROTECT_FRAME) {
       body = fs_pop()->local_vars[0];
       push_throw_frame();
-      push_quote_frame(reg[2]);
+      push_quote_frame(reg[0]);
       push_eval_sequential_frame(body);
       return;
     }
@@ -643,7 +656,7 @@ static void pop_throw_frame(void)
     fs_rewind_pop();
   }
   push_apply_frame(handler);
-  reg[0] = gc_new_cons(reg[2], object_nil);
+  reg[0] = gc_new_cons(reg[0], object_nil);
 }
 
 static void pop_unwind_protect_frame(void)
@@ -651,7 +664,76 @@ static void pop_unwind_protect_frame(void)
   push_eval_sequential_frame(fs_pop()->local_vars[0]);
 }
 
-// validation etc.
+// trace and debug
+
+static void sweep_env(int depth, void *sym, void *val)
+{
+  char buf[MAX_STR_LEN];
+  printf(" (%s", object_describe(sym, buf));
+  printf(" %s)", object_describe(val, buf));
+}
+
+static object call_stack(void)
+{
+  int i;
+  object o;
+  i = 0;
+  o = object_nil;
+  while (i < sp) {
+    if (fs_nth(i)->type == TRACE_FRAME)
+      o = gc_new_cons(fs_nth(i)->local_vars[0], o);
+    i++;
+  }
+  return o;
+}
+
+static void epilogue(void)
+{
+  char buf[MAX_STR_LEN];
+  object o;
+  o = call_stack();
+  printf("Error -- %s\n", object_describe(reg[0], buf));
+  while (o != object_nil) {
+    printf("	at: %s\n", object_describe(o->cons.car, buf));
+    o = o->cons.cdr;
+  }
+}
+
+#ifndef NDEBUG
+void describe_env(void)
+{
+  object e;
+  printf("; environment\n");
+  e = reg[1];
+  while (e != object_nil) {
+    xassert(typep(e, ENV));
+    printf("(<%p>", e);
+    xsplay_foreach(&e->env.binding, sweep_env);
+    printf(")\n");
+    e = e->env.top;
+  }
+}
+#endif
+
+#ifndef NDEBUG
+void describe_fs(void)
+{
+  int i, j;
+  char buf[MAX_STR_LEN];
+  struct frame *f;
+  printf("; frame stack\n");
+  for (i = sp - 1; i >= 0; i--) {
+    f = fs[i];
+    printf("(%s", frame_name(f->type));
+    for (j = 0; j < frame_size(f->type); j++)
+      printf(" %s", object_describe(f->local_vars[j], buf));
+    printf(")\n");
+  }
+  printf("\n");
+}
+#endif
+
+// special/prim
 
 static int same_symbol_keyword_p(object sym, object key)
 {
@@ -1105,76 +1187,23 @@ PRIM(bound_p)
   return TRUE;
 }
 
-// trace and debug
-
-static void sweep_env(int depth, void *sym, void *val)
+PRIM(call_stack)
 {
-  char buf[MAX_STR_LEN];
-  printf(" (%s", object_describe(sym, buf));
-  printf(" %s)", object_describe(val, buf));
-}
-
-static void describe_st(void)
-{
-  object e, msg;
-  char buf[MAX_STR_LEN];
-  if (error_msg != NULL) {
-    e = object_error;
-    msg = gc_new_barray_from(STRING, strlen(error_msg), error_msg);
-  } else  {
-    xassert(typep(reg[2], CONS));
-    xassert(typep(reg[2]->cons.cdr, CONS));
-    xassert(typep(reg[2]->cons.cdr->cons.cdr, CONS));
-    xassert(typep(reg[2]->cons.cdr->cons.cdr->cons.cdr, CONS));
-    e = reg[2]->cons.cdr->cons.car;
-    msg = reg[2]->cons.cdr->cons.cdr->cons.cdr->cons.car;
-  }
-  printf("%s", object_describe(e, buf));
-  if (msg != object_nil)
-    printf(" -- %s.\n", object_describe(msg, buf));
-  while (sp > 0) {
-    if (fs_top()->type == TRACE_FRAME)
-      printf("	at: %s\n", object_describe(fs_top()->local_vars[0], buf));
-    fs_pop();
-  }
-}
-
-void describe_env(void)
-{
-  object e;
-  printf("; environment\n");
-  e = reg[1];
-  while (e != object_nil) {
-    xassert(typep(e, ENV));
-    printf("(<%p>", e);
-    xsplay_foreach(&e->env.binding, sweep_env);
-    printf(")\n");
-    e = e->env.top;
-  }
-}
-
-void describe_fs(void)
-{
-  int i, j;
-  char buf[MAX_STR_LEN];
-  struct frame *f;
-  printf("; frame stack\n");
-  for (i = sp - 1; i >= 0; i--) {
-    f = fs[i];
-    printf("(%s", frame_name(f->type));
-    for (j = 0; j < frame_size(f->type); j++)
-      printf(" %s", object_describe(f->local_vars[j], buf));
-    printf(")\n");
-  }
-  printf("\n");
+  if (!ip_ensure_no_args(argc)) return FALSE;
+  *result = call_stack()->cons.cdr;    // remove own.
+  return TRUE;
 }
 
 static void trap(void)
 {
   switch (ip_trap_code) {
     case TRAP_ERROR:
-      describe_st();
-      exit(1);
+      push_throw_frame();
+      xassert(error_msg != NULL);
+      reg[0] = gc_new_barray_from(STRING, strlen(error_msg), error_msg);
+      printf("%d\n", 30);
+      ip_trap_code = TRAP_NONE;
+      error_msg = NULL;
       break;
     default:
       ip_trap_code=TRAP_NONE;
@@ -1186,7 +1215,6 @@ static object ip_main(void)
 {
   reg[0] = object_nil;
   reg[1] = object_toplevel;
-  reg[2] = object_nil;
   push_apply_frame(object_boot);
   while (TRUE) {
     xassert(sp >= 0);
