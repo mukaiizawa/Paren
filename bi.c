@@ -109,6 +109,7 @@ PRIM(print)
 
 static char *symbol_name_map[] = {
   "basic_catch", "basic-catch",
+  "call_stack", "call-stack",
   "operator_p", "operator?",
   "samep", "same?",
   "special_operator_p", "special-operator?",
