@@ -147,39 +147,39 @@ static void fb_flush(void)
 #define UNWIND_PROTECT_INST 20
 #define LAST_INST 21
 
-// static int inst_size(object o)
-// {
-//   xassert(typep(o, XINT));
-//   switch (o->xint.val) {
-//     case ASSERT_INST:
-//     case EVAL_INST:
-//     case FENCE_INST:
-//     case GOTO_INST:
-//     case RETURN_INST:
-//     case THROW_INST:
-//       return 0;
-//     case APPLY_INST:
-//     case APPLY_PRIM_INST:
-//     case BIND_INST:
-//     case BIND_PROPAGATION_INST:
-//     case EVAL_SEQUENTIAL_INST:
-//     case FETCH_HANDLER_INST:
-//     case FETCH_OPERATOR_INST:
-//     case HANDLER_INST:
-//     case IF_INST:
-//     case LABELS_INST:
-//     case QUOTE_INST:
-//     case SWITCH_ENV_INST:
-//     case TRACE_INST:
-//     case UNWIND_PROTECT_INST:
-//       return 1;
-//     case EVAL_ARGS_INST:
-//       return 2;
-//     default:
-//       xassert(FALSE);
-//       return FALSE;
-//   }
-// }
+int inst_size(object o)
+{
+  xassert(typep(o, XINT));
+  switch (o->xint.val) {
+    case ASSERT_INST:
+    case EVAL_INST:
+    case FENCE_INST:
+    case GOTO_INST:
+    case RETURN_INST:
+    case THROW_INST:
+      return 0;
+    case APPLY_INST:
+    case APPLY_PRIM_INST:
+    case BIND_INST:
+    case BIND_PROPAGATION_INST:
+    case EVAL_SEQUENTIAL_INST:
+    case FETCH_HANDLER_INST:
+    case FETCH_OPERATOR_INST:
+    case HANDLER_INST:
+    case IF_INST:
+    case LABELS_INST:
+    case QUOTE_INST:
+    case SWITCH_ENV_INST:
+    case TRACE_INST:
+    case UNWIND_PROTECT_INST:
+      return 1;
+    case EVAL_ARGS_INST:
+      return 2;
+    default:
+      xassert(FALSE);
+      return FALSE;
+  }
+}
 
 char *inst_name(object o)
 {
@@ -1161,7 +1161,7 @@ static void trap(void)
       error_msg = NULL;
       break;
     default:
-      ip_trap_code=TRAP_NONE;
+      ip_trap_code = TRAP_NONE;
       break;
   }
 }
