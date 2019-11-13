@@ -224,7 +224,7 @@ static object gen_inst1(int type, object o)
   return gc_new_cons(inst(type), gc_new_cons(o, object_nil));
 }
 
-static object alloc_inst2(int type, object o, object p)
+static object gen_inst2(int type, object o, object p)
 {
   return gc_new_cons(inst(type), gc_new_cons(o, gc_new_cons(p, object_nil)));
 }
@@ -313,7 +313,7 @@ static void push_eval_args_inst(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else {
-    fs_push(alloc_inst2(EVAL_ARGS_INST, args->cons.cdr, object_nil));
+    fs_push(gen_inst2(EVAL_ARGS_INST, args->cons.cdr, object_nil));
     push_eval_inst();
     reg[0] = args->cons.car;
   }
