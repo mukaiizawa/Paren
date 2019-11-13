@@ -141,7 +141,7 @@ static object new_barray(int type, int size)
   xassert(size >= 0);
   o = gc_alloc(sizeof(struct barray) + size - 1);
   set_type(o, type);
-  memset(o->barray.elt,0, size);
+  memset(o->barray.elt, 0, size);
   o->barray.size = size;
   return o;
 }
@@ -185,6 +185,18 @@ object gc_new_barray_from(int type, int size, char *val)
       xassert(FALSE);
       return NULL;
   }
+}
+
+object gc_new_array(int size)
+{
+  int i;
+  object o;
+  xassert(size >= 0);
+  o = gc_alloc(sizeof(struct array) + sizeof(object) * (size - 1));
+  set_type(o, ARRAY);
+  for (i = 0; i < size; i++) o->array.elt[i] = object_nil;
+  o->array.size = size;
+  return o;
 }
 
 static void sweep_env(int depth, void *key, void *data)

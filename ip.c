@@ -11,7 +11,7 @@
 
 /*
  * registers:
- *   0 -- frame argument.
+ *   0 -- inst argument.
  *   1 -- current environment.
  */
 #define REG_SIZE 2
@@ -97,16 +97,16 @@ static void symbol_bind_propagation(object e, object s, object v)
   symbol_bind(object_toplevel, s, v);
 }
 
-// frame
+// inst
 
 #define STACK_GAP 5
-#define FRAME_STACK_SIZE 1000
+#define INST_STACK_SIZE 1000
 
 static int sp;
-static struct frame *fs[FRAME_STACK_SIZE];
+static object fs[INST_STACK_SIZE];
 static struct xarray fb;
 
-static void fb_add(struct frame *f)
+static void fb_add(object f)
 {
   xarray_add(&fb, f);
 }
@@ -116,341 +116,336 @@ static void fb_reset(void)
   xarray_reset(&fb);
 }
 
-static void fs_push(struct frame *f);
+static void fs_push(object f);
 static void fb_flush(void)
 {
   int i;
   for (i = fb.size - 1; i >= 0; i--) fs_push(fb.elt[i]);
 }
 
-struct frame {
-  int type;
-#define APPLY_FRAME 0
-#define APPLY_PRIM_FRAME 1
-#define ASSERT_FRAME 2
-#define BIND_FRAME 3
-#define BIND_PROPAGATION_FRAME 4
-#define EVAL_FRAME 5
-#define EVAL_ARGS_FRAME 6
-#define EVAL_SEQUENTIAL_FRAME 7
-#define FENCE_FRAME 8
-#define FETCH_HANDLER_FRAME 9
-#define FETCH_OPERATOR_FRAME 10
-#define GOTO_FRAME 11
-#define HANDLER_FRAME 12
-#define IF_FRAME 13
-#define LABELS_FRAME 14
-#define QUOTE_FRAME 15
-#define RETURN_FRAME 16
-#define SWITCH_ENV_FRAME 17
-#define THROW_FRAME 18
-#define TRACE_FRAME 19
-#define UNWIND_PROTECT_FRAME 20
-  object local_vars[0];
-};
+// instructions
+#define APPLY_INST 0
+#define APPLY_PRIM_INST 1
+#define ASSERT_INST 2
+#define BIND_INST 3
+#define BIND_PROPAGATION_INST 4
+#define EVAL_INST 5
+#define EVAL_ARGS_INST 6
+#define EVAL_SEQUENTIAL_INST 7
+#define FENCE_INST 8
+#define FETCH_HANDLER_INST 9
+#define FETCH_OPERATOR_INST 10
+#define GOTO_INST 11
+#define HANDLER_INST 12
+#define IF_INST 13
+#define LABELS_INST 14
+#define QUOTE_INST 15
+#define RETURN_INST 16
+#define SWITCH_ENV_INST 17
+#define THROW_INST 18
+#define TRACE_INST 19
+#define UNWIND_PROTECT_INST 20
+#define LAST_INST 21
 
-static int frame_size(int type)
-{
-  switch (type) {
-    case ASSERT_FRAME:
-    case EVAL_FRAME:
-    case FENCE_FRAME:
-    case GOTO_FRAME:
-    case RETURN_FRAME:
-    case THROW_FRAME:
-      return 0;
-    case APPLY_FRAME:
-    case APPLY_PRIM_FRAME:
-    case BIND_FRAME:
-    case BIND_PROPAGATION_FRAME:
-    case EVAL_SEQUENTIAL_FRAME:
-    case FETCH_HANDLER_FRAME:
-    case FETCH_OPERATOR_FRAME:
-    case HANDLER_FRAME:
-    case IF_FRAME:
-    case LABELS_FRAME:
-    case QUOTE_FRAME:
-    case SWITCH_ENV_FRAME:
-    case TRACE_FRAME:
-    case UNWIND_PROTECT_FRAME:
-      return 1;
-    case EVAL_ARGS_FRAME:
-      return 2;
-    default:
-      xassert(FALSE);
-      return FALSE;
-  }
-}
+// static int inst_size(object o)
+// {
+//   xassert(typep(o, XINT));
+//   switch (o->xint.val) {
+//     case ASSERT_INST:
+//     case EVAL_INST:
+//     case FENCE_INST:
+//     case GOTO_INST:
+//     case RETURN_INST:
+//     case THROW_INST:
+//       return 0;
+//     case APPLY_INST:
+//     case APPLY_PRIM_INST:
+//     case BIND_INST:
+//     case BIND_PROPAGATION_INST:
+//     case EVAL_SEQUENTIAL_INST:
+//     case FETCH_HANDLER_INST:
+//     case FETCH_OPERATOR_INST:
+//     case HANDLER_INST:
+//     case IF_INST:
+//     case LABELS_INST:
+//     case QUOTE_INST:
+//     case SWITCH_ENV_INST:
+//     case TRACE_INST:
+//     case UNWIND_PROTECT_INST:
+//       return 1;
+//     case EVAL_ARGS_INST:
+//       return 2;
+//     default:
+//       xassert(FALSE);
+//       return FALSE;
+//   }
+// }
 
-char *frame_name(int type)
+char *inst_name(object o)
 {
-  switch (type) {
-    case APPLY_FRAME: return "APPLY_FRAME";
-    case APPLY_PRIM_FRAME: return "APPLY_PRIM_FRAME";
-    case ASSERT_FRAME: return "ASSERT_FRAME";
-    case BIND_FRAME: return "BIND_FRAME";
-    case BIND_PROPAGATION_FRAME: return "BIND_PROPAGATION_FRAME";
-    case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
-    case EVAL_FRAME: return "EVAL_FRAME";
-    case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
-    case FENCE_FRAME: return "FENCE_FRAME";
-    case FETCH_HANDLER_FRAME: return "FETCH_HANDLER_FRAME";
-    case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
-    case GOTO_FRAME: return "GOTO_FRAME";
-    case HANDLER_FRAME: return "HANDLER_FRAME";
-    case IF_FRAME: return "IF_FRAME";
-    case LABELS_FRAME: return "LABELS_FRAME";
-    case QUOTE_FRAME: return "QUOTE_FRAME";
-    case RETURN_FRAME: return "RETURN_FRAME";
-    case SWITCH_ENV_FRAME: return "SWITCH_ENV_FRAME";
-    case TRACE_FRAME: return "TRACE_FRAME";
-    case THROW_FRAME: return "THROW_FRAME";
+  xassert(typep(o, XINT));
+  switch (o->xint.val) {
+    case APPLY_INST: return "APPLY_INST";
+    case APPLY_PRIM_INST: return "APPLY_PRIM_INST";
+    case ASSERT_INST: return "ASSERT_INST";
+    case BIND_INST: return "BIND_INST";
+    case BIND_PROPAGATION_INST: return "BIND_PROPAGATION_INST";
+    case EVAL_ARGS_INST: return "EVAL_ARGS_INST";
+    case EVAL_INST: return "EVAL_INST";
+    case EVAL_SEQUENTIAL_INST: return "EVAL_SEQUENTIAL_INST";
+    case FENCE_INST: return "FENCE_INST";
+    case FETCH_HANDLER_INST: return "FETCH_HANDLER_INST";
+    case FETCH_OPERATOR_INST: return "FETCH_OPERATOR_INST";
+    case GOTO_INST: return "GOTO_INST";
+    case HANDLER_INST: return "HANDLER_INST";
+    case IF_INST: return "IF_INST";
+    case LABELS_INST: return "LABELS_INST";
+    case QUOTE_INST: return "QUOTE_INST";
+    case RETURN_INST: return "RETURN_INST";
+    case SWITCH_ENV_INST: return "SWITCH_ENV_INST";
+    case TRACE_INST: return "TRACE_INST";
+    case THROW_INST: return "THROW_INST";
     default: xassert(FALSE); return NULL;
   }
 }
 
-static struct frame *alloc_frame(int type)
+static object inst(int type)
 {
-  struct frame *f;
-  f = xmalloc(sizeof(struct frame) + sizeof(object) * frame_size(type));
-  f->type = type;
-  return f;
+  return object_bytes[type];
 }
 
-static struct frame *alloc_frame1(int type, object o)
+static object gen_inst0(int type)
 {
-  struct frame *f;
-  f = alloc_frame(type);
-  f->local_vars[0] = o;
-  return f;
+  return gc_new_cons(inst(type), object_nil);
 }
 
-static struct frame *alloc_frame2(int type, object o, object p)
+static object gen_inst1(int type, object o)
 {
-  struct frame *f;
-  f = alloc_frame(type);
-  f->local_vars[0] = o;
-  f->local_vars[1] = p;
-  return f;
+  return gc_new_cons(inst(type), gc_new_cons(o, object_nil));
 }
 
-static struct frame *fs_top(void)
+static object alloc_inst2(int type, object o, object p)
+{
+  return gc_new_cons(inst(type), gc_new_cons(o, gc_new_cons(p, object_nil)));
+}
+
+static object fs_top(void)
 {
   xassert(sp > 0);
   return fs[sp - 1];
 }
 
-static struct frame *fs_nth(int n)
+static object fs_nth(int n)
 {
   xassert(0 <= n && n < sp);
   return fs[n];
 }
 
-static void fs_push(struct frame *f)
+static void fs_push(object f)
 {
-  if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_mark_error("stack over flow");
-  else if (sp + 3 > FRAME_STACK_SIZE) xerror("stack over flow.");
+  if (sp > INST_STACK_SIZE - STACK_GAP) ip_mark_error("stack over flow");
+  else if (sp + 3 > INST_STACK_SIZE) xerror("stack over flow.");
   fs[sp] = f;
   sp++;
 }
 
-static struct frame *fs_pop(void)
+static object fs_pop(void)
 {
-  struct frame *top;
+  object top;
   top = fs_top();
   --sp;
   return top;
 }
 
 static void pop_switch_env(void);
-static void pop_unwind_protect_frame(void);
+static void pop_unwind_protect_inst(void);
 
 static void fs_rewind_pop(void)
 {
-  switch (fs_top()->type) {
-    case SWITCH_ENV_FRAME: pop_switch_env(); break;
-    case UNWIND_PROTECT_FRAME: xassert(FALSE); break;    // must be protected.
+  switch (fs_top()->cons.car->xint.val) {
+    case SWITCH_ENV_INST: pop_switch_env(); break;
+    case UNWIND_PROTECT_INST: xassert(FALSE); break;    // must be protected.
     default: fs_pop(); break;
   }
 }
 
-static void push_fence_frame(void);
+static void push_fence_inst(void);
 
-static void push_apply_frame(object operator)
+static void push_apply_inst(object operator)
 {
-  push_fence_frame();
-  fs_push(alloc_frame1(APPLY_FRAME, operator));
+  push_fence_inst();
+  fs_push(gen_inst1(APPLY_INST, operator));
 }
 
-static void push_apply_prim_frame(object prim)
+static void push_apply_prim_inst(object prim)
 {
-  fs_push(alloc_frame1(APPLY_PRIM_FRAME, prim));
+  fs_push(gen_inst1(APPLY_PRIM_INST, prim));
 }
 
 #ifndef NDEBUG
-static void push_assert_frame(void)
+static void push_assert_inst(void)
 {
-  fs_push(alloc_frame(ASSERT_FRAME));
+  fs_push(gen_inst0(ASSERT_INST));
 }
 #endif
 
-static struct frame *make_eval_frame(void)
+static object make_eval_inst(void)
 {
-  return alloc_frame(EVAL_FRAME);
+  return gen_inst0(EVAL_INST);
 }
 
-static void push_eval_frame(void)
+static void push_eval_inst(void)
 {
-  fs_push(make_eval_frame());
+  fs_push(make_eval_inst());
 }
 
-static struct frame *make_bind_frame(object sym)
+static object make_bind_inst(object sym)
 {
-  return alloc_frame1(BIND_FRAME, sym);
+  return gen_inst1(BIND_INST, sym);
 }
 
-static struct frame *make_bind_propagation_frame(object sym)
+static object make_bind_propagation_inst(object sym)
 {
-  return alloc_frame1(BIND_PROPAGATION_FRAME, sym);
+  return gen_inst1(BIND_PROPAGATION_INST, sym);
 }
 
-static void push_eval_args_frame(object args)
+static void push_eval_args_inst(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else {
-    fs_push(alloc_frame2(EVAL_ARGS_FRAME, args->cons.cdr, object_nil));
-    push_eval_frame();
+    fs_push(alloc_inst2(EVAL_ARGS_INST, args->cons.cdr, object_nil));
+    push_eval_inst();
     reg[0] = args->cons.car;
   }
 }
 
-static void push_eval_sequential_frame(object args)
+static void push_eval_sequential_inst(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
-  else fs_push(alloc_frame1(EVAL_SEQUENTIAL_FRAME, args));
+  else fs_push(gen_inst1(EVAL_SEQUENTIAL_INST, args));
 }
 
-static void push_fence_frame(void)
+static void push_fence_inst(void)
 {
-  fs_push(alloc_frame(FENCE_FRAME));
+  fs_push(gen_inst0(FENCE_INST));
 }
 
-static void push_fetch_handler_frame(object body)
+static void push_fetch_handler_inst(object body)
 {
-  fs_push(alloc_frame1(FETCH_HANDLER_FRAME, body));
+  fs_push(gen_inst1(FETCH_HANDLER_INST, body));
 }
 
-static void push_fetch_operator_frame(object args)
+static void push_fetch_operator_inst(object args)
 {
-  fs_push(alloc_frame1(FETCH_OPERATOR_FRAME, args));
+  fs_push(gen_inst1(FETCH_OPERATOR_INST, args));
 }
 
-static void push_goto_frame(void)
+static void push_goto_inst(void)
 {
-  fs_push(alloc_frame(GOTO_FRAME));
+  fs_push(gen_inst0(GOTO_INST));
 }
 
-static void push_handler_frame(object handler)
+static void push_handler_inst(object handler)
 {
-  fs_push(alloc_frame1(HANDLER_FRAME, handler));
+  fs_push(gen_inst1(HANDLER_INST, handler));
 }
 
-static void push_if_frame(object args)
+static void push_if_inst(object args)
 {
   if (args == object_nil) return;
   if (args->cons.cdr != object_nil) {
-    fs_push(alloc_frame1(IF_FRAME, args->cons.cdr));
+    fs_push(gen_inst1(IF_INST, args->cons.cdr));
   }
-  push_eval_frame();
+  push_eval_inst();
   reg[0] = args->cons.car;
 }
 
-static void push_labels_frame(object args)
+static void push_labels_inst(object args)
 {
-  fs_push(alloc_frame1(LABELS_FRAME, args));
+  fs_push(gen_inst1(LABELS_INST, args));
 }
 
-static struct frame *make_quote_frame(object arg)
+static object make_quote_inst(object arg)
 {
-  return alloc_frame1(QUOTE_FRAME, arg);
+  return gen_inst1(QUOTE_INST, arg);
 }
 
-static void push_quote_frame(object arg)
+static void push_quote_inst(object arg)
 {
-  fs_push(make_quote_frame(arg));
+  fs_push(make_quote_inst(arg));
 }
 
-static void push_return_frame(void)
+static void push_return_inst(void)
 {
-  fs_push(alloc_frame(RETURN_FRAME));
+  fs_push(gen_inst0(RETURN_INST));
 }
 
-static void push_switch_env_frame(object env)
+static void push_switch_env_inst(object env)
 {
-  fs_push(alloc_frame1(SWITCH_ENV_FRAME, reg[1]));
+  fs_push(gen_inst1(SWITCH_ENV_INST, reg[1]));
   reg[1] = gc_new_env(env);
 }
 
-static void push_throw_frame(void)
+static void push_throw_inst(void)
 {
-  fs_push(alloc_frame(THROW_FRAME));
+  fs_push(gen_inst0(THROW_INST));
 }
 
-static void push_trace_frame(void)
+static void push_trace_inst(void)
 {
-  fs_push(alloc_frame1(TRACE_FRAME, reg[0]));
+  fs_push(gen_inst1(TRACE_INST, reg[0]));
 }
 
-static void push_unwind_protect_frame(object argv)
+static void push_unwind_protect_inst(object argv)
 {
-  fs_push(alloc_frame1(UNWIND_PROTECT_FRAME, argv));
+  fs_push(gen_inst1(UNWIND_PROTECT_INST, argv));
 }
 
 static void parse_lambda_list(object env, object params, object args);
-static void pop_apply_frame(void)
+static void pop_apply_inst(void)
 {
   object operator;
-  operator = fs_pop()->local_vars[0];
-  push_switch_env_frame(operator->lambda.env);
+  operator = fs_pop()->cons.cdr->cons.car;
+  push_switch_env_inst(operator->lambda.env);
   fb_reset();
   parse_lambda_list(reg[1], operator->lambda.params, reg[0]);
-  push_eval_sequential_frame(operator->lambda.body);
+  push_eval_sequential_inst(operator->lambda.body);
   fb_flush();
 }
 
-static void pop_apply_prim_frame(void)
+static void pop_apply_prim_inst(void)
 {
   object args;
   int (*prim)(int, object, object *);
   args = reg[0];
-  prim = xsplay_find(&prim_splay, fs_pop()->local_vars[0]);
+  prim = xsplay_find(&prim_splay, fs_pop()->cons.cdr->cons.car);
   if ((*prim)(object_list_len(args), args, &(reg[0]))) return;
   if (error_msg == NULL) ip_mark_error("primitive failed");
 }
 
 #ifndef NDEBUG
-static void pop_assert_frame(void)
+static void pop_assert_inst(void)
 {
   fs_pop();
   if (reg[0] == object_nil) ip_mark_error("assert failed");
 }
 #endif
 
-static void pop_bind_frame(void)
+static void pop_bind_inst(void)
 {
-  symbol_bind(reg[1], fs_pop()->local_vars[0], reg[0]);
+  symbol_bind(reg[1], fs_pop()->cons.cdr->cons.car, reg[0]);
 }
 
-static void pop_bind_propagation_frame(void)
+static void pop_bind_propagation_inst(void)
 {
-  symbol_bind_propagation(reg[1], fs_pop()->local_vars[0], reg[0]);
+  symbol_bind_propagation(reg[1], fs_pop()->cons.cdr->cons.car, reg[0]);
 }
 
-static void pop_eval_frame(void)
+static void pop_eval_inst(void)
 {
   object s;
   fs_pop();
-  push_trace_frame();
+  push_trace_inst();
   switch (type(reg[0])) {
     case MACRO:
     case LAMBDA:
@@ -469,15 +464,15 @@ static void pop_eval_frame(void)
       reg[0] = s;
       return;
     case CONS:
-      push_fetch_operator_frame(reg[0]->cons.cdr);
-      push_eval_frame();
+      push_fetch_operator_inst(reg[0]->cons.cdr);
+      push_eval_inst();
       reg[0] = reg[0]->cons.car;
       return;
     default: xassert(FALSE);
   }
 }
 
-static void pop_goto_frame(void)
+static void pop_goto_inst(void)
 {
   object o, label;
   label = reg[0];
@@ -490,17 +485,17 @@ static void pop_goto_frame(void)
       ip_mark_error("labels context not found");
       return;
     }
-    if (fs_top()->type == UNWIND_PROTECT_FRAME) {
-      o = fs_pop()->local_vars[0];
-      push_goto_frame();
-      push_quote_frame(label);
-      push_eval_sequential_frame(o);
+    if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
+      o = fs_pop()->cons.cdr->cons.car;
+      push_goto_inst();
+      push_quote_inst(label);
+      push_eval_sequential_inst(o);
       return;
     }
-    if (fs_top()->type == LABELS_FRAME) break;
+    if (fs_top()->cons.car->xint.val == LABELS_INST) break;
     fs_rewind_pop();
   }
-  o = fs_top()->local_vars[0];
+  o = fs_top()->cons.cdr->cons.car;
   while (TRUE) {
     if (o == object_nil) {
       ip_mark_error("label not found");
@@ -509,14 +504,14 @@ static void pop_goto_frame(void)
     if (o->cons.car == label) break;
     o = o->cons.cdr;
   }
-  push_eval_sequential_frame(o);
+  push_eval_sequential_inst(o);
 }
 
-static void pop_fetch_handler_frame(void)
+static void pop_fetch_handler_inst(void)
 {
   object handler, body;
   handler = reg[0];
-  body = fs_pop()->local_vars[0];
+  body = fs_pop()->cons.cdr->cons.car;
   if (!typep(handler, LAMBDA)) {
     ip_mark_error("require exception handler");
     return;
@@ -525,15 +520,15 @@ static void pop_fetch_handler_frame(void)
     ip_mark_error("handler parameter must be one required parameter");
     return;
   }
-  push_handler_frame(handler);
-  push_eval_sequential_frame(body);
+  push_handler_inst(handler);
+  push_eval_sequential_inst(body);
 }
 
-static void pop_fetch_operator_frame(void)
+static void pop_fetch_operator_inst(void)
 {
   object args;
   int (*special)(int, object);
-  args = fs_pop()->local_vars[0];
+  args = fs_pop()->cons.cdr->cons.car;
   switch (type(reg[0])) {
     case SYMBOL:
       if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
@@ -541,86 +536,88 @@ static void pop_fetch_operator_frame(void)
         return;
       }
       if (xsplay_find(&prim_splay, reg[0]) != NULL) {
-        push_apply_prim_frame(reg[0]);
-        push_eval_args_frame(args);
+        push_apply_prim_inst(reg[0]);
+        push_eval_args_inst(args);
         return;
       }
       break;
     case MACRO:
-      push_eval_frame();
-      push_apply_frame(reg[0]);
+      push_eval_inst();
+      push_apply_inst(reg[0]);
       reg[0] = args;
       return;
     case LAMBDA:
-      push_apply_frame(reg[0]);
-      push_eval_args_frame(args);
+      push_apply_inst(reg[0]);
+      push_eval_args_inst(args);
       return;
     default: break;
   }
   ip_mark_error("is not a operator");
 }
 
-static void pop_eval_args_frame(void)
+static void pop_eval_args_inst(void)
 {
-  struct frame *top;
+  object top;
   object rest, acc;
   top = fs_top();
-  rest = top->local_vars[0];
-  acc = top->local_vars[1] = gc_new_cons(reg[0], top->local_vars[1]);
+  rest = top->cons.cdr->cons.car;
+  acc = top->cons.cdr->cons.cdr->cons.car;
+  acc = gc_new_cons(reg[0], acc);
+  top->cons.cdr->cons.cdr->cons.car = acc;
   if (rest == object_nil) {
     fs_pop();
     reg[0] = object_reverse(acc);
   } else {
-    top->local_vars[0] = rest->cons.cdr;
-    push_eval_frame();
+    top->cons.cdr->cons.car = rest->cons.cdr;
+    push_eval_inst();
     reg[0] = rest->cons.car;
   }
 }
 
-static void pop_eval_sequential_frame(void)
+static void pop_eval_sequential_inst(void)
 {
   object args;
-  args = fs_top()->local_vars[0];
+  args = fs_top()->cons.cdr->cons.car;
   if (args == object_nil) fs_pop();
   else {
-    fs_top()->local_vars[0] = args->cons.cdr;
-    push_eval_frame();
+    fs_top()->cons.cdr->cons.car = args->cons.cdr;
+    push_eval_inst();
     reg[0] = args->cons.car;
   }
 }
 
-static void pop_if_frame(void)
+static void pop_if_inst(void)
 {
   object args;
-  args = fs_pop()->local_vars[0];
+  args = fs_pop()->cons.cdr->cons.car;
   if (reg[0] != object_nil) {
-    push_eval_frame();
+    push_eval_inst();
     reg[0] = args->cons.car;
-  } else if ((args = args->cons.cdr) != object_nil) push_if_frame(args);
+  } else if ((args = args->cons.cdr) != object_nil) push_if_inst(args);
 }
 
-static void pop_quote_frame(void)
+static void pop_quote_inst(void)
 {
-  reg[0] = fs_pop()->local_vars[0];
+  reg[0] = fs_pop()->cons.cdr->cons.car;
 }
 
 static void pop_switch_env(void)
 {
-  reg[1] = fs_pop()->local_vars[0];
+  reg[1] = fs_pop()->cons.cdr->cons.car;
 }
 
-static void pop_return_frame(void)
+static void pop_return_inst(void)
 {
   object args;
   while (sp != 0) {
-    switch (fs_top()->type) {
-      case FENCE_FRAME:
+    switch (fs_top()->cons.car->xint.val) {
+      case FENCE_INST:
         return;
-      case UNWIND_PROTECT_FRAME: 
-        args = fs_pop()->local_vars[0];
-        push_return_frame();
-        push_quote_frame(reg[0]);
-        push_eval_sequential_frame(args);
+      case UNWIND_PROTECT_INST: 
+        args = fs_pop()->cons.cdr->cons.car;
+        push_return_inst();
+        push_quote_inst(reg[0]);
+        push_eval_sequential_inst(args);
         return;
       default:
         fs_rewind_pop();
@@ -629,9 +626,9 @@ static void pop_return_frame(void)
   }
 }
 
-static void epilogue(void);
+static void ip_finish(void);
 
-static void pop_throw_frame(void)
+static void pop_throw_inst(void)
 {
   object body, handler;
   int xsp;
@@ -639,39 +636,31 @@ static void pop_throw_frame(void)
   while (TRUE) {
     if (sp == 0) {
       sp = xsp;
-      epilogue();
-      exit(1);
+      ip_finish();
     }
-    if (fs_top()->type == UNWIND_PROTECT_FRAME) {
-      body = fs_pop()->local_vars[0];
-      push_throw_frame();
-      push_quote_frame(reg[0]);
-      push_eval_sequential_frame(body);
+    if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
+      body = fs_pop()->cons.cdr->cons.car;
+      push_throw_inst();
+      push_quote_inst(reg[0]);
+      push_eval_sequential_inst(body);
       return;
     }
-    if (fs_top()->type == HANDLER_FRAME) {
-      handler = fs_pop()->local_vars[0];
+    if (fs_top()->cons.car->xint.val == HANDLER_INST) {
+      handler = fs_pop()->cons.cdr->cons.car;
       break;
     }
     fs_rewind_pop();
   }
-  push_apply_frame(handler);
+  push_apply_inst(handler);
   reg[0] = gc_new_cons(reg[0], object_nil);
 }
 
-static void pop_unwind_protect_frame(void)
+static void pop_unwind_protect_inst(void)
 {
-  push_eval_sequential_frame(fs_pop()->local_vars[0]);
+  push_eval_sequential_inst(fs_pop()->cons.cdr->cons.car);
 }
 
 // trace and debug
-
-static void sweep_env(int depth, void *sym, void *val)
-{
-  char buf[MAX_STR_LEN];
-  printf(" (%s", object_describe(sym, buf));
-  printf(" %s)", object_describe(val, buf));
-}
 
 static object call_stack(void)
 {
@@ -680,14 +669,14 @@ static object call_stack(void)
   i = 0;
   o = object_nil;
   while (i < sp) {
-    if (fs_nth(i)->type == TRACE_FRAME)
-      o = gc_new_cons(fs_nth(i)->local_vars[0], o);
+    if (fs_nth(i)->cons.car->xint.val == TRACE_INST)
+      o = gc_new_cons(fs_nth(i)->cons.cdr->cons.car, o);
     i++;
   }
   return o;
 }
 
-static void epilogue(void)
+static void ip_finish(void)
 {
   char buf[MAX_STR_LEN];
   object o;
@@ -697,41 +686,8 @@ static void epilogue(void)
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
+  exit(1);
 }
-
-#ifndef NDEBUG
-void describe_env(void)
-{
-  object e;
-  printf("; environment\n");
-  e = reg[1];
-  while (e != object_nil) {
-    xassert(typep(e, ENV));
-    printf("(<%p>", e);
-    xsplay_foreach(&e->env.binding, sweep_env);
-    printf(")\n");
-    e = e->env.top;
-  }
-}
-#endif
-
-#ifndef NDEBUG
-void describe_fs(void)
-{
-  int i, j;
-  char buf[MAX_STR_LEN];
-  struct frame *f;
-  printf("; frame stack\n");
-  for (i = sp - 1; i >= 0; i--) {
-    f = fs[i];
-    printf("(%s", frame_name(f->type));
-    for (j = 0; j < frame_size(f->type); j++)
-      printf(" %s", object_describe(f->local_vars[j], buf));
-    printf(")\n");
-  }
-  printf("\n");
-}
-#endif
 
 // special/prim
 
@@ -782,8 +738,8 @@ static void parse_lambda_list(object env, object params, object args)
       return;
     }
     if (!typep(params->cons.car, CONS)) {
-      fb_add(make_quote_frame(args->cons.car));
-      fb_add(make_bind_frame(params->cons.car));
+      fb_add(make_quote_inst(args->cons.car));
+      fb_add(make_bind_inst(params->cons.car));
     } else {
       parse_lambda_list(env, params->cons.car, args->cons.car);
       if (ip_trap_code != TRAP_NONE) return;
@@ -806,21 +762,21 @@ static void parse_lambda_list(object env, object params, object args)
       params = params->cons.cdr;
       if (sup_k != NULL) {
         v = object_bool(args != object_nil);
-        fb_add(make_quote_frame(v));
-        fb_add(make_bind_frame(sup_k));
+        fb_add(make_quote_inst(v));
+        fb_add(make_bind_inst(sup_k));
       }
       if (args != object_nil) {
-        fb_add(make_quote_frame(args->cons.car));
-        fb_add(make_bind_frame(k));
+        fb_add(make_quote_inst(args->cons.car));
+        fb_add(make_bind_inst(k));
         args = args->cons.cdr;
       } else {
         if (def_v == NULL) {
-          fb_add(make_quote_frame(object_nil));
-          fb_add(make_bind_frame(k));
+          fb_add(make_quote_inst(object_nil));
+          fb_add(make_bind_inst(k));
         } else {
-          fb_add(make_quote_frame(def_v));
-          fb_add(make_eval_frame());
-          fb_add(make_bind_frame(k));
+          fb_add(make_quote_inst(def_v));
+          fb_add(make_eval_inst());
+          fb_add(make_bind_inst(k));
         }
       }
     }
@@ -828,8 +784,8 @@ static void parse_lambda_list(object env, object params, object args)
   // parse rest parameter
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    fb_add(make_quote_frame(args));
-    fb_add(make_bind_frame(params->cons.car));
+    fb_add(make_quote_inst(args));
+    fb_add(make_bind_inst(params->cons.car));
     return;
   }
   // parse keyword parameter
@@ -859,21 +815,21 @@ static void parse_lambda_list(object env, object params, object args)
         o = o->cons.cdr;
       }
       if (sup_k != NULL) {
-        fb_add(make_quote_frame(object_bool(v != NULL)));
-        fb_add(make_bind_frame(sup_k));
+        fb_add(make_quote_inst(object_bool(v != NULL)));
+        fb_add(make_bind_inst(sup_k));
       }
       if (v != NULL) {
-        fb_add(make_quote_frame(v));
-        fb_add(make_bind_frame(k));
+        fb_add(make_quote_inst(v));
+        fb_add(make_bind_inst(k));
       }
       else {
         if (def_v == NULL) {
-          fb_add(make_quote_frame(object_nil));
-          fb_add(make_bind_frame(k));
+          fb_add(make_quote_inst(object_nil));
+          fb_add(make_bind_inst(k));
         } else {
-          fb_add(make_quote_frame(def_v));
-          fb_add(make_eval_frame());
-          fb_add(make_bind_frame(k));
+          fb_add(make_quote_inst(def_v));
+          fb_add(make_eval_inst());
+          fb_add(make_bind_inst(k));
         }
       }
       params = params->cons.cdr;
@@ -952,8 +908,8 @@ SPECIAL(let)
     ip_mark_error("argument must be list");
     return FALSE;
   }
-  if (args != object_nil) push_switch_env_frame(reg[1]);
-  push_eval_sequential_frame(argv->cons.cdr);
+  if (args != object_nil) push_switch_env_inst(reg[1]);
+  push_eval_sequential_inst(argv->cons.cdr);
   fb_reset();
   while (args != object_nil) {
     if (!typep((s = args->cons.car), SYMBOL)) {
@@ -964,9 +920,9 @@ SPECIAL(let)
       ip_mark_error("argument must be association list");
       return FALSE;
     }
-    fb_add(make_quote_frame(args->cons.car));
-    fb_add(make_eval_frame());
-    fb_add(make_bind_frame(s));
+    fb_add(make_quote_inst(args->cons.car));
+    fb_add(make_eval_inst());
+    fb_add(make_bind_inst(s));
     args = args->cons.cdr;
   }
   fb_flush();
@@ -987,8 +943,8 @@ SPECIAL(dynamic)
   while (TRUE) {
     if ((v = symbol_find(e, s)) != NULL) break;
     while (--i >= 0) {
-      if (fs[i]->type == SWITCH_ENV_FRAME) {
-        e = fs[i]->local_vars[0];
+      if (fs[i]->cons.car->xint.val == SWITCH_ENV_INST) {
+        e = fs[i]->cons.cdr->cons.car;
         break;
       }
     }
@@ -1021,9 +977,9 @@ SPECIAL(symbol_bind)
       return FALSE;
     }
     argv = argv->cons.cdr;
-    fb_add(make_quote_frame(argv->cons.car));
-    fb_add(make_eval_frame());
-    fb_add(make_bind_propagation_frame(s));
+    fb_add(make_quote_inst(argv->cons.car));
+    fb_add(make_eval_inst());
+    fb_add(make_bind_propagation_inst(s));
     argv = argv->cons.cdr;
     argc -= 2;
   }
@@ -1033,7 +989,7 @@ SPECIAL(symbol_bind)
 
 SPECIAL(begin)
 {
-  push_eval_sequential_frame(argv);
+  push_eval_sequential_inst(argv);
   return TRUE;
 }
 
@@ -1045,7 +1001,7 @@ SPECIAL(macro)
     ip_mark_error("required macro name");
     return FALSE;
   } else {
-    fs_push(make_bind_propagation_frame(argv->cons.car));
+    fs_push(make_bind_propagation_inst(argv->cons.car));
     argv = argv->cons.cdr;
   }
   if (!valid_lambda_list_p(MACRO, params = argv->cons.car)) {
@@ -1079,31 +1035,31 @@ SPECIAL(quote)
 SPECIAL(if)
 {
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
-  push_if_frame(argv);
+  push_if_inst(argv);
   return TRUE;
 }
 
 SPECIAL(unwind_protect)
 {
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
-  push_unwind_protect_frame(argv->cons.cdr);
-  push_eval_frame();
+  push_unwind_protect_inst(argv->cons.cdr);
+  push_eval_inst();
   reg[0] = argv->cons.car;
   return TRUE;
 }
 
 SPECIAL(labels)
 {
-  push_labels_frame(argv);
-  push_eval_sequential_frame(argv);
+  push_labels_inst(argv);
+  push_eval_sequential_inst(argv);
   return TRUE;
 }
 
 SPECIAL(goto)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  push_goto_frame();
-  push_eval_frame();
+  push_goto_inst();
+  push_eval_inst();
   reg[0] = argv->cons.car;
   return TRUE;
 }
@@ -1111,8 +1067,8 @@ SPECIAL(goto)
 SPECIAL(throw)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  push_throw_frame();
-  push_eval_frame();
+  push_throw_inst();
+  push_eval_inst();
   reg[0] = argv->cons.car;
   return TRUE;
 }
@@ -1120,8 +1076,8 @@ SPECIAL(throw)
 SPECIAL(basic_catch)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
-  push_fetch_handler_frame(argv->cons.cdr);
-  push_eval_frame();
+  push_fetch_handler_inst(argv->cons.cdr);
+  push_eval_inst();
   reg[0] = argv->cons.car;
   return TRUE;
 }
@@ -1129,8 +1085,8 @@ SPECIAL(basic_catch)
 SPECIAL(return)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  push_return_frame();
-  push_eval_frame();
+  push_return_inst();
+  push_eval_inst();
   reg[0] = argv->cons.car;
   return TRUE;
 }
@@ -1139,8 +1095,8 @@ SPECIAL(assert)
 {
 #ifndef NDEBUG
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  push_assert_frame();
-  push_eval_frame();
+  push_assert_inst();
+  push_eval_inst();
   reg[0] = argv->cons.car;
 #endif
   return TRUE;
@@ -1149,7 +1105,7 @@ SPECIAL(assert)
 PRIM(eval)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  push_eval_frame();
+  push_eval_inst();
   reg[0] = argv->cons.car;
   return TRUE;
 }
@@ -1161,12 +1117,12 @@ PRIM(apply)
     case SYMBOL:
       if (xsplay_find(&prim_splay, argv->cons.car) == NULL) break;
       else {
-        push_apply_prim_frame(argv->cons.car);
+        push_apply_prim_inst(argv->cons.car);
         reg[0] = argv->cons.cdr->cons.car;
         return TRUE;
       }
     case LAMBDA:
-      push_apply_frame(argv->cons.car);
+      push_apply_inst(argv->cons.car);
       reg[0] = argv->cons.cdr->cons.car;
       return TRUE;
     default: break;
@@ -1198,10 +1154,9 @@ static void trap(void)
 {
   switch (ip_trap_code) {
     case TRAP_ERROR:
-      push_throw_frame();
+      push_throw_inst();
       xassert(error_msg != NULL);
       reg[0] = gc_new_barray_from(STRING, strlen(error_msg), error_msg);
-      printf("%d\n", 30);
       ip_trap_code = TRAP_NONE;
       error_msg = NULL;
       break;
@@ -1215,35 +1170,35 @@ static object ip_main(void)
 {
   reg[0] = object_nil;
   reg[1] = object_toplevel;
-  push_apply_frame(object_boot);
+  push_apply_inst(object_boot);
   while (TRUE) {
     xassert(sp >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
     if (sp == 0) break;
-    switch (fs_top()->type) {
-      case APPLY_FRAME: pop_apply_frame(); break;
-      case APPLY_PRIM_FRAME: pop_apply_prim_frame(); break;
+    switch (fs_top()->cons.car->xint.val) {
+      case APPLY_INST: pop_apply_inst(); break;
+      case APPLY_PRIM_INST: pop_apply_prim_inst(); break;
 #ifndef NDEBUG
-      case ASSERT_FRAME: pop_assert_frame(); break;
+      case ASSERT_INST: pop_assert_inst(); break;
 #endif
-      case BIND_FRAME: pop_bind_frame(); break;
-      case BIND_PROPAGATION_FRAME: pop_bind_propagation_frame(); break;
-      case EVAL_FRAME: pop_eval_frame(); break;
-      case EVAL_ARGS_FRAME: pop_eval_args_frame(); break;
-      case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
-      case FENCE_FRAME: fs_pop(); break;
-      case FETCH_HANDLER_FRAME: pop_fetch_handler_frame(); break;
-      case FETCH_OPERATOR_FRAME: pop_fetch_operator_frame(); break;
-      case GOTO_FRAME: pop_goto_frame(); break;
-      case HANDLER_FRAME: fs_pop(); break;
-      case IF_FRAME: pop_if_frame(); break;
-      case LABELS_FRAME: fs_pop(); break;
-      case QUOTE_FRAME: pop_quote_frame(); break;
-      case RETURN_FRAME: pop_return_frame(); break;
-      case SWITCH_ENV_FRAME: pop_switch_env(); break;
-      case THROW_FRAME: pop_throw_frame(); break;
-      case TRACE_FRAME: fs_pop(); break;
-      case UNWIND_PROTECT_FRAME: pop_unwind_protect_frame(); break;
+      case BIND_INST: pop_bind_inst(); break;
+      case BIND_PROPAGATION_INST: pop_bind_propagation_inst(); break;
+      case EVAL_INST: pop_eval_inst(); break;
+      case EVAL_ARGS_INST: pop_eval_args_inst(); break;
+      case EVAL_SEQUENTIAL_INST: pop_eval_sequential_inst(); break;
+      case FENCE_INST: fs_pop(); break;
+      case FETCH_HANDLER_INST: pop_fetch_handler_inst(); break;
+      case FETCH_OPERATOR_INST: pop_fetch_operator_inst(); break;
+      case GOTO_INST: pop_goto_inst(); break;
+      case HANDLER_INST: fs_pop(); break;
+      case IF_INST: pop_if_inst(); break;
+      case LABELS_INST: fs_pop(); break;
+      case QUOTE_INST: pop_quote_inst(); break;
+      case RETURN_INST: pop_return_inst(); break;
+      case SWITCH_ENV_INST: pop_switch_env(); break;
+      case THROW_INST: pop_throw_inst(); break;
+      case TRACE_INST: fs_pop(); break;
+      case UNWIND_PROTECT_INST: pop_unwind_protect_inst(); break;
       default: xassert(FALSE);
     }
     cycle++;
