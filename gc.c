@@ -11,9 +11,6 @@
 int gc_used_memory;
 int gc_max_used_memory;
 
-static long cons_alloc_size;
-static object free_cons;
-
 static struct xarray table;
 static struct xarray work_table;
 static struct xsplay symbol_table;
@@ -116,18 +113,8 @@ object gc_new_xfloat(double val)
 
 object gc_new_cons(object car, object cdr)
 {
-  int i;
   object o;
-  struct cons *p;
-  if (free_cons == NULL) {
-    free_cons = gc_alloc(sizeof(struct cons) * cons_alloc_size);
-    p = (struct cons *)free_cons;
-    for (i = 0; i < cons_alloc_size - 1; i++) p[i].cdr = (object)&(p[i + 1]);
-    p[cons_alloc_size - 1].cdr = NULL;
-    cons_alloc_size *= 2;
-  }
-  o = free_cons;
-  free_cons = o->cons.cdr;
+  o = gc_alloc(sizeof(struct cons));
   set_type(o, CONS);
   o->cons.car = car;
   o->cons.cdr = cdr;
@@ -243,10 +230,6 @@ static void gc_free(object o)
       xsplay_delete(&keyword_table, name);
       xfree(name);
       break;
-    case CONS:
-      o->cons.cdr = free_cons;
-      free_cons = o;
-      return;    // reuse.
     default: break;
   }
   gc_used_memory -= object_byte_size(o);
@@ -289,8 +272,6 @@ void gc_chance(void)
 void gc_init(void)
 {
   gc_used_memory = gc_max_used_memory = 0;
-  cons_alloc_size = 256;
-  free_cons = NULL;
   xarray_init(&table);
   xarray_init(&work_table);
   xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
