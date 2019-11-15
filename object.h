@@ -68,9 +68,6 @@ extern struct xsplay prim_splay;
 // global object
 extern object object_boot;
 extern object object_bytes[];
-extern object object_catch;
-extern object object_error;
-extern object object_finally;
 extern object object_key;
 extern object object_nil;
 extern object object_opt;

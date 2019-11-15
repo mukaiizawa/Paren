@@ -11,9 +11,6 @@ struct xsplay prim_splay;
 
 object object_boot;
 object object_bytes[256];
-object object_catch;
-object object_error;
-object object_finally;
 object object_key;
 object object_nil;
 object object_opt;
