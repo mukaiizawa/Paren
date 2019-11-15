@@ -17,4 +17,3 @@ extern object gc_new_array(int size);
 extern void gc_init(void);
 extern void gc_mark(object o);
 extern void gc_chance(void);
-extern void gc_dump_table(void);

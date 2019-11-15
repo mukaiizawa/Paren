@@ -14,20 +14,16 @@
 // option
 
 char *core_fn;
-int dump_object_table_p;
 
 static void parse_opt(int argc, char *argv[])
 {
   int ch;
   core_fn = "./core.p";
-  dump_object_table_p = FALSE;
   while((ch = xgetopt(argc, argv, "f:o")) != EOF)
     switch(ch) {
       case 'f': core_fn = xoptarg; break;
-      case 'o': dump_object_table_p = TRUE; break;
       default: xerror("\
 -f FILE as core library for paren\n\
--o dump object table.\n\
 ");
     }
 }
@@ -244,6 +240,5 @@ int main(int argc, char *argv[])
   xbarray_init(&token_str);
   object_boot = gc_new_lambda(object_toplevel, object_nil, load());
   ip_start();
-  if (dump_object_table_p) gc_dump_table();
   return 0;
 }

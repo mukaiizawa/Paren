@@ -13,7 +13,6 @@ int gc_max_used_memory;
 
 static long cons_alloc_size;
 static object free_cons;
-static object free_env;
 
 static struct xarray table;
 static struct xarray work_table;
@@ -37,6 +36,15 @@ static void set_type(object o, int type)
   o->header |= type;
 }
 
+static char *asstr(int size, char *val)
+{
+  char *name;
+  name = xmalloc(size + 1);
+  memcpy(name, val, size);
+  name[size] = '\0';
+  return name;
+}
+
 static object gc_alloc(int size)
 {
   if ((gc_used_memory += size) > MAX_HEAP_SIZE) xerror("out of memory.");
@@ -44,25 +52,20 @@ static object gc_alloc(int size)
   return xmalloc(size);
 }
 
-static void regist(object o)
+static object regist(object o)
 { 
   xarray_add(&table, o);
+  return o;
 }
 
 object gc_new_env(object top)
 {
   object o;
-  if (free_env == NULL) {
-    o = gc_alloc(sizeof(struct env));
-    set_type(o, ENV);
-    xsplay_init(&o->env.binding, (int(*)(void *, void *))symcmp);
-  } else {
-    o = free_env;
-    free_env = o->env.top;
-  }
+  o = gc_alloc(sizeof(struct env));
+  set_type(o, ENV);
+  xsplay_init(&o->env.binding, (int(*)(void *, void *))symcmp);
   o->env.top = top;
-  regist(o);
-  return o;
+  return regist(o);
 }
 
 static object new_lambda(object env, object params, object body, int macro_p)
@@ -74,8 +77,7 @@ static object new_lambda(object env, object params, object body, int macro_p)
   o->lambda.env = env;
   o->lambda.params = params;
   o->lambda.body = body;
-  regist(o);
-  return o;
+  return regist(o);
 }
 
 object gc_new_macro(object env, object params, object body)
@@ -94,8 +96,7 @@ object gc_new_bytes(int64_t val)
   o = gc_alloc(sizeof(struct xint));
   set_type(o, XINT);
   o->xint.val = val;
-  regist(o);
-  return o;
+  return regist(o);
 }
 
 object gc_new_xint(int64_t val)
@@ -110,8 +111,7 @@ object gc_new_xfloat(double val)
   o = gc_alloc(sizeof(struct xfloat));
   set_type(o, XFLOAT);
   o->xfloat.val = val;
-  regist(o);
-  return o;
+  return regist(o);
 }
 
 object gc_new_cons(object car, object cdr)
@@ -131,8 +131,7 @@ object gc_new_cons(object car, object cdr)
   set_type(o, CONS);
   o->cons.car = car;
   o->cons.cdr = cdr;
-  regist(o);
-  return o;
+  return regist(o);
 }
 
 static object new_barray(int type, int size)
@@ -143,7 +142,7 @@ static object new_barray(int type, int size)
   set_type(o, type);
   memset(o->barray.elt, 0, size);
   o->barray.size = size;
-  return o;
+  return regist(o);
 }
 
 object gc_new_barray(int type, int size)
@@ -154,27 +153,23 @@ object gc_new_barray(int type, int size)
 object gc_new_barray_from(int type, int size, char *val)
 {
   object o;
-  char *name;
+  char *str;
   switch (type) {
     case SYMBOL:
-      name = xmalloc(size + 1);
-      memcpy(name, val, size);
-      name[size] = '\0';
-      if ((o = xsplay_find(&symbol_table, name)) == NULL) {
+      str = asstr(size, val);
+      if ((o = xsplay_find(&symbol_table, str)) == NULL) {
         o = new_barray(type, size);
         memcpy(o->barray.elt, val, size);
-        xsplay_add(&symbol_table, name, o);
-      } else xfree(name);
+        xsplay_add(&symbol_table, str, o);
+      } else xfree(str);
       return o;
     case KEYWORD:
-      name = xmalloc(size + 1);
-      memcpy(name, val, size);
-      name[size] = '\0';
-      if ((o = xsplay_find(&keyword_table, name)) == NULL) {
+      str = asstr(size, val);
+      if ((o = xsplay_find(&keyword_table, str)) == NULL) {
         o = new_barray(type, size);
         memcpy(o->barray.elt, val, size);
-        xsplay_add(&keyword_table, name, o);
-      } else xfree(name);
+        xsplay_add(&keyword_table, str, o);
+      } else xfree(str);
       return o;
     case STRING:
     case BARRAY:
@@ -196,22 +191,23 @@ object gc_new_array(int size)
   set_type(o, ARRAY);
   for (i = 0; i < size; i++) o->array.elt[i] = object_nil;
   o->array.size = size;
-  return o;
+  return regist(o);
 }
 
-static void sweep_env(int depth, void *key, void *data)
+static void mark_binding(int depth, void *key, void *data)
 {
   gc_mark(data);
 }
 
 void gc_mark(object o)
 {
+  int i;
   if (alivep(o)) return;
   set_alive(o, TRUE);
   switch (type(o)) {
     case ENV:
+      xsplay_foreach(&o->env.binding, mark_binding);
       gc_mark(o->env.top);
-      xsplay_foreach(&o->env.binding, sweep_env);
       break;
     case MACRO:
     case LAMBDA:
@@ -223,18 +219,30 @@ void gc_mark(object o)
       gc_mark(o->cons.car);
       gc_mark(o->cons.cdr);
       break;
+    case ARRAY:
+      for (i = 0; i < o->array.size; i++) gc_mark(o->array.elt[i]);
+      break;
     default: break;
   }
 }
 
 static void gc_free(object o)
 {
+  char *name;
   switch (type(o)) {
     case ENV:
-      xsplay_reset(&o->env.binding);
-      o->env.top = free_env;
-      free_env = o;
-      return;    // reuse.
+      xsplay_free(&o->env.binding);
+      break;
+    case SYMBOL:
+      name = asstr(o->barray.size, o->barray.elt);
+      xsplay_delete(&symbol_table, name);
+      xfree(name);
+      break;
+    case KEYWORD:
+      name = asstr(o->barray.size, o->barray.elt);
+      xsplay_delete(&keyword_table, name);
+      xfree(name);
+      break;
     case CONS:
       o->cons.cdr = free_cons;
       free_cons = o;
@@ -248,14 +256,21 @@ static void gc_free(object o)
 static void sweep_s_expr(void)
 {
   int i;
+  char buf[MAX_STR_LEN];
   object o;
+  if (GC_LOG_P) printf("***seep\n");
   for (i = 0; i < table.size; i++) {
     o = table.elt[i];
-    if (!alivep(o)) gc_free(o);
-    else {
+    if (GC_LOG_P) printf("%s", object_describe(o, buf));
+    if (alivep(o)) {
+      if (GC_LOG_P) printf(",alive");
       set_alive(o, FALSE);
       xarray_add(&work_table, o);
+    } else {
+      if (GC_LOG_P) printf(",free");
+      gc_free(o);
     }
+    if (GC_LOG_P) printf("\n");
   }
   xarray_reset(&table);
   for (i = 0; i < work_table.size; i++) regist(work_table.elt[i]);
@@ -265,44 +280,19 @@ static void sweep_s_expr(void)
 void gc_chance(void)
 {
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
-  if(GC_LOG_P) {
-    printf("before gc(used memory %d[byte])\n", gc_used_memory);
-    gc_dump_table();
-  }
+  if (GC_LOG_P) printf("before gc(used memory %d[byte])\n", gc_used_memory);
   ip_mark();
-  gc_mark(object_boot);
   sweep_s_expr();
-  if (GC_LOG_P) {
-    printf("after gc(used memory %d[byte])\n", gc_used_memory);
-    gc_dump_table();
-  }
+  if (GC_LOG_P) printf("after gc(used memory %d[byte])\n", gc_used_memory);
 }
 
 void gc_init(void)
 {
   gc_used_memory = gc_max_used_memory = 0;
   cons_alloc_size = 256;
-  free_env = free_cons = NULL;
+  free_cons = NULL;
   xarray_init(&table);
   xarray_init(&work_table);
   xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
   xsplay_init(&keyword_table, (int(*)(void *, void *))strcmp);
-}
-
-void gc_dump_table(void)
-{
-  int i;
-  char buf[MAX_STR_LEN];
-  object o;
-  printf("; object table {{{\n");
-  printf("; \ttoplevel\t%p\n", object_toplevel);
-  printf("; \tnil\t%p\n", object_nil);
-  for(i = 0; i < table.size; i++) {
-    o = table.elt[i];
-    printf("; \t%p\t", o);
-    if (typep(o, CONS)) printf("(%p . %p)\n", o->cons.car, o->cons.cdr);
-    else if (typep(o, ENV)) printf("-> %p\n", o->env.top);
-    else object_describe(o, buf);
-  }
-  printf("; }}}\n");
 }

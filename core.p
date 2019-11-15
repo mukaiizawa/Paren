@@ -949,17 +949,23 @@
 ; testing for development.
 (print (os_clock))
 
-(let ($encoding :UTF-8)
-  (<- ar (.init (.new AheadReader) :string "あいう"))
-  (print :init)
-  (print (.get ar))
-  (print (.get ar))
-  (print (.get ar))
-  (print (.token ar)))
+; (let ($encoding :UTF-8)
+;   (<- ar (.init (.new AheadReader) :string "あいう"))
+;   (print :init)
+;   (print (.get ar))
+;   (print (.get ar))
+;   (print (.get ar))
+;   (print (.token ar)))
 
 ; (basic-catch (lambda (e)
 ;                (print e))
 ;              (car (car (car 40))))
+
+(function fib (x)
+  (if (> x 1) (+ (fib (-- x)) (fib (- x 2)))
+      1))
+; (print (map (.. 0 30) fib))
+(print (map (.. 0 10) fib))
 
 (print (os_clock))
 ; ------------------------------------------------------------------------------
