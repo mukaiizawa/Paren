@@ -307,21 +307,6 @@ static void push_switch_env_inst(object env)
   reg[1] = gc_new_env(env);
 }
 
-static void push_throw_inst(void)
-{
-  fs_push(gen_inst0(THROW_INST));
-}
-
-static void push_trace_inst(void)
-{
-  fs_push(gen_inst1(TRACE_INST, reg[0]));
-}
-
-static void push_unwind_protect_inst(object argv)
-{
-  fs_push(gen_inst1(UNWIND_PROTECT_INST, argv));
-}
-
 static void parse_lambda_list(object env, object params, object args);
 static void pop_apply_inst(void)
 {
@@ -366,7 +351,7 @@ static void pop_eval_inst(void)
 {
   object s;
   fs_pop();
-  push_trace_inst();
+  fs_push(gen_inst1(TRACE_INST, reg[0]));
   switch (type(reg[0])) {
     case MACRO:
     case LAMBDA:
@@ -556,7 +541,7 @@ static void pop_throw_inst(void)
     }
     if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
       body = fs_pop()->cons.cdr->cons.car;
-      push_throw_inst();
+      fs_push(gen_inst0(THROW_INST));
       fs_push(gen_inst1(QUOTE_INST, reg[0]));
       push_eval_sequential_inst(body);
       return;
@@ -958,7 +943,7 @@ SPECIAL(if)
 SPECIAL(unwind_protect)
 {
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
-  push_unwind_protect_inst(argv->cons.cdr);
+  fs_push(gen_inst1(UNWIND_PROTECT_INST, argv->cons.cdr));
   fs_push(gen_inst0(EVAL_INST));
   reg[0] = argv->cons.car;
   return TRUE;
@@ -983,7 +968,7 @@ SPECIAL(goto)
 SPECIAL(throw)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  push_throw_inst();
+  fs_push(gen_inst0(THROW_INST));
   fs_push(gen_inst0(EVAL_INST));
   reg[0] = argv->cons.car;
   return TRUE;
@@ -1070,7 +1055,7 @@ static void trap(void)
 {
   switch (ip_trap_code) {
     case TRAP_ERROR:
-      push_throw_inst();
+      fs_push(gen_inst0(THROW_INST));
       xassert(error_msg != NULL);
       reg[0] = gc_new_barray_from(STRING, strlen(error_msg), error_msg);
       ip_trap_code = TRAP_NONE;
