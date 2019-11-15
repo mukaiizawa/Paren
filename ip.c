@@ -1076,7 +1076,7 @@ static object ip_main(void)
     xassert(sp >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
     if (sp == 0) break;
-    // gc_chance();
+    gc_chance();
     switch (fs_top()->cons.car->xint.val) {
       case APPLY_INST: pop_apply_inst(); break;
       case APPLY_PRIM_INST: pop_apply_prim_inst(); break;
@@ -1111,10 +1111,18 @@ static object ip_main(void)
 void ip_mark(void)
 {
   int i;
+  gc_mark(object_boot);
+  gc_mark(object_key);
+  gc_mark(object_nil);
+  gc_mark(object_opt);
+  gc_mark(object_os);
+  gc_mark(object_quote);
+  gc_mark(object_rest);
+  gc_mark(object_toplevel);
+  gc_mark(object_true);
   for (i = 0; i < REG_SIZE; i++) gc_mark(reg[i]);
   for (i = 0; i < sp; i++) gc_mark(fs_nth(i));
   for (i = 0; byte_range_p(i); i++) gc_mark(object_bytes[i]);
-  gc_mark(object_boot);
 }
 
 void ip_start(void)

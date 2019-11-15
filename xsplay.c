@@ -176,21 +176,16 @@ void xsplay_free(struct xsplay *s)
   s->top = null;
 }
 
-static void (*func)(int depth, void *key, void *data) = NULL;
-
-static void foreach1(int depth, struct xsplay_node *n)
+static void foreach1(int depth, struct xsplay_node *n, void (*f)(int d, void *key, void *data))
 {
   if (n != null) {
-    foreach1(depth + 1, n->left);
-    (*func)(depth, n->key, n->data);
-    foreach1(depth + 1, n->right);
+    foreach1(depth + 1, n->left, f);
+    (*f)(depth, n->key, n->data);
+    foreach1(depth + 1, n->right, f);
   }
 }
 
 void xsplay_foreach(struct xsplay *s, void (*f)(int d, void *key, void *data))
 {
-  xassert(func == NULL);
-  func = f;
-  foreach1(0, s->top);
-  func = NULL;
+  foreach1(0, s->top, f);
 }
