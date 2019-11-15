@@ -301,26 +301,6 @@ static void push_if_inst(object args)
   reg[0] = args->cons.car;
 }
 
-static void push_labels_inst(object args)
-{
-  fs_push(gen_inst1(LABELS_INST, args));
-}
-
-static object make_quote_inst(object arg)
-{
-  return gen_inst1(QUOTE_INST, arg);
-}
-
-static void push_quote_inst(object arg)
-{
-  fs_push(make_quote_inst(arg));
-}
-
-static void push_return_inst(void)
-{
-  fs_push(gen_inst0(RETURN_INST));
-}
-
 static void push_switch_env_inst(object env)
 {
   fs_push(gen_inst1(SWITCH_ENV_INST, reg[1]));
@@ -429,7 +409,7 @@ static void pop_goto_inst(void)
     if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
       o = fs_pop()->cons.cdr->cons.car;
       fs_push(gen_inst0(GOTO_INST));
-      push_quote_inst(label);
+      fs_push(gen_inst1(QUOTE_INST, label));
       push_eval_sequential_inst(o);
       return;
     }
@@ -551,8 +531,8 @@ static void pop_return_inst(void)
         return;
       case UNWIND_PROTECT_INST: 
         args = fs_pop()->cons.cdr->cons.car;
-        push_return_inst();
-        push_quote_inst(reg[0]);
+        fs_push(gen_inst0(RETURN_INST));
+        fs_push(gen_inst1(QUOTE_INST, reg[0]));
         push_eval_sequential_inst(args);
         return;
       default:
@@ -577,7 +557,7 @@ static void pop_throw_inst(void)
     if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
       body = fs_pop()->cons.cdr->cons.car;
       push_throw_inst();
-      push_quote_inst(reg[0]);
+      fs_push(gen_inst1(QUOTE_INST, reg[0]));
       push_eval_sequential_inst(body);
       return;
     }
@@ -674,7 +654,7 @@ static void parse_lambda_list(object env, object params, object args)
       return;
     }
     if (!typep(params->cons.car, CONS)) {
-      fb_add(make_quote_inst(args->cons.car));
+      fb_add(gen_inst1(QUOTE_INST, args->cons.car));
       fb_add(gen_inst1(BIND_INST, params->cons.car));
     } else {
       parse_lambda_list(env, params->cons.car, args->cons.car);
@@ -698,19 +678,19 @@ static void parse_lambda_list(object env, object params, object args)
       params = params->cons.cdr;
       if (sup_k != NULL) {
         v = object_bool(args != object_nil);
-        fb_add(make_quote_inst(v));
+        fb_add(gen_inst1(QUOTE_INST, v));
         fb_add(gen_inst1(BIND_INST, sup_k));
       }
       if (args != object_nil) {
-        fb_add(make_quote_inst(args->cons.car));
+        fb_add(gen_inst1(QUOTE_INST, args->cons.car));
         fb_add(gen_inst1(BIND_INST, k));
         args = args->cons.cdr;
       } else {
         if (def_v == NULL) {
-          fb_add(make_quote_inst(object_nil));
+          fb_add(gen_inst1(QUOTE_INST, object_nil));
           fb_add(gen_inst1(BIND_INST, k));
         } else {
-          fb_add(make_quote_inst(def_v));
+          fb_add(gen_inst1(QUOTE_INST, def_v));
           fb_add(gen_inst0(EVAL_INST));
           fb_add(gen_inst1(BIND_INST, k));
         }
@@ -720,7 +700,7 @@ static void parse_lambda_list(object env, object params, object args)
   // parse rest parameter
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    fb_add(make_quote_inst(args));
+    fb_add(gen_inst1(QUOTE_INST, args));
     fb_add(gen_inst1(BIND_INST, params->cons.car));
     return;
   }
@@ -751,19 +731,19 @@ static void parse_lambda_list(object env, object params, object args)
         o = o->cons.cdr;
       }
       if (sup_k != NULL) {
-        fb_add(make_quote_inst(object_bool(v != NULL)));
+        fb_add(gen_inst1(QUOTE_INST, object_bool(v != NULL)));
         fb_add(gen_inst1(BIND_INST, sup_k));
       }
       if (v != NULL) {
-        fb_add(make_quote_inst(v));
+        fb_add(gen_inst1(QUOTE_INST, v));
         fb_add(gen_inst1(BIND_INST, k));
       }
       else {
         if (def_v == NULL) {
-          fb_add(make_quote_inst(object_nil));
+          fb_add(gen_inst1(QUOTE_INST, object_nil));
           fb_add(gen_inst1(BIND_INST, k));
         } else {
-          fb_add(make_quote_inst(def_v));
+          fb_add(gen_inst1(QUOTE_INST, def_v));
           fb_add(gen_inst0(EVAL_INST));
           fb_add(gen_inst1(BIND_INST, k));
         }
@@ -856,7 +836,7 @@ SPECIAL(let)
       ip_mark_error("argument must be association list");
       return FALSE;
     }
-    fb_add(make_quote_inst(args->cons.car));
+    fb_add(gen_inst1(QUOTE_INST, args->cons.car));
     fb_add(gen_inst0(EVAL_INST));
     fb_add(gen_inst1(BIND_INST, s));
     args = args->cons.cdr;
@@ -913,7 +893,7 @@ SPECIAL(symbol_bind)
       return FALSE;
     }
     argv = argv->cons.cdr;
-    fb_add(make_quote_inst(argv->cons.car));
+    fb_add(gen_inst1(QUOTE_INST, argv->cons.car));
     fb_add(gen_inst0(EVAL_INST));
     fb_add(gen_inst1(BIND_PROPAGATION_INST, s));
     argv = argv->cons.cdr;
@@ -986,7 +966,7 @@ SPECIAL(unwind_protect)
 
 SPECIAL(labels)
 {
-  push_labels_inst(argv);
+  fs_push(gen_inst1(LABELS_INST, argv));
   push_eval_sequential_inst(argv);
   return TRUE;
 }
@@ -1021,7 +1001,7 @@ SPECIAL(basic_catch)
 SPECIAL(return)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  push_return_inst();
+  fs_push(gen_inst0(RETURN_INST));
   fs_push(gen_inst0(EVAL_INST));
   reg[0] = argv->cons.car;
   return TRUE;
