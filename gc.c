@@ -23,8 +23,8 @@ static int alivep(object o)
 
 static void set_alive(object o, int alivep)
 {
-  o->header &= ~ALIVE_MASK;
   if (alivep) o->header |= ALIVE_MASK;
+  else o->header &= ~ALIVE_MASK;
 }
 
 static void set_type(object o, int type)
@@ -33,7 +33,7 @@ static void set_type(object o, int type)
   o->header |= type;
 }
 
-static char *asstr(int size, char *val)
+static char *symbol_name(int size, char *val)
 {
   char *name;
   name = xmalloc(size + 1);
@@ -44,9 +44,12 @@ static char *asstr(int size, char *val)
 
 static object gc_alloc(int size)
 {
+  object o;
   if ((gc_used_memory += size) > MAX_HEAP_SIZE) xerror("out of memory.");
   if (gc_used_memory < gc_max_used_memory) gc_max_used_memory = gc_used_memory;
-  return xmalloc(size);
+  o = xmalloc(size);
+  set_alive(o, FALSE);
+  return o;
 }
 
 static object regist(object o)
@@ -65,12 +68,10 @@ object gc_new_env(object top)
   return regist(o);
 }
 
-static object new_lambda(object env, object params, object body, int macro_p)
+static object new_lambda(object env, object params, object body)
 {
   object o;
   o = gc_alloc(sizeof(struct lambda));
-  if (macro_p) set_type(o, MACRO);
-  else set_type(o, LAMBDA);
   o->lambda.env = env;
   o->lambda.params = params;
   o->lambda.body = body;
@@ -79,12 +80,17 @@ static object new_lambda(object env, object params, object body, int macro_p)
 
 object gc_new_macro(object env, object params, object body)
 {
-  return new_lambda(env, params, body, TRUE);
+  object o;
+  o = new_lambda(env, params, body);
+  set_type(o, MACRO);
+  return o;
 }
 
 object gc_new_lambda(object env, object params, object body)
 {
-  return new_lambda(env, params, body, FALSE);
+  object o = new_lambda(env, params, body);
+  set_type(o, LAMBDA);
+  return o;
 }
 
 object gc_new_bytes(int64_t val)
@@ -143,7 +149,7 @@ object gc_new_barray_from(int type, int size, char *val)
   char *str;
   switch (type) {
     case SYMBOL:
-      str = asstr(size, val);
+      str = symbol_name(size, val);
       if ((o = xsplay_find(&symbol_table, str)) == NULL) {
         o = new_barray(type, size);
         memcpy(o->barray.elt, val, size);
@@ -151,7 +157,7 @@ object gc_new_barray_from(int type, int size, char *val)
       } else xfree(str);
       return o;
     case KEYWORD:
-      str = asstr(size, val);
+      str = symbol_name(size, val);
       if ((o = xsplay_find(&keyword_table, str)) == NULL) {
         o = new_barray(type, size);
         memcpy(o->barray.elt, val, size);
@@ -183,14 +189,17 @@ object gc_new_array(int size)
 
 static void mark_binding(int depth, void *key, void *data)
 {
-  gc_mark(data);
+  object k, d;
+  k = key;
+  d = data;
+  gc_mark(k);
+  gc_mark(d);
 }
 
 void gc_mark(object o)
 {
   int i;
   if (alivep(o)) return;
-  set_alive(o, TRUE);
   switch (type(o)) {
     case ENV:
       xsplay_foreach(&o->env.binding, mark_binding);
@@ -211,6 +220,7 @@ void gc_mark(object o)
       break;
     default: break;
   }
+  set_alive(o, TRUE);
 }
 
 static void gc_free(object o)
@@ -221,12 +231,12 @@ static void gc_free(object o)
       xsplay_free(&o->env.binding);
       break;
     case SYMBOL:
-      name = asstr(o->barray.size, o->barray.elt);
+      name = symbol_name(o->barray.size, o->barray.elt);
       xsplay_delete(&symbol_table, name);
       xfree(name);
       break;
     case KEYWORD:
-      name = asstr(o->barray.size, o->barray.elt);
+      name = symbol_name(o->barray.size, o->barray.elt);
       xsplay_delete(&keyword_table, name);
       xfree(name);
       break;
@@ -239,25 +249,29 @@ static void gc_free(object o)
 static void sweep_s_expr(void)
 {
   int i;
-  char buf[MAX_STR_LEN];
   object o;
-  if (GC_LOG_P) printf("***seep\n");
+  xarray_reset(&work_table);
   for (i = 0; i < table.size; i++) {
     o = table.elt[i];
-    if (GC_LOG_P) printf("%s", object_describe(o, buf));
     if (alivep(o)) {
-      if (GC_LOG_P) printf(",alive");
       set_alive(o, FALSE);
       xarray_add(&work_table, o);
     } else {
-      if (GC_LOG_P) printf(",free");
+      char buf[MAX_STR_LEN];
+      switch (type(o)) {
+        case SYMBOL:
+        case KEYWORD:
+        case XINT:
+        case XFLOAT:
+          printf("free: %s\n", object_describe(o, buf));
+          break;
+        default: break;
+      }
       gc_free(o);
     }
-    if (GC_LOG_P) printf("\n");
   }
   xarray_reset(&table);
   for (i = 0; i < work_table.size; i++) regist(work_table.elt[i]);
-  xarray_reset(&work_table);
 }
 
 void gc_chance(void)
