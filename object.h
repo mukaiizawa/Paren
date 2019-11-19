@@ -30,7 +30,7 @@ union s_expr {
   struct env {
     int header;
     object top;
-    struct xsplay binding;
+    struct xarray binding;
   } env;
   struct lambda {
     int header;

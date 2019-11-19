@@ -133,12 +133,6 @@ void xsplay_add(struct xsplay *s, void *k, void *d)
   s->top = top;
 }
 
-void xsplay_replace(struct xsplay *s, void *k, void *d)
-{
-  if (xsplay_find(s, k) != NULL) xsplay_delete(s, k);
-  xsplay_add(s, k, d);
-}
-
 void *xsplay_find(struct xsplay *s, void *k)
 {
   struct xsplay_node *top;
@@ -176,16 +170,21 @@ void xsplay_free(struct xsplay *s)
   s->top = null;
 }
 
-static void foreach1(int depth, struct xsplay_node *n, void (*f)(int d, void *key, void *data))
+static void (*func)(int depth, void *key, void *data) = NULL;
+
+static void foreach1(int depth, struct xsplay_node *n)
 {
   if (n != null) {
-    foreach1(depth + 1, n->left, f);
-    (*f)(depth, n->key, n->data);
-    foreach1(depth + 1, n->right, f);
+    foreach1(depth + 1, n->left);
+    (*func)(depth,n->key, n->data);
+    foreach1(depth + 1, n->right);
   }
 }
 
 void xsplay_foreach(struct xsplay *s, void (*f)(int d, void *key, void *data))
 {
-  foreach1(0, s->top, f);
+  xassert(func == NULL);
+  func = f;
+  foreach1(0, s->top);
+  func = NULL;
 }

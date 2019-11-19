@@ -157,9 +157,10 @@ static object load(void)
   return o;
 }
 
-static void bind_symbol(object o, object v)
+static void bind_symbol(object k, object v)
 {
-  xsplay_add(&object_toplevel->env.binding, o, v);
+  xarray_add(&object_toplevel->env.binding, k);
+  xarray_add(&object_toplevel->env.binding, v);
 }
 
 static void bind_pseudo_symbol(object o)

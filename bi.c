@@ -5,6 +5,7 @@
 #include <math.h>
 
 #include "xsplay.h"
+#include "xarray.h"
 #include "xbarray.h"
 #include "object.h"
 #include "gc.h"

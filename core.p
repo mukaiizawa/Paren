@@ -11,11 +11,6 @@
                                             " symbol already bound")))
       (cons <- (cons name (cons (cons lambda (cons args body)) nil)))))
 
-(function fib (x)
-  (if (< x 1) 1
-      (+ (fib (+ x -1)) (fib (+ x -2)))))
-(print (fib 30))
-
 (macro begin0 (:rest body)
   ; bodyを逐次評価し、最初に評価した結果を返す。
   (let (sym (gensym))
@@ -966,11 +961,10 @@
 ;                (print e))
 ;              (car (car (car 40))))
 
-; (function fib (x)
-;   (if (> x 1) (+ (fib (-- x)) (fib (- x 2)))
-;       1))
-; ; (print (map (.. 0 30) fib))
-; (print (map (.. 0 10) fib))
+(function fib (x)
+  (if (> x 1) (+ (fib (-- x)) (fib (- x 2)))
+      1))
+(print (map (.. 0 10) fib))
 
 (print (os_clock))
 ; ------------------------------------------------------------------------------

@@ -65,8 +65,11 @@ static void mark_illegal_parameter_error()
 
 static object symbol_find(object e, object s)
 {
+  int i;
   xassert(typep(e, ENV));
-  return xsplay_find(&e->env.binding, s);
+  for (i = 0; i < e->env.binding.size; i += 2)
+    if (s == e->env.binding.elt[i]) return e->env.binding.elt[i + 1];
+  return NULL;
 }
 
 static object symbol_find_propagation(object e, object s)
@@ -81,8 +84,16 @@ static object symbol_find_propagation(object e, object s)
 
 static void symbol_bind(object e, object s, object v)
 {
+  int i;
   xassert(typep(e, ENV) && typep(s, SYMBOL));
-  xsplay_replace(&e->env.binding, s, v);
+  for (i = 0; i < e->env.binding.size; i += 2) {
+    if (s == e->env.binding.elt[i]) {
+      e->env.binding.elt[i + 1] = v;
+      return;
+    }
+  }
+  xarray_add(&e->env.binding, s);
+  xarray_add(&e->env.binding, v);
 }
 
 static void symbol_bind_propagation(object e, object s, object v)

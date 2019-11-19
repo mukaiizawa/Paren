@@ -63,7 +63,7 @@ object gc_new_env(object top)
   object o;
   o = gc_alloc(sizeof(struct env));
   set_type(o, ENV);
-  xsplay_init(&o->env.binding, (int(*)(void *, void *))symcmp);
+  xarray_init(&o->env.binding);
   o->env.top = top;
   return regist(o);
 }
@@ -71,6 +71,7 @@ object gc_new_env(object top)
 static object new_lambda(object env, object params, object body)
 {
   object o;
+  xassert(typep(env, ENV));
   o = gc_alloc(sizeof(struct lambda));
   o->lambda.env = env;
   o->lambda.params = params;
@@ -88,7 +89,8 @@ object gc_new_macro(object env, object params, object body)
 
 object gc_new_lambda(object env, object params, object body)
 {
-  object o = new_lambda(env, params, body);
+  object o;
+  o = new_lambda(env, params, body);
   set_type(o, LAMBDA);
   return o;
 }
@@ -187,23 +189,15 @@ object gc_new_array(int size)
   return regist(o);
 }
 
-static void mark_binding(int depth, void *key, void *data)
-{
-  object k, d;
-  k = key;
-  d = data;
-  gc_mark(k);
-  gc_mark(d);
-}
-
 void gc_mark(object o)
 {
   int i;
   if (alivep(o)) return;
+  set_alive(o, TRUE);
   switch (type(o)) {
     case ENV:
-      xsplay_foreach(&o->env.binding, mark_binding);
       gc_mark(o->env.top);
+      for (i = 0; i < o->env.binding.size; i++) gc_mark(o->env.binding.elt[i]);
       break;
     case MACRO:
     case LAMBDA:
@@ -220,7 +214,6 @@ void gc_mark(object o)
       break;
     default: break;
   }
-  set_alive(o, TRUE);
 }
 
 static void gc_free(object o)
@@ -228,7 +221,7 @@ static void gc_free(object o)
   char *name;
   switch (type(o)) {
     case ENV:
-      xsplay_free(&o->env.binding);
+      xarray_free(&o->env.binding);
       break;
     case SYMBOL:
       name = symbol_name(o->barray.size, o->barray.elt);
@@ -256,19 +249,7 @@ static void sweep_s_expr(void)
     if (alivep(o)) {
       set_alive(o, FALSE);
       xarray_add(&work_table, o);
-    } else {
-      char buf[MAX_STR_LEN];
-      switch (type(o)) {
-        case SYMBOL:
-        case KEYWORD:
-        case XINT:
-        case XFLOAT:
-          printf("free: %s\n", object_describe(o, buf));
-          break;
-        default: break;
-      }
-      gc_free(o);
-    }
+    } else gc_free(o);
   }
   xarray_reset(&table);
   for (i = 0; i < work_table.size; i++) regist(work_table.elt[i]);
