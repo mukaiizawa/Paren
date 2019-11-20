@@ -609,7 +609,6 @@
             (list 'push! '$class (list quote cls-sym)))
       (map fields (lambda (var) (list 'make-accessor cls-sym var))))))
 
-
 (macro method (cls-sym method-sym args :rest body)
   (assert (class-exists? cls-sym))
   (if (and (bound? method-sym)
@@ -622,6 +621,30 @@
                   (list cons (list quote method-sym)
                         (list cons (cons lambda (cons (cons 'self args) body))
                               (list '. cls-sym :methods)))))))
+
+(macro catch ((:rest handlers) :rest body)
+  ; (catch ((Exception1 (e) ...)
+  ;         (Exception2 (e) ...)
+  ;         (Exception3 (e) ...))
+  ;   ...)
+  ; (basic-catch (lambda (gsym)
+  ;                (if (is-a gsym Exception1) (apply (lambda (e) ...) gsym)
+  ;                    (is-a gsym Exception2) (apply (lambda (e) ...) gsym)
+  ;                    (is-a gsym Exception3) (apply (lambda (e) ...) gsym)
+  ;                    (throw gsym)))
+  ;              ...)
+  (let (gargs (gensym) if-clause nil)
+    (push! if-clause if)
+    (push! if-clause (list 'not (list 'object? gargs)))
+    (push! if-clause (list 'throw gargs))
+    (dolist (h handlers)
+      (push! if-clause (list 'is-a? gargs (car h)))
+      (push! if-clause (list apply (cons lambda (cons (cadr h) (cddr h)))
+                             (list list gargs))))
+    (push! if-clause (list 'throw gargs))
+    (cons 'basic-catch (cons (cons lambda (list (list gargs)
+                                                (reverse if-clause)))
+                             body))))
 
 (function object? (x)
   ; xがオブジェクトの場合trueを、そうでなければnilを返す。
@@ -910,6 +933,12 @@
     (.skip self))
   self)
 
+; paren reader
+
+; (class ParenLexcer (ByteAheadReader)
+;   ; parenリーダクラス
+;   )
+
 ;; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
     $stdout (.init (.new FileStream) :fp (fp 1))
@@ -939,11 +968,8 @@
   (.writeString stream s)
   s)
 
-; paren reader
-
-(class ParenReader (AheadReader)
-  ; parenリーダクラス
-  )
+; (function read (:opt (stream $stdin))
+;   (.parseSExpr (.init (.new ParenReader) :stream stream)))
 
 ; ------------------------------------------------------------------------------
 ; testing for development.
@@ -957,14 +983,19 @@
 ;   (print (.get ar))
 ;   (print (.token ar)))
 
-; (basic-catch (lambda (e)
-;                (print e))
-;              (car (car (car 40))))
-
 ; (function fib (x)
 ;   (if (> x 1) (+ (fib (-- x)) (fib (- x 2)))
 ;       1))
-; (print (map (.. 0 30) fib))
+; (print (map (.. 0 15) fib))
+
+; todo
+; (print (read "3"))
+; (print (read "nil"))
+; (print (read ":aaa"))
+; (print (read "\"str\""))
+; (print (read "\"文字列\""))
+; (print (read "(list)"))
+; (print (read "(list 1 2 3)"))
 
 (print (os_clock))
 ; ------------------------------------------------------------------------------
