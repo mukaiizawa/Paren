@@ -1,14 +1,11 @@
-; paren core library.
+; Paren core library.
 
 ; fundamental macro
 
 (macro function (name args :rest body)
   ; 仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
   ; argsの書式はspecial operatorのlambdaに準ずる。
-  (if (bound? name) (throw (list :class 'Error
-                                 :message (string+
-                                            (symbol->string name)
-                                            " symbol already bound")))
+  (if (bound? name) (throw "function/symbol already bound")
       (cons <- (cons name (cons (cons lambda (cons args body)) nil)))))
 
 (macro begin0 (:rest body)
@@ -440,7 +437,7 @@
       (and (f (car l) (cadr l)) (adjacent-satisfy? (cdr l) f))))
 
 ; associated list
-;; parenでは、キーワードと任意のS式の対を保持するリストを連想リストという。
+;; Parenでは、キーワードと任意のS式の対を保持するリストを連想リストという。
 ;; 探索は線形時間必要になるが、比較はアドレスで行われるため高速。
 ;; 任意のオブジェクトの対応を保持する場合はMapクラスを利用する。
 
@@ -450,8 +447,7 @@
   ; vが指定された場合はkに対応する値をvで上書きする。
   (assert (list? al))
   (let (rec (lambda (rest)
-              (if (nil? rest) (throw
-                                '(:class 'Error :message "property not found"))
+              (if (nil? rest) (throw "property not found")
                   (same? (car rest) k) rest
                   (rec (cddr rest))))
         pair (rec al))
@@ -527,17 +523,7 @@
   (assert (number? x))
   (< x 0))
 
-; character, string
-
-(function char->byte (s)
-  ; 文字列sをバイトに変換する。
-  ; sはascii文字でなければならない。
-  (assert (string? s))
-  (let (ba (string->byte-array s))
-    (if (= (byte-array-length ba) 1) ([] ba 0)
-        (throw '(:class Error :message "expected type ascii character")))))
-
-; paren object system
+; Paren object system
 
 (<- $class nil)
 
@@ -565,8 +551,7 @@
                     (let (super (. cls :super))
                       (and super (rec (find-class super)))))))
     (let (m (rec (find-class cls-sym)))
-      (if m m
-          (throw '(:class Error :message "method not found"))))))
+      (if m m (throw (.message (.new Error) "method not found"))))))
 
 (macro make-accessor (cls-sym var)
   (let (val (gensym) val? (gensym))
@@ -613,7 +598,7 @@
   (assert (class-exists? cls-sym))
   (if (and (bound? method-sym)
            (not (method? (eval method-sym))))
-      (throw '(:class Error :message "is not a method"))
+      (throw (.message (.new Error) "method/symbol already bound"))
       (list begin
             (if (not (bound? method-sym))
                 (list make-method-dispatcher method-sym))
@@ -648,7 +633,7 @@
 
 (function object? (x)
   ; xがオブジェクトの場合trueを、そうでなければnilを返す。
-  ; paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。
+  ; Paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。
   (and (list? x) (same? (car x) :class)))
 
 (function is-a? (o cls)
@@ -894,7 +879,7 @@
 (method ByteAheadReader .skipSpace ()
   ; スペース、改行文字を読み飛ばし、レシーバを返す。
   (while (and (not (.eof? self))
-              (find (map '(" " "\r" "\n") char->byte) (.next self) :test =))
+              (find '(0x20 0x0A 0x0D) (.next self) :test =))
     (.skip self))
   self)
 
@@ -933,11 +918,26 @@
     (.skip self))
   self)
 
-; paren reader
+; Paren reader
 
-; (class ParenLexcer (ByteAheadReader)
-;   ; parenリーダクラス
-;   )
+(class ParenLexer (AheadReader)
+  ; Paren字句解析機
+  line-no file)
+
+(method ParenLexer .error (message)
+  (throw (.message (.new Error) message)))
+
+(method ParenLexer .getString ()
+  (.skip self)
+  (while (/= 0x16 (.next self))
+    (if (or (= (.next self) :EOF) (.eof? self))
+        (.error self "missing close \"")
+        (.get self)))
+  (.token self))
+
+(class ParenParser ()
+  ; Paren構文解析機
+  lexer next)
 
 ;; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
@@ -989,13 +989,13 @@
 ; (print (map (.. 0 15) fib))
 
 ; todo
-; (print (read "3"))
-; (print (read "nil"))
-; (print (read ":aaa"))
-; (print (read "\"str\""))
-; (print (read "\"文字列\""))
-; (print (read "(list)"))
-; (print (read "(list 1 2 3)"))
+; (assert (= (read "3") 3))
+; (assert (= (read "nil") nil))
+; (assert (= (read ":aaa") :aaa))
+; (assert (string= (read "\"str\"") "str"))
+; (assert (string= (read "\"文字列\"") "文字列"))
+; (assert (list= (read "(list)") '(list)))
+; (assert (list= (read "(list :1 :2 :3)") '(list :1 :2 :3)))
 
 (print (os_clock))
 ; ------------------------------------------------------------------------------
