@@ -5,7 +5,7 @@
 (macro function (name args :rest body)
   ; 仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
   ; argsの書式はspecial operatorのlambdaに準ずる。
-  (if (bound? name) (throw "function/symbol already bound")
+  (if (bound? name) (throw "symbol already bound")
       (cons <- (cons name (cons (cons lambda (cons args body)) nil)))))
 
 (macro begin0 (:rest body)
@@ -598,7 +598,7 @@
   (assert (class-exists? cls-sym))
   (if (and (bound? method-sym)
            (not (method? (eval method-sym))))
-      (throw (.message (.new Error) "method/symbol already bound"))
+      (throw (.message (.new Error) "symbol already bound"))
       (list begin
             (if (not (bound? method-sym))
                 (list make-method-dispatcher method-sym))
