@@ -457,15 +457,15 @@
 ; char
 
 (function char-space? (c)
-  (assert (byte? c))
+  (assert (number? c))
   (find '(0x09 0x0A 0x0D 0x20) c :test =))
 
 (function char-alpha? (c)
-  (assert (byte? c))
+  (assert (number? c))
   (or (<= 0x41 c 0x5A) (<= 0x61 c 0x7A)))
 
 (function char-digit? (c)
-  (assert (byte? c))
+  (assert (number? c))
   (<= 0x30 c 0x39))
 
 (function char-lower (c)
@@ -857,10 +857,10 @@
   ; 文字列やストリームから1byte先読みを行う機能を提供するクラス。
   stream next buf)
 
-(method ByteAheadReader .init (:key string stream)
+(method ByteAheadReader .init (:key string (stream $stdin))
   ; 文字列または、ストリームのいずれかを用いてレシーバを初期化する。
-  (assert (or (and string (string? string))
-              (and (object? stream) (is-a? stream Stream))))
+  (assert (and (or (nil? string) (string? string))
+               (object? stream) (is-a? stream Stream)))
   (when string
     (<- stream (.new MemoryStream))
     (.writeString stream string))
@@ -869,9 +869,9 @@
   (.buf self (.new MemoryStream))
   self)
 
-(method ByteAheadReader .eof? (:key string stream)
+(method ByteAheadReader .eof? ()
   ; ストリームが終端に達している場合にtrueを、そうでなければnilを返す。
-  (same? (.next self) :EOF))
+  (= (.next self) -1))
 
 (method ByteAheadReader .ensureNotEOFReached ()
   ; ストリームが終端に達していた場合は例外をスローする。
@@ -926,6 +926,10 @@
   (.buf self (.new MemoryStream))
   self)
 
+(method AheadReader .eof? ()
+  ; ストリームが終端に達している場合にtrueを、そうでなければnilを返す。
+  (same? (.next self) :EOF))
+
 (method AheadReader .skip ()
   ; 次の1文字を読み飛ばし、返す。
   (.ensureNotEOFReached self)
@@ -950,7 +954,7 @@
   ; Paren字句解析機
   )
 
-(method ParenLexer .error (message)
+(method ParenLexer .raise (message)
   (throw (.message (.new Error) message)))
 
 (method ParenLexer .identifierLead? ()
@@ -958,26 +962,26 @@
     (or (find '(0x21 0x24 0x25 0x26 0x2A 0x2B 0x2D 0x2F 0x3C 0x3D 0x3E 0x3F
                 0x5F 0x2E 0x5B 0x5D)
               c :test =)
-        (alpha? c))))
+        (char-alpha? c))))
 
 (method ParenLexer .identifierTrail? ()
   (let (c (.next self))
-    (or (.identifierLead? c) (char-digit? c))))
+    (or (.identifierLead? self) (char-digit? c))))
 
-(method ParenLexer .lexString ()
+(method ParenLexer .getString ()
   (.skip self)
-  (while (/= 0x22 (.next self))    ; '"'
-    (if (.eof? self) (.error self "quote not closed")
-        (/= (.next self) 0x5C) (.get self)    ; '\'
+  (while (/= 0x22 (.next self))
+    (if (.eof? self) (.raise self "quote not closed")
+        (/= (.next self) 0x5C) (.get self)
         (begin (.skip self)
                (throw "todo/implement not yet"))))
   (.skip self)
   (.token self))
 
-(method ParenLexer .lexNumber (sign)
+(method ParenLexer .getNumber (sign)
   (let (radix 10 factor 0 val 0)
     (while (char-digit? (.next self))
-      (<- val (+ (* val 10) (char->digit (.skip self) 10))))
+      (<- val (+ (* val 10) (char->digit (.skip self)))))
     (if (= (.next self) 0x78)
         (begin (.skip self)
                (<- radix (if (= val 0) 16 val)
@@ -992,39 +996,78 @@
                (while (char-digit? (.next self))
                  (<- val (+ val (* (char->digit (.skip self)) factor))
                      factor (/ factor 10)))))
-    (if (= sign 0x2D) (negated val)
+    (if (and (byte? sign) (= sign 0x2D)) (negated val)
         val)))
 
-(method ParenLexer .lexKeyword ()
+(method ParenLexer .getKeyword ()
   (.skip self)
   (while (.identifierTrail? self) (.get self))
   (symbol->keyword (string->symbol (.token self))))
 
-(method ParenLexer .lexSymbol ()
+(method ParenLexer .getSymbol ()
   (while (.identifierTrail? self) (.get self))
   (string->symbol (.token self)))
 
-(method ParenLexer .lex ()
+(method ParenLexer .getToken ()
   (let (sign nil)
     (.reset self)
     (while (char-space? (.next self)) (.skip self))
     (if (= (.next self) 0x3B) (begin
                                 (while (/= (.next self) 0x0A) (.skip self))
-                                (.lex self))
-        (or (.eof self) (find '(0x27 0x28 0x29) (.next self))) (.skip self)
-        (= (.next self) 0x22) (.lexString self)
-        (= (.next self) 0x3A) (.lexKeyword self)
-        (begin (if (find '(0x2B 0x2D) (.next self))
+                                (.getToken self))
+        (.eof? self) :EOF
+        (find '(0x27 0x28 0x29) (.next self) :test =) (.skip self)
+        (= (.next self) 0x22) (.getString self)
+        (= (.next self) 0x3A) (.getKeyword self)
+        (begin (if (find '(0x2B 0x2D) (.next self) :test =)
                    (<- sign (.skip self)))
                nil) :unreachable
-        (char-digit? (.next self)) (.lexNumber sign)
+        (char-digit? (.next self)) (.getNumber self sign)
         (or sign (.identifierLead? self)) (begin (if sign (.add self sign))
-                                                 (.lexSymbol self))
-        (.error self "illegal char"))))
+                                                 (.getSymbol self))
+        (.raise self (list (.next self) "illegal char")))))
 
 (class ParenParser ()
   ; Paren構文解析機
   lexer next)
+
+(method ParenParser .init (:key string (stream $stdin))
+  (.lexer self (.init (.new ParenLexer) :string string :stream stream))
+  (.scan self)
+  self)
+
+(method ParenParser .raise (:opt message)
+  (throw (.message (.new Exception) (or message "illegal token"))))
+
+(method ParenParser .scan (:opt f)
+  (if (and f (not (f (.next self)))) (.raise self "missing token")
+      (let (token (.getToken (.lexer self)))
+        (.next self token)
+        token)))
+
+(method ParenParser .parseList ()
+  (let (close-paren? (lambda (x) (and (byte? x) (= x 0x29))))
+    (if (close-paren? (.scan self)) nil
+        (begin0 (cons (.parse self) (.parseCdr self))
+                (.scan self close-paren?)))))
+
+(method ParenParser .parseCdr ()
+  (let (next (.next self))
+    (if (and (byte? next) (= next 0x29)) nil
+        (cons (.parse self) (.parseCdr self)))))
+
+(method ParenParser .parseAtom ()
+  (let (atom (.next self))
+    (if (or (symbol? atom) (keyword? atom) (string? atom) (number? atom))
+        (begin0 atom (.scan self))
+        (.raise self))))
+
+(method ParenParser .parse ()
+  (let (next (.next self))
+    (if (and (byte? next) (= next 0x27)) (begin (.scan self)
+                                                (list quote (.parse self)))
+        (and (byte? next) (= next 0x28)) (.parseList self)
+        (.parseAtom self))))
 
 ;; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
@@ -1055,8 +1098,13 @@
   (.writeString stream s)
   s)
 
-; (function read (:opt (stream $stdin))
-;   (.parseSExpr (.init (.new ParenReader) :stream stream)))
+(function read (:opt (stream (dynamic $stdin)))
+  (.parse (.init (.new ParenParser) :stream stream)))
+
+(function repl ()
+  (while true
+    (write-string ") ")
+    (print (eval (read)))))
 
 ; ------------------------------------------------------------------------------
 ; testing for development.
@@ -1075,14 +1123,15 @@
 ;       1))
 ; (print (map (.. 0 15) fib))
 
-; todo
-; (assert (= (read "3") 3))
-; (assert (= (read "nil") nil))
-; (assert (= (read ":aaa") :aaa))
-; (assert (string= (read "\"str\"") "str"))
-; (assert (string= (read "\"文字列\"") "文字列"))
-; (assert (list= (read "(list)") '(list)))
-; (assert (list= (read "(list :1 :2 :3)") '(list :1 :2 :3)))
+(repl)
+
+; (assert (= (read) 3))
+; (assert (= (read) nil))
+; (assert (= (read) :aaa))
+; (assert (string= (read) "str"))
+; (assert (string= (read) "文字列"))
+; (assert (list= (read) '(list)))
+; (assert (list= (read) '(list :1 :2 :3)))
 
 (print (os_clock))
 ; ------------------------------------------------------------------------------
