@@ -456,17 +456,34 @@
 
 ; char
 
-(function char-space? (x)
-  (assert (byte? x))
-  (find '(0x09 0x0A 0x0D 0x20) x :test =))
+(function char-space? (c)
+  (assert (byte? c))
+  (find '(0x09 0x0A 0x0D 0x20) c :test =))
 
-(function char-alpha? (x)
-  (assert (byte? x))
-  (or (<= 0x41 x 0x5A) (<= 0x61 x 0x7A)))
+(function char-alpha? (c)
+  (assert (byte? c))
+  (or (<= 0x41 c 0x5A) (<= 0x61 c 0x7A)))
 
-(function char-digit? (x)
-  (assert (byte? x))
-  (<= 0x30 x 0x39))
+(function char-digit? (c)
+  (assert (byte? c))
+  (<= 0x30 c 0x39))
+
+(function char-lower (c)
+  (assert (byte? c))
+  (if (<= 0x41 c 0x5A) (+ c 0x20)
+      c))
+
+(function char-upper (c)
+  (assert (byte? c))
+  (if (<= 0x61 c 0x7A) (- c 0x20)
+      c))
+
+(function char->digit (c :key (radix 10))
+  (assert (byte? c))
+  (let (n (if (char-digit? c) (- c 0x30)
+              (char-alpha? c) (+ (- (char-lower c) 0x61) 10)))
+    (if (and n (< n radix)) n
+        (throw (.message (.new Exception) "illegal number")))))
 
 ; number
 
@@ -877,13 +894,9 @@
   (assert (byte? b))
   (.writeByte (.buf self) b))
 
-(method ByteAheadReader .bytes ()
-  ; 現在切り出しているbyte列を返す。
-  (.buf self))
-
 (method ByteAheadReader .token ()
   ; 現在切り出しているbyte列を文字列にして返す。
-  (.toString (.bytes self)))
+  (.toString (.buf self)))
 
 (method ByteAheadReader .reset ()
   ; 現在切り出しているトークン文字列を返す。
@@ -940,16 +953,6 @@
 (method ParenLexer .error (message)
   (throw (.message (.new Error) message)))
 
-(method ParenLexer .getString ()
-  (.skip self)
-  (while (/= 0x22 (.next self))    ; '"'
-    (if (.eof? self) (.error self "quote not closed")
-        (/= (.next self) 0x5C) (.get self)    ; '\'
-        (begin (.skip self)
-               (throw "implement not yet"))))
-  (.skip self)
-  (.token self))
-
 (method ParenLexer .identifierLead? ()
   (let (c (.next self))
     (or (find '(0x21 0x24 0x25 0x26 0x2A 0x2B 0x2D 0x2F 0x3C 0x3D 0x3E 0x3F
@@ -960,6 +963,64 @@
 (method ParenLexer .identifierTrail? ()
   (let (c (.next self))
     (or (.identifierLead? c) (char-digit? c))))
+
+(method ParenLexer .lexString ()
+  (.skip self)
+  (while (/= 0x22 (.next self))    ; '"'
+    (if (.eof? self) (.error self "quote not closed")
+        (/= (.next self) 0x5C) (.get self)    ; '\'
+        (begin (.skip self)
+               (throw "todo/implement not yet"))))
+  (.skip self)
+  (.token self))
+
+(method ParenLexer .lexNumber (sign)
+  (let (radix 10 factor 0 val 0)
+    (while (char-digit? (.next self))
+      (<- val (+ (* val 10) (char->digit (.skip self) 10))))
+    (if (= (.next self) 0x78)
+        (begin (.skip self)
+               (<- radix (if (= val 0) 16 val)
+                   val 0)
+               (while (or (char-alpha? (.next self))
+                          (char-digit? (.next self)))
+                 (<- val (+ (* val radix)
+                            (char->digit (.skip self) :radix radix)))))
+        (= (.next self) 0x2E)
+        (begin (.skip self)
+               (<- factor 0.1)
+               (while (char-digit? (.next self))
+                 (<- val (+ val (* (char->digit (.skip self)) factor))
+                     factor (/ factor 10)))))
+    (if (= sign 0x2D) (negated val)
+        val)))
+
+(method ParenLexer .lexKeyword ()
+  (.skip self)
+  (while (.identifierTrail? self) (.get self))
+  (symbol->keyword (string->symbol (.token self))))
+
+(method ParenLexer .lexSymbol ()
+  (while (.identifierTrail? self) (.get self))
+  (string->symbol (.token self)))
+
+(method ParenLexer .lex ()
+  (let (sign nil)
+    (.reset self)
+    (while (char-space? (.next self)) (.skip self))
+    (if (= (.next self) 0x3B) (begin
+                                (while (/= (.next self) 0x0A) (.skip self))
+                                (.lex self))
+        (or (.eof self) (find '(0x27 0x28 0x29) (.next self))) (.skip self)
+        (= (.next self) 0x22) (.lexString self)
+        (= (.next self) 0x3A) (.lexKeyword self)
+        (begin (if (find '(0x2B 0x2D) (.next self))
+                   (<- sign (.skip self)))
+               nil) :unreachable
+        (char-digit? (.next self)) (.lexNumber sign)
+        (or sign (.identifierLead? self)) (begin (if sign (.add self sign))
+                                                 (.lexSymbol self))
+        (.error self "illegal char"))))
 
 (class ParenParser ()
   ; Paren構文解析機
