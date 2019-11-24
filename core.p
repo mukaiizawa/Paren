@@ -720,6 +720,13 @@
 (function Error.shouldBeImplemented ()
   (throw (.message (.new Error) "should be implemented")))
 
+(class QuitSignal (Error)
+  ; システム終了シグナル
+  )
+
+(function quit ()
+  (throw (.new QuitSignal)))
+
 (class Exception ()
   ; 例外クラス。
   ; すべての例外クラスはこのクラスを継承する。
