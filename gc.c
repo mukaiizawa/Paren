@@ -11,6 +11,8 @@
 int gc_used_memory;
 int gc_max_used_memory;
 
+static object free_cons;
+
 static struct xarray table;
 static struct xarray work_table;
 static struct xsplay symbol_table;
@@ -122,8 +124,13 @@ object gc_new_xfloat(double val)
 object gc_new_cons(object car, object cdr)
 {
   object o;
-  o = gc_alloc(sizeof(struct cons));
-  set_type(o, CONS);
+  if (free_cons == NULL) {
+    o = gc_alloc(sizeof(struct cons));
+    set_type(o, CONS);
+  } else {
+    o = free_cons;
+    free_cons = o->cons.cdr;
+  }
   o->cons.car = car;
   o->cons.cdr = cdr;
   return regist(o);
@@ -223,6 +230,10 @@ static void gc_free(object o)
     case ENV:
       xarray_free(&o->env.binding);
       break;
+    case CONS:
+      o->cons.cdr = free_cons;
+      free_cons = o;
+      return;
     case SYMBOL:
       name = symbol_name(o->barray.size, o->barray.elt);
       xsplay_delete(&symbol_table, name);
@@ -267,6 +278,7 @@ void gc_chance(void)
 void gc_init(void)
 {
   gc_used_memory = gc_max_used_memory = 0;
+  free_cons = NULL;
   xarray_init(&table);
   xarray_init(&work_table);
   xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);

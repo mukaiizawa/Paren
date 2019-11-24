@@ -1023,7 +1023,7 @@
                    (<- sign (.skip self)))
                nil) :unreachable
         (char-digit? (.next self)) (.getNumber self sign)
-        (or sign (.identifierLead? self)) (begin (if sign (.add self sign))
+        (or sign (.identifierLead? self)) (begin (if sign (.put self sign))
                                                  (.getSymbol self))
         (.raise self (list (.next self) "illegal char")))))
 
@@ -1118,10 +1118,10 @@
 ;   (print (.get ar))
 ;   (print (.token ar)))
 
-; (function fib (x)
-;   (if (> x 1) (+ (fib (-- x)) (fib (- x 2)))
-;       1))
-; (print (map (.. 0 15) fib))
+(function fib (x)
+  (if (> x 1) (+ (fib (-- x)) (fib (- x 2)))
+      1))
+(print (map (.. 0 15) fib))
 
 (repl)
 
