@@ -127,11 +127,13 @@ static char *symbol_name_map[] = {
   "bit_xor", "bit-xor",
   "integer_p", "integer?",
   "number_add", "+",
+  "number_divide", "/",
   "number_equal_p", "=",
   "number_lt", "<",
   "number_modulo", "mod",
   "number_multiply", "*",
   "number_p", "number?",
+  "number_to_integer", "number->integer",
   "number_to_string", "number->string",
 
   "string_add", "string+",

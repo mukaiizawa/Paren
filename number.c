@@ -17,9 +17,14 @@ static void mark_required_number(void)
   ip_mark_error("required number");
 }
 
-void mark_numeric_over_flow(void)
+static void mark_numeric_over_flow(void)
 {
   ip_mark_error("numeric overflow");
+}
+
+static void mark_division_by_zero(void)
+{
+  ip_mark_error("division by zero");
 }
 
 PRIM(number_p)
@@ -86,8 +91,8 @@ static int int64_add(object argv, object *result)
 PRIM(number_add)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
-  *result = object_bytes[0];
-  return int64_add(argv, result);
+  *result = argv->cons.car;
+  return int64_add(argv->cons.cdr, result);
 }
 
 static int double_multiply(object argv, object *result)
@@ -126,14 +131,61 @@ static int int64_multiply(object argv, object *result)
     }
     *result = gc_new_xint(x * y);
     return int64_multiply(argv->cons.cdr, result);
-  } else return double_multiply(argv, result);
+  }
+  return double_multiply(argv, result);
 }
 
 PRIM(number_multiply)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
-  *result = object_bytes[1];
-  return int64_multiply(argv, result);
+  *result = argv->cons.car;
+  return int64_multiply(argv->cons.cdr, result);
+}
+
+static int double_divide(object argv, object *result)
+{
+  double x, y, z;
+  if (argv == object_nil) return TRUE;
+  if (!bi_double(*result, &x) || !bi_double(argv->cons.car, &y)) {
+    mark_required_number();
+    return FALSE;
+  }
+  if (y == 0) {
+    mark_division_by_zero();
+    return FALSE;
+  }
+  if (!isfinite(z = x / y)) {
+    mark_numeric_over_flow();
+    return FALSE;
+  }
+  *result = gc_new_xfloat(z);
+  return double_divide(argv->cons.cdr, result);
+}
+
+static int int64_divide(object argv, object *result)
+{
+  int64_t x, y;
+  if (argv == object_nil) return TRUE;
+  if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y)) {
+    if (y == 0) {
+      mark_division_by_zero();
+      return FALSE;
+    }
+    if(x == INT64_MIN && y == -1) {
+      mark_numeric_over_flow();
+      return FALSE;
+    }
+    *result = gc_new_xint(x / y);
+    return int64_divide(argv->cons.cdr, result);
+  }
+  return double_divide(argv, result);
+}
+
+PRIM(number_divide)
+{
+  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
+  *result = argv->cons.car;
+  return int64_divide(argv->cons.cdr, result);
 }
 
 PRIM(number_modulo)
@@ -163,6 +215,23 @@ PRIM(number_lt)
   return TRUE;
 }
 
+
+PRIM(number_to_integer)
+{
+  double x;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_double(argv->cons.car, &x)) {
+    mark_required_number();
+    return FALSE;
+  }
+  if(!(INT64_MIN <= x && x <= INT64_MAX)) {
+    mark_numeric_over_flow();
+    return FALSE;
+  }
+  *result = gc_new_xint((int64_t)x);
+  return TRUE;
+}
+
 PRIM(number_to_string)
 {
   int64_t i;
@@ -172,7 +241,10 @@ PRIM(number_to_string)
   xbarray_init(&x);
   if (bi_int64(argv->cons.car, &i)) xbarray_addf(&x, "%d", i);
   else if (bi_double(argv->cons.car, &d)) xbarray_addf(&x, "%g", d);
-  else return FALSE;
+  else {
+    mark_numeric_over_flow();
+    return FALSE;
+  }
   *result = gc_new_barray_from(STRING, x.size, x.elt);
   xbarray_free(&x);
   return TRUE;
