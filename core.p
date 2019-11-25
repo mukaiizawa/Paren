@@ -1016,27 +1016,33 @@
   (string->symbol (.token self)))
 
 (method ParenLexer .getToken ()
-  (let (sign nil)
-    (.reset self)
-    (while (char-space? (.next self)) (.skip self))
-    (if (= (.next self) 0x3B) (begin
-                                (while (/= (.next self) 0x0A) (.skip self))
-                                (.getToken self))
-        (.eof? self) :EOF
-        (find '(0x27 0x28 0x29) (.next self) :test =) (.skip self)
-        (= (.next self) 0x22) (.getString self)
-        (= (.next self) 0x3A) (.getKeyword self)
-        (begin (if (find '(0x2B 0x2D) (.next self) :test =)
+  ; return -- (token-type [token])
+  (.reset self)
+  (let (sign nil next (.next self) space? (lambda (x)
+                                            (and (char-space? x) (/= 0x0A x))))
+    (if (space? next) (begin (while (space? (.next self)) (.skip self))
+                             (.getToken self))
+        (.eof? self) '(:EOF)
+        (= next 0x0A) (begin (.skip self) '(:EOL))
+        (= next 0x22) (list :string (.getString self))
+        (= next 0x27) (begin (.skip self) '(:quote))
+        (= next 0x28) (begin (.skip self) '(:open-paren))
+        (= next 0x29) (begin (.skip self) '(:close-paren))
+        (= next 0x3A) (list :keyword (.getKeyword self))
+        (= next 0x3B) (begin (while (/= (.next self) 0x0A) (.skip self))
+                             (.getToken self))
+        (begin (if (find '(0x2B 0x2D) next :test =)
                    (<- sign (.skip self)))
                nil) :unreachable
-        (char-digit? (.next self)) (.getNumber self sign)
-        (or sign (.identifierLead? self)) (begin (if sign (.put self sign))
-                                                 (.getSymbol self))
+        (char-digit? next) (list :number (.getNumber self sign))
+        (or sign (.identifierLead? self)) (begin
+                                            (if sign (.put self sign))
+                                            (list :symbol (.getSymbol self)))
         (.raise self (list (.next self) "illegal char")))))
 
 (class ParenParser ()
   ; Paren構文解析機
-  lexer next)
+  lexer token-type next-token)
 
 (method ParenParser .init (:key string (stream $stdin))
   (.lexer self (.init (.new ParenLexer) :string string :stream stream))
@@ -1046,35 +1052,31 @@
 (method ParenParser .raise (:opt message)
   (throw (.message (.new Exception) (or message "illegal token"))))
 
-(method ParenParser .scan (:opt f)
-  (if (and f (not (f (.next self)))) (.raise self "missing token")
-      (let (token (.getToken (.lexer self)))
-        (.next self token)
-        token)))
-
-(method ParenParser .parseList ()
-  (let (close-paren? (lambda (x) (and (byte? x) (= x 0x29))))
-    (if (close-paren? (.scan self)) nil
-        (begin0 (cons (.parse self) (.parseCdr self))
-                (.scan self close-paren?)))))
+(method ParenParser .scan ()
+  (let (next (.getToken (.lexer self)))
+    (.token-type self (car next))
+    (.next-token self (cadr next))))
 
 (method ParenParser .parseCdr ()
-  (let (next (.next self))
-    (if (and (byte? next) (= next 0x29)) nil
+  (let (type (.token-type self) token (.next-token self))
+    (if (same? type :close-paren) nil
+        (same? type :EOL) (.parseCdr (.scan self))
         (cons (.parse self) (.parseCdr self)))))
 
-(method ParenParser .parseAtom ()
-  (let (atom (.next self))
-    (if (or (symbol? atom) (keyword? atom) (string? atom) (number? atom))
-        (begin0 atom (.scan self))
-        (.raise self))))
-
 (method ParenParser .parse ()
-  (let (next (.next self))
-    (if (and (byte? next) (= next 0x27)) (begin (.scan self)
-                                                (list quote (.parse self)))
-        (and (byte? next) (= next 0x28)) (.parseList self)
-        (.parseAtom self))))
+  (let (type (.token-type self) token (.next-token self))
+    (if (same? type :EOL) (.parse (.scan self))
+        (same? type :quote) (list quote (.parse (.scan self)))
+        (same? type :open-paren) (begin0
+                                   (if (same? (.token-type (.scan self))
+                                              :close-paren) nil
+                                       (cons (.parse self) (.parseCdr self)))
+                                   (.scan self))
+        (or (same? type :symbol)
+            (same? type :keyword)
+            (same? type :string)
+            (same? type :number)) (begin (.scan self) token)
+        (.raise self))))
 
 ;; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
