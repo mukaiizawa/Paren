@@ -52,57 +52,56 @@ PRIM(number_equal_p)
   return TRUE;
 }
 
-static int double_add(object o, object p, object *result)
+static int double_add(object argv, object *result)
 {
   double x, y, z;
-  if (bi_double(o, &x) && bi_double(p, &y)) {
-    if (!isfinite(z = x + y)) {
-      mark_numeric_over_flow();
-      return FALSE;
-    }
-    *result = gc_new_xfloat(z);
-    return TRUE;
+  if (argv == object_nil) return TRUE;
+  if (!bi_double(*result, &x) || !bi_double(argv->cons.car, &x)) {
+    mark_required_number();
+    return FALSE;
   }
-  mark_required_number();
-  return FALSE;
+  if (!isfinite(z = x + y)) {
+    mark_numeric_over_flow();
+    return FALSE;
+  }
+  *result = gc_new_xfloat(z);
+  return double_add(argv->cons.cdr, result);
 }
 
-static int int64_add(object o, object p, object *result)
+static int int64_add(object argv, object *result)
 {
   int64_t x, y;
-  if (bi_int64(o, &x) && bi_int64(p, &y)) {
+  if (argv == object_nil) return TRUE;
+  if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y)) {
     if ((y > 0 && x > INT64_MAX - y) || (y < 0 && x < INT64_MIN - y)) {
       mark_numeric_over_flow();
       return FALSE;
     }
     *result = gc_new_xint(x + y);
-    return TRUE;
+    return int64_add(argv->cons.cdr, result);
   }
-  return double_add(o, p, result);
+  return double_add(argv, result);
 }
 
 PRIM(number_add)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
-  *result = argv->cons.car;
-  if (argc == 1) {
-    if (!typep(*result, XINT) || typep(*result, XFLOAT)) return TRUE;
-    mark_required_number();
-    return FALSE;
-  }
-  while ((argv = argv->cons.cdr) != object_nil) {
-    if (!(int64_add(*result, argv->cons.car, result))) return FALSE;
-  }
-  return TRUE;
+  *result = object_bytes[0];
+  return int64_add(argv, result);
 }
 
 static int double_multiply(object argv, object *result)
 {
   double x, y, z;
   if (argv == object_nil) return TRUE;
-  if (!bi_double(*result, &x)) return FALSE;
-  if (!bi_double(argv->cons.car, &y)) return FALSE;
-  if (!isfinite(z = x * y)) return FALSE;
+  if (!bi_double(*result, &x) || !bi_double(argv->cons.car, &y)) {
+    mark_required_number();
+    return FALSE;
+  }
+  if (!isfinite(z = x * y)) {
+    mark_numeric_over_flow();
+    return FALSE;
+  }
   *result = gc_new_xfloat(z);
   return double_multiply(argv->cons.cdr, result);
 }
@@ -132,6 +131,7 @@ static int int64_multiply(object argv, object *result)
 
 PRIM(number_multiply)
 {
+  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
   *result = object_bytes[1];
   return int64_multiply(argv, result);
 }
