@@ -49,7 +49,7 @@ Parenのプログラムは演算子を前置し、被演算子と共に括弧で
     hello world
     "hello world"
 
-printの評価すると二行出力される。一行目がprintがコンソールへ印字した文字列であり、二行がprintの評価結果をreplが印字したものである。
+上記のプログラムを評価すると二行出力される。一行目がprintがコンソールへ印字した文字列であり、二行がprintの評価結果をreplが印字したものである。
 
 すべての式はprintのように必ず値を返す。この仕様はParenの特徴の一つである。
 
@@ -59,7 +59,7 @@ printの評価すると二行出力される。一行目がprintがコンソー�
     ; copy 第一版
     (function copy ()
       (let (ch nil)
-        (while (different? ch :EOF)
+        (while (different? ch -1)
           (<- ch (read-byte))
           (write-byte ch))))
 

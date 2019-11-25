@@ -749,12 +749,15 @@
   )
 
 (method Stream .readByte (:rest args)
+  ; ストリームの終端に達した場合は1を返す。
   (Error.shouldBeImplemented))
 
 (method Stream .writeByte (:rest args)
   (Error.shouldBeImplemented))
 
 (method Stream .readChar ()
+  ; ストリームから1byte読み込む。
+  ; ストリームの終端に達した場合は:EOFを返す。
   (if (same? (dynamic $encoding) :UTF-8)
           (let (utf8-exception
                    (lambda ()
@@ -1087,11 +1090,14 @@
     $support-encodings '(:UTF-8 :CP932))
 
 (function read-byte (:opt (stream $stdin))
+  ; ストリームから1byte読み込む。
+  ; ストリームの終端に達した場合は-1を返す。
   (assert (is-a? stream Stream))
   (.readByte stream))
 
 (function read-char (:opt (stream $stdin))
   ; streamから1byte読み込み返す。
+  ; ストリームの終端に達した場合は:EOFを返す。
   (assert (is-a? stream Stream))
   (.readChar stream))
 
