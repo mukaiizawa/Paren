@@ -83,8 +83,17 @@ static int int64_add(object o, object p, object *result)
 
 PRIM(number_add)
 {
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
-  return int64_add(argv->cons.car, argv->cons.cdr->cons.car, result);
+  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
+  *result = argv->cons.car;
+  if (argc == 1) {
+    if (!typep(*result, XINT) || typep(*result, XFLOAT)) return TRUE;
+    mark_required_number();
+    return FALSE;
+  }
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (!(int64_add(*result, argv->cons.car, result))) return FALSE;
+  }
+  return TRUE;
 }
 
 static int double_multiply(object argv, object *result)

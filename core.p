@@ -1006,8 +1006,7 @@
                (while (char-digit? (.next self))
                  (<- val (+ val (* (char->digit (.skip self)) factor))
                      factor (/ factor 10)))))
-    (if (and (byte? sign) (= sign 0x2D)) (negated val)
-        val)))
+    (if (and (byte? sign) (= sign 0x2D)) (- val) val)))
 
 (method ParenLexer .getKeyword ()
   (.skip self)
