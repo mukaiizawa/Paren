@@ -61,7 +61,7 @@ static int double_add(object argv, object *result)
 {
   double x, y, z;
   if (argv == object_nil) return TRUE;
-  if (!bi_double(*result, &x) || !bi_double(argv->cons.car, &x)) {
+  if (!bi_double(*result, &x) || !bi_double(argv->cons.car, &y)) {
     mark_required_number();
     return FALSE;
   }
