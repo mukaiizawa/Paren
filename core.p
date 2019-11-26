@@ -586,7 +586,7 @@
 
 (macro make-accessor (cls-sym var)
   (let (val (gensym) val? (gensym))
-    (list method cls-sym (string->symbol (string+ "." (symbol->string var)))
+    (list method cls-sym (string->symbol (string+ "&" (symbol->string var)))
           (list :opt (list val nil val?))
           (list if val?
                 (list begin
@@ -699,7 +699,7 @@
 (method Class .new ()
   (let (o nil cls self fields nil)
     (while cls
-      (<- fields (reverse (copy-list (map (. cls :fields) symbol->keyword))))
+      (<- fields (reverse (map (. cls :fields) symbol->keyword)))
       (while fields
         (push! o (if (same? (car fields) :class) (. self :symbol)))
         (push! o (car fields))
@@ -711,11 +711,19 @@
 
 ;; error, exception
 
-(class Error ()
+(class Throwable ()
+  ; すべてのエラー、例外クラスの基底クラス。
+  message)
+
+(method Throwable .message (message)
+  ; エラーオブジェクトにメッセージを設定する。
+  (&message self message))
+
+(class Error (Throwable)
   ; エラークラス。
   ; 継続が困難な状態や、到達すべきでない状態を表す。
   ; throwされた場合は、原則としてcatchオペレーターで補足すべきではない。
-  message)
+  )
 
 (function Error.shouldBeImplemented ()
   (throw (.message (.new Error) "should be implemented")))
@@ -727,18 +735,18 @@
 (function quit ()
   (throw (.new QuitSignal)))
 
-(class Exception ()
+(class Exception (Throwable)
   ; 例外クラス。
   ; すべての例外クラスはこのクラスを継承する。
   ; 補足すべきでない例外を表す場合はErrorクラスを継承すること。
-  message)
+  )
 
 (method Exception .addMessage (msg)
   (assert (string? msg))
   (.message self (+ (.message self) msg)))
 
 (method Exception .toString ()
-  (let (class-name (symbol->string (.class self)) msg (.message self))
+  (let (class-name (symbol->string (&class self)) msg (.message self))
     (if msg (+ class-name " -- " msg)
         class-name)))
 
@@ -803,49 +811,49 @@
 
 (class MemoryStream (Stream)
   ; メモリ上に内容を保持するストリームクラス。
-  buf buf-size rd-pos wr-pos)
+  buf buf-size rdpos wrpos)
 
 (method MemoryStream .init ()
   (let (buf-size 256)
-    (.buf-size self buf-size)
-    (.buf self (byte-array buf-size))
-    (.rd-pos self 0)
-    (.wr-pos self 0))
+    (&buf-size self buf-size)
+    (&buf self (byte-array buf-size))
+    (&rdpos self 0)
+    (&wrpos self 0))
   self)
 
-(method MemoryStream .extend (size)
+(method MemoryStream _extend (size)
   (assert (integer? size))
-  (let (req (+ (.wr-pos self) size) new-buf nil)
-    (while (< (.buf-size self) req)
-      (.buf-size self (* (.buf-size self) 2)))
-    (<- new-buf (byte-array (.buf-size self)))
-    (array-copy (.buf self) 0 new-buf 0  (.wr-pos self))
-    (.buf self new-buf))
+  (let (req (+ (&wrpos self) size) new-buf nil)
+    (while (< (&buf-size self) req)
+      (&buf-size self (* (&buf-size self) 2)))
+    (<- new-buf (byte-array (&buf-size self)))
+    (array-copy (&buf self) 0 new-buf 0  (&wrpos self))
+    (&buf self new-buf))
   self)
 
 (method MemoryStream .writeByte (byte)
   (assert (byte? byte))
-  (let (pos (.wr-pos self))
-    (if (< pos (.buf-size self))
-        (begin ([] (.buf self) pos byte)
-               (.wr-pos self (++ pos)))
-        (.writeByte (.extend self 1) byte)))
+  (let (pos (&wrpos self))
+    (if (< pos (&buf-size self))
+        (begin ([] (&buf self) pos byte)
+               (&wrpos self (++ pos)))
+        (.writeByte (_extend self 1) byte)))
   self)
 
 (method MemoryStream .readByte ()
-  (let (pos (.rd-pos self))
-    (if (>= pos (.wr-pos self)) -1
-        (begin0 ([] (.buf self) pos)
-                (.rd-pos self (++ pos))))))
+  (let (pos (&rdpos self))
+    (if (>= pos (&wrpos self)) -1
+        (begin0 ([] (&buf self) pos)
+                (&rdpos self (++ pos))))))
 
 (method MemoryStream .toString ()
-  (let (pos (.wr-pos self) str (byte-array pos))
+  (let (pos (&wrpos self) str (byte-array pos))
     (if (= pos 0) ""
-        (byte-array->string (array-copy (.buf self) 0 str 0 pos)))))
+        (byte-array->string (array-copy (&buf self) 0 str 0 pos)))))
 
 (method MemoryStream .reset ()
-  (.rd-pos self 0)
-  (.wr-pos self 0))
+  (&rdpos self 0)
+  (&wrpos self 0))
 
 (class FileStream (Stream)
   ; ファイルストリームクラス
@@ -853,14 +861,14 @@
 
 (method FileStream .init (:key fp)
   (assert fp)
-  (.fp self fp))
+  (&fp self fp))
 
 (method FileStream .readByte ()
-  (fgetc (.fp self)))
+  (fgetc (&fp self)))
 
 (method FileStream .writeByte (byte)
   (assert (byte? byte))
-  (fputc byte (.fp self)))
+  (fputc byte (&fp self)))
 
 (class ByteAheadReader ()
   ; 先読みリーダー。
@@ -874,24 +882,27 @@
   (when string
     (<- stream (.new MemoryStream))
     (.writeString stream string))
-  (.stream self stream)
-  (.next self (.readByte stream))
-  (.buf self (.new MemoryStream))
+  (&stream self stream)
+  (&next self (.readByte stream))
+  (&buf self (.new MemoryStream))
   self)
+
+(method ByteAheadReader .next ()
+  (&next self))
 
 (method ByteAheadReader .eof? ()
   ; ストリームが終端に達している場合にtrueを、そうでなければnilを返す。
-  (= (.next self) -1))
+  (= (&next self) -1))
 
-(method ByteAheadReader .ensureNotEOFReached ()
+(method ByteAheadReader _ensureNotEOFReached ()
   ; ストリームが終端に達していた場合は例外をスローする。
   (if (.eof? self) (throw (.message (.new Error) "EOF reached"))))
 
 (method ByteAheadReader .skip ()
   ; 次の1byte読み飛ばし、返す。
-  (.ensureNotEOFReached self)
-  (begin0 (.next self)
-          (.next self (.readByte (.stream self)))))
+  (_ensureNotEOFReached self)
+  (begin0 (&next self)
+          (&next self (.readByte (&stream self)))))
 
 (method ByteAheadReader .get ()
   ; 次の1byteをトークンの末尾に追加し、返す。
@@ -902,20 +913,20 @@
 (method ByteAheadReader .put (b)
   ; ストリームとは無関係にトークンの末尾に1byte追加する。
   (assert (byte? b))
-  (.writeByte (.buf self) b))
+  (.writeByte (&buf self) b))
 
 (method ByteAheadReader .token ()
   ; 現在切り出しているbyte列を文字列にして返す。
-  (.toString (.buf self)))
+  (.toString (&buf self)))
 
 (method ByteAheadReader .reset ()
   ; 現在切り出しているトークン文字列を返す。
-  (.reset (.buf self))
+  (.reset (&buf self))
   self)
 
 (method ByteAheadReader .skipSpace ()
   ; スペース、改行文字を読み飛ばし、レシーバを返す。
-  (while (and (not (.eof? self)) (char-space? (.next self)))
+  (while (and (not (.eof? self)) (char-space? (&next self)))
     (.skip self))
   self)
 
@@ -931,30 +942,30 @@
   (when string
     (<- stream (.new MemoryStream))
     (.writeString stream string))
-  (.stream self stream)
-  (.next self (.readChar stream))
-  (.buf self (.new MemoryStream))
+  (&stream self stream)
+  (&next self (.readChar stream))
+  (&buf self (.new MemoryStream))
   self)
 
 (method AheadReader .eof? ()
   ; ストリームが終端に達している場合にtrueを、そうでなければnilを返す。
-  (same? (.next self) :EOF))
+  (same? (&next self) :EOF))
 
 (method AheadReader .skip ()
   ; 次の1文字を読み飛ばし、返す。
-  (.ensureNotEOFReached self)
-  (begin0 (.next self)
-          (.next self (.readChar (.stream self)))))
+  (_ensureNotEOFReached self)
+  (begin0 (&next self)
+          (&next self (.readChar (&stream self)))))
 
 (method AheadReader .put (s)
   ; ストリームとは無関係にトークンの末尾に文字列sを追加する。
   (assert (string? s))
-  (.writeString (.buf self) s))
+  (.writeString (&buf self) s))
 
 (method AheadReader .skipSpace ()
   ; スペース、改行文字を読み飛ばし、レシーバを返す。
   (while (and (not (.eof? self))
-              (find '(" " "\r" "\n") (.next self) :test string=))
+              (find '(" " "\r" "\n") (&next self) :test string=))
     (.skip self))
   self)
 
@@ -964,31 +975,31 @@
   ; Paren字句解析機
   )
 
-(method ParenLexer .raise (message)
+(method ParenLexer _raise (message)
   (throw (.message (.new Error) message)))
 
-(method ParenLexer .identifierLead? ()
+(method ParenLexer _identifierLead? ()
   (let (c (.next self))
     (or (find '(0x21 0x24 0x25 0x26 0x2A 0x2B 0x2D 0x2F 0x3C 0x3D 0x3E 0x3F
                 0x5F 0x2E 0x5B 0x5D)
               c :test =)
         (char-alpha? c))))
 
-(method ParenLexer .identifierTrail? ()
+(method ParenLexer _identifierTrail? ()
   (let (c (.next self))
-    (or (.identifierLead? self) (char-digit? c))))
+    (or (_identifierLead? self) (char-digit? c))))
 
-(method ParenLexer .getString ()
+(method ParenLexer _getString ()
   (.skip self)
   (while (/= 0x22 (.next self))
-    (if (.eof? self) (.raise self "quote not closed")
+    (if (.eof? self) (_raise self "quote not closed")
         (/= (.next self) 0x5C) (.get self)
         (begin (.skip self)
                (throw "todo/implement not yet"))))
   (.skip self)
   (.token self))
 
-(method ParenLexer .getNumber (sign)
+(method ParenLexer _getNumber (sign)
   (let (radix 10 factor 0 val 0)
     (while (char-digit? (.next self))
       (<- val (+ (* val 10) (char->digit (.skip self)))))
@@ -1007,13 +1018,13 @@
                      factor (/ factor 10)))))
     (if (and (byte? sign) (= sign 0x2D)) (- val) val)))
 
-(method ParenLexer .getKeyword ()
+(method ParenLexer _getKeyword ()
   (.skip self)
-  (while (.identifierTrail? self) (.get self))
+  (while (_identifierTrail? self) (.get self))
   (symbol->keyword (string->symbol (.token self))))
 
-(method ParenLexer .getSymbol ()
-  (while (.identifierTrail? self) (.get self))
+(method ParenLexer _getSymbol ()
+  (while (_identifierTrail? self) (.get self))
   (string->symbol (.token self)))
 
 (method ParenLexer .getToken ()
@@ -1025,59 +1036,59 @@
                              (.getToken self))
         (.eof? self) '(:EOF)
         (= next 0x0A) (begin (.skip self) '(:EOL))
-        (= next 0x22) (list :string (.getString self))
+        (= next 0x22) (list :string (_getString self))
         (= next 0x27) (begin (.skip self) '(:quote))
         (= next 0x28) (begin (.skip self) '(:open-paren))
         (= next 0x29) (begin (.skip self) '(:close-paren))
-        (= next 0x3A) (list :keyword (.getKeyword self))
+        (= next 0x3A) (list :keyword (_getKeyword self))
         (= next 0x3B) (begin (while (/= (.next self) 0x0A) (.skip self))
                              (.getToken self))
         (begin (if (find '(0x2B 0x2D) next :test =)
                    (<- sign (.skip self)))
                nil) :unreachable
-        (char-digit? next) (list :number (.getNumber self sign))
-        (or sign (.identifierLead? self)) (begin
+        (char-digit? next) (list :number (_getNumber self sign))
+        (or sign (_identifierLead? self)) (begin
                                             (if sign (.put self sign))
-                                            (list :symbol (.getSymbol self)))
-        (.raise self (list (.next self) "illegal char")))))
+                                            (list :symbol (_getSymbol self)))
+        (_raise self (list (.next self) "illegal char")))))
 
 (class ParenParser ()
   ; Paren構文解析機
   lexer token-type next-token)
 
 (method ParenParser .init (:key string (stream $stdin))
-  (.lexer self (.init (.new ParenLexer) :string string :stream stream))
-  (.scan self)
+  (&lexer self (.init (.new ParenLexer) :string string :stream stream))
+  (_scan self)
   self)
 
-(method ParenParser .raise (:opt message)
+(method ParenParser _raise (:opt message)
   (throw (.message (.new Exception) (or message "illegal token"))))
 
-(method ParenParser .scan ()
-  (let (next (.getToken (.lexer self)))
-    (.token-type self (car next))
-    (.next-token self (cadr next))))
+(method ParenParser _scan ()
+  (let (next (.getToken (&lexer self)))
+    (&token-type self (car next))
+    (&next-token self (cadr next))))
 
-(method ParenParser .parseCdr ()
-  (let (type (.token-type self) token (.next-token self))
+(method ParenParser _parseCdr ()
+  (let (type (&token-type self) token (&next-token self))
     (if (same? type :close-paren) nil
-        (same? type :EOL) (.parseCdr (.scan self))
-        (cons (.parse self) (.parseCdr self)))))
+        (same? type :EOL) (_parseCdr (_scan self))
+        (cons (.parse self) (_parseCdr self)))))
 
 (method ParenParser .parse ()
-  (let (type (.token-type self) token (.next-token self))
-    (if (same? type :EOL) (.parse (.scan self))
-        (same? type :quote) (list quote (.parse (.scan self)))
+  (let (type (&token-type self) token (&next-token self))
+    (if (same? type :EOL) (.parse (_scan self))
+        (same? type :quote) (list quote (.parse (_scan self)))
         (same? type :open-paren) (begin0
-                                   (if (same? (.token-type (.scan self))
+                                   (if (same? (&token-type (_scan self))
                                               :close-paren) nil
-                                       (cons (.parse self) (.parseCdr self)))
-                                   (.scan self))
+                                       (cons (.parse self) (_parseCdr self)))
+                                   (_scan self))
         (or (same? type :symbol)
             (same? type :keyword)
             (same? type :string)
-            (same? type :number)) (begin (.scan self) token)
-        (.raise self))))
+            (same? type :number)) (begin (_scan self) token)
+        (_raise self))))
 
 ;; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
@@ -1123,13 +1134,13 @@
 ; testing for development.
 (print (os_clock))
 
-; (let ($encoding :UTF-8)
-;   (<- ar (.init (.new AheadReader) :string "あいう"))
-;   (print :init)
-;   (print (.get ar))
-;   (print (.get ar))
-;   (print (.get ar))
-;   (print (.token ar)))
+(let ($encoding :UTF-8)
+  (<- ar (.init (.new AheadReader) :string "あいう"))
+  (print :init)
+  (print (.get ar))
+  (print (.get ar))
+  (print (.get ar))
+  (print (.token ar)))
 
 ; (function fib (x)
 ;   (if (> x 1) (+ (fib (-- x)) (fib (- x 2)))
@@ -1137,14 +1148,6 @@
 ; (print (map (.. 0 15) fib))
 
 (repl)
-
-; (assert (= (read) 3))
-; (assert (= (read) nil))
-; (assert (= (read) :aaa))
-; (assert (string= (read) "str"))
-; (assert (string= (read) "文字列"))
-; (assert (list= (read) '(list)))
-; (assert (list= (read) '(list :1 :2 :3)))
 
 (print (os_clock))
 ; ------------------------------------------------------------------------------
