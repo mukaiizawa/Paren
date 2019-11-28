@@ -2,8 +2,6 @@
 
 ; fundamental macro
 
-(print (string+ "a" "b" "cc"))
-
 (macro function (name args :rest body)
   ; 仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
   ; argsの書式はspecial operatorのlambdaに準ずる。
@@ -459,15 +457,15 @@
 ; char
 
 (function char-space? (c)
-  (assert (number? c))
+  (assert (byte? c))
   (find '(0x09 0x0A 0x0D 0x20) c :test =))
 
 (function char-alpha? (c)
-  (assert (number? c))
+  (assert (byte? c))
   (or (<= 0x41 c 0x5A) (<= 0x61 c 0x7A)))
 
 (function char-digit? (c)
-  (assert (number? c))
+  (assert (byte? c))
   (<= 0x30 c 0x39))
 
 (function char-lower (c)
@@ -656,11 +654,12 @@
   ;                    (is-a gsym Exception2) (apply (lambda (e) ...) gsym)
   ;                    (is-a gsym Exception3) (apply (lambda (e) ...) gsym)
   ;                    (throw gsym)))
-  ;              ...)
+  ;     (basic-catch (lambda (gsym)
+  ;                      (throw (if (object? gsym) gsym
+  ;                                 (.message (.new Error) gsym))))
+  ;              ...))
   (let (gargs (gensym) if-clause nil)
     (push! if-clause if)
-    (push! if-clause (list 'not (list 'object? gargs)))
-    (push! if-clause (list 'throw gargs))
     (dolist (h handlers)
       (push! if-clause (list 'is-a? gargs (car h)))
       (push! if-clause (list apply (cons lambda (cons (cadr h) (cddr h)))
@@ -668,7 +667,10 @@
     (push! if-clause (list 'throw gargs))
     (cons 'basic-catch (cons (cons lambda (list (list gargs)
                                                 (reverse if-clause)))
-                             body))))
+                             (list (cons 'basic-catch (cons (cons lambda (list (list gargs)
+                                                                               (list throw (list if (list 'object? gargs) gargs
+                                                                                                 (list '.message '(.new Error) gargs)))))
+                                                            body)))))))
 
 (function object? (x)
   ; xがオブジェクトの場合trueを、そうでなければnilを返す。
@@ -723,9 +725,14 @@
   ; すべてのエラー、例外クラスの基底クラス。
   message)
 
-(method Throwable .message (message)
+(method Throwable .message (:opt (message nil message?))
   ; エラーオブジェクトにメッセージを設定する。
-  (&message self message))
+  (if message? (&message self message) (&message self)))
+
+(method Throwable .toString ()
+  (let (class-name (symbol->string (&class self)) msg (.message self))
+    (if msg (string+ class-name " -- " msg)
+        class-name)))
 
 (class Error (Throwable)
   ; エラークラス。
@@ -752,11 +759,6 @@
 (method Exception .addMessage (msg)
   (assert (string? msg))
   (.message self (+ (.message self) msg)))
-
-(method Exception .toString ()
-  (let (class-name (symbol->string (&class self)) msg (.message self))
-    (if msg (+ class-name " -- " msg)
-        class-name)))
 
 ;; stream I/O
 
@@ -1039,7 +1041,9 @@
   ; return -- (token-type [token])
   (.reset self)
   (let (sign nil next (.next self) space? (lambda (x)
-                                            (and (char-space? x) (/= 0x0A x))))
+                                            (and (byte? x)
+                                                 (char-space? x)
+                                                 (/= 0x0A x))))
     (if (space? next) (begin (while (space? (.next self)) (.skip self))
                              (.getToken self))
         (.eof? self) '(:EOF)
@@ -1085,7 +1089,8 @@
 
 (method ParenParser .parse ()
   (let (type (&token-type self) token (&next-token self))
-    (if (same? type :EOL) (.parse (_scan self))
+    (if (same? type :EOF) :EOF
+        (same? type :EOL) (.parse (_scan self))
         (same? type :quote) (list quote (.parse (_scan self)))
         (same? type :open-paren) (begin0
                                    (if (same? (&token-type (_scan self))
@@ -1131,12 +1136,19 @@
   s)
 
 (function read (:opt (stream (dynamic $stdin)))
+  ; streamからS式を読み込み返す。
+  ; 終端に達した場合は:EOFを返す。
   (.parse (.init (.new ParenParser) :stream stream)))
 
 (function repl ()
-  (while true
-    (write-string ") ")
-    (print (eval (read)))))
+  (let (s nil)
+    (while true
+      (write-string ") ")
+      (catch ((QuitSignal (e) (break))
+              (Exception (e) (write-string (.toString e)) (write-byte 0x0A))
+              (Error (e) (write-string (.toString e)) (write-byte 0x0A)))
+        (print (eval (<- s (read)))))
+      (if (same? s :EOF) (break)))))
 
 ; ------------------------------------------------------------------------------
 ; testing for development.
