@@ -2,6 +2,8 @@
 
 ; fundamental macro
 
+(print (string+ "a" "b" "cc"))
+
 (macro function (name args :rest body)
   ; 仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
   ; argsの書式はspecial operatorのlambdaに準ずる。

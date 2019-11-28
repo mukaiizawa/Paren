@@ -162,16 +162,10 @@ Parenではすべての実数は数値型として扱われる。
     ) "hello paren"
     "hello paren"
 
-## 文字列の作成
-オブジェクトから文字列を作成するには->stringを使用する。->string関数はParenのオブジェクトの表現を文字列として取得する。
-
-    ) (->string 123)
-    "123"
-
 ## 文字列の結合
-文字列の結合は+を使用する。
+文字列の結合はstring+を使用する。
 
-    ) (+ "hello" "_" "paren")
+    ) (string+ "hello" "_" "paren")
     "hello_paren"
 
 ## 文字列の長さの取得

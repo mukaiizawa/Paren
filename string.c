@@ -26,15 +26,24 @@ PRIM(string_p)
   return TRUE;
 }
 
-PRIM(string_add)
+static void string_add (object y, object *result)
 {
-  object x, y;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
-  if (!ensure_string(argv->cons.car, &x)) return FALSE;
-  if (!ensure_string(argv->cons.cdr->cons.car, &y)) return FALSE;
+  object x;
+  x = *result;
   *result = gc_new_barray(STRING, x->barray.size + y->barray.size);
   memcpy((*result)->barray.elt, x->barray.elt, x->barray.size);
   memcpy((*result)->barray.elt + x->barray.size, y->barray.elt, y->barray.size);
+}
+
+PRIM(string_add)
+{
+  object x;
+  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
+  if (!ensure_string(argv->cons.car, result)) return FALSE;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (!ensure_string(argv->cons.car, &x)) return FALSE;
+    string_add(x, result);
+  }
   return TRUE;
 }
 
