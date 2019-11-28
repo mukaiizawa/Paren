@@ -215,6 +215,32 @@ PRIM(number_lt)
   return TRUE;
 }
 
+PRIM(number_floor)
+{
+  double x;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_double(argv->cons.car, &x)) return FALSE;
+  *result = gc_new_xfloat(floor(x));
+  return TRUE;
+}
+
+PRIM(number_ceiling)
+{
+  double x;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_double(argv->cons.car, &x)) return FALSE;
+  *result = gc_new_xfloat(ceil(x));
+  return TRUE;
+}
+
+PRIM(number_truncate)
+{
+  double x;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_double(argv->cons.car, &x)) return FALSE;
+  *result = gc_new_xfloat(trunc(x));
+  return TRUE;
+}
 
 PRIM(number_to_integer)
 {

@@ -498,6 +498,12 @@
   ; xの符号を反転させた値を返す。
   (* x -1))
 
+(function // (x y)
+  ; 切り捨て除算
+  ; xをyで除算した結果の整数部を返す。
+  (assert (and (number? x) (number? y)))
+  (truncate (/ x y)))
+
 (function /= (x y)
   ; 数値x、yを比較した結果を返す。
   (not (= x y)))
@@ -1134,13 +1140,13 @@
 ; testing for development.
 (print (os_clock))
 
-(let ($encoding :UTF-8)
-  (<- ar (.init (.new AheadReader) :string "あいう"))
-  (print :init)
-  (print (.get ar))
-  (print (.get ar))
-  (print (.get ar))
-  (print (.token ar)))
+; (let ($encoding :UTF-8)
+;   (<- ar (.init (.new AheadReader) :string "あいう"))
+;   (print :init)
+;   (print (.get ar))
+;   (print (.get ar))
+;   (print (.get ar))
+;   (print (.token ar)))
 
 ; (function fib (x)
 ;   (if (> x 1) (+ (fib (-- x)) (fib (- x 2)))
