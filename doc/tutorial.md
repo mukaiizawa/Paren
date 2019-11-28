@@ -169,51 +169,51 @@ Parenではすべての実数は数値型として扱われる。
     "hello_paren"
 
 ## 文字列の長さの取得
-文字列の長さを取得するには組み込み関数のlengthを使用する。
+文字列の長さを取得するには組み込み関数のstring-lengthを使用する。
 
-    ) (length "hello paren")
+    ) (string-length "hello paren")
     11
 
 ## 部分文字列の取得
-部分文字列を取得するにはsubstrを使用する。
+部分文字列を取得するにはstring-sliceを使用する。
 
-    ) (substr "hello paren" 6)
+    ) (string-slice "hello paren" 6)
     "paren"
-    ) (substr "hello paren" 0 5)
+    ) (string-slice "hello paren" 0 5)
     "hello"
 
 第一引数のみ指定されている場合はその値以降の部分文字列を取得する。第二引数まで指定してある場合は、第一引数から第二引数の値の前までの部分文字列を取得する。ただし、どちらの場合も零から数える。
 
 ## 文字列の比較
-文字列の比較は比較関数`=`で行う。
+文字列の比較は比較関数string=で行う。
 
-    ) (= "hello paren" "hello paren")
+    ) (string= "hello paren" "hello paren")
     true
-    ) (= "Hello Paren" "hello paren")
+    ) (string= "Hello Paren" "hello paren")
     nil
 
 ## 部分文字列が含まれるか判定
-部分文字列が含まれているかどうか判定するにはinclude?を使用する。
+部分文字列が含まれているかどうか判定するにはstring-include?を使用する。
 
-    ) (include? "Hello Paren" "Hello")
+    ) (string-include? "Hello Paren" "Hello")
     true
-    ) (include? "Hello Paren" "hello")
+    ) (string-include? "Hello Paren" "hello")
     nil
 
 ## 文字列の先頭がある部分文字列と一致するか判定
-start_with?は文字列が特定の文字列で始まっているかを判定する。
+string-start-with?は文字列が特定の文字列で始まっているかを判定する。
 
-    ) (start_with? "Hello Paren" "Hello")
+    ) (string-start-with? "Hello Paren" "Hello")
     true
-    ) (start_with? "Hello Paren" "hello")
+    ) (string-start-with? "Hello Paren" "hello")
     nil
 
 ## 文字列の末尾がある部分文字列と一致するか判定
-end_with?は文字列が特定の文字列で終了しているか判定する。
+string-end-with?は文字列が特定の文字列で終了しているか判定する。
 
-    ) (end_with? "Hello Paren" "Paren")
+    ) (string-end-with? "Hello Paren" "Paren")
     true
-    ) (end_with? "Hello Paren" "Hello")
+    ) (string-end-with? "Hello Paren" "Hello")
     nil
 
 ## 正規表現
