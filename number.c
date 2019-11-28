@@ -166,7 +166,7 @@ static int int64_divide(object argv, object *result)
 {
   int64_t x, y;
   if (argv == object_nil) return TRUE;
-  if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y)) {
+  if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y) && x % y == 0) {
     if (y == 0) {
       mark_division_by_zero();
       return FALSE;
@@ -184,6 +184,10 @@ static int int64_divide(object argv, object *result)
 PRIM(number_divide)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
+  if (argc == 1) {
+    *result = object_bytes[1];
+    return int64_divide(argv, result);
+  }
   *result = argv->cons.car;
   return int64_divide(argv->cons.cdr, result);
 }
