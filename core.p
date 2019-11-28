@@ -8,11 +8,17 @@
   (if (bound? name) (throw "symbol already bound")
       (cons <- (cons name (cons (cons lambda (cons args body)) nil)))))
 
+(macro with-gensyms ((:rest syms) :rest body)
+  (let (rec (lambda (syms :opt acc)
+              (if (not syms) acc
+                  (cons (car syms) (cons '(gensym) (rec (cdr syms) acc))))))
+    (cons let (cons (rec syms) body))))
+
 (macro begin0 (:rest body)
   ; bodyを逐次評価し、最初に評価した結果を返す。
-  (let (sym (gensym))
-    (cons let (cons (list sym (car body))
-                    (append-atom (cdr body) sym)))))
+  (with-gensyms (val)
+    (cons let (cons (list val (car body))
+                    (append-atom (cdr body) val)))))
 
 (macro when (test :rest body)
   ; testを評価しnil以外の場合にbodyを逐次評価し、最後に評価した結果を返す。
@@ -77,17 +83,17 @@
   ; リストlをインデックスiを用いてイテレーションする。
   ; nilを返す。
   (assert (symbol? i))
-  (let (gl (gensym))
+  (with-gensyms (gl)
     (cons for (cons (list gl l i (list car gl))
                     (cons gl
                     (cons (list <- gl (list cdr gl) i (list car gl))
-                          body))))))
+                                body))))))
 
 (macro dotimes ((i n) :rest body)
   ; シンボルiを0から順にn - 1まで束縛しながらbodyを反復評価する。
   ; nilを返す。
   (assert (symbol? i))
-  (let (gn (gensym))
+  (with-gensyms (gn)
     (cons for (cons (list i 0 gn n)
               (cons (list < i gn)
               (cons (list inc! i)
@@ -591,7 +597,7 @@
       (if m m (throw (.message (.new Error) "method not found"))))))
 
 (macro make-accessor (cls-sym var)
-  (let (val (gensym) val? (gensym))
+  (with-gensyms (val val?)
     (list method cls-sym (string->symbol (string+ "&" (symbol->string var)))
           (list :opt (list val nil val?))
           (list if val?
@@ -601,7 +607,7 @@
                 (list '. 'self (symbol->keyword var))))))
 
 (macro make-method-dispatcher (method-sym)
-  (let (receiver (gensym) args (gensym))
+  (with-gensyms (receiver args)
     (list function method-sym (list receiver :rest args)
           :method
           (list assert (list object? receiver))
@@ -658,19 +664,19 @@
   ;                      (throw (if (object? gsym) gsym
   ;                                 (.message (.new Error) gsym))))
   ;              ...))
-  (let (gargs (gensym) if-clause nil)
-    (push! if-clause if)
-    (dolist (h handlers)
-      (push! if-clause (list 'is-a? gargs (car h)))
-      (push! if-clause (list apply (cons lambda (cons (cadr h) (cddr h)))
-                             (list list gargs))))
-    (push! if-clause (list 'throw gargs))
-    (cons 'basic-catch (cons (cons lambda (list (list gargs)
-                                                (reverse if-clause)))
-                             (list (cons 'basic-catch (cons (cons lambda (list (list gargs)
-                                                                               (list throw (list if (list 'object? gargs) gargs
-                                                                                                 (list '.message '(.new Error) gargs)))))
-                                                            body)))))))
+  (with-gensyms (gargs)
+    (let (if-clause nil)
+      (push! if-clause if)
+      (dolist (h handlers)
+        (push! if-clause (list 'is-a? gargs (car h)))
+        (push! if-clause (list apply (cons lambda (cons (cadr h) (cddr h)))
+                               (list list gargs))))
+      (cons 'basic-catch (cons (cons lambda (list (list gargs)
+                                                  (reverse if-clause)))
+                               (list (cons 'basic-catch (cons (cons lambda (list (list gargs)
+                                                                                 (list throw (list if (list 'object? gargs) gargs
+                                                                                                   (list '.message '(.new Error) gargs)))))
+                                                              body))))))))
 
 (function object? (x)
   ; xがオブジェクトの場合trueを、そうでなければnilを返す。
@@ -1143,12 +1149,12 @@
 (function repl ()
   (let (s nil)
     (while true
-      (write-string ") ")
       (catch ((QuitSignal (e) (break))
               (Exception (e) (write-string (.toString e)) (write-byte 0x0A))
               (Error (e) (write-string (.toString e)) (write-byte 0x0A)))
-        (print (eval (<- s (read)))))
-      (if (same? s :EOF) (break)))))
+        (write-string ") ")
+        (if (same? (<- s (read)) :EOF) (break))
+        (print (eval s))))))
 
 ; ------------------------------------------------------------------------------
 ; testing for development.
