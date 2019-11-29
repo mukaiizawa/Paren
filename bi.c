@@ -154,11 +154,13 @@ static char *symbol_name_map[] = {
   "barray_p", "byte-array?",
   "barray_to_string", "byte-array->string",
 
+  "bound_p", "bound?",
   "keyword_p", "keyword?",
+  "keyword_to_string", "keyword->string",
+  "keyword_to_symbol", "keyword->symbol",
   "symbol_p", "symbol?",
   "symbol_to_keyword", "symbol->keyword",
   "symbol_to_string", "symbol->string",
-  "bound_p", "bound?",
 
   "lambda_body", "lambda-body",
   "lambda_p", "lambda?",

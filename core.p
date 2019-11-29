@@ -665,18 +665,25 @@
   ;                                 (.message (.new Error) gsym))))
   ;              ...))
   (with-gensyms (gargs)
-    (let (if-clause nil)
+    (let (if-clause nil make-basic-catch
+                    (lambda (handler-args handler-body body)
+                      (cons 'basic-catch
+                            (cons (list lambda (list handler-args)
+                                        handler-body)
+                                  body))))
       (push! if-clause if)
       (dolist (h handlers)
         (push! if-clause (list 'is-a? gargs (car h)))
         (push! if-clause (list apply (cons lambda (cons (cadr h) (cddr h)))
-                               (list list gargs))))
-      (cons 'basic-catch (cons (cons lambda (list (list gargs)
-                                                  (reverse if-clause)))
-                               (list (cons 'basic-catch (cons (cons lambda (list (list gargs)
-                                                                                 (list throw (list if (list 'object? gargs) gargs
-                                                                                                   (list '.message '(.new Error) gargs)))))
-                                                              body))))))))
+                               (list 'list gargs))))
+      (push! if-clause (list throw gargs))
+      (make-basic-catch
+        gargs (reverse if-clause)
+        (list
+          (make-basic-catch
+            gargs (list throw (list if (list 'object? gargs) gargs
+                                    (list '.message '(.new Error) gargs)))
+            body))))))
 
 (function object? (x)
   ; xがオブジェクトの場合trueを、そうでなければnilを返す。
@@ -1135,6 +1142,10 @@
   (.writeByte stream byte)
   byte)
 
+(function write-new-line (:opt (stream $stdout))
+  ; streamに改行を書き込む。
+  (write-byte 0x0A))
+
 (function write-string (s :opt (stream $stdout))
   ; streamに文字列を書き込みsを返す。
   (assert (and (string? s) (is-a? stream Stream)))
@@ -1146,15 +1157,32 @@
   ; 終端に達した場合は:EOFを返す。
   (.parse (.init (.new ParenParser) :stream stream)))
 
+(function xprint (x)
+  (let (print-s-expr (lambda (x)
+                       (if (cons? x) (print-cons x)
+                           (print-atom x)))
+        print-cons (lambda (x)
+                     (write-string "(") (map x print-s-expr) (write-string ")"))
+        print-atom (lambda (x)
+                     (if (macro? x) (write-string "<macro>")
+                         (lambda? x) (write-string "<lambda>")
+                         (string? x) (write-string x)
+                         (symbol? x) (write-string (symbol->string x))
+                         (keyword? x) (write-string (keyword->string x))
+                         (number? x) (write-string (number->string x))
+                         (throw "not implemented yet"))))
+    (print-s-expr x)
+    (write-new-line)))
+
 (function repl ()
   (let (s nil)
     (while true
       (catch ((QuitSignal (e) (break))
-              (Exception (e) (write-string (.toString e)) (write-byte 0x0A))
-              (Error (e) (write-string (.toString e)) (write-byte 0x0A)))
+              (Exception (e) (write-string (.toString e)))
+              (Error (e) (write-string (.toString e))))
         (write-string ") ")
         (if (same? (<- s (read)) :EOF) (break))
-        (print (eval s))))))
+        (xprint (eval s))))))
 
 ; ------------------------------------------------------------------------------
 ; testing for development.
@@ -1173,7 +1201,7 @@
 ;       1))
 ; (print (map (.. 0 15) fib))
 
-(repl)
+; (repl)
 
 (print (os_clock))
 ; ------------------------------------------------------------------------------
