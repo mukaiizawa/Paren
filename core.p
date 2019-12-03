@@ -1172,7 +1172,8 @@
                          (number? x) (write-string (number->string x))
                          (throw "not implemented yet"))))
     (print-s-expr x)
-    (write-new-line)))
+    (write-new-line)
+    x))
 
 (function repl ()
   (let (s nil)
@@ -1201,7 +1202,7 @@
 ;       1))
 ; (print (map (.. 0 15) fib))
 
-; (repl)
+(repl)
 
 (print (os_clock))
 ; ------------------------------------------------------------------------------

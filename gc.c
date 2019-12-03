@@ -12,7 +12,6 @@ int gc_used_memory;
 int gc_max_used_memory;
 
 static object free_cons;
-static object free_env;
 
 static struct xarray table;
 static struct xarray work_table;
@@ -64,15 +63,10 @@ static object regist(object o)
 object gc_new_env(object top)
 {
   object o;
-  if (free_env == NULL) {
-    o = gc_alloc(sizeof(struct env));
-    set_type(o, ENV);
-    xarray_init(&o->env.binding);
-  } else {
-    o = free_env;
-    free_env = o->env.top;
-  }
+  o = gc_alloc(sizeof(struct env));
+  set_type(o, ENV);
   o->env.top = top;
+  o->env.binding = object_nil;
   return regist(o);
 }
 
@@ -210,7 +204,7 @@ void gc_mark(object o)
   switch (type(o)) {
     case ENV:
       gc_mark(o->env.top);
-      for (i = 0; i < o->env.binding.size; i++) gc_mark(o->env.binding.elt[i]);
+      gc_mark(o->env.binding);
       break;
     case MACRO:
     case LAMBDA:
@@ -233,11 +227,6 @@ static void gc_free(object o)
 {
   char *name;
   switch (type(o)) {
-    case ENV:
-      xarray_reset(&o->env.binding);
-      o->env.top = free_env;
-      free_env = o;
-      return;
     case CONS:
       o->cons.cdr = free_cons;
       free_cons = o;
@@ -287,7 +276,6 @@ void gc_init(void)
 {
   gc_used_memory = gc_max_used_memory = 0;
   free_cons = NULL;
-  free_env = NULL;
   xarray_init(&table);
   xarray_init(&work_table);
   xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);

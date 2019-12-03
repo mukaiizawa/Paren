@@ -65,10 +65,13 @@ static void mark_illegal_parameter_error()
 
 static object symbol_find(object e, object s)
 {
-  int i;
+  object o;
   xassert(typep(e, ENV));
-  for (i = 0; i < e->env.binding.size; i += 2)
-    if (s == e->env.binding.elt[i]) return e->env.binding.elt[i + 1];
+  o = e->env.binding;
+  while (o != object_nil) {
+    if (o->cons.car == s) return o->cons.cdr->cons.car;
+    o = o->cons.cdr->cons.cdr;
+  }
   return NULL;
 }
 
@@ -76,24 +79,25 @@ static object symbol_find_propagation(object e, object s)
 {
   object v;
   while (e != object_nil) {
-    if ((v = symbol_find(e, s)) != NULL) break;
+    if ((v = symbol_find(e, s)) != NULL) return v;
     e = e->env.top;
   }
-  return v;
+  return NULL;
 }
 
 static void symbol_bind(object e, object s, object v)
 {
-  int i;
+  object o;
   xassert(typep(e, ENV) && typep(s, SYMBOL));
-  for (i = 0; i < e->env.binding.size; i += 2) {
-    if (s == e->env.binding.elt[i]) {
-      e->env.binding.elt[i + 1] = v;
+  o = e->env.binding;
+  while (o != object_nil) {
+    if (o->cons.car == s) {
+      o->cons.cdr->cons.car = v;
       return;
     }
+    o = o->cons.cdr->cons.cdr;
   }
-  xarray_add(&e->env.binding, s);
-  xarray_add(&e->env.binding, v);
+  e->env.binding = gc_new_cons(s, gc_new_cons(v, e->env.binding));
 }
 
 static void symbol_bind_propagation(object e, object s, object v)

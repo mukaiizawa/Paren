@@ -159,8 +159,9 @@ static object load(void)
 
 static void bind_symbol(object k, object v)
 {
-  xarray_add(&object_toplevel->env.binding, k);
-  xarray_add(&object_toplevel->env.binding, v);
+  object o;
+  o = object_toplevel->env.binding;
+  object_toplevel->env.binding = gc_new_cons(k , gc_new_cons(v, o));
 }
 
 static void bind_pseudo_symbol(object o)
