@@ -1071,7 +1071,7 @@
         (begin (if (find '(0x2B 0x2D) next :test =)
                    (<- sign (.skip self)))
                nil) :unreachable
-        (char-digit? next) (list :number (_getNumber self sign))
+        (char-digit? (.next self)) (list :number (_getNumber self sign))
         (or sign (_identifierLead? self)) (begin
                                             (if sign (.put self sign))
                                             (list :symbol (_getSymbol self)))
