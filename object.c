@@ -9,16 +9,20 @@
 struct xsplay special_splay;
 struct xsplay prim_splay;
 
-object object_boot;
-object object_bytes[256];
-object object_key;
 object object_nil;
-object object_opt;
-object object_os;
-object object_quote;
-object object_rest;
-object object_toplevel;
 object object_true;
+object object_key;
+object object_opt;
+object object_rest;
+object object_quote;
+object object_bytes[256];
+object object_toplevel;
+object object_os;
+object object_class;
+object object_message;
+object object_Error;
+object object_Exception;
+object object_boot;
 
 int symcmp(object o, object p)
 {

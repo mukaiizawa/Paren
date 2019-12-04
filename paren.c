@@ -200,13 +200,17 @@ static void make_initial_objects(void)
 {
   int i;
   object_nil = symbol_new("nil");
+  object_true = symbol_new("true");
   object_key = keyword_new("key");
   object_opt = keyword_new("opt");
-  object_quote = symbol_new("quote");
   object_rest = keyword_new("rest");
+  object_quote = symbol_new("quote");
   object_toplevel = gc_new_env(object_nil);
-  object_true = symbol_new("true");
   object_os = symbol_new("$os");
+  object_class = keyword_new("class");
+  object_message = keyword_new("message");
+  object_Error = symbol_new("Error");
+  object_Exception = symbol_new("Exception");
 #if WINDOWS_P
   bind_symbol(object_os, keyword_new("Windows"));
 #elif OS_CODE == OS_LINUX
