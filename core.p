@@ -101,14 +101,19 @@
               (cons (list inc! i)
                     body))))))
 
-(macro time (:rest expr)
+(macro measure (:rest body)
   ; 時間計測マクロ
-  ; (time expr1 expr2 ...)
+  ; (measure expr1 expr2 ...)
   ; (let (s (clock))
   ;   (begin0 (begin expr1 expr2 ...)
   ;           (print (- (clock) s)))))
-  todo
-  )
+  (with-gensyms (s)
+    (list let (list s (list clock))
+          (list begin0 (cons begin body)
+                (list write-string
+                      (list string+ "time="
+                            (list number->string (list - (list clock) s))))
+                (list write-new-line)))))
 
 ; fundamental function
 
