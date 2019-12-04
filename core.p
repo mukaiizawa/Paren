@@ -5,7 +5,9 @@
 (macro function (name args :rest body)
   ; 仮引数がargs、本体がbodyであるような関数をシンボルnameに束縛する。
   ; argsの書式はspecial operatorのlambdaに準ずる。
-  (if (bound? name) (throw "symbol already bound")
+  ; 既に束縛されているシンボルがnameに指定されている場合はエラーと見做す。
+  (if (bound? name) (throw (.message (.new IllegalArgumentsException)
+                                     "symbol already bound"))
       (cons <- (cons name (cons (cons lambda (cons args body)) nil)))))
 
 (macro with-gensyms ((:rest syms) :rest body)
@@ -82,7 +84,7 @@
 (macro dolist ((i l) :rest body)
   ; リストlをインデックスiを用いてイテレーションする。
   ; nilを返す。
-  (assert (symbol? i))
+  (ensure-arguments (symbol? i))
   (with-gensyms (gl)
     (cons for (cons (list gl l i (list car gl))
                     (cons gl
@@ -92,12 +94,21 @@
 (macro dotimes ((i n) :rest body)
   ; シンボルiを0から順にn - 1まで束縛しながらbodyを反復評価する。
   ; nilを返す。
-  (assert (symbol? i))
+  (ensure-arguments (symbol? i))
   (with-gensyms (gn)
     (cons for (cons (list i 0 gn n)
               (cons (list < i gn)
               (cons (list inc! i)
                     body))))))
+
+(macro time (:rest expr)
+  ; 時間計測マクロ
+  ; (time expr1 expr2 ...)
+  ; (let (s (clock))
+  ;   (begin0 (begin expr1 expr2 ...)
+  ;           (print (- (clock) s)))))
+  todo
+  )
 
 ; fundamental function
 
@@ -221,6 +232,9 @@
   ; xを返す。恒等関数。
   x)
 
+(function ensure-arguments (test)
+  (if (nil? test) (throw (.new IllegalArgumentsException))))
+
 (function different? (x y)
   ; 式(not (same? x y))に等価。
   (not (same? x y)))
@@ -249,20 +263,20 @@
   ; リストlのn番目の要素を返す。
   ; ただし、nは零から数える。
   ; nがlの長さよりも大きい場合はnilを返す。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (car (nthcdr l n)))
 
 (function nthcdr (l n)
   ; リストlを構成するn番目のコンスを取得する。
   ; nがlの長さよりも大きい場合はnilを返す。
-  (assert (and (list? l) (not (minus? n))))
+  (ensure-arguments (and (list? l) (not (minus? n))))
   (if (nil? l) nil
       (= n 0) l
       :default (nthcdr (cdr l) (-- n))))
 
 (function list= (x y :key (test same?))
   ; listの要素がすべて関数testでtrueを返す場合はtrueを、そうでなければnilを返す。
-  (assert (and (list? x) (list? y)))
+  (ensure-arguments (and (list? x) (list? y)))
   (let (rec (lambda (x y)
               (if (and (nil? x) (nil? y)) true
                   (or (nil? x) (nil? y)) nil
@@ -272,7 +286,7 @@
 
 (function length (l)
   ; リストlの要素数を返す。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (let (rec (lambda (l)
               (if (nil? l) 0
                   (+ 1 (rec (cdr l))))))
@@ -287,33 +301,33 @@
         rec (lambda (l n)
               (if (= n 0) nil
                   (cons (car l) (rec (cdr l) (-- n))))))
-    (assert (and (>= s 0) (<= s e) (<= e len)))
+    (ensure-arguments (and (>= s 0) (<= s e) (<= e len)))
     (rec (nthcdr l s) (- e s))))
 
 (function copy-list (l)
   ; リストlの複製を作成して返す。
   ; ただし、要素は複製されない。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (if (nil? l) nil
       (sublist l 0 (length l))))
 
 (function last-cons (l)
   ; リストlを構成する最後のコンスを返す。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (if (nil? l) nil
       (let (rec (lambda (l) (if (cdr l) (rec (cdr l)) l)))
         (rec l))))
 
 (function last (l)
   ; リストlの最後の要素を返す。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (car (last-cons l)))
 
 (function .. (s e :opt (step 1))
   ; 整数sから整数eまでstep刻みの要素を持つリストを返す。
-  (assert (and (number? s) (number? e) (number? step) (/= step 0)
-               (or (and (< step 0) (>= s e))
-                   (and (> step 0) (<= s e)))))
+  (ensure-arguments (and (number? s) (number? e) (number? step) (/= step 0)
+                         (or (and (< step 0) (>= s e))
+                             (and (> step 0) (<= s e)))))
   (let (acc nil test (if (> step 0) <= >=))
     (while (test s e)
       (push! acc s)
@@ -322,7 +336,7 @@
 
 (function append-atom (l x)
   ; リストlの末尾にxを追加したような新たなリストを返す。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (let (rec (lambda (l)
               (if l (cons (car l) (rec (cdr l)))
                   (list x))))
@@ -331,7 +345,7 @@
 (function append (l :rest args)
   ; リストlの要素としてargsの各要素を追加する。
   ; argsの任意の要素はリストでなければならない。
-  (assert (and (list? l) (all-satisfy? args list?)))
+  (ensure-arguments (and (list? l) (all-satisfy? args list?)))
   (reduce args (lambda (acc rest)
                  (reduce rest append-atom :identity acc))
           :identity l))
@@ -339,15 +353,15 @@
 (macro push! (sym x)
   ; シンボルsymを束縛しているリストの先頭に破壊的にxを追加する。
   ; 式としてxを返す。
-  (assert (symbol? sym))
+  (ensure-arguments (symbol? sym))
   (list begin
-        (list assert (list list? sym))
+        (list ensure-arguments (list list? sym))
         (list <- sym (list cons x sym))
         x))
 
 (macro pop! (sym)
   ; シンボルsymを束縛しているリストの先頭を返し、symをリストのcdrで再束縛する。
-  (assert (symbol? sym))
+  (ensure-arguments (symbol? sym))
   (list begin0
         (list car sym)
         (list <- sym (list cdr sym))))
@@ -355,7 +369,7 @@
 (function flatten (l)
   ; リストlisを構成するすべてのコンスのcar部が要素であるような新しいリストを返す。
   ; 作成されるリストの要素の順は、元のリストのcar優先探索となる。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (let (acc nil
         rec (lambda (x)
                (if (nil? x) (reverse acc)
@@ -366,12 +380,12 @@
 
 (function map (args f)
   ; リストargsの各々の要素を関数fで写像した結果をリストにして返す。
-  (assert (list? args))
+  (ensure-arguments (list? args))
   (if args (cons (f (car args)) (map (cdr args) f))))
 
 (function reverse (l)
   ; リストlの要素を逆の順で持つリストを新たに作成して返す。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (let (rec (lambda (l acc)
               (if (nil? l) acc
                   (rec (cdr l) (cons (car l) acc)))))
@@ -380,7 +394,7 @@
 (function reduce (l f :key (identity nil identity?))
   ; リストlを二変数関数fで畳み込んだ結果を返す。
   ; キーワードパラメターidentityが指定された場合は単位元として使用する。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (let (rec (lambda (l)
               (if (nil? (cdr l)) (car l)
                   (rec (cons (f (car l) (cadr l)) (cddr l))))))
@@ -392,7 +406,7 @@
   ; 該当するコンスが存在しない場合はnilを返す。
   ; 比較は=で行われ、testで指定された場合はそれを用いる。
   ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (if (nil? l) nil
       (test (key (car l)) e) l
       (find-cons (cdr l) e :test test :key key)))
@@ -402,7 +416,7 @@
   ; 探索はリストの先頭から順に行われる。
   ; 該当するコンスが存在しない場合はnilを返す。
   ; keyが指定された場合はcar部をkey関数で評価した後に比較を行う。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (if (nil? l) nil
       (f (key (car l))) l
       (find-cons-if (cdr l) f :key key)))
@@ -412,20 +426,20 @@
   ; eが存在しない場合はnilを返す。
   ; 比較は=で行われ、testで指定された場合はそれを用いる。
   ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (car (find-cons l e :test test :key key)))
 
 (function find-if (l f :key (key identity))
   ; リストlの先頭から関数fがnilを返さない最初の要素を返す。
   ; 該当する要素が存在しない場合はnilを返す。
   ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
-  (assert (list? l))
+  (ensure-arguments (list? l))
   (car (find-cons-if l f :key key)))
 
 (function all-satisfy? (l f)
   ; リストlのすべての要素が関数fの引数として評価したときに、nilでない値を返す場合にtrueを返す。
   ; そうでなければnilを返す。
-  (assert (and (list? l) (operator? f)))
+  (ensure-arguments (and (list? l) (operator? f)))
   (if (nil? l) true
       (and (f (car l)) (all-satisfy? (cdr l) f))))
 
@@ -433,12 +447,12 @@
   ; リストlのいずれかの要素が関数fの引数として評価したときにnil以外の値を返す場合はtrueを返す。
   ; そうでなければnilを返す。
   ; なお、lが空の場合はnilを返す。
-  (assert (and (list? l) (operator? f)))
+  (ensure-arguments (and (list? l) (operator? f)))
   (if l (or (f (car l)) (any-satisfy? (cdr l) f))))
 
 (function adjacent-satisfy? (l f)
   ; リストの隣接するすべての二要素に対して二変数関数fの評価がnil以外の場合は
-  (assert (and (list? l) (operator? f)))
+  (ensure-arguments (and (list? l) (operator? f)))
   (if (nil? (cdr l)) true
       (and (f (car l) (cadr l)) (adjacent-satisfy? (cdr l) f))))
 
@@ -451,9 +465,12 @@
   ; 連想リストalのキー値kに対応する値を返す。
   ; 値がない場合は例外を発生させる。
   ; vが指定された場合はkに対応する値をvで上書きする。
-  (assert (list? al))
+  (ensure-arguments (list? al))
   (let (rec (lambda (rest)
-              (if (nil? rest) (throw "property not found")
+              (if (nil? rest) (throw (.message (.new IllegalStateException)
+                                               (string+ "property "
+                                                        (symbol->string k)
+                                                        " not found")))
                   (same? (car rest) k) rest
                   (rec (cddr rest))))
         pair (rec al))
@@ -463,40 +480,41 @@
 ; char
 
 (function char-space? (c)
-  (assert (byte? c))
+  (ensure-arguments (byte? c))
   (find '(0x09 0x0A 0x0D 0x20) c :test =))
 
 (function char-alpha? (c)
-  (assert (byte? c))
+  (ensure-arguments (byte? c))
   (or (<= 0x41 c 0x5A) (<= 0x61 c 0x7A)))
 
 (function char-digit? (c)
-  (assert (byte? c))
+  (ensure-arguments (byte? c))
   (<= 0x30 c 0x39))
 
 (function char-lower (c)
-  (assert (byte? c))
+  (ensure-arguments (byte? c))
   (if (<= 0x41 c 0x5A) (+ c 0x20)
       c))
 
 (function char-upper (c)
-  (assert (byte? c))
+  (ensure-arguments (byte? c))
   (if (<= 0x61 c 0x7A) (- c 0x20)
       c))
 
 (function char->digit (c :key (radix 10))
-  (assert (byte? c))
+  (ensure-arguments (byte? c))
   (let (n (if (char-digit? c) (- c 0x30)
               (char-alpha? c) (+ (- (char-lower c) 0x61) 10)))
     (if (and n (< n radix)) n
-        (throw (.message (.new Exception) "illegal number")))))
+        (throw (.message (.new IllegalStateException)
+                         "illegal char")))))
 
 ; number
 
 (function - (x :rest args)
   ; xからargsの合計を引いた値を返す。
   ; argsがnilの場合はxを負にした値を返す。
-  (assert (and (number? x) (all-satisfy? args number?)))
+  (ensure-arguments (and (number? x) (all-satisfy? args number?)))
   (if (nil? args) (negated x)
       (+ x (negated (reduce args +)))))
 
@@ -507,7 +525,7 @@
 (function // (x y)
   ; 切り捨て除算
   ; xをyで除算した結果の整数部を返す。
-  (assert (and (number? x) (number? y)))
+  (ensure-arguments (and (number? x) (number? y)))
   (truncate (/ x y)))
 
 (function /= (x y)
@@ -525,22 +543,22 @@
 
 (function ++ (x)
   ; xに1を加えた結果を返す。
-  (assert (number? x))
+  (ensure-arguments (number? x))
   (+ x 1))
 
 (function -- (x)
   ; xから1を引いた結果を返す。
-  (assert (number? x))
+  (ensure-arguments (number? x))
   (- x 1))
 
 (macro inc! (s :opt (v 1))
   ; sの値にvを加えた値をsに束縛する式に展開する。
-  (assert (symbol? s))
+  (ensure-arguments (symbol? s))
   (list <- s (list '+ s v)))
 
 (macro dec! (s :opt (v 1))
   ; sの値からvを引いた値をsに束縛する式に展開する。
-  (assert (symbol? s))
+  (ensure-arguments (symbol? s))
   (list <- s (list '- s v)))
 
 (function even? (x)
@@ -553,17 +571,17 @@
 
 (function plus? (x)
   ; xが正の数の場合にtrueを、そうでなければnilを返す。
-  (assert (number? x))
+  (ensure-arguments (number? x))
   (> x 0))
 
 (function zero? (x)
   ; xが0の場合はtrueを、そうでなければnilを返す。
-  (assert (number? x))
+  (ensure-arguments (number? x))
   (= x 0))
 
 (function minus? (x)
   ; xが負の数の場合はtrueを、そうでなければnilを返す。
-  (assert (number? x))
+  (ensure-arguments (number? x))
   (< x 0))
 
 ; Paren object system
@@ -574,11 +592,11 @@
   (find $class cls-sym))
 
 (function find-class (cls-sym)
-  (assert (and (symbol? cls-sym) (class-exists? cls-sym)))
+  (ensure-arguments (and (symbol? cls-sym) (class-exists? cls-sym)))
   (. $class cls-sym))
 
 (function find-method (cls-sym method-sym)
-  (assert (and (symbol? cls-sym) (symbol? method-sym)))
+  (ensure-arguments (and (symbol? cls-sym) (symbol? method-sym)))
   (let (find-class-method
             (lambda (cls)
               (cadr (find-cons (. cls :methods) method-sym)))
@@ -594,7 +612,10 @@
                     (let (super (. cls :super))
                       (and super (rec (find-class super)))))))
     (let (m (rec (find-class cls-sym)))
-      (if m m (throw (.message (.new Error) "method not found"))))))
+      (if m m (throw (.message (.new IllegalStateException)
+                               (string+ "method "
+                                        (symbol->string method-sym)
+                                        " not found")))))))
 
 (macro make-accessor (cls-sym var)
   (with-gensyms (val val?)
@@ -610,7 +631,7 @@
   (with-gensyms (receiver args)
     (list function method-sym (list receiver :rest args)
           :method
-          (list assert (list object? receiver))
+          (list ensure-arguments (list object? receiver))
           (list 'apply
                 (list 'find-method
                       (list '. receiver :class)
@@ -623,7 +644,8 @@
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
   (let (Object? (same? cls-sym 'Object))
-    (assert (and (all-satisfy? fields symbol?) (not (class-exists? cls-sym))))
+    (ensure-arguments (and (all-satisfy? fields symbol?)
+                           (not (class-exists? cls-sym))))
     (append
       (list begin0
             (list quote cls-sym)
@@ -638,17 +660,16 @@
       (map fields (lambda (var) (list 'make-accessor cls-sym var))))))
 
 (macro method (cls-sym method-sym args :rest body)
-  (assert (class-exists? cls-sym))
-  (if (and (bound? method-sym)
-           (not (method? (eval method-sym))))
-      (throw (.message (.new Error) "symbol already bound"))
-      (list begin
-            (if (not (bound? method-sym))
-                (list make-method-dispatcher method-sym))
-            (list . cls-sym :methods
-                  (list cons (list quote method-sym)
-                        (list cons (cons lambda (cons (cons 'self args) body))
-                              (list '. cls-sym :methods)))))))
+  (ensure-arguments (and (class-exists? cls-sym)
+                         (not (and (bound? method-sym)
+                                   (not (method? (eval method-sym)))))))
+  (list begin
+        (if (not (bound? method-sym))
+            (list make-method-dispatcher method-sym))
+        (list . cls-sym :methods
+              (list cons (list quote method-sym)
+                    (list cons (cons lambda (cons (cons 'self args) body))
+                          (list '. cls-sym :methods))))))
 
 (macro catch ((:rest handlers) :rest body)
   ; (catch ((Exception1 (e) ...)
@@ -692,7 +713,7 @@
 
 (function is-a? (o cls)
   ; oがclsクラスのインスタンスの場合trueを、そうでなければnilを返す。
-  (assert (and (object? o) (object? cls) (same? (cadr cls) 'Class)))
+  (ensure-arguments (and (object? o) (object? cls) (same? (cadr cls) 'Class)))
   (let (cls-sym (. cls :symbol)
                 rec (lambda (o-cls-sym)
                       (and o-cls-sym
@@ -770,8 +791,16 @@
   )
 
 (method Exception .addMessage (msg)
-  (assert (string? msg))
+  (ensure-arguments (string? msg))
   (.message self (+ (.message self) msg)))
+
+(class IllegalArgumentsException (Exception)
+  ; 引数が不正な場合にスローされる例外
+  )
+
+(class IllegalStateException (Exception)
+  ; 状態が不正な場合にスローされる例外
+  )
 
 ;; stream I/O
 
@@ -792,7 +821,8 @@
   (if (same? (dynamic $encoding) :UTF-8)
           (let (utf8-exception
                    (lambda ()
-                     (throw (.message (.new Exception) "illegal UTF-8")))
+                     (throw (.message (.new IllegalStateException)
+                                      "illegal UTF-8")))
                 trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
                 ms (.new MemoryStream)
                 b1 (.readByte self) b2 nil b3 nil b4 nil)
@@ -800,33 +830,35 @@
                 (< b1 0x80) (.writeByte ms b1)
                 (< b1 0xc2) (utf8-exception)
                 (not (trail? (<- b2 (.readByte self)))) (utf8-exception)
-                (< b1 0xe0)    ; 2-byte character
-                    (begin (if (= (bit-and b1 0x3e) 0) (utf8-exception))
-                           (.writeByte (.writeByte ms b1) b2))
-                (< b1 0xf0)    ; 3-byte character
-                    (begin (<- b3 (.readByte self))
-                           (if (or (and (= b1 0xe0) (= (bit-and b2 0x20) 0))
-                                   (not (trail? b3)))
-                               (utf8-exception))
-                           (.writeByte (.writeByte (.writeByte ms b1) b2) b3))
-                (< b1 0xf8)    ; 4-byte character
-                    (begin (<- b3 (.readByte self) b4 (.readByte self))
-                           (if (or (not (trail? b3)) (not (trail? b4))
-                                   (and (= b1 0xf0) (= (bit-and b2 0x30) 0)))
-                               (utf8-exception))
-                           (.writeByte
-                             (.writeByte
-                               (.writeByte
-                                 (.writeByte ms b1) b2) b3) b4))
+                (< b1 0xe0) (begin (if (= (bit-and b1 0x3e) 0) (utf8-exception))
+                                   (.writeByte (.writeByte ms b1) b2))
+                (< b1 0xf0) (begin (<- b3 (.readByte self))
+                                   (if (or (and (= b1 0xe0)
+                                                (= (bit-and b2 0x20) 0))
+                                           (not (trail? b3)))
+                                       (utf8-exception))
+                                   (.writeByte
+                                     (.writeByte
+                                       (.writeByte ms b1) b2) b3))
+                (< b1 0xf8) (begin (<- b3 (.readByte self) b4 (.readByte self))
+                                   (if (or (not (trail? b3))
+                                           (not (trail? b4))
+                                           (and (= b1 0xf0)
+                                                (= (bit-and b2 0x30) 0)))
+                                       (utf8-exception))
+                                   (.writeByte
+                                     (.writeByte
+                                       (.writeByte
+                                         (.writeByte ms b1) b2) b3) b4))
                 (utf8-exception))
             (.toString ms))
-          (throw (.message (.new Exception) "unsupport encoding"))))
+          (throw (.message (.new IllegalStateException) "unsupport encoding"))))
 
 (method Stream .readLine (:rest args)
   (Error.shouldBeImplemented))
 
 (method Stream .writeString (s)
-  (assert (string? s))
+  (ensure-arguments (string? s))
   (let (ba (string->byte-array s))
     (dotimes (i (byte-array-length ba))
       (.writeByte self ([] ba i))))
@@ -851,7 +883,7 @@
   self)
 
 (method MemoryStream _extend (size)
-  (assert (integer? size))
+  (ensure-arguments (integer? size))
   (let (req (+ (&wrpos self) size) new-buf nil)
     (while (< (&buf-size self) req)
       (&buf-size self (* (&buf-size self) 2)))
@@ -861,7 +893,7 @@
   self)
 
 (method MemoryStream .writeByte (byte)
-  (assert (byte? byte))
+  (ensure-arguments (byte? byte))
   (let (pos (&wrpos self))
     (if (< pos (&buf-size self))
         (begin ([] (&buf self) pos byte)
@@ -876,7 +908,7 @@
                 (&rdpos self (++ pos))))))
 
 (method MemoryStream .seek (offset)
-  (assert (<= 0 offset (&wrpos self)))
+  (ensure-arguments (<= 0 offset (&wrpos self)))
   (&rdpos self offset))
 
 (method MemoryStream .tell (offset)
@@ -896,14 +928,14 @@
   fp)
 
 (method FileStream .init (:key fp)
-  (assert fp)
+  (ensure-arguments fp)
   (&fp self fp))
 
 (method FileStream .readByte ()
   (fgetc (&fp self)))
 
 (method FileStream .writeByte (byte)
-  (assert (byte? byte))
+  (ensure-arguments (byte? byte))
   (fputc byte (&fp self)))
 
 (method FileStream .seek (offset)
@@ -922,8 +954,8 @@
 
 (method ByteAheadReader .init (:key string (stream $stdin))
   ; 文字列または、ストリームのいずれかを用いてレシーバを初期化する。
-  (assert (and (or (nil? string) (string? string))
-               (object? stream) (is-a? stream Stream)))
+  (ensure-arguments (and (or (nil? string) (string? string))
+                         (object? stream) (is-a? stream Stream)))
   (when string
     (<- stream (.new MemoryStream))
     (.writeString stream string))
@@ -941,7 +973,8 @@
 
 (method ByteAheadReader _ensureNotEOFReached ()
   ; ストリームが終端に達していた場合は例外をスローする。
-  (if (.eof? self) (throw (.message (.new Error) "EOF reached"))))
+  (if (.eof? self) (throw (.message (.new IllegalStateException)
+                                    "EOF reached"))))
 
 (method ByteAheadReader .skip ()
   ; 次の1byte読み飛ばし、返す。
@@ -957,7 +990,7 @@
 
 (method ByteAheadReader .put (b)
   ; ストリームとは無関係にトークンの末尾に1byte追加する。
-  (assert (byte? b))
+  (ensure-arguments (byte? b))
   (.writeByte (&buf self) b))
 
 (method ByteAheadReader .token ()
@@ -982,8 +1015,8 @@
 
 (method AheadReader .init (:key string stream)
   ; 文字列または、ストリームのいずれかを用いてレシーバを初期化する。
-  (assert (or (and string (string? string))
-              (and (object? stream) (is-a? stream Stream))))
+  (ensure-arguments (or (and string (string? string))
+                        (and (object? stream) (is-a? stream Stream))))
   (when string
     (<- stream (.new MemoryStream))
     (.writeString stream string))
@@ -1004,7 +1037,7 @@
 
 (method AheadReader .put (s)
   ; ストリームとは無関係にトークンの末尾に文字列sを追加する。
-  (assert (string? s))
+  (ensure-arguments (string? s))
   (.writeString (&buf self) s))
 
 (method AheadReader .skipSpace ()
@@ -1021,7 +1054,7 @@
   )
 
 (method ParenLexer _raise (message)
-  (throw (.message (.new Error) message)))
+  (throw (.message (.new IllegalStateException) message)))
 
 (method ParenLexer _identifierLead? ()
   (let (c (.next self))
@@ -1040,7 +1073,7 @@
     (if (.eof? self) (_raise self "quote not closed")
         (/= (.next self) 0x5C) (.get self)
         (begin (.skip self)
-               (throw "todo/implement not yet"))))
+               (throw todo))))
   (.skip self)
   (.token self))
 
@@ -1109,7 +1142,8 @@
   self)
 
 (method ParenParser _raise (:opt message)
-  (throw (.message (.new Exception) (or message "illegal token"))))
+  (throw (.message (.new IllegalStateException)
+                   (or message "illegal token"))))
 
 (method ParenParser _scan ()
   (let (next (.getToken (&lexer self)))
@@ -1149,18 +1183,18 @@
 (function read-byte (:opt (stream $stdin))
   ; ストリームから1byte読み込む。
   ; ストリームの終端に達した場合は-1を返す。
-  (assert (is-a? stream Stream))
+  (ensure-arguments (is-a? stream Stream))
   (.readByte stream))
 
 (function read-char (:opt (stream $stdin))
   ; streamから1byte読み込み返す。
   ; ストリームの終端に達した場合は:EOFを返す。
-  (assert (is-a? stream Stream))
+  (ensure-arguments (is-a? stream Stream))
   (.readChar stream))
 
 (function write-byte (byte :opt (stream $stdout))
   ; streamに1byte書き込みbyteを返す。
-  (assert (and (byte? byte) (is-a? stream Stream)))
+  (ensure-arguments (and (byte? byte) (is-a? stream Stream)))
   (.writeByte stream byte)
   byte)
 
@@ -1170,7 +1204,7 @@
 
 (function write-string (s :opt (stream $stdout))
   ; streamに文字列を書き込みsを返す。
-  (assert (and (string? s) (is-a? stream Stream)))
+  (ensure-arguments (and (string? s) (is-a? stream Stream)))
   (.writeString stream s)
   s)
 
@@ -1193,11 +1227,13 @@
         print-atom (lambda (x)
                      (if (macro? x) (write-string "<macro>")
                          (lambda? x) (write-string "<lambda>")
-                         (string? x) (write-string x)
+                         (string? x) (begin (write-string "\"")
+                                            (write-string x)
+                                            (write-string "\""))
                          (symbol? x) (write-string (symbol->string x))
                          (keyword? x) (write-string (keyword->string x))
                          (number? x) (write-string (number->string x))
-                         (throw "not implemented yet"))))
+                         (throw todo))))
     (print-s-expr x)
     (write-new-line)
     x))
