@@ -77,3 +77,12 @@ PRIM(string_to_symbol)
   *result = gc_new_barray_from(SYMBOL, x->barray.size, x->barray.elt);
   return TRUE;
 }
+
+PRIM(string_to_keyword)
+{
+  object x;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!ensure_string(argv->cons.car, &x)) return FALSE;
+  *result = gc_new_barray_from(KEYWORD, x->barray.size, x->barray.elt);
+  return TRUE;
+}

@@ -110,6 +110,7 @@ PRIM(print)
 
 static char *symbol_name_map[] = {
   "basic_catch", "basic-catch",
+  "basic_throw", "basic-throw",
   "call_stack", "call-stack",
   "operator_p", "operator?",
   "samep", "same?",
@@ -143,6 +144,7 @@ static char *symbol_name_map[] = {
   "string_equal", "string=",
   "string_p", "string?",
   "string_to_barray", "string->byte-array",
+  "string_to_keyword", "string->keyword",
   "string_to_symbol", "string->symbol",
 
   "array_access", "[]",

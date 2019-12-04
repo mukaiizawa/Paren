@@ -984,7 +984,7 @@ SPECIAL(goto)
   return TRUE;
 }
 
-SPECIAL(throw)
+SPECIAL(basic_throw)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   fs_push(gen_inst0(THROW_INST));

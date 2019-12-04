@@ -238,7 +238,7 @@
   x)
 
 (function ensure-arguments (test)
-  (if (not test) (throw (.new IllegalArgumentsException))))
+  (if (not test) (basic-throw (.new IllegalArgumentsException))))
 
 (function different? (x y)
   ; 式(not (same? x y))に等価。
@@ -676,6 +676,14 @@
                     (list cons (cons lambda (cons (cons 'self args) body))
                           (list '. cls-sym :methods))))))
 
+(macro throw (o)
+  (with-gensyms (e)
+    (list let (list e o)
+          (list ensure-arguments (list and
+                                       (list object? e)
+                                       (list is-a? e 'Throwable)))
+          (list basic-throw o))))
+
 (macro catch ((:rest handlers) :rest body)
   ; (catch ((Exception1 (e) ...)
   ;         (Exception2 (e) ...)
@@ -737,6 +745,10 @@
   ; クラスごとに必要に応じて固有の初期化処理を上書きする。
   self)
 
+(method Object .class ()
+  ; 自身のクラスを返す。
+  (find-class (&class self)))
+
 (method Object .equal? (o)
   ; レシーバとoが同一オブジェクトの場合にtrueを、そうでなければnilを返す。
   ; サブクラスで同等性を定義する場合はこのメソッドをオーバーロードする。
@@ -757,6 +769,14 @@
     (if (list= (lambda-parameter (find-method (. o :class) '.init)) '(self))
         (.init o)
         o)))
+
+(method Class .super ()
+  ; スーパークラスを返す。
+  (find-class (&super self)))
+
+(method Class .features ()
+  ; フィーチャーのリストを返す。
+  (map (&features self) find-class))
 
 ;; error, exception
 
