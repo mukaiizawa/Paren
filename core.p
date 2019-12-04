@@ -690,34 +690,29 @@
   ;         (Exception3 (e) ...))
   ;   ...)
   ; (basic-catch (lambda (gsym)
+  ;                (ensure-arguments (and (object? gsym) (is-a? Throwable)))
   ;                (if (is-a gsym Exception1) (apply (lambda (e) ...) gsym)
   ;                    (is-a gsym Exception2) (apply (lambda (e) ...) gsym)
   ;                    (is-a gsym Exception3) (apply (lambda (e) ...) gsym)
   ;                    (throw gsym)))
-  ;     (basic-catch (lambda (gsym)
-  ;                      (throw (if (object? gsym) gsym
-  ;                                 (.message (.new Error) gsym))))
-  ;              ...))
+  ;              ...)
   (with-gensyms (gargs)
-    (let (if-clause nil make-basic-catch
-                    (lambda (handler-args handler-body body)
-                      (cons 'basic-catch
-                            (cons (list lambda (list handler-args)
-                                        handler-body)
-                                  body))))
+    (let (if-clause nil)
       (push! if-clause if)
       (dolist (h handlers)
         (push! if-clause (list 'is-a? gargs (car h)))
         (push! if-clause (list apply (cons lambda (cons (cadr h) (cddr h)))
                                (list 'list gargs))))
       (push! if-clause (list throw gargs))
-      (make-basic-catch
-        gargs (reverse if-clause)
-        (list
-          (make-basic-catch
-            gargs (list throw (list if (list 'object? gargs) gargs
-                                    (list '.message '(.new Error) gargs)))
-            body))))))
+      (cons basic-catch
+            (cons (list lambda (list gargs)
+                        (list begin
+                              (list ensure-arguments
+                                    (list and
+                                          (list object? gargs)
+                                          (list is-a? gargs 'Throwable)))
+                              (reverse if-clause)))
+                  body)))))
 
 (function object? (x)
   ; xがオブジェクトの場合trueを、そうでなければnilを返す。
