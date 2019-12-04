@@ -18,7 +18,7 @@
 static int ensure_file_pointer(object o, FILE **fp)
 {
   if (!bi_intptr(o, (intptr_t *)fp)) {
-    ip_mark_error("illegal file pointer");
+    ip_mark_exception("illegal file pointer");
     return FALSE;
   }
   return TRUE;
@@ -30,14 +30,14 @@ PRIM(fp)
   FILE *fp;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!bi_int(argv->cons.car, &fd)) {
-    ip_mark_error("illegal file discripter");
+    ip_mark_exception("illegal file discripter");
     return FALSE;
   }
   switch (fd) {
     case 0: fp = stdin; break;
     case 1: fp = stdout; break;
     case 2: fp = stderr; break;
-    default: ip_mark_error("unknown file discripter"); return FALSE;
+    default: ip_mark_exception("unknown file discripter"); return FALSE;
   }
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;
@@ -58,15 +58,15 @@ PRIM(fopen)
   object ofn;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
   if (!typep(ofn = argv->cons.car, STRING)) {
-    ip_mark_error("illegal file name");
+    ip_mark_exception("illegal file name");
     return FALSE;
   }
   fn = ofn->barray.elt;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &mode)
       || (0 < mode || mode >= sizeof(mode_table) / sizeof(char *)))
-    ip_mark_error("illegal open mode");
+    ip_mark_exception("illegal open mode");
   else if ((fp = fopen(fn, mode_table[mode])) == NULL)
-    ip_mark_error("cannot open file");
+    ip_mark_exception("cannot open file");
   else {
     *result = gc_new_xint((intptr_t) fp);
     return TRUE;

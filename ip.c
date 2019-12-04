@@ -24,6 +24,12 @@ static long cycle;
 int ip_trap_code;
 static char *error_msg;
 
+void ip_mark_exception(char *msg)
+{
+  ip_trap_code = TRAP_EXCEPTION;
+  error_msg = msg;
+}
+
 void ip_mark_error(char *msg)
 {
   ip_trap_code = TRAP_ERROR;
@@ -32,12 +38,12 @@ void ip_mark_error(char *msg)
 
 static void ip_mark_too_few_arguments_error(void)
 {
-  ip_mark_error("too few arguments");
+  ip_mark_exception("too few arguments");
 }
 
 static void ip_mark_too_many_arguments_error(void)
 {
-  ip_mark_error("too many arguments");
+  ip_mark_exception("too many arguments");
 }
 
 int ip_ensure_no_args(int argc)
@@ -58,7 +64,7 @@ int ip_ensure_arguments(int argc, int min, int max)
 
 static void mark_illegal_parameter_error()
 {
-  ip_mark_error("illegal parameter list");
+  ip_mark_exception("illegal parameter list");
 }
 
 // symbol
@@ -341,7 +347,7 @@ static void pop_apply_prim_inst(void)
   args = reg[0];
   prim = xsplay_find(&prim_splay, fs_pop()->cons.cdr->cons.car);
   if ((*prim)(object_list_len(args), args, &(reg[0]))) return;
-  if (error_msg == NULL) ip_mark_error("primitive failed");
+  if (error_msg == NULL) ip_mark_exception("primitive failed");
 }
 
 #ifndef NDEBUG
@@ -379,7 +385,7 @@ static void pop_eval_inst(void)
       return;
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
-        ip_mark_error("unbind symbol");
+        ip_mark_exception("unbind symbol");
         return;
       }
       reg[0] = s;
@@ -398,12 +404,12 @@ static void pop_goto_inst(void)
   object o, label;
   label = reg[0];
   if (!typep(label, KEYWORD)) {
-    ip_mark_error("label must be keyword");
+    ip_mark_exception("label must be keyword");
     return;
   }
   while (TRUE) {
     if (sp == 0) {
-      ip_mark_error("labels context not found");
+      ip_mark_exception("labels context not found");
       return;
     }
     if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
@@ -419,7 +425,7 @@ static void pop_goto_inst(void)
   o = fs_top()->cons.cdr->cons.car;
   while (TRUE) {
     if (o == object_nil) {
-      ip_mark_error("label not found");
+      ip_mark_exception("label not found");
       return;
     }
     if (o->cons.car == label) break;
@@ -434,11 +440,11 @@ static void pop_fetch_handler_inst(void)
   handler = reg[0];
   body = fs_pop()->cons.cdr->cons.car;
   if (!typep(handler, LAMBDA)) {
-    ip_mark_error("require exception handler");
+    ip_mark_exception("require exception handler");
     return;
   }
   if (object_list_len(handler->lambda.params) != 1) {
-    ip_mark_error("handler parameter must be one required parameter");
+    ip_mark_exception("handler parameter must be one required parameter");
     return;
   }
   fs_push(gen_inst1(HANDLER_INST, handler));
@@ -473,7 +479,7 @@ static void pop_fetch_operator_inst(void)
       return;
     default: break;
   }
-  ip_mark_error("is not a operator");
+  ip_mark_exception("is not a operator");
 }
 
 static void pop_eval_args_inst(void)
@@ -542,7 +548,19 @@ static void pop_return_inst(void)
   }
 }
 
-static void ip_finish(void);
+static object call_stack(void);
+static void exit1(void)
+{
+  char buf[MAX_STR_LEN];
+  object o;
+  o = call_stack();
+  printf("Error -- %s\n", object_describe(reg[0], buf));
+  while (o != object_nil) {
+    printf("	at: %s\n", object_describe(o->cons.car, buf));
+    o = o->cons.cdr;
+  }
+  exit(1);
+}
 
 static void pop_throw_inst(void)
 {
@@ -552,7 +570,7 @@ static void pop_throw_inst(void)
   while (TRUE) {
     if (sp == 0) {
       sp = xsp;
-      ip_finish();
+      exit1();
     }
     if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
       body = fs_pop()->cons.cdr->cons.car;
@@ -592,19 +610,6 @@ static object call_stack(void)
   return o;
 }
 
-static void ip_finish(void)
-{
-  char buf[MAX_STR_LEN];
-  object o;
-  o = call_stack();
-  printf("Error -- %s\n", object_describe(reg[0], buf));
-  while (o != object_nil) {
-    printf("	at: %s\n", object_describe(o->cons.car, buf));
-    o = o->cons.cdr;
-  }
-  exit(1);
-}
-
 // special/prim
 
 static int same_symbol_keyword_p(object sym, object key)
@@ -619,7 +624,7 @@ static int valid_keyword_p(object params, object args)
   object p, s;
   while (args != object_nil) {
     if (!typep(args->cons.car, KEYWORD)) {
-      ip_mark_error("expected keyword parameter");
+      ip_mark_exception("expected keyword parameter");
       return FALSE;
     }
     p = params;
@@ -631,11 +636,11 @@ static int valid_keyword_p(object params, object args)
       p = p->cons.cdr;
     }
     if (p == object_nil) {
-      ip_mark_error("undeclared keyword parameter");
+      ip_mark_exception("undeclared keyword parameter");
       return FALSE;
     }
     if ((args = args->cons.cdr) == object_nil) {
-      ip_mark_error("expected keyword parameter value");
+      ip_mark_exception("expected keyword parameter value");
       return FALSE;
     }
     args = args->cons.cdr;
@@ -643,7 +648,6 @@ static int valid_keyword_p(object params, object args)
   return TRUE;
 }
 
-// TODO lambda-list内のシンボルが一意であることのvalidate-lambda-listに追加する。
 static void parse_lambda_list(object env, object params, object args)
 {
   object o, pre, k, v, def_v, sup_k;
@@ -821,7 +825,7 @@ SPECIAL(let)
   object args, s;
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
   if (!listp((args = argv->cons.car))) {
-    ip_mark_error("argument must be list");
+    ip_mark_exception("argument must be list");
     return FALSE;
   }
   if (args != object_nil) push_switch_env_inst(reg[1]);
@@ -829,11 +833,11 @@ SPECIAL(let)
   fb_reset();
   while (args != object_nil) {
     if (!typep((s = args->cons.car), SYMBOL)) {
-      ip_mark_error("argument must be symbol");
+      ip_mark_exception("argument must be symbol");
       return FALSE;
     }
     if ((args = args->cons.cdr) == object_nil) {
-      ip_mark_error("argument must be association list");
+      ip_mark_exception("argument must be association list");
       return FALSE;
     }
     fb_add(gen_inst1(QUOTE_INST, args->cons.car));
@@ -851,7 +855,7 @@ SPECIAL(dynamic)
   object e, s, v;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!typep((s = argv->cons.car), SYMBOL)) {
-    ip_mark_error("argument must be symbol");
+    ip_mark_exception("argument must be symbol");
     return FALSE;
   }
   i = sp - 1;
@@ -865,7 +869,7 @@ SPECIAL(dynamic)
       }
     }
     if (i < 0) {
-      ip_mark_error("unbind symbol");
+      ip_mark_exception("unbind symbol");
       return FALSE;
     }
   }
@@ -878,18 +882,18 @@ SPECIAL(symbol_bind)
   object s;
   if (argc == 0) return TRUE;
   if (argc % 2 != 0) {
-    ip_mark_error("must be pair");
+    ip_mark_exception("must be pair");
     return FALSE;
   }
   fb_reset();
   while (argc != 0) {
     s = argv->cons.car;
     if (!typep(s, SYMBOL)) {
-      ip_mark_error("cannot bind except symbol");
+      ip_mark_exception("cannot bind except symbol");
       return FALSE;
     }
     if (s == object_nil) {
-      ip_mark_error("cannot bind nil");
+      ip_mark_exception("cannot bind nil");
       return FALSE;
     }
     argv = argv->cons.cdr;
@@ -914,7 +918,7 @@ SPECIAL(macro)
   object params;
   if (!ip_ensure_arguments(argc, 3, FALSE)) return FALSE;
   if (!typep(argv->cons.car, SYMBOL)) {
-    ip_mark_error("required macro name");
+    ip_mark_exception("required macro name");
     return FALSE;
   } else {
     fs_push(gen_inst1(BIND_PROPAGATION_INST, argv->cons.car));
@@ -1043,7 +1047,7 @@ PRIM(apply)
       return TRUE;
     default: break;
   }
-  ip_mark_error("requires function or symbol(built in function) to apply");
+  ip_mark_exception("requires function or symbol(built in function) to apply");
   return FALSE;
 }
 
@@ -1052,7 +1056,7 @@ PRIM(bound_p)
   object s;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!typep((s = argv->cons.car), SYMBOL)) {
-    ip_mark_error("required symbol");
+    ip_mark_exception("required symbol");
     return FALSE;
   }
   *result = object_bool(symbol_find_propagation(reg[1], s) != NULL);
@@ -1069,6 +1073,7 @@ PRIM(call_stack)
 static void trap(void)
 {
   switch (ip_trap_code) {
+    case TRAP_EXCEPTION:
     case TRAP_ERROR:
       fs_push(gen_inst0(THROW_INST));
       xassert(error_msg != NULL);
