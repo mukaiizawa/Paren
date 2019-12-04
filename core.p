@@ -238,7 +238,7 @@
   x)
 
 (function ensure-arguments (test)
-  (if (nil? test) (throw (.new IllegalArgumentsException))))
+  (if (not test) (throw (.new IllegalArgumentsException))))
 
 (function different? (x y)
   ; 式(not (same? x y))に等価。
