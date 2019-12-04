@@ -167,6 +167,8 @@ static char *symbol_name_map[] = {
   "lambda_parameter", "lambda-parameter",
   "macro_p", "macro?",
 
+  "milli_time", "milli-time",
+
   NULL
 };
 

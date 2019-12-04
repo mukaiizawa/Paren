@@ -832,6 +832,12 @@
       (.writeByte self ([] ba i))))
   self)
 
+(method Stream .seek (:rest args)
+  (Error.shouldBeImplemented))
+
+(method Stream .tell (:rest args)
+  (Error.shouldBeImplemented))
+
 (class MemoryStream (Stream)
   ; メモリ上に内容を保持するストリームクラス。
   buf buf-size rdpos wrpos)
@@ -869,6 +875,13 @@
         (begin0 ([] (&buf self) pos)
                 (&rdpos self (++ pos))))))
 
+(method MemoryStream .seek (offset)
+  (assert (<= 0 offset (&wrpos self)))
+  (&rdpos self offset))
+
+(method MemoryStream .tell (offset)
+  (&rdpos self))
+
 (method MemoryStream .toString ()
   (let (pos (&wrpos self) str (byte-array pos))
     (if (= pos 0) ""
@@ -892,6 +905,15 @@
 (method FileStream .writeByte (byte)
   (assert (byte? byte))
   (fputc byte (&fp self)))
+
+(method FileStream .seek (offset)
+  (fseek (&fp self) offset))
+
+(method FileStream .tell ()
+  (ftell (&fp self)))
+
+(method FileStream .close ()
+  (fclose (&fp self)))
 
 (class ByteAheadReader ()
   ; 先読みリーダー。
@@ -1192,7 +1214,7 @@
 
 ; ------------------------------------------------------------------------------
 ; testing for development.
-(print (os_clock))
+(print (clock))
 
 ; (let ($encoding :UTF-8)
 ;   (<- ar (.init (.new AheadReader) :string "あいう"))
@@ -1209,7 +1231,7 @@
 
 (repl)
 
-(print (os_clock))
+(print (clock))
 ; ------------------------------------------------------------------------------
 
 ; ./paren

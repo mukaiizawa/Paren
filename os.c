@@ -162,7 +162,7 @@ PRIM(fseek)
 {
   int off;
   FILE *fp;
-  if (argc != 2) return FALSE;
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
   if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &off)) return FALSE;
   if (off == -1) return fseek(fp, 0, SEEK_END) == 0;
@@ -173,7 +173,7 @@ PRIM(ftell)
 {
   int pos;
   FILE *fp;
-  if (argc != 1) return FALSE;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   if ((pos = ftell(fp)) == -1) return FALSE;
   *result = gc_new_xint(pos);
@@ -189,16 +189,17 @@ PRIM(fclose)
   return TRUE;
 }
 
-PRIM(time)
+PRIM(clock)
+{
+  if (!ip_ensure_arguments(argc, FALSE, FALSE)) return FALSE;
+  *result = gc_new_xfloat((double)clock() / CLOCKS_PER_SEC);
+  return TRUE;
+}
+
+PRIM(milli_time)
 {
   if (!ip_ensure_arguments(argc, FALSE, FALSE)) return FALSE;
   *result = gc_new_xint(time(NULL));
   return TRUE;
 }
 
-PRIM(os_clock)
-{
-  if (!ip_ensure_arguments(argc, FALSE, FALSE)) return FALSE;
-  *result = gc_new_xfloat((double)clock() / CLOCKS_PER_SEC);
-  return TRUE;
-}
