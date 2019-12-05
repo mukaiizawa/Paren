@@ -1287,8 +1287,11 @@
 ; (function fib (x)
 ;   (if (> x 1) (+ (fib (-- x)) (fib (- x 2)))
 ;       1))
-; (print (map (.. 0 15) fib))
+; (print (map (.. 0 5) fib))
 
-(if (nil? $args) (repl)
-    (dolist (arg $args)
-      (load arg)))
+(function boot (args)
+  (if (nil? args) (repl)
+      (dolist (arg args)
+        (load arg))))
+
+(boot $args)
