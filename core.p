@@ -328,6 +328,14 @@
   (ensure-arguments (list? l))
   (car (last-cons l)))
 
+(function butlast (l)
+  ; リストlの最後の要素を除いたリストを返す。
+  (ensure-arguments (list? l))
+  (let (rec (lambda (l)
+              (if (nil? (cdr l)) nil
+                  (cons (car l) (rec (cdr l))))))
+    (rec l)))
+
 (function .. (s e :opt (step 1))
   ; 整数sから整数eまでstep刻みの要素を持つリストを返す。
   (ensure-arguments (and (number? s) (number? e) (number? step) (/= step 0)
@@ -959,6 +967,9 @@
 (method FileStream .readByte ()
   (fgetc (&fp self)))
 
+(method FileStream .readLine ()
+  (fgets (&fp self)))
+
 (method FileStream .writeByte (byte)
   (ensure-arguments (byte? byte))
   (fputc byte (&fp self)))
@@ -971,6 +982,47 @@
 
 (method FileStream .close ()
   (fclose (&fp self)))
+
+(class Path ()
+  ; イミュータブルなファイルパスクラス。
+  files mode)
+
+(method Path .init (:rest files)
+  ; このパスを構成するファイルのリストを渡して初期化を行う。
+  (&files self files)
+  self)
+
+(method Path _reset ()
+  (&mode self nil)
+  self)
+
+(method Path .parent ()
+  ; このパスの親のパス
+  (&files (.init (.new Path)) (butlast (&files self))))
+
+(method Path .child (:rest body)
+  (ensure-arguments (all-satisfy? body string?))
+  ; このパスの下にパスを結合する。
+  (&files (.new Path) (append (&files self) body)))
+
+(method Path .toString ()
+  (reduce (&files self) (lambda (acc rest) (string+ acc "/" rest))))
+
+(method Path .open (mode)
+  ; このパスの表すファイルを指定したモードでオープンし、FileStreamクラスのインスタンスを返す。
+  (.init (.new FileStream) :fp (fopen (.toString self) mode)))
+
+(method Path .openRead ()
+  (.open self 0))
+
+(method Path .openWrite ()
+  (.open self 1))
+
+(method Path .openAppend ()
+  (.open self 2))
+
+(method Path .openUpdate ()
+  (.open self 3))
 
 (class ByteAheadReader ()
   ; 先読みリーダー。
@@ -1217,21 +1269,62 @@
   (ensure-arguments (is-a? stream Stream))
   (.readChar stream))
 
+(function read-line (:opt (stream $stdin))
+  ; streamから一行読み込み返す。
+  (ensure-arguments (is-a? stream Stream))
+  (.readLine stream))
+
 (function write-byte (byte :opt (stream $stdout))
   ; streamに1byte書き込みbyteを返す。
   (ensure-arguments (and (byte? byte) (is-a? stream Stream)))
   (.writeByte stream byte)
   byte)
 
-(function write-new-line (:opt (stream $stdout))
+(function write-line (:opt args (stream $stdout))
   ; streamに改行を書き込む。
-  (write-byte 0x0A))
+  (ensure-arguments (or (nil? args) (string? args)))
+  (if args (write-string args stream))
+  (write-byte 0x0A stream))
 
 (function write-string (s :opt (stream $stdout))
   ; streamに文字列を書き込みsを返す。
   (ensure-arguments (and (string? s) (is-a? stream Stream)))
   (.writeString stream s)
   s)
+
+(macro with-memory-stream ((s) :rest body)
+  (list let (list s (list '.new 'MemoryStream))
+        (cons begin body)
+        (list '.toString s)))
+
+(function with-open-mode (sym gsym path mode body)
+  ; 各種マクロのためのhelper function
+  (let (path (list if (list string? path) (list '.init '(.new Path) path)
+                   (list and (list 'object? path)
+                         (list 'is-a? path 'Path)) path
+                   (list ensure-arguments nil)))
+    (list let (list gsym nil)
+          (list unwind-protect
+                (cons let (cons (list sym (list mode path))
+                                (cons (list <- gsym sym)
+                                      body)))
+                (list if gsym (list '.close gsym))))))
+
+(macro with-open-read ((in path) :rest body)
+  (with-gensyms (stream)
+    (with-open-mode in stream path '.openRead body)))
+
+(macro with-open-write ((out path) :rest body)
+  (with-gensyms (stream)
+    (with-open-mode out stream path '.openWrite body)))
+
+(macro with-open-append ((out path) :rest body)
+  (with-gensyms (stream)
+    (with-open-mode out stream path '.openAppend body)))
+
+(macro with-open-update ((out path) :rest body)
+  (with-gensyms (stream)
+    (with-open-mode out stream path '.openUpdate body)))
 
 (function read (:opt (stream (dynamic $stdin)))
   ; streamからS式を読み込み返す。
@@ -1273,9 +1366,12 @@
         (if (same? (<- s (read)) :EOF) (break))
         (xprint (eval s))))))
 
-(function load (p)
-  (print "load")
-  (print p))
+(function load (path)
+  (with-open-read (in path)
+    (let (expr nil)
+      (while true
+        (if (same? (<- expr (read in)) :EOF) (break)
+            (eval expr))))))
 
 ; (let ($encoding :UTF-8)
 ;   (<- ar (.init (.new AheadReader) :string "あいう"))
@@ -1288,6 +1384,18 @@
 ;   (if (> x 1) (+ (fib (-- x)) (fib (- x 2)))
 ;       1))
 ; (print (map (.. 0 5) fib))
+
+(<- p (.init (.new Path) "." "test.wk"))
+
+(with-open-write (out p)
+  (write-line ":hello" out)
+  (write-line ":hello" out)
+  (write-line ":hello" out)
+  (write-line ":hello" out)
+  (write-line ":hello" out)
+  )
+
+(load "test.wk")
 
 (function boot (args)
   (if (nil? args) (repl)

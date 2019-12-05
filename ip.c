@@ -385,6 +385,8 @@ static void pop_eval_inst(void)
       return;
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
+        char buf[MAX_STR_LEN];
+        printf("bound -- %s\n", object_describe(reg[0], buf));
         ip_mark_exception("unbind symbol");
         return;
       }

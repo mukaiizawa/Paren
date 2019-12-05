@@ -63,7 +63,7 @@ PRIM(fopen)
   }
   fn = ofn->barray.elt;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &mode)
-      || (0 < mode || mode >= sizeof(mode_table) / sizeof(char *)))
+      || (0 > mode || mode >= sizeof(mode_table) / sizeof(char *)))
     ip_mark_exception("illegal open mode");
   else if ((fp = fopen(fn, mode_table[mode])) == NULL)
     ip_mark_exception("cannot open file");
@@ -111,7 +111,7 @@ PRIM(fgets)
   s = xbarray_fgets(&x, fp);
   if (s == NULL) *result = object_nil;
   else {
-    *result = gc_new_barray(BARRAY, x.size--); // remove NUL
+    *result = gc_new_barray(STRING, --x.size);// remove NUL
     memcpy((*result)->barray.elt, x.elt, x.size);
   }
   xbarray_free(&x);
