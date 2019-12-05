@@ -11,22 +11,10 @@
 #include "ip.h"
 #include "bi.h"
 
-// option
+static char *core_fn;
 
-char *core_fn;
-
-static void parse_opt(int argc, char *argv[])
-{
-  int ch;
-  core_fn = "./core.p";
-  while((ch = xgetopt(argc, argv, "f:o")) != EOF)
-    switch(ch) {
-      case 'f': core_fn = xoptarg; break;
-      default: xerror("\
--f FILE as core library for paren\n\
-");
-    }
-}
+static object object_args;
+static object object_os;
 
 // parser
 
@@ -196,7 +184,15 @@ static void bind_special(void)
   }
 }
 
-static void make_initial_objects(void)
+static object parse_args(int argc, char *argv[], int i)
+{
+  object o;
+  if (i >= argc) return object_nil;
+  o = gc_new_barray_from(STRING, strlen(argv[i]), argv[i]);
+  return gc_new_cons(o, parse_args(argc, argv, i + 1));
+}
+
+static void make_initial_objects(int argc, char *argv[])
 {
   int i;
   object_nil = symbol_new("nil");
@@ -207,10 +203,12 @@ static void make_initial_objects(void)
   object_quote = symbol_new("quote");
   object_toplevel = gc_new_env(object_nil);
   object_os = symbol_new("$os");
+  object_args = symbol_new("$args");
   object_class = keyword_new("class");
   object_message = keyword_new("message");
   object_Error = symbol_new("Error");
   object_Exception = symbol_new("Exception");
+  bind_symbol(object_args, parse_args(argc, argv, 1));
 #if WINDOWS_P
   bind_symbol(object_os, keyword_new("Windows"));
 #elif OS_CODE == OS_LINUX
@@ -232,17 +230,14 @@ int main(int argc, char *argv[])
 {
   char buf[MAX_STR_LEN];
   setbuf(stdout, NULL);
-  parse_opt(argc, argv);
-  if (core_fn == NULL) {
-    pf_exepath(argv[0], buf);
+  pf_exepath(argv[0], buf);
 #if !UNIX_P
-    *strrchr(buf, '.') = '\0';
+  *strrchr(buf, '.') = '\0';
 #endif
-    strcat(buf, ".p");
-    core_fn = buf;
-  }
+  strcpy(buf + strlen(buf) - 5, "core.p");
+  core_fn = buf;
   gc_init();
-  make_initial_objects();
+  make_initial_objects(argc, argv);
   xbarray_init(&token_str);
   object_boot = gc_new_lambda(object_toplevel, object_nil, load());
   ip_start();

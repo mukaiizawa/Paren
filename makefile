@@ -33,7 +33,7 @@ endif
 
 paren=paren$(exe)
 all: $(paren)
-	./paren
+	./paren$(exe)
 
 special=ip.c
 special.wk: $(special)

@@ -604,7 +604,7 @@
   (ensure-arguments (and (symbol? cls-sym) (symbol? method-sym)))
   (let (find-class-method
             (lambda (cls)
-              (cadr (find-cons (. cls :methods) method-sym)))
+              (cadr (find-cons (car (nthcdr cls 11)) method-sym)))    ; <=> (.cls :methods)
         find-feature-method
             (lambda (features)
               (and features
@@ -613,8 +613,8 @@
         rec
             (lambda (cls)
                 (or (find-class-method cls)
-                    (find-feature-method (. cls :features))
-                    (let (super (. cls :super))
+                    (find-feature-method (car (nthcdr cls 7)))    ; <=> (. cls :features)
+                    (let (super (car (nthcdr cls 5)))    ; <=> (. cls :super)
                       (and super (rec (find-class super)))))))
     (let (m (rec (find-class cls-sym)))
       (if m m (throw (.message (.new IllegalStateException)
@@ -772,6 +772,11 @@
 (method Class .features ()
   ; フィーチャーのリストを返す。
   (map (&features self) find-class))
+
+(method Class .methods ()
+  ; このクラスのメソッドのリストを返す。
+  ; スーパークラスや、フィーチャーのメソッドは含まない。
+  (&methods self))
 
 ;; error, exception
 
@@ -1268,13 +1273,12 @@
         (if (same? (<- s (read)) :EOF) (break))
         (xprint (eval s))))))
 
-; ------------------------------------------------------------------------------
-; testing for development.
-(print (clock))
+(function load (p)
+  (print "load")
+  (print p))
 
 ; (let ($encoding :UTF-8)
 ;   (<- ar (.init (.new AheadReader) :string "あいう"))
-;   (print :init)
 ;   (print (.get ar))
 ;   (print (.get ar))
 ;   (print (.get ar))
@@ -1285,20 +1289,6 @@
 ;       1))
 ; (print (map (.. 0 15) fib))
 
-(repl)
-
-(print (clock))
-; ------------------------------------------------------------------------------
-
-; ./paren
-; )
-;
-;  /paren xxx.p
-;      load xxx.p
-;
-;  /paren
-;      invoke repl
-;
-;
-; (if $args (loop (print (eval (read))))
-;     (load xxx.p))
+(if (nil? $args) (repl)
+    (dolist (arg $args)
+      (load arg)))
