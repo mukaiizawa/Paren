@@ -1029,7 +1029,7 @@
   ; 文字列やストリームから1byte先読みを行う機能を提供するクラス。
   stream next buf)
 
-(method ByteAheadReader .init (:key string (stream $stdin))
+(method ByteAheadReader .init (:key string (stream (dynamic $stdin)))
   ; 文字列または、ストリームのいずれかを用いてレシーバを初期化する。
   (ensure-arguments (and (or (nil? string) (string? string))
                          (object? stream) (is-a? stream Stream)))
@@ -1213,7 +1213,7 @@
   ; Paren構文解析機
   lexer token-type next-token)
 
-(method ParenParser .init (:key string (stream $stdin))
+(method ParenParser .init (:key string (stream (dynamic $stdin)))
   (&lexer self (.init (.new ParenLexer) :string string :stream stream))
   (_scan self)
   self)
@@ -1257,24 +1257,24 @@
     $encoding (if (same? $os :Windows) :CP932 :UTF-8)
     $support-encodings '(:UTF-8 :CP932))
 
-(function read-byte (:opt (stream $stdin))
+(function read-byte (:opt (stream (dynamic $stdin)))
   ; ストリームから1byte読み込む。
   ; ストリームの終端に達した場合は-1を返す。
   (ensure-arguments (is-a? stream Stream))
   (.readByte stream))
 
-(function read-char (:opt (stream $stdin))
+(function read-char (:opt (stream (dynamic $stdin)))
   ; streamから1byte読み込み返す。
   ; ストリームの終端に達した場合は:EOFを返す。
   (ensure-arguments (is-a? stream Stream))
   (.readChar stream))
 
-(function read-line (:opt (stream $stdin))
+(function read-line (:opt (stream (dynamic $stdin)))
   ; streamから一行読み込み返す。
   (ensure-arguments (is-a? stream Stream))
   (.readLine stream))
 
-(function write-byte (byte :opt (stream $stdout))
+(function write-byte (byte :opt (stream (dynamic $stdout)))
   ; streamに1byte書き込みbyteを返す。
   (ensure-arguments (and (byte? byte) (is-a? stream Stream)))
   (.writeByte stream byte)
@@ -1331,7 +1331,7 @@
   ; 終端に達した場合は:EOFを返す。
   (.parse (.init (.new ParenParser) :stream stream)))
 
-(function xprint (x)
+(function xprint (x :opt (stream (dynamic $stdin)))
   (let (print-s-expr (lambda (x)
                        (if (cons? x) (print-cons x)
                            (print-atom x)))
