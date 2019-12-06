@@ -186,6 +186,7 @@ PRIM(fclose)
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   fclose(fp);
+  *result = object_true;
   return TRUE;
 }
 

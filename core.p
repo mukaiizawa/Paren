@@ -1190,12 +1190,10 @@
   (.reset self)
   (let (sign nil next (.next self) space? (lambda (x)
                                             (and (byte? x)
-                                                 (char-space? x)
-                                                 (/= 0x0A x))))
+                                                 (char-space? x))))
     (if (space? next) (begin (while (space? (.next self)) (.skip self))
                              (.getToken self))
         (.eof? self) '(:EOF)
-        (= next 0x0A) (begin (.skip self) '(:EOL))
         (= next 0x22) (list :string (_getString self))
         (= next 0x27) (begin (.skip self) '(:quote))
         (= next 0x28) (begin (.skip self) '(:open-paren))
@@ -1218,7 +1216,6 @@
 
 (method ParenParser .init (:key string (stream (dynamic $stdin)))
   (&lexer self (.init (.new ParenLexer) :string string :stream stream))
-  (_scan self)
   self)
 
 (method ParenParser _raise ()
@@ -1229,28 +1226,25 @@
     (&token-type self (car next))
     (&token self (cadr next))))
 
-(method ParenParser _parseCdr ()
-  (let (token-type (&token-type self) token (&token self))
-    (if (same? token-type :close-paren) nil
-        (same? token-type :EOL) (_parseCdr (_scan self))
-        (cons (.parse self) (_parseCdr self)))))
+(method ParenParser _parseList (:opt expect-close?)
+  (_scan self)
+  (if (same? (&token-type self) :close-paren) nil
+      (cons (_parseS self) (_parseList self))))
+
+(method ParenParser _parseS ()
+  (let (type (&token-type self))
+    (if (same? type :EOF) :EOF
+        (same? type :quote) (list quote (.parse self))
+        (same? type :open-paren) (_parseList self)
+        (or (same? type :symbol)
+            (same? type :keyword)
+            (same? type :string)
+            (same? type :number)) (&token self)
+        (_raise self))))
 
 (method ParenParser .parse ()
-  (let (token-type (&token-type self) token (&token self))
-    (if (same? token-type :EOF) :EOF
-        (same? token-type :EOL) (.parse (_scan self))
-        (same? token-type :quote) (list quote (.parse (_scan self)))
-        (same? token-type :open-paren) (begin0
-                                         (if (same? (&token-type (_scan self))
-                                                    :close-paren) nil
-                                             (cons (.parse self)
-                                                   (_parseCdr self)))
-                                         (_scan self))
-        (or (same? token-type :symbol)
-            (same? token-type :keyword)
-            (same? token-type :string)
-            (same? token-type :number)) (begin (_scan self) token)
-        (_raise self))))
+  (_scan self)
+  (_parseS self))
 
 ;; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
