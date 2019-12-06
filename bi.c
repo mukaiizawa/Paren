@@ -53,6 +53,13 @@ static int prim_p(object o)
   return FALSE;
 }
 
+PRIM(address)
+{
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  *result = gc_new_xfloat((intptr_t)argv->cons.car);
+  return TRUE;
+}
+
 PRIM(not)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;

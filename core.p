@@ -555,12 +555,12 @@
   (adjacent-satisfy? args (lambda (x y) (not (< x y)))))
 
 (function ++ (x)
-  ; xに1を加えた結果を返す。
+  ; Returns the value of x + 1.
   (ensure-arguments (number? x))
   (+ x 1))
 
 (function -- (x)
-  ; xから1を引いた結果を返す。
+  ; Returns the value of x - 1.
   (ensure-arguments (number? x))
   (- x 1))
 
@@ -597,20 +597,161 @@
   (ensure-arguments (number? x))
   (< x 0))
 
+; splay tree
+
+;; End node of splay.
+(<- $splay-nil '(nil nil nil nil))
+
+;; splay ::= (top comparator)
+
+(function splay-new (comparator)
+  (list $splay-nil comparator))
+
+(function splay-top (splay)
+  (car splay))
+
+(function splay-top! (splay top)
+  (car! splay top))
+
+(function splay-comparator (splay)
+  (cadr splay))
+
+;; splay node ::= (k v left right)
+
+(function splay-node-new (k v)
+  (list k v nil nil))
+
+(function splay-node-key (splay-node)
+  (car splay-node))
+
+(function splay-node-key! (splay-node key)
+  (car! splay-node key))
+
+(function splay-node-val (splay-node)
+  (cadr splay-node))
+
+(function splay-node-left (splay-node)
+  (caddr splay-node))
+
+(function splay-node-left! (splay-node val)
+  (car! (cddr splay-node) val))
+
+(function splay-node-right (splay-node)
+  (cadddr splay-node))
+
+(function splay-node-right! (splay-node val)
+  (car! (cdddr splay-node) val))
+
+(function splay-balance (splay k)
+  (let (top (splay-top splay) cmp (splay-comparator splay) p nil q nil d 0)
+    (splay-node-key! $splay-nil k)
+    (splay-node-left! $splay-nil $splay-nil)
+    (splay-node-right! $splay-nil $splay-nil)
+    (while (/= (<- d (cmp k (splay-node-key top))) 0)
+      (<- p top)
+      (if (< d 0)
+          (begin
+            (<- q (splay-node-left p))
+            (if (= (<- d (cmp k (splay-node-key q))) 0)
+                (begin
+                  (<- top q)
+                  (splay-node-left! p (splay-node-right top))
+                  (splay-node-right! top p)
+                  (break))
+                (< d 0)
+                (begin
+                  (<- top (splay-node-left q))
+                  (splay-node-left! q (splay-node-right top))
+                  (splay-node-right! top p))
+                (begin
+                  (<- top (splay-node-right q))
+                  (splay-node-right! q (splay-node-left top))
+                  (splay-node-left! top q)
+                  (splay-node-left! p (splay-node-right top))
+                  (splay-node-right! top p))))
+          (begin
+            (<- q (splay-node-right p))
+            (if (= (<- d (cmp k (splay-node-key q))) 0)
+                (begin
+                  (<- top q)
+                  (splay-node-right! p (splay-node-left top))
+                  (splay-node-left! top p)
+                  (break))
+                (> d 0)
+                (begin
+                  (<- top (splay-node-right q))
+                  (splay-node-right! q (splay-node-left top))
+                  (splay-node-left! top p))
+                (begin
+                  (<- top (splay-node-left q))
+                  (splay-node-left! q (splay-node-right top))
+                  (splay-node-right! top q)
+                  (splay-node-right! p (splay-node-left top))
+                  (splay-node-left! top p))))))
+    top))
+
+(function splay-resume (top)
+  (let (l (splay-node-left top) r (splay-node-right top) p nil)
+    (if (same? l $splay-nil) (return r)
+        (different? r $splay-nil)
+        (begin (<- p l)
+               (while (different? (splay-node-right p) $splay-nil)
+                 (<- p (splay-node-right p)))))
+    l))
+
+(function splay-add (splay k v)
+  ; Associates the specified v with the specified k in the specified splay.
+  ; Returns the v.
+  (let (top (splay-balance splay k))
+    (assert (same? top $splay-nil))
+    (<- top (splay-node-new k v))
+    (splay-node-left! top (splay-node-left $splay-nil))
+    (splay-node-right! top (splay-node-right $splay-nil))
+    (splay-top! splay top)
+    v))
+
+(function splay-find (splay k)
+  ; Returns the value to which the specified k is associated in the specified splay.
+  ; If not found, return nil.
+  (let (top (splay-balance splay k))
+    (if (same? top $splay-nil) (begin (splay-top! splay (splay-resume top))
+                                      nil)
+        (begin (splay-top! splay top)
+               (splay-node-val top)))))
+
 ; Paren object system
 
-(<- $class nil)
+(<- $class nil
+    $class-cache (splay-new
+                   (lambda (k1 k2)
+                     (let (d (- (address k1) (address k2)))
+                       (if (= d 0) 0 (> d 0) 1 -1))))
+    $method-cache (splay-new
+                    (lambda (k1 k2)
+                      (let (d (- (+ (* (address (car k1)) 10)
+                                    (address (cadr k1)))
+                                 (+ (* (address (car k2)) 10)
+                                    (address (cadr k2)))))
+                        (if (= d 0) 0 (> d 0) 1 -1)))))
 
 (function class-exists? (cls-sym)
   (find $class cls-sym))
 
 (function find-class (cls-sym)
   (ensure-arguments (and (symbol? cls-sym) (class-exists? cls-sym)))
-  (. $class cls-sym))
+  (let (cls nil)
+    (if (<- cls (splay-find $class-cache cls-sym))
+        (begin ;(print (list :hit cls-sym))
+                cls)
+        (begin (<- cls (. $class cls-sym))
+               ;(print (list :cache cls-sym))
+               (splay-add $class-cache cls-sym cls)))))
 
 (function find-method (cls-sym method-sym)
   (ensure-arguments (and (symbol? cls-sym) (symbol? method-sym)))
-  (let (find-class-method
+  (let (key (list cls-sym method-sym)
+        m nil
+        find-class-method
             (lambda (cls)
               (cadr (find-cons (car (nthcdr cls 11)) method-sym)))    ; <=> (.cls :methods)
         find-feature-method
@@ -624,11 +765,13 @@
                     (find-feature-method (car (nthcdr cls 7)))    ; <=> (. cls :features)
                     (let (super (car (nthcdr cls 5)))    ; <=> (. cls :super)
                       (and super (rec (find-class super)))))))
-    (let (m (rec (find-class cls-sym)))
-      (if m m (throw (.message (.new IllegalStateException)
-                               (string+ "method "
-                                        (symbol->string method-sym)
-                                        " not found")))))))
+    (if (<- m (splay-find $method-cache key)) (begin ; (print (list :hit key))
+                                                     m)
+        (<- m (rec (find-class cls-sym))) (begin ; (print (list :cache key))
+                                                 (splay-add $method-cache key m))
+        (throw (.message (.new IllegalStateException)
+                         (string+ "method " (symbol->string method-sym)
+                                  " not found"))))))
 
 (macro make-accessor (cls-sym var)
   (with-gensyms (val val?)
