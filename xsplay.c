@@ -63,7 +63,7 @@ static struct xsplay_node *balance(struct xsplay *s, void *key)
   cmp = s->cmp;
   null->key = key;
   null->left = null->right = null;
-  while((d = (*cmp)(key, top->key)) != 0) {
+  while ((d = (*cmp)(key, top->key)) != 0) {
     p = top;
     if (d < 0) {
       q = p->left;
