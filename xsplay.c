@@ -114,7 +114,7 @@ static struct xsplay_node *resume(struct xsplay_node *top)
   if (l == null) return r;
   if (r != null) {
     p = l;
-    while(p->right != null) p = p->right;
+    while (p->right != null) p = p->right;
     p->right = r;
   }
   return l;
