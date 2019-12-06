@@ -1145,13 +1145,12 @@
         (char-alpha? c))))
 
 (method ParenLexer _identifierTrail? ()
-  (let (c (.next self))
-    (or (_identifierLead? self) (char-digit? c))))
+  (or (_identifierLead? self) (char-digit? (.next self))))
 
 (method ParenLexer _getString ()
   (.skip self)
   (while (/= 0x22 (.next self))
-    (if (.eof? self) (_raise self "quote not closed")
+    (if (.eof? self) (_raise self "string not closed")
         (/= (.next self) 0x5C) (.get self)
         (begin (.skip self)
                (throw todo))))
@@ -1180,7 +1179,7 @@
 (method ParenLexer _getKeyword ()
   (.skip self)
   (while (_identifierTrail? self) (.get self))
-  (symbol->keyword (string->symbol (.token self))))
+  (string->keyword (.token self)))
 
 (method ParenLexer _getSymbol ()
   (while (_identifierTrail? self) (.get self))
@@ -1211,46 +1210,46 @@
         (or sign (_identifierLead? self)) (begin
                                             (if sign (.put self sign))
                                             (list :symbol (_getSymbol self)))
-        (_raise self (list (.next self) "illegal char")))))
+        (_raise self (string+ (number->string (.next self)) " illegal char")))))
 
 (class ParenParser ()
   ; Paren構文解析機
-  lexer token-type next-token)
+  lexer token-type token)
 
 (method ParenParser .init (:key string (stream (dynamic $stdin)))
   (&lexer self (.init (.new ParenLexer) :string string :stream stream))
   (_scan self)
   self)
 
-(method ParenParser _raise (:opt message)
-  (throw (.message (.new IllegalStateException)
-                   (or message "illegal token"))))
+(method ParenParser _raise ()
+  (throw (.message (.new IllegalStateException) "illegal token")))
 
 (method ParenParser _scan ()
   (let (next (.getToken (&lexer self)))
     (&token-type self (car next))
-    (&next-token self (cadr next))))
+    (&token self (cadr next))))
 
 (method ParenParser _parseCdr ()
-  (let (type (&token-type self) token (&next-token self))
-    (if (same? type :close-paren) nil
-        (same? type :EOL) (_parseCdr (_scan self))
+  (let (token-type (&token-type self) token (&token self))
+    (if (same? token-type :close-paren) nil
+        (same? token-type :EOL) (_parseCdr (_scan self))
         (cons (.parse self) (_parseCdr self)))))
 
 (method ParenParser .parse ()
-  (let (type (&token-type self) token (&next-token self))
-    (if (same? type :EOF) :EOF
-        (same? type :EOL) (.parse (_scan self))
-        (same? type :quote) (list quote (.parse (_scan self)))
-        (same? type :open-paren) (begin0
-                                   (if (same? (&token-type (_scan self))
-                                              :close-paren) nil
-                                       (cons (.parse self) (_parseCdr self)))
-                                   (_scan self))
-        (or (same? type :symbol)
-            (same? type :keyword)
-            (same? type :string)
-            (same? type :number)) (begin (_scan self) token)
+  (let (token-type (&token-type self) token (&token self))
+    (if (same? token-type :EOF) :EOF
+        (same? token-type :EOL) (.parse (_scan self))
+        (same? token-type :quote) (list quote (.parse (_scan self)))
+        (same? token-type :open-paren) (begin0
+                                         (if (same? (&token-type (_scan self))
+                                                    :close-paren) nil
+                                             (cons (.parse self)
+                                                   (_parseCdr self)))
+                                         (_scan self))
+        (or (same? token-type :symbol)
+            (same? token-type :keyword)
+            (same? token-type :string)
+            (same? token-type :number)) (begin (_scan self) token)
         (_raise self))))
 
 ;; I/O
