@@ -27,7 +27,7 @@ PRIM(lambda_parameter)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!typep(o = argv->cons.car, LAMBDA)) return FALSE;
+  if (!typep(o = argv->cons.car, LAMBDA) && !typep(o, MACRO)) return FALSE;
   *result = o->lambda.params;
   return TRUE;
 }
@@ -36,7 +36,7 @@ PRIM(lambda_body)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!typep(o = argv->cons.car, LAMBDA)) return FALSE;
+  if (!typep(o = argv->cons.car, LAMBDA) && !typep(o, MACRO)) return FALSE;
   *result = o->lambda.body;
   return TRUE;
 }

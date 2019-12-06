@@ -113,7 +113,7 @@
                 (list write-string
                       (list string+ "time="
                             (list number->string (list - (list clock) s))))
-                (list write-new-line)))))
+                (list write-line)))))
 
 ; fundamental function
 
@@ -757,6 +757,10 @@
   ; サブクラスで同等性を定義する場合はこのメソッドをオーバーロードする。
   (same? self o))
 
+(method Object .toString ()
+  ; レシーバの印字表現を返す。
+  "<object>")
+
 (class Class ()
   symbol super features fields methods)
 
@@ -1342,18 +1346,28 @@
                                     (write-string " ")
                                     (print-s-expr x)))
                      (write-string ")"))
+        print-operator (lambda (x)
+                         (write-string "(")
+                         (if (lambda? x) (write-string "lambda")
+                             (write-string "macro"))
+                         (write-string " ")
+                         (print-cons (lambda-parameter x))
+                         (map (lambda-body x) (lambda (x)
+                                                (write-string " ")
+                                                (print-s-expr x)))
+                         (write-string ")"))
         print-atom (lambda (x)
-                     (if (macro? x) (write-string "<macro>")
-                         (lambda? x) (write-string "<lambda>")
+                     (if (macro? x) (print-operator x)
+                         (lambda? x) (print-operator x)
                          (string? x) (begin (write-string "\"")
                                             (write-string x)
                                             (write-string "\""))
                          (symbol? x) (write-string (symbol->string x))
                          (keyword? x) (write-string (keyword->string x))
                          (number? x) (write-string (number->string x))
-                         (throw todo))))
+                         (throw (.new IllegalStateException)))))
     (print-s-expr x)
-    (write-new-line)
+    (write-line)
     x))
 
 (function repl ()
@@ -1385,17 +1399,15 @@
 ;       1))
 ; (print (map (.. 0 5) fib))
 
-(<- p (.init (.new Path) "." "test.wk"))
-
-(with-open-write (out p)
-  (write-line ":hello" out)
-  (write-line ":hello" out)
-  (write-line ":hello" out)
-  (write-line ":hello" out)
-  (write-line ":hello" out)
-  )
-
-(load "test.wk")
+; (<- p (.init (.new Path) "." "test.wk"))
+; (with-open-write (out p)
+;   (write-line ":hello" out)
+;   (write-line ":hello" out)
+;   (write-line ":hello" out)
+;   (write-line ":hello" out)
+;   (write-line ":hello" out)
+;   )
+; (load "test.wk")
 
 (function boot (args)
   (if (nil? args) (repl)
