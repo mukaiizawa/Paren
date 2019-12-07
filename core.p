@@ -22,7 +22,7 @@
     (cons let (cons (rec syms) body))))
 
 (macro begin0 (:rest body)
-  ; Evaluate each the specified body and return the first evaluated value.
+  ; Evaluate each of the specified body and return the first evaluated value.
   ; (begin0 expr1 expr2 ...)
   ; (let (x expr1)
   ;     (begin expr2
@@ -34,22 +34,22 @@
           val)))
 
 (macro when (test :rest body)
-  ; Evaluate the specified test and if it is not nil then evaluate the specified each body.
+  ; Evaluate the specified test and if it is not nil then evaluate each of the specified body.
   (list if test (cons begin body)))
 
 (macro unless (test :rest body)
-  ; Evaluate the specified test and if it is nil then evaluate the specified each body.
+  ; Evaluate the specified test and if it is nil then evaluate each of the specified body.
   (list if (list nil? test) (cons begin body)))
 
 (macro or (:rest args)
-  ; Evaluate each the specified args, one at a time, from left to right.
+  ; Evaluate each of the specified args, one at a time, from left to right.
   ; The evaluation of all forms terminates when a args evaluates to true.
   ; Return last evaluated value.
   ; If args is nil then return nil.
   (if args (list if (car args) (car args) (cons or (cdr args)))))
 
 (macro and (:rest args)
-  ; Evaluate each the specified args, one at a time, from left to right.
+  ; Evaluate each of the specified args, one at a time, from left to right.
   ; As soon as any form evaluates to nil, and returns nil without evaluating the remaining forms.
   ; If all args but the last evaluate to true values, and returns the results produced by evaluating the last args.
   ; If no args are supplied, returns true.
@@ -101,27 +101,32 @@
      nil))
 
 (macro while (test :rest body)
-  ; The specified test is evaluated, and if the specified test is true, each the specified body is evaluated.
+  ; The specified test is evaluated, and if the specified test is true, each of the specified body is evaluated.
   ; This repeats until the test becomes nil.
+  ; Supports break, continue macro.
   (cons 'for (cons nil (cons test (cons nil body)))))
 
 (macro dolist ((i l) :rest body)
+  ; Iterates over the elements of the specified list l, with index the specified i.
+  ; Evaluate each of the specified body once for each element in list l, with index i bound to the element.
+  ; Supports break, continue macro.
   (ensure-arguments (symbol? i))
   (with-gensyms (gl)
     (cons for (cons (list gl l i (list car gl))
                     (cons gl
-                    (cons (list <- gl (list cdr gl) i (list car gl))
+                          (cons (list <- gl (list cdr gl) i (list car gl))
                                 body))))))
 
 (macro dotimes ((i n) :rest body)
-  ; シンボルiを0から順にn - 1まで束縛しながらbodyを反復評価する。
-  ; nilを返す。
+  ; Iterates over a series of integers, from 0 to the specified n.
+  ; The specified body once for each integer from 0 up to but not including the value of n, with the specified i bound to each integer.
+  ; Supports break, continue macro.
   (ensure-arguments (symbol? i))
   (with-gensyms (gn)
     (cons for (cons (list i 0 gn n)
-              (cons (list < i gn)
-              (cons (list inc! i)
-                    body))))))
+                    (cons (list < i gn)
+                          (cons (list inc! i)
+                                body))))))
 
 (macro measure (:rest body)
   ; 時間計測マクロ
