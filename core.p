@@ -38,43 +38,57 @@
   (list if test (cons begin body)))
 
 (macro unless (test :rest body)
-  ; testを評価しnilの場合にbodyを逐次評価し、最後に評価した結果を返す。
-  ; testがnil偽の場合はnilを返す。
-  (cons when (cons (list not test)
-                   body)))
+  ; Evaluate the specified test and if it is nil then evaluate the specified each body.
+  (list if (list nil? test) (cons begin body)))
 
 (macro or (:rest args)
-  ; argsを逐次評価し、ある評価結果がnil以外だった場合にその値を返す。
-  ; この場合、後続の評価は行わない。
-  ; すべての評価結果がnilの場合はnilを返す。
+  ; Evaluate each the specified args, one at a time, from left to right.
+  ; The evaluation of all forms terminates when a args evaluates to true.
+  ; Return last evaluated value.
+  ; If args is nil then return nil.
   (if args (list if (car args) (car args) (cons or (cdr args)))))
 
 (macro and (:rest args)
-  ; argsを逐次評価し、すべてnil出ない場合にのみ最後に評価した結果を返す。
-  ; 逐次評価の過程でnilが得られた場合は後続の評価を中断し即nilを返す。
-  ; ただし、argsがnilの場合はtrueを返す。
+  ; Evaluate each the specified args, one at a time, from left to right.
+  ; As soon as any form evaluates to nil, and returns nil without evaluating the remaining forms.
+  ; If all args but the last evaluate to true values, and returns the results produced by evaluating the last args.
+  ; If no args are supplied, returns true.
   (if (nil? args) true
       (let (rec (lambda (l)
                   (if (cdr l) (list if (car l) (rec (cdr l)))
                       (car l))))
         (rec args))))
 
-(macro continue ()
-  ; :continueというラベルにジャンプする。
-  ; 反復系のマクロはコンテキスト内でcontinueを使用したときに
-  ; 後続の処理をスキップし反復処理を再開するように実装することが望ましい。
-  '(goto :continue))
-
 (macro break ()
-  ; :breakというラベルにジャンプする。
-  ; 反復系のマクロはコンテキスト内でbreakを使用したときに
-  ; 反復処理を終了するように実装することが望ましい。
+  ; The break macro is expected evaluated in the iteration context like a for, while.
+  ; Jump to :break label which causes the inner-most loop to be terminated immediately when executed.
+  ; If you create new iteration macro, desirable to support it.
   '(goto :break))
 
+(macro continue ()
+  ; The continue macro is expected evaluated in the iteration context like a for, while.
+  ; Jump to :continue label which will move at once to the next iteration without further progress through the loop body for the current iteration.
+  ; If you create new iteration macro, desirable to support it.
+  '(goto :continue))
+
 (macro for (binding test update :rest body)
-  ; bindingをletで束縛し、testが真の場合にbody、updateを反復評価する。
-  ; continueマクロとbreakマクロをサポートしている。
-  ; nilを返す。
+  ; The for macro creates a general-purpose iteration context and evaluates the specified body.
+  ; Return nil.
+  ; See expanded image for details.
+  ; (for (i 0) (< i 10) (<- i (++ i))
+  ;     expr1
+  ;     expr2
+  ;     ...)
+  ; (let (i 0)
+  ;    (labels :start
+  ;            (if (not test) (goto :break))
+  ;            expr1
+  ;            expr2
+  ;            ...
+  ;            :continue
+  ;            (<- i (++ i))
+  ;            (goto :start)
+  ;            :break))
   (list let binding
      (cons labels
            (cons :start
@@ -87,13 +101,11 @@
      nil))
 
 (macro while (test :rest body)
-  ; 引数testがnilでない間bodyを逐次評価し、nilを返す。
-  ; continueマクロとbreakマクロをサポートしている。
+  ; The specified test is evaluated, and if the specified test is true, each the specified body is evaluated.
+  ; This repeats until the test becomes nil.
   (cons 'for (cons nil (cons test (cons nil body)))))
 
 (macro dolist ((i l) :rest body)
-  ; リストlをインデックスiを用いてイテレーションする。
-  ; nilを返す。
   (ensure-arguments (symbol? i))
   (with-gensyms (gl)
     (cons for (cons (list gl l i (list car gl))
