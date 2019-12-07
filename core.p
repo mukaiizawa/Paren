@@ -106,7 +106,7 @@
   ; (measure expr1 expr2 ...)
   ; (let (s (clock))
   ;   (begin0 (begin expr1 expr2 ...)
-  ;           (print (- (clock) s)))))
+  ;           (- (clock) s))))
   (with-gensyms (s)
     (list let (list s (list clock))
           (list begin0 (cons begin body)
@@ -696,7 +696,8 @@
         (different? r $splay-nil)
         (begin (<- p l)
                (while (different? (splay-node-right p) $splay-nil)
-                 (<- p (splay-node-right p)))))
+                 (<- p (splay-node-right p)))
+               (splay-node-right! p r)))
     l))
 
 (function splay-add (splay k v)
@@ -740,11 +741,8 @@
 (function find-class (cls-sym)
   (ensure-arguments (and (symbol? cls-sym) (class-exists? cls-sym)))
   (let (cls nil)
-    (if (<- cls (splay-find $class-cache cls-sym))
-        (begin ;(print (list :hit cls-sym))
-                cls)
+    (if (<- cls (splay-find $class-cache cls-sym)) cls
         (begin (<- cls (. $class cls-sym))
-               ;(print (list :cache cls-sym))
                (splay-add $class-cache cls-sym cls)))))
 
 (function find-method (cls-sym method-sym)
@@ -757,18 +755,16 @@
         find-feature-method
             (lambda (features)
               (and features
-                  (or (find-class-method (find-class (car features)))
-                      (find-feature-method (cdr features)))))
+                   (or (find-class-method (find-class (car features)))
+                       (find-feature-method (cdr features)))))
         rec
             (lambda (cls)
-                (or (find-class-method cls)
-                    (find-feature-method (car (nthcdr cls 7)))    ; <=> (. cls :features)
-                    (let (super (car (nthcdr cls 5)))    ; <=> (. cls :super)
-                      (and super (rec (find-class super)))))))
-    (if (<- m (splay-find $method-cache key)) (begin ; (print (list :hit key))
-                                                     m)
-        (<- m (rec (find-class cls-sym))) (begin ; (print (list :cache key))
-                                                 (splay-add $method-cache key m))
+              (or (find-class-method cls)
+                  (find-feature-method (car (nthcdr cls 7)))    ; <=> (. cls :features)
+                  (let (super (car (nthcdr cls 5)))    ; <=> (. cls :super)
+                    (and super (rec (find-class super)))))))
+    (if (<- m (splay-find $method-cache key)) m
+        (<- m (rec (find-class cls-sym))) (splay-add $method-cache key m)
         (throw (.message (.new IllegalStateException)
                          (string+ "method " (symbol->string method-sym)
                                   " not found"))))))
