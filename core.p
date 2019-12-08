@@ -431,6 +431,15 @@
                   (rec (cdr l) (cons (car l) acc)))))
     (rec l nil)))
 
+(function reverse! (l)
+  (ensure-arguments (list? l))
+  (if l
+      (let (prev nil curr l next (cdr l))
+        (while true
+          (cdr! curr prev)
+          (if next (<- prev curr curr next next (cdr next))
+              (return curr))))))
+
 (function reduce (l f :key (identity nil identity?))
   ; リストlを二変数関数fで畳み込んだ結果を返す。
   ; キーワードパラメターidentityが指定された場合は単位元として使用する。
@@ -505,16 +514,15 @@
   ; 連想リストalのキー値kに対応する値を返す。
   ; 値がない場合は例外を発生させる。
   ; vが指定された場合はkに対応する値をvで上書きする。
-  (ensure-arguments (list? al))
-  (let (rec (lambda (rest)
-              (if (nil? rest) (throw (.message (.new IllegalStateException)
-                                               (string+ "property "
-                                                        (symbol->string k)
-                                                        " not found")))
-                  (same? (car rest) k) rest
-                  (rec (cddr rest))))
-        pair (rec al))
-    (if (nil? v?) (cadr pair)
+  (ensure-arguments (and (list? al) (or (keyword? k) (symbol? k))))
+  (let (pair al)
+    (while pair
+      (if (same? (car pair) k) (break)
+          (<- pair (cddr pair))))
+    (if (nil? pair) (throw (.message (.new IllegalStateException)
+                                     (string+ "property " (symbol->string k)
+                                              " not found")))
+        (nil? v?) (cadr pair)
         (car! (cdr pair) v))))
 
 ; char
