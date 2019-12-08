@@ -121,7 +121,7 @@ static void symbol_bind_propagation(object e, object s, object v)
 // inst
 
 #define STACK_GAP 5
-#define INST_STACK_SIZE 1000
+#define INST_STACK_SIZE 10000
 
 static int sp;
 static object fs[INST_STACK_SIZE];

@@ -304,7 +304,7 @@
   (ensure-arguments (and (list? l) (not (minus? n))))
   (if (nil? l) nil
       (= n 0) l
-      :default (nthcdr (cdr l) (-- n))))
+      (nthcdr (cdr l) (-- n))))
 
 (function list= (x y :key (test same?))
   ; listの要素がすべて関数testでtrueを返す場合はtrueを、そうでなければnilを返す。
@@ -395,7 +395,6 @@
   ; 式としてxを返す。
   (ensure-arguments (symbol? sym))
   (list begin
-        (list ensure-arguments (list list? sym))
         (list <- sym (list cons x sym))
         x))
 
