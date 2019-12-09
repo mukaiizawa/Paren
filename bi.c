@@ -148,6 +148,7 @@ static char *symbol_name_map[] = {
   "number_truncate", "truncate",
 
   "string_add", "string+",
+  "string_byte_length", "string-byte-length",
   "string_equal", "string=",
   "string_p", "string?",
   "string_to_barray", "string->byte-array",

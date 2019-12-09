@@ -144,7 +144,7 @@ PRIM(fwrite)
   int from, size;
   FILE *fp;
   if (argc != 4) return FALSE;
-  if (!typep((o = argv->cons.car), BARRAY)) return FALSE;
+  if (!(typep((o = argv->cons.car), BARRAY) || typep(o, STRING))) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!(0 <= from && from + size <= o->barray.size)) return FALSE;

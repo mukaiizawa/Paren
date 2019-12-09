@@ -1183,9 +1183,19 @@
 (method FileStream .readLine ()
   (fgets (&fp self)))
 
+(method FileStream _basicWrite (buf from size)
+  (ensure-arguments (and (or (byte-array? buf)
+                             (string? buf))
+                         (unsigned-integer? from)
+                         (unsigned-integer? size)))
+  (fwrite buf from size (&fp self)))
+
 (method FileStream .writeByte (byte)
   (ensure-arguments (byte? byte))
   (fputc byte (&fp self)))
+
+(method FileStream .writeString(s)
+  (_basicWrite self s 0 (string-byte-length s)))
 
 (method FileStream .seek (offset)
   (fseek (&fp self) offset))
