@@ -564,75 +564,84 @@
 ; number
 
 (function - (x :rest args)
-  ; xからargsの合計を引いた値を返す。
-  ; argsがnilの場合はxを負にした値を返す。
+  ; Returns the value of the specified x minus the sum of the specified args.
+  ; If args is nil, return -x.
   (ensure-arguments (and (number? x) (all-satisfy? args number?)))
   (if (nil? args) (negated x)
       (+ x (negated (reduce args +)))))
 
 (function negated (x)
-  ; xの符号を反転させた値を返す。
+  ; Returns the inverted value of the specified x's sign.
   (* x -1))
 
 (function // (x y)
-  ; 切り捨て除算
-  ; xをyで除算した結果の整数部を返す。
+  ; Same as (truncate (/ x y))).
   (ensure-arguments (and (number? x) (number? y)))
   (truncate (/ x y)))
 
 (function /= (x y)
-  ; 数値x、yを比較した結果を返す。
+  ; Same as (not (= x y))).
   (not (= x y)))
 
 (function > (:rest args)
+  ; Returns true if each of the specified args are in monotonically decreasing order.
+  ; Otherwise returns nil.
   (each-adjacent-satisfy? args (lambda (x y) (< y x))))
 
 (function <= (:rest args)
+  ; Returns true if each of the specified args are in monotonically nondecreasing order.
+  ; Otherwise returns nil.
   (each-adjacent-satisfy? args (lambda (x y) (not (< y x)))))
 
 (function >= (:rest args)
+  ; Returns true if each of the specified args are in monotonically nonincreasing order.
+  ; Otherwise returns nil.
   (each-adjacent-satisfy? args (lambda (x y) (not (< x y)))))
 
 (function ++ (x)
-  ; Returns the value of x + 1.
+  ; Returns the value of the specified number x + 1.
   (ensure-arguments (number? x))
   (+ x 1))
 
 (function -- (x)
-  ; Returns the value of x - 1.
+  ; Returns the value of the specified number x - 1.
   (ensure-arguments (number? x))
   (- x 1))
 
 (macro inc! (s :opt (v 1))
-  ; sの値にvを加えた値をsに束縛する式に展開する。
+  ; Increase the value bound by the specified symbol s by 1.
+  ; If the specified number v is supplied, increase v.
   (ensure-arguments (symbol? s))
   (list <- s (list '+ s v)))
 
 (macro dec! (s :opt (v 1))
-  ; sの値からvを引いた値をsに束縛する式に展開する。
+  ; Decrease the value bound by the specified symbol s by 1.
+  ; If the specified number v is supplied, decrease v.
   (ensure-arguments (symbol? s))
   (list <- s (list '- s v)))
 
 (function even? (x)
-  ; xが偶数の場合にtrueを、そうでなければnilを返す。
+  ; Returns true if the specified integer x is even.
+  (ensure-arguments (integer? x))
   (= (mod x 2) 0))
 
 (function odd? (x)
-  ; xが奇数の場合にtrueを、そうでなければnilを返す。
+  ; Returns true if the specified integer x is odd
+  (ensure-arguments (integer? x))
   (not (even? x)))
 
 (function plus? (x)
-  ; xが正の数の場合にtrueを、そうでなければnilを返す。
+  ; Returns true if the specified number x is positive.
   (ensure-arguments (number? x))
   (> x 0))
 
 (function zero? (x)
-  ; xが0の場合はtrueを、そうでなければnilを返す。
+  ; Same as (= x 0).
   (ensure-arguments (number? x))
   (= x 0))
 
 (function minus? (x)
-  ; xが負の数の場合はtrueを、そうでなければnilを返す。
+  ; Returns true if the specified number x is negative.
   (ensure-arguments (number? x))
   (< x 0))
 
@@ -641,6 +650,7 @@
   (and (integer? x ) (<= 0 x 255)))
 
 (function unsigned-integer? (x)
+  ; Returns true if the specified x is integer and zero or positive.
   (and (integer? x) (not (minus? x))))
 
 ; splay tree
@@ -649,7 +659,6 @@
 (<- $splay-nil '(nil nil nil nil))
 
 ;; splay ::= (top comparator)
-
 (function splay-new (comparator)
   (list $splay-nil comparator))
 
