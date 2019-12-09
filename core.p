@@ -318,38 +318,37 @@
     (rec x y)))
 
 (function sublist (l s :opt e)
-  ; リストlのs番目からe - 1番目までを要素に持つ部分リストを返す。
-  ; sが零未満、eがリストの長さ以上、sがeより大きい場合はエラーと見做す。
-  ; 部分リストはlとは別に作成される。
-  (let (len (length l)
-        e (or e len)
-        rec (lambda (l n)
-              (if (= n 0) nil
-                  (cons (car l) (rec (cdr l) (-- n))))))
-    (ensure-arguments (and (>= s 0) (<= s e) (<= e len)))
+  ; Returns a partial list with elements from the specified s to the specified e -1 of the specified list l.
+  ; Throw IllegalArgumentsException when s is less than zero or e is greater than the length of the list or s is greater than e.
+  ; The partial list is created separately from l.
+  (let (len (length l) e (or e len) rec (lambda (l n)
+                                          (if (= n 0) nil
+                                              (cons (car l)
+                                                    (rec (cdr l) (-- n))))))
+    (ensure-arguments (and (unsigned-integer? s) (<= s e) (<= e len)))
     (rec (nthcdr l s) (- e s))))
 
 (function copy-list (l)
-  ; リストlの複製を作成して返す。
-  ; ただし、要素は複製されない。
+  ; Create and return a duplicate of the specified list l.
+  ; It is shallow copy.
   (ensure-arguments (list? l))
   (if (nil? l) nil
       (sublist l 0 (length l))))
 
 (function last-cons (l)
-  ; リストlを構成する最後のコンスを返す。
+  ; Returns the last cons that make up the specified list l.
   (ensure-arguments (list? l))
   (if (nil? l) nil
       (let (rec (lambda (l) (if (cdr l) (rec (cdr l)) l)))
         (rec l))))
 
 (function last (l)
-  ; リストlの最後の要素を返す。
+  ; Returns the last element of the specified list l.
   (ensure-arguments (list? l))
   (car (last-cons l)))
 
 (function butlast (l)
-  ; リストlの最後の要素を除いたリストを返す。
+  ; Returns a list excluding the last element of the specified list l.
   (ensure-arguments (list? l))
   (let (rec (lambda (l)
               (if (nil? (cdr l)) nil
@@ -357,7 +356,7 @@
     (rec l)))
 
 (function .. (s e :opt (step 1))
-  ; 整数sから整数eまでstep刻みの要素を持つリストを返す。
+  ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
   (ensure-arguments (and (number? s) (number? e) (number? step) (/= step 0)
                          (or (and (< step 0) (>= s e))
                              (and (> step 0) (<= s e)))))
@@ -365,10 +364,10 @@
     (while (test s e)
       (push! acc s)
       (<- s (+ s step)))
-    (reverse acc)))
+    (reverse! acc)))
 
 (function append-atom (l x)
-  ; リストlの末尾にxを追加したような新たなリストを返す。
+  ; Returns a new list with the specified x appended to the end of the specified list l.
   (ensure-arguments (list? l))
   (let (rec (lambda (l)
               (if l (cons (car l) (rec (cdr l)))
@@ -376,8 +375,8 @@
     (rec l)))
 
 (function append (l :rest args)
-  ; リストlの要素としてargsの各要素を追加する。
-  ; argsの任意の要素はリストでなければならない。
+  ; Add each element of the specified args as an element of the specified list l.
+  ; Each of args must be a list.
   (ensure-arguments (and (list? l) (all-satisfy? args list?)))
   (reduce args (lambda (acc rest)
                  (reduce rest append-atom :identity acc))
@@ -402,12 +401,11 @@
   ; リストlisを構成するすべてのコンスのcar部が要素であるような新しいリストを返す。
   ; 作成されるリストの要素の順は、元のリストのcar優先探索となる。
   (ensure-arguments (list? l))
-  (let (acc nil
-        rec (lambda (x)
-               (if (nil? x) (reverse acc)
-                   (atom? x) (begin (push! acc x) acc)
-                   (nil? (car x)) (begin (push! acc nil) acc)
-                   (begin (rec (car x))) (rec (cdr x)))))
+  (let (acc nil rec (lambda (x)
+                      (if (nil? x) (reverse! acc)
+                          (atom? x) (begin (push! acc x) acc)
+                          (nil? (car x)) (begin (push! acc nil) acc)
+                          (begin (rec (car x))) (rec (cdr x)))))
     (rec l)))
 
 (function map (args f)
@@ -831,7 +829,7 @@
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
   (let (Object? (same? cls-sym 'Object))
     (ensure-arguments (and (all-satisfy? fields symbol?)
-                           (not (class-exists? cls-sym))))
+                           (not (bound? cls-sym))))
     (append
       (list begin0
             (list quote cls-sym)
@@ -892,7 +890,7 @@
                                     (list and
                                           (list object? gargs)
                                           (list is-a? gargs 'Throwable)))
-                              (reverse if-clause)))
+                              (reverse! if-clause)))
                   body)))))
 
 (function object? (x)
@@ -940,7 +938,7 @@
 (method Class .new ()
   (let (o nil cls self fields nil)
     (while cls
-      (<- fields (reverse (map (. cls :fields) symbol->keyword)))
+      (<- fields (reverse! (map (. cls :fields) symbol->keyword)))
       (while fields
         (push! o (if (same? (car fields) :class) (. self :symbol)))
         (push! o (car fields))
