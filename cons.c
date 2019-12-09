@@ -97,3 +97,12 @@ PRIM(set_cdr)
   *result = p;
   return TRUE;
 }
+
+PRIM(length)
+{
+  object o;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!ensure_list(argv->cons.car, &o)) return FALSE;
+  *result = gc_new_xint(object_list_len(o));
+  return TRUE;
+}

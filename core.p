@@ -287,46 +287,35 @@
   ; Same as (or (nil? x) (cons? x)).
   (or (nil? x) (cons? x)))
 
-(function byte? (x)
-  ; Returns true if the specified x is integer and between 0 and 255.
-  (and (integer? x ) (<= 0 x 255)))
-
 (function ->list (x)
-  ; xがリストの場合にxを、そうでなければxをリストにして返す。
+  ; Returns the specified x if x is a list, otherwise returns x as a list.
   (if (list? x) x (list x)))
 
 (function nth (l n)
-  ; リストlのn番目の要素を返す。
-  ; ただし、nは零から数える。
-  ; nがlの長さよりも大きい場合はnilを返す。
-  (ensure-arguments (list? l))
+  ; Returns the specified nth element of the specified list l.
+  ; However, n is counted from zero.
+  ; If n is greater than the length of l, nil is returned.
+  (ensure-arguments (and (list? l) (unsigned-integer? n)))
   (car (nthcdr l n)))
 
 (function nthcdr (l n)
-  ; リストlを構成するn番目のコンスを取得する。
-  ; nがlの長さよりも大きい場合はnilを返す。
-  (ensure-arguments (and (list? l) (not (minus? n))))
+  ; Get the the specified nth cons of the specified list l.
+  ; If n is greater than the length of l, nil is returned.
+  (ensure-arguments (and (list? l) (unsigned-integer? n)))
   (if (nil? l) nil
       (= n 0) l
       (nthcdr (cdr l) (-- n))))
 
 (function list= (x y :key (test same?))
-  ; listの要素がすべて関数testでtrueを返す場合はtrueを、そうでなければnilを返す。
-  (ensure-arguments (and (list? x) (list? y)))
+  ; Returns whether the result of comparing each element of the specified lists x and y with the specified function test is true.
+  ; Always returns nil if x and y are different lengths.
+  (ensure-arguments (and (list? x) (list? y) (operator? test)))
   (let (rec (lambda (x y)
               (if (and (nil? x) (nil? y)) true
                   (or (nil? x) (nil? y)) nil
                   (and (test (car x) (car y))
                        (rec (cdr x) (cdr y))))))
     (rec x y)))
-
-(function length (l)
-  ; リストlの要素数を返す。
-  (ensure-arguments (list? l))
-  (let (rec (lambda (l)
-              (if (nil? l) 0
-                  (+ 1 (rec (cdr l))))))
-    (rec l)))
 
 (function sublist (l s :opt e)
   ; リストlのs番目からe - 1番目までを要素に持つ部分リストを返す。
@@ -634,6 +623,13 @@
   ; xが負の数の場合はtrueを、そうでなければnilを返す。
   (ensure-arguments (number? x))
   (< x 0))
+
+(function byte? (x)
+  ; Returns true if the specified x is integer and between 0 and 255.
+  (and (integer? x ) (<= 0 x 255)))
+
+(function unsigned-integer? (x)
+  (and (integer? x) (not (minus? x))))
 
 ; splay tree
 
