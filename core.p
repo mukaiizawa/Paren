@@ -129,11 +129,11 @@
                                 body))))))
 
 (macro measure (:rest body)
-  ; 時間計測マクロ
+  ; Measure the time it takes to evaluate the specified body.
   ; (measure expr1 expr2 ...)
   ; (let (s (clock))
   ;   (begin0 (begin expr1 expr2 ...)
-  ;           (- (clock) s))))
+  ;           (print (- (clock) s))))
   (with-gensyms (s)
     (list let (list s (list clock))
           (list begin0 (cons begin body)
@@ -145,146 +145,150 @@
 ; fundamental function
 
 (function list (:rest args)
-  ; 引数をリストにして返す。
+  ; Returns the argument as a list.
   args)
 
 (function caar (x)
-  ; (car (car x))に等価
+  ; Same as (car (car x)).
   (car (car x)))
 
 (function cadr (x)
-  ; (car (cdr x))に等価
+  ; Same as (car (cdr x)).
   (car (cdr x)))
 
 (function cdar (x)
-  ; (cdr (car x))に等価
+  ; Same as (cdr (car x)).
   (cdr (car x)))
 
 (function cddr (x)
-  ; (cdr (cdr x))に等価
+  ; Same as (cdr (cdr x)).
   (cdr (cdr x)))
 
 (function caaar (x)
-  ; (car (caar x))に等価
+  ; Same as (car (caar x)).
   (car (caar x)))
 
 (function caadr (x)
-  ; (car (cadr x))に等価
+  ; Same as (car (cadr x)).
   (car (cadr x)))
 
 (function cadar (x)
-  ; (car (cdar x))に等価
+  ; Same as (car (cdar x)).
   (car (cdar x)))
 
 (function caddr (x)
-  ; (car (cddr x))に等価
+  ; Same as (car (cddr x)).
   (car (cddr x)))
 
 (function cdaar (x)
-  ; (cdr (caar x))に等価
+  ; Same as (cdr (caar x)).
   (cdr (caar x)))
 
 (function cdadr (x)
-  ; (cdr (cadr x))に等価
+  ; Same as (cdr (cadr x)).
   (cdr (cadr x)))
 
 (function cddar (x)
-  ; (cdr (cdar x))に等価
+  ; Same as (cdr (cdar x)).
   (cdr (cdar x)))
 
 (function cdddr (x)
-  ; (cdr (cddr x))に等価
+  ; Same as (cdr (cddr x)).
   (cdr (cddr x)))
 
 (function caaaar (x)
-  ; (car (caaar x))に等価
+  ; Same as (car (caaar x)).
   (car (caaar x)))
 
 (function caaadr (x)
-  ; (car (caadr x))に等価
+  ; Same as (car (caadr x)).
   (car (caadr x)))
 
 (function caadar (x)
-  ; (car (cadar x))に等価
+  ; Same as (car (cadar x)).
   (car (cadar x)))
 
 (function caaddr (x)
-  ; (car (caddr x))に等価
+  ; Same as (car (caddr x)).
   (car (caddr x)))
 
 (function cadaar (x)
-  ; (car (cdaar x))に等価
+  ; Same as (car (cdaar x)).
   (car (cdaar x)))
 
 (function cadadr (x)
-  ; (car (cdadr x))に等価
+  ; Same as (car (cdadr x)).
   (car (cdadr x)))
 
 (function caddar (x)
-  ; (car (cddar x))に等価
+  ; Same as (car (cddar x)).
   (car (cddar x)))
 
 (function cadddr (x)
-  ; (car (cdddr x))に等価
+  ; Same as (car (cdddr x)).
   (car (cdddr x)))
 
 (function cdaaar (x)
-  ; (cdr (caaar x))に等価
+  ; Same as (cdr (caaar x)).
   (cdr (caaar x)))
 
 (function cdaadr (x)
-  ; (cdr (caadr x))に等価
+  ; Same as (cdr (caadr x)).
   (cdr (caadr x)))
 
 (function cdadar (x)
-  ; (cdr (cadar x))に等価
+  ; Same as (cdr (cadar x)).
   (cdr (cadar x)))
 
 (function cdaddr (x)
-  ; (cdr (caddr x))に等価
+  ; Same as (cdr (caddr x)).
   (cdr (caddr x)))
 
 (function cddaar (x)
-  ; (cdr (cdaar x))に等価
+  ; Same as (cdr (cdaar x)).
   (cdr (cdaar x)))
 
 (function cddadr (x)
-  ; (cdr (cdadr x))に等価
+  ; Same as (cdr (cdadr x)).
   (cdr (cdadr x)))
 
 (function cdddar (x)
-  ; (cdr (cddar x))に等価
+  ; Same as (cdr (cddar x)).
   (cdr (cddar x)))
 
 (function cddddr (x)
-  ; (cdr (cdddr x))に等価
+  ; Same as (cdr (cdddr x)).
   (cdr (cdddr x)))
 
 (function identity (x)
-  ; xを返す。恒等関数。
+  ; Returns the specified x.
+  ; So-called identity function.
   x)
 
 (function ensure-arguments (test)
+  ; If the specified test evaluate to nil, throw IllegalArgumentsException.
   (if (not test) (basic-throw (.new IllegalArgumentsException))))
 
 (function different? (x y)
-  ; 式(not (same? x y))に等価。
+  ; Same as (not (same? x y)).
   (not (same? x y)))
 
 (function nil? (x)
-  ; 式(not x)に等価。
+  ; Alias for not.
   (not x))
 
 (function atom? (x)
-  ; xがアトムの場合はtrueを、そうでなければnilを返す。
+  ; Returns true if the specified x is of type atom.
+  ; It means x is cons or not.
   (not (cons? x)))
 
 (function list? (x)
-  ; xがコンスまたはnilの場合はtrueを、そうでなければnilを返す。
+  ; Returns true if the specified x is of type list.
+  ; Same as (or (nil? x) (cons? x)).
   (or (nil? x) (cons? x)))
 
 (function byte? (x)
-  ; xが0から255の整数の場合はtrueを、そうでなければnilを返す。
+  ; Returns true if the specified x is integer and between 0 and 255.
   (and (integer? x ) (<= 0 x 255)))
 
 (function ->list (x)
