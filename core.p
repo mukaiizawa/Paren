@@ -1261,56 +1261,53 @@
   self)
 
 (method ByteAheadReader .next ()
+  ; Returns a pre-read Char type character.
   (&next self))
 
 (method ByteAheadReader .eof? ()
-  ; ストリームが終端に達している場合にtrueを、そうでなければnilを返す。
+  ; Returns true if eof reached.
   (= (&next self) -1))
 
-(method ByteAheadReader _ensureNotEOFReached ()
-  ; ストリームが終端に達していた場合は例外をスローする。
+(method ByteAheadReader _throwIfEOF ()
   (if (.eof? self) (throw (.message (.new IllegalStateException)
                                     "EOF reached"))))
 
 (method ByteAheadReader .skip ()
-  ; 次の1byte読み飛ばし、返す。
-  (_ensureNotEOFReached self)
+  ; Skip next character and returns it.
+  (_throwIfEOF self)
   (begin0 (&next self)
           (&next self (.readByte (&stream self)))))
 
 (method ByteAheadReader .get ()
-  ; 次の1byteをトークンの末尾に追加し、返す。
+  ; Append next character to token and returns it.
   (let (c (.skip self))
     (.put self c)
     c))
 
 (method ByteAheadReader .put (b)
-  ; ストリームとは無関係にトークンの末尾に1byte追加する。
+  ; Put the specified byte b to the end of the token regardless of the stream.
   (ensure-arguments (byte? b))
   (.writeByte (&buf self) b))
 
 (method ByteAheadReader .token ()
-  ; 現在切り出しているbyte列を文字列にして返す。
+  ; Returns the token string currently cut out.
   (.toString (&buf self)))
 
 (method ByteAheadReader .reset ()
-  ; 現在切り出しているトークン文字列を返す。
+  ; Reset token and returns self.
   (.reset (&buf self))
   self)
 
 (method ByteAheadReader .skipSpace ()
-  ; スペース、改行文字を読み飛ばし、レシーバを返す。
+  ; Skip as long as a space character follows.
+  ; Returns self.
   (while (and (not (.eof? self)) (char-space? (&next self)))
     (.skip self))
   self)
 
-(class AheadReader (ByteAheadReader)
-  ; 先読みリーダー。
-  ; 文字列やストリームから1文字先読みを行う機能を提供するクラス。
-  )
+(class AheadReader (ByteAheadReader))
 
 (method AheadReader .init (:key string stream)
-  ; 文字列または、ストリームのいずれかを用いてレシーバを初期化する。
   (ensure-arguments (or (and string (string? string))
                         (and (object? stream) (is-a? stream Stream))))
   (when string
@@ -1322,22 +1319,18 @@
   self)
 
 (method AheadReader .eof? ()
-  ; ストリームが終端に達している場合にtrueを、そうでなければnilを返す。
   (same? (&next self) :EOF))
 
 (method AheadReader .skip ()
-  ; 次の1文字を読み飛ばし、返す。
-  (_ensureNotEOFReached self)
+  (_throwIfEOF self)
   (begin0 (&next self)
           (&next self (.readChar (&stream self)))))
 
 (method AheadReader .put (s)
-  ; ストリームとは無関係にトークンの末尾に文字列sを追加する。
   (ensure-arguments (string? s))
   (.writeString (&buf self) s))
 
 (method AheadReader .skipSpace ()
-  ; スペース、改行文字を読み飛ばし、レシーバを返す。
   (while (and (not (.eof? self))
               (find '(" " "\r" "\n") (&next self) :test string=))
     (.skip self))
@@ -1345,9 +1338,7 @@
 
 ; Paren reader
 
-(class ParenLexer (ByteAheadReader)
-  ; Paren字句解析機
-  )
+(class ParenLexer (ByteAheadReader))
 
 (method ParenLexer _raise (message)
   (throw (.message (.new IllegalStateException) message)))
@@ -1401,7 +1392,7 @@
   (string->symbol (.token self)))
 
 (method ParenLexer .getToken ()
-  ; return -- (token-type [token])
+  ; Returns (token-type [token]).
   (.reset self)
   (let (sign nil next (.next self) space? (lambda (x)
                                             (and (byte? x)
@@ -1426,7 +1417,6 @@
         (_raise self (string+ (number->string (.next self)) " illegal char")))))
 
 (class ParenParser ()
-  ; Paren構文解析機
   lexer token-type token)
 
 (method ParenParser .init (:key string (stream (dynamic $stdin)))
@@ -1470,47 +1460,51 @@
     $support-encodings '(:UTF-8 :CP932))
 
 (function read-byte (:opt (stream (dynamic $stdin)))
-  ; ストリームから1byte読み込む。
-  ; ストリームの終端に達した場合は-1を返す。
+  ; Read 1byte from the specified stream.
+  ; Returns -1 when the stream reaches the end.
   (ensure-arguments (is-a? stream Stream))
   (.readByte stream))
 
 (function read-char (:opt (stream (dynamic $stdin)))
-  ; streamから1byte読み込み返す。
-  ; ストリームの終端に達した場合は:EOFを返す。
+  ; Read 1character from the specified stream.
   (ensure-arguments (is-a? stream Stream))
   (.readChar stream))
 
 (function read-line (:opt (stream (dynamic $stdin)))
-  ; streamから一行読み込み返す。
+  ; Read line from the specified stream.
   (ensure-arguments (is-a? stream Stream))
   (.readLine stream))
 
 (function write-byte (byte :opt (stream (dynamic $stdout)))
-  ; streamに1byte書き込みbyteを返す。
+  ; Write 1byte to the specified stream.
   (ensure-arguments (and (byte? byte) (is-a? stream Stream)))
   (.writeByte stream byte)
   byte)
 
 (function write-line (:opt args (stream $stdout))
-  ; streamに改行を書き込む。
+  ; Write the specified stirng args to stream and write 0x0a.
   (ensure-arguments (or (nil? args) (string? args)))
   (if args (write-string args stream))
   (write-byte 0x0A stream))
 
 (function write-string (s :opt (stream $stdout))
-  ; streamに文字列を書き込みsを返す。
+  ; Write the specified stirng s to the specified stream.
   (ensure-arguments (and (string? s) (is-a? stream Stream)))
   (.writeString stream s)
   s)
 
 (macro with-memory-stream ((s) :rest body)
+  ; Create memory stream context.
+  ; (with-memory-stream (s)
+  ;    expr1 expr2 ...)
+  ; (let (s (.new MemoryStream))
+  ;    expr1 expr2 ...
+  ;    s)
   (list let (list s (list '.new 'MemoryStream))
         (cons begin body)
         (list '.toString s)))
 
 (function with-open-mode (sym gsym path mode body)
-  ; 各種マクロのためのhelper function
   (let (path (list if (list string? path) (list '.init '(.new Path) path)
                    (list and (list 'object? path)
                          (list 'is-a? path 'Path)) path
@@ -1539,8 +1533,8 @@
     (with-open-mode out stream path '.openUpdate body)))
 
 (function read (:opt (stream (dynamic $stdin)))
-  ; streamからS式を読み込み返す。
-  ; 終端に達した場合は:EOFを返す。
+  ; Read expression from the specified stream.
+  ; Returns :EOF if eof reached.
   (.parse (.init (.new ParenParser) :stream stream)))
 
 (function xprint (x :opt (stream (dynamic $stdin)))
@@ -1559,7 +1553,9 @@
                          (if (lambda? x) (write-string "lambda")
                              (write-string "macro"))
                          (write-string " ")
-                         (print-cons (lambda-parameter x))
+                         (if (lambda-parameter x)
+                             (print-cons (lambda-parameter x))
+                             (write-string "()"))
                          (map (lambda-body x) (lambda (x)
                                                 (write-string " ")
                                                 (print-s-expr x)))
