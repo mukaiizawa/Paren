@@ -526,34 +526,40 @@
 ; char
 
 (function char-space? (c)
+  ; Returns whether byte c can be considered a space character.
   (ensure-arguments (byte? c))
   (find '(0x09 0x0A 0x0D 0x20) c :test =))
 
 (function char-alpha? (c)
+  ; Returns whether byte c can be considered a alphabetic character.
   (ensure-arguments (byte? c))
   (or (<= 0x41 c 0x5A) (<= 0x61 c 0x7A)))
 
 (function char-digit? (c)
+  ; Returns whether byte c can be considered a digit character.
   (ensure-arguments (byte? c))
   (<= 0x30 c 0x39))
 
 (function char-lower (c)
+  ; Returns lowercase if byte c can be considered an alphabetic character, c otherwise.
   (ensure-arguments (byte? c))
   (if (<= 0x41 c 0x5A) (+ c 0x20)
       c))
 
 (function char-upper (c)
+  ; Returns uppercase if byte c can be considered an alphabetic character, c otherwise.
   (ensure-arguments (byte? c))
   (if (<= 0x61 c 0x7A) (- c 0x20)
       c))
 
 (function char->digit (c :key (radix 10))
+  ; Returns the numeric value when the specified byte c is regarded as the specified radix base character.
+  ; Default radix is 10.
   (ensure-arguments (byte? c))
   (let (n (if (char-digit? c) (- c 0x30)
               (char-alpha? c) (+ (- (char-lower c) 0x61) 10)))
     (if (and n (< n radix)) n
-        (throw (.message (.new IllegalStateException)
-                         "illegal char")))))
+        (throw (.message (.new IllegalStateException) "illegal char")))))
 
 ; number
 
