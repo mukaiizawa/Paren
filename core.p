@@ -1501,16 +1501,18 @@
   (.writeString stream s)
   s)
 
-(macro with-memory-stream ((s) :rest body)
+(macro with-memory-stream ((mem :opt s) :rest body)
   ; Create memory stream context.
-  ; (with-memory-stream (s)
+  ; (with-memory-stream (mem s)
   ;    expr1 expr2 ...)
-  ; (let (s (.new MemoryStream))
+  ; (let (mem (.new MemoryStream))
+  ;    (if s (.writeString mem s))
   ;    expr1 expr2 ...
-  ;    s)
-  (list let (list s (list '.new 'MemoryStream))
+  ;    mem)
+  (list let (list mem (list '.new 'MemoryStream))
+        (list if s (list '.writeString mem s))
         (cons begin body)
-        (list '.toString s)))
+        (list '.toString mem)))
 
 (function with-open-mode (sym gsym path mode body)
   (let (path (list if (list string? path) (list '.init '(.new Path) path)
