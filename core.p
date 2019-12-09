@@ -383,38 +383,36 @@
           :identity l))
 
 (macro push! (sym x)
-  ; シンボルsymを束縛しているリストの先頭に破壊的にxを追加する。
-  ; 式としてxを返す。
+  ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
+  ; Returns x.
   (ensure-arguments (symbol? sym))
   (list begin
         (list <- sym (list cons x sym))
         x))
 
 (macro pop! (sym)
-  ; シンボルsymを束縛しているリストの先頭を返し、symをリストのcdrで再束縛する。
+  ; Returns the head of the list that binds the specified symbol sym and rebinds sym with the cdr of the list.
   (ensure-arguments (symbol? sym))
   (list begin0
         (list car sym)
         (list <- sym (list cdr sym))))
 
 (function flatten (l)
-  ; リストlisを構成するすべてのコンスのcar部が要素であるような新しいリストを返す。
-  ; 作成されるリストの要素の順は、元のリストのcar優先探索となる。
+  ; Returns a new list in which the car parts of all cons that make up the specified list l are elements.
   (ensure-arguments (list? l))
   (let (acc nil rec (lambda (x)
-                      (if (nil? x) (reverse! acc)
-                          (atom? x) (begin (push! acc x) acc)
-                          (nil? (car x)) (begin (push! acc nil) acc)
-                          (begin (rec (car x))) (rec (cdr x)))))
-    (rec l)))
+                      (if (atom? x) (push! acc x)
+                          (dolist (i x) (rec i)))))
+    (rec l)
+    (reverse! acc)))
 
 (function map (args f)
-  ; リストargsの各々の要素を関数fで写像した結果をリストにして返す。
-  (ensure-arguments (list? args))
+  ; Returns a list of the results of mapping each element of the specified list args with the specified function f.
+  (ensure-arguments (and (list? args) (operator? f)))
   (if args (cons (f (car args)) (map (cdr args) f))))
 
 (function reverse (l)
-  ; リストlの要素を逆の順で持つリストを新たに作成して返す。
+  ; Returns a new list with the elements of the specified list l in reverse order.
   (ensure-arguments (list? l))
   (let (rec (lambda (l acc)
               (if (nil? l) acc
@@ -422,6 +420,7 @@
     (rec l nil)))
 
 (function reverse! (l)
+  ; Destructive reverse.
   (ensure-arguments (list? l))
   (if l
       (let (prev nil curr l next (cdr l))
@@ -431,8 +430,10 @@
               (return curr))))))
 
 (function reduce (l f :key (identity nil identity?))
-  ; リストlを二変数関数fで畳み込んだ結果を返す。
-  ; キーワードパラメターidentityが指定された場合は単位元として使用する。
+  ; Reduce uses the specified binary operation f, to combine the elements of the specified list l.
+  ; The function must accept as arguments two elements of list or the results from combining those elements.
+  ; The function must also be able to accept no arguments.
+  ; If the specified identity is supplied, used as a unit.
   (ensure-arguments (list? l))
   (let (rec (lambda (l)
               (if (nil? (cdr l)) (car l)
@@ -440,65 +441,65 @@
     (rec (if identity? (cons identity l) l))))
 
 (function find-cons (l e :key (test same?) (key identity))
-  ; リストlをなすコンスのうち、car部がeに等しいコンスを返す。
-  ; 探索はリストの先頭から順に行われる。
-  ; 該当するコンスが存在しない場合はnilを返す。
-  ; 比較は=で行われ、testで指定された場合はそれを用いる。
-  ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
-  (ensure-arguments (list? l))
+  ; Among the cons that make up the specified list l, the cons whose car part is equal to the specified e is returned.
+  ; Evaluation is performed in order from left to right.
+  ; If there is no such cons, nil is returned.
+  ; The comparison is done with the specified function test which default value is same?.
+  ; If key is supplied, the element is evaluated with the key function at first and then compared.
+  (ensure-arguments (and (list? l) (operator? test)))
   (if (nil? l) nil
       (test (key (car l)) e) l
       (find-cons (cdr l) e :test test :key key)))
 
 (function find-cons-if (l f :key (key identity))
-  ; リストlをなすコンスのうち、car部が関数fの引数として評価されたときにnilとならないものを返す。
-  ; 探索はリストの先頭から順に行われる。
-  ; 該当するコンスが存在しない場合はnilを返す。
-  ; keyが指定された場合はcar部をkey関数で評価した後に比較を行う。
-  (ensure-arguments (list? l))
+  ; Returns the cons that make up the specified list l that are not nil when the car part is evaluated as an argument of the specified function f.
+  ; Evaluation is performed in order from left to right.
+  ; If there is no such cons, nil is returned.
+  ; If key is supplied, the element is evaluated with the key function at first and then compared.
+  (ensure-arguments (and (list? l) (operator? f)))
   (if (nil? l) nil
       (f (key (car l))) l
       (find-cons-if (cdr l) f :key key)))
 
 (function find (l e :key (test same?) (key identity))
-  ; リストlの先頭からeに等しい要素を返す。
-  ; eが存在しない場合はnilを返す。
-  ; 比較は=で行われ、testで指定された場合はそれを用いる。
-  ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
+  ; Returns an element equal to the specified element e from the beginning of the specified list l.
+  ; Returns nil if e does not exist.
+  ; The comparison is done with same? as a default.
+  ; If test is supplied, the element is compared using the test function.
+  ; If key is supplied, the element is evaluated with the key function at first and then compared.
   (ensure-arguments (list? l))
   (car (find-cons l e :test test :key key)))
 
 (function find-if (l f :key (key identity))
-  ; リストlの先頭から関数fがnilを返さない最初の要素を返す。
-  ; 該当する要素が存在しない場合はnilを返す。
-  ; keyが指定された場合は要素をkey関数で評価した後に比較を行う。
+  ; From the beginning of the specified list l, the specified function f returns the first element that does not evaluate to nil.
+  ; If no such element exists, nil is returned.
+  ; If key is supplied, the element is evaluated with the key function at first and then compared.
   (ensure-arguments (list? l))
   (car (find-cons-if l f :key key)))
 
 (function all-satisfy? (l f)
-  ; リストlのすべての要素が関数fの引数として評価したときに、nilでない値を返す場合にtrueを返す。
-  ; そうでなければnilを返す。
+  ; Returns true if all element of the specified list l returns a not nil value which evaluates as an argument to the specified function f.
+  ; Otherwise returns nil.
+  ; As soon as any element evaluates to nil, and returns nil without evaluating the remaining elements
   (ensure-arguments (and (list? l) (operator? f)))
   (if (nil? l) true
       (and (f (car l)) (all-satisfy? (cdr l) f))))
 
 (function any-satisfy? (l f)
-  ; リストlのいずれかの要素が関数fの引数として評価したときにnil以外の値を返す場合はtrueを返す。
-  ; そうでなければnilを返す。
-  ; なお、lが空の場合はnilを返す。
+  ; Returns true if any element of the specified list l returns a not nil value which evaluated as an argument to the specified function f.
+  ; Otherwise returns nil.
+  ; It returns nil if l is empty.
+  ; As soon as any element evaluates to not nil, and returns it without evaluating the remaining elements.
   (ensure-arguments (and (list? l) (operator? f)))
   (if l (or (f (car l)) (any-satisfy? (cdr l) f))))
 
-(function adjacent-satisfy? (l f)
-  ; リストの隣接するすべての二要素に対して二変数関数fの評価がnil以外の場合は
+(function each-adjacent-satisfy? (l f)
+  ; Returns true if each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
   (ensure-arguments (and (list? l) (operator? f)))
   (if (nil? (cdr l)) true
-      (and (f (car l) (cadr l)) (adjacent-satisfy? (cdr l) f))))
+      (and (f (car l) (cadr l)) (each-adjacent-satisfy? (cdr l) f))))
 
 ; associated list
-;; Parenでは、キーワードと任意のS式の対を保持するリストを連想リストという。
-;; 探索は線形時間必要になるが、比較はアドレスで行われるため高速。
-;; 任意のオブジェクトの対応を保持する場合はMapクラスを利用する。
 
 (function . (al k :opt (v nil v?))
   ; 連想リストalのキー値kに対応する値を返す。
@@ -571,13 +572,13 @@
   (not (= x y)))
 
 (function > (:rest args)
-  (adjacent-satisfy? args (lambda (x y) (< y x))))
+  (each-adjacent-satisfy? args (lambda (x y) (< y x))))
 
 (function <= (:rest args)
-  (adjacent-satisfy? args (lambda (x y) (not (< y x)))))
+  (each-adjacent-satisfy? args (lambda (x y) (not (< y x)))))
 
 (function >= (:rest args)
-  (adjacent-satisfy? args (lambda (x y) (not (< x y)))))
+  (each-adjacent-satisfy? args (lambda (x y) (not (< x y)))))
 
 (function ++ (x)
   ; Returns the value of x + 1.
