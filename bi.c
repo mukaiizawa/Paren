@@ -94,16 +94,6 @@ PRIM(gensym)
   return TRUE;
 }
 
-// TODO should be removed
-PRIM(print)
-{
-  char buf[MAX_STR_LEN];
-  if (argc != 1) return FALSE;
-  *result = argv->cons.car;
-  printf("%s\n", object_describe(*result, buf));
-  return TRUE;
-}
-
 #undef SPECIAL
 #undef PRIM
 
