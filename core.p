@@ -1464,8 +1464,6 @@
 ;; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
     $stdout (.init (.new FileStream) :fp (fp 1))
-    $in $stdin
-    $out $stdout
     $encoding (if (same? $os :Windows) :CP932 :UTF-8)
     $support-encodings '(:UTF-8 :CP932))
 
