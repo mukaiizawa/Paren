@@ -1503,6 +1503,7 @@
 
 (macro with-memory-stream ((mem :opt s) :rest body)
   ; Create memory stream context.
+  ; If the specified string s supplied, memory stream initialize with s.
   ; (with-memory-stream (mem s)
   ;    expr1 expr2 ...)
   ; (let (mem (.new MemoryStream))
