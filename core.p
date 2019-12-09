@@ -1578,8 +1578,11 @@
   (let (s nil)
     (while true
       (catch ((QuitSignal (e) (break))
-              (Exception (e) (write-string (.toString e)))
-              (Error (e) (write-string (.toString e))))
+              (Exception (e)
+                         (write-line (.toString e))
+                         (map (call-stack) (lambda (x)
+                                             (write-string "	at: ")
+                                             (xprint x)))))
         (write-string ") ")
         (if (same? (<- s (read)) :EOF) (break))
         (xprint (eval s))))))
@@ -1588,11 +1591,14 @@
   (throw (.new QuitSignal)))
 
 (function load (path)
+  ; Load the specified file.
+  ; Returns true if successfully loaded.
   (with-open-read (in path)
     (let (expr nil)
       (while true
         (if (same? (<- expr (read in)) :EOF) (break)
-            (eval expr))))))
+            (eval expr)))))
+  true)
 
 ; (let ($encoding :UTF-8)
 ;   (<- ar (.init (.new AheadReader) :string "あいう"))
