@@ -1047,15 +1047,16 @@
   )
 
 (method Stream .readByte (:rest args)
-  ; ストリームの終端に達した場合は1を返す。
+  ; Read 1byte from stream.
+  ; Returns -1 when the stream reaches the end.
   (Error.shouldBeImplemented))
 
 (method Stream .writeByte (:rest args)
+  ; Write 1byte to stream.
   (Error.shouldBeImplemented))
 
 (method Stream .readChar ()
-  ; ストリームから1byte読み込む。
-  ; ストリームの終端に達した場合は:EOFを返す。
+  ; Read 1character from stream.
   (if (same? (dynamic $encoding) :UTF-8)
           (let (utf8-exception
                    (lambda ()
@@ -1093,9 +1094,11 @@
           (throw (.message (.new IllegalStateException) "unsupport encoding"))))
 
 (method Stream .readLine (:rest args)
+  ; Read line.
   (Error.shouldBeImplemented))
 
 (method Stream .writeString (s)
+  ; Write string to stream.
   (ensure-arguments (string? s))
   (let (ba (string->byte-array s))
     (dotimes (i (byte-array-length ba))
@@ -1103,13 +1106,15 @@
   self)
 
 (method Stream .seek (:rest args)
+  ; Move the read position on the stream to the specified offset.
   (Error.shouldBeImplemented))
 
 (method Stream .tell (:rest args)
+  ; Returns the read position on the stream as a byte offset from the beginning.
   (Error.shouldBeImplemented))
 
 (class MemoryStream (Stream)
-  ; メモリ上に内容を保持するストリームクラス。
+  ; A stream whose contents are held in memory.
   buf buf-size rdpos wrpos)
 
 (method MemoryStream .init ()
@@ -1158,11 +1163,14 @@
         (byte-array->string (array-copy (&buf self) 0 str 0 pos)))))
 
 (method MemoryStream .reset ()
+  ; Empty the contents of the stream.
   (&rdpos self 0)
   (&wrpos self 0))
 
 (class FileStream (Stream)
-  ; ファイルストリームクラス
+  ; Provides I/O functions for files.
+  ; Construct with methods such as Path.openRead, Path.openWrite.
+  ; It should not be construct by new.
   fp)
 
 (method FileStream .init (:key fp)
@@ -1189,11 +1197,12 @@
   (fclose (&fp self)))
 
 (class Path ()
-  ; イミュータブルなファイルパスクラス。
+  ; Means a file or directory and provides a series of functions such as file information acquisition, creation and deletion, and stream construction.
+  ; Use '/' to separate path names regardless of the host OS.
   files mode)
 
 (method Path .init (:rest files)
-  ; このパスを構成するファイルのリストを渡して初期化を行う。
+  ; Initialize by passing the specified list of files that make up this path.
   (&files self files)
   self)
 
@@ -1202,40 +1211,45 @@
   self)
 
 (method Path .parent ()
-  ; このパスの親のパス
+  ; Returns the parent path, or nil if this path does not have a parent.
   (&files (.init (.new Path)) (butlast (&files self))))
 
 (method Path .child (:rest body)
   (ensure-arguments (all-satisfy? body string?))
-  ; このパスの下にパスを結合する。
+  ; Resolve the given path against this path.
   (&files (.new Path) (append (&files self) body)))
 
 (method Path .toString ()
   (reduce (&files self) (lambda (acc rest) (string+ acc "/" rest))))
 
-(method Path .open (mode)
-  ; このパスの表すファイルを指定したモードでオープンし、FileStreamクラスのインスタンスを返す。
+(method Path _open (mode)
   (.init (.new FileStream) :fp (fopen (.toString self) mode)))
 
 (method Path .openRead ()
-  (.open self 0))
+  ; Returns a stream that reads the contents of the receiver.
+  (_open self 0))
 
 (method Path .openWrite ()
-  (.open self 1))
+  ; Returns a stream to write to the contents of the receiver.
+  (_open self 1))
 
 (method Path .openAppend ()
-  (.open self 2))
+  ; Returns a stream to append to the receiver's content.
+  (_open self 2))
 
 (method Path .openUpdate ()
-  (.open self 3))
+  ; Returns a stream that updates the contents of the receiver.
+  ; The read/write position is at the beginning of the file.
+  ; The file size cannot be reduced.
+  (_open self 3))
 
 (class ByteAheadReader ()
-  ; 先読みリーダー。
-  ; 文字列やストリームから1byte先読みを行う機能を提供するクラス。
+  ; A one-character look-ahead reader.
+  ; While prefetching one character at a time from a character string or Reader, if necessary, cut out a part as a token.
+  ; Can be used as a syllable reader or lexical analyzer.
   stream next buf)
 
 (method ByteAheadReader .init (:key string (stream (dynamic $stdin)))
-  ; 文字列または、ストリームのいずれかを用いてレシーバを初期化する。
   (ensure-arguments (and (or (nil? string) (string? string))
                          (object? stream) (is-a? stream Stream)))
   (when string
