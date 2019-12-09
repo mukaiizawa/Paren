@@ -12,7 +12,7 @@
 static int ensure_cons(object o, object *result)
 {
   if (!typep(o, CONS)) {
-    ip_mark_error("requires cons");
+    ip_mark_exception("requires cons");
     return FALSE;
   }
   *result = o;
@@ -22,7 +22,7 @@ static int ensure_cons(object o, object *result)
 static int ensure_list(object o, object *result)
 {
   if (!listp(o)) {
-    ip_mark_error("requires list");
+    ip_mark_exception("requires list");
     return FALSE;
   }
   *result = o;
@@ -32,7 +32,7 @@ static int ensure_list(object o, object *result)
 static int ensure_cdr(object o, object *result)
 {
   if (!listp(o)) {
-    ip_mark_error("part of cdr must be list");
+    ip_mark_exception("part of cdr must be list");
     return FALSE;
   }
   *result = o;

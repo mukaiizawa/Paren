@@ -12,7 +12,7 @@
 static int ensure_string(object o, object *result)
 {
   if (!typep(o, STRING)) {
-    ip_mark_error("requires string");
+    ip_mark_exception("requires string");
     return FALSE;
   }
   *result = o;

@@ -12,7 +12,7 @@
 static int ensure_symbol(object o, object *result)
 {
   if (!typep(o, SYMBOL)) {
-    ip_mark_error("requires symbol");
+    ip_mark_exception("requires symbol");
     return FALSE;
   }
   *result = o;
@@ -22,7 +22,7 @@ static int ensure_symbol(object o, object *result)
 static int ensure_keyword(object o, object *result)
 {
   if (!typep(o, KEYWORD)) {
-    ip_mark_error("requires keyword");
+    ip_mark_exception("requires keyword");
     return FALSE;
   }
   *result = o;

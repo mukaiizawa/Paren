@@ -12,7 +12,7 @@
 static int ensure_byte_array(object o, object *result)
 {
   if (!typep(o, BARRAY)) {
-    ip_mark_error("requires byte-array");
+    ip_mark_exception("requires byte-array");
     return FALSE;
   }
   *result = o;
@@ -22,7 +22,7 @@ static int ensure_byte_array(object o, object *result)
 static int ensure_array(object o, object *result)
 {
   if (!typep(o, ARRAY)) {
-    ip_mark_error("requires array");
+    ip_mark_exception("requires array");
     return FALSE;
   }
   *result = o;
@@ -71,7 +71,7 @@ PRIM(array_access)
   if (!ip_ensure_arguments(argc, 2, 3)) return FALSE;
   a = argv->cons.car;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &i) || i < 0) {
-    ip_mark_error("array index must be positive number");
+    ip_mark_exception("array index must be positive number");
     return FALSE;
   }
   if (argc == 2) v = NULL;
@@ -82,7 +82,7 @@ PRIM(array_access)
     case BARRAY:
       return barray_access(a, i, v, result);
     default:
-      ip_mark_error("requires array/byte-array");
+      ip_mark_exception("requires array/byte-array");
       return FALSE;
   }
 }
@@ -112,32 +112,32 @@ PRIM(array_copy)
   if (!ip_ensure_arguments(argc, 5, 5)) return FALSE;
   from = argv->cons.car;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &fp)) {
-    ip_mark_error("source array index must be integer");
+    ip_mark_exception("source array index must be integer");
     return FALSE;
   }
   to = (argv = argv->cons.cdr)->cons.car;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &tp)) {
-    ip_mark_error("destination array index must be integer");
+    ip_mark_exception("destination array index must be integer");
     return FALSE;
   }
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) {
-    ip_mark_error("copy size must be integer");
+    ip_mark_exception("copy size must be integer");
     return FALSE;
   }
   switch (type(from)) {
     case BARRAY:
       if (!typep(to, BARRAY))
-        ip_mark_error("destination must be byte-array");
+        ip_mark_exception("destination must be byte-array");
       else if (fp < 0)
-        ip_mark_error("source array index must be positive");
+        ip_mark_exception("source array index must be positive");
       else if (tp < 0)
-        ip_mark_error("destination array index must be positive");
+        ip_mark_exception("destination array index must be positive");
       else if (size <= 0)
-        ip_mark_error("copy size must be positive");
+        ip_mark_exception("copy size must be positive");
       else if ((fp + size) > from->barray.size)
-        ip_mark_error("source array index out of bounds error");
+        ip_mark_exception("source array index out of bounds ip_mark_exception");
       else if ((tp + size) > to->barray.size)
-        ip_mark_error("destination array index out of bounds error");
+        ip_mark_exception("destination array index out of bounds ip_mark_exception");
       else {
         memmove(to->barray.elt + tp, from->barray.elt + fp, size);
         *result = to;
