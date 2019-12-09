@@ -501,20 +501,27 @@
 
 ; associated list
 
-(function . (al k :opt (v nil v?))
-  ; 連想リストalのキー値kに対応する値を返す。
-  ; 値がない場合は例外を発生させる。
-  ; vが指定された場合はkに対応する値をvで上書きする。
+(function assoc-not-found-exception (k)
+  (.message (.new IllegalStateException)
+            (string+ "property " (symbol->string k) " not found")))
+
+(function assoc (al k)
+  ; Returns a value corresponding to the specified key k of the specified asoociate list al.
+  ; Raises an exception if there is no value.
   (ensure-arguments (and (list? al) (or (keyword? k) (symbol? k))))
-  (let (pair al)
-    (while pair
-      (if (same? (car pair) k) (break)
-          (<- pair (cddr pair))))
-    (if (nil? pair) (throw (.message (.new IllegalStateException)
-                                     (string+ "property " (symbol->string k)
-                                              " not found")))
-        (nil? v?) (cadr pair)
-        (car! (cdr pair) v))))
+  (while al
+    (if (same? (car al) k) (return (cadr al))
+        (<- al (cddr al))))
+  (throw (assoc-not-found-exception k)))
+
+(function assoc! (al k v)
+  ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
+  ; Raises an exception if there is no value.
+  (ensure-arguments (and (list? al) (or (keyword? k) (symbol? k))))
+  (while al
+    (if (same? (car al) k) (return (car! (cdr al) v))
+        (<- al (cddr al))))
+  (throw (assoc-not-found-exception k)))
 
 ; char
 
@@ -775,7 +782,7 @@
   (ensure-arguments (and (symbol? cls-sym) (class-exists? cls-sym)))
   (let (cls nil)
     (if (<- cls (splay-find $class-cache cls-sym)) cls
-        (begin (<- cls (. $class cls-sym))
+        (begin (<- cls (assoc $class cls-sym))
                (splay-add $class-cache cls-sym cls)))))
 
 (function find-method (cls-sym method-sym)
@@ -793,8 +800,8 @@
         rec
             (lambda (cls)
               (or (find-class-method cls)
-                  (find-feature-method (car (nthcdr cls 7)))    ; <=> (. cls :features)
-                  (let (super (car (nthcdr cls 5)))    ; <=> (. cls :super)
+                  (find-feature-method (car (nthcdr cls 7)))    ; <=> (assoc cls :features)
+                  (let (super (car (nthcdr cls 5)))    ; <=> (assoc cls :super)
                     (and super (rec (find-class super)))))))
     (if (<- m (splay-find $method-cache key)) m
         (<- m (rec (find-class cls-sym))) (splay-add $method-cache key m)
@@ -808,9 +815,9 @@
           (list :opt (list val nil val?))
           (list if val?
                 (list begin
-                      (list '. 'self (symbol->keyword var) val)
+                      (list 'assoc! 'self (symbol->keyword var) val)
                       'self)
-                (list '. 'self (symbol->keyword var))))))
+                (list 'assoc 'self (symbol->keyword var))))))
 
 (macro make-method-dispatcher (method-sym)
   (with-gensyms (receiver args)
@@ -819,7 +826,7 @@
           (list ensure-arguments (list object? receiver))
           (list 'apply
                 (list 'find-method
-                      (list '. receiver :class)
+                      (list 'assoc receiver :class)
                       (list quote method-sym))
                 (list 'cons receiver args)))))
 
@@ -851,10 +858,10 @@
   (list begin
         (if (not (bound? method-sym))
             (list make-method-dispatcher method-sym))
-        (list . cls-sym :methods
+        (list assoc! cls-sym :methods
               (list cons (list quote method-sym)
                     (list cons (cons lambda (cons (cons 'self args) body))
-                          (list '. cls-sym :methods))))))
+                          (list 'assoc cls-sym :methods))))))
 
 (macro throw (o)
   (with-gensyms (e)
@@ -902,12 +909,12 @@
 (function is-a? (o cls)
   ; oがclsクラスのインスタンスの場合trueを、そうでなければnilを返す。
   (ensure-arguments (and (object? o) (object? cls) (same? (cadr cls) 'Class)))
-  (let (cls-sym (. cls :symbol)
+  (let (cls-sym (assoc cls :symbol)
                 rec (lambda (o-cls-sym)
                       (and o-cls-sym
                            (or (same? o-cls-sym cls-sym)
-                               (rec (. (find-class o-cls-sym) :super))))))
-    (rec (. o :class))))
+                               (rec (assoc (find-class o-cls-sym) :super))))))
+    (rec (assoc o :class))))
 
 (class Object ()
   ; 唯一スーパークラスを持たない、クラス階層の最上位クラス。
@@ -939,13 +946,14 @@
 (method Class .new ()
   (let (o nil cls self fields nil)
     (while cls
-      (<- fields (reverse! (map (. cls :fields) symbol->keyword)))
+      (<- fields (reverse! (map (assoc cls :fields) symbol->keyword)))
       (while fields
-        (push! o (if (same? (car fields) :class) (. self :symbol)))
+        (push! o (if (same? (car fields) :class) (assoc self :symbol)))
         (push! o (car fields))
         (<- fields (cdr fields)))
-      (<- cls (and (. cls :super) (find-class (. cls :super)))))
-    (if (list= (lambda-parameter (find-method (. o :class) '.init)) '(self))
+      (<- cls (and (assoc cls :super) (find-class (assoc cls :super)))))
+    (if (list= (lambda-parameter (find-method (assoc o :class) '.init))
+               '(self))
         (.init o)
         o)))
 
