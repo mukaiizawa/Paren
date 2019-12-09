@@ -656,7 +656,7 @@
 ; splay tree
 
 ;; End node of splay.
-(<- $splay-nil '(nil nil nil nil))
+(<- $splay-nil '(nil nil nil))
 
 ;; splay ::= (top comparator)
 (function splay-new (comparator)
@@ -671,10 +671,9 @@
 (function splay-comparator (splay)
   (cadr splay))
 
-;; splay node ::= (k v left right)
-
+;; splay node ::= (k v left . right)
 (function splay-node-new (k v)
-  (list k v nil nil))
+  (list k v nil))
 
 (function splay-node-key (splay-node)
   (car splay-node))
@@ -692,10 +691,10 @@
   (car! (cddr splay-node) val))
 
 (function splay-node-right (splay-node)
-  (cadddr splay-node))
+  (cdddr splay-node))
 
 (function splay-node-right! (splay-node val)
-  (car! (cdddr splay-node) val))
+  (cdr! (cddr splay-node) val))
 
 (function splay-balance (splay k)
   (let (top (splay-top splay) cmp (splay-comparator splay) p nil q nil d 0)
@@ -824,15 +823,21 @@
                          (string+ "method " (symbol->string method-sym)
                                   " not found"))))))
 
-(macro make-accessor (cls-sym var)
+(macro make-accessor (cls-sym iv)
+  ; Create accessor for the specified instance variable iv.
+  ; If instance variable name is iv, create accessor &var.
+  ; (make-accessor Object hash)
+  ; (method Object &hash (k :opt (v nil v?))
+  ;   (if v? (set-instance-variable! self 'hash v)
+  ;       (get-instance-variable self 'hash)))
   (with-gensyms (val val?)
-    (list method cls-sym (string->symbol (string+ "&" (symbol->string var)))
+    (list method cls-sym (string->symbol (string+ "&" (symbol->string iv)))
           (list :opt (list val nil val?))
           (list if val?
                 (list begin
-                      (list 'assoc! 'self (symbol->keyword var) val)
+                      (list 'assoc! 'self (symbol->keyword iv) val)
                       'self)
-                (list 'assoc 'self (symbol->keyword var))))))
+                (list 'assoc 'self (symbol->keyword iv))))))
 
 (macro make-method-dispatcher (method-sym)
   (with-gensyms (receiver args)
@@ -846,10 +851,12 @@
                 (list 'cons receiver args)))))
 
 (function method? (o)
+  ; Returns true if the specified o is method.
   (and (lambda? o)
        (same? (car (lambda-body o)) :method)))
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
+  ; Create class the specified cls-sym.
   (let (Object? (same? cls-sym 'Object))
     (ensure-arguments (and (all-satisfy? fields symbol?)
                            (not (bound? cls-sym))))
@@ -917,13 +924,13 @@
                   body)))))
 
 (function object? (x)
-  ; xがオブジェクトの場合trueを、そうでなければnilを返す。
-  ; Paren object systemでは先頭要素がキーワード:classで始まるような連想リストをオブジェクトと見做す。
+  ; Returns true if the specified x is object.
   (and (list? x) (same? (car x) :class)))
 
 (function is-a? (o cls)
-  ; oがclsクラスのインスタンスの場合trueを、そうでなければnilを返す。
-  (ensure-arguments (and (object? o) (object? cls) (same? (cadr cls) 'Class)))
+  ; Returns true if the specified o regarded as the specified class cls's object.
+  (ensure-arguments (and (object? o) (object? cls)
+                         (same? (assoc cls :class) 'Class)))
   (let (cls-sym (assoc cls :symbol)
                 rec (lambda (o-cls-sym)
                       (and o-cls-sym
@@ -932,33 +939,40 @@
     (rec (assoc o :class))))
 
 (class Object ()
-  ; 唯一スーパークラスを持たない、クラス階層の最上位クラス。
-  ; スーパークラスを指定しない場合は暗黙的にObjectクラスを継承する。
+  ; Object is a class that is the basis of all class hierarchies.
+  ; This class provides basic functionality common to all objects.
+  ; It is the only class that does not have a superclass.
   class)
 
 (method Object .init ()
-  ; オブジェクトの初期化メソッド。
-  ; 引数なしの場合は、オブジェクト生成時に自動で初期化される。
-  ; クラスごとに必要に応じて固有の初期化処理を上書きする。
+  ; Initialize receiver.
+  ; Method executed when an object is created by .new method.
+  ; Overwrite this method if there is class-specific initialization processing.
+  ; If overwrote .init method has argument, must call manually.
   self)
 
 (method Object .class ()
-  ; 自身のクラスを返す。
+  ; Returns the class of receiver.
   (find-class (&class self)))
 
 (method Object .equal? (o)
-  ; レシーバとoが同一オブジェクトの場合にtrueを、そうでなければnilを返す。
-  ; サブクラスで同等性を定義する場合はこのメソッドをオーバーロードする。
+  ; Returns true if the receiver and the specified object o are the same object.
+  ; Overwrite this method if there is class-specific comparisons.
   (same? self o))
 
 (method Object .toString ()
-  ; レシーバの印字表現を返す。
+  ; Returns a String representing the receiver.
   "<object>")
 
 (class Class ()
+  ; Class of class object.
+  ; All class objects are instances of Class class.
   symbol super features fields methods)
 
 (method Class .new ()
+  ; Construct an instance.
+  ; If .init method has argument, must invoke after create an instance.
+  ; Otherwise automatically invoke .init method.
   (let (o nil cls self fields nil)
     (while cls
       (<- fields (reverse! (map (assoc cls :fields) symbol->keyword)))
@@ -973,71 +987,63 @@
         o)))
 
 (method Class .super ()
-  ; スーパークラスを返す。
+  ; Returns the class representing the superclass of the receiver.
   (find-class (&super self)))
 
 (method Class .features ()
-  ; フィーチャーのリストを返す。
+  ; Returns the feature list representing the feature of the receiver.
   (map (&features self) find-class))
 
 (method Class .methods ()
-  ; このクラスのメソッドのリストを返す。
-  ; スーパークラスや、フィーチャーのメソッドは含まない。
+  ; Returns method list of this class, but excluding inherited methods.
   (&methods self))
 
 ;; error, exception
 
 (class Throwable ()
-  ; すべてのエラー、例外クラスの基底クラス。
+  ; The Throwable class is the superclass of all errors and exceptions.
   message)
 
 (method Throwable .message (:opt (message nil message?))
-  ; エラーオブジェクトにメッセージを設定する。
+  ; Set the message.
   (if message? (&message self message) (&message self)))
 
 (method Throwable .toString ()
+  ; Returns a String representing the receiver.
   (let (class-name (symbol->string (&class self)) msg (.message self))
     (if msg (string+ class-name " -- " msg)
         class-name)))
 
 (class Error (Throwable)
-  ; エラークラス。
-  ; 継続が困難な状態や、到達すべきでない状態を表す。
-  ; throwされた場合は、原則としてcatchオペレーターで補足すべきではない。
+  ; An Error is a subclass of Throwable that indicates serious problems that a reasonable application should not try to catch.
+  ; Most such errors are abnormal conditions. 
   )
 
 (function Error.shouldBeImplemented ()
   (throw (.message (.new Error) "should be implemented")))
 
-(class QuitSignal (Error)
-  ; システム終了シグナル
-  )
-
-(function quit ()
-  (throw (.new QuitSignal)))
-
 (class Exception (Throwable)
-  ; 例外クラス。
-  ; すべての例外クラスはこのクラスを継承する。
-  ; 補足すべきでない例外を表す場合はErrorクラスを継承すること。
+  ; The class Exception and its subclasses are a form of Throwable that indicates conditions that a reasonable application might want to catch.
   )
-
-(method Exception .addMessage (msg)
-  (ensure-arguments (string? msg))
-  (.message self (+ (.message self) msg)))
 
 (class IllegalArgumentsException (Exception)
-  ; 引数が不正な場合にスローされる例外
+  ; Thrown to indicate that a method has been passed an illegal or inappropriate argument.
   )
 
 (class IllegalStateException (Exception)
-  ; 状態が不正な場合にスローされる例外
+  ; Signals that a method has been invoked at an illegal or inappropriate time.
+  ; In other words, application is not in an appropriate state for the requested operation.
+  )
+
+(class QuitSignal (Exception)
+  ; Exception that terminates the system.
+  ; In principle, this exception is not caught and terminates Paren system itself.
   )
 
 ;; stream I/O
 
 (class Stream ()
-  ;ストリームクラス。入出力の基本的なメソッドを持つ。
+  ; Abstract class for reading and writing streams.
   )
 
 (method Stream .readByte (:rest args)
@@ -1567,6 +1573,9 @@
         (write-string ") ")
         (if (same? (<- s (read)) :EOF) (break))
         (xprint (eval s))))))
+
+(function quit ()
+  (throw (.new QuitSignal)))
 
 (function load (path)
   (with-open-read (in path)
