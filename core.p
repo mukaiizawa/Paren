@@ -139,10 +139,8 @@
   ; Supports break, continue macro.
   (ensure-arguments (symbol? i))
   (with-gensyms (gn)
-    (cons for (cons (list i 0 gn n)
-                    (cons (list < i gn)
-                          (cons (<- i (++ i))
-                                body))))))
+    (list for (list i 0 gn n) (list < i gn) (list <- i (list '++ i))
+          (cons begin body))))
 
 (macro measure (:rest body)
   ; Measure the time it takes to evaluate the specified body.
