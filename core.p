@@ -141,7 +141,7 @@
   (with-gensyms (gn)
     (cons for (cons (list i 0 gn n)
                     (cons (list < i gn)
-                          (cons (list inc! i)
+                          (cons (<- i (++ i))
                                 body))))))
 
 (macro measure (:rest body)
@@ -318,9 +318,9 @@
   ; Get the the specified nth cons of the specified list l.
   ; If n is greater than the length of l, nil is returned.
   (ensure-arguments (and (list? l) (unsigned-integer? n)))
-  (if (nil? l) nil
-      (= n 0) l
-      (nthcdr (cdr l) (-- n))))
+  (for (i 0) (< i n) (<- i (++ i))
+    (<- l (cdr l)))
+  l)
 
 (function list= (x y :key (test same?))
   ; Returns whether the result of comparing each element of the specified lists x and y with the specified function test is true.
@@ -394,9 +394,11 @@
   ; Add each element of the specified args as an element of the specified list l.
   ; Each of args must be a list.
   (ensure-arguments (and (list? l) (all-satisfy? args list?)))
-  (reduce args (lambda (acc rest)
-                 (reduce rest append-atom :identity acc))
-          :identity l))
+  (let (acc nil)
+    (dolist (x (cons l args))
+      (dolist (y x)
+        (push! acc y)))
+    (reverse! acc)))
 
 (macro push! (sym x)
   ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
@@ -624,18 +626,6 @@
   ; Returns the value of the specified number x - 1.
   (ensure-arguments (number? x))
   (- x 1))
-
-(macro inc! (s :opt (v 1))
-  ; Increase the value bound by the specified symbol s by 1.
-  ; If the specified number v is supplied, increase v.
-  (ensure-arguments (symbol? s))
-  (list <- s (list '+ s v)))
-
-(macro dec! (s :opt (v 1))
-  ; Decrease the value bound by the specified symbol s by 1.
-  ; If the specified number v is supplied, decrease v.
-  (ensure-arguments (symbol? s))
-  (list <- s (list '- s v)))
 
 (function even? (x)
   ; Returns true if the specified integer x is even.
