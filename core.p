@@ -73,7 +73,7 @@
 
 (macro for (binding test update :rest body)
   ; The for macro creates a general-purpose iteration context and evaluates the specified body.
-  ; Return nil.
+  ; Returns nil.
   ; See expanded image for details.
   ; (for (i 0) (< i 10) (<- i (++ i))
   ;     expr1
@@ -88,23 +88,39 @@
   ;            :continue
   ;            (<- i (++ i))
   ;            (goto :start)
-  ;            :break))
+  ;            :break)
+  ;     nil)
   (list let binding
-     (cons labels
-           (cons :start
-           (cons (list if (list not test) '(goto :break))
-           (append body
-           (cons :continue
-           (cons update
-           (list '(goto :start)
-                 :break)))))))
-     nil))
+        (list labels
+              :start
+              (list if (list not test) '(goto :break))
+              (cons begin body)
+              :continue
+              update
+              '(goto :start)
+              :break)
+        nil))
 
 (macro while (test :rest body)
   ; The specified test is evaluated, and if the specified test is true, each of the specified body is evaluated.
   ; This repeats until the test becomes nil.
   ; Supports break, continue macro.
-  (cons 'for (cons nil (cons test (cons nil body)))))
+  ; Returns nil.
+  ; (while test
+  ;    expr1
+  ;    expr2
+  ;    ...)
+  ; (for nil test nil
+  ;    expr1
+  ;    expr2
+  ;    ...)
+  (list labels
+        :start
+        (list if (list not test) '(goto :break))
+        (cons begin body)
+        :continue
+        '(goto :start)
+        :break))
 
 (macro dolist ((i l) :rest body)
   ; Iterates over the elements of the specified list l, with index the specified i.
@@ -338,9 +354,9 @@
 (function last-cons (l)
   ; Returns the last cons that make up the specified list l.
   (ensure-arguments (list? l))
-  (if (nil? l) nil
-      (let (rec (lambda (l) (if (cdr l) (rec (cdr l)) l)))
-        (rec l))))
+  (while true
+    (if (cdr l) (<- l (cdr l))
+        (return l))))
 
 (function last (l)
   ; Returns the last element of the specified list l.
@@ -447,9 +463,10 @@
   ; The comparison is done with the specified function test which default value is same?.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
   (ensure-arguments (and (list? l) (operator? test)))
-  (if (nil? l) nil
-      (test (key (car l)) e) l
-      (find-cons (cdr l) e :test test :key key)))
+  (while true
+    (if (nil? l) (return nil)
+        (test (key (car l)) e) (return l)
+        (<- l (cdr l)))))
 
 (function find-cons-if (l f :key (key identity))
   ; Returns the cons that make up the specified list l that are not nil when the car part is evaluated as an argument of the specified function f.
