@@ -838,6 +838,7 @@
 (macro make-accessor (field)
   ; Create accessor for the specified field.
   ; If field name is 'xxx', create accessor &xxx.
+  ; Works faster than method which defined with the method macro.
   (let (key (symbol->keyword field) f (string->symbol
                                         (string+ "&" (symbol->string field))))
     (unless (bound? f)
@@ -1287,8 +1288,8 @@
   (= (&next self) -1))
 
 (method ByteAheadReader _throwIfEOF ()
-  (if (.eof? self) (throw (.message (.new IllegalStateException)
-                                    "EOF reached"))))
+  (if (.eof? self)
+      (throw (.message (.new IllegalStateException) "EOF reached"))))
 
 (method ByteAheadReader .skip ()
   ; Skip next character and returns it.
@@ -1362,20 +1363,20 @@
   (throw (.message (.new IllegalStateException) message)))
 
 (method ParenLexer _identifierLead? ()
-  (let (c (.next self))
+  (let (c (&next self))
     (or (find '(0x21 0x24 0x25 0x26 0x2A 0x2B 0x2D 0x2F 0x3C 0x3D 0x3E 0x3F
                 0x5F 0x2E 0x5B 0x5D)
               c :test =)
         (char-alpha? c))))
 
 (method ParenLexer _identifierTrail? ()
-  (or (_identifierLead? self) (char-digit? (.next self))))
+  (or (_identifierLead? self) (char-digit? (&next self))))
 
 (method ParenLexer _getString ()
   (.skip self)
-  (while (/= 0x22 (.next self))
+  (while (/= 0x22 (&next self))
     (if (.eof? self) (_raise self "string not closed")
-        (/= (.next self) 0x5C) (.get self)
+        (/= (&next self) 0x5C) (.get self)
         (begin (.skip self)
                (throw todo))))
   (.skip self)
@@ -1383,19 +1384,19 @@
 
 (method ParenLexer _getNumber (sign)
   (let (radix 10 factor 0 val 0)
-    (while (char-digit? (.next self))
+    (while (char-digit? (&next self))
       (<- val (+ (* val 10) (char->digit (.skip self)))))
-    (if (= (.next self) 0x78)
+    (if (= (&next self) 0x78)
         (begin (.skip self)
                (<- radix (if (= val 0) 16 val)
                    val 0)
-               (while (or (char-alpha? (.next self)) (char-digit? (.next self)))
+               (while (or (char-alpha? (&next self)) (char-digit? (&next self)))
                  (<- val (+ (* val radix)
                             (char->digit (.skip self) :radix radix)))))
-        (= (.next self) 0x2E)
+        (= (&next self) 0x2E)
         (begin (.skip self)
                (<- factor 0.1)
-               (while (char-digit? (.next self))
+               (while (char-digit? (&next self))
                  (<- val (+ val (* factor (char->digit (.skip self))))
                      factor (/ factor 10)))))
     (if (and (byte? sign) (= sign 0x2D)) (- val) val)))
@@ -1412,10 +1413,10 @@
 (method ParenLexer .getToken ()
   ; Returns (token-type [token]).
   (.reset self)
-  (let (sign nil next (.next self) space? (lambda (x)
+  (let (sign nil next (&next self) space? (lambda (x)
                                             (and (byte? x)
                                                  (char-space? x))))
-    (if (space? next) (begin (while (space? (.next self)) (.skip self))
+    (if (space? next) (begin (while (space? (&next self)) (.skip self))
                              (.getToken self))
         (.eof? self) '(:EOF)
         (= next 0x22) (list :string (_getString self))
@@ -1423,16 +1424,16 @@
         (= next 0x28) (begin (.skip self) '(:open-paren))
         (= next 0x29) (begin (.skip self) '(:close-paren))
         (= next 0x3A) (list :keyword (_getKeyword self))
-        (= next 0x3B) (begin (while (/= (.next self) 0x0A) (.skip self))
+        (= next 0x3B) (begin (while (/= (&next self) 0x0A) (.skip self))
                              (.getToken self))
         (begin (if (find '(0x2B 0x2D) next :test =)
                    (<- sign (.skip self)))
                nil) :unreachable
-        (char-digit? (.next self)) (list :number (_getNumber self sign))
+        (char-digit? (&next self)) (list :number (_getNumber self sign))
         (or sign (_identifierLead? self)) (begin
                                             (if sign (.put self sign))
                                             (list :symbol (_getSymbol self)))
-        (_raise self (string+ (number->string (.next self)) " illegal char")))))
+        (_raise self (string+ (number->string (&next self)) " illegal char")))))
 
 (class ParenParser ()
   lexer token-type token)
@@ -1441,15 +1442,12 @@
   (&lexer self (.init (.new ParenLexer) :string string :stream stream))
   self)
 
-(method ParenParser _raise ()
-  (throw (.message (.new IllegalStateException) "illegal token")))
-
 (method ParenParser _scan ()
   (let (next (.getToken (&lexer self)))
     (&token-type self (car next))
     (&token self (cadr next))))
 
-(method ParenParser _parseList (:opt expect-close?)
+(method ParenParser _parseList ()
   (_scan self)
   (if (same? (&token-type self) :close-paren) nil
       (cons (_parseS self) (_parseList self))))
@@ -1463,7 +1461,7 @@
             (same? type :keyword)
             (same? type :string)
             (same? type :number)) (&token self)
-        (_raise self))))
+        (throw (.message (.new IllegalStateException) "syntax error")))))
 
 (method ParenParser .parse ()
   (_scan self)
