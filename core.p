@@ -394,11 +394,10 @@
   ; Add each element of the specified args as an element of the specified list l.
   ; Each of args must be a list.
   (ensure-arguments (and (list? l) (all-satisfy? args list?)))
-  (let (acc nil)
-    (dolist (x (cons l args))
-      (dolist (y x)
-        (push! acc y)))
-    (reverse! acc)))
+  (for (acc nil x l y args) true nil
+    (if x (begin (push! acc (car x)) (<- x (cdr x)))
+        y (<- x (car y) y (cdr y))
+        (return (reverse! acc)))))
 
 (macro push! (sym x)
   ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
