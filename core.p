@@ -384,10 +384,11 @@
 (function append-atom (l x)
   ; Returns a new list with the specified x appended to the end of the specified list l.
   (ensure-arguments (list? l))
-  (let (rec (lambda (l)
-              (if l (cons (car l) (rec (cdr l)))
-                  (list x))))
-    (rec l)))
+  (let (acc nil)
+    (dolist (i l)
+      (push! acc i))
+    (push! acc x)
+    (reverse! acc)))
 
 (function append (l :rest args)
   ; Add each element of the specified args as an element of the specified list l.
