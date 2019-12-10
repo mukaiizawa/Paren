@@ -404,9 +404,10 @@
   ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
   ; Returns x.
   (ensure-arguments (symbol? sym))
-  (list begin
-        (list <- sym (list cons x sym))
-        x))
+  (with-gensyms (y)
+    (list let (list y x)
+          (list <- sym (list cons y sym))
+          y)))
 
 (macro pop! (sym)
   ; Returns the head of the list that binds the specified symbol sym and rebinds sym with the cdr of the list.
@@ -427,7 +428,11 @@
 (function map (args f)
   ; Returns a list of the results of mapping each element of the specified list args with the specified function f.
   (ensure-arguments (and (list? args) (operator? f)))
-  (if args (cons (f (car args)) (map (cdr args) f))))
+  (let (acc nil)
+    (while args
+      (push! acc (f (car args)))
+      (<- args (cdr args)))
+    (reverse! acc)))
 
 (function reverse (l)
   ; Returns a new list with the elements of the specified list l in reverse order.
