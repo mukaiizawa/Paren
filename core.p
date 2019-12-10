@@ -126,20 +126,21 @@
   ; Iterates over the elements of the specified list l, with index the specified i.
   ; Evaluate each of the specified body once for each element in list l, with index i bound to the element.
   ; Supports break, continue macro.
+  ; Returns nil.
   (ensure-arguments (symbol? i))
   (with-gensyms (gl)
-    (cons for (cons (list gl l i (list car gl))
-                    (cons gl
-                          (cons (list <- gl (list cdr gl) i (list car gl))
-                                body))))))
+    (list 'for (list gl l i (list car gl)) gl (list <- gl (list cdr gl)
+                                                    i (list car gl))
+          (cons begin body))))
 
 (macro dotimes ((i n) :rest body)
   ; Iterates over a series of integers, from 0 to the specified n.
   ; The specified body once for each integer from 0 up to but not including the value of n, with the specified i bound to each integer.
   ; Supports break, continue macro.
+  ; Returns nil.
   (ensure-arguments (symbol? i))
   (with-gensyms (gn)
-    (list for (list i 0 gn n) (list < i gn) (list <- i (list '++ i))
+    (list 'for (list i 0 gn n) (list < i gn) (list <- i (list '++ i))
           (cons begin body))))
 
 (macro measure (:rest body)
