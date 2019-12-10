@@ -823,25 +823,23 @@
                          (string+ "method " (symbol->string method-sym)
                                   " not found"))))))
 
-(macro make-accessor (cls-sym iv)
-  ; Create accessor for the specified instance variable iv.
-  ; If instance variable name is iv, create accessor &var.
-  ; (make-accessor Object hash)
-  ; (method Object &hash (k :opt (v nil v?))
-  ;   (if v? (set-instance-variable! self 'hash v)
-  ;       (get-instance-variable self 'hash)))
-  (with-gensyms (val val?)
-    (list method cls-sym (string->symbol (string+ "&" (symbol->string iv)))
-          (list :opt (list val nil val?))
-          (list if val?
-                (list begin
-                      (list 'assoc! 'self (symbol->keyword iv) val)
-                      'self)
-                (list 'assoc 'self (symbol->keyword iv))))))
+(macro make-accessor (field)
+  ; Create accessor for the specified field.
+  ; If field name is 'xxx', create accessor &xxx.
+  (let (key (symbol->keyword field) f (string->symbol
+                                        (string+ "&" (symbol->string field))))
+    (unless (bound? f)
+      (with-gensyms (receiver val val?)
+        (list 'function f (list receiver :opt (list val nil val?))
+              :method
+              (list 'ensure-arguments (list 'object? receiver))
+              (list if val? (list begin (list 'assoc! receiver key val)
+                                  receiver)
+                    (list 'assoc receiver key)))))))
 
 (macro make-method-dispatcher (method-sym)
   (with-gensyms (receiver args)
-    (list function method-sym (list receiver :rest args)
+    (list 'function method-sym (list receiver :rest args)
           :method
           (list ensure-arguments (list object? receiver))
           (list 'apply
@@ -860,18 +858,18 @@
   (let (Object? (same? cls-sym 'Object))
     (ensure-arguments (and (all-satisfy? fields symbol?)
                            (not (bound? cls-sym))))
-    (append
-      (list begin0
-            (list quote cls-sym)
-            (list <- cls-sym (list quote (list :class 'Class
-                                               :symbol cls-sym
-                                               :super (if (not Object?) super)
-                                               :features features
-                                               :fields fields
-                                               :methods nil)))
-            (list 'push! '$class cls-sym)
-            (list 'push! '$class (list quote cls-sym)))
-      (map fields (lambda (var) (list 'make-accessor cls-sym var))))))
+    (list begin0
+          (list quote cls-sym)
+          (list <- cls-sym (list quote (list :class 'Class
+                                             :symbol cls-sym
+                                             :super (if (not Object?) super)
+                                             :features features
+                                             :fields fields
+                                             :methods nil)))
+          (list 'push! '$class cls-sym)
+          (list 'push! '$class (list quote cls-sym))
+          (cons begin
+                (map fields (lambda (field) (list 'make-accessor field)))))))
 
 (macro method (cls-sym method-sym args :rest body)
   (ensure-arguments (and (class-exists? cls-sym)
