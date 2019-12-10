@@ -120,7 +120,8 @@
         (cons begin body)
         :continue
         '(goto :start)
-        :break))
+        :break
+        nil))
 
 (macro dolist ((i l) :rest body)
   ; Iterates over the elements of the specified list l, with index the specified i.
@@ -886,7 +887,8 @@
   (ensure-arguments (and (class-exists? cls-sym)
                          (not (and (bound? method-sym)
                                    (not (method? (eval method-sym)))))))
-  (list begin
+  (list begin0
+        (list quote method-sym)
         (if (not (bound? method-sym))
             (list make-method-dispatcher method-sym))
         (list assoc! cls-sym :methods
@@ -909,9 +911,9 @@
   ;   ...)
   ; (basic-catch (lambda (gsym)
   ;                (ensure-arguments (and (object? gsym) (is-a? Throwable)))
-  ;                (if (is-a gsym Exception1) (apply (lambda (e) ...) gsym)
-  ;                    (is-a gsym Exception2) (apply (lambda (e) ...) gsym)
-  ;                    (is-a gsym Exception3) (apply (lambda (e) ...) gsym)
+  ;                (if (is-a gsym Exception1) ((lambda (e) ...) gsym)
+  ;                    (is-a gsym Exception2) ((lambda (e) ...) gsym)
+  ;                    (is-a gsym Exception3) ((lambda (e) ...) gsym)
   ;                    (throw gsym)))
   ;              ...)
   (with-gensyms (gargs)
@@ -919,33 +921,30 @@
       (push! if-clause if)
       (dolist (h handlers)
         (push! if-clause (list 'is-a? gargs (car h)))
-        (push! if-clause (list apply (cons lambda (cons (cadr h) (cddr h)))
-                               (list 'list gargs))))
-      (push! if-clause (list throw gargs))
-      (cons basic-catch
-            (cons (list lambda (list gargs)
-                        (list begin
-                              (list ensure-arguments
-                                    (list and
-                                          (list object? gargs)
-                                          (list is-a? gargs 'Throwable)))
-                              (reverse! if-clause)))
-                  body)))))
+        (push! if-clause (list (cons lambda (cons (cadr h) (cddr h))) gargs)))
+      (push! if-clause (list 'throw gargs))
+      (list basic-catch
+            (list lambda (list gargs)
+                  (list begin
+                        (list print (list 'is-a? gargs 'QuitSignal))
+                        (list 'ensure-arguments
+                              (list 'and (list 'object? gargs)
+                                    (list 'is-a? gargs 'Throwable)))
+                        (reverse! if-clause)))
+            (cons begin body)))))
 
 (function object? (x)
   ; Returns true if the specified x is object.
   (and (list? x) (same? (car x) :class)))
 
 (function is-a? (o cls)
-  ; Returns true if the specified o regarded as the specified class cls's object.
+  ; Returns true if the specified object o regarded as the specified class cls's instance.
   (ensure-arguments (and (object? o) (object? cls)
                          (same? (assoc cls :class) 'Class)))
-  (let (cls-sym (assoc cls :symbol)
-                rec (lambda (o-cls-sym)
-                      (and o-cls-sym
-                           (or (same? o-cls-sym cls-sym)
-                               (rec (assoc (find-class o-cls-sym) :super))))))
-    (rec (assoc o :class))))
+  (let (o-cls-sym (assoc o :class) cls-sym (assoc cls :symbol))
+    (while o-cls-sym
+      (if (same? o-cls-sym cls-sym) (return true)
+          (<- o-cls-sym (assoc (find-class o-cls-sym) :super))))))
 
 (class Object ()
   ; Object is a class that is the basis of all class hierarchies.
@@ -1680,8 +1679,7 @@
 ;   (write-line ":hello" out)
 ;   (write-line ":hello" out)
 ;   (write-line ":hello" out)
-;   (write-line ":hello" out)
-;   )
+;   (write-line ":hello" out))
 ; (load "test.wk")
 
 (function boot (args)
