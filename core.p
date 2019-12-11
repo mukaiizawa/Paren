@@ -1407,7 +1407,7 @@
               (let (sign nil next (&next self))
                 (if (space? next) (begin
                                     (while (space? (&next self)) (.skip self))
-                                    (.lex self))
+                                    (lex))
                     (.eof? self) '(:EOF)
                     (= next 0x22) (list :string (lex-string))
                     (= next 0x27) (begin (.skip self) '(:quote))
@@ -1416,7 +1416,7 @@
                     (= next 0x3A) (list :keyword (lex-keyword))
                     (= next 0x3B) (begin
                                     (while (/= (&next self) 0x0A) (.skip self))
-                                    (.lex self))
+                                    (lex))
                     (begin (if (find '(0x2B 0x2D) next :test =)
                                (<- sign (.skip self)))
                            nil) :unreachable
