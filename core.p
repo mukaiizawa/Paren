@@ -327,12 +327,11 @@
   ; Returns whether the result of comparing each element of the specified lists x and y with the specified function test is true.
   ; Always returns nil if x and y are different lengths.
   (ensure-arguments (and (list? x) (list? y) (operator? test)))
-  (let (rec (lambda (x y)
-              (if (and (nil? x) (nil? y)) true
-                  (or (nil? x) (nil? y)) nil
-                  (and (test (car x) (car y))
-                       (rec (cdr x) (cdr y))))))
-    (rec x y)))
+  (while true
+    (if (and (nil? x) (nil? y)) (return true)
+        (or (nil? x) (nil? y)) (return nil)
+        (test (car x) (car y)) (<- x (cdr x) y (cdr y))
+        (return nil))))
 
 (function sublist (l s :opt e)
   ; Returns a partial list with elements from the specified s to the specified e -1 of the specified list l.
