@@ -366,10 +366,7 @@
 (function butlast (l)
   ; Returns a list excluding the last element of the specified list l.
   (ensure-arguments (list? l))
-  (let (rec (lambda (l)
-              (if (nil? (cdr l)) nil
-                  (cons (car l) (rec (cdr l))))))
-    (rec l)))
+  (sublist l 0 (-- (length l))))
 
 (function .. (s e :opt (step 1))
   ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
