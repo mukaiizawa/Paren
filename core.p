@@ -1033,15 +1033,15 @@
 
 (method Throwable .printStackTrace ()
   (write-line (.toString self))
-  (dolist (x (reverse (.stackTrace self)))
+  (dolist (x (.stackTrace self))
     (write-string "\tat: ") (print x)))
 
 (method Throwable .printSimpleStackTrace ()
   (write-line (.toString self))
-  (for (i 0 st (reverse (.stackTrace self))) st (<- i (++ i) st (cdr st))
+  (for (i 0 st (.stackTrace self)) st (<- i (++ i) st (cdr st))
     (if (< i 15) (begin (write-string "\tat: ")
                         (simple-print (car st)))
-        (begin (write-string "\t...\n")
+        (begin (write-string "\t\t...\n")
                (break)))))
 
 (class Error (Throwable)
@@ -1521,13 +1521,13 @@
   (.writeByte stream byte)
   byte)
 
-(function write-line (:opt args (stream $stdout))
+(function write-line (:opt args (stream (dynamic $stdout)))
   ; Write the specified stirng args to stream and write 0x0a.
   (ensure-argument (or (nil? args) (string? args)))
   (if args (write-string args stream))
   (write-byte 0x0A stream))
 
-(function write-string (s :opt (stream $stdout))
+(function write-string (s :opt (stream (dynamic $stdout)))
   ; Write the specified stirng s to the specified stream.
   (ensure-argument (and (string? s) (is-a? stream Stream)))
   (.writeString stream s)
@@ -1541,7 +1541,7 @@
   ; (let (mem (.new MemoryStream))
   ;    (if s (.writeString mem s))
   ;    expr1 expr2 ...
-  ;    mem)
+  ;    (.toString mem))
   (list let (list mem (list '.new 'MemoryStream))
         (list if s (list '.writeString mem s))
         (cons begin body)
@@ -1580,16 +1580,17 @@
   ; Returns :EOF if eof reached.
   (.parse (.init (.new ParenParser) :stream stream)))
 
-(function simple-print (x :opt (stream (dynamic $stdin)))
+(function simple-print (x :opt (stream (dynamic $stdout)))
   ; Print the specified x as a simple format.
   ; Returns x;
   (let (print-s-expr (lambda (x)
-                       (if (cons? x) (print-cons x)
-                           (print-atom x)))
+                     (if (cons? x) (print-cons x)
+                         (print-atom x)))
         print-cons (lambda (x)
                      (write-string "(")
                      (for (i 0) x (<- i (++ i) x (cdr x))
-                       (if (> i 2) (begin (write-string " ...") (break))
+                       (if (= i 3) (begin (write-string " ...")
+                                          (break))
                            (begin (if (/= i 0) (write-string " "))
                                   (print-s-expr (car x)))))
                      (write-string ")"))
@@ -1614,10 +1615,10 @@
                          (number? x) (write-string (number->string x))
                          (throw (.new IllegalStateException)))))
     (print-s-expr x)
-    (write-line)
-    x))
+    (write-byte 0x0A))
+  x)
 
-(function print (x :opt (stream (dynamic $stdin)))
+(function print (x :opt (stream (dynamic $stdout)))
   ; print the specified x as a readable format.
   (let (print-s-expr (lambda (x)
                        (if (cons? x) (print-cons x)
