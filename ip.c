@@ -983,7 +983,6 @@ SPECIAL(goto)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   fs_push(gen0(GOTO_INST));
-  fs_push(gen0(EVAL_INST));
   reg[0] = argv->cons.car;
   return TRUE;
 }
