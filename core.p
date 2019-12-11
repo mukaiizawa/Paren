@@ -478,9 +478,9 @@
   ; If there is no such cons, nil is returned.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
   (ensure-arguments (and (list? l) (operator? f)))
-  (if (nil? l) nil
-      (f (key (car l))) l
-      (find-cons-if (cdr l) f :key key)))
+  (while l
+    (if (f (key (car l))) (return l)
+        (<- l (cdr l)))))
 
 (function find (l e :key (test same?) (key identity))
   ; Returns an element equal to the specified element e from the beginning of the specified list l.
@@ -503,8 +503,10 @@
   ; Otherwise returns nil.
   ; As soon as any element evaluates to nil, and returns nil without evaluating the remaining elements
   (ensure-arguments (and (list? l) (operator? f)))
-  (if (nil? l) true
-      (and (f (car l)) (all-satisfy? (cdr l) f))))
+  (while l
+    (if (f (car l)) (<- l (cdr l))
+        (return nil)))
+  true)
 
 (function any-satisfy? (l f)
   ; Returns true if any element of the specified list l returns a not nil value which evaluated as an argument to the specified function f.
@@ -512,17 +514,21 @@
   ; It returns nil if l is empty.
   ; As soon as any element evaluates to not nil, and returns it without evaluating the remaining elements.
   (ensure-arguments (and (list? l) (operator? f)))
-  (if l (or (f (car l)) (any-satisfy? (cdr l) f))))
+  (while l
+    (if (f (car l)) (return true)
+        (<- l (cdr l)))))
 
 (function each-adjacent-satisfy? (l f)
   ; Returns true if each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
   (ensure-arguments (and (list? l) (operator? f)))
-  (if (nil? (cdr l)) true
-      (and (f (car l) (cadr l)) (each-adjacent-satisfy? (cdr l) f))))
+  (while true
+    (if (nil? (cdr l)) (return true)
+        (f (car l) (cadr l)) (<- l (cdr l))
+        (return nil))))
 
 ; associated list
 
-(function assoc-not-found-exception (k)
+(function assoc-property-not-found (k)
   (.message (.new IllegalStateException)
             (string+ "property " (symbol->string k) " not found")))
 
@@ -533,7 +539,7 @@
   (while al
     (if (same? (car al) k) (return (cadr al))
         (<- al (cddr al))))
-  (throw (assoc-not-found-exception k)))
+  (throw (assoc-property-not-found k)))
 
 (function assoc! (al k v)
   ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
@@ -542,7 +548,7 @@
   (while al
     (if (same? (car al) k) (return (car! (cdr al) v))
         (<- al (cddr al))))
-  (throw (assoc-not-found-exception k)))
+  (throw (assoc-property-not-found k)))
 
 ; char
 
