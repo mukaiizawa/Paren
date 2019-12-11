@@ -808,7 +808,7 @@
   (find $class cls-sym))
 
 (function find-class (cls-sym)
-  (ensure-arguments (and (symbol? cls-sym) (class-exists? cls-sym)))
+  (ensure-arguments (symbol? cls-sym))
   (let (cls nil)
     (if (<- cls (splay-find $class-cache cls-sym)) cls
         (begin (<- cls (assoc $class cls-sym))
@@ -820,20 +820,17 @@
         m nil
         find-class-method
             (lambda (cls)
-              (cadr (find-cons (car (nthcdr cls 11)) method-sym)))    ; <=> (.cls :methods)
-        find-feature-method
-            (lambda (features)
-              (and features
-                   (or (find-class-method (find-class (car features)))
-                       (find-feature-method (cdr features)))))
+              (cadr (find-cons (nth cls 11) method-sym)))
         rec
-            (lambda (cls)
-              (or (find-class-method cls)
-                  (find-feature-method (car (nthcdr cls 7)))    ; <=> (assoc cls :features)
-                  (let (super (car (nthcdr cls 5)))    ; <=> (assoc cls :super)
-                    (and super (rec (find-class super)))))))
+            (lambda (cls-sym)
+              (for (cls-sym cls-sym cls nil) cls-sym (<- cls-sym (nth cls 5))
+                (<- cls (find-class cls-sym))
+                (if (<- m (find-class-method cls)) (return m)
+                    (dolist (feature (nth cls 7))
+                      (if (<- m (find-class-method (find-class feature)))
+                          (return m)))))))
     (if (<- m (splay-find $method-cache key)) m
-        (<- m (rec (find-class cls-sym))) (splay-add $method-cache key m)
+        (<- m (rec cls-sym)) (splay-add $method-cache key m)
         (throw (.message (.new IllegalStateException)
                          (string+ "method " (symbol->string method-sym)
                                   " not found"))))))
@@ -930,7 +927,6 @@
       (list basic-catch
             (list lambda (list gargs)
                   (list begin
-                        (list print (list 'is-a? gargs 'QuitSignal))
                         (list 'ensure-arguments
                               (list 'and (list 'object? gargs)
                                     (list 'is-a? gargs 'Throwable)))
@@ -985,14 +981,13 @@
   ; Construct an instance.
   ; If .init method has argument, must invoke after create an instance.
   ; Otherwise automatically invoke .init method.
-  (let (o nil cls self fields nil)
-    (while cls
-      (<- fields (reverse! (map (assoc cls :fields) symbol->keyword)))
-      (while fields
-        (push! o (if (same? (car fields) :class) (assoc self :symbol)))
-        (push! o (car fields))
-        (<- fields (cdr fields)))
-      (<- cls (and (assoc cls :super) (find-class (assoc cls :super)))))
+  (let (o nil)
+    (for (cls self) cls (<- cls (and (assoc cls :super)
+                                     (find-class (assoc cls :super))))
+      (dolist (field (reverse! (map (assoc cls :fields) symbol->keyword)))
+        (push! o nil)
+        (push! o field)))
+    (car! (cdr o) (assoc self :symbol))
     (if (= (length (lambda-parameter (find-method (assoc o :class) '.init))) 1)
         (.init o)
         o)))
@@ -1047,9 +1042,9 @@
   ; Exception that thrown when an abstract method is not implemented.
   )
 
-(class QuitSignal (Exception)
-  ; Exception that terminates the system.
-  ; In principle, this exception is not caught and terminates Paren system itself.
+(class QuitSignal (Error)
+  ; Error that terminates the system.
+  ; In principle, this Error is not caught and terminates Paren system itself.
   )
 
 ;; stream I/O
