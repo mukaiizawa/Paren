@@ -130,7 +130,8 @@
   ; Returns nil.
   (ensure-arguments (symbol? i))
   (with-gensyms (gl)
-    (list 'for (list gl l i (list car gl)) gl (list <- gl (list cdr gl)
+    (list 'for (list gl l i (list car gl)) gl (list <-
+                                                    gl (list cdr gl)
                                                     i (list car gl))
           (cons begin body))))
 
@@ -990,8 +991,7 @@
         (push! o (car fields))
         (<- fields (cdr fields)))
       (<- cls (and (assoc cls :super) (find-class (assoc cls :super)))))
-    (if (list= (lambda-parameter (find-method (assoc o :class) '.init))
-               '(self))
+    (if (= (length (lambda-parameter (find-method (assoc o :class) '.init))) 1)
         (.init o)
         o)))
 
