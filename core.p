@@ -857,7 +857,7 @@
           (list ensure-arguments (list object? receiver))
           (list 'apply
                 (list 'find-method
-                      (list 'assoc receiver :class)
+                      (list 'cadr receiver)    ; <=> (assoc cls :class)
                       (list quote method-sym))
                 (list 'cons receiver args)))))
 
@@ -940,8 +940,8 @@
 (function is-a? (o cls)
   ; Returns true if the specified object o regarded as the specified class cls's instance.
   (ensure-arguments (and (object? o) (object? cls)
-                         (same? (assoc cls :class) 'Class)))
-  (let (o-cls-sym (assoc o :class) cls-sym (assoc cls :symbol))
+                         (same? (cadr cls) 'Class)))
+  (let (o-cls-sym (cadr o) cls-sym (assoc cls :symbol))
     (while o-cls-sym
       (if (same? o-cls-sym cls-sym) (return true)
           (<- o-cls-sym (assoc (find-class o-cls-sym) :super))))))
@@ -1027,6 +1027,11 @@
   (write-line (.toString self))
   (dolist (x (.stackTrace self))
     (write-string "	at: ") (print x)))
+
+(method Throwable .printSimpleStackTrace ()
+  (write-line (.toString self))
+  (dolist (x (.stackTrace self))
+    (write-string "	at: ") (simple-print x) (write-byte 0x0A)))
 
 (class Error (Throwable)
   ; An Error is a subclass of Throwable that indicates serious problems that a reasonable application should not try to catch.
@@ -1371,7 +1376,25 @@
                        (if (.eof? self) (raise "string not closed")
                            (/= (&next self) 0x5C) (.get self)
                            (begin (.skip self)
-                                  (throw todo))))
+                                  (let (c (.skip self))
+                                    (if (= c 0x61) (.put self 0x07)
+                                        (= c 0x62) (.put self 0x08)
+                                        (= c 0x65) (.put self 0x1B)
+                                        (= c 0x66) (.put self 0x0C)
+                                        (= c 0x6E) (.put self 0x0A)
+                                        (= c 0x72) (.put self 0x0D)
+                                        (= c 0x74) (.put self 0x09)
+                                        (= c 0x76) (.put self 0x0B)
+                                        (= c 0x78) (.put self
+                                                         (+
+                                                           (* 16
+                                                              (char->digit
+                                                                (.skip self)
+                                                                :radix 16))
+                                                           (char->digit
+                                                             (.skip self)
+                                                             :radix 16)))
+                                        (.put c))))))
                      (.skip self)
                      (.token self))
         lex-symbol (lambda ()
@@ -1629,7 +1652,7 @@
   (let (s nil)
     (while true
       (catch ((QuitSignal (e) (break))
-              (Exception (e) (.printStackTrace e)))
+              (Exception (e) (.printSimpleStackTrace e)))
         (write-string ") ")
         (if (same? (<- s (read)) :EOF) (break))
         (print (eval s))))))
