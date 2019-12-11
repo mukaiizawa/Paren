@@ -337,12 +337,12 @@
   ; Returns a partial list with elements from the specified s to the specified e -1 of the specified list l.
   ; Throw IllegalArgumentsException when s is less than zero or e is greater than the length of the list or s is greater than e.
   ; The partial list is created separately from l.
-  (let (len (length l) e (or e len) rec (lambda (l n)
-                                          (if (= n 0) nil
-                                              (cons (car l)
-                                                    (rec (cdr l) (-- n))))))
+  (let (acc nil len (length l) e (or e len))
     (ensure-arguments (and (unsigned-integer? s) (<= s e) (<= e len)))
-    (rec (nthcdr l s) (- e s))))
+    (for (i 0) (< i e) (<- i (++ i) l (cdr l))
+      (if (< i s) (continue)
+          (push! acc (car l))))
+    (reverse! acc)))
 
 (function copy-list (l)
   ; Create and return a duplicate of the specified list l.
