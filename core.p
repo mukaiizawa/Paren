@@ -1028,9 +1028,6 @@
   ; Most such errors are abnormal conditions. 
   )
 
-(function Error.shouldBeImplemented ()
-  (throw (.message (.new Error) "should be implemented")))
-
 (class Exception (Throwable)
   ; The class Exception and its subclasses are a form of Throwable that indicates conditions that a reasonable application might want to catch.
   )
@@ -1042,6 +1039,10 @@
 (class IllegalStateException (Exception)
   ; Signals that a method has been invoked at an illegal or inappropriate time.
   ; In other words, application is not in an appropriate state for the requested operation.
+  )
+
+(class UnimplementedException (Exception)
+  ; Exception that thrown when an abstract method is not implemented.
   )
 
 (class QuitSignal (Exception)
@@ -1058,11 +1059,11 @@
 (method Stream .readByte (:rest args)
   ; Read 1byte from stream.
   ; Returns -1 when the stream reaches the end.
-  (Error.shouldBeImplemented))
+  (throw (.new UnimplementedException)))
 
 (method Stream .writeByte (:rest args)
   ; Write 1byte to stream.
-  (Error.shouldBeImplemented))
+  (throw (.new UnimplementedException)))
 
 (method Stream .readChar ()
   ; Read 1character from stream.
@@ -1104,7 +1105,7 @@
 
 (method Stream .readLine (:rest args)
   ; Read line.
-  (Error.shouldBeImplemented))
+  (throw (.new UnimplementedException)))
 
 (method Stream .writeString (s)
   ; Write string to stream.
@@ -1116,11 +1117,11 @@
 
 (method Stream .seek (:rest args)
   ; Move the read position on the stream to the specified offset.
-  (Error.shouldBeImplemented))
+  (throw (.new UnimplementedException)))
 
 (method Stream .tell (:rest args)
   ; Returns the read position on the stream as a byte offset from the beginning.
-  (Error.shouldBeImplemented))
+  (throw (.new UnimplementedException)))
 
 (class MemoryStream (Stream)
   ; A stream whose contents are held in memory.
@@ -1192,19 +1193,14 @@
 (method FileStream .readLine ()
   (fgets (&fp self)))
 
-(method FileStream _basicWrite (buf from size)
-  (ensure-arguments (and (or (byte-array? buf)
-                             (string? buf))
-                         (unsigned-integer? from)
-                         (unsigned-integer? size)))
-  (fwrite buf from size (&fp self)))
-
 (method FileStream .writeByte (byte)
   (ensure-arguments (byte? byte))
   (fputc byte (&fp self)))
 
-(method FileStream .writeString(s)
-  (_basicWrite self s 0 (string-byte-length s)))
+(method FileStream .writeString(o)
+  (ensure-arguments (or (byte-array? o) (string? o)))
+  (fwrite o 0 (if (byte-array? o) (byte-array-length o) (string-byte-length o))
+          (&fp self)))
 
 (method FileStream .seek (offset)
   (fseek (&fp self) offset))
@@ -1223,10 +1219,6 @@
 (method Path .init (:rest files)
   ; Initialize by passing the specified list of files that make up this path.
   (&files self files)
-  self)
-
-(method Path _reset ()
-  (&mode self nil)
   self)
 
 (method Path .parent ()
@@ -1287,15 +1279,11 @@
   ; Returns true if eof reached.
   (= (&next self) -1))
 
-(method ByteAheadReader _throwIfEOF ()
-  (if (.eof? self)
-      (throw (.message (.new IllegalStateException) "EOF reached"))))
-
 (method ByteAheadReader .skip ()
   ; Skip next character and returns it.
-  (_throwIfEOF self)
-  (begin0 (&next self)
-          (&next self (.readByte (&stream self)))))
+  (if (.eof? self) (throw (.message (.new IllegalStateException) "EOF reached"))
+      (begin0 (&next self)
+              (&next self (.readByte (&stream self))))))
 
 (method ByteAheadReader .get ()
   ; Append next character to token and returns it.
@@ -1341,7 +1329,6 @@
   (same? (&next self) :EOF))
 
 (method AheadReader .skip ()
-  (_throwIfEOF self)
   (begin0 (&next self)
           (&next self (.readChar (&stream self)))))
 
@@ -1359,81 +1346,82 @@
 
 (class ParenLexer (ByteAheadReader))
 
-(method ParenLexer _raise (message)
-  (throw (.message (.new IllegalStateException) message)))
-
-(method ParenLexer _identifierLead? ()
-  (let (c (&next self))
-    (or (find '(0x21 0x24 0x25 0x26 0x2A 0x2B 0x2D 0x2F 0x3C 0x3D 0x3E 0x3F
-                0x5F 0x2E 0x5B 0x5D)
-              c :test =)
-        (char-alpha? c))))
-
-(method ParenLexer _identifierTrail? ()
-  (or (_identifierLead? self) (char-digit? (&next self))))
-
-(method ParenLexer _getString ()
-  (.skip self)
-  (while (/= 0x22 (&next self))
-    (if (.eof? self) (_raise self "string not closed")
-        (/= (&next self) 0x5C) (.get self)
-        (begin (.skip self)
-               (throw todo))))
-  (.skip self)
-  (.token self))
-
-(method ParenLexer _getNumber (sign)
-  (let (radix 10 factor 0 val 0)
-    (while (char-digit? (&next self))
-      (<- val (+ (* val 10) (char->digit (.skip self)))))
-    (if (= (&next self) 0x78)
-        (begin (.skip self)
-               (<- radix (if (= val 0) 16 val)
-                   val 0)
-               (while (or (char-alpha? (&next self)) (char-digit? (&next self)))
-                 (<- val (+ (* val radix)
-                            (char->digit (.skip self) :radix radix)))))
-        (= (&next self) 0x2E)
-        (begin (.skip self)
-               (<- factor 0.1)
-               (while (char-digit? (&next self))
-                 (<- val (+ val (* factor (char->digit (.skip self))))
-                     factor (/ factor 10)))))
-    (if (and (byte? sign) (= sign 0x2D)) (- val) val)))
-
-(method ParenLexer _getKeyword ()
-  (.skip self)
-  (while (_identifierTrail? self) (.get self))
-  (string->keyword (.token self)))
-
-(method ParenLexer _getSymbol ()
-  (while (_identifierTrail? self) (.get self))
-  (string->symbol (.token self)))
-
-(method ParenLexer .getToken ()
+(method ParenLexer .lex ()
   ; Returns (token-type [token]).
-  (.reset self)
-  (let (sign nil next (&next self) space? (lambda (x)
-                                            (and (byte? x)
-                                                 (char-space? x))))
-    (if (space? next) (begin (while (space? (&next self)) (.skip self))
-                             (.getToken self))
-        (.eof? self) '(:EOF)
-        (= next 0x22) (list :string (_getString self))
-        (= next 0x27) (begin (.skip self) '(:quote))
-        (= next 0x28) (begin (.skip self) '(:open-paren))
-        (= next 0x29) (begin (.skip self) '(:close-paren))
-        (= next 0x3A) (list :keyword (_getKeyword self))
-        (= next 0x3B) (begin (while (/= (&next self) 0x0A) (.skip self))
-                             (.getToken self))
-        (begin (if (find '(0x2B 0x2D) next :test =)
-                   (<- sign (.skip self)))
-               nil) :unreachable
-        (char-digit? (&next self)) (list :number (_getNumber self sign))
-        (or sign (_identifierLead? self)) (begin
-                                            (if sign (.put self sign))
-                                            (list :symbol (_getSymbol self)))
-        (_raise self (string+ (number->string (&next self)) " illegal char")))))
+  (let (space? (lambda (x) (and (byte? x) (char-space? x)))
+        raise (lambda (message)
+                (throw (.message (.new IllegalStateException) message)))
+        identifierLead? (lambda ()
+                          (let (c (&next self))
+                            (or (find '(0x21 0x24 0x25 0x26 0x2A 0x2B 0x2D 0x2F
+                                        0x3C 0x3D 0x3E 0x3F 0x5F 0x2E 0x5B 0x5D)
+                                      c :test =)
+                                (char-alpha? c))))
+        identifierTrail? (lambda ()
+                           (or (identifierLead?)
+                               (char-digit? (&next self))))
+        lex-string (lambda ()
+                     (.skip self)
+                     (while (/= 0x22 (&next self))
+                       (if (.eof? self) (raise "string not closed")
+                           (/= (&next self) 0x5C) (.get self)
+                           (begin (.skip self)
+                                  (throw todo))))
+                     (.skip self)
+                     (.token self))
+        lex-symbol (lambda ()
+                     (while (identifierTrail?) (.get self))
+                     (string->symbol (.token self)))
+        lex-keyword (lambda ()
+                      (.skip self)
+                      (while (identifierTrail?) (.get self))
+                      (string->keyword (.token self)))
+        lex-number (lambda (sign)
+                     (let (radix 10 factor 0 val 0)
+                       (while (char-digit? (&next self))
+                         (<- val (+ (* val 10) (char->digit (.skip self)))))
+                       (if (= (&next self) 0x78)
+                           (begin (.skip self)
+                                  (<- radix (if (= val 0) 16 val)
+                                      val 0)
+                                  (while (or (char-alpha? (&next self))
+                                             (char-digit? (&next self)))
+                                    (<- val (+ (* val radix)
+                                               (char->digit (.skip self)
+                                                            :radix radix)))))
+                           (= (&next self) 0x2E)
+                           (begin (.skip self)
+                                  (<- factor 0.1)
+                                  (while (char-digit? (&next self))
+                                    (<- val (+ val (* factor (char->digit
+                                                               (.skip self))))
+                                        factor (/ factor 10)))))
+                       (if (and (byte? sign) (= sign 0x2D)) (- val) val)))
+        lex (lambda ()
+              (.reset self)
+              (let (sign nil next (&next self))
+                (if (space? next) (begin
+                                    (while (space? (&next self)) (.skip self))
+                                    (.lex self))
+                    (.eof? self) '(:EOF)
+                    (= next 0x22) (list :string (lex-string))
+                    (= next 0x27) (begin (.skip self) '(:quote))
+                    (= next 0x28) (begin (.skip self) '(:open-paren))
+                    (= next 0x29) (begin (.skip self) '(:close-paren))
+                    (= next 0x3A) (list :keyword (lex-keyword))
+                    (= next 0x3B) (begin
+                                    (while (/= (&next self) 0x0A) (.skip self))
+                                    (.lex self))
+                    (begin (if (find '(0x2B 0x2D) next :test =)
+                               (<- sign (.skip self)))
+                           nil) :unreachable
+                    (char-digit? (&next self)) (list :number (lex-number sign))
+                    (or sign (identifierLead?)) (begin
+                                                  (if sign (.put self sign))
+                                                  (list :symbol (lex-symbol)))
+                    (raise (string+ (number->string (&next self))
+                                    " illegal char"))))))
+    (lex)))
 
 (class ParenParser ()
   lexer)
@@ -1446,7 +1434,7 @@
   (let (token-type nil
         token nil
         scan (lambda ()
-                (let (next (.getToken (&lexer self)))
+                (let (next (.lex (&lexer self)))
                   (<- token-type (car next)
                       token (cadr next))))
         parse (lambda () (scan) (parse-s))
