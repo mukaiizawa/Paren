@@ -13,8 +13,9 @@
  * registers:
  *   0 -- inst argument.
  *   1 -- current environment.
+ *   2 -- trace.
  */
-#define REG_SIZE 2
+#define REG_SIZE 3
 static object reg[REG_SIZE];
 
 static long cycle;
@@ -548,12 +549,12 @@ static void pop_return_inst(void)
   }
 }
 
-static object call_stack(void);
+static object call_stack(int s, int e);
 static void exit1(void)
 {
   char buf[MAX_STR_LEN];
   object o;
-  o = call_stack();
+  o = call_stack(0, sp);
   printf("Error -- %s\n", object_describe(reg[0], buf));
   while (o != object_nil) {
     printf("	at: %s\n", object_describe(o->cons.car, buf));
@@ -565,11 +566,11 @@ static void exit1(void)
 static void pop_throw_inst(void)
 {
   object body, handler;
-  int xsp;
-  xsp = sp;
+  int s, e;
+  e = sp;
   while (TRUE) {
     if (sp == 0) {
-      sp = xsp;
+      sp = e;
       exit1();
     }
     if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
@@ -580,6 +581,10 @@ static void pop_throw_inst(void)
       return;
     }
     if (fs_top()->cons.car->xint.val == HANDLER_INST) {
+      s = sp;
+      sp = e;
+      reg[2] = call_stack(s, e);
+      sp = s;
       handler = fs_pop()->cons.cdr->cons.car;
       break;
     }
@@ -596,16 +601,14 @@ static void pop_unwind_protect_inst(void)
 
 // trace and debug
 
-static object call_stack(void)
+static object call_stack(int s, int e)
 {
   int i;
   object o;
-  i = 0;
   o = object_nil;
-  while (i < sp) {
+  for (i = s; i < e; i++) {
     if (fs_nth(i)->cons.car->xint.val == TRACE_INST)
       o = gc_new_cons(fs_nth(i)->cons.cdr->cons.car, o);
-    i++;
   }
   return o;
 }
@@ -1066,7 +1069,7 @@ PRIM(bound_p)
 PRIM(call_stack)
 {
   if (!ip_ensure_no_args(argc)) return FALSE;
-  *result = call_stack()->cons.cdr;    // remove own.
+  *result = reg[2];
   return TRUE;
 }
 
@@ -1102,6 +1105,7 @@ static void ip_main(void)
 {
   reg[0] = object_nil;
   reg[1] = object_toplevel;
+  reg[2] = object_nil;
   push_apply_inst(object_boot);
   while (TRUE) {
     xassert(sp >= 0);

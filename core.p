@@ -1020,6 +1020,14 @@
     (if msg (string+ class-name " -- " msg)
         class-name)))
 
+(method Throwable .stackTrace ()
+  (call-stack))
+
+(method Throwable .printStackTrace ()
+  (write-line (.toString self))
+  (dolist (x (.stackTrace self))
+    (write-string "	at: ") (print x)))
+
 (class Error (Throwable)
   ; An Error is a subclass of Throwable that indicates serious problems that a reasonable application should not try to catch.
   ; Most such errors are abnormal conditions. 
@@ -1621,11 +1629,7 @@
   (let (s nil)
     (while true
       (catch ((QuitSignal (e) (break))
-              (Exception (e)
-                         (write-line (.toString e))
-                         (map (call-stack) (lambda (x)
-                                             (write-string "	at: ")
-                                             (print x)))))
+              (Exception (e) (.printStackTrace e)))
         (write-string ") ")
         (if (same? (<- s (read)) :EOF) (break))
         (print (eval s))))))
