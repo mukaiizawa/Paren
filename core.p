@@ -1641,10 +1641,7 @@
   ; Load the specified file.
   ; Returns true if successfully loaded.
   (with-open-read (in path)
-    (let (expr nil)
-      (while true
-        (if (same? (<- expr (read in)) :EOF) (break)
-            (eval expr)))))
+    (while (different? (eval (read in)) :EOF)))
   true)
 
 ; (let ($encoding :UTF-8)
