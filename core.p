@@ -1040,8 +1040,7 @@
   (write-line (.toString self))
   (for (i 0 st (reverse (.stackTrace self))) st (<- i (++ i) st (cdr st))
     (if (< i 15) (begin (write-string "\tat: ")
-                        (simple-print (car st))
-                        (write-byte 0x0A))
+                        (simple-print (car st)))
         (begin (write-string "\t...\n")
                (break)))))
 
@@ -1589,11 +1588,10 @@
                            (print-atom x)))
         print-cons (lambda (x)
                      (write-string "(")
-                     (print-s-expr (car x))
-                     (when (cdr x)
-                       (write-string " ")
-                       (print-s-expr (cadr x))
-                       (if (cddr x) (write-string "...")))
+                     (for (i 0) x (<- i (++ i) x (cdr x))
+                       (if (> i 2) (begin (write-string " ...") (break))
+                           (begin (if (/= i 0) (write-string " "))
+                                  (print-s-expr (car x)))))
                      (write-string ")"))
         print-operator (lambda (x)
                          (write-string "(")
@@ -1616,11 +1614,8 @@
                          (number? x) (write-string (number->string x))
                          (throw (.new IllegalStateException)))))
     (print-s-expr x)
+    (write-line)
     x))
-
-(function simple-println (x :opt (stream (dynamic $stdin)))
-  (symple-print x)
-  (write-line))
 
 (function print (x :opt (stream (dynamic $stdin)))
   ; print the specified x as a readable format.
