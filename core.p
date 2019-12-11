@@ -1436,36 +1436,35 @@
         (_raise self (string+ (number->string (&next self)) " illegal char")))))
 
 (class ParenParser ()
-  lexer token-type token)
+  lexer)
 
 (method ParenParser .init (:key string (stream (dynamic $stdin)))
   (&lexer self (.init (.new ParenLexer) :string string :stream stream))
   self)
 
-(method ParenParser _scan ()
-  (let (next (.getToken (&lexer self)))
-    (&token-type self (car next))
-    (&token self (cadr next))))
-
-(method ParenParser _parseList ()
-  (_scan self)
-  (if (same? (&token-type self) :close-paren) nil
-      (cons (_parseS self) (_parseList self))))
-
-(method ParenParser _parseS ()
-  (let (type (&token-type self))
-    (if (same? type :EOF) :EOF
-        (same? type :quote) (list quote (.parse self))
-        (same? type :open-paren) (_parseList self)
-        (or (same? type :symbol)
-            (same? type :keyword)
-            (same? type :string)
-            (same? type :number)) (&token self)
-        (throw (.message (.new IllegalStateException) "syntax error")))))
-
 (method ParenParser .parse ()
-  (_scan self)
-  (_parseS self))
+  (let (token-type nil
+        token nil
+        scan (lambda ()
+                (let (next (.getToken (&lexer self)))
+                  (<- token-type (car next)
+                      token (cadr next))))
+        parse (lambda () (scan) (parse-s))
+        parse-s (lambda ()
+                  (if (same? token-type :EOF) :EOF
+                      (same? token-type :quote) (list quote (parse))
+                      (same? token-type :open-paren) (parse-list)
+                      (or (same? token-type :symbol)
+                          (same? token-type :keyword)
+                          (same? token-type :string)
+                          (same? token-type :number)) token
+                      (throw (.message (.new IllegalStateException)
+                                       "syntax error"))))
+        parse-list (lambda ()
+                     (scan)
+                     (if (same? token-type :close-paren) nil
+                         (cons (parse-s) (parse-list)))))
+    (parse)))
 
 ;; I/O
 (<- $stdin (.init (.new FileStream) :fp (fp 0))
