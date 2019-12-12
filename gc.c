@@ -70,7 +70,7 @@ static object new_splay()
 
 object gc_new_splay_node(object k, object v, object l, object r)
 {
-  return gc_new_cons(k, gc_new_cons(v, gc_new_cons(l, r)));
+  return gc_new_cons(gc_new_cons(k, v), gc_new_cons(l, r));
 }
 
 object gc_new_env(object top)

@@ -236,7 +236,7 @@ static object gen1(int type, object o)
 
 static object gen2(int type, object o, object p)
 {
-  return gc_new_cons(gen(type), gc_new_cons(o, gc_new_cons(p, object_nil)));
+  return gc_new_cons(gen(type), gc_new_cons(o, p));
 }
 
 static object fs_top(void)
@@ -476,9 +476,8 @@ static void pop_eval_args_inst(void)
   object rest, acc;
   top = fs_top();
   rest = top->cons.cdr->cons.car;
-  acc = top->cons.cdr->cons.cdr->cons.car;
-  acc = gc_new_cons(reg[0], acc);
-  top->cons.cdr->cons.cdr->cons.car = acc;
+  acc = gc_new_cons(reg[0], top->cons.cdr->cons.cdr);
+  top->cons.cdr->cons.cdr = acc;
   if (rest == object_nil) {
     fs_pop();
     reg[0] = object_reverse(acc);
