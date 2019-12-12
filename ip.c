@@ -551,9 +551,11 @@ static void exit1(void)
 
 static void pop_throw_inst(void)
 {
-  object body, handler;
+  object osp, body, handler;
   int s, e;
   e = sp;
+  osp = fs_pop()->cons.cdr;
+  if (osp != object_nil) e = osp->xint.val;
   while (TRUE) {
     if (sp == 0) {
       sp = e;
@@ -561,7 +563,7 @@ static void pop_throw_inst(void)
     }
     if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
       body = fs_pop()->cons.cdr;
-      fs_push(gen0(THROW_INST));
+      fs_push(gen1(THROW_INST, gc_new_xint(e)));
       fs_push(gen1(QUOTE_INST, reg[0]));
       push_eval_sequential_inst(body);
       return;
