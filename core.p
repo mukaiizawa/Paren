@@ -1032,12 +1032,14 @@
   (call-stack))
 
 (method Throwable .printStackTrace ()
-  (write-line (.toString self))
+  (write-string (.toString self))
+  (write-new-line)
   (dolist (x (.stackTrace self))
     (write-string "\tat: ") (print x)))
 
 (method Throwable .printSimpleStackTrace ()
-  (write-line (.toString self))
+  (write-string (.toString self))
+  (write-new-line)
   (for (i 0 st (.stackTrace self)) st (<- i (++ i) st (cdr st))
     (if (< i 15) (begin (write-string "\tat: ")
                         (simple-print (car st)))
@@ -1617,8 +1619,8 @@
                            (number? x) (write-string (number->string x))
                            (throw (.new IllegalStateException)))))
       (print-s-expr x)
-      (write-byte 0x0A))
-    x))
+      (write-byte 0x0A)))
+  x)
 
 (function print (x :opt stream)
   ; print the specified x as a readable format.
