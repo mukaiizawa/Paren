@@ -52,7 +52,7 @@ static object gc_alloc(int size)
     }
   }
   set_alive(o, FALSE);
-  if ((gc_used_memory += size) > MAX_HEAP_SIZE) xerror("out of memory.");
+  if ((gc_used_memory += size) > MAX_HEAP_SIZE) ip_mark_error("out of memory");
   if (gc_used_memory > gc_max_used_memory) gc_max_used_memory = gc_used_memory;
   return o;
 }
