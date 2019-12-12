@@ -19,62 +19,16 @@ static int cmp(object o, object p)
   return -1;
 }
 
-static object splay_get_top(object splay)
-{
-  return splay->cons.car;
-}
-
-static void splay_set_top(object splay, object top)
-{
-  splay->cons.car = top;
-}
-
-static object node_new(object key, object val)
-{
-  return gc_new_cons(key, gc_new_cons(val
-        , gc_new_cons(object_splay_nil, object_splay_nil)));
-}
-
-// #define node_get_key(node) ((node)->cons.car)
-static object node_get_key(object node)
-{
-  return node->cons.car;
-}
-
-static void node_set_key(object node, object key)
-{
-  node->cons.car = key;
-}
-
-static object node_get_val(object node)
-{
-  return node->cons.cdr->cons.car;
-}
-
-static void node_set_val(object node, object val)
-{
-  node->cons.cdr->cons.car = val;
-}
-
-static object node_get_left(object node)
-{
-  return node->cons.cdr->cons.cdr->cons.car;
-}
-
-static void node_set_left(object node, object l)
-{
-  node->cons.cdr->cons.cdr->cons.car = l;
-}
-
-static object node_get_right(object node)
-{
-  return node->cons.cdr->cons.cdr->cons.cdr;
-}
-
-static void node_set_right(object node, object r)
-{
-  node->cons.cdr->cons.cdr->cons.cdr = r;
-}
+#define splay_get_top(splay) ((splay)->cons.car)
+#define splay_set_top(splay, top) ((splay)->cons.car = top)
+#define node_get_key(node) ((node)->cons.car)
+#define node_set_key(node, k) ((node)->cons.car = k)
+#define node_get_val(node) ((node)->cons.cdr->cons.car)
+#define node_set_val(node, v) ((node)->cons.cdr->cons.car = v)
+#define node_get_left(node) ((node)->cons.cdr->cons.cdr->cons.car)
+#define node_set_left(node, l) ((node)->cons.cdr->cons.cdr->cons.car = l)
+#define node_get_right(node) ((node)->cons.cdr->cons.cdr->cons.cdr)
+#define node_set_right(node, r) ((node)->cons.cdr->cons.cdr->cons.cdr = r)
 
 static object balance(object splay, object key)
 {
@@ -146,9 +100,8 @@ void splay_add(object splay, object key, object val)
   object top;
   top = balance(splay, key);
   xassert(top == object_splay_nil);
-  top = node_new(key, val);
-  node_set_left(top, node_get_left(object_splay_nil));
-  node_set_right(top, node_get_right(object_splay_nil));
+  top = gc_new_cons(key, gc_new_cons(val, gc_new_cons(
+          node_get_left(object_splay_nil), node_get_right(object_splay_nil))));
   splay_set_top(splay, top);
 }
 
