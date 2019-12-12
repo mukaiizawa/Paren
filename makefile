@@ -21,7 +21,7 @@ sflags=-s
 link=$(cc) $(lflags) -o $@ $+ $(libs)
 
 ifeq ($(debug),on)
-uflags+=-g
+uflags+=-pg
 else
 cflags+=-O3 -DNDEBUG
 link+= ; strip $(sflags) $@

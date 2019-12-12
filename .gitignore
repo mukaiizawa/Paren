@@ -2,5 +2,6 @@
 *.a
 *.wk
 *.exe
+*.out
 test.p
 src/paren
