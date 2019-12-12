@@ -12,7 +12,7 @@ int gc_used_memory;
 int gc_max_used_memory;
 
 static object free_cons;
-#define LINK_SIZE (sizeof(object) * 3)
+#define LINK_SIZE (5 * sizeof(intptr_t))
 static object link;
 
 static struct heap heap;

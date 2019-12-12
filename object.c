@@ -22,7 +22,6 @@ object object_message;
 object object_Error;
 object object_Exception;
 object object_boot;
-
 object object_splay_nil;
 
 int symcmp(object o, object p)
