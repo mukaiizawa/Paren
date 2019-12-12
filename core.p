@@ -691,10 +691,6 @@
 
 ; splay tree
 
-;; End node of splay.
-(<- $splay-nil '(nil nil nil))
-
-;; splay ::= (top comparator)
 (function splay-new (comparator)
   (list $splay-nil comparator))
 
@@ -707,30 +703,29 @@
 (function splay-comparator (splay)
   (cadr splay))
 
-;; splay node ::= (k v left . right)
-(function splay-node-new (k v)
-  (list k v nil))
+(function splay-node-new (k v l r)
+  (cons (cons k l) (cons v r)))
 
 (function splay-node-key (splay-node)
-  (car splay-node))
+  (caar splay-node))
 
 (function splay-node-key! (splay-node key)
-  (car! splay-node key))
+  (car! (car splay-node) key))
 
 (function splay-node-val (splay-node)
   (cadr splay-node))
 
 (function splay-node-left (splay-node)
-  (caddr splay-node))
+  (cdar splay-node))
 
 (function splay-node-left! (splay-node val)
-  (car! (cddr splay-node) val))
+  (cdr! (car splay-node) val))
 
 (function splay-node-right (splay-node)
-  (cdddr splay-node))
+  (cddr splay-node))
 
 (function splay-node-right! (splay-node val)
-  (cdr! (cddr splay-node) val))
+  (cdr! (cdr splay-node) val))
 
 (function splay-balance (splay k)
   (let (top (splay-top splay) cmp (splay-comparator splay) p nil q nil d 0)
@@ -795,10 +790,8 @@
   ; Returns the v.
   (let (top (splay-balance splay k))
     (assert (same? top $splay-nil))
-    (<- top (splay-node-new k v))
-    (splay-node-left! top (splay-node-left $splay-nil))
-    (splay-node-right! top (splay-node-right $splay-nil))
-    (splay-top! splay top)
+    (splay-top! splay (splay-node-new k v (splay-node-left $splay-nil)
+                                      (splay-node-right $splay-nil)))
     v))
 
 (function splay-find (splay k)
@@ -809,6 +802,9 @@
                                       nil)
         (begin (splay-top! splay top)
                (splay-node-val top)))))
+
+;; End node of splay.
+(<- $splay-nil (splay-node-new nil nil nil nil))
 
 ; Paren object system
 
