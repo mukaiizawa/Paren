@@ -11,7 +11,6 @@
 static int cmp(object o, object p)
 {
   int i, os, ps;
-  if (o == p) return 0;
   os = o->barray.size;
   ps = p->barray.size;
   if ((i = os - ps) == 0) return memcmp(o->barray.elt, p->barray.elt, os);

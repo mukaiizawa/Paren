@@ -1134,7 +1134,6 @@ void ip_mark(void)
   for (i = 0; i < REG_SIZE; i++) gc_mark(reg[i]);
   for (i = 0; i < sp; i++) gc_mark(fs_nth(i));
   for (i = 0; byte_range_p(i); i++) gc_mark(object_bytes[i]);
-  gc_mark(object_splay_nil);
 }
 
 void ip_start(void)
