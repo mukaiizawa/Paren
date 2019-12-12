@@ -12,8 +12,7 @@
 int gc_used_memory;
 int gc_max_used_memory;
 
-static object free_cons;
-#define LINK_SIZE (5 * sizeof(intptr_t))
+#define LINK_SIZE (4 * sizeof(intptr_t))
 static object link;
 
 static struct heap heap;
@@ -43,8 +42,6 @@ static void set_type(object o, int type)
 static object gc_alloc(int size)
 {
   object o;
-  if ((gc_used_memory += size) > MAX_HEAP_SIZE) xerror("out of memory.");
-  if (gc_used_memory < gc_max_used_memory) gc_max_used_memory = gc_used_memory;
   if (size > LINK_SIZE) o = xmalloc(size);
   else {
     size = LINK_SIZE;
@@ -55,6 +52,8 @@ static object gc_alloc(int size)
     }
   }
   set_alive(o, FALSE);
+  if ((gc_used_memory += size) > MAX_HEAP_SIZE) xerror("out of memory.");
+  if (gc_used_memory > gc_max_used_memory) gc_max_used_memory = gc_used_memory;
   return o;
 }
 
@@ -138,13 +137,8 @@ object gc_new_xfloat(double val)
 object gc_new_cons(object car, object cdr)
 {
   object o;
-  if (free_cons == NULL) {
-    o = gc_alloc(sizeof(struct cons));
-    set_type(o, CONS);
-  } else {
-    o = free_cons;
-    free_cons = o->cons.cdr;
-  }
+  o = gc_alloc(sizeof(struct cons));
+  set_type(o, CONS);
   o->cons.car = car;
   o->cons.cdr = cdr;
   return regist(o);
@@ -233,13 +227,6 @@ void gc_mark(object o)
 static void gc_free(object o)
 {
   int size;
-  switch (type(o)) {
-    case CONS:
-      o->cons.cdr = free_cons;
-      free_cons = o;
-      return;
-    default: break;
-  }
   size = object_byte_size(o);
   if (object_byte_size(o) > LINK_SIZE) xfree(o);
   else {
@@ -287,7 +274,6 @@ void gc_init1(void)
 void gc_init(void)
 {
   gc_used_memory = gc_max_used_memory = 0;
-  free_cons = NULL;
   link = NULL;
   xarray_init(&table);
   xarray_init(&work_table);
