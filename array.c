@@ -135,9 +135,9 @@ PRIM(array_copy)
       else if (size <= 0)
         ip_mark_exception("copy size must be positive");
       else if ((fp + size) > from->barray.size)
-        ip_mark_exception("source array index out of bounds ip_mark_exception");
+        ip_mark_exception("source array index out of bounds exception");
       else if ((tp + size) > to->barray.size)
-        ip_mark_exception("destination array index out of bounds ip_mark_exception");
+        ip_mark_exception("destination array index out of bounds exception");
       else {
         memmove(to->barray.elt + tp, from->barray.elt + fp, size);
         *result = to;
