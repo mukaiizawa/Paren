@@ -13,7 +13,9 @@ extern object gc_new_cons(object car, object cdr);
 extern object gc_new_barray(int type, int size);
 extern object gc_new_barray_from(int type, int size, char *val);
 extern object gc_new_array(int size);
+extern object gc_new_splay_node(object k, object v, object l, object r);
 
 extern void gc_init(void);
+extern void gc_init1(void);
 extern void gc_mark(object o);
 extern void gc_chance(void);

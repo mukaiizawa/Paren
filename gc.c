@@ -5,6 +5,7 @@
 #include "xarray.h"
 #include "heap.h"
 #include "object.h"
+#include "splay.h"
 #include "ip.h"
 #include "gc.h"
 
@@ -18,8 +19,9 @@ static object link;
 static struct heap heap;
 static struct xarray table;
 static struct xarray work_table;
-static struct xsplay symbol_table;
-static struct xsplay keyword_table;
+
+static object symbol_table;
+static object keyword_table;
 
 static int alivep(object o)
 {
@@ -36,15 +38,6 @@ static void set_type(object o, int type)
 {
   o->header &= ~TYPE_MASK;
   o->header |= type;
-}
-
-static char *symbol_name(int size, char *val)
-{
-  char *name;
-  name = xmalloc(size + 1);
-  memcpy(name, val, size);
-  name[size] = '\0';
-  return name;
 }
 
 static object gc_alloc(int size)
@@ -71,13 +64,23 @@ static object regist(object o)
   return o;
 }
 
+static object new_splay()
+{
+  return gc_new_cons(object_splay_nil, object_nil);
+}
+
+object gc_new_splay_node(object k, object v, object l, object r)
+{
+  return gc_new_cons(k, gc_new_cons(v, gc_new_cons(l, r)));
+}
+
 object gc_new_env(object top)
 {
   object o;
   o = gc_alloc(sizeof(struct env));
   set_type(o, ENV);
   o->env.top = top;
-  o->env.binding = gc_new_cons(object_splay_nil, object_nil);
+  o->env.binding = new_splay();
   return regist(o);
 }
 
@@ -147,7 +150,7 @@ object gc_new_cons(object car, object cdr)
   return regist(o);
 }
 
-static object new_barray(int type, int size)
+object gc_new_barray(int type, int size)
 {
   object o;
   xassert(size >= 0);
@@ -158,36 +161,29 @@ static object new_barray(int type, int size)
   return regist(o);
 }
 
-object gc_new_barray(int type, int size)
+static object new_barray_from(int type, int size, char *val)
 {
-  return new_barray(type, size);
+  object o;
+  o = gc_new_barray(type, size);
+  memcpy(o->barray.elt, val, size);
+  return o;
 }
 
 object gc_new_barray_from(int type, int size, char *val)
 {
-  object o;
-  char *str;
+  object o, p;
+  o = new_barray_from(type, size, val);
   switch (type) {
     case SYMBOL:
-      str = symbol_name(size, val);
-      if ((o = xsplay_find(&symbol_table, str)) == NULL) {
-        o = new_barray(type, size);
-        memcpy(o->barray.elt, val, size);
-        xsplay_add(&symbol_table, str, o);
-      } else xfree(str);
+      if ((p = splay_find(symbol_table, o)) != NULL) return p;
+      splay_add(symbol_table, o, o);
       return o;
     case KEYWORD:
-      str = symbol_name(size, val);
-      if ((o = xsplay_find(&keyword_table, str)) == NULL) {
-        o = new_barray(type, size);
-        memcpy(o->barray.elt, val, size);
-        xsplay_add(&keyword_table, str, o);
-      } else xfree(str);
+      if ((p = splay_find(keyword_table, o)) != NULL) return p;
+      splay_add(keyword_table, o, o);
       return o;
     case STRING:
     case BARRAY:
-      o = new_barray(type, size);
-      memcpy(o->barray.elt, val, size);
       return o;
     default:
       xassert(FALSE);
@@ -237,22 +233,11 @@ void gc_mark(object o)
 static void gc_free(object o)
 {
   int size;
-  char *name;
   switch (type(o)) {
     case CONS:
       o->cons.cdr = free_cons;
       free_cons = o;
       return;
-    case SYMBOL:
-      name = symbol_name(o->barray.size, o->barray.elt);
-      xsplay_delete(&symbol_table, name);
-      xfree(name);
-      break;
-    case KEYWORD:
-      name = symbol_name(o->barray.size, o->barray.elt);
-      xsplay_delete(&keyword_table, name);
-      xfree(name);
-      break;
     default: break;
   }
   size = object_byte_size(o);
@@ -286,8 +271,17 @@ void gc_chance(void)
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
   if (GC_LOG_P) printf("before gc(used memory %d[byte])\n", gc_used_memory);
   ip_mark();
+  gc_mark(symbol_table);
+  gc_mark(keyword_table);
   sweep_s_expr();
   if (GC_LOG_P) printf("after gc(used memory %d[byte])\n", gc_used_memory);
+}
+
+void gc_init1(void)
+{
+  symbol_table = new_splay();
+  keyword_table = new_splay();
+  splay_add(symbol_table, object_nil, object_nil);
 }
 
 void gc_init(void)
@@ -297,6 +291,4 @@ void gc_init(void)
   link = NULL;
   xarray_init(&table);
   xarray_init(&work_table);
-  xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);
-  xsplay_init(&keyword_table, (int(*)(void *, void *))strcmp);
 }

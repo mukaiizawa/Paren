@@ -194,15 +194,18 @@ static object parse_args(int argc, char *argv[], int i)
 static void make_initial_objects(int argc, char *argv[])
 {
   int i;
-  object_nil = symbol_new("nil");
+  object nil;
+  nil = gc_new_barray(SYMBOL, 3);
+  memcpy(nil->barray.elt, "nil", 3);
+  object_nil = nil;
+  object_splay_nil = gc_new_splay_node(nil, nil, nil, nil);
+  gc_init1();
   object_true = symbol_new("true");
   object_key = keyword_new("key");
   object_opt = keyword_new("opt");
   object_rest = keyword_new("rest");
   object_quote = symbol_new("quote");
-  object_splay_nil = gc_new_cons(object_nil, gc_new_cons(object_nil
-        , gc_new_cons(object_nil, object_nil)));
-  object_toplevel = gc_new_env(object_nil);
+  object_toplevel = gc_new_env(nil);
   object_os = symbol_new("$os");
   object_args = symbol_new("$args");
   object_class = keyword_new("class");
@@ -222,7 +225,7 @@ static void make_initial_objects(int argc, char *argv[])
   xassert(FALSE);
 #endif
   for (i = 0; i < 256; i++) object_bytes[i] = gc_new_bytes(i);
-  bind_pseudo_symbol(object_nil);
+  bind_pseudo_symbol(nil);
   bind_pseudo_symbol(object_true);
   bind_special();
 }

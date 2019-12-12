@@ -99,8 +99,8 @@ void splay_add(object splay, object key, object val)
   object top;
   top = balance(splay, key);
   xassert(top == object_splay_nil);
-  top = gc_new_cons(key, gc_new_cons(val, gc_new_cons(
-          node_get_left(object_splay_nil), node_get_right(object_splay_nil))));
+  top = gc_new_splay_node(key, val,
+      node_get_left(object_splay_nil), node_get_right(object_splay_nil));
   splay_set_top(splay, top);
 }
 
@@ -122,4 +122,12 @@ object splay_find(object splay, object key)
   }
   splay_set_top(splay, top);
   return node_get_val(top);
+}
+
+void splay_delete(object splay, object key)
+{
+  object top;
+  top = balance(splay, key);
+  xassert(top != object_splay_nil);
+  splay_set_top(splay, resume(top));
 }
