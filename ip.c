@@ -231,7 +231,7 @@ static object gen0(int type)
 
 static object gen1(int type, object o)
 {
-  return gc_new_cons(gen(type), gc_new_cons(o, object_nil));
+  return gc_new_cons(gen(type), o);
 }
 
 static object gen2(int type, object o, object p)
@@ -319,7 +319,7 @@ static void parse_lambda_list(object env, object params, object args);
 static void pop_apply_inst(void)
 {
   object operator;
-  operator = fs_pop()->cons.cdr->cons.car;
+  operator = fs_pop()->cons.cdr;
   push_switch_env_inst(operator->lambda.env);
   fb_reset();
   parse_lambda_list(reg[1], operator->lambda.params, reg[0]);
@@ -332,7 +332,7 @@ static void pop_apply_prim_inst(void)
   object args;
   int (*prim)(int, object, object *);
   args = reg[0];
-  prim = xsplay_find(&prim_splay, fs_pop()->cons.cdr->cons.car);
+  prim = xsplay_find(&prim_splay, fs_pop()->cons.cdr);
   if ((*prim)(object_list_len(args), args, &(reg[0]))) return;
   if (error_msg == NULL) ip_mark_exception("primitive failed");
 }
@@ -347,12 +347,12 @@ static void pop_assert_inst(void)
 
 static void pop_bind_inst(void)
 {
-  symbol_bind(reg[1], fs_pop()->cons.cdr->cons.car, reg[0]);
+  symbol_bind(reg[1], fs_pop()->cons.cdr, reg[0]);
 }
 
 static void pop_bind_propagation_inst(void)
 {
-  symbol_bind_propagation(reg[1], fs_pop()->cons.cdr->cons.car, reg[0]);
+  symbol_bind_propagation(reg[1], fs_pop()->cons.cdr, reg[0]);
 }
 
 static void pop_eval_inst(void)
@@ -401,7 +401,7 @@ static void pop_goto_inst(void)
       return;
     }
     if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
-      o = fs_pop()->cons.cdr->cons.car;
+      o = fs_pop()->cons.cdr;
       fs_push(gen0(GOTO_INST));
       fs_push(gen1(QUOTE_INST, label));
       push_eval_sequential_inst(o);
@@ -410,7 +410,7 @@ static void pop_goto_inst(void)
     if (fs_top()->cons.car->xint.val == LABELS_INST) break;
     fs_rewind_pop();
   }
-  o = fs_top()->cons.cdr->cons.car;
+  o = fs_top()->cons.cdr;
   while (TRUE) {
     if (o == object_nil) {
       ip_mark_exception("label not found");
@@ -426,7 +426,7 @@ static void pop_fetch_handler_inst(void)
 {
   object handler, body;
   handler = reg[0];
-  body = fs_pop()->cons.cdr->cons.car;
+  body = fs_pop()->cons.cdr;
   if (!typep(handler, LAMBDA)) {
     ip_mark_exception("require exception handler");
     return;
@@ -443,7 +443,7 @@ static void pop_fetch_operator_inst(void)
 {
   object args;
   int (*special)(int, object);
-  args = fs_pop()->cons.cdr->cons.car;
+  args = fs_pop()->cons.cdr;
   switch (type(reg[0])) {
     case SYMBOL:
       if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
@@ -491,10 +491,10 @@ static void pop_eval_args_inst(void)
 static void pop_eval_sequential_inst(void)
 {
   object args;
-  args = fs_top()->cons.cdr->cons.car;
+  args = fs_top()->cons.cdr;
   if (args == object_nil) fs_pop();
   else {
-    fs_top()->cons.cdr->cons.car = args->cons.cdr;
+    fs_top()->cons.cdr = args->cons.cdr;
     fs_push(gen0(EVAL_INST));
     reg[0] = args->cons.car;
   }
@@ -503,7 +503,7 @@ static void pop_eval_sequential_inst(void)
 static void pop_if_inst(void)
 {
   object args;
-  args = fs_pop()->cons.cdr->cons.car;
+  args = fs_pop()->cons.cdr;
   if (reg[0] != object_nil) {
     fs_push(gen0(EVAL_INST));
     reg[0] = args->cons.car;
@@ -512,7 +512,7 @@ static void pop_if_inst(void)
 
 static void pop_switch_env(void)
 {
-  reg[1] = fs_pop()->cons.cdr->cons.car;
+  reg[1] = fs_pop()->cons.cdr;
 }
 
 static void pop_return_inst(void)
@@ -523,7 +523,7 @@ static void pop_return_inst(void)
       case FENCE_INST:
         return;
       case UNWIND_PROTECT_INST: 
-        args = fs_pop()->cons.cdr->cons.car;
+        args = fs_pop()->cons.cdr;
         fs_push(gen0(RETURN_INST));
         fs_push(gen1(QUOTE_INST, reg[0]));
         push_eval_sequential_inst(args);
@@ -560,7 +560,7 @@ static void pop_throw_inst(void)
       exit1();
     }
     if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
-      body = fs_pop()->cons.cdr->cons.car;
+      body = fs_pop()->cons.cdr;
       fs_push(gen0(THROW_INST));
       fs_push(gen1(QUOTE_INST, reg[0]));
       push_eval_sequential_inst(body);
@@ -571,7 +571,7 @@ static void pop_throw_inst(void)
       sp = e;
       reg[2] = call_stack(s, e);
       sp = s;
-      handler = fs_pop()->cons.cdr->cons.car;
+      handler = fs_pop()->cons.cdr;
       break;
     }
     fs_rewind_pop();
@@ -582,7 +582,7 @@ static void pop_throw_inst(void)
 
 static void pop_unwind_protect_inst(void)
 {
-  push_eval_sequential_inst(fs_pop()->cons.cdr->cons.car);
+  push_eval_sequential_inst(fs_pop()->cons.cdr);
 }
 
 // trace and debug
@@ -594,7 +594,7 @@ static object call_stack(int s, int e)
   o = object_nil;
   for (i = s; i < e; i++) {
     if (fs_nth(i)->cons.car->xint.val == TRACE_INST)
-      o = gc_new_cons(fs_nth(i)->cons.cdr->cons.car, o);
+      o = gc_new_cons(fs_nth(i)->cons.cdr, o);
   }
   return o;
 }
@@ -853,7 +853,7 @@ SPECIAL(dynamic)
     if ((v = symbol_find(e, s)) != NULL) break;
     while (--i >= 0) {
       if (fs[i]->cons.car->xint.val == SWITCH_ENV_INST) {
-        e = fs[i]->cons.cdr->cons.car;
+        e = fs[i]->cons.cdr;
         break;
       }
     }
@@ -1115,7 +1115,7 @@ static void ip_main(void)
       case HANDLER_INST: fs_pop(); break;
       case IF_INST: pop_if_inst(); break;
       case LABELS_INST: fs_pop(); break;
-      case QUOTE_INST: reg[0] = fs_pop()->cons.cdr->cons.car; break;
+      case QUOTE_INST: reg[0] = fs_pop()->cons.cdr; break;
       case RETURN_INST: pop_return_inst(); break;
       case SWITCH_ENV_INST: pop_switch_env(); break;
       case THROW_INST: pop_throw_inst(); break;
