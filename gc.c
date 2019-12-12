@@ -66,7 +66,7 @@ object gc_new_env(object top)
   o = gc_alloc(sizeof(struct env));
   set_type(o, ENV);
   o->env.top = top;
-  o->env.binding = object_nil;
+  o->env.binding = gc_new_cons(object_splay_nil, object_nil);
   return regist(o);
 }
 

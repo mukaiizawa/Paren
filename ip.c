@@ -7,6 +7,7 @@
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
+#include "splay.h"
 #include "ip.h"
 
 /*
@@ -72,16 +73,10 @@ static void mark_illegal_parameter_error()
 
 static object symbol_find(object e, object s)
 {
-  object o;
   xassert(typep(e, ENV));
   if (s == object_nil) return object_nil;
-  else if (s == object_true) return object_true;
-  o = e->env.binding;
-  while (o != object_nil) {
-    if (o->cons.car == s) return o->cons.cdr->cons.car;
-    o = o->cons.cdr->cons.cdr;
-  }
-  return NULL;
+  if (s == object_true) return object_true;
+  return splay_find(e->env.binding, s);
 }
 
 static object symbol_find_propagation(object e, object s)
@@ -96,17 +91,8 @@ static object symbol_find_propagation(object e, object s)
 
 static void symbol_bind(object e, object s, object v)
 {
-  object o;
   xassert(typep(e, ENV) && typep(s, SYMBOL));
-  o = e->env.binding;
-  while (o != object_nil) {
-    if (o->cons.car == s) {
-      o->cons.cdr->cons.car = v;
-      return;
-    }
-    o = o->cons.cdr->cons.cdr;
-  }
-  e->env.binding = gc_new_cons(s, gc_new_cons(v, e->env.binding));
+  splay_replace(e->env.binding, s, v);
 }
 
 static void symbol_bind_propagation(object e, object s, object v)
@@ -1148,6 +1134,7 @@ void ip_mark(void)
   for (i = 0; i < REG_SIZE; i++) gc_mark(reg[i]);
   for (i = 0; i < sp; i++) gc_mark(fs_nth(i));
   for (i = 0; byte_range_p(i); i++) gc_mark(object_bytes[i]);
+  gc_mark(object_splay_nil);
 }
 
 void ip_start(void)

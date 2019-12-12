@@ -8,6 +8,7 @@
 #include "object.h"
 #include "lex.h"
 #include "gc.h"
+#include "splay.h"
 #include "ip.h"
 #include "bi.h"
 
@@ -147,9 +148,7 @@ static object load(void)
 
 static void bind_symbol(object k, object v)
 {
-  object o;
-  o = object_toplevel->env.binding;
-  object_toplevel->env.binding = gc_new_cons(k , gc_new_cons(v, o));
+  splay_add(object_toplevel->env.binding, k, v);
 }
 
 static void bind_pseudo_symbol(object o)
@@ -201,6 +200,8 @@ static void make_initial_objects(int argc, char *argv[])
   object_opt = keyword_new("opt");
   object_rest = keyword_new("rest");
   object_quote = symbol_new("quote");
+  object_splay_nil = gc_new_cons(object_nil, gc_new_cons(object_nil
+        , gc_new_cons(object_nil, object_nil)));
   object_toplevel = gc_new_env(object_nil);
   object_os = symbol_new("$os");
   object_args = symbol_new("$args");

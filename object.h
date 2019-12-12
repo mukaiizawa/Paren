@@ -80,6 +80,8 @@ extern object object_Error;
 extern object object_Exception;
 extern object object_boot;
 
+extern object object_splay_nil;
+
 extern int object_byte_size(object o);
 extern char *object_describe(object o, char *buf);
 extern int object_list_len(object o);
