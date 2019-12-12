@@ -18,6 +18,7 @@ static int cmp(object o, object p)
   return -1;
 }
 
+#define nil object_splay_nil
 #define splay_get_top(splay) ((splay)->cons.car)
 #define splay_set_top(splay, top) ((splay)->cons.car = top)
 #define node_get_key(node) ((node)->cons.car->cons.car)
@@ -34,9 +35,9 @@ static object balance(object splay, object key)
   int d;
   object top, p, q;
   top = splay_get_top(splay);
-  node_set_key(object_splay_nil, key);
-  node_set_left(object_splay_nil, object_splay_nil);
-  node_set_right(object_splay_nil, object_splay_nil);
+  node_set_key(nil, key);
+  node_set_left(nil, nil);
+  node_set_right(nil, nil);
   while ((d = cmp(key, node_get_key(top))) != 0) {
     p = top;
     if (d < 0) {
@@ -85,10 +86,10 @@ static object resume(object top)
   object l, r, p;
   l = node_get_left(top);
   r = node_get_right(top);
-  if (l == object_splay_nil) return r;
-  if (r != object_splay_nil) {
+  if (l == nil) return r;
+  if (r != nil) {
     p = l;
-    while (node_get_right(p) != object_splay_nil) p = node_get_right(p);
+    while (node_get_right(p) != nil) p = node_get_right(p);
     node_set_right(p, r);
   }
   return l;
@@ -98,9 +99,8 @@ void splay_add(object splay, object key, object val)
 {
   object top;
   top = balance(splay, key);
-  xassert(top == object_splay_nil);
-  top = gc_new_splay_node(key, val,
-      node_get_left(object_splay_nil), node_get_right(object_splay_nil));
+  xassert(top == nil);
+  top = gc_new_splay_node(key, val, node_get_left(nil), node_get_right(nil));
   splay_set_top(splay, top);
 }
 
@@ -116,7 +116,7 @@ object splay_find(object splay, object key)
 {
   object top;
   top = balance(splay, key);
-  if (top == object_splay_nil) {
+  if (top == nil) {
     splay_set_top(splay, resume(top));
     return NULL;
   }
@@ -128,6 +128,6 @@ void splay_delete(object splay, object key)
 {
   object top;
   top = balance(splay, key);
-  xassert(top != object_splay_nil);
+  xassert(top != nil);
   splay_set_top(splay, resume(top));
 }
