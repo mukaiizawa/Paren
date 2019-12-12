@@ -282,9 +282,10 @@
   ; So-called identity function.
   x)
 
-(function ensure-argument (test)
+(macro ensure-argument (:rest tests)
   ; If the specified test evaluate to nil, throw IllegalArgumentException.
-  (if (not test) (basic-throw (.new IllegalArgumentException))))
+  (list if (list not (cons 'and tests))
+        (list basic-throw (list '.new 'IllegalArgumentException))))
 
 (function different? (x y)
   ; Same as (not (same? x y)).
@@ -312,13 +313,13 @@
   ; Returns the specified nth element of the specified list l.
   ; However, n is counted from zero.
   ; If n is greater than the length of l, nil is returned.
-  (ensure-argument (and (list? l) (unsigned-integer? n)))
+  (ensure-argument (list? l) (unsigned-integer? n))
   (car (nthcdr l n)))
 
 (function nthcdr (l n)
   ; Get the the specified nth cons of the specified list l.
   ; If n is greater than the length of l, nil is returned.
-  (ensure-argument (and (list? l) (unsigned-integer? n)))
+  (ensure-argument (list? l) (unsigned-integer? n))
   (for (i 0) (< i n) (<- i (++ i))
     (<- l (cdr l)))
   l)
@@ -326,7 +327,7 @@
 (function list= (x y :key (test same?))
   ; Returns whether the result of comparing each element of the specified lists x and y with the specified function test is true.
   ; Always returns nil if x and y are different lengths.
-  (ensure-argument (and (list? x) (list? y) (operator? test)))
+  (ensure-argument (list? x) (list? y) (operator? test))
   (while true
     (if (and (nil? x) (nil? y)) (return true)
         (or (nil? x) (nil? y)) (return nil)
@@ -338,7 +339,7 @@
   ; Throw IllegalArgumentException when s is less than zero or e is greater than the length of the list or s is greater than e.
   ; The partial list is created separately from l.
   (let (acc nil len (length l) e (or e len))
-    (ensure-argument (and (unsigned-integer? s) (<= s e) (<= e len)))
+    (ensure-argument (unsigned-integer? s) (<= s e) (<= e len))
     (for (i 0) (< i e) (<- i (++ i) l (cdr l))
       (if (< i s) (continue)
           (push! acc (car l))))
@@ -370,9 +371,8 @@
 
 (function .. (s e :opt (step 1))
   ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
-  (ensure-argument (and (number? s) (number? e) (number? step) (/= step 0)
-                         (or (and (< step 0) (>= s e))
-                             (and (> step 0) (<= s e)))))
+  (ensure-argument (number? s) (number? e) (number? step) (/= step 0)
+                   (or (and (< step 0) (>= s e)) (and (> step 0) (<= s e))))
   (let (acc nil test (if (> step 0) <= >=))
     (while (test s e)
       (push! acc s)
@@ -391,7 +391,7 @@
 (function append (l :rest args)
   ; Add each element of the specified args as an element of the specified list l.
   ; Each of args must be a list.
-  (ensure-argument (and (list? l) (all-satisfy? args list?)))
+  (ensure-argument (list? l) (all-satisfy? args list?))
   (for (acc nil x l y args) true nil
     (if x (begin (push! acc (car x)) (<- x (cdr x)))
         y (<- x (car y) y (cdr y))
@@ -424,7 +424,7 @@
 
 (function map (args f)
   ; Returns a list of the results of mapping each element of the specified list args with the specified function f.
-  (ensure-argument (and (list? args) (operator? f)))
+  (ensure-argument (list? args) (operator? f))
   (let (acc nil)
     (while args
       (push! acc (f (car args)))
@@ -466,7 +466,7 @@
   ; If there is no such cons, nil is returned.
   ; The comparison is done with the specified function test which default value is same?.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (ensure-argument (and (list? l) (operator? test)))
+  (ensure-argument (list? l) (operator? test))
   (while true
     (if (nil? l) (return nil)
         (test (key (car l)) e) (return l)
@@ -477,7 +477,7 @@
   ; Evaluation is performed in order from left to right.
   ; If there is no such cons, nil is returned.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (ensure-argument (and (list? l) (operator? f)))
+  (ensure-argument (list? l) (operator? f))
   (while l
     (if (f (key (car l))) (return l)
         (<- l (cdr l)))))
@@ -502,7 +502,7 @@
   ; Returns true if all element of the specified list l returns a not nil value which evaluates as an argument to the specified function f.
   ; Otherwise returns nil.
   ; As soon as any element evaluates to nil, and returns nil without evaluating the remaining elements
-  (ensure-argument (and (list? l) (operator? f)))
+  (ensure-argument (list? l) (operator? f))
   (while l
     (if (f (car l)) (<- l (cdr l))
         (return nil)))
@@ -513,14 +513,14 @@
   ; Otherwise returns nil.
   ; It returns nil if l is empty.
   ; As soon as any element evaluates to not nil, and returns it without evaluating the remaining elements.
-  (ensure-argument (and (list? l) (operator? f)))
+  (ensure-argument (list? l) (operator? f))
   (while l
     (if (f (car l)) (return true)
         (<- l (cdr l)))))
 
 (function each-adjacent-satisfy? (l f)
   ; Returns true if each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
-  (ensure-argument (and (list? l) (operator? f)))
+  (ensure-argument (list? l) (operator? f))
   (while true
     (if (nil? (cdr l)) (return true)
         (f (car l) (cadr l)) (<- l (cdr l))
@@ -535,7 +535,7 @@
 (function assoc (al k)
   ; Returns a value corresponding to the specified key k of the specified asoociate list al.
   ; Raises an exception if there is no value.
-  (ensure-argument (and (list? al) (or (keyword? k) (symbol? k))))
+  (ensure-argument (list? al) (or (keyword? k) (symbol? k)))
   (while al
     (if (same? (car al) k) (return (cadr al))
         (<- al (cddr al))))
@@ -544,7 +544,7 @@
 (function assoc! (al k v)
   ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
   ; Raises an exception if there is no value.
-  (ensure-argument (and (list? al) (or (keyword? k) (symbol? k))))
+  (ensure-argument (list? al) (or (keyword? k) (symbol? k)))
   (while al
     (if (same? (car al) k) (return (car! (cdr al) v))
         (<- al (cddr al))))
@@ -592,7 +592,7 @@
 
 (function list->string (l delimiter)
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
-  (ensure-argument (and (list? l) (string? delimiter)))
+  (ensure-argument (list? l) (string? delimiter))
   (reduce l (lambda (x y) (->string x delimiter y))))
 
 (function ->string (:rest args)
@@ -606,7 +606,7 @@
 (function - (x :rest args)
   ; Returns the value of the specified x minus the sum of the specified args.
   ; If args is nil, return -x.
-  (ensure-argument (and (number? x) (all-satisfy? args number?)))
+  (ensure-argument (number? x) (all-satisfy? args number?))
   (if (nil? args) (negated x)
       (+ x (negated (reduce args +)))))
 
@@ -616,7 +616,7 @@
 
 (function // (x y)
   ; Same as (truncate (/ x y))).
-  (ensure-argument (and (number? x) (number? y)))
+  (ensure-argument (number? x) (number? y))
   (truncate (/ x y)))
 
 (function /= (x y)
@@ -836,7 +836,7 @@
                (splay-add $class-cache cls-sym cls)))))
 
 (function find-method (cls-sym method-sym)
-  (ensure-argument (and (symbol? cls-sym) (symbol? method-sym)))
+  (ensure-argument (symbol? cls-sym) (symbol? method-sym))
   (let (key (list cls-sym method-sym)
         m nil
         find-class-method
@@ -890,8 +890,7 @@
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
   ; Create class the specified cls-sym.
   (let (Object? (same? cls-sym 'Object))
-    (ensure-argument (and (all-satisfy? fields symbol?)
-                           (not (bound? cls-sym))))
+    (ensure-argument (all-satisfy? fields symbol?) (not (bound? cls-sym)))
     (list begin0
           (list quote cls-sym)
           (list <- cls-sym (list quote (list :class 'Class
@@ -906,9 +905,9 @@
                 (map fields (lambda (field) (list 'make-accessor field)))))))
 
 (macro method (cls-sym method-sym args :rest body)
-  (ensure-argument (and (class-exists? cls-sym)
-                         (not (and (bound? method-sym)
-                                   (not (method? (eval method-sym)))))))
+  (ensure-argument (class-exists? cls-sym)
+                   (not (and (bound? method-sym)
+                             (not (method? (eval method-sym))))))
   (list begin0
         (list quote method-sym)
         (if (not (bound? method-sym))
@@ -921,9 +920,7 @@
 (macro throw (o)
   (with-gensyms (e)
     (list let (list e o)
-          (list ensure-argument (list and
-                                       (list object? e)
-                                       (list is-a? e 'Throwable)))
+          (list ensure-argument (list object? e) (list is-a? e 'Throwable))
           (list basic-throw o))))
 
 (macro catch ((:rest handlers) :rest body)
@@ -932,7 +929,7 @@
   ;         (Exception3 (e) ...))
   ;   ...)
   ; (basic-catch (lambda (gsym)
-  ;                (ensure-argument (and (object? gsym) (is-a? Throwable)))
+  ;                (ensure-argument (object? gsym) (is-a? Throwable))
   ;                (if (is-a gsym Exception1) ((lambda (e) ...) gsym)
   ;                    (is-a gsym Exception2) ((lambda (e) ...) gsym)
   ;                    (is-a gsym Exception3) ((lambda (e) ...) gsym)
@@ -949,8 +946,8 @@
             (list lambda (list gargs)
                   (list begin
                         (list 'ensure-argument
-                              (list 'and (list 'object? gargs)
-                                    (list 'is-a? gargs 'Throwable)))
+                              (list 'object? gargs)
+                              (list 'is-a? gargs 'Throwable))
                         (reverse! if-clause)))
             (cons begin body)))))
 
@@ -960,8 +957,7 @@
 
 (function is-a? (o cls)
   ; Returns true if the specified object o regarded as the specified class cls's instance.
-  (ensure-argument (and (object? o) (object? cls)
-                         (same? (cadr cls) 'Class)))
+  (ensure-argument (object? o) (object? cls) (same? (cadr cls) 'Class))
   (let (o-cls-sym (cadr o) cls-sym (assoc cls :symbol))
     (while o-cls-sym
       (if (same? o-cls-sym cls-sym) (return true)
@@ -1299,8 +1295,8 @@
   stream next buf)
 
 (method ByteAheadReader .init (:key string stream)
-  (ensure-argument (and (or (nil? string) (string? string))
-                        (or (nil? stream) (is-a? stream Stream))))
+  (ensure-argument (or (nil? string) (string? string))
+                   (or (nil? stream) (is-a? stream Stream)))
   (when string
     (<- stream (.writeString (.new MemoryStream) string)))
   (&stream self (or stream (dynamic $stdin)))
@@ -1352,8 +1348,8 @@
 (class AheadReader (ByteAheadReader))
 
 (method AheadReader .init (:key string stream)
-  (ensure-argument (and (or (nil? string) (string? string))
-                        (or (nil? stream) (is-a? stream Stream))))
+  (ensure-argument (or (nil? string) (string? string))
+                   (or (nil? stream) (is-a? stream Stream)))
   (when string
     (<- stream (.writeString (.new MemoryStream) string)))
   (&stream self (or stream (dynamic $stdin)))
