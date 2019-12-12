@@ -3,8 +3,8 @@
 #include "std.h"
 #include "xsplay.h"
 #include "xarray.h"
+#include "heap.h"
 #include "object.h"
-#include "lex.h"
 #include "ip.h"
 #include "gc.h"
 
@@ -12,7 +12,10 @@ int gc_used_memory;
 int gc_max_used_memory;
 
 static object free_cons;
+#define LINK_SIZE (sizeof(object) * 3)
+static object link;
 
+static struct heap heap;
 static struct xarray table;
 static struct xarray work_table;
 static struct xsplay symbol_table;
@@ -49,7 +52,15 @@ static object gc_alloc(int size)
   object o;
   if ((gc_used_memory += size) > MAX_HEAP_SIZE) xerror("out of memory.");
   if (gc_used_memory < gc_max_used_memory) gc_max_used_memory = gc_used_memory;
-  o = xmalloc(size);
+  if (size > LINK_SIZE) o = xmalloc(size);
+  else {
+    size = LINK_SIZE;
+    if (link == NULL) o = heap_alloc(&heap, size);
+    else {
+      o = link;
+      link = o->next;
+    }
+  }
   set_alive(o, FALSE);
   return o;
 }
@@ -225,6 +236,7 @@ void gc_mark(object o)
 
 static void gc_free(object o)
 {
+  int size;
   char *name;
   switch (type(o)) {
     case CONS:
@@ -243,8 +255,14 @@ static void gc_free(object o)
       break;
     default: break;
   }
-  gc_used_memory -= object_byte_size(o);
-  xfree(o);
+  size = object_byte_size(o);
+  if (object_byte_size(o) > LINK_SIZE) xfree(o);
+  else {
+    size = LINK_SIZE;
+    o->next = link;
+    link = o;
+  }
+  gc_used_memory -= size;
 }
 
 static void sweep_s_expr(void)
@@ -276,6 +294,7 @@ void gc_init(void)
 {
   gc_used_memory = gc_max_used_memory = 0;
   free_cons = NULL;
+  link = NULL;
   xarray_init(&table);
   xarray_init(&work_table);
   xsplay_init(&symbol_table, (int(*)(void *, void *))strcmp);

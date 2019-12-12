@@ -1,7 +1,8 @@
 array.o: array.c ip.h bi.h gc.h object.h xbarray.h xarray.h xsplay.h config.h std.h
 bi.o: bi.c prim.wk special.wk ip.h bi.h gc.h object.h xbarray.h xarray.h xsplay.h config.h std.h
 cons.o: cons.c ip.h bi.h gc.h object.h xbarray.h xarray.h xsplay.h config.h std.h
-gc.o: gc.c gc.h ip.h xbarray.h lex.h object.h xarray.h xsplay.h config.h std.h
+gc.o: gc.c gc.h ip.h object.h heap.h xarray.h xsplay.h config.h std.h
+heap.o: heap.c heap.h config.h std.h
 ip.o: ip.c ip.h splay.h bi.h gc.h object.h xbarray.h xarray.h xsplay.h config.h std.h
 lambda.o: lambda.c ip.h bi.h gc.h object.h xbarray.h xarray.h xsplay.h config.h std.h
 lex.o: lex.c xbarray.h lex.h config.h std.h

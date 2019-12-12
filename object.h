@@ -58,6 +58,7 @@ union s_expr {
     int size;
     object elt[1];
   } array;
+  object next;
 };
 
 extern int symcmp(object o, object p);
