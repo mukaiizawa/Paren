@@ -12,15 +12,17 @@
 int gc_used_memory;
 int gc_max_used_memory;
 
-#define LINK_SIZE (4 * sizeof(intptr_t))
-static object link;
+#define LINK0_SIZE (sizeof(struct cons))
+#define LINK1_SIZE (2 * LINK0_SIZE)
+static object link0;
+static object link1;
+
+static object symbol_table;
+static object keyword_table;
 
 static struct heap heap;
 static struct xarray table;
 static struct xarray work_table;
-
-static object symbol_table;
-static object keyword_table;
 
 static int alivep(object o)
 {
@@ -42,15 +44,21 @@ static void set_type(object o, int type)
 static object gc_alloc(int size)
 {
   object o;
-  if (size > LINK_SIZE) o = xmalloc(size);
-  else {
-    size = LINK_SIZE;
-    if (link == NULL) o = heap_alloc(&heap, size);
+  if (size <= LINK0_SIZE) {
+    size = LINK0_SIZE;
+    if (link0 == NULL) o = heap_alloc(&heap, size);
     else {
-      o = link;
-      link = o->next;
+      o = link0;
+      link0 = o->next;
     }
-  }
+  } else if (size <= LINK1_SIZE) {
+    size = LINK1_SIZE;
+    if (link1 == NULL) o = heap_alloc(&heap, size);
+    else {
+      o = link1;
+      link1 = o->next;
+    }
+  } else o = xmalloc(size);
   set_alive(o, FALSE);
   if ((gc_used_memory += size) > MAX_HEAP_SIZE) ip_mark_error("out of memory");
   if (gc_used_memory > gc_max_used_memory) gc_max_used_memory = gc_used_memory;
@@ -228,12 +236,15 @@ static void gc_free(object o)
 {
   int size;
   size = object_byte_size(o);
-  if (object_byte_size(o) > LINK_SIZE) xfree(o);
-  else {
-    size = LINK_SIZE;
-    o->next = link;
-    link = o;
-  }
+  if (size <= LINK0_SIZE) {
+    size = LINK0_SIZE;
+    o->next = link0;
+    link0 = o;
+  } else if (size <= LINK1_SIZE) {
+    size = LINK1_SIZE;
+    o->next = link1;
+    link1 = o;
+  } else xfree(o);
   gc_used_memory -= size;
 }
 
@@ -274,7 +285,7 @@ void gc_init1(void)
 void gc_init(void)
 {
   gc_used_memory = gc_max_used_memory = 0;
-  link = NULL;
+  link0 = link1 = NULL;
   xarray_init(&table);
   xarray_init(&work_table);
 }

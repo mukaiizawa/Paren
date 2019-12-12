@@ -51,10 +51,7 @@ xc.a: std.o xarray.o xbarray.o xsplay.o xgetopt.o heap.o splay.o \
 $(paren): paren.o xc.a
 	$(link)
 
-man:
-	cat core.p | grep ';:' | cut -c 4- > core.man
-
 clean:
-	rm -f *.o *.a *.wk *.man $(paren)
+	rm -f *.o *.out *.a *.wk $(paren)
 
 include cdep.d
