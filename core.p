@@ -554,17 +554,17 @@
 
 (function char-space? (c)
   ; Returns whether byte c can be considered a space character.
-  (ensure-argument (byte? c))
+  (ensure-argument (number? c))
   (find '(0x09 0x0A 0x0D 0x20) c :test =))
 
 (function char-alpha? (c)
   ; Returns whether byte c can be considered a alphabetic character.
-  (ensure-argument (byte? c))
+  (ensure-argument (number? c))
   (or (<= 0x41 c 0x5A) (<= 0x61 c 0x7A)))
 
 (function char-digit? (c)
   ; Returns whether byte c can be considered a digit character.
-  (ensure-argument (byte? c))
+  (ensure-argument (number? c))
   (<= 0x30 c 0x39))
 
 (function char-lower (c)
@@ -1246,7 +1246,7 @@
   ; Returns the parent path, or nil if this path does not have a parent.
   (&files (.init (.new Path)) (butlast (&files self))))
 
-(method Path .child (:rest body)
+(method Path .resolve (:rest body)
   (ensure-argument (all-satisfy? body string?))
   ; Resolve the given path against this path.
   (&files (.new Path) (append (&files self) body)))

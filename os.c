@@ -203,4 +203,3 @@ PRIM(milli_time)
   *result = gc_new_xint(time(NULL));
   return TRUE;
 }
-
