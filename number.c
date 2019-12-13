@@ -165,17 +165,18 @@ static int int64_divide(object argv, object *result)
 {
   int64_t x, y;
   if (argv == object_nil) return TRUE;
-  if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y) && x % y == 0) {
+  if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y)) {
     if (y == 0) {
       mark_division_by_zero();
       return FALSE;
+    } else if (x % y == 0) {
+      if(x == INT64_MIN && y == -1) {
+        mark_numeric_over_flow();
+        return FALSE;
+      }
+      *result = gc_new_xint(x / y);
+      return int64_divide(argv->cons.cdr, result);
     }
-    if(x == INT64_MIN && y == -1) {
-      mark_numeric_over_flow();
-      return FALSE;
-    }
-    *result = gc_new_xint(x / y);
-    return int64_divide(argv->cons.cdr, result);
   }
   return double_divide(argv, result);
 }
