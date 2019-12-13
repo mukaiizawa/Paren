@@ -794,15 +794,13 @@
 (<- $class nil
     $class-cache (splay-new
                    (lambda (k1 k2)
-                     (let (d (- (address k1) (address k2)))
-                       (if (= d 0) 0 (> d 0) 1 -1))))
+                     (- (address k1) (address k2))))
     $method-cache (splay-new
                     (lambda (k1 k2)
-                      (let (d (- (+ (* (address (car k1)) 10)
-                                    (address (cadr k1)))
-                                 (+ (* (address (car k2)) 10)
-                                    (address (cadr k2)))))
-                        (if (= d 0) 0 (> d 0) 1 -1)))))
+                      (let (d (- (address (car k1)) (address (car k2))))
+                        (if (= d 0)
+                            (- (address (cadr k1)) (address (cadr k2)))
+                            d)))))
 
 (function class-exists? (cls-sym)
   (find $class cls-sym))
