@@ -160,6 +160,10 @@ static void fb_flush(void)
 #define gen0(type) (gc_new_cons(inst(type), object_nil))
 #define gen1(type, o) (gc_new_cons(inst(type), o))
 #define gen2(type, o, p) (gc_new_cons(inst(type), gc_new_cons(o, p)))
+#define regen1(type, val) {\
+  fs_top()->cons.car = inst(type);\
+  fs_top()->cons.cdr = val; \
+}
 
 int inst_size(object o)
 {
@@ -223,17 +227,25 @@ char *inst_name(object o)
   }
 }
 
+#ifdef NDEBUG
+#define fs_top(void) (fs[sp - 1])
+#else
 static object fs_top(void)
 {
   xassert(sp > 0);
   return fs[sp - 1];
 }
+#endif
 
+#ifdef NDEBUG
+#define fs_nth(n) (fs[n])
+#else
 static object fs_nth(int n)
 {
   xassert(0 <= n && n < sp);
   return fs[n];
 }
+#endif
 
 static void fs_push(object f)
 {
@@ -342,7 +354,6 @@ static void pop_bind_propagation_inst(void)
 static void pop_eval_inst(void)
 {
   object s;
-  fs_pop();
   switch (type(reg[0])) {
     case MACRO:
     case LAMBDA:
@@ -352,17 +363,19 @@ static void pop_eval_inst(void)
     case STRING:
     case BARRAY:
     case ARRAY:
+      fs_pop();
       return;
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
-        fs_push(gen1(TRACE_INST, reg[0]));
+        regen1(TRACE_INST, reg[0]);
         ip_mark_exception("unbind symbol");
         return;
       }
       reg[0] = s;
+      fs_pop();
       return;
     case CONS:
-      fs_push(gen1(TRACE_INST, reg[0]));
+      regen1(TRACE_INST, reg[0]);
       fs_push(gen1(FETCH_OPERATOR_INST, reg[0]->cons.cdr));
       fs_push(gen0(EVAL_INST));
       reg[0] = reg[0]->cons.car;
@@ -1109,7 +1122,7 @@ static void ip_main(void)
       case THROW_INST: pop_throw_inst(); break;
       case TRACE_INST: fs_pop(); break;
       case UNWIND_PROTECT_INST: pop_unwind_protect_inst(); break;
-      default: xassert(FALSE);
+      default: xassert(FALSE); break;
     }
     cycle++;
   }
