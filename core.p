@@ -439,16 +439,6 @@
                   (rec (cdr l) (cons (car l) acc)))))
     (rec l nil)))
 
-(function reverse! (l)
-  ; Destructive reverse.
-  (ensure-argument (list? l))
-  (if l
-      (let (prev nil curr l next (cdr l))
-        (while true
-          (cdr! curr prev)
-          (if next (<- prev curr curr next next (cdr next))
-              (return curr))))))
-
 (function reduce (l f :key (identity nil identity?))
   ; Reduce uses the specified binary operation f, to combine the elements of the specified list l.
   ; The function must accept as arguments two elements of list or the results from combining those elements.

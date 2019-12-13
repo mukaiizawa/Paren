@@ -117,6 +117,7 @@ static char *symbol_name_map[] = {
   "cons_p", "cons?",
   "set_car", "car!",
   "set_cdr", "cdr!",
+  "xreverse", "reverse!",
 
   "bit_and", "bit-and",
   "bit_or", "bit-or",
