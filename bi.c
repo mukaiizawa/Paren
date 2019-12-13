@@ -52,6 +52,15 @@ static int prim_p(object o)
   return FALSE;
 }
 
+void barray_add(int type, object y, object *result)
+{
+  object x;
+  x = *result;
+  *result = gc_new_barray(type, x->barray.size + y->barray.size);
+  memcpy((*result)->barray.elt, x->barray.elt, x->barray.size);
+  memcpy((*result)->barray.elt + x->barray.size, y->barray.elt, y->barray.size);
+}
+
 PRIM(address)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -159,6 +168,7 @@ static char *symbol_name_map[] = {
   "keyword_p", "keyword?",
   "keyword_to_string", "keyword->string",
   "keyword_to_symbol", "keyword->symbol",
+  "symbol_add", "symbol+",
   "symbol_p", "symbol?",
   "symbol_to_keyword", "symbol->keyword",
   "symbol_to_string", "symbol->string",

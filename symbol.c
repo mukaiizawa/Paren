@@ -40,6 +40,20 @@ PRIM(keyword_p)
   return TRUE;
 }
 
+PRIM(symbol_add)
+{
+  object x;
+  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
+  if (!ensure_symbol(argv->cons.car, result)) return FALSE;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (!ensure_symbol(argv->cons.car, &x)) return FALSE;
+    barray_add(STRING, x, result);
+  }
+  *result = gc_new_barray_from(SYMBOL, (*result)->barray.size
+      , (*result)->barray.elt);
+  return TRUE;
+}
+
 PRIM(symbol_to_string)
 {
   object o;

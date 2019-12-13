@@ -674,7 +674,9 @@
 
 ; splay tree
 
-(function splay-new (comparator)
+(function splay-new (:opt (comparator
+                            (lambda (k1 k2)
+                              (- (address k1) (address k2)))))
   (list $splay-nil comparator))
 
 (function splay-top (splay)
@@ -791,44 +793,32 @@
 
 ; Paren object system
 
-(<- $class nil
-    $class-cache (splay-new
-                   (lambda (k1 k2)
-                     (- (address k1) (address k2))))
-    $method-cache (splay-new
-                    (lambda (k1 k2)
-                      (let (d (- (address (car k1)) (address (car k2))))
-                        (if (= d 0)
-                            (- (address (cadr k1)) (address (cadr k2)))
-                            d)))))
-
-(function class-exists? (cls-sym)
-  (find $class cls-sym))
+(<- $class (splay-new)
+    $method (splay-new))
 
 (function find-class (cls-sym)
   (ensure-argument (symbol? cls-sym))
-  (let (cls nil)
-    (if (<- cls (splay-find $class-cache cls-sym)) cls
-        (begin (<- cls (assoc $class cls-sym))
-               (splay-add $class-cache cls-sym cls)))))
+  (let (cls (splay-find $class cls-sym))
+    (if cls cls
+        (throw (.message (.new IllegalStateException)
+                         (string+ "class " (symbol->string cls-sym)
+                                  " not found"))))))
 
 (function find-method (cls-sym method-sym)
   (ensure-argument (symbol? cls-sym) (symbol? method-sym))
-  (let (key (list cls-sym method-sym)
-        m nil
+  (let (m nil
         find-class-method
-            (lambda (cls)
-              (cadr (find-cons (nth cls 11) method-sym)))
+            (lambda (cls-sym)
+              (splay-find $method (symbol+ cls-sym method-sym)))
         rec
             (lambda (cls-sym)
-              (for (cls-sym cls-sym cls nil) cls-sym (<- cls-sym (nth cls 5))
-                (<- cls (find-class cls-sym))
-                (if (<- m (find-class-method cls)) (return m)
+              (for (cls-sym cls-sym cls (find-class cls-sym)) cls-sym
+                (<- cls-sym (nth cls 5) cls (find-class cls-sym))
+                (if (<- m (find-class-method cls-sym)) (return m)
                     (dolist (feature (nth cls 7))
-                      (if (<- m (find-class-method (find-class feature)))
+                      (if (<- m (find-class-method feature))
                           (return m)))))))
-    (if (<- m (splay-find $method-cache key)) m
-        (<- m (rec cls-sym)) (splay-add $method-cache key m)
+    (if (<- m (rec cls-sym)) m
         (throw (.message (.new IllegalStateException)
                          (string+ "method " (symbol->string method-sym)
                                   " not found"))))))
@@ -849,15 +839,16 @@
                     (list 'assoc receiver key)))))))
 
 (macro make-method-dispatcher (method-sym)
-  (with-gensyms (receiver args)
-    (list 'function method-sym (list receiver :rest args)
-          :method
-          (list ensure-argument (list object? receiver))
-          (list 'apply
-                (list 'find-method
-                      (list 'cadr receiver)    ; <=> (assoc cls :class)
-                      (list quote method-sym))
-                (list 'cons receiver args)))))
+  (unless (bound? method-sym)
+    (with-gensyms (receiver args)
+      (list 'function method-sym (list receiver :rest args)
+            :method
+            (list 'ensure-argument (list object? receiver))
+            (list 'apply
+                  (list 'find-method
+                        (list 'cadr receiver)    ; <=> (assoc cls :class)
+                        (list quote method-sym))
+                  (list 'cons receiver args))))))
 
 (function method? (o)
   ; Returns true if the specified o is method.
@@ -874,25 +865,19 @@
                                              :symbol cls-sym
                                              :super (if (not Object?) super)
                                              :features features
-                                             :fields fields
-                                             :methods nil)))
-          (list 'push! '$class cls-sym)
-          (list 'push! '$class (list quote cls-sym))
+                                             :fields fields)))
+          (list 'splay-add '$class (list quote cls-sym) cls-sym)
           (cons begin
                 (map fields (lambda (field) (list 'make-accessor field)))))))
 
 (macro method (cls-sym method-sym args :rest body)
-  (ensure-argument (class-exists? cls-sym)
-                   (not (and (bound? method-sym)
-                             (not (method? (eval method-sym))))))
-  (list begin0
-        (list quote method-sym)
-        (if (not (bound? method-sym))
-            (list make-method-dispatcher method-sym))
-        (list assoc! cls-sym :methods
-              (list cons (list quote method-sym)
-                    (list cons (cons lambda (cons (cons 'self args) body))
-                          (list 'assoc cls-sym :methods))))))
+  (let (global-sym (symbol+ cls-sym method-sym))
+    (ensure-argument (find-class cls-sym) (not (bound? global-sym)))
+    (list begin0
+          (list quote global-sym)
+          (list 'make-method-dispatcher method-sym)
+          (list 'splay-add '$method (list quote global-sym)
+                (cons lambda (cons (cons 'self args) body))))))
 
 (macro throw (o)
   (with-gensyms (e)
