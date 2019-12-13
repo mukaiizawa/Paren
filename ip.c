@@ -1097,7 +1097,9 @@ static void ip_main(void)
     xassert(sp >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
     if (sp == 0) break;
-    gc_chance();
+    if(cycle % IP_POLLING_INTERVAL == 0) {
+      gc_chance();
+    }
     switch (fs_top()->cons.car->xint.val) {
       case APPLY_INST: pop_apply_inst(); break;
       case APPLY_PRIM_INST: pop_apply_prim_inst(); break;
