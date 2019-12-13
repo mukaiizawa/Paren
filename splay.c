@@ -13,11 +13,10 @@ int splay_symcmp(object o, object p)
 
 int splay_strcmp(object o, object p)
 {
-  int i, os, ps;
-  os = o->barray.size;
-  ps = p->barray.size;
-  if ((i = os - ps) == 0) return memcmp(o->barray.elt, p->barray.elt, os);
-  return i;
+  int i, len;
+  len = o->barray.size;
+  if ((i = (len = o->barray.size) - p->barray.size) != 0) return i;
+  return memcmp(o->barray.elt, p->barray.elt, len);
 }
 
 #define nil object_splay_nil
