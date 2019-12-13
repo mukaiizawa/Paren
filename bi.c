@@ -115,6 +115,7 @@ static char *symbol_name_map[] = {
   "unwind_protect", "unwind-protect",
 
   "cons_p", "cons?",
+  "last_cons", "last-cons",
   "set_car", "car!",
   "set_cdr", "cdr!",
   "xreverse", "reverse!",

@@ -106,6 +106,17 @@ PRIM(length)
   return TRUE;
 }
 
+PRIM(last_cons)
+{
+  object o;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!ensure_list(argv->cons.car, &o)) return FALSE;
+  if (o != object_nil)
+    while (o->cons.cdr != object_nil) o = o->cons.cdr;
+  *result = o;
+  return TRUE;
+}
+
 PRIM(xreverse)
 {
   object o;

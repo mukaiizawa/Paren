@@ -352,13 +352,6 @@
   (if (nil? l) nil
       (sublist l 0 (length l))))
 
-(function last-cons (l)
-  ; Returns the last cons that make up the specified list l.
-  (ensure-argument (list? l))
-  (while true
-    (if (cdr l) (<- l (cdr l))
-        (return l))))
-
 (function last (l)
   ; Returns the last element of the specified list l.
   (ensure-argument (list? l))
