@@ -804,12 +804,16 @@
                          (string+ "class " (symbol->string cls-sym)
                                   " not found"))))))
 
+(function global-method-sym (cls-sym method-sym)
+  (string->symbol (string+ (symbol->string cls-sym)
+                           (symbol->string method-sym))))
+
 (function find-method (cls-sym method-sym)
   (ensure-argument (symbol? cls-sym) (symbol? method-sym))
   (let (m nil
         find-class-method
             (lambda (cls-sym)
-              (splay-find $method (symbol+ cls-sym method-sym)))
+              (splay-find $method (global-method-sym cls-sym method-sym)))
         rec
             (lambda (cls-sym)
               (for (cls-sym cls-sym cls (find-class cls-sym)) cls-sym
@@ -871,13 +875,15 @@
                 (map fields (lambda (field) (list 'make-accessor field)))))))
 
 (macro method (cls-sym method-sym args :rest body)
-  (let (global-sym (symbol+ cls-sym method-sym))
+  (let (global-sym (global-method-sym cls-sym method-sym)
+        quoted-gloval-sym (list quote global-sym)
+        method-lambda (cons lambda (cons (cons 'self args) body)))
     (ensure-argument (find-class cls-sym) (not (bound? global-sym)))
     (list begin0
-          (list quote global-sym)
+          quoted-gloval-sym
           (list 'make-method-dispatcher method-sym)
-          (list 'splay-add '$method (list quote global-sym)
-                (cons lambda (cons (cons 'self args) body))))))
+          (list <- global-sym method-lambda)
+          (list 'splay-add '$method quoted-gloval-sym method-lambda))))
 
 (macro throw (o)
   (with-gensyms (e)
