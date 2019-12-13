@@ -3,10 +3,10 @@
 extern int gc_used_memory;
 extern int gc_max_used_memory;
 
+extern object gc_new_pointer(void *p);
 extern object gc_new_splay(object cmp);
 extern object gc_new_splay_node(object k, object v, object l, object r);
 
-extern object gc_new_pointer(void *p);
 extern object gc_new_env(object top);
 extern object gc_new_macro(object env, object params, object body);
 extern object gc_new_lambda(object env, object params, object body);

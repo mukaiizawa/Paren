@@ -156,6 +156,11 @@ static void fb_flush(void)
 #define UNWIND_PROTECT_INST 20
 #define LAST_INST 21
 
+#define inst(type) (object_bytes[type])
+#define gen0(type) (gc_new_cons(inst(type), object_nil))
+#define gen1(type, o) (gc_new_cons(inst(type), o))
+#define gen2(type, o, p) (gc_new_cons(inst(type), gc_new_cons(o, p)))
+
 int inst_size(object o)
 {
   xassert(typep(o, XINT));
@@ -216,26 +221,6 @@ char *inst_name(object o)
     case THROW_INST: return "THROW_INST";
     default: xassert(FALSE); return NULL;
   }
-}
-
-static object gen(int type)
-{
-  return object_bytes[type];
-}
-
-static object gen0(int type)
-{
-  return gc_new_cons(gen(type), object_nil);
-}
-
-static object gen1(int type, object o)
-{
-  return gc_new_cons(gen(type), o);
-}
-
-static object gen2(int type, object o, object p)
-{
-  return gc_new_cons(gen(type), gc_new_cons(o, p));
 }
 
 static object fs_top(void)
