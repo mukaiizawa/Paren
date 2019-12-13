@@ -1062,25 +1062,17 @@ PRIM(call_stack)
   return TRUE;
 }
 
-static object make_error_object(void)
-{
-  object e;
-  if (ip_trap_code == TRAP_EXCEPTION) e = object_Exception;
-  else e = object_Error;
-  // (:class Error :message msg)
-  return gc_new_cons(object_class, gc_new_cons(e, gc_new_cons(object_message
-          , gc_new_cons(gc_new_barray_from(STRING, strlen(error_msg), error_msg)
-            , object_nil))));
-}
-
 static void trap(void)
 {
+  object e;
   switch (ip_trap_code) {
     case TRAP_EXCEPTION:
     case TRAP_ERROR:
-      fs_push(gen0(THROW_INST));
       xassert(error_msg != NULL);
-      reg[0] = make_error_object();
+      if (ip_trap_code == TRAP_EXCEPTION) e = object_Exception;
+      else e = object_Error;
+      fs_push(gen0(THROW_INST));
+      reg[0] = gc_new_throwable(e, error_msg);
       ip_trap_code = TRAP_NONE;
       error_msg = NULL;
       break;

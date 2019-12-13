@@ -47,26 +47,6 @@ static object gc_alloc(int size)
   return o;
 }
 
-object gc_new_pointer(void *p)
-{
-  object o;
-  o = gc_alloc(sizeof(void *));
-  set_type(o, POINTER);
-  o->p = p;
-  regist(o);
-  return o;
-}
-
-object gc_new_splay(object cmp)
-{
-  return gc_new_cons(object_splay_nil, cmp);
-}
-
-object gc_new_splay_node(object k, object v, object l, object r)
-{
-  return gc_new_cons(gc_new_cons(k, v), gc_new_cons(l, r));
-}
-
 object gc_new_env(object top)
 {
   object o;
@@ -196,6 +176,33 @@ object gc_new_array(int size)
   o->array.size = size;
   regist(o);
   return o;
+}
+
+object gc_new_pointer(void *p)
+{
+  object o;
+  o = gc_alloc(sizeof(void *));
+  set_type(o, POINTER);
+  o->p = p;
+  regist(o);
+  return o;
+}
+
+object gc_new_splay(object cmp)
+{
+  return gc_new_cons(object_splay_nil, cmp);
+}
+
+object gc_new_splay_node(object k, object v, object l, object r)
+{
+  return gc_new_cons(gc_new_cons(k, v), gc_new_cons(l, r));
+}
+
+object gc_new_throwable(object e, char *msg)
+{
+  return gc_new_cons(object_class, gc_new_cons(e, gc_new_cons(object_message
+          , gc_new_cons(gc_new_barray_from(STRING, strlen(msg), msg)
+            , object_nil))));
 }
 
 void gc_mark(object o)
