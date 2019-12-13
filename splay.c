@@ -7,11 +7,8 @@
 
 int splay_symcmp(object o, object p)
 {
-  intptr_t i;
   xassert(typep(o, SYMBOL));
-  if ((i = (intptr_t)o - (intptr_t)p) == 0) return 0;
-  if (i > 0) return 1;
-  return -1;
+  return (intptr_t)o - (intptr_t)p;
 }
 
 int splay_strcmp(object o, object p)
@@ -20,8 +17,7 @@ int splay_strcmp(object o, object p)
   os = o->barray.size;
   ps = p->barray.size;
   if ((i = os - ps) == 0) return memcmp(o->barray.elt, p->barray.elt, os);
-  if (i > 0) return 1;
-  return -1;
+  return i;
 }
 
 #define nil object_splay_nil
