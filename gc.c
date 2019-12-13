@@ -21,6 +21,7 @@ static struct xarray *table, *work_table, table0, table1;
 #define set_alive(o) ((o)->header |= ALIVE_MASK)
 #define set_dead(o) ((o)->header &= ~ALIVE_MASK)
 #define set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= type;}
+#define regist(o) (xarray_add(table, o))
 
 static object gc_alloc(int size)
 {
@@ -46,19 +47,14 @@ static object gc_alloc(int size)
   return o;
 }
 
-static object regist(object o)
-{ 
-  xarray_add(table, o);
-  return o;
-}
-
 object gc_new_pointer(void *p)
 {
   object o;
   o = gc_alloc(sizeof(void *));
   set_type(o, POINTER);
   o->p = p;
-  return regist(o);
+  regist(o);
+  return o;
 }
 
 object gc_new_splay(object cmp)
@@ -78,7 +74,8 @@ object gc_new_env(object top)
   set_type(o, ENV);
   o->env.top = top;
   o->env.binding = gc_new_splay(object_symcmp);
-  return regist(o);
+  regist(o);
+  return o;
 }
 
 static object new_lambda(object env, object params, object body)
@@ -89,7 +86,8 @@ static object new_lambda(object env, object params, object body)
   o->lambda.env = env;
   o->lambda.params = params;
   o->lambda.body = body;
-  return regist(o);
+  regist(o);
+  return o;
 }
 
 object gc_new_macro(object env, object params, object body)
@@ -114,7 +112,8 @@ object gc_new_bytes(int64_t val)
   o = gc_alloc(sizeof(struct xint));
   set_type(o, XINT);
   o->xint.val = val;
-  return regist(o);
+  regist(o);
+  return o;
 }
 
 object gc_new_xint(int64_t val)
@@ -129,7 +128,8 @@ object gc_new_xfloat(double val)
   o = gc_alloc(sizeof(struct xfloat));
   set_type(o, XFLOAT);
   o->xfloat.val = val;
-  return regist(o);
+  regist(o);
+  return o;
 }
 
 object gc_new_cons(object car, object cdr)
@@ -139,7 +139,8 @@ object gc_new_cons(object car, object cdr)
   set_type(o, CONS);
   o->cons.car = car;
   o->cons.cdr = cdr;
-  return regist(o);
+  regist(o);
+  return o;
 }
 
 object gc_new_barray(int type, int size)
@@ -150,7 +151,8 @@ object gc_new_barray(int type, int size)
   set_type(o, type);
   memset(o->barray.elt, 0, size);
   o->barray.size = size;
-  return regist(o);
+  regist(o);
+  return o;
 }
 
 static object new_barray_from(int type, int size, char *val)
@@ -192,7 +194,8 @@ object gc_new_array(int size)
   set_type(o, ARRAY);
   for (i = 0; i < size; i++) o->array.elt[i] = object_nil;
   o->array.size = size;
-  return regist(o);
+  regist(o);
+  return o;
 }
 
 void gc_mark(object o)
