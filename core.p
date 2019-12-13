@@ -793,8 +793,7 @@
 
 ; Paren object system
 
-(<- $class (splay-new)
-    $method (splay-new))
+(<- $class (splay-new))
 
 (function find-class (cls-sym)
   (ensure-argument (symbol? cls-sym))
@@ -805,15 +804,15 @@
                                   " not found"))))))
 
 (function global-method-sym (cls-sym method-sym)
-  (string->symbol (string+ (symbol->string cls-sym)
-                           (symbol->string method-sym))))
+  (symbol+ cls-sym method-sym))
 
 (function find-method (cls-sym method-sym)
   (ensure-argument (symbol? cls-sym) (symbol? method-sym))
   (let (m nil
         find-class-method
             (lambda (cls-sym)
-              (splay-find $method (global-method-sym cls-sym method-sym)))
+              (let (gs (global-method-sym cls-sym method-sym))
+                (if (bound? gs) (eval gs))))
         rec
             (lambda (cls-sym)
               (for (cls-sym cls-sym cls (find-class cls-sym)) cls-sym
@@ -882,8 +881,7 @@
     (list begin0
           quoted-gloval-sym
           (list 'make-method-dispatcher method-sym)
-          (list <- global-sym method-lambda)
-          (list 'splay-add '$method quoted-gloval-sym method-lambda))))
+          (list <- global-sym method-lambda))))
 
 (macro throw (o)
   (with-gensyms (e)
