@@ -1,7 +1,6 @@
 // interpreter
 
 #include "std.h"
-#include "xsplay.h"
 #include "xarray.h"
 #include "xbarray.h"
 #include "object.h"
@@ -332,7 +331,7 @@ static void pop_apply_prim_inst(void)
   object args;
   int (*prim)(int, object, object *);
   args = reg[0];
-  prim = xsplay_find(&prim_splay, fs_pop()->cons.cdr);
+  prim = fs_pop()->cons.cdr->prim;
   if ((*prim)(object_list_len(args), args, &(reg[0]))) return;
   if (error_msg == NULL) ip_mark_exception("primitive failed");
 }
@@ -441,17 +440,18 @@ static void pop_fetch_handler_inst(void)
 
 static void pop_fetch_operator_inst(void)
 {
-  object args;
+  object f, args;
   int (*special)(int, object);
   args = fs_pop()->cons.cdr;
   switch (type(reg[0])) {
     case SYMBOL:
-      if ((special = xsplay_find(&special_splay, reg[0])) != NULL) {
+      if ((f = splay_find(object_special_splay, reg[0])) != NULL) {
+        special = f->special;
         (*special)(object_list_len(args), args);
         return;
       }
-      if (xsplay_find(&prim_splay, reg[0]) != NULL) {
-        fs_push(gen1(APPLY_PRIM_INST, reg[0]));
+      if ((f = splay_find(object_prim_splay, reg[0])) != NULL) {
+        fs_push(gen1(APPLY_PRIM_INST, f));
         push_eval_args_inst(args);
         return;
       }
@@ -1022,12 +1022,13 @@ PRIM(eval)
 
 PRIM(apply)
 {
+  object f;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
   switch (type(argv->cons.car)) {
     case SYMBOL:
-      if (xsplay_find(&prim_splay, argv->cons.car) == NULL) break;
+      if ((f = splay_find(object_prim_splay, argv->cons.car)) == NULL) break;
       else {
-        fs_push(gen1(APPLY_PRIM_INST, argv->cons.car));
+        fs_push(gen1(APPLY_PRIM_INST, f));
         reg[0] = argv->cons.cdr->cons.car;
         return TRUE;
       }

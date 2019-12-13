@@ -43,7 +43,7 @@ prim=ip.c bi.c cons.c number.c symbol.c array.c string.c lambda.c os.c
 prim.wk: $(prim)
 	cat $+ | grep ^PRIM>$@
 
-xc.a: std.o xarray.o xbarray.o xsplay.o xgetopt.o heap.o splay.o \
+xc.a: std.o xarray.o xbarray.o xgetopt.o heap.o splay.o \
 	gc.o object.o lex.o pf.o \
 	$(special:%.c=%.o) $(prim:%.c=%.o) 
 	ar -ru xc.a $+

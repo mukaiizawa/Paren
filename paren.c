@@ -2,7 +2,6 @@
 
 #include "std.h"
 #include "xgetopt.h"
-#include "xsplay.h"
 #include "xarray.h"
 #include "pf.h"
 #include "object.h"
@@ -171,15 +170,15 @@ static void bind_special(void)
   int i;
   char *s;
   object o;
-  xsplay_init(&special_splay, (int(*)(void *, void *))symcmp);
-  xsplay_init(&prim_splay, (int(*)(void *, void *))symcmp);
+  object_special_splay = gc_new_splay(object_symcmp);
+  object_prim_splay = gc_new_splay(object_symcmp);
   for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++) {
     bind_pseudo_symbol(o = symbol_new(s));
-    xsplay_add(&special_splay, o, special_table[i]);
+    splay_add(object_special_splay, o, gc_new_pointer(special_table[i]));
   }
   for (i = 0; (s = bi_as_symbol_name(prim_name_table[i])) != NULL; i++) {
     bind_pseudo_symbol(o = symbol_new(s));
-    xsplay_add(&prim_splay, o, prim_table[i]);
+    splay_add(object_prim_splay, o, gc_new_pointer(prim_table[i]));
   }
 }
 
@@ -199,7 +198,11 @@ static void make_initial_objects(int argc, char *argv[])
   memcpy(nil->barray.elt, "nil", 3);
   object_nil = nil;
   object_splay_nil = gc_new_splay_node(nil, nil, nil, nil);
-  gc_init1();
+  object_symcmp = gc_new_pointer(&splay_symcmp);
+  object_strcmp = gc_new_pointer(&splay_strcmp);
+  object_symbol_splay = gc_new_splay(object_strcmp);
+  object_keyword_splay = gc_new_splay(object_strcmp);
+  splay_add(object_symbol_splay, object_nil, object_nil);
   object_true = symbol_new("true");
   object_key = keyword_new("key");
   object_opt = keyword_new("opt");

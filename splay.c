@@ -1,14 +1,20 @@
 // splay tree.
 
 #include "std.h"
-#include "xsplay.h"
-#include "xarray.h"
-#include "xbarray.h"
 #include "object.h"
 #include "gc.h"
 #include "splay.h"
 
-static int cmp(object o, object p)
+int splay_symcmp(object o, object p)
+{
+  intptr_t i;
+  xassert(typep(o, SYMBOL));
+  if ((i = (intptr_t)o - (intptr_t)p) == 0) return 0;
+  if (i > 0) return 1;
+  return -1;
+}
+
+int splay_strcmp(object o, object p)
 {
   int i, os, ps;
   os = o->barray.size;
@@ -21,6 +27,7 @@ static int cmp(object o, object p)
 #define nil object_splay_nil
 #define splay_get_top(splay) ((splay)->cons.car)
 #define splay_set_top(splay, top) ((splay)->cons.car = top)
+#define splay_get_cmp(splay) ((splay)->cons.cdr->cmp)
 #define node_get_key(node) ((node)->cons.car->cons.car)
 #define node_set_key(node, k) ((node)->cons.car->cons.car = k)
 #define node_get_val(node) ((node)->cons.car->cons.cdr)
@@ -32,8 +39,9 @@ static int cmp(object o, object p)
 
 static object balance(object splay, object key)
 {
-  int d;
   object top, p, q;
+  int (*cmp)(object p, object q), d;
+  cmp = splay_get_cmp(splay);
   top = splay_get_top(splay);
   node_set_key(nil, key);
   node_set_left(nil, nil);
@@ -122,12 +130,4 @@ object splay_find(object splay, object key)
   }
   splay_set_top(splay, top);
   return node_get_val(top);
-}
-
-void splay_delete(object splay, object key)
-{
-  object top;
-  top = balance(splay, key);
-  xassert(top != nil);
-  splay_set_top(splay, resume(top));
 }

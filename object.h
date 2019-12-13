@@ -15,6 +15,7 @@ typedef union s_expr *object;
 #define   STRING   0x00000100
 #define   BARRAY   0x00000200
 #define   ARRAY    0x00000400
+#define   POINTER  0x00000800
 
 #define LINT_BITS 63
 
@@ -59,12 +60,18 @@ union s_expr {
     object elt[1];
   } array;
   object next;
+  void *p;
+  int (*cmp)(object p, object q);
+  int (*special)(int, object);
+  int (*prim)(int, object, object *);
 };
 
-extern int symcmp(object o, object p);
-
-extern struct xsplay special_splay;
-extern struct xsplay prim_splay;
+extern object object_symbol_splay;
+extern object object_keyword_splay;
+extern object object_special_splay;
+extern object object_prim_splay;
+extern object object_symcmp;
+extern object object_strcmp;
 
 // global object
 extern object object_nil;

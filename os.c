@@ -8,7 +8,6 @@
 
 #include "xbarray.h"
 #include "xarray.h"
-#include "xsplay.h"
 #include "object.h"
 #include "gc.h"
 #include "bi.h"

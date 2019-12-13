@@ -3,11 +3,14 @@
 #include "std.h"
 #include "xarray.h"
 #include "xbarray.h"
-#include "xsplay.h"
 #include "object.h"
 
-struct xsplay special_splay;
-struct xsplay prim_splay;
+object object_symbol_splay;
+object object_keyword_splay;
+object object_special_splay;
+object object_prim_splay;
+object object_symcmp;
+object object_strcmp;
 
 object object_nil;
 object object_true;
@@ -23,15 +26,6 @@ object object_Error;
 object object_Exception;
 object object_boot;
 object object_splay_nil;
-
-int symcmp(object o, object p)
-{
-  intptr_t i;
-  xassert(typep(o, SYMBOL));
-  if ((i = (intptr_t)o - (intptr_t)p) == 0) return 0;
-  if (i > 0) return 1;
-  return -1;
-}
 
 int object_list_len(object o)
 {

@@ -1,7 +1,6 @@
 // garbage collector
 
 #include "std.h"
-#include "xsplay.h"
 #include "xarray.h"
 #include "heap.h"
 #include "object.h"
@@ -16,9 +15,6 @@ int gc_max_used_memory;
 #define LINK1_SIZE (2 * LINK0_SIZE)
 static object link0;
 static object link1;
-
-static object symbol_table;
-static object keyword_table;
 
 static struct heap heap;
 static struct xarray table;
@@ -71,9 +67,18 @@ static object regist(object o)
   return o;
 }
 
-static object new_splay()
+object gc_new_pointer(void *p)
 {
-  return gc_new_cons(object_splay_nil, object_nil);
+  object o;
+  o = gc_alloc(sizeof(void *));
+  set_type(o, POINTER);
+  o->p = p;
+  return regist(o);
+}
+
+object gc_new_splay(object cmp)
+{
+  return gc_new_cons(object_splay_nil, cmp);
 }
 
 object gc_new_splay_node(object k, object v, object l, object r)
@@ -87,7 +92,7 @@ object gc_new_env(object top)
   o = gc_alloc(sizeof(struct env));
   set_type(o, ENV);
   o->env.top = top;
-  o->env.binding = new_splay();
+  o->env.binding = gc_new_splay(object_symcmp);
   return regist(o);
 }
 
@@ -177,12 +182,12 @@ object gc_new_barray_from(int type, int size, char *val)
   o = new_barray_from(type, size, val);
   switch (type) {
     case SYMBOL:
-      if ((p = splay_find(symbol_table, o)) != NULL) return p;
-      splay_add(symbol_table, o, o);
+      if ((p = splay_find(object_symbol_splay, o)) != NULL) return p;
+      splay_add(object_symbol_splay, o, o);
       return o;
     case KEYWORD:
-      if ((p = splay_find(keyword_table, o)) != NULL) return p;
-      splay_add(keyword_table, o, o);
+      if ((p = splay_find(object_keyword_splay, o)) != NULL) return p;
+      splay_add(object_keyword_splay, o, o);
       return o;
     case STRING:
     case BARRAY:
@@ -269,17 +274,14 @@ void gc_chance(void)
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
   if (GC_LOG_P) printf("before gc(used memory %d[byte])\n", gc_used_memory);
   ip_mark();
-  gc_mark(symbol_table);
-  gc_mark(keyword_table);
+  gc_mark(object_special_splay);
+  gc_mark(object_prim_splay);
+  gc_mark(object_symcmp);
+  gc_mark(object_strcmp);
+  gc_mark(object_symbol_splay);
+  gc_mark(object_keyword_splay);
   sweep_s_expr();
   if (GC_LOG_P) printf("after gc(used memory %d[byte])\n", gc_used_memory);
-}
-
-void gc_init1(void)
-{
-  symbol_table = new_splay();
-  keyword_table = new_splay();
-  splay_add(symbol_table, object_nil, object_nil);
 }
 
 void gc_init(void)
