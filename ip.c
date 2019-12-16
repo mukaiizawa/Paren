@@ -160,11 +160,6 @@ static void fb_flush(void)
 #define gen0(type) (gc_new_cons(inst(type), object_nil))
 #define gen1(type, o) (gc_new_cons(inst(type), o))
 #define gen2(type, o, p) (gc_new_cons(inst(type), gc_new_cons(o, p)))
-#define regen0(type) { fs_top()->cons.car = inst(type); }
-#define regen1(type, val) {\
-  fs_top()->cons.car = inst(type);\
-  fs_top()->cons.cdr = val; \
-}
 
 int inst_size(object o)
 {
@@ -355,6 +350,7 @@ static void pop_bind_propagation_inst(void)
 static void pop_eval_inst(void)
 {
   object s;
+  fs_pop();
   switch (type(reg[0])) {
     case MACRO:
     case LAMBDA:
@@ -364,19 +360,17 @@ static void pop_eval_inst(void)
     case STRING:
     case BARRAY:
     case ARRAY:
-      fs_pop();
       return;
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
-        regen1(TRACE_INST, reg[0]);
+        fs_push(gen1(TRACE_INST, reg[0]));
         ip_mark_exception("unbind symbol");
         return;
       }
       reg[0] = s;
-      fs_pop();
       return;
     case CONS:
-      regen1(TRACE_INST, reg[0]);
+      fs_push(gen1(TRACE_INST, reg[0]));
       fs_push(gen1(FETCH_OPERATOR_INST, reg[0]->cons.cdr));
       fs_push(gen0(EVAL_INST));
       reg[0] = reg[0]->cons.car;
@@ -441,33 +435,30 @@ static void pop_fetch_operator_inst(void)
 {
   object f, args;
   int (*special)(int, object);
-  args = fs_top()->cons.cdr;
+  args = fs_pop()->cons.cdr;
   switch (type(reg[0])) {
     case SYMBOL:
       if ((f = splay_find(object_special_splay, reg[0])) != NULL) {
-        fs_pop();
         special = f->special;
         (*special)(object_list_len(args), args);
         return;
       }
       if ((f = splay_find(object_prim_splay, reg[0])) != NULL) {
-        regen1(APPLY_PRIM_INST, f);
+        fs_push(gen1(APPLY_PRIM_INST, f));
         push_eval_args_inst(args);
         return;
       }
-      fs_pop();
       break;
     case MACRO:
-      regen0(EVAL_INST);
+      fs_push(gen0(EVAL_INST));
       push_apply_inst(reg[0]);
       reg[0] = args;
       return;
     case LAMBDA:
-      fs_pop();
       push_apply_inst(reg[0]);
       push_eval_args_inst(args);
       return;
-    default: fs_pop(); break;
+    default: break;
   }
   ip_mark_exception("is not a operator");
 }
