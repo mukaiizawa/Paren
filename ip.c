@@ -156,10 +156,11 @@ static void fb_flush(void)
 #define UNWIND_PROTECT_INST 20
 #define LAST_INST 21
 
-#define inst(type) (object_bytes[type])
-#define gen0(type) (gc_new_cons(inst(type), object_nil))
-#define gen1(type, o) (gc_new_cons(inst(type), o))
-#define gen2(type, o, p) (gc_new_cons(inst(type), gc_new_cons(o, p)))
+#define inst(o) (o->cons.car->xint.val)
+#define inst_val(inst) (object_bytes[inst])
+#define gen0(inst) (gc_new_cons(inst_val(inst), object_nil))
+#define gen1(inst, o) (gc_new_cons(inst_val(inst), o))
+#define gen2(inst, o, p) (gc_new_cons(inst_val(inst), gc_new_cons(o, p)))
 
 int inst_size(object o)
 {
@@ -264,7 +265,7 @@ static void pop_unwind_protect_inst(void);
 
 static void fs_rewind_pop(void)
 {
-  switch (fs_top()->cons.car->xint.val) {
+  switch (inst(fs_top())) {
     case SWITCH_ENV_INST: pop_switch_env(); break;
     case UNWIND_PROTECT_INST: xassert(FALSE); break;    // must be protected.
     default: fs_pop(); break;
@@ -392,14 +393,14 @@ static void pop_goto_inst(void)
       ip_mark_exception("labels context not found");
       return;
     }
-    if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
+    if (inst(fs_top()) == UNWIND_PROTECT_INST) {
       o = fs_pop()->cons.cdr;
       fs_push(gen0(GOTO_INST));
       fs_push(gen1(QUOTE_INST, label));
       push_eval_sequential_inst(o);
       return;
     }
-    if (fs_top()->cons.car->xint.val == LABELS_INST) break;
+    if (inst(fs_top()) == LABELS_INST) break;
     fs_rewind_pop();
   }
   o = fs_top()->cons.cdr;
@@ -511,7 +512,7 @@ static void pop_return_inst(void)
 {
   object args;
   while (sp != 0) {
-    switch (fs_top()->cons.car->xint.val) {
+    switch (inst(fs_top())) {
       case FENCE_INST:
         return;
       case UNWIND_PROTECT_INST: 
@@ -543,24 +544,24 @@ static void exit1(void)
 
 static void pop_throw_inst(void)
 {
-  object osp, body, handler;
+  object o, body, handler;
   int s, e;
   e = sp;
-  osp = fs_pop()->cons.cdr;
-  if (osp != object_nil) e = osp->xint.val;
+  o = fs_pop()->cons.cdr;
+  if (o != object_nil) e = o->xint.val;
   while (TRUE) {
     if (sp == 0) {
       sp = e;
       exit1();
     }
-    if (fs_top()->cons.car->xint.val == UNWIND_PROTECT_INST) {
+    if (inst(fs_top()) == UNWIND_PROTECT_INST) {
       body = fs_pop()->cons.cdr;
       fs_push(gen1(THROW_INST, gc_new_xint(e)));
       fs_push(gen1(QUOTE_INST, reg[0]));
       push_eval_sequential_inst(body);
       return;
     }
-    if (fs_top()->cons.car->xint.val == HANDLER_INST) {
+    if (inst(fs_top()) == HANDLER_INST) {
       s = sp;
       sp = e;
       reg[2] = call_stack(s, e);
@@ -587,8 +588,7 @@ static object call_stack(int s, int e)
   object o;
   o = object_nil;
   for (i = s; i < e; i++) {
-    if (fs_nth(i)->cons.car->xint.val == TRACE_INST)
-      o = gc_new_cons(fs_nth(i)->cons.cdr, o);
+    if (inst(fs_nth(i)) == TRACE_INST) o = gc_new_cons(fs_nth(i)->cons.cdr, o);
   }
   return o;
 }
@@ -846,7 +846,7 @@ SPECIAL(dynamic)
   while (TRUE) {
     if ((v = symbol_find(e, s)) != NULL) break;
     while (--i >= 0) {
-      if (fs[i]->cons.car->xint.val == SWITCH_ENV_INST) {
+      if (inst(fs[i]) == SWITCH_ENV_INST) {
         e = fs[i]->cons.cdr;
         break;
       }
@@ -1086,7 +1086,7 @@ static void ip_main(void)
     if(cycle % IP_POLLING_INTERVAL == 0) {
       gc_chance();
     }
-    switch (fs_top()->cons.car->xint.val) {
+    switch (inst(fs_top())) {
       case APPLY_INST: pop_apply_inst(); break;
       case APPLY_PRIM_INST: pop_apply_prim_inst(); break;
 #ifndef NDEBUG
