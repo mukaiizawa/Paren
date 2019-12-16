@@ -677,16 +677,16 @@
 (function splay-new (:opt (comparator
                             (lambda (k1 k2)
                               (- (address k1) (address k2)))))
-  (list $splay-nil comparator))
+  (cons comparator $splay-nil))
 
 (function splay-top (splay)
-  (car splay))
+  (cdr splay))
 
 (function splay-top! (splay top)
-  (car! splay top))
+  (cdr! splay top))
 
 (function splay-comparator (splay)
-  (cadr splay))
+  (car splay))
 
 (function splay-node-new (k v l r)
   (cons (cons k l) (cons v r)))
