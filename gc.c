@@ -195,7 +195,13 @@ object gc_new_splay(object cmp)
 
 object gc_new_splay_node(object k, object v, object l, object r)
 {
-  return gc_new_cons(gc_new_cons(k, v), gc_new_cons(l, r));
+  object o;
+  o = gc_new_array(4);
+  o->array.elt[0] = k;
+  o->array.elt[1] = v;
+  o->array.elt[2] = l;
+  o->array.elt[3] = r;
+  return o;
 }
 
 object gc_new_throwable(object e, char *msg)
