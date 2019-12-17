@@ -13,9 +13,10 @@
  * registers:
  *   0 -- inst argument.
  *   1 -- current environment.
- *   2 -- trace.
+ *   2 -- stack trace.
+ *   3 -- where the exception occurred.
  */
-#define REG_SIZE 3
+#define REG_SIZE 4
 static object reg[REG_SIZE];
 
 static long cycle;
@@ -106,31 +107,15 @@ static void symbol_bind_propagation(object e, object s, object v)
   symbol_bind(object_toplevel, s, v);
 }
 
-// inst
+// instructions
 
-#define STACK_GAP 5
-#define INST_STACK_SIZE 10000
+#define STACK_GAP 10
+#define FRAME_STACK_SIZE 10000
 
 static int sp;
-static object fs[INST_STACK_SIZE];
+static int ip;
+static object fs[FRAME_STACK_SIZE];
 static struct xarray fb;
-
-static void fb_add(object f)
-{
-  xarray_add(&fb, f);
-}
-
-static void fb_reset(void)
-{
-  xarray_reset(&fb);
-}
-
-static void fs_push(object f);
-static void fb_flush(void)
-{
-  int i;
-  for (i = fb.size - 1; i >= 0; i--) fs_push(fb.elt[i]);
-}
 
 // instructions
 #define APPLY_INST 0
@@ -154,25 +139,31 @@ static void fb_flush(void)
 #define THROW_INST 18
 #define TRACE_INST 19
 #define UNWIND_PROTECT_INST 20
-#define LAST_INST 21
 
-#define inst(o) (o->cons.car->xint.val)
-#define inst_val(inst) (object_bytes[inst])
-#define gen0(inst) (gc_new_cons(inst_val(inst), object_nil))
-#define gen1(inst, o) (gc_new_cons(inst_val(inst), o))
-#define gen2(inst, o, p) (gc_new_cons(inst_val(inst), gc_new_cons(o, p)))
-
-int inst_size(object o)
+/*
+ * |       ...       |
+ * +-----------------+
+ * |       ...       |
+ * | 2: local_var 0  |
+ * | 1: return addr  |
+ * | 0: instruction  |
+ * +-----------------+
+ * |       ...       |
+ * | 2: local_var[0] |
+ * | 1: return addr  |
+ * | 0: instruction  |
+ * +-----------------+
+ */
+static int frame_size(int inst_type)
 {
-  xassert(typep(o, XINT));
-  switch (o->xint.val) {
+  switch (inst_type) {
     case ASSERT_INST:
     case EVAL_INST:
     case FENCE_INST:
     case GOTO_INST:
     case RETURN_INST:
     case THROW_INST:
-      return 0;
+      return 2;
     case APPLY_INST:
     case APPLY_PRIM_INST:
     case BIND_INST:
@@ -187,26 +178,25 @@ int inst_size(object o)
     case SWITCH_ENV_INST:
     case TRACE_INST:
     case UNWIND_PROTECT_INST:
-      return 1;
+      return 3;
     case EVAL_ARGS_INST:
-      return 2;
+      return 4;
     default:
       xassert(FALSE);
       return FALSE;
   }
 }
 
-char *inst_name(object o)
+char *inst_name(int inst_type)
 {
-  xassert(typep(o, XINT));
-  switch (o->xint.val) {
+  switch (inst_type) {
     case APPLY_INST: return "APPLY_INST";
     case APPLY_PRIM_INST: return "APPLY_PRIM_INST";
     case ASSERT_INST: return "ASSERT_INST";
     case BIND_INST: return "BIND_INST";
     case BIND_PROPAGATION_INST: return "BIND_PROPAGATION_INST";
-    case EVAL_ARGS_INST: return "EVAL_ARGS_INST";
     case EVAL_INST: return "EVAL_INST";
+    case EVAL_ARGS_INST: return "EVAL_ARGS_INST";
     case EVAL_SEQUENTIAL_INST: return "EVAL_SEQUENTIAL_INST";
     case FENCE_INST: return "FENCE_INST";
     case FETCH_HANDLER_INST: return "FETCH_HANDLER_INST";
@@ -218,93 +208,151 @@ char *inst_name(object o)
     case QUOTE_INST: return "QUOTE_INST";
     case RETURN_INST: return "RETURN_INST";
     case SWITCH_ENV_INST: return "SWITCH_ENV_INST";
-    case TRACE_INST: return "TRACE_INST";
     case THROW_INST: return "THROW_INST";
+    case TRACE_INST: return "TRACE_INST";
+    case UNWIND_PROTECT_INST: return "UNWIND_PROTECT_INST";
     default: xassert(FALSE); return NULL;
   }
 }
 
-#ifdef NDEBUG
-#define fs_top(void) (fs[sp - 1])
-#else
-static object fs_top(void)
-{
-  xassert(sp > 0);
-  return fs[sp - 1];
-}
-#endif
+#define inst_type(o) (o->xint.val)
+#define fs_top() (fs[ip])
 
-#ifdef NDEBUG
-#define fs_nth(n) (fs[n])
-#else
-static object fs_nth(int n)
+static int prev_ip(int base_ip)
 {
-  xassert(0 <= n && n < sp);
-  return fs[n];
-}
-#endif
-
-static void fs_push(object f)
-{
-  if (sp > INST_STACK_SIZE - STACK_GAP) ip_mark_error("stack over flow");
-  else if (sp + 3 > INST_STACK_SIZE) xerror("stack over flow.");
-  fs[sp] = f;
-  sp++;
+  xassert(0 <= base_ip && base_ip <= ip);
+  if (base_ip == 0) return -1;
+  return fs[base_ip + 1]->xint.val;
 }
 
-static object fs_pop(void)
+static int next_ip(int base_ip)
 {
-  object top;
-  top = fs_top();
-  --sp;
-  return top;
+  xassert(0 <= base_ip && base_ip <= ip);
+  return base_ip + frame_size(fs[base_ip]->xint.val);
 }
 
-static void pop_switch_env(void);
+static object get_local_var(int base_ip, int n)
+{
+  return fs[base_ip + 2 + n];
+}
+
+static void set_local_var(int base_ip, int n, object v)
+{
+  fs[base_ip + 2 + n] = v;
+}
+
+static void gen(int inst_type)
+{
+  if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_mark_error("stack over flow");
+  fs[sp + 1] = gc_new_xint(ip);
+  fs[sp] = object_bytes[inst_type];
+  ip = sp;
+  sp = next_ip(ip);
+}
+
+static void gen0(int inst_type)
+{
+  gen(inst_type);
+}
+
+static void gen1(int inst_type, object lv0)
+{
+  gen(inst_type);
+  set_local_var(ip, 0, lv0);
+}
+
+static void gen2(int inst_type, object lv0, object lv1)
+{
+  gen(inst_type);
+  set_local_var(ip, 0, lv0);
+  set_local_var(ip, 1, lv1);
+}
+
+static void pop_frame(void)
+{
+  sp = ip;
+  ip = prev_ip(ip);
+}
+
+static void fb_gen(object o)
+{
+  xarray_add(&fb, o);
+}
+
+static void fb_gen0(int inst_type)
+{
+  fb_gen(object_bytes[inst_type]);
+}
+
+static void fb_gen1(int inst_type, object o)
+{
+  fb_gen(o);
+  fb_gen0(inst_type);
+}
+
+static void fb_flush(void)
+{
+  int i;
+  object o;
+  i = fb.size - 1;
+  while (i > 0) {
+    o = fb.elt[i];
+    gen(inst_type(o));
+    i--;
+    switch (frame_size(inst_type(o))) {
+      case 2: break;
+      case 3: o = fb.elt[i]; set_local_var(ip, 0, o); i--; break;
+      default: xassert(FALSE); break;
+    }
+  }
+  xarray_reset(&fb);
+}
+
+static void pop_swith_env_inst(void);
 static void pop_unwind_protect_inst(void);
 
-static void fs_rewind_pop(void)
+static void pop_rewinding(void)
 {
-  switch (inst(fs_top())) {
-    case SWITCH_ENV_INST: pop_switch_env(); break;
+  switch (inst_type(fs_top())) {
+    case SWITCH_ENV_INST: pop_swith_env_inst(); break;
     case UNWIND_PROTECT_INST: xassert(FALSE); break;    // must be protected.
-    default: fs_pop(); break;
+    default: pop_frame(); break;
   }
 }
 
-static void push_apply_inst(object operator)
+static void gen_apply_inst(object operator)
 {
-  fs_push(gen0(FENCE_INST));
-  fs_push(gen1(APPLY_INST, operator));
+  gen0(FENCE_INST);
+  gen1(APPLY_INST, operator);
 }
 
-static void push_eval_args_inst(object args)
+static void gen_eval_args_inst(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else {
-    fs_push(gen2(EVAL_ARGS_INST, args->cons.cdr, object_nil));
-    fs_push(gen0(EVAL_INST));
+    gen2(EVAL_ARGS_INST, args->cons.cdr, object_nil);
+    gen0(EVAL_INST);
     reg[0] = args->cons.car;
   }
 }
 
-static void push_eval_sequential_inst(object args)
+static void gen_eval_sequential_inst(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
-  else fs_push(gen1(EVAL_SEQUENTIAL_INST, args));
+  else gen1(EVAL_SEQUENTIAL_INST, args);
 }
 
-static void push_if_inst(object args)
+static void gen_if_inst(object args)
 {
   if (args == object_nil) return;
-  if (args->cons.cdr != object_nil) fs_push(gen1(IF_INST, args->cons.cdr));
-  fs_push(gen0(EVAL_INST));
+  if (args->cons.cdr != object_nil) gen1(IF_INST, args->cons.cdr);
+  gen0(EVAL_INST);
   reg[0] = args->cons.car;
 }
 
-static void push_switch_env_inst(object env)
+static void gen_switch_env_inst(object env)
 {
-  fs_push(gen1(SWITCH_ENV_INST, reg[1]));
+  gen1(SWITCH_ENV_INST, reg[1]);
   reg[1] = gc_new_env(env);
 }
 
@@ -312,11 +360,11 @@ static void parse_lambda_list(object env, object params, object args);
 static void pop_apply_inst(void)
 {
   object operator;
-  operator = fs_pop()->cons.cdr;
-  push_switch_env_inst(operator->lambda.env);
-  fb_reset();
+  operator = get_local_var(ip, 0);
+  pop_frame();
+  gen_switch_env_inst(operator->lambda.env);
   parse_lambda_list(reg[1], operator->lambda.params, reg[0]);
-  push_eval_sequential_inst(operator->lambda.body);
+  gen_eval_sequential_inst(operator->lambda.body);
   fb_flush();
 }
 
@@ -325,7 +373,8 @@ static void pop_apply_prim_inst(void)
   object args;
   int (*prim)(int, object, object *);
   args = reg[0];
-  prim = fs_pop()->cons.cdr->prim;
+  prim = get_local_var(ip, 0)->prim;
+  pop_frame();
   if ((*prim)(object_list_len(args), args, &(reg[0]))) return;
   if (error_msg == NULL) ip_mark_exception("primitive failed");
 }
@@ -333,25 +382,27 @@ static void pop_apply_prim_inst(void)
 #ifndef NDEBUG
 static void pop_assert_inst(void)
 {
-  fs_pop();
+  pop_frame();
   if (reg[0] == object_nil) ip_mark_error("assert failed");
 }
 #endif
 
 static void pop_bind_inst(void)
 {
-  symbol_bind(reg[1], fs_pop()->cons.cdr, reg[0]);
+  symbol_bind(reg[1], get_local_var(ip, 0), reg[0]);
+  pop_frame();
 }
 
 static void pop_bind_propagation_inst(void)
 {
-  symbol_bind_propagation(reg[1], fs_pop()->cons.cdr, reg[0]);
+  symbol_bind_propagation(reg[1], get_local_var(ip, 0), reg[0]);
+  pop_frame();
 }
 
 static void pop_eval_inst(void)
 {
   object s;
-  fs_pop();
+  pop_frame();
   switch (type(reg[0])) {
     case MACRO:
     case LAMBDA:
@@ -364,16 +415,16 @@ static void pop_eval_inst(void)
       return;
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
-        fs_push(gen1(TRACE_INST, reg[0]));
+        gen1(TRACE_INST, reg[0]);
         ip_mark_exception("unbind symbol");
         return;
       }
       reg[0] = s;
       return;
     case CONS:
-      fs_push(gen1(TRACE_INST, reg[0]));
-      fs_push(gen1(FETCH_OPERATOR_INST, reg[0]->cons.cdr));
-      fs_push(gen0(EVAL_INST));
+      gen1(TRACE_INST, reg[0]);
+      gen1(FETCH_OPERATOR_INST, reg[0]->cons.cdr);
+      gen0(EVAL_INST);
       reg[0] = reg[0]->cons.car;
       return;
     default: xassert(FALSE);
@@ -389,21 +440,22 @@ static void pop_goto_inst(void)
     return;
   }
   while (TRUE) {
-    if (sp == 0) {
+    if (ip < 0) {
       ip_mark_exception("labels context not found");
       return;
     }
-    if (inst(fs_top()) == UNWIND_PROTECT_INST) {
-      o = fs_pop()->cons.cdr;
-      fs_push(gen0(GOTO_INST));
-      fs_push(gen1(QUOTE_INST, label));
-      push_eval_sequential_inst(o);
+    if (inst_type(fs_top()) == UNWIND_PROTECT_INST) {
+      o = get_local_var(ip, 0);
+      pop_frame();
+      gen0(GOTO_INST);
+      gen1(QUOTE_INST, label);
+      gen_eval_sequential_inst(o);
       return;
     }
-    if (inst(fs_top()) == LABELS_INST) break;
-    fs_rewind_pop();
+    if (inst_type(fs_top()) == LABELS_INST) break;
+    pop_rewinding();
   }
-  o = fs_top()->cons.cdr;
+  o = get_local_var(ip, 0);
   while (TRUE) {
     if (o == object_nil) {
       ip_mark_exception("label not found");
@@ -412,14 +464,15 @@ static void pop_goto_inst(void)
     if (o->cons.car == label) break;
     o = o->cons.cdr;
   }
-  push_eval_sequential_inst(o);
+  gen_eval_sequential_inst(o);
 }
 
 static void pop_fetch_handler_inst(void)
 {
   object handler, body;
   handler = reg[0];
-  body = fs_pop()->cons.cdr;
+  body = get_local_var(ip, 0);
+  pop_frame();
   if (!typep(handler, LAMBDA)) {
     ip_mark_exception("require exception handler");
     return;
@@ -428,15 +481,16 @@ static void pop_fetch_handler_inst(void)
     ip_mark_exception("handler parameter must be one required parameter");
     return;
   }
-  fs_push(gen1(HANDLER_INST, handler));
-  push_eval_sequential_inst(body);
+  gen1(HANDLER_INST, handler);
+  gen_eval_sequential_inst(body);
 }
 
 static void pop_fetch_operator_inst(void)
 {
   object f, args;
   int (*special)(int, object);
-  args = fs_pop()->cons.cdr;
+  args = get_local_var(ip, 0);
+  pop_frame();
   switch (type(reg[0])) {
     case SYMBOL:
       if ((f = splay_find(object_special_splay, reg[0])) != NULL) {
@@ -445,19 +499,19 @@ static void pop_fetch_operator_inst(void)
         return;
       }
       if ((f = splay_find(object_prim_splay, reg[0])) != NULL) {
-        fs_push(gen1(APPLY_PRIM_INST, f));
-        push_eval_args_inst(args);
+        gen1(APPLY_PRIM_INST, f);
+        gen_eval_args_inst(args);
         return;
       }
       break;
     case MACRO:
-      fs_push(gen0(EVAL_INST));
-      push_apply_inst(reg[0]);
+      gen0(EVAL_INST);
+      gen_apply_inst(reg[0]);
       reg[0] = args;
       return;
     case LAMBDA:
-      push_apply_inst(reg[0]);
-      push_eval_args_inst(args);
+      gen_apply_inst(reg[0]);
+      gen_eval_args_inst(args);
       return;
     default: break;
   }
@@ -466,17 +520,16 @@ static void pop_fetch_operator_inst(void)
 
 static void pop_eval_args_inst(void)
 {
-  object top, rest, acc;
-  top = fs_top();
-  rest = top->cons.cdr->cons.car;
-  acc = gc_new_cons(reg[0], top->cons.cdr->cons.cdr);
-  top->cons.cdr->cons.cdr = acc;
+  object rest, acc;
+  rest = get_local_var(ip, 0);
+  acc = gc_new_cons(reg[0], get_local_var(ip, 1));
+  set_local_var(ip, 1, acc);
   if (rest == object_nil) {
-    fs_pop();
+    pop_frame();
     reg[0] = object_reverse(acc);
   } else {
-    top->cons.cdr->cons.car = rest->cons.cdr;
-    fs_push(gen0(EVAL_INST));
+    set_local_var(ip, 0, rest->cons.cdr);
+    gen0(EVAL_INST);
     reg[0] = rest->cons.car;
   }
 }
@@ -484,11 +537,11 @@ static void pop_eval_args_inst(void)
 static void pop_eval_sequential_inst(void)
 {
   object args;
-  args = fs_top()->cons.cdr;
-  if (args == object_nil) fs_pop();
+  args = get_local_var(ip, 0);
+  if (args == object_nil) pop_frame();
   else {
-    fs_top()->cons.cdr = args->cons.cdr;
-    fs_push(gen0(EVAL_INST));
+    set_local_var(ip, 0, args->cons.cdr);
+    gen0(EVAL_INST);
     reg[0] = args->cons.car;
   }
 }
@@ -496,33 +549,37 @@ static void pop_eval_sequential_inst(void)
 static void pop_if_inst(void)
 {
   object args;
-  args = fs_pop()->cons.cdr;
+  args = get_local_var(ip, 0);
+  pop_frame();
   if (reg[0] != object_nil) {
-    fs_push(gen0(EVAL_INST));
+    gen0(EVAL_INST);
     reg[0] = args->cons.car;
-  } else if ((args = args->cons.cdr) != object_nil) push_if_inst(args);
+  } else if ((args = args->cons.cdr) != object_nil) gen_if_inst(args);
 }
 
-static void pop_switch_env(void)
+static void pop_swith_env_inst(void)
 {
-  reg[1] = fs_pop()->cons.cdr;
+  reg[1] = get_local_var(ip, 0);
+  pop_frame();
 }
 
 static void pop_return_inst(void)
 {
   object args;
   while (sp != 0) {
-    switch (inst(fs_top())) {
+    xassert(sp > 0);
+    switch (inst_type(fs_top())) {
       case FENCE_INST:
         return;
       case UNWIND_PROTECT_INST: 
-        args = fs_pop()->cons.cdr;
-        fs_push(gen0(RETURN_INST));
-        fs_push(gen1(QUOTE_INST, reg[0]));
-        push_eval_sequential_inst(args);
+        args = get_local_var(ip, 0);
+        pop_frame();
+        gen0(RETURN_INST);
+        gen1(QUOTE_INST, reg[0]);
+        gen_eval_sequential_inst(args);
         return;
       default:
-        fs_rewind_pop();
+        pop_rewinding();
         break;
     }
   }
@@ -533,7 +590,7 @@ static void exit1(void)
 {
   char buf[MAX_STR_LEN];
   object o;
-  o = call_stack(0, sp);
+  o = call_stack(0, ip);
   printf("Error -- %s\n", object_describe(reg[0], buf));
   while (o != object_nil) {
     printf("	at: %s\n", object_describe(o->cons.car, buf));
@@ -544,40 +601,47 @@ static void exit1(void)
 
 static void pop_throw_inst(void)
 {
-  object o, body, handler;
+  object body, handler;
   int s, e;
-  e = sp;
-  o = fs_pop()->cons.cdr;
-  if (o != object_nil) e = o->xint.val;
+  e = ip;
+  if (reg[3] != object_nil) e = reg[3]->xint.val;
+  pop_frame();
   while (TRUE) {
-    if (sp == 0) {
-      sp = e;
+    if (ip < 0) {
+      ip = e;
       exit1();
     }
-    if (inst(fs_top()) == UNWIND_PROTECT_INST) {
-      body = fs_pop()->cons.cdr;
-      fs_push(gen1(THROW_INST, gc_new_xint(e)));
-      fs_push(gen1(QUOTE_INST, reg[0]));
-      push_eval_sequential_inst(body);
+    if (inst_type(fs_top()) == UNWIND_PROTECT_INST) {
+      body = get_local_var(ip, 0);
+      pop_frame();
+      reg[3] = gc_new_xint(e);
+      gen0(THROW_INST);
+      gen1(QUOTE_INST, reg[0]);
+      gen_eval_sequential_inst(body);
       return;
     }
-    if (inst(fs_top()) == HANDLER_INST) {
-      s = sp;
-      sp = e;
+    if (inst_type(fs_top()) == HANDLER_INST) {
+      s = ip;
+      ip = e;
       reg[2] = call_stack(s, e);
-      sp = s;
-      handler = fs_pop()->cons.cdr;
+      ip = s;
+      reg[3] = object_nil;
+      handler = get_local_var(ip, 0);
+      pop_frame();
       break;
     }
-    fs_rewind_pop();
+    pop_rewinding();
   }
-  push_apply_inst(handler);
+  gen_apply_inst(handler);
   reg[0] = gc_new_cons(reg[0], object_nil);
 }
 
 static void pop_unwind_protect_inst(void)
 {
-  push_eval_sequential_inst(fs_pop()->cons.cdr);
+  object body;
+  body = get_local_var(ip, 0);
+  pop_frame();
+  gen_eval_sequential_inst(body);
 }
 
 // trace and debug
@@ -587,8 +651,9 @@ static object call_stack(int s, int e)
   int i;
   object o;
   o = object_nil;
-  for (i = s; i < e; i++) {
-    if (inst(fs_nth(i)) == TRACE_INST) o = gc_new_cons(fs_nth(i)->cons.cdr, o);
+  for (i = s; i < e; i = next_ip(i)) {
+    if (inst_type(fs[i]) == TRACE_INST)
+      o = gc_new_cons(get_local_var(i, 0), o);
   }
   return o;
 }
@@ -641,8 +706,8 @@ static void parse_lambda_list(object env, object params, object args)
       return;
     }
     if (!typep(params->cons.car, CONS)) {
-      fb_add(gen1(QUOTE_INST, args->cons.car));
-      fb_add(gen1(BIND_INST, params->cons.car));
+      fb_gen1(QUOTE_INST, args->cons.car);
+      fb_gen1(BIND_INST, params->cons.car);
     } else {
       parse_lambda_list(env, params->cons.car, args->cons.car);
       if (ip_trap_code != TRAP_NONE) return;
@@ -665,21 +730,21 @@ static void parse_lambda_list(object env, object params, object args)
       params = params->cons.cdr;
       if (sup_k != NULL) {
         v = object_bool(args != object_nil);
-        fb_add(gen1(QUOTE_INST, v));
-        fb_add(gen1(BIND_INST, sup_k));
+        fb_gen1(QUOTE_INST, v);
+        fb_gen1(BIND_INST, sup_k);
       }
       if (args != object_nil) {
-        fb_add(gen1(QUOTE_INST, args->cons.car));
-        fb_add(gen1(BIND_INST, k));
+        fb_gen1(QUOTE_INST, args->cons.car);
+        fb_gen1(BIND_INST, k);
         args = args->cons.cdr;
       } else {
         if (def_v == NULL) {
-          fb_add(gen1(QUOTE_INST, object_nil));
-          fb_add(gen1(BIND_INST, k));
+          fb_gen1(QUOTE_INST, object_nil);
+          fb_gen1(BIND_INST, k);
         } else {
-          fb_add(gen1(QUOTE_INST, def_v));
-          fb_add(gen0(EVAL_INST));
-          fb_add(gen1(BIND_INST, k));
+          fb_gen1(QUOTE_INST, def_v);
+          fb_gen0(EVAL_INST);
+          fb_gen1(BIND_INST, k);
         }
       }
     }
@@ -687,8 +752,8 @@ static void parse_lambda_list(object env, object params, object args)
   // parse rest parameter
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    fb_add(gen1(QUOTE_INST, args));
-    fb_add(gen1(BIND_INST, params->cons.car));
+    fb_gen1(QUOTE_INST, args);
+    fb_gen1(BIND_INST, params->cons.car);
     return;
   }
   // parse keyword parameter
@@ -718,21 +783,21 @@ static void parse_lambda_list(object env, object params, object args)
         o = o->cons.cdr;
       }
       if (sup_k != NULL) {
-        fb_add(gen1(QUOTE_INST, object_bool(v != NULL)));
-        fb_add(gen1(BIND_INST, sup_k));
+        fb_gen1(QUOTE_INST, object_bool(v != NULL));
+        fb_gen1(BIND_INST, sup_k);
       }
       if (v != NULL) {
-        fb_add(gen1(QUOTE_INST, v));
-        fb_add(gen1(BIND_INST, k));
+        fb_gen1(QUOTE_INST, v);
+        fb_gen1(BIND_INST, k);
       }
       else {
         if (def_v == NULL) {
-          fb_add(gen1(QUOTE_INST, object_nil));
-          fb_add(gen1(BIND_INST, k));
+          fb_gen1(QUOTE_INST, object_nil);
+          fb_gen1(BIND_INST, k);
         } else {
-          fb_add(gen1(QUOTE_INST, def_v));
-          fb_add(gen0(EVAL_INST));
-          fb_add(gen1(BIND_INST, k));
+          fb_gen1(QUOTE_INST, def_v);
+          fb_gen0(EVAL_INST);
+          fb_gen1(BIND_INST, k);
         }
       }
       params = params->cons.cdr;
@@ -811,9 +876,8 @@ SPECIAL(let)
     ip_mark_exception("argument must be list");
     return FALSE;
   }
-  if (args != object_nil) push_switch_env_inst(reg[1]);
-  push_eval_sequential_inst(argv->cons.cdr);
-  fb_reset();
+  if (args != object_nil) gen_switch_env_inst(reg[1]);
+  gen_eval_sequential_inst(argv->cons.cdr);
   while (args != object_nil) {
     if (!typep((s = args->cons.car), SYMBOL)) {
       ip_mark_exception("argument must be symbol");
@@ -823,9 +887,9 @@ SPECIAL(let)
       ip_mark_exception("argument must be association list");
       return FALSE;
     }
-    fb_add(gen1(QUOTE_INST, args->cons.car));
-    fb_add(gen0(EVAL_INST));
-    fb_add(gen1(BIND_INST, s));
+    fb_gen1(QUOTE_INST, args->cons.car);
+    fb_gen0(EVAL_INST);
+    fb_gen1(BIND_INST, s);
     args = args->cons.cdr;
   }
   fb_flush();
@@ -841,13 +905,13 @@ SPECIAL(dynamic)
     ip_mark_exception("argument must be symbol");
     return FALSE;
   }
-  i = sp - 1;
+  i = ip;
   e = reg[1];
   while (TRUE) {
     if ((v = symbol_find(e, s)) != NULL) break;
-    while (--i >= 0) {
-      if (inst(fs[i]) == SWITCH_ENV_INST) {
-        e = fs[i]->cons.cdr;
+    while ((i = prev_ip(i)) > 0) {
+      if (inst_type(fs[i]) == SWITCH_ENV_INST) {
+        e = get_local_var(i, 0);
         break;
       }
     }
@@ -868,7 +932,6 @@ SPECIAL(symbol_bind)
     ip_mark_exception("must be pair");
     return FALSE;
   }
-  fb_reset();
   while (argc != 0) {
     s = argv->cons.car;
     if (!typep(s, SYMBOL)) {
@@ -880,9 +943,9 @@ SPECIAL(symbol_bind)
       return FALSE;
     }
     argv = argv->cons.cdr;
-    fb_add(gen1(QUOTE_INST, argv->cons.car));
-    fb_add(gen0(EVAL_INST));
-    fb_add(gen1(BIND_PROPAGATION_INST, s));
+    fb_gen1(QUOTE_INST, argv->cons.car);
+    fb_gen0(EVAL_INST);
+    fb_gen1(BIND_PROPAGATION_INST, s);
     argv = argv->cons.cdr;
     argc -= 2;
   }
@@ -892,7 +955,7 @@ SPECIAL(symbol_bind)
 
 SPECIAL(begin)
 {
-  push_eval_sequential_inst(argv);
+  gen_eval_sequential_inst(argv);
   return TRUE;
 }
 
@@ -904,7 +967,7 @@ SPECIAL(macro)
     ip_mark_exception("required macro name");
     return FALSE;
   } else {
-    fs_push(gen1(BIND_PROPAGATION_INST, argv->cons.car));
+    gen1(BIND_PROPAGATION_INST, argv->cons.car);
     argv = argv->cons.cdr;
   }
   if (!valid_lambda_list_p(MACRO, params = argv->cons.car)) {
@@ -938,30 +1001,30 @@ SPECIAL(quote)
 SPECIAL(if)
 {
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
-  push_if_inst(argv);
+  gen_if_inst(argv);
   return TRUE;
 }
 
 SPECIAL(unwind_protect)
 {
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
-  fs_push(gen1(UNWIND_PROTECT_INST, argv->cons.cdr));
-  fs_push(gen0(EVAL_INST));
+  gen1(UNWIND_PROTECT_INST, argv->cons.cdr);
+  gen0(EVAL_INST);
   reg[0] = argv->cons.car;
   return TRUE;
 }
 
 SPECIAL(labels)
 {
-  fs_push(gen1(LABELS_INST, argv));
-  push_eval_sequential_inst(argv);
+  gen1(LABELS_INST, argv);
+  gen_eval_sequential_inst(argv);
   return TRUE;
 }
 
 SPECIAL(goto)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  fs_push(gen0(GOTO_INST));
+  gen0(GOTO_INST);
   reg[0] = argv->cons.car;
   return TRUE;
 }
@@ -969,8 +1032,8 @@ SPECIAL(goto)
 SPECIAL(basic_throw)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  fs_push(gen0(THROW_INST));
-  fs_push(gen0(EVAL_INST));
+  gen0(THROW_INST);
+  gen0(EVAL_INST);
   reg[0] = argv->cons.car;
   return TRUE;
 }
@@ -978,8 +1041,8 @@ SPECIAL(basic_throw)
 SPECIAL(basic_catch)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
-  fs_push(gen1(FETCH_HANDLER_INST, argv->cons.cdr));
-  fs_push(gen0(EVAL_INST));
+  gen1(FETCH_HANDLER_INST, argv->cons.cdr);
+  gen0(EVAL_INST);
   reg[0] = argv->cons.car;
   return TRUE;
 }
@@ -987,8 +1050,8 @@ SPECIAL(basic_catch)
 SPECIAL(return)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  fs_push(gen0(RETURN_INST));
-  fs_push(gen0(EVAL_INST));
+  gen0(RETURN_INST);
+  gen0(EVAL_INST);
   reg[0] = argv->cons.car;
   return TRUE;
 }
@@ -997,8 +1060,8 @@ SPECIAL(assert)
 {
 #ifndef NDEBUG
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  fs_push(gen0(ASSERT_INST));
-  fs_push(gen0(EVAL_INST));
+  gen0(ASSERT_INST);
+  gen0(EVAL_INST);
   reg[0] = argv->cons.car;
 #endif
   return TRUE;
@@ -1007,7 +1070,7 @@ SPECIAL(assert)
 PRIM(eval)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  fs_push(gen0(EVAL_INST));
+  gen0(EVAL_INST);
   reg[0] = argv->cons.car;
   return TRUE;
 }
@@ -1020,12 +1083,12 @@ PRIM(apply)
     case SYMBOL:
       if ((f = splay_find(object_prim_splay, argv->cons.car)) == NULL) break;
       else {
-        fs_push(gen1(APPLY_PRIM_INST, f));
+        gen1(APPLY_PRIM_INST, f);
         reg[0] = argv->cons.cdr->cons.car;
         return TRUE;
       }
     case LAMBDA:
-      push_apply_inst(argv->cons.car);
+      gen_apply_inst(argv->cons.car);
       reg[0] = argv->cons.cdr->cons.car;
       return TRUE;
     default: break;
@@ -1062,7 +1125,7 @@ static void trap(void)
       xassert(error_msg != NULL);
       if (ip_trap_code == TRAP_EXCEPTION) e = object_Exception;
       else e = object_Error;
-      fs_push(gen0(THROW_INST));
+      gen0(THROW_INST);
       reg[0] = gc_new_throwable(e, error_msg);
       ip_trap_code = TRAP_NONE;
       error_msg = NULL;
@@ -1078,15 +1141,15 @@ static void ip_main(void)
   reg[0] = object_nil;
   reg[1] = object_toplevel;
   reg[2] = object_nil;
-  push_apply_inst(object_boot);
-  while (TRUE) {
-    xassert(sp >= 0);
+  reg[3] = object_nil;
+  gen_apply_inst(object_boot);
+  while (ip != -1) {
+    xassert(sp > 0);
     if (ip_trap_code != TRAP_NONE) trap();
-    if (sp == 0) break;
     if(cycle % IP_POLLING_INTERVAL == 0) {
-      gc_chance();
+      if (reg[3] == object_nil) gc_chance();
     }
-    switch (inst(fs_top())) {
+    switch (inst_type(fs_top())) {
       case APPLY_INST: pop_apply_inst(); break;
       case APPLY_PRIM_INST: pop_apply_prim_inst(); break;
 #ifndef NDEBUG
@@ -1097,18 +1160,18 @@ static void ip_main(void)
       case EVAL_INST: pop_eval_inst(); break;
       case EVAL_ARGS_INST: pop_eval_args_inst(); break;
       case EVAL_SEQUENTIAL_INST: pop_eval_sequential_inst(); break;
-      case FENCE_INST: fs_pop(); break;
+      case FENCE_INST: pop_frame(); break;
       case FETCH_HANDLER_INST: pop_fetch_handler_inst(); break;
       case FETCH_OPERATOR_INST: pop_fetch_operator_inst(); break;
       case GOTO_INST: pop_goto_inst(); break;
-      case HANDLER_INST: fs_pop(); break;
+      case HANDLER_INST: pop_frame(); break;
       case IF_INST: pop_if_inst(); break;
-      case LABELS_INST: fs_pop(); break;
-      case QUOTE_INST: reg[0] = fs_pop()->cons.cdr; break;
+      case LABELS_INST: pop_frame(); break;
+      case QUOTE_INST: reg[0] = get_local_var(ip, 0); pop_frame(); break;
       case RETURN_INST: pop_return_inst(); break;
-      case SWITCH_ENV_INST: pop_switch_env(); break;
+      case SWITCH_ENV_INST: pop_swith_env_inst(); break;
       case THROW_INST: pop_throw_inst(); break;
-      case TRACE_INST: fs_pop(); break;
+      case TRACE_INST: pop_frame(); break;
       case UNWIND_PROTECT_INST: pop_unwind_protect_inst(); break;
       default: xassert(FALSE); break;
     }
@@ -1120,13 +1183,15 @@ void ip_mark(void)
 {
   int i;
   for (i = 0; i < REG_SIZE; i++) gc_mark(reg[i]);
-  for (i = 0; i < sp; i++) gc_mark(fs_nth(i));
+  for (i = 0; i < sp; i++) gc_mark(fs[i]);
   for (i = 0; byte_range_p(i); i++) gc_mark(object_bytes[i]);
 }
 
 void ip_start(void)
 {
-  cycle = sp = 0;
+  ip = -1;
+  sp = 0;
+  cycle = 0;
   xarray_init(&fb);
   ip_trap_code = TRAP_NONE;
   ip_main();
