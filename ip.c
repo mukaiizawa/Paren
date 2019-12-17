@@ -38,17 +38,17 @@ void ip_mark_error(char *msg)
   error_msg = msg;
 }
 
-static void ip_mark_too_few_arguments_error(void)
+STATIC void ip_mark_too_few_arguments_error(void)
 {
   ip_mark_exception("too few arguments");
 }
 
-static void ip_mark_too_many_arguments_error(void)
+STATIC void ip_mark_too_many_arguments_error(void)
 {
   ip_mark_exception("too many arguments");
 }
 
-int ip_ensure_no_args(int argc)
+STATIC int ip_ensure_no_args(int argc)
 {
   if (argc == 0) return TRUE;
   ip_mark_too_many_arguments_error();
@@ -64,14 +64,14 @@ int ip_ensure_arguments(int argc, int min, int max)
   return FALSE;
 }
 
-static void mark_illegal_parameter_error()
+STATIC void mark_illegal_parameter_error()
 {
   ip_mark_exception("illegal parameter list");
 }
 
 // symbol
 
-static object symbol_find(object e, object s)
+STATIC object symbol_find(object e, object s)
 {
   xassert(typep(e, ENV));
   if (s == object_nil) return object_nil;
@@ -79,7 +79,7 @@ static object symbol_find(object e, object s)
   return splay_find(e->env.binding, s);
 }
 
-static object symbol_find_propagation(object e, object s)
+STATIC object symbol_find_propagation(object e, object s)
 {
   object v;
   while (e != object_nil) {
@@ -89,13 +89,13 @@ static object symbol_find_propagation(object e, object s)
   return NULL;
 }
 
-static void symbol_bind(object e, object s, object v)
+STATIC void symbol_bind(object e, object s, object v)
 {
   xassert(typep(e, ENV) && typep(s, SYMBOL));
   splay_replace(e->env.binding, s, v);
 }
 
-static void symbol_bind_propagation(object e, object s, object v)
+STATIC void symbol_bind_propagation(object e, object s, object v)
 {
   while (e != object_toplevel) {
     if (symbol_find(e, s) != NULL) {
@@ -217,31 +217,23 @@ char *inst_name(int inst_type)
 
 #define inst_type(o) (o->xint.val)
 #define fs_top() (fs[ip])
+#define get_local_var(base_ip, n) (fs[base_ip + 2 + n])
+#define set_local_var(base_ip, n, o) (fs[base_ip + 2 + n] = o)
 
-static int prev_ip(int base_ip)
+STATIC int prev_ip(int base_ip)
 {
   xassert(0 <= base_ip && base_ip <= ip);
   if (base_ip == 0) return -1;
   return fs[base_ip + 1]->xint.val;
 }
 
-static int next_ip(int base_ip)
+STATIC int next_ip(int base_ip)
 {
   xassert(0 <= base_ip && base_ip <= ip);
   return base_ip + frame_size(fs[base_ip]->xint.val);
 }
 
-static object get_local_var(int base_ip, int n)
-{
-  return fs[base_ip + 2 + n];
-}
-
-static void set_local_var(int base_ip, int n, object v)
-{
-  fs[base_ip + 2 + n] = v;
-}
-
-static void gen(int inst_type)
+STATIC void gen(int inst_type)
 {
   if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_mark_error("stack over flow");
   fs[sp + 1] = gc_new_xint(ip);
@@ -250,47 +242,47 @@ static void gen(int inst_type)
   sp = next_ip(ip);
 }
 
-static void gen0(int inst_type)
+STATIC void gen0(int inst_type)
 {
   gen(inst_type);
 }
 
-static void gen1(int inst_type, object lv0)
+STATIC void gen1(int inst_type, object lv0)
 {
   gen(inst_type);
   set_local_var(ip, 0, lv0);
 }
 
-static void gen2(int inst_type, object lv0, object lv1)
+STATIC void gen2(int inst_type, object lv0, object lv1)
 {
   gen(inst_type);
   set_local_var(ip, 0, lv0);
   set_local_var(ip, 1, lv1);
 }
 
-static void pop_frame(void)
+STATIC void pop_frame(void)
 {
   sp = ip;
   ip = prev_ip(ip);
 }
 
-static void fb_gen(object o)
+STATIC void fb_gen(object o)
 {
   xarray_add(&fb, o);
 }
 
-static void fb_gen0(int inst_type)
+STATIC void fb_gen0(int inst_type)
 {
   fb_gen(object_bytes[inst_type]);
 }
 
-static void fb_gen1(int inst_type, object o)
+STATIC void fb_gen1(int inst_type, object o)
 {
   fb_gen(o);
   fb_gen0(inst_type);
 }
 
-static void fb_flush(void)
+STATIC void fb_flush(void)
 {
   int i;
   object o;
@@ -308,10 +300,10 @@ static void fb_flush(void)
   xarray_reset(&fb);
 }
 
-static void pop_swith_env_inst(void);
-static void pop_unwind_protect_inst(void);
+STATIC void pop_swith_env_inst(void);
+STATIC void pop_unwind_protect_inst(void);
 
-static void pop_rewinding(void)
+STATIC void pop_rewinding(void)
 {
   switch (inst_type(fs_top())) {
     case SWITCH_ENV_INST: pop_swith_env_inst(); break;
@@ -320,13 +312,13 @@ static void pop_rewinding(void)
   }
 }
 
-static void gen_apply_inst(object operator)
+STATIC void gen_apply_inst(object operator)
 {
   gen0(FENCE_INST);
   gen1(APPLY_INST, operator);
 }
 
-static void gen_eval_args_inst(object args)
+STATIC void gen_eval_args_inst(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else {
@@ -336,13 +328,13 @@ static void gen_eval_args_inst(object args)
   }
 }
 
-static void gen_eval_sequential_inst(object args)
+STATIC void gen_eval_sequential_inst(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else gen1(EVAL_SEQUENTIAL_INST, args);
 }
 
-static void gen_if_inst(object args)
+STATIC void gen_if_inst(object args)
 {
   if (args == object_nil) return;
   if (args->cons.cdr != object_nil) gen1(IF_INST, args->cons.cdr);
@@ -350,14 +342,14 @@ static void gen_if_inst(object args)
   reg[0] = args->cons.car;
 }
 
-static void gen_switch_env_inst(object env)
+STATIC void gen_switch_env_inst(object env)
 {
   gen1(SWITCH_ENV_INST, reg[1]);
   reg[1] = gc_new_env(env);
 }
 
-static void parse_lambda_list(object env, object params, object args);
-static void pop_apply_inst(void)
+STATIC void parse_lambda_list(object env, object params, object args);
+STATIC void pop_apply_inst(void)
 {
   object operator;
   operator = get_local_var(ip, 0);
@@ -368,7 +360,7 @@ static void pop_apply_inst(void)
   fb_flush();
 }
 
-static void pop_apply_prim_inst(void)
+STATIC void pop_apply_prim_inst(void)
 {
   object args;
   int (*prim)(int, object, object *);
@@ -380,26 +372,26 @@ static void pop_apply_prim_inst(void)
 }
 
 #ifndef NDEBUG
-static void pop_assert_inst(void)
+STATIC void pop_assert_inst(void)
 {
   pop_frame();
   if (reg[0] == object_nil) ip_mark_error("assert failed");
 }
 #endif
 
-static void pop_bind_inst(void)
+STATIC void pop_bind_inst(void)
 {
   symbol_bind(reg[1], get_local_var(ip, 0), reg[0]);
   pop_frame();
 }
 
-static void pop_bind_propagation_inst(void)
+STATIC void pop_bind_propagation_inst(void)
 {
   symbol_bind_propagation(reg[1], get_local_var(ip, 0), reg[0]);
   pop_frame();
 }
 
-static void pop_eval_inst(void)
+STATIC void pop_eval_inst(void)
 {
   object s;
   pop_frame();
@@ -431,7 +423,7 @@ static void pop_eval_inst(void)
   }
 }
 
-static void pop_goto_inst(void)
+STATIC void pop_goto_inst(void)
 {
   object o, label;
   label = reg[0];
@@ -467,7 +459,7 @@ static void pop_goto_inst(void)
   gen_eval_sequential_inst(o);
 }
 
-static void pop_fetch_handler_inst(void)
+STATIC void pop_fetch_handler_inst(void)
 {
   object handler, body;
   handler = reg[0];
@@ -485,7 +477,7 @@ static void pop_fetch_handler_inst(void)
   gen_eval_sequential_inst(body);
 }
 
-static void pop_fetch_operator_inst(void)
+STATIC void pop_fetch_operator_inst(void)
 {
   object f, args;
   int (*special)(int, object);
@@ -518,7 +510,7 @@ static void pop_fetch_operator_inst(void)
   ip_mark_exception("is not a operator");
 }
 
-static void pop_eval_args_inst(void)
+STATIC void pop_eval_args_inst(void)
 {
   object rest, acc;
   rest = get_local_var(ip, 0);
@@ -534,7 +526,7 @@ static void pop_eval_args_inst(void)
   }
 }
 
-static void pop_eval_sequential_inst(void)
+STATIC void pop_eval_sequential_inst(void)
 {
   object args;
   args = get_local_var(ip, 0);
@@ -557,13 +549,13 @@ static void pop_if_inst(void)
   } else if ((args = args->cons.cdr) != object_nil) gen_if_inst(args);
 }
 
-static void pop_swith_env_inst(void)
+STATIC void pop_swith_env_inst(void)
 {
   reg[1] = get_local_var(ip, 0);
   pop_frame();
 }
 
-static void pop_return_inst(void)
+STATIC void pop_return_inst(void)
 {
   object args;
   while (sp != 0) {
@@ -585,8 +577,8 @@ static void pop_return_inst(void)
   }
 }
 
-static object call_stack(int s, int e);
-static void exit1(void)
+STATIC object call_stack(int s, int e);
+STATIC void exit1(void)
 {
   char buf[MAX_STR_LEN];
   object o;
@@ -599,7 +591,7 @@ static void exit1(void)
   exit(1);
 }
 
-static void pop_throw_inst(void)
+STATIC void pop_throw_inst(void)
 {
   object body, handler;
   int s, e;
@@ -636,7 +628,7 @@ static void pop_throw_inst(void)
   reg[0] = gc_new_cons(reg[0], object_nil);
 }
 
-static void pop_unwind_protect_inst(void)
+STATIC void pop_unwind_protect_inst(void)
 {
   object body;
   body = get_local_var(ip, 0);
@@ -646,7 +638,7 @@ static void pop_unwind_protect_inst(void)
 
 // trace and debug
 
-static object call_stack(int s, int e)
+STATIC object call_stack(int s, int e)
 {
   int i;
   object o;
@@ -660,14 +652,14 @@ static object call_stack(int s, int e)
 
 // special/prim
 
-static int same_symbol_keyword_p(object sym, object key)
+STATIC int same_symbol_keyword_p(object sym, object key)
 {
   xassert(typep(sym, SYMBOL) && typep(key, KEYWORD));
   if (sym->barray.size != key->barray.size) return FALSE;
   return memcmp(sym->barray.elt, key->barray.elt, sym->barray.size) == 0;
 }
 
-static int valid_keyword_p(object params, object args)
+STATIC int valid_keyword_p(object params, object args)
 {
   object p, s;
   while (args != object_nil) {
@@ -696,7 +688,7 @@ static int valid_keyword_p(object params, object args)
   return TRUE;
 }
 
-static void parse_lambda_list(object env, object params, object args)
+STATIC void parse_lambda_list(object env, object params, object args)
 {
   object o, pre, k, v, def_v, sup_k;
   // parse required parameter
@@ -816,7 +808,7 @@ static void parse_lambda_list(object env, object params, object args)
  * <xparams> ::= <xparam> <xparam> ...
  * <xparam> ::= { <param> | (<param> <initial_value> [<supplyp>]) }
  */
-static int valid_xparam_p(object o)
+STATIC int valid_xparam_p(object o)
 {
   o = o->cons.car;
   if (typep(o, SYMBOL)) return TRUE;
@@ -827,7 +819,7 @@ static int valid_xparam_p(object o)
           && typep(o->cons.car, SYMBOL) && o->cons.cdr == object_nil));
 }
 
-static int parse_params(object *o)
+STATIC int parse_params(object *o)
 {
   *o = (*o)->cons.cdr;
   if (!valid_xparam_p(*o)) return FALSE;
@@ -841,7 +833,7 @@ static int parse_params(object *o)
   return TRUE;
 }
 
-static int valid_lambda_list_p(int object_type, object params)
+STATIC int valid_lambda_list_p(int object_type, object params)
 {
   int type;
   while (TRUE) {
@@ -1116,7 +1108,7 @@ PRIM(call_stack)
   return TRUE;
 }
 
-static void trap(void)
+STATIC void trap(void)
 {
   object e;
   switch (ip_trap_code) {
@@ -1136,7 +1128,7 @@ static void trap(void)
   }
 }
 
-static void ip_main(void)
+STATIC void ip_main(void)
 {
   reg[0] = object_nil;
   reg[1] = object_toplevel;
