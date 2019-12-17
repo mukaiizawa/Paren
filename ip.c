@@ -154,7 +154,7 @@ static struct xarray fb;
  * | 0: instruction  |
  * +-----------------+
  */
-static int frame_size(int inst_type)
+STATIC int frame_size(int inst_type)
 {
   switch (inst_type) {
     case ASSERT_INST:
