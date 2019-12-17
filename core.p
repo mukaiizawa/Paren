@@ -1725,4 +1725,13 @@
       (dolist (arg args)
         (load arg))))
 
+(function expand-macro (expr)
+  (let (operator (eval (car expr))
+        params (lambda-parameter operator)
+        body (lambda-body operator)
+        args (cdr expr))
+    (apply (lambda params body) args)))
+
+(print (expand-macro '(begin0 1 2 3)))
+
 (boot $args)

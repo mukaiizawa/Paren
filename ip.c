@@ -839,6 +839,7 @@ STATIC int valid_lambda_list_p(int object_type, object params)
 {
   int type;
   while (TRUE) {
+    if (!listp(params)) return FALSE;
     if (params == object_nil) return TRUE;
     type = type(params->cons.car);
     if (type == KEYWORD) break;
@@ -960,10 +961,9 @@ SPECIAL(macro)
   if (!typep(argv->cons.car, SYMBOL)) {
     ip_mark_exception("required macro name");
     return FALSE;
-  } else {
-    gen1(BIND_PROPAGATION_INST, argv->cons.car);
-    argv = argv->cons.cdr;
   }
+  gen1(BIND_PROPAGATION_INST, argv->cons.car);
+  argv = argv->cons.cdr;
   if (!valid_lambda_list_p(MACRO, params = argv->cons.car)) {
     mark_illegal_parameter_error();
     return FALSE;
