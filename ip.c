@@ -64,7 +64,7 @@ int ip_ensure_arguments(int argc, int min, int max)
   return FALSE;
 }
 
-STATIC void mark_illegal_parameter_error()
+STATIC void mark_illegal_args_exception()
 {
   ip_mark_exception("illegal parameter list");
 }
@@ -702,6 +702,9 @@ STATIC void parse_lambda_list(object env, object params, object args)
     if (!typep(params->cons.car, CONS)) {
       fb_gen1(QUOTE_INST, args->cons.car);
       fb_gen1(BIND_INST, params->cons.car);
+    } else if (!listp(args->cons.car)) {
+      mark_illegal_args_exception();
+      return;
     } else {
       parse_lambda_list(env, params->cons.car, args->cons.car);
       if (ip_trap_code != TRAP_NONE) return;
@@ -965,7 +968,7 @@ SPECIAL(macro)
   gen1(BIND_PROPAGATION_INST, argv->cons.car);
   argv = argv->cons.cdr;
   if (!valid_lambda_list_p(MACRO, params = argv->cons.car)) {
-    mark_illegal_parameter_error();
+    mark_illegal_args_exception();
     return FALSE;
   }
   reg[0] = gc_new_macro(reg[1], params, argv->cons.cdr);
@@ -978,7 +981,7 @@ SPECIAL(lambda)
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   params = argv->cons.car;
   if (!valid_lambda_list_p(LAMBDA, params)) {
-    mark_illegal_parameter_error();
+    mark_illegal_args_exception();
     return FALSE;
   }
   reg[0] = gc_new_lambda(reg[1], params, argv->cons.cdr);
@@ -1089,6 +1092,22 @@ PRIM(apply)
   }
   ip_mark_exception("requires function or symbol(built in function) to apply");
   return FALSE;
+}
+
+PRIM(expand_macro)
+{
+  object f, args;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  reg[0] = argv->cons.car;
+  if (!typep(reg[0], CONS)) return TRUE;
+  f = reg[0]->cons.car;
+  args = reg[0]->cons.cdr;
+  if (!typep(f, SYMBOL)) return TRUE;
+  if ((f = symbol_find_propagation(reg[1], f)) == NULL) return TRUE;
+  if (!typep(f, MACRO)) return TRUE;
+  gen_apply_inst(f);
+  reg[0] = args;
+  return TRUE;
 }
 
 PRIM(bound_p)

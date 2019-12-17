@@ -117,6 +117,7 @@ static char *symbol_name_map[] = {
   "basic_catch", "basic-catch",
   "basic_throw", "basic-throw",
   "call_stack", "call-stack",
+  "expand_macro", "expand-macro",
   "operator_p", "operator?",
   "samep", "same?",
   "special_operator_p", "special-operator?",
