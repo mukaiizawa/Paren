@@ -109,10 +109,12 @@ void splay_add(object splay, object key, object val)
 
 void splay_replace(object splay, object key, object val)
 {
-  object o;
-  o = splay_find(splay, key);
-  if (o == NULL) splay_add(splay, key, val);
-  else node_set_val(splay_get_top(splay), val);
+  object top;
+  top = balance(splay, key);
+  if (top == nil)
+    top = gc_new_splay_node(key, val, node_get_left(nil), node_get_right(nil));
+  else node_set_val(top, val);
+  splay_set_top(splay, top);
 }
 
 object splay_find(object splay, object key)
