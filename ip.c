@@ -154,9 +154,9 @@ static struct xarray fb;
  * | 0: instruction  |
  * +-----------------+
  */
-STATIC int frame_size(int inst_type)
+STATIC int frame_size(int inst)
 {
-  switch (inst_type) {
+  switch (inst) {
     case ASSERT_INST:
     case EVAL_INST:
     case FENCE_INST:
@@ -187,9 +187,9 @@ STATIC int frame_size(int inst_type)
   }
 }
 
-char *inst_name(int inst_type)
+char *inst_name(int inst)
 {
-  switch (inst_type) {
+  switch (inst) {
     case APPLY_INST: return "APPLY_INST";
     case APPLY_PRIM_INST: return "APPLY_PRIM_INST";
     case ASSERT_INST: return "ASSERT_INST";
@@ -215,8 +215,10 @@ char *inst_name(int inst_type)
   }
 }
 
-#define inst_type(o) (o->xint.val)
-#define fs_top() (fs[ip])
+#define sint_p(o) ((((intptr_t)o)&1)==1)
+#define sint_val(o) ((int)(((intptr_t)o)>>1))
+#define sint(i) ((object)((((uintptr_t)i)<<1)|1))
+#define curr_inst() (sint_val(fs[ip]))
 #define get_local_var(base_ip, n) (fs[base_ip + 2 + n])
 #define set_local_var(base_ip, n, o) (fs[base_ip + 2 + n] = o)
 
@@ -224,38 +226,38 @@ STATIC int prev_ip(int base_ip)
 {
   xassert(0 <= base_ip && base_ip <= ip);
   if (base_ip == 0) return -1;
-  return fs[base_ip + 1]->xint.val;
+  return sint_val(fs[base_ip + 1]);
 }
 
 STATIC int next_ip(int base_ip)
 {
   xassert(0 <= base_ip && base_ip <= ip);
-  return base_ip + frame_size(fs[base_ip]->xint.val);
+  return base_ip + frame_size(sint_val(fs[base_ip]));
 }
 
-STATIC void gen(int inst_type)
+STATIC void gen(int inst)
 {
   if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_mark_error("stack over flow");
-  fs[sp + 1] = gc_new_xint(ip);
-  fs[sp] = object_bytes[inst_type];
+  fs[sp + 1] = sint(ip);
+  fs[sp] = sint(inst);
   ip = sp;
   sp = next_ip(ip);
 }
 
-STATIC void gen0(int inst_type)
+STATIC void gen0(int inst)
 {
-  gen(inst_type);
+  gen(inst);
 }
 
-STATIC void gen1(int inst_type, object lv0)
+STATIC void gen1(int inst, object lv0)
 {
-  gen(inst_type);
+  gen(inst);
   set_local_var(ip, 0, lv0);
 }
 
-STATIC void gen2(int inst_type, object lv0, object lv1)
+STATIC void gen2(int inst, object lv0, object lv1)
 {
-  gen(inst_type);
+  gen(inst);
   set_local_var(ip, 0, lv0);
   set_local_var(ip, 1, lv1);
 }
@@ -271,15 +273,15 @@ STATIC void fb_gen(object o)
   xarray_add(&fb, o);
 }
 
-STATIC void fb_gen0(int inst_type)
+STATIC void fb_gen0(int inst)
 {
-  fb_gen(object_bytes[inst_type]);
+  fb_gen(sint(inst));
 }
 
-STATIC void fb_gen1(int inst_type, object o)
+STATIC void fb_gen1(int inst, object o)
 {
   fb_gen(o);
-  fb_gen0(inst_type);
+  fb_gen0(inst);
 }
 
 STATIC void fb_flush(void)
@@ -289,9 +291,9 @@ STATIC void fb_flush(void)
   i = fb.size - 1;
   while (i > 0) {
     o = fb.elt[i];
-    gen(inst_type(o));
+    gen(sint_val(o));
     i--;
-    switch (frame_size(inst_type(o))) {
+    switch (frame_size(sint_val(o))) {
       case 2: break;
       case 3: o = fb.elt[i]; set_local_var(ip, 0, o); i--; break;
       default: xassert(FALSE); break;
@@ -305,7 +307,7 @@ STATIC void pop_unwind_protect_inst(void);
 
 STATIC void pop_rewinding(void)
 {
-  switch (inst_type(fs_top())) {
+  switch (curr_inst()) {
     case SWITCH_ENV_INST: pop_swith_env_inst(); break;
     case UNWIND_PROTECT_INST: xassert(FALSE); break;    // must be protected.
     default: pop_frame(); break;
@@ -436,7 +438,7 @@ STATIC void pop_goto_inst(void)
       ip_mark_exception("labels context not found");
       return;
     }
-    if (inst_type(fs_top()) == UNWIND_PROTECT_INST) {
+    if (curr_inst() == UNWIND_PROTECT_INST) {
       o = get_local_var(ip, 0);
       pop_frame();
       gen0(GOTO_INST);
@@ -444,7 +446,7 @@ STATIC void pop_goto_inst(void)
       gen_eval_sequential_inst(o);
       return;
     }
-    if (inst_type(fs_top()) == LABELS_INST) break;
+    if (curr_inst() == LABELS_INST) break;
     pop_rewinding();
   }
   o = get_local_var(ip, 0);
@@ -560,7 +562,7 @@ STATIC void pop_return_inst(void)
   object args;
   while (sp != 0) {
     xassert(sp > 0);
-    switch (inst_type(fs_top())) {
+    switch (curr_inst()) {
       case FENCE_INST:
         return;
       case UNWIND_PROTECT_INST: 
@@ -603,7 +605,7 @@ STATIC void pop_throw_inst(void)
       ip = e;
       exit1();
     }
-    if (inst_type(fs_top()) == UNWIND_PROTECT_INST) {
+    if (curr_inst() == UNWIND_PROTECT_INST) {
       body = get_local_var(ip, 0);
       pop_frame();
       reg[3] = gc_new_xint(e);
@@ -612,7 +614,7 @@ STATIC void pop_throw_inst(void)
       gen_eval_sequential_inst(body);
       return;
     }
-    if (inst_type(fs_top()) == HANDLER_INST) {
+    if (curr_inst() == HANDLER_INST) {
       s = ip;
       ip = e;
       reg[2] = call_stack(s, e);
@@ -644,7 +646,7 @@ STATIC object call_stack(int s, int e)
   object o;
   o = object_nil;
   for (i = s; i < e; i = next_ip(i)) {
-    if (inst_type(fs[i]) == TRACE_INST)
+    if (sint_val(fs[i]) == TRACE_INST)
       o = gc_new_cons(get_local_var(i, 0), o);
   }
   return o;
@@ -902,7 +904,7 @@ SPECIAL(dynamic)
   while (TRUE) {
     if ((v = symbol_find(e, s)) != NULL) break;
     while ((i = prev_ip(i)) > 0) {
-      if (inst_type(fs[i]) == SWITCH_ENV_INST) {
+      if (sint_val(fs[i]) == SWITCH_ENV_INST) {
         e = get_local_var(i, 0);
         break;
       }
@@ -1141,7 +1143,7 @@ STATIC void ip_main(void)
     if(cycle % IP_POLLING_INTERVAL == 0) {
       if (reg[3] == object_nil) gc_chance();
     }
-    switch (inst_type(fs_top())) {
+    switch (curr_inst()) {
       case APPLY_INST: pop_apply_inst(); break;
       case APPLY_PRIM_INST: pop_apply_prim_inst(); break;
 #ifndef NDEBUG
@@ -1175,7 +1177,8 @@ void ip_mark(void)
 {
   int i;
   for (i = 0; i < REG_SIZE; i++) gc_mark(reg[i]);
-  for (i = 0; i < sp; i++) gc_mark(fs[i]);
+  for (i = 0; i < sp; i++)
+    if (!sint_p(fs[i])) gc_mark(fs[i]);
   for (i = 0; byte_range_p(i); i++) gc_mark(object_bytes[i]);
 }
 
