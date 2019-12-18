@@ -110,6 +110,7 @@ STATIC void symbol_bind_propagation(object e, object s, object v)
 
 #define STACK_GAP 10
 #define FRAME_STACK_SIZE 10000
+#define FRAME_STACK_SIZE 10000
 
 /*
  * frame structure.
@@ -119,11 +120,13 @@ STATIC void symbol_bind_propagation(object e, object s, object v)
  * |                 | <- sp
  * +-----------------+
  * |       ...       |
+ * | 3: local_var[1] |
  * | 2: local_var 0  |
  * | 1: return addr  |
  * | 0: instruction  | <- ip
  * +-----------------+
  * |       ...       |
+ * | 3: local_var[1] |
  * | 2: local_var[0] |
  * | 1: return addr  |
  * | 0: instruction  |
@@ -133,6 +136,7 @@ STATIC void symbol_bind_propagation(object e, object s, object v)
  * |       ...       |
  * +-----------------+
  * |       ...       |
+ * | 3: local_var[1] |
  * | 2: local_var[0] |
  * | 1: return addr  |
  * | 0: instruction  |
