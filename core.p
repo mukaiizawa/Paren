@@ -326,7 +326,8 @@
 
 (function ->list (x)
   ; Returns the specified x if x is a list, otherwise returns x as a list.
-  (if (list? x) x (list x)))
+  (if (list? x) x
+      (list x)))
 
 (function nth (l n)
   ; Returns the specified nth element of the specified list l.
@@ -599,7 +600,7 @@
   ; Returns concatenated string which each of the specified args as string.
   (with-memory-stream (ms)
     (dolist (arg args)
-      (if arg (princ arg ms)))))
+      (if arg (simple-print arg ms)))))
 
 ; number
 
@@ -1034,7 +1035,8 @@
   (write-new-line)
   (for (i 0 st (.stackTrace self)) st (<- i (++ i) st (cdr st))
     (if (< i 15) (begin (write-string "\tat: ")
-                        (simple-print (car st)))
+                        (simple-print (car st))
+                        (write-new-line))
         (begin (write-string "\t\t...\n")
                (break)))))
 
@@ -1488,7 +1490,8 @@
     (parse)))
 
 ;; I/O
-(<- $stdin (.init (.new FileStream) :fp (fp 0))
+(<- $import nil
+    $stdin (.init (.new FileStream) :fp (fp 0))
     $stdout (.init (.new FileStream) :fp (fp 1))
     $encoding (if (same? $os :Windows) :CP932 :UTF-8)
     $support-encodings '(:UTF-8 :CP932))
@@ -1614,47 +1617,9 @@
                     (symbol? x) (write-string (symbol->string x) stream)
                     (keyword? x) (write-string (keyword->string x) stream)
                     (number? x) (write-string (number->string x) stream)
-                    (throw (.new IllegalStateException)))))
-      (print-s-expr x)
-      (write-byte 0x0A)))
+                    (assert nil))))
+      (print-s-expr x)))
   x)
-
-(function princ (x :opt stream)
-  ; print the specified x as a readable format.
-  (let (stream (or stream (dynamic $stdout)))
-      (let (print-s-expr (lambda (x)
-                           (if (cons? x) (print-cons x)
-                               (print-atom x)))
-            print-cons (lambda (x)
-                         (write-string "(" stream)
-                         (print-s-expr (car x))
-                         (map (cdr x) (lambda (x) 
-                                        (write-string " " stream)
-                                        (print-s-expr x)))
-                         (write-string ")" stream))
-            print-operator (lambda (x)
-                             (write-string "(" stream)
-                             (if (lambda? x) (write-string "lambda" stream)
-                                 (write-string "macro" stream))
-                             (write-string " " stream)
-                             (if (lambda-parameter x)
-                                 (print-cons (lambda-parameter x))
-                                 (write-string "()" stream))
-                             (map (lambda-body x) (lambda (x)
-                                                    (write-string " " stream)
-                                                    (print-s-expr x)))
-                             (write-string ")" stream))
-            print-atom
-                (lambda (x)
-                  (if (macro? x) (print-operator x)
-                      (lambda? x) (print-operator x)
-                      (string? x) (write-string x stream)
-                      (symbol? x) (write-string (symbol->string x) stream)
-                      (keyword? x) (write-string (keyword->string x) stream)
-                      (number? x) (write-string (number->string x) stream)
-                      (throw (.new IllegalStateException)))))
-        (print-s-expr x)
-        x)))
 
 (function print (x :opt stream)
   ; print the specified x as a readable format.
@@ -1691,7 +1656,7 @@
                       (symbol? x) (write-string (symbol->string x) stream)
                       (keyword? x) (write-string (keyword->string x) stream)
                       (number? x) (write-string (number->string x) stream)
-                      (throw (.new IllegalStateException)))))
+                      (assert nil))))
         (print-s-expr x)
         (write-new-line stream)
         x)))
@@ -1715,6 +1680,24 @@
   (with-open-read (in path)
     (while (different? (eval (read in)) :EOF)))
   true)
+
+(function import (key)
+  ; Load the file corresponding to the specified keyword.
+  ; Search the current directory and directories in the execution environment.
+  ; Returns true if successfully loaded.
+  (if (find $import key) true
+      (begin0 (load (->string (keyword->symbol key) ".p"))
+              (push! $import key))))
+
+(function shell ()
+  ; Start paren shell.
+  (let (s nil)
+    (while true
+      (catch ((QuitSignal (e) (break))
+              (Exception (e) (.printSimpleStackTrace e)))
+        (write-string ") ")
+        (if (same? (<- s (read)) :EOF) (break))
+        (print (eval s))))))
 
 ; (let ($encoding :UTF-8)
 ;   (<- ar (.init (.new AheadReader) :string "あいう"))
