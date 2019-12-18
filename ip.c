@@ -120,14 +120,14 @@ STATIC void symbol_bind_propagation(object e, object s, object v)
  * |                 | <- sp
  * +-----------------+
  * |       ...       |
- * | 3: local_var[1] |
- * | 2: local_var 0  |
+ * | 3: frame_var[1] |
+ * | 2: frame_var 0  |
  * | 1: return addr  |
  * | 0: instruction  | <- ip
  * +-----------------+
  * |       ...       |
- * | 3: local_var[1] |
- * | 2: local_var[0] |
+ * | 3: frame_var[1] |
+ * | 2: frame_var[0] |
  * | 1: return addr  |
  * | 0: instruction  |
  * +-----------------+
@@ -136,8 +136,8 @@ STATIC void symbol_bind_propagation(object e, object s, object v)
  * |       ...       |
  * +-----------------+
  * |       ...       |
- * | 3: local_var[1] |
- * | 2: local_var[0] |
+ * | 3: frame_var[1] |
+ * | 2: frame_var[0] |
  * | 1: return addr  |
  * | 0: instruction  |
  * +-----------------+
@@ -205,9 +205,9 @@ char *inst_name(int inst)
 #define sint_p(o) ((((intptr_t)o) & 1) == 1)
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
 #define sint(i) ((object)((((uintptr_t)i) << 1) | 1))
-#define curr_inst() (sint_val(fs[ip]))
-#define get_local_var(base_ip, n) (fs[base_ip + 2 + n])
-#define set_local_var(base_ip, n, o) (fs[base_ip + 2 + n] = o)
+#define top_inst() (sint_val(fs[ip]))
+#define get_frame_var(base_ip, n) (fs[base_ip + 2 + n])
+#define set_frame_var(base_ip, n, o) (fs[base_ip + 2 + n] = o)
 #define frame_size(inst) (inst & INST_SIZE_MASK)
 #define next_ip(base_ip) (base_ip + frame_size(sint_val(fs[base_ip])))
 #define prev_ip(base_ip) (sint_val(fs[base_ip + 1]))
@@ -215,13 +215,13 @@ char *inst_name(int inst)
 #define gen1(inst, lv0) \
 { \
   gen0(inst); \
-  set_local_var(ip, 0, lv0); \
+  set_frame_var(ip, 0, lv0); \
 }
 #define gen2(inst, lv0, lv1) \
 { \
   gen0(inst); \
-  set_local_var(ip, 0, lv0); \
-  set_local_var(ip, 1, lv1); \
+  set_frame_var(ip, 0, lv0); \
+  set_frame_var(ip, 1, lv1); \
 }
 #define fb_gen0(inst) xarray_add(&fb, sint(inst));
 #define fb_gen1(inst, o) \
@@ -256,365 +256,66 @@ STATIC void fb_flush(void)
     i--;
     switch (frame_size(sint_val(o))) {
       case 2: break;
-      case 3: o = fb.elt[i]; set_local_var(ip, 0, o); i--; break;
+      case 3: o = fb.elt[i]; set_frame_var(ip, 0, o); i--; break;
       default: xassert(FALSE); break;
     }
   }
   xarray_reset(&fb);
 }
 
-STATIC void pop_swith_env_inst(void);
-STATIC void pop_unwind_protect_inst(void);
+STATIC void pop_swith_env_frame(void)
+{
+  reg[1] = get_frame_var(ip, 0);
+  pop_frame();
+}
 
 STATIC void pop_rewinding(void)
 {
-  switch (curr_inst()) {
-    case SWITCH_ENV_INST: pop_swith_env_inst(); break;
+  switch (top_inst()) {
+    case SWITCH_ENV_INST: pop_swith_env_frame(); break;
     case UNWIND_PROTECT_INST: xassert(FALSE); break;    // must be protected.
     default: pop_frame(); break;
   }
 }
 
-STATIC void gen_apply_inst(object operator)
+STATIC void gen_apply_frame(object operator)
 {
   gen0(FENCE_INST);
   gen1(APPLY_INST, operator);
 }
 
-STATIC void gen_eval_inst(object o)
+STATIC void gen_eval_frame(object o)
 {
   if ((reg[0] = o)->header & EVAL_INST_MASK) gen0(EVAL_INST);
 }
 
-STATIC void gen_eval_args_inst(object args)
+STATIC void gen_eval_args_frame(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else {
     gen2(EVAL_ARGS_INST, args->cons.cdr, object_nil);
-    gen_eval_inst(args->cons.car);
+    gen_eval_frame(args->cons.car);
   }
 }
 
-STATIC void gen_eval_sequential_inst(object args)
+STATIC void gen_eval_sequential_frame(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else gen1(EVAL_SEQUENTIAL_INST, args);
 }
 
-STATIC void gen_if_inst(object args)
+STATIC void gen_if_frame(object args)
 {
   if (args == object_nil) return;
   if (args->cons.cdr != object_nil) gen1(IF_INST, args->cons.cdr);
-  gen_eval_inst(args->cons.car);
+  gen_eval_frame(args->cons.car);
 }
 
-STATIC void gen_switch_env_inst(object env)
+STATIC void gen_switch_env_frame(object env)
 {
   gen1(SWITCH_ENV_INST, reg[1]);
   reg[1] = gc_new_env(env);
 }
-
-STATIC void parse_lambda_list(object env, object params, object args);
-STATIC void pop_apply_inst(void)
-{
-  object operator;
-  operator = get_local_var(ip, 0);
-  pop_frame();
-  gen_switch_env_inst(operator->lambda.env);
-  parse_lambda_list(reg[1], operator->lambda.params, reg[0]);
-  gen_eval_sequential_inst(operator->lambda.body);
-  fb_flush();
-}
-
-STATIC void pop_apply_prim_inst(void)
-{
-  object args;
-  int (*prim)(int, object, object *);
-  args = reg[0];
-  prim = get_local_var(ip, 0)->prim;
-  pop_frame();
-  if ((*prim)(object_list_len(args), args, &(reg[0]))) return;
-  if (error_msg == NULL) ip_mark_exception("primitive failed");
-}
-
-#ifndef NDEBUG
-STATIC void pop_assert_inst(void)
-{
-  pop_frame();
-  if (reg[0] == object_nil) ip_mark_error("assert failed");
-}
-#endif
-
-STATIC void pop_bind_inst(void)
-{
-  symbol_bind(reg[1], get_local_var(ip, 0), reg[0]);
-  pop_frame();
-}
-
-STATIC void pop_bind_propagation_inst(void)
-{
-  symbol_bind_propagation(reg[1], get_local_var(ip, 0), reg[0]);
-  pop_frame();
-}
-
-STATIC void pop_eval_inst(void)
-{
-  object s;
-  pop_frame();
-  switch (type(reg[0])) {
-    case SYMBOL:
-      if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
-        gen1(TRACE_INST, reg[0]);
-        ip_mark_exception("unbind symbol");
-        return;
-      }
-      reg[0] = s;
-      return;
-    case CONS:
-      gen1(TRACE_INST, reg[0]);
-      gen1(FETCH_OPERATOR_INST, reg[0]->cons.cdr);
-      gen_eval_inst(reg[0]->cons.car);
-      return;
-#ifndef NDEBUG
-    case MACRO:
-    case LAMBDA:
-    case XINT:
-    case XFLOAT:
-    case KEYWORD:
-    case STRING:
-    case BARRAY:
-    case ARRAY:
-      return;
-#endif
-    default:
-      xassert(FALSE);
-      return;
-  }
-}
-
-STATIC void pop_goto_inst(void)
-{
-  object o, label;
-  label = reg[0];
-  if (!typep(label, KEYWORD)) {
-    ip_mark_exception("label must be keyword");
-    return;
-  }
-  while (TRUE) {
-    if (ip < 0) {
-      ip_mark_exception("labels context not found");
-      return;
-    }
-    if (curr_inst() == UNWIND_PROTECT_INST) {
-      o = get_local_var(ip, 0);
-      pop_frame();
-      gen0(GOTO_INST);
-      gen1(QUOTE_INST, label);
-      gen_eval_sequential_inst(o);
-      return;
-    }
-    if (curr_inst() == LABELS_INST) break;
-    pop_rewinding();
-  }
-  o = get_local_var(ip, 0);
-  while (TRUE) {
-    if (o == object_nil) {
-      ip_mark_exception("label not found");
-      return;
-    }
-    if (o->cons.car == label) break;
-    o = o->cons.cdr;
-  }
-  gen_eval_sequential_inst(o);
-}
-
-STATIC void pop_fetch_handler_inst(void)
-{
-  object handler, body;
-  handler = reg[0];
-  body = get_local_var(ip, 0);
-  pop_frame();
-  if (!typep(handler, LAMBDA)) {
-    ip_mark_exception("require exception handler");
-    return;
-  }
-  if (object_list_len(handler->lambda.params) != 1) {
-    ip_mark_exception("handler parameter must be one required parameter");
-    return;
-  }
-  gen1(HANDLER_INST, handler);
-  gen_eval_sequential_inst(body);
-}
-
-STATIC void pop_fetch_operator_inst(void)
-{
-  object f, args;
-  int (*special)(int, object);
-  args = get_local_var(ip, 0);
-  pop_frame();
-  switch (type(reg[0])) {
-    case SYMBOL:
-      if ((f = splay_find(object_special_splay, reg[0])) != NULL) {
-        special = f->special;
-        (*special)(object_list_len(args), args);
-        return;
-      }
-      if ((f = splay_find(object_prim_splay, reg[0])) != NULL) {
-        gen1(APPLY_PRIM_INST, f);
-        gen_eval_args_inst(args);
-        return;
-      }
-      break;
-    case MACRO:
-      gen0(EVAL_INST);
-      gen_apply_inst(reg[0]);
-      reg[0] = args;
-      return;
-    case LAMBDA:
-      gen_apply_inst(reg[0]);
-      gen_eval_args_inst(args);
-      return;
-    default: break;
-  }
-  ip_mark_exception("is not a operator");
-}
-
-STATIC void pop_eval_args_inst(void)
-{
-  object rest, acc;
-  rest = get_local_var(ip, 0);
-  acc = gc_new_cons(reg[0], get_local_var(ip, 1));
-  set_local_var(ip, 1, acc);
-  if (rest == object_nil) {
-    pop_frame();
-    reg[0] = object_reverse(acc);
-  } else {
-    set_local_var(ip, 0, rest->cons.cdr);
-    gen_eval_inst(rest->cons.car);
-  }
-}
-
-STATIC void pop_eval_sequential_inst(void)
-{
-  object args;
-  args = get_local_var(ip, 0);
-  if (args == object_nil) pop_frame();
-  else {
-    set_local_var(ip, 0, args->cons.cdr);
-    gen_eval_inst(args->cons.car);
-  }
-}
-
-static void pop_if_inst(void)
-{
-  object args;
-  args = get_local_var(ip, 0);
-  pop_frame();
-  if (reg[0] != object_nil) gen_eval_inst(args->cons.car);
-  else if ((args = args->cons.cdr) != object_nil) gen_if_inst(args);
-}
-
-STATIC void pop_swith_env_inst(void)
-{
-  reg[1] = get_local_var(ip, 0);
-  pop_frame();
-}
-
-STATIC void pop_return_inst(void)
-{
-  object args;
-  while (sp > 0) {
-    switch (curr_inst()) {
-      case FENCE_INST:
-        return;
-      case UNWIND_PROTECT_INST: 
-        args = get_local_var(ip, 0);
-        pop_frame();
-        gen0(RETURN_INST);
-        gen1(QUOTE_INST, reg[0]);
-        gen_eval_sequential_inst(args);
-        return;
-      default:
-        pop_rewinding();
-        break;
-    }
-  }
-}
-
-STATIC object call_stack(int s, int e);
-STATIC void exit1(void)
-{
-  char buf[MAX_STR_LEN];
-  object o;
-  o = call_stack(0, ip);
-  printf("Error -- %s\n", object_describe(reg[0], buf));
-  while (o != object_nil) {
-    printf("	at: %s\n", object_describe(o->cons.car, buf));
-    o = o->cons.cdr;
-  }
-  exit(1);
-}
-
-STATIC void pop_throw_inst(void)
-{
-  object body, handler;
-  int s, e;
-  e = ip;
-  if (reg[3] != object_nil) e = reg[3]->xint.val;
-  pop_frame();
-  while (TRUE) {
-    if (ip < 0) {
-      ip = e;
-      exit1();
-    }
-    if (curr_inst() == UNWIND_PROTECT_INST) {
-      body = get_local_var(ip, 0);
-      pop_frame();
-      reg[3] = gc_new_xint(e);
-      gen0(THROW_INST);
-      gen1(QUOTE_INST, reg[0]);
-      gen_eval_sequential_inst(body);
-      return;
-    }
-    if (curr_inst() == HANDLER_INST) {
-      s = ip;
-      ip = e;
-      reg[2] = call_stack(s, e);
-      ip = s;
-      reg[3] = object_nil;
-      handler = get_local_var(ip, 0);
-      pop_frame();
-      break;
-    }
-    pop_rewinding();
-  }
-  gen_apply_inst(handler);
-  reg[0] = gc_new_cons(reg[0], object_nil);
-}
-
-STATIC void pop_unwind_protect_inst(void)
-{
-  object body;
-  body = get_local_var(ip, 0);
-  pop_frame();
-  gen_eval_sequential_inst(body);
-}
-
-// trace and debug
-
-STATIC object call_stack(int s, int e)
-{
-  int i;
-  object o;
-  o = object_nil;
-  for (i = s; i < e; i = next_ip(i)) {
-    if (sint_val(fs[i]) == TRACE_INST)
-      o = gc_new_cons(get_local_var(i, 0), o);
-  }
-  return o;
-}
-
-// special/prim
 
 STATIC int same_symbol_keyword_p(object sym, object key)
 {
@@ -765,6 +466,292 @@ STATIC void parse_lambda_list(object env, object params, object args)
   if (args != object_nil) ip_mark_too_many_arguments_error();
 }
 
+STATIC void pop_apply_frame(void)
+{
+  object operator;
+  operator = get_frame_var(ip, 0);
+  pop_frame();
+  gen_switch_env_frame(operator->lambda.env);
+  parse_lambda_list(reg[1], operator->lambda.params, reg[0]);
+  gen_eval_sequential_frame(operator->lambda.body);
+  fb_flush();
+}
+
+STATIC void pop_apply_prim_frame(void)
+{
+  object args;
+  int (*prim)(int, object, object *);
+  args = reg[0];
+  prim = get_frame_var(ip, 0)->prim;
+  pop_frame();
+  if ((*prim)(object_list_len(args), args, &(reg[0]))) return;
+  if (error_msg == NULL) ip_mark_exception("primitive failed");
+}
+
+STATIC void pop_assert_frame(void)
+{
+  pop_frame();
+  if (reg[0] == object_nil) ip_mark_error("assert failed");
+}
+
+STATIC void pop_bind_frame(void)
+{
+  symbol_bind(reg[1], get_frame_var(ip, 0), reg[0]);
+  pop_frame();
+}
+
+STATIC void pop_bind_propagation_frame(void)
+{
+  symbol_bind_propagation(reg[1], get_frame_var(ip, 0), reg[0]);
+  pop_frame();
+}
+
+STATIC void pop_eval_frame(void)
+{
+  object s;
+  pop_frame();
+  switch (type(reg[0])) {
+    case SYMBOL:
+      if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
+        gen1(TRACE_INST, reg[0]);
+        ip_mark_exception("unbind symbol");
+        return;
+      }
+      reg[0] = s;
+      return;
+    case CONS:
+      gen1(TRACE_INST, reg[0]);
+      gen1(FETCH_OPERATOR_INST, reg[0]->cons.cdr);
+      gen_eval_frame(reg[0]->cons.car);
+      return;
+    case MACRO:
+    case LAMBDA:
+    case XINT:
+    case XFLOAT:
+    case KEYWORD:
+    case STRING:
+    case BARRAY:
+    case ARRAY:
+      return;
+    default:
+      xassert(FALSE);
+      return;
+  }
+}
+
+STATIC void pop_unwind_protect_frame(void)
+{
+  object body;
+  body = get_frame_var(ip, 0);
+  pop_frame();
+  gen_eval_sequential_frame(body);
+}
+
+STATIC void pop_goto_frame(void)
+{
+  object o, label;
+  label = reg[0];
+  if (!typep(label, KEYWORD)) {
+    ip_mark_exception("label must be keyword");
+    return;
+  }
+  while (TRUE) {
+    if (ip < 0) {
+      ip_mark_exception("labels context not found");
+      return;
+    }
+    if (top_inst() == UNWIND_PROTECT_INST) {
+      o = get_frame_var(ip, 0);
+      pop_frame();
+      gen0(GOTO_INST);
+      gen1(QUOTE_INST, label);
+      gen_eval_sequential_frame(o);
+      return;
+    }
+    if (top_inst() == LABELS_INST) break;
+    pop_rewinding();
+  }
+  o = get_frame_var(ip, 0);
+  while (TRUE) {
+    if (o == object_nil) {
+      ip_mark_exception("label not found");
+      return;
+    }
+    if (o->cons.car == label) break;
+    o = o->cons.cdr;
+  }
+  gen_eval_sequential_frame(o);
+}
+
+STATIC void pop_fetch_handler_frame(void)
+{
+  object handler, body;
+  handler = reg[0];
+  body = get_frame_var(ip, 0);
+  pop_frame();
+  if (!typep(handler, LAMBDA)) {
+    ip_mark_exception("require exception handler");
+    return;
+  }
+  if (object_list_len(handler->lambda.params) != 1) {
+    ip_mark_exception("handler parameter must be one required parameter");
+    return;
+  }
+  gen1(HANDLER_INST, handler);
+  gen_eval_sequential_frame(body);
+}
+
+STATIC void pop_fetch_operator_frame(void)
+{
+  object f, args;
+  int (*special)(int, object);
+  args = get_frame_var(ip, 0);
+  pop_frame();
+  switch (type(reg[0])) {
+    case SYMBOL:
+      if ((f = splay_find(object_special_splay, reg[0])) != NULL) {
+        special = f->special;
+        (*special)(object_list_len(args), args);
+        return;
+      }
+      if ((f = splay_find(object_prim_splay, reg[0])) != NULL) {
+        gen1(APPLY_PRIM_INST, f);
+        gen_eval_args_frame(args);
+        return;
+      }
+      break;
+    case MACRO:
+      gen0(EVAL_INST);
+      gen_apply_frame(reg[0]);
+      reg[0] = args;
+      return;
+    case LAMBDA:
+      gen_apply_frame(reg[0]);
+      gen_eval_args_frame(args);
+      return;
+    default: break;
+  }
+  ip_mark_exception("is not a operator");
+}
+
+STATIC void pop_eval_args_frame(void)
+{
+  object rest, acc;
+  rest = get_frame_var(ip, 0);
+  acc = gc_new_cons(reg[0], get_frame_var(ip, 1));
+  set_frame_var(ip, 1, acc);
+  if (rest == object_nil) {
+    pop_frame();
+    reg[0] = object_reverse(acc);
+  } else {
+    set_frame_var(ip, 0, rest->cons.cdr);
+    gen_eval_frame(rest->cons.car);
+  }
+}
+
+STATIC void pop_eval_sequential_frame(void)
+{
+  object args;
+  args = get_frame_var(ip, 0);
+  if (args == object_nil) pop_frame();
+  else {
+    set_frame_var(ip, 0, args->cons.cdr);
+    gen_eval_frame(args->cons.car);
+  }
+}
+
+static void pop_if_frame(void)
+{
+  object args;
+  args = get_frame_var(ip, 0);
+  pop_frame();
+  if (reg[0] != object_nil) gen_eval_frame(args->cons.car);
+  else if ((args = args->cons.cdr) != object_nil) gen_if_frame(args);
+}
+
+STATIC void pop_return_frame(void)
+{
+  object args;
+  while (sp > 0) {
+    switch (top_inst()) {
+      case FENCE_INST:
+        return;
+      case UNWIND_PROTECT_INST: 
+        args = get_frame_var(ip, 0);
+        pop_frame();
+        gen0(RETURN_INST);
+        gen1(QUOTE_INST, reg[0]);
+        gen_eval_sequential_frame(args);
+        return;
+      default:
+        pop_rewinding();
+        break;
+    }
+  }
+}
+
+STATIC object call_stack(int s, int e)
+{
+  int i;
+  object o;
+  o = object_nil;
+  for (i = s; i < e; i = next_ip(i)) {
+    if (sint_val(fs[i]) == TRACE_INST)
+      o = gc_new_cons(get_frame_var(i, 0), o);
+  }
+  return o;
+}
+
+STATIC void exit1(void)
+{
+  char buf[MAX_STR_LEN];
+  object o;
+  o = call_stack(0, ip);
+  printf("Error -- %s\n", object_describe(reg[0], buf));
+  while (o != object_nil) {
+    printf("	at: %s\n", object_describe(o->cons.car, buf));
+    o = o->cons.cdr;
+  }
+  exit(1);
+}
+
+STATIC void pop_throw_frame(void)
+{
+  object body, handler;
+  int s, e;
+  e = ip;
+  if (reg[3] != object_nil) e = reg[3]->xint.val;
+  pop_frame();
+  while (TRUE) {
+    if (ip < 0) {
+      ip = e;
+      exit1();
+    }
+    if (top_inst() == UNWIND_PROTECT_INST) {
+      body = get_frame_var(ip, 0);
+      pop_frame();
+      reg[3] = gc_new_xint(e);
+      gen0(THROW_INST);
+      gen1(QUOTE_INST, reg[0]);
+      gen_eval_sequential_frame(body);
+      return;
+    }
+    if (top_inst() == HANDLER_INST) {
+      s = ip;
+      ip = e;
+      reg[2] = call_stack(s, e);
+      ip = s;
+      reg[3] = object_nil;
+      handler = get_frame_var(ip, 0);
+      pop_frame();
+      break;
+    }
+    pop_rewinding();
+  }
+  gen_apply_frame(handler);
+  reg[0] = gc_new_cons(reg[0], object_nil);
+}
+
 // special forms
 
 /*
@@ -800,7 +787,7 @@ STATIC int parse_params(object *o)
   return TRUE;
 }
 
-STATIC int valid_lambda_list_p(int object_type, object params)
+STATIC int valid_lambda_list_p(object params, int nest_p)
 {
   int type;
   while (TRUE) {
@@ -810,8 +797,8 @@ STATIC int valid_lambda_list_p(int object_type, object params)
     if (type == KEYWORD) break;
     else if (type == SYMBOL) params = params->cons.cdr;
     else if (type == CONS) {
-      if (object_type != MACRO || !valid_lambda_list_p(MACRO, params->cons.car))
-        return FALSE;
+      if (!nest_p) return FALSE;
+      if (!valid_lambda_list_p(params->cons.car, nest_p)) return FALSE;
       params = params->cons.cdr;
     }
     else return FALSE;
@@ -836,8 +823,8 @@ SPECIAL(let)
     ip_mark_exception("argument must be list");
     return FALSE;
   }
-  if (args != object_nil) gen_switch_env_inst(reg[1]);
-  gen_eval_sequential_inst(argv->cons.cdr);
+  if (args != object_nil) gen_switch_env_frame(reg[1]);
+  gen_eval_sequential_frame(argv->cons.cdr);
   while (args != object_nil) {
     if (!typep((s = args->cons.car), SYMBOL)) {
       ip_mark_exception("argument must be symbol");
@@ -871,7 +858,7 @@ SPECIAL(dynamic)
     if ((v = symbol_find(e, s)) != NULL) break;
     while ((i = prev_ip(i)) > 0) {
       if (sint_val(fs[i]) == SWITCH_ENV_INST) {
-        e = get_local_var(i, 0);
+        e = get_frame_var(i, 0);
         break;
       }
     }
@@ -915,7 +902,7 @@ SPECIAL(symbol_bind)
 
 SPECIAL(begin)
 {
-  gen_eval_sequential_inst(argv);
+  gen_eval_sequential_frame(argv);
   return TRUE;
 }
 
@@ -929,7 +916,7 @@ SPECIAL(macro)
   }
   gen1(BIND_PROPAGATION_INST, argv->cons.car);
   argv = argv->cons.cdr;
-  if (!valid_lambda_list_p(MACRO, params = argv->cons.car)) {
+  if (!valid_lambda_list_p(params = argv->cons.car, TRUE)) {
     mark_illegal_args_exception();
     return FALSE;
   }
@@ -942,7 +929,7 @@ SPECIAL(lambda)
   object params;
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   params = argv->cons.car;
-  if (!valid_lambda_list_p(LAMBDA, params)) {
+  if (!valid_lambda_list_p(params, FALSE)) {
     mark_illegal_args_exception();
     return FALSE;
   }
@@ -960,7 +947,7 @@ SPECIAL(quote)
 SPECIAL(if)
 {
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
-  gen_if_inst(argv);
+  gen_if_frame(argv);
   return TRUE;
 }
 
@@ -968,14 +955,14 @@ SPECIAL(unwind_protect)
 {
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   gen1(UNWIND_PROTECT_INST, argv->cons.cdr);
-  gen_eval_inst(argv->cons.car);
+  gen_eval_frame(argv->cons.car);
   return TRUE;
 }
 
 SPECIAL(labels)
 {
   gen1(LABELS_INST, argv);
-  gen_eval_sequential_inst(argv);
+  gen_eval_sequential_frame(argv);
   return TRUE;
 }
 
@@ -991,7 +978,7 @@ SPECIAL(basic_throw)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   gen0(THROW_INST);
-  gen_eval_inst(argv->cons.car);
+  gen_eval_frame(argv->cons.car);
   return TRUE;
 }
 
@@ -999,7 +986,7 @@ SPECIAL(basic_catch)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
   gen1(FETCH_HANDLER_INST, argv->cons.cdr);
-  gen_eval_inst(argv->cons.car);
+  gen_eval_frame(argv->cons.car);
   return TRUE;
 }
 
@@ -1007,7 +994,7 @@ SPECIAL(return)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   gen0(RETURN_INST);
-  gen_eval_inst(argv->cons.car);
+  gen_eval_frame(argv->cons.car);
   return TRUE;
 }
 
@@ -1016,7 +1003,7 @@ SPECIAL(assert)
 #ifndef NDEBUG
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   gen0(ASSERT_INST);
-  gen_eval_inst(argv->cons.car);
+  gen_eval_frame(argv->cons.car);
 #endif
   return TRUE;
 }
@@ -1024,7 +1011,7 @@ SPECIAL(assert)
 PRIM(eval)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  gen_eval_inst(argv->cons.car);
+  gen_eval_frame(argv->cons.car);
   return TRUE;
 }
 
@@ -1041,7 +1028,7 @@ PRIM(apply)
         return TRUE;
       }
     case LAMBDA:
-      gen_apply_inst(argv->cons.car);
+      gen_apply_frame(argv->cons.car);
       reg[0] = argv->cons.cdr->cons.car;
       return TRUE;
     default: break;
@@ -1061,7 +1048,7 @@ PRIM(expand_macro)
   if (!typep(f, SYMBOL)) return TRUE;
   if ((f = symbol_find_propagation(reg[1], f)) == NULL) return TRUE;
   if (!typep(f, MACRO)) return TRUE;
-  gen_apply_inst(f);
+  gen_apply_frame(f);
   reg[0] = args;
   return TRUE;
 }
@@ -1111,37 +1098,35 @@ STATIC void ip_main(void)
   reg[1] = object_toplevel;
   reg[2] = object_nil;
   reg[3] = object_nil;
-  gen_apply_inst(object_boot);
+  gen_apply_frame(object_boot);
   while (ip != -1) {
     xassert(ip >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
     if(cycle % IP_POLLING_INTERVAL == 0) {
       if (reg[3] == object_nil) gc_chance();
     }
-    switch (curr_inst()) {
-      case APPLY_INST: pop_apply_inst(); break;
-      case APPLY_PRIM_INST: pop_apply_prim_inst(); break;
-#ifndef NDEBUG
-      case ASSERT_INST: pop_assert_inst(); break;
-#endif
-      case BIND_INST: pop_bind_inst(); break;
-      case BIND_PROPAGATION_INST: pop_bind_propagation_inst(); break;
-      case EVAL_INST: pop_eval_inst(); break;
-      case EVAL_ARGS_INST: pop_eval_args_inst(); break;
-      case EVAL_SEQUENTIAL_INST: pop_eval_sequential_inst(); break;
+    switch (top_inst()) {
+      case APPLY_INST: pop_apply_frame(); break;
+      case APPLY_PRIM_INST: pop_apply_prim_frame(); break;
+      case ASSERT_INST: pop_assert_frame(); break;
+      case BIND_INST: pop_bind_frame(); break;
+      case BIND_PROPAGATION_INST: pop_bind_propagation_frame(); break;
+      case EVAL_INST: pop_eval_frame(); break;
+      case EVAL_ARGS_INST: pop_eval_args_frame(); break;
+      case EVAL_SEQUENTIAL_INST: pop_eval_sequential_frame(); break;
       case FENCE_INST: pop_frame(); break;
-      case FETCH_HANDLER_INST: pop_fetch_handler_inst(); break;
-      case FETCH_OPERATOR_INST: pop_fetch_operator_inst(); break;
-      case GOTO_INST: pop_goto_inst(); break;
+      case FETCH_HANDLER_INST: pop_fetch_handler_frame(); break;
+      case FETCH_OPERATOR_INST: pop_fetch_operator_frame(); break;
+      case GOTO_INST: pop_goto_frame(); break;
       case HANDLER_INST: pop_frame(); break;
-      case IF_INST: pop_if_inst(); break;
+      case IF_INST: pop_if_frame(); break;
       case LABELS_INST: pop_frame(); break;
-      case QUOTE_INST: reg[0] = get_local_var(ip, 0); pop_frame(); break;
-      case RETURN_INST: pop_return_inst(); break;
-      case SWITCH_ENV_INST: pop_swith_env_inst(); break;
-      case THROW_INST: pop_throw_inst(); break;
+      case QUOTE_INST: reg[0] = get_frame_var(ip, 0); pop_frame(); break;
+      case RETURN_INST: pop_return_frame(); break;
+      case SWITCH_ENV_INST: pop_swith_env_frame(); break;
+      case THROW_INST: pop_throw_frame(); break;
       case TRACE_INST: pop_frame(); break;
-      case UNWIND_PROTECT_INST: pop_unwind_protect_inst(); break;
+      case UNWIND_PROTECT_INST: pop_unwind_protect_frame(); break;
       default: xassert(FALSE); break;
     }
     cycle++;
