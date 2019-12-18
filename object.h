@@ -2,20 +2,21 @@
 
 typedef union s_expr *object;
 
-#define ALIVE_MASK 0xf0000000
-#define TYPE_MASK  0x0fffffff
-#define   ENV      0x00000001
-#define   MACRO    0x00000002
-#define   LAMBDA   0x00000004
-#define   CONS     0x00000008
-#define   XINT     0x00000010
-#define   XFLOAT   0x00000020
-#define   SYMBOL   0x00000040
-#define   KEYWORD  0x00000080
-#define   STRING   0x00000100
-#define   BARRAY   0x00000200
-#define   ARRAY    0x00000400
-#define   POINTER  0x00000800
+#define ALIVE_MASK      0xf0000000
+#define EVAL_INST_MASK  0x0f000000
+#define TYPE_MASK       0x0fffffff
+#define   ENV           0x00000001
+#define   MACRO         0x00000002
+#define   LAMBDA        0x00000004
+#define   CONS          0x01000008
+#define   XINT          0x00000010
+#define   XFLOAT        0x00000020
+#define   SYMBOL        0x01000040
+#define   KEYWORD       0x00000080
+#define   STRING        0x00000100
+#define   BARRAY        0x00000200
+#define   ARRAY         0x00000400
+#define   POINTER       0x00000800
 
 #define LINT_BITS 63
 

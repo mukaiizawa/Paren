@@ -211,6 +211,24 @@ char *inst_name(int inst)
 #define frame_size(inst) (inst & INST_SIZE_MASK)
 #define next_ip(base_ip) (base_ip + frame_size(sint_val(fs[base_ip])))
 #define prev_ip(base_ip) (sint_val(fs[base_ip + 1]))
+#define gen0(inst) gen(inst);
+#define gen1(inst, lv0) \
+{ \
+  gen0(inst); \
+  set_local_var(ip, 0, lv0); \
+}
+#define gen2(inst, lv0, lv1) \
+{ \
+  gen0(inst); \
+  set_local_var(ip, 0, lv0); \
+  set_local_var(ip, 1, lv1); \
+}
+#define fb_gen0(inst) xarray_add(&fb, sint(inst));
+#define fb_gen1(inst, o) \
+{ \
+  xarray_add(&fb, o); \
+  fb_gen0(inst); \
+}
 
 STATIC void gen(int inst)
 {
@@ -221,44 +239,10 @@ STATIC void gen(int inst)
   sp = next_ip(ip);
 }
 
-STATIC void gen0(int inst)
-{
-  gen(inst);
-}
-
-STATIC void gen1(int inst, object lv0)
-{
-  gen(inst);
-  set_local_var(ip, 0, lv0);
-}
-
-STATIC void gen2(int inst, object lv0, object lv1)
-{
-  gen(inst);
-  set_local_var(ip, 0, lv0);
-  set_local_var(ip, 1, lv1);
-}
-
 STATIC void pop_frame(void)
 {
   sp = ip;
   ip = prev_ip(ip);
-}
-
-STATIC void fb_gen(object o)
-{
-  xarray_add(&fb, o);
-}
-
-STATIC void fb_gen0(int inst)
-{
-  fb_gen(sint(inst));
-}
-
-STATIC void fb_gen1(int inst, object o)
-{
-  fb_gen(o);
-  fb_gen0(inst);
 }
 
 STATIC void fb_flush(void)
@@ -297,13 +281,17 @@ STATIC void gen_apply_inst(object operator)
   gen1(APPLY_INST, operator);
 }
 
+STATIC void gen_eval_inst(object o)
+{
+  if ((reg[0] = o)->header & EVAL_INST_MASK) gen0(EVAL_INST);
+}
+
 STATIC void gen_eval_args_inst(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else {
     gen2(EVAL_ARGS_INST, args->cons.cdr, object_nil);
-    gen0(EVAL_INST);
-    reg[0] = args->cons.car;
+    gen_eval_inst(args->cons.car);
   }
 }
 
@@ -317,8 +305,7 @@ STATIC void gen_if_inst(object args)
 {
   if (args == object_nil) return;
   if (args->cons.cdr != object_nil) gen1(IF_INST, args->cons.cdr);
-  gen0(EVAL_INST);
-  reg[0] = args->cons.car;
+  gen_eval_inst(args->cons.car);
 }
 
 STATIC void gen_switch_env_inst(object env)
@@ -375,15 +362,6 @@ STATIC void pop_eval_inst(void)
   object s;
   pop_frame();
   switch (type(reg[0])) {
-    case MACRO:
-    case LAMBDA:
-    case XINT:
-    case XFLOAT:
-    case KEYWORD:
-    case STRING:
-    case BARRAY:
-    case ARRAY:
-      return;
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
         gen1(TRACE_INST, reg[0]);
@@ -395,10 +373,22 @@ STATIC void pop_eval_inst(void)
     case CONS:
       gen1(TRACE_INST, reg[0]);
       gen1(FETCH_OPERATOR_INST, reg[0]->cons.cdr);
-      gen0(EVAL_INST);
-      reg[0] = reg[0]->cons.car;
+      gen_eval_inst(reg[0]->cons.car);
       return;
-    default: xassert(FALSE);
+#ifndef NDEBUG
+    case MACRO:
+    case LAMBDA:
+    case XINT:
+    case XFLOAT:
+    case KEYWORD:
+    case STRING:
+    case BARRAY:
+    case ARRAY:
+      return;
+#endif
+    default:
+      xassert(FALSE);
+      return;
   }
 }
 
@@ -500,8 +490,7 @@ STATIC void pop_eval_args_inst(void)
     reg[0] = object_reverse(acc);
   } else {
     set_local_var(ip, 0, rest->cons.cdr);
-    gen0(EVAL_INST);
-    reg[0] = rest->cons.car;
+    gen_eval_inst(rest->cons.car);
   }
 }
 
@@ -512,8 +501,7 @@ STATIC void pop_eval_sequential_inst(void)
   if (args == object_nil) pop_frame();
   else {
     set_local_var(ip, 0, args->cons.cdr);
-    gen0(EVAL_INST);
-    reg[0] = args->cons.car;
+    gen_eval_inst(args->cons.car);
   }
 }
 
@@ -522,10 +510,8 @@ static void pop_if_inst(void)
   object args;
   args = get_local_var(ip, 0);
   pop_frame();
-  if (reg[0] != object_nil) {
-    gen0(EVAL_INST);
-    reg[0] = args->cons.car;
-  } else if ((args = args->cons.cdr) != object_nil) gen_if_inst(args);
+  if (reg[0] != object_nil) gen_eval_inst(args->cons.car);
+  else if ((args = args->cons.cdr) != object_nil) gen_if_inst(args);
 }
 
 STATIC void pop_swith_env_inst(void)
@@ -982,8 +968,7 @@ SPECIAL(unwind_protect)
 {
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   gen1(UNWIND_PROTECT_INST, argv->cons.cdr);
-  gen0(EVAL_INST);
-  reg[0] = argv->cons.car;
+  gen_eval_inst(argv->cons.car);
   return TRUE;
 }
 
@@ -1006,8 +991,7 @@ SPECIAL(basic_throw)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   gen0(THROW_INST);
-  gen0(EVAL_INST);
-  reg[0] = argv->cons.car;
+  gen_eval_inst(argv->cons.car);
   return TRUE;
 }
 
@@ -1015,8 +999,7 @@ SPECIAL(basic_catch)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
   gen1(FETCH_HANDLER_INST, argv->cons.cdr);
-  gen0(EVAL_INST);
-  reg[0] = argv->cons.car;
+  gen_eval_inst(argv->cons.car);
   return TRUE;
 }
 
@@ -1024,8 +1007,7 @@ SPECIAL(return)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   gen0(RETURN_INST);
-  gen0(EVAL_INST);
-  reg[0] = argv->cons.car;
+  gen_eval_inst(argv->cons.car);
   return TRUE;
 }
 
@@ -1034,8 +1016,7 @@ SPECIAL(assert)
 #ifndef NDEBUG
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   gen0(ASSERT_INST);
-  gen0(EVAL_INST);
-  reg[0] = argv->cons.car;
+  gen_eval_inst(argv->cons.car);
 #endif
   return TRUE;
 }
@@ -1043,8 +1024,7 @@ SPECIAL(assert)
 PRIM(eval)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  gen0(EVAL_INST);
-  reg[0] = argv->cons.car;
+  gen_eval_inst(argv->cons.car);
   return TRUE;
 }
 
