@@ -1,9 +1,9 @@
 # makefile
-# Usage: make os={linux|windows} [cc=gcc] [debug=off]
+# Usage: make os={linux|windows} [cc=gcc] [debug=on]
 
 supportos=linux windows
 cc?=gcc
-debug?=on
+debug?=off
 
 ifeq ($(filter $(supportos),$(os)),)
 $(error Unsupport os)
