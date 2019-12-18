@@ -165,10 +165,6 @@
 
 ; fundamental function
 
-(function list (:rest args)
-  ; Returns the argument as a list.
-  args)
-
 (function caar (x)
   ; Same as (car (car x)).
   (car (car x)))
@@ -533,10 +529,6 @@
 
 ; associated list
 
-(function assoc-property-not-found (k)
-  (.message (.new IllegalStateException)
-            (string+ "property " (symbol->string k) " not found")))
-
 (function assoc (al k)
   ; Returns a value corresponding to the specified key k of the specified asoociate list al.
   ; Raises an exception if there is no value.
@@ -544,7 +536,8 @@
   (while al
     (if (same? (car al) k) (return (cadr al))
         (<- al (cddr al))))
-  (throw (assoc-property-not-found k)))
+  (throw (.message (.new IllegalArgumentException)
+                   (string+ "property " (symbol->string k) " not found"))))
 
 (function assoc! (al k v)
   ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
@@ -553,43 +546,44 @@
   (while al
     (if (same? (car al) k) (return (car! (cdr al) v))
         (<- al (cddr al))))
-  (throw (assoc-property-not-found k)))
+  (throw (.message (.new IllegalArgumentException)
+                   (string+ "property " (symbol->string k) " not found"))))
 
-; char
+; ascii character code.
 
-(function char-space? (c)
+(function ascii-space? (c)
   ; Returns whether byte c can be considered a space character.
   (ensure-argument (number? c))
   (find '(0x09 0x0A 0x0D 0x20) c :test =))
 
-(function char-alpha? (c)
+(function ascii-alpha? (c)
   ; Returns whether byte c can be considered a alphabetic character.
   (ensure-argument (number? c))
   (or (<= 0x41 c 0x5A) (<= 0x61 c 0x7A)))
 
-(function char-digit? (c)
+(function ascii-digit? (c)
   ; Returns whether byte c can be considered a digit character.
   (ensure-argument (number? c))
   (<= 0x30 c 0x39))
 
-(function char-lower (c)
+(function ascii-lower (c)
   ; Returns lowercase if byte c can be considered an alphabetic character, c otherwise.
   (ensure-argument (byte? c))
   (if (<= 0x41 c 0x5A) (+ c 0x20)
       c))
 
-(function char-upper (c)
+(function ascii-upper (c)
   ; Returns uppercase if byte c can be considered an alphabetic character, c otherwise.
   (ensure-argument (byte? c))
   (if (<= 0x61 c 0x7A) (- c 0x20)
       c))
 
-(function char->digit (c :key (radix 10))
+(function ascii->digit (c :key (radix 10))
   ; Returns the numeric value when the specified byte c is regarded as the specified radix base character.
   ; Default radix is 10.
   (ensure-argument (byte? c))
-  (let (n (if (char-digit? c) (- c 0x30)
-              (char-alpha? c) (+ (- (char-lower c) 0x61) 10)))
+  (let (n (if (ascii-digit? c) (- c 0x30)
+              (ascii-alpha? c) (+ (- (ascii-lower c) 0x61) 10)))
     (if (and n (< n radix)) n
         (throw (.message (.new IllegalStateException) "illegal char")))))
 
@@ -1329,7 +1323,7 @@
 (method ByteAheadReader .skipSpace ()
   ; Skip as long as a space character follows.
   ; Returns self.
-  (while (and (not (.eof? self)) (char-space? (&next self)))
+  (while (and (not (.eof? self)) (ascii-space? (&next self)))
     (.skip self))
   self)
 
@@ -1368,7 +1362,7 @@
 
 (method ParenLexer .lex ()
   ; Returns (token-type [token]).
-  (let (space? (lambda (x) (and (byte? x) (char-space? x)))
+  (let (space? (lambda (x) (and (byte? x) (ascii-space? x)))
         raise (lambda (message)
                 (throw (.message (.new IllegalStateException) message)))
         identifierLead? (lambda ()
@@ -1376,10 +1370,10 @@
                             (or (find '(0x21 0x24 0x25 0x26 0x2A 0x2B 0x2D 0x2F
                                         0x3C 0x3D 0x3E 0x3F 0x5F 0x2E 0x5B 0x5D)
                                       c :test =)
-                                (char-alpha? c))))
+                                (ascii-alpha? c))))
         identifierTrail? (lambda ()
                            (or (identifierLead?)
-                               (char-digit? (&next self))))
+                               (ascii-digit? (&next self))))
         lex-string (lambda ()
                      (.skip self)
                      (while (/= 0x22 (&next self))
@@ -1398,10 +1392,10 @@
                                         (= c 0x78) (.put self
                                                          (+
                                                            (* 16
-                                                              (char->digit
+                                                              (ascii->digit
                                                                 (.skip self)
                                                                 :radix 16))
-                                                           (char->digit
+                                                           (ascii->digit
                                                              (.skip self)
                                                              :radix 16)))
                                         (.put self c))))))
@@ -1416,22 +1410,22 @@
                       (string->keyword (.token self)))
         lex-number (lambda (sign)
                      (let (radix 10 factor 0 val 0)
-                       (while (char-digit? (&next self))
-                         (<- val (+ (* val 10) (char->digit (.skip self)))))
+                       (while (ascii-digit? (&next self))
+                         (<- val (+ (* val 10) (ascii->digit (.skip self)))))
                        (if (= (&next self) 0x78)
                            (begin (.skip self)
                                   (<- radix (if (= val 0) 16 val)
                                       val 0)
-                                  (while (or (char-alpha? (&next self))
-                                             (char-digit? (&next self)))
+                                  (while (or (ascii-alpha? (&next self))
+                                             (ascii-digit? (&next self)))
                                     (<- val (+ (* val radix)
-                                               (char->digit (.skip self)
+                                               (ascii->digit (.skip self)
                                                             :radix radix)))))
                            (= (&next self) 0x2E)
                            (begin (.skip self)
                                   (<- factor 0.1)
-                                  (while (char-digit? (&next self))
-                                    (<- val (+ val (* factor (char->digit
+                                  (while (ascii-digit? (&next self))
+                                    (<- val (+ val (* factor (ascii->digit
                                                                (.skip self))))
                                         factor (/ factor 10)))))
                        (if (and (byte? sign) (= sign 0x2D)) (- val) val)))
@@ -1453,7 +1447,7 @@
                     (begin (if (find '(0x2B 0x2D) next :test =)
                                (<- sign (.skip self)))
                            nil) :unreachable
-                    (char-digit? (&next self)) (list :number (lex-number sign))
+                    (ascii-digit? (&next self)) (list :number (lex-number sign))
                     (or sign (identifierLead?)) (begin
                                                   (if sign (.put self sign))
                                                   (list :symbol (lex-symbol)))

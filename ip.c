@@ -11,7 +11,7 @@
 
 /*
  * registers:
- *   0 -- inst argument.
+ *   0 -- instruction argument.
  *   1 -- current environment.
  *   2 -- stack trace.
  *   3 -- where the exception occurred.
@@ -75,7 +75,6 @@ STATIC object symbol_find(object e, object s)
 {
   xassert(typep(e, ENV));
   if (s == object_nil) return object_nil;
-  if (s == object_true) return object_true;
   return splay_find(e->env.binding, s);
 }
 
@@ -112,80 +111,64 @@ STATIC void symbol_bind_propagation(object e, object s, object v)
 #define STACK_GAP 10
 #define FRAME_STACK_SIZE 10000
 
-static int sp;
-static int ip;
-static object fs[FRAME_STACK_SIZE];
-static struct xarray fb;
-
-// instructions
-#define APPLY_INST 0
-#define APPLY_PRIM_INST 1
-#define ASSERT_INST 2
-#define BIND_INST 3
-#define BIND_PROPAGATION_INST 4
-#define EVAL_INST 5
-#define EVAL_ARGS_INST 6
-#define EVAL_SEQUENTIAL_INST 7
-#define FENCE_INST 8
-#define FETCH_HANDLER_INST 9
-#define FETCH_OPERATOR_INST 10
-#define GOTO_INST 11
-#define HANDLER_INST 12
-#define IF_INST 13
-#define LABELS_INST 14
-#define QUOTE_INST 15
-#define RETURN_INST 16
-#define SWITCH_ENV_INST 17
-#define THROW_INST 18
-#define TRACE_INST 19
-#define UNWIND_PROTECT_INST 20
-
 /*
+ * frame structure.
+ *
  * |       ...       |
+ * |                 |
+ * |                 | <- sp
  * +-----------------+
  * |       ...       |
  * | 2: local_var 0  |
  * | 1: return addr  |
- * | 0: instruction  |
+ * | 0: instruction  | <- ip
  * +-----------------+
  * |       ...       |
  * | 2: local_var[0] |
  * | 1: return addr  |
  * | 0: instruction  |
  * +-----------------+
+ * |       ...       |
+ * |       ...       |
+ * |       ...       |
+ * +-----------------+
+ * |       ...       |
+ * | 2: local_var[0] |
+ * | 1: return addr  |
+ * | 0: instruction  |
+ * +-----------------+
+ *
  */
-STATIC int frame_size(int inst)
-{
-  switch (inst) {
-    case ASSERT_INST:
-    case EVAL_INST:
-    case FENCE_INST:
-    case GOTO_INST:
-    case RETURN_INST:
-    case THROW_INST:
-      return 2;
-    case APPLY_INST:
-    case APPLY_PRIM_INST:
-    case BIND_INST:
-    case BIND_PROPAGATION_INST:
-    case EVAL_SEQUENTIAL_INST:
-    case FETCH_HANDLER_INST:
-    case FETCH_OPERATOR_INST:
-    case HANDLER_INST:
-    case IF_INST:
-    case LABELS_INST:
-    case QUOTE_INST:
-    case SWITCH_ENV_INST:
-    case TRACE_INST:
-    case UNWIND_PROTECT_INST:
-      return 3;
-    case EVAL_ARGS_INST:
-      return 4;
-    default:
-      xassert(FALSE);
-      return FALSE;
-  }
-}
+
+static int ip;
+static int sp;
+static object fs[FRAME_STACK_SIZE];
+static struct xarray fb;
+
+// instructions
+#define INST_SIZE_MASK          0x0000000f
+#define   APPLY_INST            0x00000003
+#define   APPLY_PRIM_INST       0x00000013
+#define   ASSERT_INST           0x00000022
+#define   BIND_INST             0x00000033
+#define   BIND_PROPAGATION_INST 0x00000043
+#define   EVAL_INST             0x00000052
+#define   EVAL_ARGS_INST        0x00000064
+#define   EVAL_SEQUENTIAL_INST  0x00000073
+#define   FENCE_INST            0x00000082
+#define   FETCH_HANDLER_INST    0x00000093
+#define   FETCH_OPERATOR_INST   0x00000103
+#define   GOTO_INST             0x00000112
+#define   HANDLER_INST          0x00000123
+#define   IF_INST               0x00000133
+#define   LABELS_INST           0x00000143
+#define   QUOTE_INST            0x00000153
+#define   RETURN_INST           0x00000162
+#define   SWITCH_ENV_INST       0x00000173
+#define   THROW_INST            0x00000182
+#define   TRACE_INST            0x00000193
+#define   UNWIND_PROTECT_INST   0x00000203
+
 
 char *inst_name(int inst)
 {
@@ -215,25 +198,15 @@ char *inst_name(int inst)
   }
 }
 
-#define sint_p(o) ((((intptr_t)o)&1)==1)
-#define sint_val(o) ((int)(((intptr_t)o)>>1))
-#define sint(i) ((object)((((uintptr_t)i)<<1)|1))
+#define sint_p(o) ((((intptr_t)o) & 1) == 1)
+#define sint_val(o) ((int)(((intptr_t)o) >> 1))
+#define sint(i) ((object)((((uintptr_t)i) << 1) | 1))
 #define curr_inst() (sint_val(fs[ip]))
 #define get_local_var(base_ip, n) (fs[base_ip + 2 + n])
 #define set_local_var(base_ip, n, o) (fs[base_ip + 2 + n] = o)
-
-STATIC int prev_ip(int base_ip)
-{
-  xassert(0 <= base_ip && base_ip <= ip);
-  if (base_ip == 0) return -1;
-  return sint_val(fs[base_ip + 1]);
-}
-
-STATIC int next_ip(int base_ip)
-{
-  xassert(0 <= base_ip && base_ip <= ip);
-  return base_ip + frame_size(sint_val(fs[base_ip]));
-}
+#define frame_size(inst) (inst & INST_SIZE_MASK)
+#define next_ip(base_ip) (base_ip + frame_size(sint_val(fs[base_ip])))
+#define prev_ip(base_ip) (sint_val(fs[base_ip + 1]))
 
 STATIC void gen(int inst)
 {
@@ -560,8 +533,7 @@ STATIC void pop_swith_env_inst(void)
 STATIC void pop_return_inst(void)
 {
   object args;
-  while (sp != 0) {
-    xassert(sp > 0);
+  while (sp > 0) {
     switch (curr_inst()) {
       case FENCE_INST:
         return;
@@ -1157,7 +1129,7 @@ STATIC void ip_main(void)
   reg[3] = object_nil;
   gen_apply_inst(object_boot);
   while (ip != -1) {
-    xassert(sp > 0);
+    xassert(ip >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
     if(cycle % IP_POLLING_INTERVAL == 0) {
       if (reg[3] == object_nil) gc_chance();
@@ -1196,15 +1168,16 @@ void ip_mark(void)
 {
   int i;
   for (i = 0; i < REG_SIZE; i++) gc_mark(reg[i]);
-  for (i = 0; i < sp; i++)
+  for (i = 0; i < sp; i++) {
     if (!sint_p(fs[i])) gc_mark(fs[i]);
+  }
   for (i = 0; byte_range_p(i); i++) gc_mark(object_bytes[i]);
 }
 
 void ip_start(void)
 {
-  ip = -1;
   sp = 0;
+  ip = -1;
   cycle = 0;
   xarray_init(&fb);
   ip_trap_code = TRAP_NONE;
