@@ -1559,10 +1559,11 @@
   ;    (if s (.writeString ms s))
   ;    expr1 expr2 ...
   ;    (.toString ms))
-  (list let (list ms (list '.new 'MemoryStream))
-        (list if s (list '.writeString ms s))
-        (cons begin body)
-        (list '.toString ms)))
+  (with-gensyms (g)
+    (list let (list ms (list '.new 'MemoryStream) g s)
+          (list if g (list '.writeString ms g))
+          (cons begin body)
+          (list '.toString ms))))
 
 (function with-open-mode (sym gsym path mode body)
   (let (path (list if (list string? path) (list '.init '(.new Path) path)
@@ -1711,9 +1712,14 @@
     (while true
       (catch ((QuitSignal (e) (break))
               (Exception (e) (.printSimpleStackTrace e)))
-        (write-string ") ")
-        (if (same? (<- s (read)) :EOF) (break))
-        (print (eval s))))))
+        (write-string (.toString $paren-home))
+        (write-string "> ")
+        (let (expr nil)
+          (with-memory-stream (out (with-memory-stream (in)
+                                     (write-string (read-line) in)))
+            (while (different? (<- s (read out)) :EOF)
+              (push! expr s)))
+          (print (eval (reverse! expr))))))))
 
 ; (let ($encoding :UTF-8)
 ;   (<- ar (.init (.new AheadReader) :string "あいう"))
