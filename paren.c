@@ -13,9 +13,6 @@
 
 static char *core_fn;
 
-static object object_args;
-static object object_os;
-
 // parser
 
 static int next_token;
@@ -182,18 +179,20 @@ static void bind_special(void)
   }
 }
 
-static object parse_args(int argc, char *argv[], int i)
+static object parse_args(int argc, char *argv[])
 {
+  int i;
   object o;
-  if (i >= argc) return object_nil;
-  o = gc_new_barray_from(STRING, strlen(argv[i]), argv[i]);
-  return gc_new_cons(o, parse_args(argc, argv, i + 1));
+  o = object_nil;
+  for (i = 1; i < argc; i++)
+    o = gc_new_cons(gc_new_barray_from(STRING, strlen(argv[i]), argv[i]), o);
+  return o;
 }
 
 static void make_initial_objects(int argc, char *argv[])
 {
   int i;
-  object nil;
+  object nil, args, os, home;
   nil = gc_new_barray(SYMBOL, 3);
   memcpy(nil->barray.elt, "nil", 3);
   object_nil = nil;
@@ -209,21 +208,23 @@ static void make_initial_objects(int argc, char *argv[])
   object_rest = keyword_new("rest");
   object_quote = symbol_new("quote");
   object_toplevel = gc_new_env(nil);
-  object_os = symbol_new("$os");
-  object_args = symbol_new("$args");
+  home = symbol_new("$paren-home");
+  bind_symbol(home, gc_new_barray_from(STRING, strlen(core_fn), core_fn));
   object_class = keyword_new("class");
   object_message = keyword_new("message");
   object_Error = symbol_new("Error");
   object_Exception = symbol_new("Exception");
-  bind_symbol(object_args, parse_args(argc, argv, 1));
+  args = symbol_new("$args");
+  bind_symbol(args, parse_args(argc, argv));
+  os = symbol_new("$os");
 #if WINDOWS_P
-  bind_symbol(object_os, keyword_new("Windows"));
+  bind_symbol(os, keyword_new("Windows"));
 #elif OS_CODE == OS_LINUX
-  bind_symbol(object_os, keyword_new("Linux"));
+  bind_symbol(os, keyword_new("Linux"));
 #elif OS_CODE == OS_ANDROID
-  bind_symbol(object_os, keyword_new("Android"));
+  bind_symbol(os, keyword_new("Android"));
 #elif OS_CODE == OS_MACOSX
-  bind_symbol(object_os, keyword_new("Mac"));
+  bind_symbol(os, keyword_new("Mac"));
 #else
   xassert(FALSE);
 #endif
@@ -235,6 +236,7 @@ static void make_initial_objects(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+  int i;
   char buf[MAX_STR_LEN];
   setbuf(stdout, NULL);
   pf_exepath(argv[0], buf);
@@ -242,6 +244,8 @@ int main(int argc, char *argv[])
   *strrchr(buf, '.') = '\0';
 #endif
   strcpy(buf + strlen(buf) - 5, "core.p");
+  for (i = 0; i < strlen(buf); i++)
+    if (buf[i] == '\\') buf[i] = '/';
   core_fn = buf;
   gc_init();
   make_initial_objects(argc, argv);

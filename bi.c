@@ -114,22 +114,25 @@ PRIM(gensym)
 #undef PRIM
 
 static char *symbol_name_map[] = {
+  // ip/special
   "basic_catch", "basic-catch",
   "basic_throw", "basic-throw",
-  "call_stack", "call-stack",
-  "expand_macro", "expand-macro",
   "operator_p", "operator?",
   "samep", "same?",
   "special_operator_p", "special-operator?",
   "symbol_bind", "<-",
   "unwind_protect", "unwind-protect",
-
+  // ip/prim
+  "expand_macro", "expand-macro",
+  "bound_p", "bound?",
+  "call_stack", "call-stack",
+  // cons
   "cons_p", "cons?",
   "last_cons", "last-cons",
   "set_car", "car!",
   "set_cdr", "cdr!",
   "xreverse", "reverse!",
-
+  // number
   "bit_and", "bit-and",
   "bit_or", "bit-or",
   "bit_shift", "bit-shift",
@@ -147,40 +150,39 @@ static char *symbol_name_map[] = {
   "number_to_integer", "number->integer",
   "number_to_string", "number->string",
   "number_truncate", "truncate",
-
+  // sequence
+  "array_length", "array-length",
+  "array_p", "array?",
+  "barray_access", "byte-array[]",
+  "barray_copy", "byte-array-copy",
+  "barray_index", "byte-array-index",
+  "barray_length", "byte-array-length",
+  "barray_new", "byte-array",
+  "barray_p", "byte-array?",
+  "barray_slice", "byte-array-slice",
+  "barray_to_string", "byte-array->string",
+  "keyword_p", "keyword?",
+  "keyword_to_string", "keyword->string",
+  "keyword_to_symbol", "keyword->symbol",
   "string_add", "string+",
   "string_byte_length", "string-byte-length",
   "string_equal", "string=",
   "string_p", "string?",
+  "string_substring", "string[]",
   "string_to_barray", "string->byte-array",
   "string_to_keyword", "string->keyword",
   "string_to_symbol", "string->symbol",
-
-  "array_access", "[]",
-  "array_copy", "array-copy",
-  "array_length", "array-length",
-  "array_p", "array?",
-  "barray_length", "byte-array-length",
-  "barray_new", "byte-array",
-  "barray_p", "byte-array?",
-  "barray_to_string", "byte-array->string",
-
-  "bound_p", "bound?",
-  "keyword_p", "keyword?",
-  "keyword_to_string", "keyword->string",
-  "keyword_to_symbol", "keyword->symbol",
   "symbol_add", "symbol+",
   "symbol_p", "symbol?",
   "symbol_to_keyword", "symbol->keyword",
   "symbol_to_string", "symbol->string",
-
+  // lambda
   "lambda_body", "lambda-body",
   "lambda_p", "lambda?",
   "lambda_parameter", "lambda-parameter",
   "macro_p", "macro?",
-
+  // os
   "milli_time", "milli-time",
-
   NULL
 };
 

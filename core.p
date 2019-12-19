@@ -324,10 +324,27 @@
   ; Same as (or (nil? x) (cons? x)).
   (or (nil? x) (cons? x)))
 
+; list
+
 (function ->list (x)
   ; Returns the specified x if x is a list, otherwise returns x as a list.
   (if (list? x) x
       (list x)))
+
+(function list->string (l delimiter)
+  ; Returns a new string of the specified list elements joined together with of the specified delimiter.
+  (ensure-argument (list? l) (string? delimiter))
+  (reduce l (lambda (x y) (->string x delimiter y))))
+
+(function list= (x y :key (test same?))
+  ; Returns whether the result of comparing each element of the specified lists x and y with the specified function test is true.
+  ; Always returns nil if x and y are different lengths.
+  (ensure-argument (list? x) (list? y) (operator? test))
+  (while true
+    (if (and (nil? x) (nil? y)) (return true)
+        (or (nil? x) (nil? y)) (return nil)
+        (test (car x) (car y)) (<- x (cdr x) y (cdr y))
+        (return nil))))
 
 (function nth (l n)
   ; Returns the specified nth element of the specified list l.
@@ -343,16 +360,6 @@
   (for (i 0) (< i n) (<- i (++ i))
     (<- l (cdr l)))
   l)
-
-(function list= (x y :key (test same?))
-  ; Returns whether the result of comparing each element of the specified lists x and y with the specified function test is true.
-  ; Always returns nil if x and y are different lengths.
-  (ensure-argument (list? x) (list? y) (operator? test))
-  (while true
-    (if (and (nil? x) (nil? y)) (return true)
-        (or (nil? x) (nil? y)) (return nil)
-        (test (car x) (car y)) (<- x (cdr x) y (cdr y))
-        (return nil))))
 
 (function sublist (l s :opt e)
   ; Returns a partial list with elements from the specified s to the specified e -1 of the specified list l.
@@ -591,16 +598,31 @@
 
 ; string
 
-(function list->string (l delimiter)
-  ; Returns a new string of the specified list elements joined together with of the specified delimiter.
-  (ensure-argument (list? l) (string? delimiter))
-  (reduce l (lambda (x y) (->string x delimiter y))))
-
 (function ->string (:rest args)
   ; Returns concatenated string which each of the specified args as string.
   (with-memory-stream (ms)
     (dolist (arg args)
       (if arg (simple-print arg ms)))))
+
+(function string->list (s delimiter)
+  ; Returns a list delimited by the specified delimiter.
+  (ensure-argument (string? s) (string? delimiter))
+  (let (s (string->byte-array s) delimiter (string->byte-array delimiter))
+    (let (rec (lambda (s acc)
+                (let (match (byte-array-index s delimiter))
+                  (if match (begin
+                              (push! acc (byte-array->string
+                                           (byte-array-slice s 0 match)))
+                              (if (<= (+ match (byte-array-length delimiter))
+                                      (byte-array-length s))
+                                  (rec (byte-array-slice
+                                         s
+                                         (+ match (byte-array-length delimiter))
+                                         (byte-array-length s))
+                                       acc)
+                                  (reverse! acc)))
+                      (reverse! acc)))))
+      (rec s nil))))
 
 ; number
 
@@ -1129,7 +1151,7 @@
   (ensure-argument (string? s))
   (let (ba (string->byte-array s))
     (dotimes (i (byte-array-length ba))
-      (.writeByte self ([] ba i))))
+      (.writeByte self (byte-array[] ba i))))
   self)
 
 (method Stream .seek (:rest args)
@@ -1158,7 +1180,7 @@
     (while (< (&buf-size self) req)
       (&buf-size self (* (&buf-size self) 2)))
     (<- new-buf (byte-array (&buf-size self)))
-    (array-copy (&buf self) 0 new-buf 0  (&wrpos self))
+    (byte-array-copy (&buf self) 0 new-buf 0  (&wrpos self))
     (&buf self new-buf))
   self)
 
@@ -1166,13 +1188,13 @@
   (ensure-argument (byte? byte))
   (let (wrpos (&wrpos self))
     (unless (< wrpos (&buf-size self)) (_extend self 1))
-    ([] (&buf self) wrpos byte)
+    (byte-array[] (&buf self) wrpos byte)
     (&wrpos self (++ wrpos))))
 
 (method MemoryStream .readByte ()
   (let (rdpos (&rdpos self))
     (if (= rdpos (&wrpos self)) -1
-        (begin0 ([] (&buf self) rdpos)
+        (begin0 (byte-array[] (&buf self) rdpos)
                 (&rdpos self (++ rdpos))))))
 
 (method MemoryStream .seek (offset)
@@ -1185,7 +1207,7 @@
 (method MemoryStream .toString ()
   (let (pos (&wrpos self) str (byte-array pos))
     (if (= pos 0) ""
-        (byte-array->string (array-copy (&buf self) 0 str 0 pos)))))
+        (byte-array->string (byte-array-copy (&buf self) 0 str 0 pos)))))
 
 (method MemoryStream .reset ()
   ; Empty the contents of the stream.
@@ -1233,7 +1255,7 @@
 
 (method Path .init (:rest files)
   ; Initialize by passing the specified list of files that make up this path.
-  (&files self files)
+  (&files self (string->list (reduce files string+) "/"))
   self)
 
 (method Path .parent ()
@@ -1243,7 +1265,8 @@
 (method Path .resolve (:rest body)
   ; Resolve the given path against this path.
   (ensure-argument (all-satisfy? body string?))
-  (&files (.new Path) (append (&files self) body)))
+  (&files (.new Path) (append (&files self)
+                              (string->list (reduce body string+) "/"))))
 
 (method Path .fileName ()
   ; Resolve file name of receiver.
@@ -1489,13 +1512,6 @@
                          (cons (parse-s) (parse-list)))))
     (parse)))
 
-;; I/O
-(<- $import nil
-    $stdin (.init (.new FileStream) :fp (fp 0))
-    $stdout (.init (.new FileStream) :fp (fp 1))
-    $encoding (if (same? $os :Windows) :CP932 :UTF-8)
-    $support-encodings '(:UTF-8 :CP932))
-
 (function read-byte (:opt stream)
   ; Read 1byte from the specified stream.
   ; Returns -1 when the stream reaches the end.
@@ -1724,5 +1740,13 @@
   (if (nil? args) (repl)
       (dolist (arg args)
         (load arg))))
+
+; global variable
+(<- $import nil
+    $paren-home (.init (.new Path) $paren-home)
+    $stdin (.init (.new FileStream) :fp (fp 0))
+    $stdout (.init (.new FileStream) :fp (fp 1))
+    $encoding (if (same? $os :Windows) :CP932 :UTF-8)
+    $support-encodings '(:UTF-8 :CP932))
 
 (boot $args)
