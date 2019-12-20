@@ -39,12 +39,12 @@ special=ip.c
 special.wk: $(special)
 	cat $+ | grep ^SPECIAL>$@
 
-prim=ip.c bi.c cons.c number.c sequence.c lambda.c os.c
+prim=ip.c bi.c seq.c number.c lambda.c os.c
 prim.wk: $(prim)
 	cat $+ | grep ^PRIM>$@
 
-xc.a: std.o xarray.o xbarray.o xgetopt.o heap.o splay.o \
-	gc.o object.o lex.o pf.o \
+xc.a: std.o xarray.o xbarray.o xgetopt.o heap.o pf.o \
+	object.o gc.o lex.o splay.o \
 	$(special:%.c=%.o) $(prim:%.c=%.o) 
 	ar -ru xc.a $+
 

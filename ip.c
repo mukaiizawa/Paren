@@ -64,6 +64,21 @@ int ip_ensure_arguments(int argc, int min, int max)
   return FALSE;
 }
 
+void ip_mark_illegal_type(void)
+{
+  ip_mark_exception("illegal argument type");
+}
+
+int ip_ensure_type(int type, object o, object *result)
+{
+  if (!typep(o, type)) {
+    ip_mark_illegal_type();
+    return FALSE;
+  }
+  *result = o;
+  return TRUE;
+}
+
 STATIC void mark_illegal_args_exception()
 {
   ip_mark_exception("illegal parameter list");

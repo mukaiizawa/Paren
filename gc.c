@@ -135,7 +135,7 @@ object gc_new_barray(int type, int size)
   return o;
 }
 
-STATIC object new_barray_from(int type, int size, char *val)
+STATIC object new_barray_from(int type, char *val, int size)
 {
   object o;
   o = gc_new_barray(type, size);
@@ -143,10 +143,10 @@ STATIC object new_barray_from(int type, int size, char *val)
   return o;
 }
 
-object gc_new_barray_from(int type, int size, char *val)
+object gc_new_barray_from(int type, char *val, int size)
 {
   object o, p;
-  o = new_barray_from(type, size, val);
+  o = new_barray_from(type, val, size);
   switch (type) {
     case SYMBOL:
       if ((p = splay_find(object_symbol_splay, o)) != NULL) return p;
@@ -165,17 +165,32 @@ object gc_new_barray_from(int type, int size, char *val)
   }
 }
 
-object gc_new_array(int size)
+STATIC object new_array(int size)
 {
-  int i;
   object o;
   xassert(size >= 0);
   o = gc_alloc(sizeof(struct array) + sizeof(object) * (size - 1));
   set_type(o, ARRAY);
-  for (i = 0; i < size; i++) o->array.elt[i] = object_nil;
   o->array.size = size;
   regist(o);
   return o;
+}
+
+object gc_new_array(int size)
+{
+  int i;
+  object o;
+  o = new_array(size);
+  for (i = 0; i < size; i++) o->array.elt[i] = object_nil;
+  return o;
+}
+
+object gc_new_array_from(object *o, int size)
+{
+  object p;
+  p = new_array(size);
+  memcpy(p->array.elt, o, size * sizeof(object));
+  return p;
 }
 
 object gc_new_pointer(void *p)
@@ -207,7 +222,7 @@ object gc_new_splay_node(object k, object v, object l, object r)
 object gc_new_throwable(object e, char *msg)
 {
   return gc_new_cons(object_class, gc_new_cons(e, gc_new_cons(object_message
-          , gc_new_cons(gc_new_barray_from(STRING, strlen(msg), msg)
+          , gc_new_cons(gc_new_barray_from(STRING, msg, strlen(msg))
             , object_nil))));
 }
 
@@ -234,7 +249,7 @@ void gc_mark(object o)
     case ARRAY:
       for (i = 0; i < o->array.size; i++) gc_mark(o->array.elt[i]);
       break;
-    default: break;
+    default: xassert(gc_targetp(o)); break;
   }
 }
 

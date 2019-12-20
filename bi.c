@@ -52,15 +52,6 @@ static int prim_p(object o)
   return FALSE;
 }
 
-void barray_add(int type, object y, object *result)
-{
-  object x;
-  x = *result;
-  *result = gc_new_barray(type, x->barray.size + y->barray.size);
-  memcpy((*result)->barray.elt, x->barray.elt, x->barray.size);
-  memcpy((*result)->barray.elt + x->barray.size, y->barray.elt, y->barray.size);
-}
-
 PRIM(address)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -97,7 +88,7 @@ PRIM(gensym)
   struct xbarray x;
   xbarray_init(&x);
   xbarray_addf(&x, "#G%d", ++c);
-  *result = gc_new_barray_from(SYMBOL, x.size, x.elt);
+  *result = gc_new_barray_from(SYMBOL, x.elt, x.size);
   xbarray_free(&x);
   return TRUE;
 }
@@ -117,20 +108,39 @@ static char *symbol_name_map[] = {
   // ip/special
   "basic_catch", "basic-catch",
   "basic_throw", "basic-throw",
-  "operator_p", "operator?",
-  "samep", "same?",
-  "special_operator_p", "special-operator?",
   "symbol_bind", "<-",
   "unwind_protect", "unwind-protect",
   // ip/prim
-  "expand_macro", "expand-macro",
   "bound_p", "bound?",
   "call_stack", "call-stack",
-  // cons
+  "expand_macro", "expand-macro",
+  // bi
+  "operator_p", "operator?",
+  "samep", "same?",
+  "special_operator_p", "special-operator?",
+  // sequence
+  "array_p", "array?",
+  "barray_copy", "byte-array-copy",
+  "barray_index", "byte-array-index",
+  "barray_new", "byte-array",
+  "barray_p", "byte-array?",
+  "barray_to_string", "byte-array->string",
   "cons_p", "cons?",
+  "keyword_p", "keyword?",
+  "keyword_to_string", "keyword->string",
+  "keyword_to_symbol", "keyword->symbol",
   "last_cons", "last-cons",
+  "nth_set", "nth!",
   "set_car", "car!",
   "set_cdr", "cdr!",
+  "string_equal", "string=",
+  "string_p", "string?",
+  "string_to_keyword", "string->keyword",
+  "string_to_symbol", "string->symbol",
+  "symbol_p", "symbol?",
+  "symbol_to_keyword", "symbol->keyword",
+  "symbol_to_string", "symbol->string",
+  "to_barray", "->byte-array",
   "xreverse", "reverse!",
   // number
   "bit_and", "bit-and",
@@ -150,32 +160,6 @@ static char *symbol_name_map[] = {
   "number_to_integer", "number->integer",
   "number_to_string", "number->string",
   "number_truncate", "truncate",
-  // sequence
-  "array_length", "array-length",
-  "array_p", "array?",
-  "barray_access", "byte-array[]",
-  "barray_copy", "byte-array-copy",
-  "barray_index", "byte-array-index",
-  "barray_length", "byte-array-length",
-  "barray_new", "byte-array",
-  "barray_p", "byte-array?",
-  "barray_slice", "byte-array-slice",
-  "barray_to_string", "byte-array->string",
-  "keyword_p", "keyword?",
-  "keyword_to_string", "keyword->string",
-  "keyword_to_symbol", "keyword->symbol",
-  "string_add", "string+",
-  "string_byte_length", "string-byte-length",
-  "string_equal", "string=",
-  "string_p", "string?",
-  "string_substring", "string[]",
-  "string_to_barray", "string->byte-array",
-  "string_to_keyword", "string->keyword",
-  "string_to_symbol", "string->symbol",
-  "symbol_add", "symbol+",
-  "symbol_p", "symbol?",
-  "symbol_to_keyword", "symbol->keyword",
-  "symbol_to_string", "symbol->string",
   // lambda
   "lambda_body", "lambda-body",
   "lambda_p", "lambda?",

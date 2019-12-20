@@ -9,7 +9,9 @@ extern int ip_trap_code;
 
 extern void ip_mark_error(char *msg);
 extern void ip_mark_exception(char *msg);
+extern void ip_mark_illegal_type(void);
 extern int ip_ensure_arguments(int argc, int min, int max);
+extern int ip_ensure_type(int type, object o, object *result);
 
 extern void ip_mark(void);
 extern void ip_start(void);

@@ -42,19 +42,19 @@ static int parse_token(int token)
 static object parse_symbol(void)
 {
   parse_token(LEX_SYMBOL);
-  return gc_new_barray_from(SYMBOL, token_str.size, token_str.elt);
+  return gc_new_barray_from(SYMBOL, token_str.elt, token_str.size);
 }
 
 static object parse_keyword(void)
 {
   parse_token(LEX_KEYWORD);
-  return gc_new_barray_from(KEYWORD, token_str.size, token_str.elt);
+  return gc_new_barray_from(KEYWORD, token_str.elt, token_str.size);
 }
 
 static object parse_string(void)
 {
   parse_token(LEX_STRING);
-  return gc_new_barray_from(STRING, token_str.size, token_str.elt);
+  return gc_new_barray_from(STRING, token_str.elt, token_str.size);
 }
 
 static object parse_integer(void)
@@ -154,12 +154,12 @@ static void bind_pseudo_symbol(object o)
 
 static object symbol_new(char *name)
 {
-  return gc_new_barray_from(SYMBOL, strlen(name), name);
+  return gc_new_barray_from(SYMBOL, name, strlen(name));
 }
 
 static object keyword_new(char *name)
 {
-  return gc_new_barray_from(KEYWORD, strlen(name), name);
+  return gc_new_barray_from(KEYWORD, name, strlen(name));
 }
 
 static void bind_special(void)
@@ -185,7 +185,7 @@ static object parse_args(int argc, char *argv[])
   object o;
   o = object_nil;
   for (i = 1; i < argc; i++)
-    o = gc_new_cons(gc_new_barray_from(STRING, strlen(argv[i]), argv[i]), o);
+    o = gc_new_cons(gc_new_barray_from(STRING, argv[i], strlen(argv[i])), o);
   return o;
 }
 
@@ -209,7 +209,7 @@ static void make_initial_objects(int argc, char *argv[])
   object_quote = symbol_new("quote");
   object_toplevel = gc_new_env(nil);
   home = symbol_new("$paren-home");
-  bind_symbol(home, gc_new_barray_from(STRING, strlen(core_fn), core_fn));
+  bind_symbol(home, gc_new_barray_from(STRING, core_fn, strlen(core_fn)));
   object_class = keyword_new("class");
   object_message = keyword_new("message");
   object_Error = symbol_new("Error");

@@ -2,20 +2,23 @@
 
 typedef union s_expr *object;
 
+#define TYPE_MASK       0x0fffffff
 #define ALIVE_MASK      0xf0000000
 #define EVAL_INST_MASK  0x0f000000
-#define TYPE_MASK       0x0fffffff
+#define BYTE_SEQ_MASK   0x00f00000
+#define SEQ_MASK        0x000f0000
+#define GC_TARGET_MASK  0x0000f000
 #define   ENV           0x00000001
-#define   MACRO         0x00000002
-#define   LAMBDA        0x00000004
-#define   CONS          0x01000008
-#define   XINT          0x00000010
-#define   XFLOAT        0x00000020
-#define   SYMBOL        0x01000040
-#define   KEYWORD       0x00000080
-#define   STRING        0x00000100
-#define   BARRAY        0x00000200
-#define   ARRAY         0x00000400
+#define   MACRO         0x00001002
+#define   LAMBDA        0x00001004
+#define   CONS          0x01001008
+#define   XINT          0x00001010
+#define   XFLOAT        0x00001020
+#define   SYMBOL        0x01111040
+#define   KEYWORD       0x00111080
+#define   STRING        0x00111100
+#define   BARRAY        0x00111200
+#define   ARRAY         0x00011400
 #define   POINTER       0x00000800
 
 #define LINT_BITS 63
@@ -23,6 +26,9 @@ typedef union s_expr *object;
 #define type(o) ((o)->header & TYPE_MASK)
 #define typep(o, t) (type(o) == t)
 #define listp(o) ((o) == object_nil || typep(o, CONS))
+#define byte_seqp(o) ((o)->header & BYTE_SEQ_MASK)
+#define seqp(o) ((o)->header & SEQ_MASK)
+#define gc_targetp(o) ((o)->header & GC_TARGET_MASK)
 #define numberp(o) (typep(o, XINT) || typep(o, XFLOAT))
 #define byte_range_p(x) ((x >= 0) && (x < 256))
 #define bytep(o) (typep(o, XINT) && byte_range_p((o)->xint.val))

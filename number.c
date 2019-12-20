@@ -275,7 +275,7 @@ PRIM(number_to_string)
     mark_numeric_over_flow();
     return FALSE;
   }
-  *result = gc_new_barray_from(STRING, x.size, x.elt);
+  *result = gc_new_barray_from(STRING, x.elt, x.size);
   xbarray_free(&x);
   return TRUE;
 }

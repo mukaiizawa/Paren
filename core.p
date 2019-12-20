@@ -1,5 +1,71 @@
 ; Paren core library.
 
+; special operator
+
+(macro special-operator (name :rest syntax)
+  ; A special operator is a operator with special syntax, special evaluation rules, or both, possibly manipulating the evaluation environment, control flow, or both.
+  name)
+
+(special-operator let
+  ; let create new environment and bind symbol then execute a series of expression that use these bindings.
+  ; First evaluates the expression init-expr-1, then binds the symbol sym-1 to that value,  then it evaluates init-expr-2 and binds sym2, and so on.
+  ; The expressions are then evaluated in order.
+  ; The values of all but the last are discarded.
+  (let (sym-1 init-expr-1
+        sym-2 init-expr-2
+        ...
+        sym-m init-expr-m)
+    expr-1
+    expr-2
+    ...
+    expr-n))
+
+(special-operator <-
+  ; The special operator '<-' is the simple symbol binding statement of Paren.
+  ; First expr-1 is evaluated and the bind sym-1 with result, and so on.
+  ; This special operator may be used for lexical and dynamic binding.
+  (<- sym-1 expr-1
+      sym-2 expr-2
+      ...
+      sym-m expr-m))
+
+(special-operator begin
+  ; progn evaluates expressions, in the order in which they are given.
+  ; The values of each form but the last are discarded.
+  (begin expr-1
+         expr-2
+         ...
+         expr-n))
+
+(special-operator quote
+  ; The quote special operator just returns expr.
+  (quote expr))
+
+(special-operator if
+  ; if allows the execution of exprs to be dependent on test.
+  ; Test-expressions are evaluated one at a time in the order in which they are given in the expression list until a test-expr is found that evaluates to true.
+  ; Once one test-expr has yielded true, no additional test-exprs are evaluated.
+  ; If no test-expr yields true, nil is returned.
+  ; The last then-n is optional, in which case the evaluation result of test-n is returned.
+  (if test-1 then-1
+      test-2 then-2
+      ...
+      test-n then-n))
+
+(special-operator macro)
+(special-operator lambda)
+(special-operator unwind-protect)
+(special-operator labels)
+(special-operator goto)
+(special-operator basic-throw)
+(special-operator basic-catch)
+(special-operator return)
+(special-operator assert)
+(special-operator dynamic)
+
+(macro primitive (name args :rest body)
+  (cons begin body))
+
 ; fundamental macro
 
 (macro function (name args :rest body)
@@ -42,7 +108,7 @@
 
 (macro or (:rest args)
   ; Evaluate each of the specified args, one at a time, from left to right.
-  ; The evaluation of all forms terminates when a args evaluates to true.
+  ; The evaluation of all args terminates when a args evaluates to true.
   ; Return last evaluated value.
   ; If args is nil then return nil.
   (if (nil? args) nil
@@ -160,11 +226,68 @@
     (list let (list s (list clock))
           (list begin0 (cons begin body)
                 (list 'write-string
-                      (list string+ "time="
+                      (list concat "time="
                             (list number->string (list - (list clock) s))))
                 (list 'write-new-line)))))
 
-; fundamental function
+(macro ensure-argument (:rest tests)
+  ; If the specified test evaluate to nil, throw IllegalArgumentException.
+  (list if (list not (cons 'and tests))
+        (list basic-throw (list '.new 'IllegalArgumentException))))
+
+(function expand-macro-all (expr)
+  ; Expand macro the specified expression expr recursively.
+  (let (expand-each-element (lambda (expr)
+                              (if expr (cons (expand-expr (car expr))
+                                             (expand-each-element (cdr expr)))))
+        expand-expr (lambda (expr)
+                      (if (not (cons? expr)) expr
+                          (expand-each-element (expand-macro expr)))))
+    (expand-expr expr)))
+
+(macro function (name args :rest body)
+  ; Redefined improved function.
+  ; Expand the macro inline.
+  ; Throw IllegalArgumentException when the specified name already bound.
+  (if (bound? name) (throw (.message (.new IllegalArgumentException)
+                                     "symbol already bound"))
+      (list <- name (cons lambda (cons args (expand-macro-all body))))))
+
+(primitive same? (x y)
+  ; Returns true if the specified x is same object.
+  (assert (not (same? 'x 'y)))
+  (assert (same? 'x 'x)))
+
+(primitive address (x)
+  ; Returns address of the specified x.
+  ; The addresses of symbols or keywords with the same name are always equal.
+  (assert (= (address 'x) (address 'x)))
+  (assert (not (= (address 'x) (address 'y)))))
+
+(function different? (x y)
+  ; Same as (not (same? x y)).
+  (not (same? x y)))
+
+(primitive not (x)
+  ; Returns true if the argument is nil.
+  (assert (not nil))
+  (assert (same? (not true) nil)))
+
+(function nil? (x)
+  ; Alias for not.
+  (not x))
+
+(function atom? (x)
+  ; Returns true if the specified x is of type atom.
+  ; It means x is cons or not.
+  (not (cons? x)))
+
+; list
+
+(function list? (x)
+  ; Returns true if the specified x is of type list.
+  ; Same as (or (nil? x) (cons? x)).
+  (or (nil? x) (cons? x)))
 
 (function caar (x)
   ; Same as (car (car x)).
@@ -283,49 +406,6 @@
   ; So-called identity function.
   x)
 
-(macro ensure-argument (:rest tests)
-  ; If the specified test evaluate to nil, throw IllegalArgumentException.
-  (list if (list not (cons 'and tests))
-        (list basic-throw (list '.new 'IllegalArgumentException))))
-
-(function expand-macro-all (expr)
-  ; Expand macro the specified expression expr recursively.
-  (let (expand-each-element (lambda (expr)
-                              (if expr (cons (expand-expr (car expr))
-                                             (expand-each-element (cdr expr)))))
-        expand-expr (lambda (expr)
-                      (if (not (cons? expr)) expr
-                          (expand-each-element (expand-macro expr)))))
-    (expand-expr expr)))
-
-(macro function (name args :rest body)
-  ; Redefined improved function.
-  ; Expand the macro inline.
-  ; Throw IllegalArgumentException when the specified name already bound.
-  (if (bound? name) (throw (.message (.new IllegalArgumentException)
-                                     "symbol already bound"))
-      (list <- name (cons lambda (cons args (expand-macro-all body))))))
-
-(function different? (x y)
-  ; Same as (not (same? x y)).
-  (not (same? x y)))
-
-(function nil? (x)
-  ; Alias for not.
-  (not x))
-
-(function atom? (x)
-  ; Returns true if the specified x is of type atom.
-  ; It means x is cons or not.
-  (not (cons? x)))
-
-(function list? (x)
-  ; Returns true if the specified x is of type list.
-  ; Same as (or (nil? x) (cons? x)).
-  (or (nil? x) (cons? x)))
-
-; list
-
 (function ->list (x)
   ; Returns the specified x if x is a list, otherwise returns x as a list.
   (if (list? x) x
@@ -346,13 +426,6 @@
         (test (car x) (car y)) (<- x (cdr x) y (cdr y))
         (return nil))))
 
-(function nth (l n)
-  ; Returns the specified nth element of the specified list l.
-  ; However, n is counted from zero.
-  ; If n is greater than the length of l, nil is returned.
-  (ensure-argument (list? l) (unsigned-integer? n))
-  (car (nthcdr l n)))
-
 (function nthcdr (l n)
   ; Get the the specified nth cons of the specified list l.
   ; If n is greater than the length of l, nil is returned.
@@ -361,23 +434,12 @@
     (<- l (cdr l)))
   l)
 
-(function sublist (l s :opt e)
-  ; Returns a partial list with elements from the specified s to the specified e -1 of the specified list l.
-  ; Throw IllegalArgumentException when s is less than zero or e is greater than the length of the list or s is greater than e.
-  ; The partial list is created separately from l.
-  (let (acc nil len (length l) e (or e len))
-    (ensure-argument (unsigned-integer? s) (<= s e) (<= e len))
-    (for (i 0) (< i e) (<- i (++ i) l (cdr l))
-      (if (< i s) (continue)
-          (push! acc (car l))))
-    (reverse! acc)))
-
 (function copy-list (l)
   ; Create and return a duplicate of the specified list l.
   ; It is shallow copy.
   (ensure-argument (list? l))
   (if (nil? l) nil
-      (sublist l 0 (length l))))
+      (subseq l 0 (length l))))
 
 (function last (l)
   ; Returns the last element of the specified list l.
@@ -387,7 +449,7 @@
 (function butlast (l)
   ; Returns a list excluding the last element of the specified list l.
   (ensure-argument (list? l))
-  (sublist l 0 (-- (length l))))
+  (subseq l 0 (-- (length l))))
 
 (function .. (s e :opt (step 1))
   ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
@@ -407,15 +469,6 @@
       (push! acc i))
     (push! acc x)
     (reverse! acc)))
-
-(function append (l :rest args)
-  ; Add each element of the specified args as an element of the specified list l.
-  ; Each of args must be a list.
-  (ensure-argument (list? l) (all-satisfy? args list?))
-  (for (acc nil x l y args) true nil
-    (if x (begin (push! acc (car x)) (<- x (cdr x)))
-        y (<- x (car y) y (cdr y))
-        (return (reverse! acc)))))
 
 (macro push! (sym x)
   ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
@@ -450,14 +503,6 @@
       (push! acc (f (car args)))
       (<- args (cdr args)))
     (reverse! acc)))
-
-(function reverse (l)
-  ; Returns a new list with the elements of the specified list l in reverse order.
-  (ensure-argument (list? l))
-  (let (rec (lambda (l acc)
-              (if (nil? l) acc
-                  (rec (cdr l) (cons (car l) acc)))))
-    (rec l nil)))
 
 (function reduce (l f :key (identity nil identity?))
   ; Reduce uses the specified binary operation f, to combine the elements of the specified list l.
@@ -546,7 +591,7 @@
     (if (same? (car al) k) (return (cadr al))
         (<- al (cddr al))))
   (throw (.message (.new IllegalArgumentException)
-                   (string+ "property " (symbol->string k) " not found"))))
+                   (concat "property " (symbol->string k) " not found"))))
 
 (function assoc! (al k v)
   ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
@@ -556,7 +601,7 @@
     (if (same? (car al) k) (return (car! (cdr al) v))
         (<- al (cddr al))))
   (throw (.message (.new IllegalArgumentException)
-                   (string+ "property " (symbol->string k) " not found"))))
+                   (concat "property " (symbol->string k) " not found"))))
 
 ; ascii character code.
 
@@ -604,25 +649,33 @@
     (dolist (arg args)
       (if arg (simple-print arg ms)))))
 
+'todo
 (function string->list (s delimiter)
-  ; Returns a list delimited by the specified delimiter.
-  (ensure-argument (string? s) (string? delimiter))
-  (let (s (string->byte-array s) delimiter (string->byte-array delimiter))
-    (let (rec (lambda (s acc)
-                (let (match (byte-array-index s delimiter))
-                  (if match (begin
-                              (push! acc (byte-array->string
-                                           (byte-array-slice s 0 match)))
-                              (if (<= (+ match (byte-array-length delimiter))
-                                      (byte-array-length s))
-                                  (rec (byte-array-slice
-                                         s
-                                         (+ match (byte-array-length delimiter))
-                                         (byte-array-length s))
-                                       acc)
-                                  (reverse! acc)))
-                      (reverse! acc)))))
-      (rec s nil))))
+  (->list s))
+; (function string->list (s delimiter)
+;   ; Returns a list delimited by the specified delimiter.
+;   (ensure-argument (string? s) (string? delimiter))
+;   (let (s (->byte-array s) delimiter (->byte-array delimiter) match nil acc nil)
+;     (while (<- match (byte-array-index s delimiter))
+;       (<- acc (cons (subseq
+;     (let (rec (lambda (s acc)
+;                 (let (match )
+;                   (if match (begin
+;                               (push! acc (byte-array->string
+;                                            (byte-array-slice s 0 match)))
+;                               (if (<= (+ match (length delimiter))
+;                                       (length s))
+;                                   (rec (byte-array-slice
+;                                          s
+;                                          (+ match (length delimiter))
+;                                          (length s))
+;                                        acc)
+;                                   (begin (push! acc s)
+;                                          (reverse! acc))))
+;                       (begin 
+;                         (push! acc s)
+;                         (reverse! acc))))))
+;       (rec s nil))))
 
 ; number
 
@@ -840,11 +893,12 @@
   (let (cls (splay-find $class cls-sym))
     (if cls cls
         (throw (.message (.new IllegalStateException)
-                         (string+ "class " (symbol->string cls-sym)
+                         (concat "class " (symbol->string cls-sym)
                                   " not found"))))))
 
 (function global-method-sym (cls-sym method-sym)
-  (symbol+ cls-sym method-sym))
+  (string->symbol (concat (symbol->string cls-sym)
+                          (symbol->string method-sym))))
 
 (function find-method (cls-sym method-sym)
   (ensure-argument (symbol? cls-sym) (symbol? method-sym))
@@ -863,7 +917,7 @@
                           (return m)))))))
     (if (<- m (rec cls-sym)) m
         (throw (.message (.new IllegalStateException)
-                         (string+ "method " (symbol->string method-sym)
+                         (concat "method " (symbol->string method-sym)
                                   " not found"))))))
 
 (macro make-accessor (field)
@@ -871,7 +925,7 @@
   ; If field name is 'xxx', create accessor &xxx.
   ; Works faster than method which defined with the method macro.
   (let (key (symbol->keyword field) f (string->symbol
-                                        (string+ "&" (symbol->string field))))
+                                        (concat "&" (symbol->string field))))
     (unless (bound? f)
       (with-gensyms (receiver val val?)
         (list 'function f (list receiver :opt (list val nil val?))
@@ -1040,7 +1094,7 @@
 (method Throwable .toString ()
   ; Returns a String representing the receiver.
   (let (class-name (symbol->string (&class self)) msg (.message self))
-    (if msg (string+ class-name " -- " msg)
+    (if msg (concat class-name " -- " msg)
         class-name)))
 
 (method Throwable .stackTrace ()
@@ -1149,9 +1203,9 @@
 (method Stream .writeString (s)
   ; Write string to stream.
   (ensure-argument (string? s))
-  (let (ba (string->byte-array s))
-    (dotimes (i (byte-array-length ba))
-      (.writeByte self (byte-array[] ba i))))
+  (let (ba (->byte-array s))
+    (dotimes (i (length ba))
+      (.writeByte self (nth ba i))))
   self)
 
 (method Stream .seek (:rest args)
@@ -1188,13 +1242,13 @@
   (ensure-argument (byte? byte))
   (let (wrpos (&wrpos self))
     (unless (< wrpos (&buf-size self)) (_extend self 1))
-    (byte-array[] (&buf self) wrpos byte)
+    (nth! (&buf self) wrpos byte)
     (&wrpos self (++ wrpos))))
 
 (method MemoryStream .readByte ()
   (let (rdpos (&rdpos self))
     (if (= rdpos (&wrpos self)) -1
-        (begin0 (byte-array[] (&buf self) rdpos)
+        (begin0 (nth (&buf self) rdpos)
                 (&rdpos self (++ rdpos))))))
 
 (method MemoryStream .seek (offset)
@@ -1236,8 +1290,8 @@
 
 (method FileStream .writeString(o)
   (ensure-argument (or (byte-array? o) (string? o)))
-  (fwrite o 0 (if (byte-array? o) (byte-array-length o) (string-byte-length o))
-          (&fp self)))
+  (let (o (->byte-array o))
+    (fwrite o 0 (length o) (&fp self))))
 
 (method FileStream .seek (offset)
   (fseek (&fp self) offset))
@@ -1255,7 +1309,7 @@
 
 (method Path .init (:rest files)
   ; Initialize by passing the specified list of files that make up this path.
-  (&files self (string->list (reduce files string+) "/"))
+  (&files self (string->list (reduce files concat) "/"))
   self)
 
 (method Path .parent ()
@@ -1265,17 +1319,18 @@
 (method Path .resolve (:rest body)
   ; Resolve the given path against this path.
   (ensure-argument (all-satisfy? body string?))
-  (&files (.new Path) (append (&files self)
-                              (string->list (reduce body string+) "/"))))
+  (&files (.new Path) (concat (&files self)
+                              (string->list (reduce body concat) "/"))))
 
 (method Path .fileName ()
   ; Resolve file name of receiver.
   (last (&files self)))
 
 (method Path .toString ()
-  (reduce (&files self) (lambda (acc rest) (string+ acc "/" rest))))
+  (reduce (&files self) (lambda (acc rest) (concat acc "/" rest))))
 
 (method Path _open (mode)
+  (print (.toString self))
   (.init (.new FileStream) :fp (fopen (.toString self) mode)))
 
 (method Path .openRead ()
@@ -1477,7 +1532,7 @@
                     (or sign (identifierLead?)) (begin
                                                   (if sign (.put self sign))
                                                   (list :symbol (lex-symbol)))
-                    (raise (string+ (number->string (&next self))
+                    (raise (concat (number->string (&next self))
                                     " illegal char"))))))
     (lex)))
 
@@ -1679,13 +1734,13 @@
         x)))
 
 (function repl ()
-  (let (s nil)
+  (with-gensyms (g)
     (while true
       (catch ((QuitSignal (e) (break))
               (Exception (e) (.printSimpleStackTrace e)))
         (write-string ") ")
-        (if (same? (<- s (read)) :EOF) (break))
-        (print (eval s))))))
+        (if (same? (<- g (read)) :EOF) (break))
+        (print (eval g))))))
 
 (function quit ()
   ; Quit the system.
@@ -1747,7 +1802,7 @@
       (dolist (arg args)
         (load arg))))
 
-; global variable
+; global symbol
 (<- $import nil
     $paren-home (.init (.new Path) $paren-home)
     $stdin (.init (.new FileStream) :fp (fp 0))
