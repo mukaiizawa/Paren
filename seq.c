@@ -313,6 +313,7 @@ static int char_size0(object o, int start, int *result)
   if (i >= o->barray.size) return FALSE;
   b1 = (unsigned char)o->barray.elt[i];
   *result = 1;
+  if (b1 < 0) return FALSE;
   if (b1 < 0x80) return TRUE;
   if (b1 < 0xC2) return FALSE;
   if (++i >= o->barray.size) return FALSE;
@@ -340,13 +341,13 @@ static int char_size(object o, int start, int *result)
   return FALSE;
 }
 
-static int string_nth_index(object o, int n, int *i)
+static int string_nth_index(object o, int n, int *i, int *size)
 {
-  int size;
   *i = 0;
-  while (n != 0) {
-    if (!char_size(o, *i, &size)) return FALSE;
-    *i += size;
+  while (TRUE) {
+    if (!char_size(o, *i, size)) return FALSE;
+    if (n == 0) return TRUE;
+    *i += *size;
     n--;
   }
   return TRUE;
@@ -530,8 +531,7 @@ PRIM(concat)
 static int nth_string(object o, int n, object *result)
 {
   int start, size;
-  if (!string_nth_index(o, n, &start)) return FALSE;
-  if (!char_size(o, start, &size)) return FALSE;
+  if (!string_nth_index(o, n, &start, &size)) return FALSE;
   *result = gc_new_barray_from(STRING, o->barray.elt + start, size);
   return TRUE;
 }
@@ -565,15 +565,15 @@ PRIM(nth)
 
 static int nth_set_string(object o, int n, object v, object *result)
 {
-  int start, csize;
-  if (!string_nth_index(o, n, &start)) return FALSE;
-  if (!char_size(o, start, &csize)) return FALSE;
-  *result = gc_new_barray(STRING, o->barray.size + v->barray.size - csize);
+  int start, size;
+  if (!string_nth_index(o, n, &start, &size)) return FALSE;
+  *result = gc_new_barray(STRING, o->barray.size + v->barray.size - size);
   if (start != 0)
     memcpy((*result)->barray.elt, o->barray.elt, start);
-  memcpy((*result)->barray.elt, v->barray.elt, v->barray.size);
+  memcpy((*result)->barray.elt + start, v->barray.elt, v->barray.size);
   if ((*result)->barray.size > start + v->barray.size)
-    memcpy((*result)->barray.elt, o->barray.elt + start + v->barray.size
+    memcpy((*result)->barray.elt + start + v->barray.size
+        , o->barray.elt + start + size
         , (*result)->barray.size - start - v->barray.size);
   return TRUE;
 }
@@ -605,8 +605,6 @@ PRIM(nth_set)
     case STRING:
       if (!typep(v, STRING)) return FALSE;
       if (!nth_set_string(o, i, v, result)) return FALSE;
-      o = *result;
-      *result = v;
       return TRUE;
     default: break;
   }
@@ -646,8 +644,7 @@ PRIM(reverse)
       p = gc_new_barray(STRING, o->barray.size);
       if (!string_length(o, &size)) return FALSE;
       for (i = 0, n = 0; n < size; n++) {
-        if (!string_nth_index(o, size - n, &j)) return FALSE;
-        if (!char_size(o, j, &csize)) return FALSE;
+        if (!string_nth_index(o, size - n, &j, &csize)) return FALSE;
         memcpy(p->barray.elt + i, o->barray.elt + j, csize);
         i += csize;
       }
