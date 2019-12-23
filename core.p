@@ -7,64 +7,128 @@
   name)
 
 (special-operator let
-  ; let create new environment and bind symbol then execute a series of expression that use these bindings.
-  ; First evaluates the expression init-expr-1, then binds the symbol sym-1 to that value,  then it evaluates init-expr-2 and binds sym2, and so on.
+  ; Special operator let create new environment and bind symbol then execute a series of expression that use these bindings.
+  ; First evaluates the expression init-expr1, then binds the symbol sym1 to that value,  then it evaluates init-expr2 and binds sym2, and so on.
   ; The expressions are then evaluated in order.
   ; The values of all but the last are discarded.
-  (let (sym-1 init-expr-1
-        sym-2 init-expr-2
-        ...
-        sym-m init-expr-m)
-    expr-1
-    expr-2
-    ...
-    expr-n))
+  (let (sym1 init-expr1
+        sym2 init-expr2
+        ...)
+    expr1
+    expr2
+    ...))
 
 (special-operator <-
-  ; The special operator '<-' is the simple symbol binding statement of Paren.
-  ; First expr-1 is evaluated and the bind sym-1 with result, and so on.
+  ; Special operator '<-' is the simple symbol binding statement of Paren.
+  ; First expr1 is evaluated and the bind sym1 with result, and so on.
   ; This special operator may be used for lexical and dynamic binding.
-  (<- sym-1 expr-1
-      sym-2 expr-2
-      ...
-      sym-m expr-m))
+  (<- sym1 expr1
+      sym2 expr2
+      ...))
 
 (special-operator begin
-  ; progn evaluates expressions, in the order in which they are given.
+  ; Special operator progn evaluates expressions, in the order in which they are given.
   ; The values of each form but the last are discarded.
-  (begin expr-1
-         expr-2
-         ...
-         expr-n))
+  (begin expr1
+         expr2
+         ...))
 
 (special-operator quote
-  ; The quote special operator just returns expr.
+  ; Special operator quote returns just expr.
   (quote expr))
 
 (special-operator if
-  ; if allows the execution of exprs to be dependent on test.
+  ; Special operator if allows the execution of exprs to be dependent on test.
   ; Test-expressions are evaluated one at a time in the order in which they are given in the expression list until a test-expr is found that evaluates to true.
   ; Once one test-expr has yielded true, no additional test-exprs are evaluated.
   ; If no test-expr yields true, nil is returned.
-  ; The last then-n is optional, in which case the evaluation result of test-n is returned.
-  (if test-1 then-1
-      test-2 then-2
-      ...
-      test-n then-n))
+  ; The last even-numbered expression is optional, in which case the evaluation result of odd-numberd is returned.
+  (if test1 then1
+      test2 then2
+      ...))
 
-(special-operator macro)
-(special-operator lambda)
-(special-operator unwind-protect)
-(special-operator labels)
-(special-operator goto)
-(special-operator basic-throw)
-(special-operator basic-catch)
-(special-operator return)
-(special-operator assert)
-(special-operator dynamic)
+(special-operator lambda
+  ; Special operator lambda creates an  anonymous function.
+  ; Parameters include required parameters, optional parameters, keyword parameters and rest parameters.
+  ; Required parameters are a parameter that results in an error if not specified when calling the function.
+  ; Optional parameters are parameters that need not be specified when calling the function.
+  ; Keyword parameters are specified with names without regard to order when calling the function.
+  ; Rest parameters implement variable length arguments.
+  ;
+  ; <lambda_parameter> ::= [<required_params>]
+  ;                        [:opt <xparams>]
+  ;                        { [:rest <param>] | [:key <xparams>] }
+  ; <required_params> ::= <param> <param> ...
+  ; <xparams> ::= <xparam> <xparam> ...
+  ; <xparam> ::= { <param> | (<param> <initial_value> [<supplyp>]) }
+  (lambda <lambda_parameter>
+    expr1
+    expr2
+    ...))
 
-(macro primitive (name args :rest body)
-  (cons begin body))
+(special-operator return
+  ; Special operator return escapes from current lambda context.
+  ; Returns the result of evaluating the argument val.
+  (return val))
+
+(special-operator macro
+  ; Special operator macro creates macro named the specified name.
+  ; Macro expands without evaluating its arguments.
+  ; The macro-parameters that can be specified for macros differ in that macro-parameters can be specified recursively instead of required parameters.
+  ;
+  ; <macro_parameter> ::= [<macro_parameter> || <required_params>]
+  ;                       [:opt <xparams>]
+  ;                       { [:rest <param>] | [:key <xparams>] }
+  ; <required_params> ::= <param> <param> ...
+  ; <xparams> ::= <xparam> <xparam> ...
+  ; <xparam> ::= { <param> | (<param> <initial_value> [<supplyp>]) }
+  (macro name <macro_parameter>
+    expr1
+    expr2
+    ...))
+
+(special-operator unwind-protect
+  ; Special operator unwind-protect evaluates protected-expr and guarantees that cleanup-exprs are executed before unwind-protect exits, whether it terminates normally or is aborted by a control transfer of some kind.
+  ; unwind-protect is intended to be used to make sure that certain side effects take place after the evaluation of protected-expr.
+  (unwind-protect protected-expr
+                  cleanup-expr
+                  ...))
+
+(special-operator goto
+  ; Special operator goto is used in the context of labels.
+  ; label must be a keyword and can only jump within the most recent labels context.
+  ; Labels and gotos are rarely used directly and are used to define macros that create iteration contexts.
+  (goto label))
+
+(special-operator labels
+  ; Special operator labels create a context for jumping with goto expressions.
+  ; When a goto is evaluated in the labels context, transfer control to the location of the specified expr that matches the specified keyword.
+  (labels expr1
+          expr2
+          ...))
+
+(special-operator basic-throw
+  ; Special operator basic-throw provide a mechanism to control global escape.
+  ; By using special operator basic-catch, it is possible to catch the occurrence of exception during evaluation.
+  ; Since paren often uses the throw macro wrapped in the object system, it is not used directly.
+  (basic-throw expr))
+
+(special-operator basic-catch
+  ; Special operator basic-catch receives the value thrown by basic-throw by the specified handler and performs processing.
+  ; Handler must be a function with one required parameter.
+  ; Since paren often uses the catch macro wrapped in the object system, it is not used directly.
+  (basic-catch handler))
+
+(special-operator assert
+  ; If the specified expr is nil, kill the system.
+  ; Not executed if not in debug mode.
+  ; It is used when an argument or an internal state is abnormal, or a process that can not be reached is executed.
+  (assert expr))
+
+(special-operator dynamic
+  ; Evaluate symbols with a dynamic scope.
+  ; Used when dynamically binding the standard input.
+  (dynamic sym))
 
 ; fundamental macro
 
@@ -74,6 +138,11 @@
   ; If the specified name is bound, throw IllegalArgumentException.
   ; This function is in beta and will be redefined later.
   (list <- name (cons lambda (cons args body))))
+
+(macro primitive (name args :rest body)
+  ; Primitives are built-in functions.
+  ; The reality is no different from a user-defined function.
+  (cons begin body))
 
 (macro with-gensyms ((:rest syms) :rest body)
   ; Create the new let context which the specified syms bind with symbols which generated by gensyms and under the let context evaluate the specified body.
@@ -244,6 +313,8 @@
                       (if (not (cons? expr)) expr
                           (expand-each-element (expand-macro expr)))))
     (expand-expr expr)))
+
+; fundamental macro
 
 (macro function (name args :rest body)
   ; Redefined improved function.
