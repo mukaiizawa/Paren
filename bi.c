@@ -45,7 +45,7 @@ DEFUN(gensym)
   static int c = 0;
   struct xbarray x;
   xbarray_init(&x);
-  xbarray_addf(&x, "#G%d", ++c);
+  xbarray_addf(&x, "$G-%d", ++c);
   *result = gc_new_barray_from(SYMBOL, x.elt, x.size);
   xbarray_free(&x);
   return TRUE;

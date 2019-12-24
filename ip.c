@@ -13,10 +13,8 @@
  * registers:
  *   0 -- instruction argument.
  *   1 -- current environment.
- *   2 -- stack trace.
- *   3 -- where the exception occurred.
  */
-#define REG_SIZE 4
+#define REG_SIZE 2
 static object reg[REG_SIZE];
 
 static long cycle;
@@ -703,12 +701,12 @@ STATIC void pop_return_frame(void)
   }
 }
 
-STATIC object call_stack(int s, int e)
+STATIC object call_stack(void)
 {
   int i;
   object o;
   o = object_nil;
-  for (i = s; i < e; i = next_ip(i)) {
+  for (i = 0; i < ip; i = next_ip(i)) {
     if (sint_val(fs[i]) == TRACE_INST)
       o = gc_new_cons(get_frame_var(i, 0), o);
   }
@@ -719,7 +717,7 @@ STATIC void exit1(void)
 {
   char buf[MAX_STR_LEN];
   object o;
-  o = call_stack(0, ip);
+  o = call_stack();
   printf("Error -- %s\n", object_describe(reg[0], buf));
   while (o != object_nil) {
     printf("	at: %s\n", object_describe(o->cons.car, buf));
@@ -730,31 +728,24 @@ STATIC void exit1(void)
 
 STATIC void pop_throw_frame(void)
 {
+  int i;
   object body, handler;
-  int s, e;
-  e = ip;
-  if (reg[3] != object_nil) e = reg[3]->xint.val;
+  i = ip;
   pop_frame();
   while (TRUE) {
     if (ip < 0) {
-      ip = e;
+      ip = i;
       exit1();
     }
     if (top_inst() == UNWIND_PROTECT_INST) {
       body = get_frame_var(ip, 0);
       pop_frame();
-      reg[3] = gc_new_xint(e);
       gen0(THROW_INST);
       gen1(QUOTE_INST, reg[0]);
       gen_eval_sequential_frame(body);
       return;
     }
     if (top_inst() == HANDLER_INST) {
-      s = ip;
-      ip = e;
-      reg[2] = call_stack(s, e);
-      ip = s;
-      reg[3] = object_nil;
       handler = get_frame_var(ip, 0);
       pop_frame();
       break;
@@ -1077,7 +1068,7 @@ DEFUN(bound_p)
 DEFUN(call_stack)
 {
   if (!ip_ensure_no_args(argc)) return FALSE;
-  *result = reg[2];
+  *result = call_stack();
   return TRUE;
 }
 
@@ -1091,7 +1082,7 @@ STATIC void trap(void)
       if (ip_trap_code == TRAP_EXCEPTION) e = object_Exception;
       else e = object_Error;
       gen0(THROW_INST);
-      reg[0] = gc_new_throwable(e, error_msg, call_stack(0, ip));
+      reg[0] = gc_new_throwable(e, error_msg, call_stack());
       ip_trap_code = TRAP_NONE;
       error_msg = NULL;
       break;
@@ -1105,14 +1096,12 @@ STATIC void ip_main(void)
 {
   reg[0] = object_nil;
   reg[1] = object_toplevel;
-  reg[2] = object_nil;
-  reg[3] = object_nil;
   gen_apply_frame(object_boot);
   while (ip != -1) {
     xassert(ip >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
     if(cycle % IP_POLLING_INTERVAL == 0) {
-      if (reg[3] == object_nil) gc_chance();
+      gc_chance();
     }
     switch (top_inst()) {
       case APPLY_INST: pop_apply_frame(); break;
