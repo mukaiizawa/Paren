@@ -295,14 +295,18 @@
     (list let (list s (list clock))
           (list begin0 (cons begin body)
                 (list 'write-string
-                      (list concat "time="
-                            (list number->string (list - (list clock) s))))
+                      (list 'concat "time="
+                            (list 'number->string (list '- (list clock) s))))
                 (list 'write-new-line)))))
 
 (macro ensure-argument (:rest tests)
   ; If the specified test evaluate to nil, throw IllegalArgumentException.
-  (list if (list not (cons 'and tests))
+  (list if (list 'not (cons 'and tests))
         (list basic-throw (list '.new 'IllegalArgumentException))))
+
+(builtin-function expand-macro-all (expr)
+  ; Expand macro the specified expression expr.
+  (assert (same? (car (expand-macro '(begin0 1 2 3))) let)))
 
 (function expand-macro-all (expr)
   ; Expand macro the specified expression expr recursively.
