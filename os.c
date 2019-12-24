@@ -23,7 +23,7 @@ static int ensure_file_pointer(object o, FILE **fp)
   return TRUE;
 }
 
-PRIM(fp)
+DEFUN(fp)
 {
   int fd;
   FILE *fp;
@@ -49,7 +49,7 @@ static char *mode_table[] = {
   "rb+"
 };
 
-PRIM(fopen)
+DEFUN(fopen)
 {
   char *fn;
   int mode;
@@ -73,7 +73,7 @@ PRIM(fopen)
   return FALSE;
 }
 
-PRIM(fgetc)
+DEFUN(fgetc)
 {
   int ch;
   FILE *fp;
@@ -88,7 +88,7 @@ PRIM(fgetc)
   return TRUE;
 }
 
-PRIM(fputc)
+DEFUN(fputc)
 {
   int byte;
   FILE *fp;
@@ -99,7 +99,7 @@ PRIM(fputc)
   return TRUE;
 }
 
-PRIM(fgets)
+DEFUN(fgets)
 {
   char *s;
   FILE *fp;
@@ -117,7 +117,7 @@ PRIM(fgets)
   return TRUE;
 }
 
-PRIM(fread)
+DEFUN(fread)
 {
   object o;
   int from, size;
@@ -137,7 +137,7 @@ PRIM(fread)
   return TRUE;
 }
 
-PRIM(fwrite)
+DEFUN(fwrite)
 {
   object o;
   int from, size;
@@ -157,7 +157,7 @@ PRIM(fwrite)
   return TRUE;
 }
 
-PRIM(fseek)
+DEFUN(fseek)
 {
   int off;
   FILE *fp;
@@ -168,7 +168,7 @@ PRIM(fseek)
   return fseek(fp, off, SEEK_SET)==0;
 }
 
-PRIM(ftell)
+DEFUN(ftell)
 {
   int pos;
   FILE *fp;
@@ -179,7 +179,7 @@ PRIM(ftell)
   return TRUE;
 }
 
-PRIM(fclose)
+DEFUN(fclose)
 {
   FILE *fp;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -189,14 +189,14 @@ PRIM(fclose)
   return TRUE;
 }
 
-PRIM(clock)
+DEFUN(clock)
 {
   if (!ip_ensure_arguments(argc, FALSE, FALSE)) return FALSE;
   *result = gc_new_xfloat((double)clock() / CLOCKS_PER_SEC);
   return TRUE;
 }
 
-PRIM(milli_time)
+DEFUN(milli_time)
 {
   if (!ip_ensure_arguments(argc, FALSE, FALSE)) return FALSE;
   *result = gc_new_xint(time(NULL));

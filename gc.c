@@ -86,6 +86,17 @@ object gc_new_lambda(object env, object params, object body)
   return o;
 }
 
+object gc_new_builtin(int type, object name, void *p)
+{
+  object o;
+  o = gc_alloc(sizeof(struct builtin));
+  o->builtin.name = name;
+  o->builtin.u.p = p;
+  set_type(o, type);
+  regist(o);
+  return o;
+}
+
 object gc_new_bytes(int64_t val)
 {
   object o;
@@ -197,7 +208,6 @@ object gc_new_pointer(void *p)
 {
   object o;
   o = gc_alloc(sizeof(void *));
-  set_type(o, POINTER);
   o->p = p;
   regist(o);
   return o;
@@ -235,6 +245,10 @@ void gc_mark(object o)
     case ENV:
       gc_mark(o->env.top);
       gc_mark(o->env.binding);
+      break;
+    case SPECIAL:
+    case FUNCITON:
+      gc_mark(o->builtin.name);
       break;
     case MACRO:
     case LAMBDA:
@@ -292,8 +306,6 @@ void gc_chance(void)
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
   if (GC_LOG_P) printf("before gc(used memory %d[byte])\n", gc_used_memory);
   ip_mark();
-  gc_mark(object_special_splay);
-  gc_mark(object_prim_splay);
   gc_mark(object_symcmp);
   gc_mark(object_strcmp);
   gc_mark(object_symbol_splay);

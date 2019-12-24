@@ -165,35 +165,35 @@ static object fs[FRAME_STACK_SIZE];
 static struct xarray fb;
 
 // instructions
-#define INST_SIZE_MASK          0x0000000f
-#define   APPLY_INST            0x00000003
-#define   APPLY_PRIM_INST       0x00000013
-#define   ASSERT_INST           0x00000022
-#define   BIND_INST             0x00000033
-#define   BIND_PROPAGATION_INST 0x00000043
-#define   EVAL_INST             0x00000052
-#define   EVAL_ARGS_INST        0x00000064
-#define   EVAL_SEQUENTIAL_INST  0x00000073
-#define   FENCE_INST            0x00000082
-#define   FETCH_HANDLER_INST    0x00000093
-#define   FETCH_OPERATOR_INST   0x00000103
-#define   GOTO_INST             0x00000112
-#define   HANDLER_INST          0x00000123
-#define   IF_INST               0x00000133
-#define   LABELS_INST           0x00000143
-#define   QUOTE_INST            0x00000153
-#define   RETURN_INST           0x00000162
-#define   SWITCH_ENV_INST       0x00000173
-#define   THROW_INST            0x00000182
-#define   TRACE_INST            0x00000193
-#define   UNWIND_PROTECT_INST   0x00000203
+#define INST_SIZE_MASK             0x0000000f
+#define   APPLY_INST               0x00000003
+#define   APPLY_BUILTIN_INST       0x00000013
+#define   ASSERT_INST              0x00000022
+#define   BIND_INST                0x00000033
+#define   BIND_PROPAGATION_INST    0x00000043
+#define   EVAL_INST                0x00000052
+#define   EVAL_ARGS_INST           0x00000064
+#define   EVAL_SEQUENTIAL_INST     0x00000073
+#define   FENCE_INST               0x00000082
+#define   FETCH_HANDLER_INST       0x00000093
+#define   FETCH_OPERATOR_INST      0x00000103
+#define   GOTO_INST                0x00000112
+#define   HANDLER_INST             0x00000123
+#define   IF_INST                  0x00000133
+#define   LABELS_INST              0x00000143
+#define   QUOTE_INST               0x00000153
+#define   RETURN_INST              0x00000162
+#define   SWITCH_ENV_INST          0x00000173
+#define   THROW_INST               0x00000182
+#define   TRACE_INST               0x00000193
+#define   UNWIND_PROTECT_INST      0x00000203
 
 
 char *inst_name(int inst)
 {
   switch (inst) {
     case APPLY_INST: return "APPLY_INST";
-    case APPLY_PRIM_INST: return "APPLY_PRIM_INST";
+    case APPLY_BUILTIN_INST: return "APPLY_BUILTIN_INST";
     case ASSERT_INST: return "ASSERT_INST";
     case BIND_INST: return "BIND_INST";
     case BIND_PROPAGATION_INST: return "BIND_PROPAGATION_INST";
@@ -492,15 +492,15 @@ STATIC void pop_apply_frame(void)
   fb_flush();
 }
 
-STATIC void pop_apply_prim_frame(void)
+STATIC void pop_builtin_inst(void)
 {
   object args;
-  int (*prim)(int, object, object *);
+  int (*function)(int, object, object *);
   args = reg[0];
-  prim = get_frame_var(ip, 0)->prim;
+  function = get_frame_var(ip, 0)->builtin.u.function;
   pop_frame();
-  if ((*prim)(object_list_len(args), args, &(reg[0]))) return;
-  if (error_msg == NULL) ip_mark_exception("primitive failed");
+  if ((*function)(object_list_len(args), args, &(reg[0]))) return;
+  if (error_msg == NULL) ip_mark_exception("built-in function failed");
 }
 
 STATIC void pop_assert_frame(void)
@@ -541,6 +541,8 @@ STATIC void pop_eval_frame(void)
       return;
     case MACRO:
     case LAMBDA:
+    case FUNCITON:
+    case SPECIAL:
     case XINT:
     case XFLOAT:
     case KEYWORD:
@@ -618,23 +620,19 @@ STATIC void pop_fetch_handler_frame(void)
 
 STATIC void pop_fetch_operator_frame(void)
 {
-  object f, args;
+  object args;
   int (*special)(int, object);
   args = get_frame_var(ip, 0);
   pop_frame();
   switch (type(reg[0])) {
-    case SYMBOL:
-      if ((f = splay_find(object_special_splay, reg[0])) != NULL) {
-        special = f->special;
-        (*special)(object_list_len(args), args);
-        return;
-      }
-      if ((f = splay_find(object_prim_splay, reg[0])) != NULL) {
-        gen1(APPLY_PRIM_INST, f);
-        gen_eval_args_frame(args);
-        return;
-      }
-      break;
+    case SPECIAL:
+      special = reg[0]->builtin.u.special;
+      (*special)(object_list_len(args), args);
+      return;
+    case FUNCITON:
+      gen1(APPLY_BUILTIN_INST, reg[0]);
+      gen_eval_args_frame(args);
+      return;
     case MACRO:
       gen0(EVAL_INST);
       gen_apply_frame(reg[0]);
@@ -830,7 +828,7 @@ STATIC int valid_lambda_list_p(object params, int nest_p)
   return params == object_nil;
 }
 
-SPECIAL(let)
+DEFSP(let)
 {
   object args, s;
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
@@ -858,7 +856,7 @@ SPECIAL(let)
   return TRUE;
 }
 
-SPECIAL(dynamic)
+DEFSP(dynamic)
 {
   int i;
   object e, s, v;
@@ -886,7 +884,7 @@ SPECIAL(dynamic)
   return TRUE;
 }
 
-SPECIAL(symbol_bind)
+DEFSP(symbol_bind)
 {
   object s;
   if (argc == 0) return TRUE;
@@ -915,13 +913,13 @@ SPECIAL(symbol_bind)
   return TRUE;
 }
 
-SPECIAL(begin)
+DEFSP(begin)
 {
   gen_eval_sequential_frame(argv);
   return TRUE;
 }
 
-SPECIAL(macro)
+DEFSP(macro)
 {
   object params;
   if (!ip_ensure_arguments(argc, 3, FALSE)) return FALSE;
@@ -939,7 +937,7 @@ SPECIAL(macro)
   return TRUE;
 }
 
-SPECIAL(lambda)
+DEFSP(lambda)
 {
   object params;
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
@@ -952,21 +950,21 @@ SPECIAL(lambda)
   return TRUE;
 }
 
-SPECIAL(quote)
+DEFSP(quote)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   reg[0] = argv->cons.car;
   return TRUE;
 }
 
-SPECIAL(if)
+DEFSP(if)
 {
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   gen_if_frame(argv);
   return TRUE;
 }
 
-SPECIAL(unwind_protect)
+DEFSP(unwind_protect)
 {
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   gen1(UNWIND_PROTECT_INST, argv->cons.cdr);
@@ -974,14 +972,14 @@ SPECIAL(unwind_protect)
   return TRUE;
 }
 
-SPECIAL(labels)
+DEFSP(labels)
 {
   gen1(LABELS_INST, argv);
   gen_eval_sequential_frame(argv);
   return TRUE;
 }
 
-SPECIAL(goto)
+DEFSP(goto)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   gen0(GOTO_INST);
@@ -989,7 +987,7 @@ SPECIAL(goto)
   return TRUE;
 }
 
-SPECIAL(basic_throw)
+DEFSP(basic_throw)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   gen0(THROW_INST);
@@ -997,7 +995,7 @@ SPECIAL(basic_throw)
   return TRUE;
 }
 
-SPECIAL(basic_catch)
+DEFSP(basic_catch)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
   gen1(FETCH_HANDLER_INST, argv->cons.cdr);
@@ -1005,7 +1003,7 @@ SPECIAL(basic_catch)
   return TRUE;
 }
 
-SPECIAL(return)
+DEFSP(return)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   gen0(RETURN_INST);
@@ -1013,7 +1011,7 @@ SPECIAL(return)
   return TRUE;
 }
 
-SPECIAL(assert)
+DEFSP(assert)
 {
 #ifndef NDEBUG
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -1023,25 +1021,21 @@ SPECIAL(assert)
   return TRUE;
 }
 
-PRIM(eval)
+DEFUN(eval)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   gen_eval_frame(argv->cons.car);
   return TRUE;
 }
 
-PRIM(apply)
+DEFUN(apply)
 {
-  object f;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
   switch (type(argv->cons.car)) {
-    case SYMBOL:
-      if ((f = splay_find(object_prim_splay, argv->cons.car)) == NULL) break;
-      else {
-        gen1(APPLY_PRIM_INST, f);
-        reg[0] = argv->cons.cdr->cons.car;
-        return TRUE;
-      }
+    case FUNCITON:
+      gen1(APPLY_BUILTIN_INST, argv->cons.car);
+      reg[0] = argv->cons.cdr->cons.car;
+      return TRUE;
     case LAMBDA:
       gen_apply_frame(argv->cons.car);
       reg[0] = argv->cons.cdr->cons.car;
@@ -1052,7 +1046,7 @@ PRIM(apply)
   return FALSE;
 }
 
-PRIM(expand_macro)
+DEFUN(expand_macro)
 {
   object f, args;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -1068,7 +1062,7 @@ PRIM(expand_macro)
   return TRUE;
 }
 
-PRIM(bound_p)
+DEFUN(bound_p)
 {
   object s;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -1080,7 +1074,7 @@ PRIM(bound_p)
   return TRUE;
 }
 
-PRIM(call_stack)
+DEFUN(call_stack)
 {
   if (!ip_ensure_no_args(argc)) return FALSE;
   *result = reg[2];
@@ -1122,7 +1116,7 @@ STATIC void ip_main(void)
     }
     switch (top_inst()) {
       case APPLY_INST: pop_apply_frame(); break;
-      case APPLY_PRIM_INST: pop_apply_prim_frame(); break;
+      case APPLY_BUILTIN_INST: pop_builtin_inst(); break;
       case ASSERT_INST: pop_assert_frame(); break;
       case BIND_INST: pop_bind_frame(); break;
       case BIND_PROPAGATION_INST: pop_bind_propagation_frame(); break;

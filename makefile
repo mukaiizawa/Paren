@@ -35,17 +35,17 @@ paren=paren$(exe)
 all: $(paren)
 	./paren$(exe)
 
-special=ip.c
-special.wk: $(special)
-	cat $+ | grep ^SPECIAL>$@
+defsp=ip.c
+defsp.wk: $(defsp)
+	cat $+ | grep ^DEFSP>$@
 
-prim=ip.c bi.c seq.c number.c lambda.c os.c
-prim.wk: $(prim)
-	cat $+ | grep ^PRIM>$@
+defun=ip.c bi.c seq.c number.c lambda.c os.c
+defun.wk: $(defun)
+	cat $+ | grep ^DEFUN>$@
 
 xc.a: std.o xarray.o xbarray.o xgetopt.o heap.o pf.o \
 	object.o gc.o lex.o splay.o \
-	$(special:%.c=%.o) $(prim:%.c=%.o) 
+	$(defsp:%.c=%.o) $(defun:%.c=%.o) 
 	ar -ru xc.a $+
 
 $(paren): paren.o xc.a

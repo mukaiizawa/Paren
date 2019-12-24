@@ -162,20 +162,18 @@ static object keyword_new(char *name)
   return gc_new_barray_from(KEYWORD, name, strlen(name));
 }
 
-static void bind_special(void)
+static void make_builtin(void)
 {
   int i;
   char *s;
   object o;
-  object_special_splay = gc_new_splay(object_symcmp);
-  object_prim_splay = gc_new_splay(object_symcmp);
   for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++) {
-    bind_pseudo_symbol(o = symbol_new(s));
-    splay_add(object_special_splay, o, gc_new_pointer(special_table[i]));
+    o = gc_new_builtin(SPECIAL, symbol_new(s), special_table[i]);
+    bind_symbol(o->builtin.name, o);
   }
-  for (i = 0; (s = bi_as_symbol_name(prim_name_table[i])) != NULL; i++) {
-    bind_pseudo_symbol(o = symbol_new(s));
-    splay_add(object_prim_splay, o, gc_new_pointer(prim_table[i]));
+  for (i = 0; (s = bi_as_symbol_name(function_name_table[i])) != NULL; i++) {
+    o = gc_new_builtin(FUNCITON, symbol_new(s), function_table[i]);
+    bind_symbol(o->builtin.name, o);
   }
 }
 
@@ -231,7 +229,7 @@ static void make_initial_objects(int argc, char *argv[])
   for (i = 0; i < 256; i++) object_bytes[i] = gc_new_bytes(i);
   bind_pseudo_symbol(nil);
   bind_pseudo_symbol(object_true);
-  bind_special();
+  make_builtin();
 }
 
 int main(int argc, char *argv[])

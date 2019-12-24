@@ -40,14 +40,14 @@ static int ensure_byte_seq(object o, object *result)
 
 // cons
 
-PRIM(cons_p)
+DEFUN(cons_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, CONS));
   return TRUE;
 }
 
-PRIM(cons)
+DEFUN(cons)
 {
   object o;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
@@ -56,13 +56,13 @@ PRIM(cons)
   return TRUE;
 }
 
-PRIM(list)
+DEFUN(list)
 {
   *result = argv;
   return TRUE;
 }
 
-PRIM(car)
+DEFUN(car)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -72,7 +72,7 @@ PRIM(car)
   return TRUE;
 }
 
-PRIM(set_car)
+DEFUN(set_car)
 {
   object o, p;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
@@ -83,7 +83,7 @@ PRIM(set_car)
   return TRUE;
 }
 
-PRIM(cdr)
+DEFUN(cdr)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -93,7 +93,7 @@ PRIM(cdr)
   return TRUE;
 }
 
-PRIM(set_cdr)
+DEFUN(set_cdr)
 {
   object o, p;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
@@ -105,7 +105,7 @@ PRIM(set_cdr)
   return TRUE;
 }
 
-PRIM(last_cons)
+DEFUN(last_cons)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -117,7 +117,7 @@ PRIM(last_cons)
   return TRUE;
 }
 
-PRIM(to_barray)
+DEFUN(to_barray)
 {
   object x;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -129,7 +129,7 @@ PRIM(to_barray)
 
 // array
 
-PRIM(array_p)
+DEFUN(array_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, ARRAY));
@@ -138,14 +138,14 @@ PRIM(array_p)
 
 // barray
 
-PRIM(barray_p)
+DEFUN(barray_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, BARRAY));
   return TRUE;
 }
 
-PRIM(barray_new)
+DEFUN(barray_new)
 {
   int size;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -154,7 +154,7 @@ PRIM(barray_new)
   return TRUE;
 }
 
-PRIM(barray_copy)
+DEFUN(barray_copy)
 {
   int fp, tp, size;
   object from, to;
@@ -193,7 +193,7 @@ PRIM(barray_copy)
   return FALSE;
 }
 
-PRIM(barray_to_string)
+DEFUN(barray_to_string)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -204,14 +204,14 @@ PRIM(barray_to_string)
 
 // string
 
-PRIM(string_p)
+DEFUN(string_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, STRING));
   return TRUE;
 }
 
-PRIM(string_equal)
+DEFUN(string_equal)
 {
   int b;
   object x, y;
@@ -224,7 +224,7 @@ PRIM(string_equal)
   return TRUE;
 }
 
-PRIM(string_to_symbol)
+DEFUN(string_to_symbol)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -233,7 +233,7 @@ PRIM(string_to_symbol)
   return TRUE;
 }
 
-PRIM(string_to_keyword)
+DEFUN(string_to_keyword)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -244,14 +244,14 @@ PRIM(string_to_keyword)
 
 // symbol
 
-PRIM(symbol_p)
+DEFUN(symbol_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, SYMBOL));
   return TRUE;
 }
 
-PRIM(symbol_to_string)
+DEFUN(symbol_to_string)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -260,7 +260,7 @@ PRIM(symbol_to_string)
   return TRUE;
 }
 
-PRIM(symbol_to_keyword)
+DEFUN(symbol_to_keyword)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -271,14 +271,14 @@ PRIM(symbol_to_keyword)
 
 // keyword
 
-PRIM(keyword_p)
+DEFUN(keyword_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, KEYWORD));
   return TRUE;
 }
 
-PRIM(keyword_to_symbol)
+DEFUN(keyword_to_symbol)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -287,7 +287,7 @@ PRIM(keyword_to_symbol)
   return TRUE;
 }
 
-PRIM(keyword_to_string)
+DEFUN(keyword_to_string)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -387,7 +387,7 @@ static int seq_length(object o, int *len)
   return FALSE;
 }
 
-PRIM(length)
+DEFUN(length)
 {
   int len;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -427,7 +427,7 @@ static int string_subseq(object o, int start, int end, object *result)
   return TRUE;
 }
 
-PRIM(subseq)
+DEFUN(subseq)
 {
   int start, end, len;
   object o, s, e;
@@ -508,7 +508,7 @@ static int concat_array(object argv, object *result)
   return TRUE;
 }
 
-PRIM(concat)
+DEFUN(concat)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
   switch (type(argv->cons.car)) {
@@ -536,7 +536,7 @@ static int nth_string(object o, int n, object *result)
   return TRUE;
 }
 
-PRIM(nth)
+DEFUN(nth)
 {
   object o;
   int i, len;
@@ -578,7 +578,7 @@ static int nth_set_string(object o, int n, object v, object *result)
   return TRUE;
 }
 
-PRIM(nth_set)
+DEFUN(nth_set)
 {
   object o, v;
   int i, len;
@@ -612,7 +612,7 @@ PRIM(nth_set)
   return FALSE;
 }
 
-PRIM(reverse)
+DEFUN(reverse)
 {
   int i, j, n, size, csize;
   object o, p;
@@ -656,7 +656,7 @@ PRIM(reverse)
   return FALSE;
 }
 
-PRIM(xreverse)
+DEFUN(xreverse)
 {
   int i, size;
   unsigned char c;

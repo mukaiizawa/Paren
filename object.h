@@ -2,24 +2,26 @@
 
 typedef union s_expr *object;
 
-#define TYPE_MASK       0x0fffffff
-#define ALIVE_MASK      0xf0000000
-#define EVAL_INST_MASK  0x0f000000
-#define BYTE_SEQ_MASK   0x00f00000
-#define SEQ_MASK        0x000f0000
-#define GC_TARGET_MASK  0x0000f000
-#define   ENV           0x00000001
-#define   MACRO         0x00001002
-#define   LAMBDA        0x00001004
-#define   CONS          0x01001008
-#define   XINT          0x00001010
-#define   XFLOAT        0x00001020
-#define   SYMBOL        0x01111040
-#define   KEYWORD       0x00111080
-#define   STRING        0x00111100
-#define   BARRAY        0x00111200
-#define   ARRAY         0x00011400
-#define   POINTER       0x00000800
+#define TYPE_MASK      0x0fffffff
+#define ALIVE_MASK     0xf0000000
+#define EVAL_INST_MASK 0x0f000000
+#define BYTE_SEQ_MASK  0x00f00000
+#define SEQ_MASK       0x000f0000
+#define GC_TARGET_MASK 0x0000f000
+#define   ENV          0x00000005
+#define   MACRO        0x00001006
+#define   LAMBDA       0x00001007
+#define   SPECIAL      0x00000008
+#define   FUNCITON     0x00000009
+#define   CONS         0x01001010
+#define   XINT         0x00001011
+#define   XFLOAT       0x00001012
+#define   SYMBOL       0x01111013
+#define   KEYWORD      0x00111014
+#define   STRING       0x00111015
+#define   BARRAY       0x00111016
+#define   ARRAY        0x00011017
+#define   POINTER      0x00000018
 
 #define LINT_BITS 63
 
@@ -37,13 +39,21 @@ union s_expr {
   int header;
   struct env {
     int header;
-    object top;
-    object binding;
+    object top, binding;
   } env;
   struct lambda {
     int header;
     object env, params, body;
   } lambda;
+  struct builtin {
+    int header;
+    object name;
+    union {
+      void *p;
+      int (*special)(int, object);
+      int (*function)(int, object, object *);
+    } u;
+  } builtin;
   struct cons {
     int header;
     object car, cdr; 
@@ -69,14 +79,10 @@ union s_expr {
   object next;
   void *p;
   int (*cmp)(object p, object q);
-  int (*special)(int, object);
-  int (*prim)(int, object, object *);
 };
 
 extern object object_symbol_splay;
 extern object object_keyword_splay;
-extern object object_special_splay;
-extern object object_prim_splay;
 extern object object_symcmp;
 extern object object_strcmp;
 

@@ -1,4 +1,4 @@
-bi.o: bi.c prim.wk special.wk ip.h bi.h gc.h object.h xbarray.h xarray.h config.h std.h
+bi.o: bi.c defun.wk defsp.wk ip.h bi.h gc.h object.h xbarray.h xarray.h config.h std.h
 gc.o: gc.c gc.h ip.h splay.h object.h heap.h xarray.h config.h std.h
 heap.o: heap.c heap.h config.h std.h
 ip.o: ip.c ip.h splay.h bi.h gc.h object.h xbarray.h xarray.h config.h std.h

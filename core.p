@@ -139,7 +139,7 @@
   ; This function is in beta and will be redefined later.
   (list <- name (cons lambda (cons args body))))
 
-(macro primitive (name args :rest body)
+(macro built-in-function (name args :rest body)
   ; Primitives are built-in functions.
   ; The reality is no different from a user-defined function.
   (cons begin body))
@@ -324,12 +324,12 @@
                                      "symbol already bound"))
       (list <- name (cons lambda (cons args (expand-macro-all body))))))
 
-(primitive same? (x y)
+(built-in-function same? (x y)
   ; Returns true if the specified x is same object.
   (assert (not (same? 'x 'y)))
   (assert (same? 'x 'x)))
 
-(primitive address (x)
+(built-in-function address (x)
   ; Returns address of the specified x.
   ; The addresses of symbols or keywords with the same name are always equal.
   (assert (= (address 'x) (address 'x)))
@@ -339,7 +339,7 @@
   ; Same as (not (same? x y)).
   (not (same? x y)))
 
-(primitive not (x)
+(built-in-function not (x)
   ; Returns true if the argument is nil.
   (assert (not nil))
   (assert (same? (not true) nil)))
@@ -490,7 +490,7 @@
 (function list= (x y :key (test same?))
   ; Returns whether the result of comparing each element of the specified lists x and y with the specified function test is true.
   ; Always returns nil if x and y are different lengths.
-  (ensure-argument (list? x) (list? y) (operator? test))
+  (ensure-argument (list? x) (list? y) (lambda? test))
   (while true
     (if (and (nil? x) (nil? y)) (return true)
         (or (nil? x) (nil? y)) (return nil)
@@ -568,7 +568,7 @@
 
 (function map (args f)
   ; Returns a list of the results of mapping each element of the specified list args with the specified function f.
-  (ensure-argument (list? args) (operator? f))
+  (ensure-argument (list? args) (lambda? f))
   (let (acc nil)
     (while args
       (push! acc (f (car args)))
@@ -592,7 +592,7 @@
   ; If there is no such cons, nil is returned.
   ; The comparison is done with the specified function test which default value is same?.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (ensure-argument (list? l) (operator? test))
+  (ensure-argument (list? l) (lambda? test))
   (while true
     (if (nil? l) (return nil)
         (test (key (car l)) e) (return l)
@@ -603,7 +603,7 @@
   ; Evaluation is performed in order from left to right.
   ; If there is no such cons, nil is returned.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (ensure-argument (list? l) (operator? f))
+  (ensure-argument (list? l) (lambda? f))
   (while l
     (if (f (key (car l))) (return l)
         (<- l (cdr l)))))
@@ -628,7 +628,7 @@
   ; Returns true if all element of the specified list l returns a not nil value which evaluates as an argument to the specified function f.
   ; Otherwise returns nil.
   ; As soon as any element evaluates to nil, and returns nil without evaluating the remaining elements
-  (ensure-argument (list? l) (operator? f))
+  (ensure-argument (list? l) (lambda? f))
   (while l
     (if (f (car l)) (<- l (cdr l))
         (return nil)))
@@ -639,14 +639,14 @@
   ; Otherwise returns nil.
   ; It returns nil if l is empty.
   ; As soon as any element evaluates to not nil, and returns it without evaluating the remaining elements.
-  (ensure-argument (list? l) (operator? f))
+  (ensure-argument (list? l) (lambda? f))
   (while l
     (if (f (car l)) (return true)
         (<- l (cdr l)))))
 
 (function each-adjacent-satisfy? (l f)
   ; Returns true if each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
-  (ensure-argument (list? l) (operator? f))
+  (ensure-argument (list? l) (lambda? f))
   (while true
     (if (nil? (cdr l)) (return true)
         (f (car l) (cadr l)) (<- l (cdr l))
@@ -1755,6 +1755,7 @@
           print-atom
               (lambda (x)
                 (if (macro? x) (print-operator x)
+                    (built-in? x) (print-atom (built-in-name x))
                     (lambda? x) (print-operator x)
                     (string? x) (write-string x stream)
                     (symbol? x) (write-string (symbol->string x) stream)
@@ -1792,6 +1793,7 @@
             print-atom
                 (lambda (x)
                   (if (macro? x) (print-operator x)
+                      (built-in? x) (print-atom (built-in-name x))
                       (lambda? x) (print-operator x)
                       (string? x) (begin (write-string "\"" stream)
                                          (write-string x stream)

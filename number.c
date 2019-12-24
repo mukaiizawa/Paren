@@ -26,21 +26,21 @@ static void mark_division_by_zero(void)
   ip_mark_exception("division by zero");
 }
 
-PRIM(number_p)
+DEFUN(number_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(numberp(argv->cons.car));
   return TRUE;
 }
 
-PRIM(integer_p)
+DEFUN(integer_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, XINT));
   return TRUE;
 }
 
-PRIM(number_equal_p)
+DEFUN(number_equal_p)
 {
   double x, y;
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
@@ -87,7 +87,7 @@ static int int64_add(object argv, object *result)
   return double_add(argv, result);
 }
 
-PRIM(number_add)
+DEFUN(number_add)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
   *result = argv->cons.car;
@@ -134,7 +134,7 @@ static int int64_multiply(object argv, object *result)
   return double_multiply(argv, result);
 }
 
-PRIM(number_multiply)
+DEFUN(number_multiply)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
   *result = argv->cons.car;
@@ -181,7 +181,7 @@ static int int64_divide(object argv, object *result)
   return double_divide(argv, result);
 }
 
-PRIM(number_divide)
+DEFUN(number_divide)
 {
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
   if (argc == 1) {
@@ -192,7 +192,7 @@ PRIM(number_divide)
   return int64_divide(argv->cons.cdr, result);
 }
 
-PRIM(number_modulo)
+DEFUN(number_modulo)
 {
   int64_t x, y;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
@@ -202,7 +202,7 @@ PRIM(number_modulo)
   return TRUE;
 }
 
-PRIM(number_lt)
+DEFUN(number_lt)
 {
   double x, y;
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
@@ -219,7 +219,7 @@ PRIM(number_lt)
   return TRUE;
 }
 
-PRIM(number_floor)
+DEFUN(number_floor)
 {
   double x;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -228,7 +228,7 @@ PRIM(number_floor)
   return TRUE;
 }
 
-PRIM(number_ceiling)
+DEFUN(number_ceiling)
 {
   double x;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -237,7 +237,7 @@ PRIM(number_ceiling)
   return TRUE;
 }
 
-PRIM(number_truncate)
+DEFUN(number_truncate)
 {
   double x;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -246,7 +246,7 @@ PRIM(number_truncate)
   return TRUE;
 }
 
-PRIM(number_to_integer)
+DEFUN(number_to_integer)
 {
   double x;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -262,7 +262,7 @@ PRIM(number_to_integer)
   return TRUE;
 }
 
-PRIM(number_to_string)
+DEFUN(number_to_string)
 {
   int64_t i;
   double d;
@@ -280,7 +280,7 @@ PRIM(number_to_string)
   return TRUE;
 }
 
-PRIM(bit_and)
+DEFUN(bit_and)
 {
   int64_t x, y;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
@@ -291,7 +291,7 @@ PRIM(bit_and)
   return TRUE;
 }
 
-PRIM(bit_or)
+DEFUN(bit_or)
 {
   int64_t x, y;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
@@ -302,7 +302,7 @@ PRIM(bit_or)
   return TRUE;
 }
 
-PRIM(bit_xor)
+DEFUN(bit_xor)
 {
   int64_t x, y;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
@@ -321,7 +321,7 @@ static int bits(int64_t x)
   return LINT_BITS;
 }
 
-PRIM(bit_shift)
+DEFUN(bit_shift)
 {
   int64_t x, y;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;

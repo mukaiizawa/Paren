@@ -11,9 +11,7 @@
 #include "bi.h"
 #include "ip.h"
 
-// basic built-in
-
-PRIM(samep)
+DEFUN(samep)
 {
   object o;
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
@@ -28,61 +26,21 @@ PRIM(samep)
   return TRUE;
 }
 
-static int special_p(object o)
-{
-  int i, size;
-  char *s;
-  if (!typep(o, SYMBOL)) return FALSE;
-  size = o->barray.size;
-  for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++) {
-    if (size  == strlen(s) && memcmp(o->barray.elt, s, size) == 0) return TRUE;
-  }
-  return FALSE;
-}
-
-static int prim_p(object o)
-{
-  int i, size;
-  char *s;
-  if (!typep(o, SYMBOL)) return FALSE;
-  size = o->barray.size;
-  for (i = 0; (s = bi_as_symbol_name(prim_name_table[i])) != NULL; i++) {
-    if (size  == strlen(s) && memcmp(o->barray.elt, s, size) == 0) return TRUE;
-  }
-  return FALSE;
-}
-
-PRIM(address)
+DEFUN(address)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = gc_new_xfloat((intptr_t)argv->cons.car);
   return TRUE;
 }
 
-PRIM(not)
+DEFUN(not)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(argv->cons.car == object_nil);
   return TRUE;
 }
 
-PRIM(special_operator_p)
-{
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(special_p(argv->cons.car));
-  return TRUE;
-}
-
-PRIM(operator_p)
-{
-  object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  o = argv->cons.car;
-  *result = object_bool(prim_p(o) || typep(o, LAMBDA));
-  return TRUE;
-}
-
-PRIM(gensym)
+DEFUN(gensym)
 {
   static int c = 0;
   struct xbarray x;
@@ -93,31 +51,29 @@ PRIM(gensym)
   return TRUE;
 }
 
-#undef SPECIAL
-#undef PRIM
+#undef DEFSP
+#undef DEFUN
 
-#define SPECIAL(name) extern int special_##name(int, object);
-#include "special.wk"
-#undef SPECIAL
+#define DEFSP(name) extern int special_##name(int, object);
+#include "defsp.wk"
+#undef DEFSP
 
-#define PRIM(name) extern int prim_##name(int, object, object *);
-#include "prim.wk"
-#undef PRIM
+#define DEFUN(name) extern int function_##name(int, object, object *);
+#include "defun.wk"
+#undef DEFUN
 
 static char *symbol_name_map[] = {
-  // ip/special
+  // ip/DEFSP
   "basic_catch", "basic-catch",
   "basic_throw", "basic-throw",
   "symbol_bind", "<-",
   "unwind_protect", "unwind-protect",
-  // ip/prim
+  // ip/DEFUN
   "bound_p", "bound?",
   "call_stack", "call-stack",
   "expand_macro", "expand-macro",
   // bi
-  "operator_p", "operator?",
   "samep", "same?",
-  "special_operator_p", "special-operator?",
   // sequence
   "array_p", "array?",
   "barray_copy", "byte-array-copy",
@@ -161,40 +117,43 @@ static char *symbol_name_map[] = {
   "number_to_string", "number->string",
   "number_truncate", "truncate",
   // lambda
+  "builtin_name", "built-in-name",
+  "builtin_p", "built-in?",
   "lambda_body", "lambda-body",
   "lambda_p", "lambda?",
   "lambda_parameter", "lambda-parameter",
   "macro_p", "macro?",
+  "special_operator_p", "special-operator?",
   // os
   "milli_time", "milli-time",
   NULL
 };
 
 char *special_name_table[] = {
-#define SPECIAL(name) #name,
-#include "special.wk"
-#undef SPECIAL
+#define DEFSP(name) #name,
+#include "defsp.wk"
+#undef DEFSP
   NULL
 };
 
-char *prim_name_table[] = {
-#define PRIM(name) #name,
-#include "prim.wk"
-#undef PRIM
+char *function_name_table[] = {
+#define DEFUN(name) #name,
+#include "defun.wk"
+#undef DEFUN
   NULL
 };
 
 int (*special_table[])(int argc, object argv) = {
-#define SPECIAL(name) special_##name,
-#include "special.wk"
-#undef SPECIAL
+#define DEFSP(name) special_##name,
+#include "defsp.wk"
+#undef DEFSP
   NULL
 };
 
-int (*prim_table[])(int argc, object argv, object *result) = {
-#define PRIM(name) prim_##name,
-#include "prim.wk"
-#undef PRIM
+int (*function_table[])(int argc, object argv, object *result) = {
+#define DEFUN(name) function_##name,
+#include "defun.wk"
+#undef DEFUN
   NULL
 };
 

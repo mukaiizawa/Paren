@@ -7,8 +7,6 @@
 
 object object_symbol_splay;
 object object_keyword_splay;
-object object_special_splay;
-object object_prim_splay;
 object object_symcmp;
 object object_strcmp;
 
@@ -170,6 +168,9 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_add(x, ':');
       xbarray_add_barray(x, o);
       break;
+    case FUNCITON:
+    case SPECIAL:
+      o = o->builtin.name;
     case SYMBOL:
       xbarray_add_barray(x, o);
       break;

@@ -8,21 +8,46 @@
 #include "bi.h"
 #include "ip.h"
 
-PRIM(lambda_p)
+DEFUN(special_operator_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(typep(argv->cons.car, LAMBDA));
+  *result = object_bool(typep(argv->cons.car, SPECIAL));
   return TRUE;
 }
 
-PRIM(macro_p)
+DEFUN(builtin_p)
+{
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  *result = object_bool(typep(argv->cons.car, FUNCITON));
+  return TRUE;
+}
+
+DEFUN(builtin_name)
+{
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (typep(argv->cons.car, FUNCITON) || typep(argv->cons.car, FUNCITON)) {
+    *result = argv->cons.car->builtin.name;
+    return TRUE;
+  }
+  return FALSE;
+}
+
+DEFUN(lambda_p)
+{
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  *result = object_bool(typep(argv->cons.car, LAMBDA)
+      || typep(argv->cons.car, FUNCITON));
+  return TRUE;
+}
+
+DEFUN(macro_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   *result = object_bool(typep(argv->cons.car, MACRO));
   return TRUE;
 }
 
-PRIM(lambda_parameter)
+DEFUN(lambda_parameter)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
@@ -31,7 +56,7 @@ PRIM(lambda_parameter)
   return TRUE;
 }
 
-PRIM(lambda_body)
+DEFUN(lambda_body)
 {
   object o;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
