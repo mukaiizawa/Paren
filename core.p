@@ -1862,22 +1862,6 @@
               (push! expr s)))
           (print (eval (reverse! expr))))))))
 
-; (let ($encoding :UTF-8)
-;   (<- ar (.init (.new AheadReader) :string "あいう"))
-;   (print (.get ar))
-;   (print (.get ar))
-;   (print (.get ar))
-;   (print (.token ar)))
-
-; (<- p (.init (.new Path) "." "test.wk"))
-; (with-open-write (out p)
-;   (write-string ":hello" out)
-;   (write-string ":hello" out)
-;   (write-string ":hello" out)
-;   (write-string ":hello" out)
-;   (write-string ":hello" out))
-; (load "test.wk")
-
 (function boot (args)
   (if (nil? args) (repl)
       (dolist (arg args)
