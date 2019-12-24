@@ -678,6 +678,13 @@
   (throw (.message (.new IllegalArgumentException)
                    (concat "property " (symbol->string k) " not found"))))
 
+; symbol & keyword
+
+(builtin-function bound? (sym)
+  ; Returns true if the specified symbol is bound.
+  (assert (bound? 'bound?))
+  (assert (bound? 'nil)))
+
 ; ascii character code.
 
 (function ascii-space? (c)
