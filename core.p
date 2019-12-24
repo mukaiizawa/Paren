@@ -1762,13 +1762,12 @@
                     (symbol? x) (write-string (symbol->string x) stream)
                     (keyword? x) (write-string (keyword->string x) stream)
                     (number? x) (write-string (number->string x) stream)
-                    (write-string "xxxxxxxxxx") 1
                     (assert nil))))
       (print-s-expr x)))
   x)
 
 (function print (x :opt stream)
-  ; print the specified x as a readable format.
+  ; Print the specified x as a readable format.
   (let (stream (or stream (dynamic $stdout)))
       (let (print-s-expr (lambda (x)
                            (if (cons? x) (print-cons x)
