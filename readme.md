@@ -136,7 +136,7 @@ Parenのビルド例を示す。
     "hello world"
 
 # チュートリアル
-`/doc/tutorial.md`を参照のこと。
+tutorial.mdを参照のこと。
 
 # Special Thanks
 Ken'ichi Tokuoka.
