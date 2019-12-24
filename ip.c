@@ -71,7 +71,7 @@ void ip_mark_illegal_type(void)
 
 int ip_ensure_type(int type, object o, object *result)
 {
-  if (!typep(o, type)) {
+  if (!type_p(o, type)) {
     ip_mark_illegal_type();
     return FALSE;
   }
@@ -88,7 +88,7 @@ STATIC void mark_illegal_args_exception()
 
 STATIC object symbol_find(object e, object s)
 {
-  xassert(typep(e, ENV));
+  xassert(type_p(e, ENV));
   if (s == object_nil) return object_nil;
   return splay_find(e->env.binding, s);
 }
@@ -105,7 +105,7 @@ STATIC object symbol_find_propagation(object e, object s)
 
 STATIC void symbol_bind(object e, object s, object v)
 {
-  xassert(typep(e, ENV) && typep(s, SYMBOL));
+  xassert(type_p(e, ENV) && type_p(s, SYMBOL));
   splay_replace(e->env.binding, s, v);
 }
 
@@ -334,7 +334,7 @@ STATIC void gen_switch_env_frame(object env)
 
 STATIC int same_symbol_keyword_p(object sym, object key)
 {
-  xassert(typep(sym, SYMBOL) && typep(key, KEYWORD));
+  xassert(type_p(sym, SYMBOL) && type_p(key, KEYWORD));
   if (sym->barray.size != key->barray.size) return FALSE;
   return memcmp(sym->barray.elt, key->barray.elt, sym->barray.size) == 0;
 }
@@ -343,15 +343,15 @@ STATIC int valid_keyword_p(object params, object args)
 {
   object p, s;
   while (args != object_nil) {
-    if (!typep(args->cons.car, KEYWORD)) {
+    if (!type_p(args->cons.car, KEYWORD)) {
       ip_mark_exception("expected keyword parameter");
       return FALSE;
     }
     p = params;
     while (p != object_nil) {
       s = p->cons.car;
-      if (typep(s, CONS)) s = s->cons.car;
-      xassert(typep(s, SYMBOL));
+      if (type_p(s, CONS)) s = s->cons.car;
+      xassert(type_p(s, SYMBOL));
       if (same_symbol_keyword_p(s, args->cons.car)) break;
       p = p->cons.cdr;
     }
@@ -372,15 +372,15 @@ STATIC void parse_lambda_list(object env, object params, object args)
 {
   object o, pre, k, v, def_v, sup_k;
   // parse required parameter
-  while (params != object_nil && !typep(params->cons.car, KEYWORD)) {
+  while (params != object_nil && !type_p(params->cons.car, KEYWORD)) {
     if (args == object_nil) {
       ip_mark_too_few_arguments_error();
       return;
     }
-    if (!typep(params->cons.car, CONS)) {
+    if (!type_p(params->cons.car, CONS)) {
       fb_gen1(QUOTE_INST, args->cons.car);
       fb_gen1(BIND_INST, params->cons.car);
-    } else if (!listp(args->cons.car)) {
+    } else if (!list_p(args->cons.car)) {
       mark_illegal_args_exception();
       return;
     } else {
@@ -393,10 +393,10 @@ STATIC void parse_lambda_list(object env, object params, object args)
   // parse optional parameter
   if (params->cons.car == object_opt) {
     params = params->cons.cdr;
-    while (params != object_nil && !typep(params->cons.car, KEYWORD)) {
+    while (params != object_nil && !type_p(params->cons.car, KEYWORD)) {
       o = params->cons.car;
       def_v = sup_k = NULL;
-      if (!typep(o, CONS)) k = o;
+      if (!type_p(o, CONS)) k = o;
       else {
         k = o->cons.car;
         def_v = (o = o->cons.cdr)->cons.car;
@@ -438,7 +438,7 @@ STATIC void parse_lambda_list(object env, object params, object args)
     while (params != object_nil) {
       o = params->cons.car;
       v = def_v = sup_k = NULL;
-      if (!typep(o, CONS)) k = o;
+      if (!type_p(o, CONS)) k = o;
       else {
         k = o->cons.car;
         def_v = (o = o->cons.cdr)->cons.car;
@@ -568,7 +568,7 @@ STATIC void pop_goto_frame(void)
 {
   object o, label;
   label = reg[0];
-  if (!typep(label, KEYWORD)) {
+  if (!type_p(label, KEYWORD)) {
     ip_mark_exception("label must be keyword");
     return;
   }
@@ -606,7 +606,7 @@ STATIC void pop_fetch_handler_frame(void)
   handler = reg[0];
   body = get_frame_var(ip, 0);
   pop_frame();
-  if (!typep(handler, LAMBDA)) {
+  if (!type_p(handler, LAMBDA)) {
     ip_mark_exception("require exception handler");
     return;
   }
@@ -778,12 +778,12 @@ STATIC void pop_throw_frame(void)
 STATIC int valid_xparam_p(object o)
 {
   o = o->cons.car;
-  if (typep(o, SYMBOL)) return TRUE;
-  return typep(o, CONS) && typep(o->cons.car, SYMBOL)
-    && typep(o = o->cons.cdr, CONS)
+  if (type_p(o, SYMBOL)) return TRUE;
+  return type_p(o, CONS) && type_p(o->cons.car, SYMBOL)
+    && type_p(o = o->cons.cdr, CONS)
     && (o->cons.cdr == object_nil
-        || (typep(o = o->cons.cdr, CONS)
-          && typep(o->cons.car, SYMBOL) && o->cons.cdr == object_nil));
+        || (type_p(o = o->cons.cdr, CONS)
+          && type_p(o->cons.car, SYMBOL) && o->cons.cdr == object_nil));
 }
 
 STATIC int parse_params(object *o)
@@ -793,7 +793,7 @@ STATIC int parse_params(object *o)
   *o = (*o)->cons.cdr;
   while (TRUE) {
     if (*o == object_nil) break;
-    if (typep((*o)->cons.car, KEYWORD)) break;
+    if (type_p((*o)->cons.car, KEYWORD)) break;
     if (!valid_xparam_p(*o)) return FALSE;
     *o = (*o)->cons.cdr;
   }
@@ -804,7 +804,7 @@ STATIC int valid_lambda_list_p(object params, int nest_p)
 {
   int type;
   while (TRUE) {
-    if (!listp(params)) return FALSE;
+    if (!list_p(params)) return FALSE;
     if (params == object_nil) return TRUE;
     type = type(params->cons.car);
     if (type == KEYWORD) break;
@@ -820,7 +820,7 @@ STATIC int valid_lambda_list_p(object params, int nest_p)
     if (!parse_params(&params)) return FALSE;
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    if (!typep(params->cons.car, SYMBOL)) return FALSE;
+    if (!type_p(params->cons.car, SYMBOL)) return FALSE;
     params = params->cons.cdr;
   } else if (params->cons.car == object_key) {
     if (!parse_params(&params)) return FALSE;
@@ -832,14 +832,14 @@ DEFSP(let)
 {
   object args, s;
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
-  if (!listp((args = argv->cons.car))) {
+  if (!list_p((args = argv->cons.car))) {
     ip_mark_exception("argument must be list");
     return FALSE;
   }
   if (args != object_nil) gen_switch_env_frame(reg[1]);
   gen_eval_sequential_frame(argv->cons.cdr);
   while (args != object_nil) {
-    if (!typep((s = args->cons.car), SYMBOL)) {
+    if (!type_p((s = args->cons.car), SYMBOL)) {
       ip_mark_exception("argument must be symbol");
       return FALSE;
     }
@@ -861,7 +861,7 @@ DEFSP(dynamic)
   int i;
   object e, s, v;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!typep((s = argv->cons.car), SYMBOL)) {
+  if (!type_p((s = argv->cons.car), SYMBOL)) {
     ip_mark_exception("argument must be symbol");
     return FALSE;
   }
@@ -894,7 +894,7 @@ DEFSP(symbol_bind)
   }
   while (argc != 0) {
     s = argv->cons.car;
-    if (!typep(s, SYMBOL)) {
+    if (!type_p(s, SYMBOL)) {
       ip_mark_exception("cannot bind except symbol");
       return FALSE;
     }
@@ -923,7 +923,7 @@ DEFSP(macro)
 {
   object params;
   if (!ip_ensure_arguments(argc, 3, FALSE)) return FALSE;
-  if (!typep(argv->cons.car, SYMBOL)) {
+  if (!type_p(argv->cons.car, SYMBOL)) {
     ip_mark_exception("required macro name");
     return FALSE;
   }
@@ -1051,12 +1051,12 @@ DEFUN(expand_macro)
   object f, args;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   reg[0] = argv->cons.car;
-  if (!typep(reg[0], CONS)) return TRUE;
+  if (!type_p(reg[0], CONS)) return TRUE;
   f = reg[0]->cons.car;
   args = reg[0]->cons.cdr;
-  if (!typep(f, SYMBOL)) return TRUE;
+  if (!type_p(f, SYMBOL)) return TRUE;
   if ((f = symbol_find_propagation(reg[1], f)) == NULL) return TRUE;
-  if (!typep(f, MACRO)) return TRUE;
+  if (!type_p(f, MACRO)) return TRUE;
   gen_apply_frame(f);
   reg[0] = args;
   return TRUE;
@@ -1066,7 +1066,7 @@ DEFUN(bound_p)
 {
   object s;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!typep((s = argv->cons.car), SYMBOL)) {
+  if (!type_p((s = argv->cons.car), SYMBOL)) {
     ip_mark_exception("required symbol");
     return FALSE;
   }

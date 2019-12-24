@@ -1,8 +1,8 @@
 // xc std
 
 /* lisence {{{
-								  Mulk system.
-		 Copyright (C) 2009-2018 Ken'ichi Tokuoka. All rights reserved.
+Mulk system.
+Copyright (C) 2009-2020 Ken'ichi Tokuoka. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in

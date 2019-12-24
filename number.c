@@ -29,14 +29,14 @@ static void mark_division_by_zero(void)
 DEFUN(number_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(numberp(argv->cons.car));
+  *result = object_bool(number_p(argv->cons.car));
   return TRUE;
 }
 
 DEFUN(integer_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(typep(argv->cons.car, XINT));
+  *result = object_bool(type_p(argv->cons.car, XINT));
   return TRUE;
 }
 

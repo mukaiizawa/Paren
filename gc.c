@@ -61,7 +61,7 @@ object gc_new_env(object top)
 STATIC object new_lambda(object env, object params, object body)
 {
   object o;
-  xassert(typep(env, ENV));
+  xassert(type_p(env, ENV));
   o = gc_alloc(sizeof(struct lambda));
   o->lambda.env = env;
   o->lambda.params = params;
@@ -264,7 +264,7 @@ void gc_mark(object o)
     case ARRAY:
       for (i = 0; i < o->array.size; i++) gc_mark(o->array.elt[i]);
       break;
-    default: xassert(gc_targetp(o)); break;
+    default: break;
   }
 }
 

@@ -20,7 +20,7 @@
 
 static int ensure_list(object o, object *result)
 {
-  if (!listp(o)) {
+  if (!list_p(o)) {
     ip_mark_illegal_type();
     return FALSE;
   }
@@ -30,7 +30,7 @@ static int ensure_list(object o, object *result)
 
 static int ensure_byte_seq(object o, object *result)
 {
-  if (!byte_seqp(o)) {
+  if (!barray_p(o)) {
     ip_mark_illegal_type();
     return FALSE;
   }
@@ -43,7 +43,7 @@ static int ensure_byte_seq(object o, object *result)
 DEFUN(cons_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(typep(argv->cons.car, CONS));
+  *result = object_bool(type_p(argv->cons.car, CONS));
   return TRUE;
 }
 
@@ -122,7 +122,7 @@ DEFUN(to_barray)
   object x;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!ensure_byte_seq(argv->cons.car, &x)) return FALSE;
-  if (typep(x, BARRAY)) *result = x;
+  if (type_p(x, BARRAY)) *result = x;
   else *result = gc_new_barray_from(BARRAY, x->barray.elt, x->barray.size);
   return TRUE;
 }
@@ -132,7 +132,7 @@ DEFUN(to_barray)
 DEFUN(array_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(typep(argv->cons.car, ARRAY));
+  *result = object_bool(type_p(argv->cons.car, ARRAY));
   return TRUE;
 }
 
@@ -141,7 +141,7 @@ DEFUN(array_p)
 DEFUN(barray_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(typep(argv->cons.car, BARRAY));
+  *result = object_bool(type_p(argv->cons.car, BARRAY));
   return TRUE;
 }
 
@@ -173,7 +173,7 @@ DEFUN(barray_copy)
     ip_mark_exception("copy size must be integer");
     return FALSE;
   }
-  if (!typep(to, BARRAY))
+  if (!type_p(to, BARRAY))
     ip_mark_exception("destination must be byte-array");
   else if (fp < 0)
     ip_mark_exception("source array index must be positive");
@@ -207,7 +207,7 @@ DEFUN(barray_to_string)
 DEFUN(string_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(typep(argv->cons.car, STRING));
+  *result = object_bool(type_p(argv->cons.car, STRING));
   return TRUE;
 }
 
@@ -247,7 +247,7 @@ DEFUN(string_to_keyword)
 DEFUN(symbol_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(typep(argv->cons.car, SYMBOL));
+  *result = object_bool(type_p(argv->cons.car, SYMBOL));
   return TRUE;
 }
 
@@ -274,7 +274,7 @@ DEFUN(symbol_to_keyword)
 DEFUN(keyword_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(typep(argv->cons.car, KEYWORD));
+  *result = object_bool(type_p(argv->cons.car, KEYWORD));
   return TRUE;
 }
 
@@ -598,12 +598,12 @@ DEFUN(nth_set)
       o->array.elt[i] = v;
       return TRUE;
     case BARRAY:
-      if (!bytep(v)) return FALSE;
+      if (!byte_p(v)) return FALSE;
       *result = v;
       o->barray.elt[i] = (char)v->xint.val;
       return TRUE;
     case STRING:
-      if (!typep(v, STRING)) return FALSE;
+      if (!type_p(v, STRING)) return FALSE;
       if (!nth_set_string(o, i, v, result)) return FALSE;
       return TRUE;
     default: break;

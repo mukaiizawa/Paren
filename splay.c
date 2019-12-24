@@ -7,7 +7,7 @@
 
 int splay_symcmp(object o, object p)
 {
-  xassert(typep(o, SYMBOL));
+  xassert(type_p(o, SYMBOL));
   return (intptr_t)o - (intptr_t)p;
 }
 

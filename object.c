@@ -29,8 +29,8 @@ object object_splay_nil;
 int object_list_len(object o)
 {
   int i;
-  xassert(listp(o));
-  for (i = 0; typep(o, CONS); i++) o = o->cons.cdr;
+  xassert(list_p(o));
+  for (i = 0; type_p(o, CONS); i++) o = o->cons.cdr;
   return i;
 }
 
@@ -43,7 +43,7 @@ object object_bool(int b)
 object object_reverse(object o)
 {
   object p, acc;
-  xassert(listp(o));
+  xassert(list_p(o));
   acc = object_nil;
   while (o != object_nil) {
     p = o->cons.cdr;
@@ -131,7 +131,7 @@ static void describe_s_expr(object o, struct xbarray *x)
       break;
     case MACRO:
     case LAMBDA:
-      if (typep(o, MACRO)) xbarray_adds(x, "(macro ");
+      if (type_p(o, MACRO)) xbarray_adds(x, "(macro ");
       else xbarray_adds(x, "(lambda ");
       if (o->lambda.params == object_nil) xbarray_adds(x, "()");
       else describe_s_expr(o->lambda.params, x);
@@ -143,7 +143,7 @@ static void describe_s_expr(object o, struct xbarray *x)
       break;
     case CONS:
       p = o->cons.car;
-      if (p == object_quote && typep(o->cons.cdr, CONS)
+      if (p == object_quote && type_p(o->cons.cdr, CONS)
           && o->cons.cdr->cons.cdr == object_nil)
       {
         xbarray_add(x, '\'');

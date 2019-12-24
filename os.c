@@ -56,7 +56,7 @@ DEFUN(fopen)
   FILE *fp;
   object ofn;
   if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
-  if (!typep(ofn = argv->cons.car, STRING)) {
+  if (!type_p(ofn = argv->cons.car, STRING)) {
     ip_mark_exception("illegal file name");
     return FALSE;
   }
@@ -123,7 +123,7 @@ DEFUN(fread)
   int from, size;
   FILE *fp;
   if (argc != 4) return FALSE;
-  if (!typep((o = argv->cons.car), BARRAY)) return FALSE;
+  if (!type_p((o = argv->cons.car), BARRAY)) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!(0 <= from && from + size <= o->barray.size)) return FALSE;
@@ -143,7 +143,7 @@ DEFUN(fwrite)
   int from, size;
   FILE *fp;
   if (argc != 4) return FALSE;
-  if (!(typep((o = argv->cons.car), BARRAY) || typep(o, STRING))) return FALSE;
+  if (!(type_p((o = argv->cons.car), BARRAY) || type_p(o, STRING))) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!(0 <= from && from + size <= o->barray.size)) return FALSE;

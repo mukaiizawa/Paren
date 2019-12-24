@@ -167,13 +167,13 @@ char *bi_as_symbol_name(char *name)
 }
 
 int bi_int(object o, int *p) {
-  if (!typep(o, XINT)) return FALSE;
+  if (!type_p(o, XINT)) return FALSE;
   *p = o->xint.val;
   return TRUE;
 }
 
 int bi_int64(object o, int64_t *p) {
-  if (!typep(o, XINT)) return FALSE;
+  if (!type_p(o, XINT)) return FALSE;
   *p = o->xint.val;
   return TRUE;
 }
@@ -189,7 +189,7 @@ int bi_intptr(object o, intptr_t *p) {
 int bi_double(object o, double *p) {
   int64_t i;
   if (bi_int64(o, &i)) *p = (double)i;
-  else if (typep(o, XFLOAT)) *p = o->xfloat.val;
+  else if (type_p(o, XFLOAT)) *p = o->xfloat.val;
   else return FALSE;
   return TRUE;
 }
