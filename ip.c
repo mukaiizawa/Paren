@@ -1091,7 +1091,7 @@ STATIC void trap(void)
       if (ip_trap_code == TRAP_EXCEPTION) e = object_Exception;
       else e = object_Error;
       gen0(THROW_INST);
-      reg[0] = gc_new_throwable(e, error_msg);
+      reg[0] = gc_new_throwable(e, error_msg, call_stack(0, ip));
       ip_trap_code = TRAP_NONE;
       error_msg = NULL;
       break;

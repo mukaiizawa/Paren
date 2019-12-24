@@ -139,9 +139,9 @@
   ; This function is in beta and will be redefined later.
   (list <- name (cons lambda (cons args body))))
 
-(macro built-in-function (name args :rest body)
-  ; Primitives are built-in functions.
-  ; The reality is no different from a user-defined function.
+(macro builtin-function (name args :rest body)
+  ; Describes the specification of a built-in function and is used to describe unit tests.
+  ; Built-in function is no different from user-defined function.
   (cons begin body))
 
 (macro with-gensyms ((:rest syms) :rest body)
@@ -324,12 +324,12 @@
                                      "symbol already bound"))
       (list <- name (cons lambda (cons args (expand-macro-all body))))))
 
-(built-in-function same? (x y)
+(builtin-function same? (x y)
   ; Returns true if the specified x is same object.
   (assert (not (same? 'x 'y)))
   (assert (same? 'x 'x)))
 
-(built-in-function address (x)
+(builtin-function address (x)
   ; Returns address of the specified x.
   ; The addresses of symbols or keywords with the same name are always equal.
   (assert (= (address 'x) (address 'x)))
@@ -339,7 +339,7 @@
   ; Same as (not (same? x y)).
   (not (same? x y)))
 
-(built-in-function not (x)
+(builtin-function not (x)
   ; Returns true if the argument is nil.
   (assert (not nil))
   (assert (same? (not true) nil)))
@@ -1051,7 +1051,8 @@
 (macro throw (o)
   (with-gensyms (e)
     (list let (list e o)
-          (list ensure-argument (list object? e) (list is-a? e 'Throwable))
+          (list ensure-argument (list 'object? e) (list 'is-a? e 'Throwable))
+          (list '&stack-trace e (list 'call-stack))
           (list basic-throw o))))
 
 (macro catch ((:rest handlers) :rest body)
@@ -1156,7 +1157,7 @@
 
 (class Throwable ()
   ; The Throwable class is the superclass of all errors and exceptions.
-  message)
+  message stack-trace)
 
 (method Throwable .message (:opt (message nil message?))
   ; Set the message.
@@ -1169,7 +1170,7 @@
         class-name)))
 
 (method Throwable .stackTrace ()
-  (call-stack))
+  (&stack-trace self))
 
 (method Throwable .printStackTrace ()
   (write-string (.toString self))
@@ -1755,12 +1756,13 @@
           print-atom
               (lambda (x)
                 (if (macro? x) (print-operator x)
-                    (built-in? x) (print-atom (built-in-name x))
+                    (builtin? x) (print-atom (builtin-name x))
                     (lambda? x) (print-operator x)
                     (string? x) (write-string x stream)
                     (symbol? x) (write-string (symbol->string x) stream)
                     (keyword? x) (write-string (keyword->string x) stream)
                     (number? x) (write-string (number->string x) stream)
+                    (write-string "xxxxxxxxxx") 1
                     (assert nil))))
       (print-s-expr x)))
   x)
@@ -1793,7 +1795,7 @@
             print-atom
                 (lambda (x)
                   (if (macro? x) (print-operator x)
-                      (built-in? x) (print-atom (built-in-name x))
+                      (builtin? x) (print-atom (builtin-name x))
                       (lambda? x) (print-operator x)
                       (string? x) (begin (write-string "\"" stream)
                                          (write-string x stream)
@@ -1805,6 +1807,18 @@
         (print-s-expr x)
         (write-new-line stream)
         x)))
+
+; execution
+
+(builtin-function eval (expr)
+  ; Evaluates the specified expression and returns a value.
+  (assert (nil? (eval 'nil))))
+
+(builtin-function apply (f args)
+  ; Evaluates the specified expression and returns a value.
+  ; Applies the function to the args.
+  (assert (= (apply car '((1))) 1))
+  (assert (= (apply identity '(1)) 1)))
 
 (function repl ()
   (with-gensyms (g)

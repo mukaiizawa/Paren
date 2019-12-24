@@ -18,14 +18,15 @@ DEFUN(special_operator_p)
 DEFUN(builtin_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(typep(argv->cons.car, FUNCITON));
+  *result = object_bool(typep(argv->cons.car, FUNCITON)
+      || typep(argv->cons.car, SPECIAL));
   return TRUE;
 }
 
 DEFUN(builtin_name)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (typep(argv->cons.car, FUNCITON) || typep(argv->cons.car, FUNCITON)) {
+  if (typep(argv->cons.car, FUNCITON) || typep(argv->cons.car, SPECIAL)) {
     *result = argv->cons.car->builtin.name;
     return TRUE;
   }

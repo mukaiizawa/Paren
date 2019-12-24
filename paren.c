@@ -210,6 +210,7 @@ static void make_initial_objects(int argc, char *argv[])
   bind_symbol(home, gc_new_barray_from(STRING, core_fn, strlen(core_fn)));
   object_class = keyword_new("class");
   object_message = keyword_new("message");
+  object_stack_trace = keyword_new("stack-trace");
   object_Error = symbol_new("Error");
   object_Exception = symbol_new("Exception");
   args = symbol_new("$args");

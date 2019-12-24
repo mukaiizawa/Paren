@@ -20,6 +20,7 @@ object object_bytes[256];
 object object_toplevel;
 object object_class;
 object object_message;
+object object_stack_trace;
 object object_Error;
 object object_Exception;
 object object_boot;

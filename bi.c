@@ -117,8 +117,8 @@ static char *symbol_name_map[] = {
   "number_to_string", "number->string",
   "number_truncate", "truncate",
   // lambda
-  "builtin_name", "built-in-name",
-  "builtin_p", "built-in?",
+  "builtin_name", "builtin-name",
+  "builtin_p", "builtin?",
   "lambda_body", "lambda-body",
   "lambda_p", "lambda?",
   "lambda_parameter", "lambda-parameter",
