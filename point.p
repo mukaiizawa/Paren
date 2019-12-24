@@ -18,7 +18,7 @@
   (&y self))
 
 (method Point .toString ()
-  (string+ "(" (number->string (&x self)) "," (number->string (&y self)) ")"))
+  (concat "(" (number->string (&x self)) "," (number->string (&y self)) ")"))
 
 (method Point .equal (p)
   (assert (is-a? p Point))

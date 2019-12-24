@@ -103,7 +103,14 @@ STATIC object symbol_find_propagation(object e, object s)
 
 STATIC void symbol_bind(object e, object s, object v)
 {
+  object o;
   xassert(type_p(e, ENV) && type_p(s, SYMBOL));
+  if ((o = splay_find(e->env.binding, s)) != NULL) {
+    if (type_p(o, SPECIAL)) {
+      ip_mark_exception("special operator could not bind");
+      return;
+    }
+  }
   splay_replace(e->env.binding, s, v);
 }
 
