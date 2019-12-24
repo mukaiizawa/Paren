@@ -490,7 +490,7 @@
 (function list= (x y :key (test same?))
   ; Returns whether the result of comparing each element of the specified lists x and y with the specified function test is true.
   ; Always returns nil if x and y are different lengths.
-  (ensure-argument (list? x) (list? y) (lambda? test))
+  (ensure-argument (list? x) (list? y) (function? test))
   (while true
     (if (and (nil? x) (nil? y)) (return true)
         (or (nil? x) (nil? y)) (return nil)
@@ -568,7 +568,7 @@
 
 (function map (args f)
   ; Returns a list of the results of mapping each element of the specified list args with the specified function f.
-  (ensure-argument (list? args) (lambda? f))
+  (ensure-argument (list? args) (function? f))
   (let (acc nil)
     (while args
       (push! acc (f (car args)))
@@ -592,7 +592,7 @@
   ; If there is no such cons, nil is returned.
   ; The comparison is done with the specified function test which default value is same?.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (ensure-argument (list? l) (lambda? test))
+  (ensure-argument (list? l) (function? test))
   (while true
     (if (nil? l) (return nil)
         (test (key (car l)) e) (return l)
@@ -603,7 +603,7 @@
   ; Evaluation is performed in order from left to right.
   ; If there is no such cons, nil is returned.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (ensure-argument (list? l) (lambda? f))
+  (ensure-argument (list? l) (function? f))
   (while l
     (if (f (key (car l))) (return l)
         (<- l (cdr l)))))
@@ -628,7 +628,7 @@
   ; Returns true if all element of the specified list l returns a not nil value which evaluates as an argument to the specified function f.
   ; Otherwise returns nil.
   ; As soon as any element evaluates to nil, and returns nil without evaluating the remaining elements
-  (ensure-argument (list? l) (lambda? f))
+  (ensure-argument (list? l) (function? f))
   (while l
     (if (f (car l)) (<- l (cdr l))
         (return nil)))
@@ -639,14 +639,14 @@
   ; Otherwise returns nil.
   ; It returns nil if l is empty.
   ; As soon as any element evaluates to not nil, and returns it without evaluating the remaining elements.
-  (ensure-argument (list? l) (lambda? f))
+  (ensure-argument (list? l) (function? f))
   (while l
     (if (f (car l)) (return true)
         (<- l (cdr l)))))
 
 (function each-adjacent-satisfy? (l f)
   ; Returns true if each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
-  (ensure-argument (list? l) (lambda? f))
+  (ensure-argument (list? l) (function? f))
   (while true
     (if (nil? (cdr l)) (return true)
         (f (car l) (cadr l)) (<- l (cdr l))
@@ -1020,7 +1020,7 @@
 
 (function method? (o)
   ; Returns true if the specified o is method.
-  (and (lambda? o)
+  (and (function? o)
        (same? (car (lambda-body o)) :method)))
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
@@ -1743,7 +1743,7 @@
                        (write-string ")" stream))
           print-operator (lambda (x)
                            (write-string "(" stream)
-                           (if (lambda? x) (write-string "lambda" stream)
+                           (if (function? x) (write-string "lambda" stream)
                                (write-string "macro" stream))
                            (write-string " " stream)
                            (if (lambda-parameter x)
@@ -1757,7 +1757,7 @@
               (lambda (x)
                 (if (macro? x) (print-operator x)
                     (builtin? x) (print-atom (builtin-name x))
-                    (lambda? x) (print-operator x)
+                    (function? x) (print-operator x)
                     (string? x) (write-string x stream)
                     (symbol? x) (write-string (symbol->string x) stream)
                     (keyword? x) (write-string (keyword->string x) stream)
@@ -1782,7 +1782,7 @@
                          (write-string ")" stream))
             print-operator (lambda (x)
                              (write-string "(")
-                             (if (lambda? x) (write-string "lambda" stream)
+                             (if (function? x) (write-string "lambda" stream)
                                  (write-string "macro" stream))
                              (write-string " " stream)
                              (if (lambda-parameter x)
@@ -1796,7 +1796,7 @@
                 (lambda (x)
                   (if (macro? x) (print-operator x)
                       (builtin? x) (print-atom (builtin-name x))
-                      (lambda? x) (print-operator x)
+                      (function? x) (print-operator x)
                       (string? x) (begin (write-string "\"" stream)
                                          (write-string x stream)
                                          (write-string "\"" stream))

@@ -120,7 +120,7 @@ static char *symbol_name_map[] = {
   "builtin_name", "builtin-name",
   "builtin_p", "builtin?",
   "lambda_body", "lambda-body",
-  "lambda_p", "lambda?",
+  "function_p", "function?",
   "lambda_parameter", "lambda-parameter",
   "macro_p", "macro?",
   "special_operator_p", "special-operator?",

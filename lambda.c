@@ -18,26 +18,32 @@ DEFUN(special_operator_p)
 DEFUN(builtin_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(type_p(argv->cons.car, FUNCITON)
-      || type_p(argv->cons.car, SPECIAL));
+  *result = object_bool(builtin_p(argv->cons.car));
   return TRUE;
 }
 
 DEFUN(builtin_name)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (type_p(argv->cons.car, FUNCITON) || type_p(argv->cons.car, SPECIAL)) {
+  if (builtin_p(argv->cons.car)) {
     *result = argv->cons.car->builtin.name;
     return TRUE;
   }
   return FALSE;
 }
 
-DEFUN(lambda_p)
+DEFUN(function_p)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  *result = object_bool(type_p(argv->cons.car, LAMBDA)
-      || type_p(argv->cons.car, FUNCITON));
+  switch (type(argv->cons.car)) {
+    case FUNCITON:
+    case LAMBDA:
+      *result = object_bool(TRUE);
+      break;
+    default:
+      *result = object_bool(FALSE);
+      break;
+  }
   return TRUE;
 }
 
