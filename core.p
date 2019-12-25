@@ -569,6 +569,13 @@
         (test (car x) (car y)) (<- x (cdr x) y (cdr y))
         (return nil))))
 
+(builtin-function last-cons (x)
+  ; Returns the last cons to follow from the specified cons x.
+  ; Error if x is not cons.
+  (assert (= (car (last-cons '(1 2 3))) 3))
+  (assert (nil? (last-cons nil)))
+  (assert-error (last-cons 1)))
+
 (function nthcdr (l n)
   ; Get the the specified nth cons of the specified list l.
   ; If n is greater than the length of l, nil is returned.
@@ -836,25 +843,94 @@
 
 ; number
 
+(builtin-function number? (x)
+  ; Returns true if the specified x is a number.
+  (assert (number? 1))
+  (assert (number? 3.14))
+  (assert (number? 0x20))
+  (assert (nil? (number? 'x))))
+
+(builtin-function integer? (x)
+  ; Returns true if the specified x is a integer.
+  (assert (integer? 1))
+  (assert (nil? (integer? 3.14)))
+  (assert (nil? (integer? 'x))))
+
+(function even? (x)
+  ; Returns true if the specified integer x is even.
+  (= (mod x 2) 0))
+
+(function odd? (x)
+  ; Returns true if the specified integer x is odd
+  (not (even? x)))
+
+(function plus? (x)
+  ; Returns true if the specified number x is positive.
+  (> x 0))
+
+(function zero? (x)
+  ; Same as (= x 0).
+  (= x 0))
+
+(function minus? (x)
+  ; Returns true if the specified number x is negative.
+  (< x 0))
+
+(function byte? (x)
+  ; Returns true if the specified x is integer and between 0 and 255.
+  (and (integer? x ) (<= 0 x 255)))
+
+(function unsigned-integer? (x)
+  ; Returns true if the specified x is integer and zero or positive.
+  (and (integer? x) (not (minus? x))))
+
+(builtin-function = (x y)
+  ; Returns true if the specified number x and y are equal.
+  (assert (= 3.14 3.140))
+  (assert-error (= 'x 'y)))
+
+(function /= (x y)
+  ; Same as (not (= x y))).
+  (not (= x y)))
+
+(builtin-function + (x :rest args)
+  ; Returns the sum of the arguments.
+  (assert (= (+ 1 2 3) 6)))
+
 (function - (x :rest args)
   ; Returns the value of the specified x minus the sum of the specified args.
   ; If args is nil, return -x.
-  (ensure-argument (number? x) (all-satisfy? args number?))
   (if (nil? args) (negated x)
-      (+ x (negated (reduce args +)))))
+      (+ x (negated (apply + args)))))
 
 (function negated (x)
   ; Returns the inverted value of the specified x's sign.
   (* x -1))
 
+(builtin-function * (x :rest args)
+  ; Returns the product of the arguments.
+  (assert (= (* 1 2 3) 6)))
+
+(builtin-function / (x :rest args)
+  ; Returns the dividing of the arguments.
+  (assert (= (/ 6 2 1) 3)))
+
 (function // (x y)
+  ; Perform truncation division.
   ; Same as (truncate (/ x y))).
-  (ensure-argument (number? x) (number? y))
   (truncate (/ x y)))
 
-(function /= (x y)
-  ; Same as (not (= x y))).
-  (not (= x y)))
+(builtin-function mod (x y)
+  ; Returns the remainder of dividing x by y.
+  (assert (= (mod 4 5) 4))
+  (assert (= (mod 4 3) 1))
+  (assert (= (mod 4 2) 0)))
+
+(builtin-function < (:rest args)
+  ; Returns true if each of the specified args are in monotonically decreasing order.
+  ; Otherwise returns nil.
+  (assert (< 0 1 2))
+  (assert (nil? (< 0 0 1))))
 
 (function > (:rest args)
   ; Returns true if each of the specified args are in monotonically decreasing order.
@@ -881,46 +957,39 @@
   (ensure-argument (number? x))
   (- x 1))
 
-(function even? (x)
-  ; Returns true if the specified integer x is even.
-  (ensure-argument (integer? x))
-  (= (mod x 2) 0))
-
-(function odd? (x)
-  ; Returns true if the specified integer x is odd
-  (ensure-argument (integer? x))
-  (not (even? x)))
-
-(function plus? (x)
-  ; Returns true if the specified number x is positive.
-  (ensure-argument (number? x))
-  (> x 0))
-
-(function zero? (x)
-  ; Same as (= x 0).
-  (ensure-argument (number? x))
-  (= x 0))
-
-(function minus? (x)
-  ; Returns true if the specified number x is negative.
-  (ensure-argument (number? x))
-  (< x 0))
-
-(function byte? (x)
-  ; Returns true if the specified x is integer and between 0 and 255.
-  (and (integer? x ) (<= 0 x 255)))
-
-(function unsigned-integer? (x)
-  ; Returns true if the specified x is integer and zero or positive.
-  (and (integer? x) (not (minus? x))))
-
 (function max (:rest args)
-  (ensure-argument (all-satisfy? args number?))
   (reduce args (lambda (x y) (if (> x y) x y))))
 
 (function min (:rest args)
-  (ensure-argument (all-satisfy? args number?))
   (reduce args (lambda (x y) (if (< x y) x y))))
+
+(builtin-function < (:rest args)
+  ; Returns true if each of the specified args are in monotonically decreasing order.
+  ; Otherwise returns nil.
+  (assert (< 0 1 2))
+  (assert (nil? (< 0 0 1))))
+
+(builtin-function ceiling (x)
+  ; So-called ceiling function.
+  (assert (= (ceiling 1.1) 2))
+  (assert (= (ceiling 0) 0))
+  (assert (= (ceiling -1.1) -1)))
+
+(builtin-function floor (x)
+  ; So-called floor function.
+  (assert (= (floor 1.1) 1))
+  (assert (= (floor 0) 0))
+  (assert (= (floor -1.1) -2)))
+
+(builtin-function truncate (x)
+  ; Truncate specified number x.
+  (assert (= (truncate 1.1) 1))
+  (assert (= (truncate 0) 0))
+  (assert (= (truncate -1.1) -1)))
+
+(builtin-function number->string (x)
+  ; Returns the specified x as a string.
+  (assert (string= (number->string 1.1) "1.1")))
 
 ; splay tree
 
