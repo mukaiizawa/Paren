@@ -114,10 +114,14 @@
   (basic-throw expr))
 
 (special-operator basic-catch
-  ; Special operator basic-catch receives the value thrown by basic-throw by the specified handler and performs processing.
+  ; Special operator basic-catch evaluate expr in order.
+  ; If an error is thrown by the basic-throw operator during expr evaluation, control is transferred to the handler and processing is performed.
   ; Handler must be a function with one required parameter.
   ; Since paren often uses the catch macro wrapped in the object system, it is not used directly.
-  (basic-catch handler))
+  (basic-catch handler
+    expr1
+    expr2
+    ...))
 
 (special-operator assert
   ; If the specified expr is nil, kill the system.
@@ -318,7 +322,13 @@
                           (expand-each-element (expand-macro expr)))))
     (expand-expr expr)))
 
-; fundamental macro
+(macro assert-error (expr)
+  (list labels (list basic-catch '(lambda (e) (goto :pass)) expr)
+        '(assert nil)
+        :pass
+        true))
+
+; fundamental function
 
 (macro function (name args :rest body)
   ; Redefined improved function.
@@ -363,19 +373,23 @@
   ; It means x is cons or not.
   (not (cons? x)))
 
-(function list? (x)
-  ; Returns true if the specified x is of type list.
-  ; Same as (or (nil? x) (cons? x)).
-  (or (nil? x) (cons? x)))
-
 ; list
+
+(builtin-function cons (x y)
+  ; Creates a cons such that the specified x is the car part and y is the cdr part
+  ; Returns nil if x is nil.
+  ; If x is not cons treated as an error.
+  (assert (same? (car (cons 'x nil)) 'x))
+  (assert (nil? (cdr (cons 'x nil))))
+  (assert-error (cons 'x 'y)))
 
 (builtin-function car (x)
   ; Returns car of the specified cons x.
   ; Returns nil if x is nil.
   ; If x is not cons treated as an error.
   (assert (= (car '(1 2 3)) 1))
-  (assert (nil? (car '()))))
+  (assert (nil? (car '())))
+  (assert-error (car 1)))
 
 (builtin-function car! (x val)
   ; Destructively change the car part of the specified cons x to the specified val.
@@ -383,14 +397,16 @@
   ; Error if x is not cons.
   (let (x '(1 2 3))
     (assert (same? (car! x 'one) 'one))
-    (assert (same? (car x) 'one))))
+    (assert (same? (car x) 'one))
+    (assert-error (car! nil 1))))
 
 (builtin-function cdr (x)
   ; Returns cdr of the specified cons x.
   ; Returns nil if x is nil.
   ; If x is not cons treated as an error.
   (assert (= (car (cdr '(1 2 3))) 2))
-  (assert (nil? (cdr '()))))
+  (assert (nil? (cdr '())))
+  (assert-error (cdr 1)))
 
 (builtin-function cdr! (x val)
   ; Destructively change the car part of the specified cons x to the specified val.
@@ -400,7 +416,9 @@
     (assert (nil? (cdr! x nil)))
     (assert (nil? (cdr x)))
     (cdr! x '(two))
-    (assert (same? (car (cdr x)) 'two))))
+    (assert (same? (car (cdr x)) 'two))
+    (assert-error (cdr! '(1) 2))
+    (assert-error (cdr! nil 1))))
 
 (function caar (x)
   ; Same as (car (car x)).
@@ -525,6 +543,11 @@
   ; If x is not cons treated as an error.
   (assert (= (car '(1 2 3)) 1))
   (assert (nil? (car '()))))
+
+(function list? (x)
+  ; Returns true if the specified x is of type list.
+  ; Same as (or (nil? x) (cons? x)).
+  (or (nil? x) (cons? x)))
 
 (function ->list (x)
   ; Returns the specified x if x is a list, otherwise returns x as a list.
