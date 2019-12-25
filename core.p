@@ -1116,6 +1116,12 @@
   ; Returns call stack as a list.
   (assert (same? (caar (call-stack)) 'caar)))
 
+(builtin-function fp (fd)
+  ; Returns file pointer.
+  ; Used to define standard input and output.
+  ; Never used directly.
+  )
+
 ; Paren object system
 
 (<- $class (splay-new))
