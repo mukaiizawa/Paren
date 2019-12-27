@@ -557,7 +557,7 @@
 (function list->string (l delimiter)
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
   (ensure-argument (list? l) (string? delimiter))
-  (reduce l (lambda (x y) (->string x delimiter y))))
+  (reduce l (lambda (x y) (string x delimiter y))))
 
 (function list= (x y :key (test same?))
   ; Returns whether the result of comparing each element of the specified lists x and y with the specified function test is true.
@@ -807,7 +807,7 @@
 
 ; string
 
-(function ->string (:rest args)
+(function string (:rest args)
   ; Returns concatenated string which each of the specified args as string.
   (with-memory-stream (ms)
     (dolist (arg args)
@@ -2010,7 +2010,7 @@
   ; Search the current directory and directories in the execution environment.
   ; Returns true if successfully loaded.
   (if (find $import key) true
-      (begin0 (load (->string (keyword->symbol key) ".p"))
+      (begin0 (load (string (keyword->symbol key) ".p"))
               (push! $import key))))
 
 (function shell ()
