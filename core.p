@@ -1986,6 +1986,8 @@
   (assert (= (apply identity '(1)) 1)))
 
 (function repl ()
+  ; Enter repl(read eval print loop) mode.
+  ; Executed when there is no command line argument when paren starts.
   (with-gensyms (g)
     (while true
       (catch ((QuitSignal (e) (break))
@@ -2029,6 +2031,9 @@
           (print (eval (reverse! expr))))))))
 
 (function boot (args)
+  ; Executed when paren is executed.
+  ; Invoke repl if there are no command line arguments.
+  ; If there are command line arguments, each is regarded as a file name and loaded in the specified order.
   (if (nil? args) (repl)
       (begin
         (dolist (arg args)
