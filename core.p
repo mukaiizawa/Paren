@@ -122,7 +122,7 @@
     ...))
 
 (special-operator assert
-  ; If the specified expr is nil, kill the system.
+  ; Evaluates the specified expression and kill the system if the results is nil.
   ; Not executed if not in debug mode.
   ; It is used when an argument or an internal state is abnormal, or a process that can not be reached is executed.
   (assert expr))
@@ -147,7 +147,8 @@
   ; Create a lambda function which parameter list the specified args and lambda function body the specified body.
   ; Then, bind a created lambda function with the specified name.
   ; If the specified name is bound, throw IllegalArgumentException.
-  ; This function is in beta and will be redefined later.
+  ; Expand the macro inline.
+  ; Throw IllegalArgumentException when the specified name already bound.
   (list <- name (cons lambda (cons args body))))
 
 (macro builtin-function (name args :rest body)
@@ -333,17 +334,18 @@
     (expand-expr expr)))
 
 (macro assert-error (expr)
-  (list labels (list basic-catch '(lambda (e) (goto :pass)) expr)
-        '(assert nil)
-        :pass
-        true))
+  ; Evaluates the specified expression and kill the system if no exception is thrown.
+  ; Not executed if not in debug mode.
+  ; It is used when an argument or an internal state is abnormal, or a process that can not be reached is executed.
+  (list assert (list (list lambda '()
+                           (list basic-catch '(lambda (e) (return true))
+                                 expr
+                                 '(return nil))
+                           true))))
 
 ; fundamental function
 
 (macro function (name args :rest body)
-  ; Redefined improved function.
-  ; Expand the macro inline.
-  ; Throw IllegalArgumentException when the specified name already bound.
   (if (bound? name) (throw (.message (.new IllegalArgumentException)
                                      "symbol already bound"))
       (list <- name (cons lambda (cons args (expand-macro-all body))))))
@@ -2085,7 +2087,7 @@
                ; - :Mac
                )
 
-(global-symbol $external-encoding (if (same? $os :Windows) :CP932 :UTF-8)
+(global-symbol $external-encoding :UTF-8
                ; Input / output encoding.
                ; Currently supported encodings are as follows.
                ; - :UTF-8
