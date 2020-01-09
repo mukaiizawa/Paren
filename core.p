@@ -146,9 +146,8 @@
 (macro function (name args :rest body)
   ; Create a lambda function which parameter list the specified args and lambda function body the specified body.
   ; Then, bind a created lambda function with the specified name.
-  ; If the specified name is bound, throw IllegalArgumentException.
+  ; If the specified name is bound, throw error.
   ; Expand the macro inline.
-  ; Throw IllegalArgumentException when the specified name already bound.
   (list <- name (cons lambda (cons args body))))
 
 (macro builtin-function (name args :rest body)
@@ -282,11 +281,10 @@
   ; Evaluate each of the specified body once for each element in list l, with index i bound to the element.
   ; Supports break, continue macro.
   ; Returns nil.
-  (ensure-argument (symbol? i))
+  (if (not (symbol? i)) (error "require symbol"))
   (with-gensyms (gl)
-    (list 'for (list gl l i (list car gl)) gl (list <-
-                                                    gl (list cdr gl)
-                                                    i (list car gl))
+    (list 'for (list gl l i (list car gl)) gl (list <- gl (list cdr gl)
+                                                        i (list car gl))
           (cons begin body))))
 
 (macro dotimes ((i n) :rest body)
@@ -294,7 +292,7 @@
   ; The specified body once for each integer from 0 up to but not including the value of n, with the specified i bound to each integer.
   ; Supports break, continue macro.
   ; Returns nil.
-  (ensure-argument (symbol? i))
+  (if (not (symbol? i)) (error "require symbol"))
   (with-gensyms (gn)
     (list 'for (list i 0 gn n) (list < i gn) (list <- i (list '++ i))
           (cons begin body))))
@@ -313,11 +311,6 @@
                       (list 'concat "time="
                             (list 'number->string (list '- (list clock) s))))
                 (list 'write-new-line)))))
-
-(macro ensure-argument (:rest tests)
-  ; If the specified test evaluate to nil, throw IllegalArgumentException.
-  (list if (list 'not (cons 'and tests))
-        (list basic-throw (list '.new 'IllegalArgumentException))))
 
 (builtin-function expand-macro (expr)
   ; Expand macro the specified expression expr.
@@ -346,8 +339,7 @@
 ; fundamental function
 
 (macro function (name args :rest body)
-  (if (bound? name) (throw (.message (.new IllegalArgumentException)
-                                     "symbol already bound"))
+  (if (bound? name) (error (concat name " already bound"))
       (list <- name (cons lambda (cons args (expand-macro-all body))))))
 
 (builtin-function same? (x y)
@@ -571,13 +563,11 @@
 
 (function list->string (l delimiter)
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
-  (ensure-argument (list? l) (string? delimiter))
   (reduce l (lambda (x y) (string x delimiter y))))
 
 (function list= (x y :key (test same?))
   ; Returns whether the result of comparing each element of the specified lists x and y with the specified function test is true.
   ; Always returns nil if x and y are different lengths.
-  (ensure-argument (list? x) (list? y) (function? test))
   (while true
     (if (and (nil? x) (nil? y)) (return true)
         (or (nil? x) (nil? y)) (return nil)
@@ -594,7 +584,7 @@
 (function nthcdr (l n)
   ; Get the the specified nth cons of the specified list l.
   ; If n is greater than the length of l, nil is returned.
-  (ensure-argument (list? l) (unsigned-integer? n))
+  (if (not (unsigned-integer? n)) (error "require unsigned integer"))
   (for (i 0) (< i n) (<- i (++ i))
     (<- l (cdr l)))
   l)
@@ -602,24 +592,19 @@
 (function copy-list (l)
   ; Create and return a duplicate of the specified list l.
   ; It is shallow copy.
-  (ensure-argument (list? l))
   (if (nil? l) nil
       (subseq l 0 (length l))))
 
 (function last (l)
   ; Returns the last element of the specified list l.
-  (ensure-argument (list? l))
   (car (last-cons l)))
 
 (function butlast (l)
   ; Returns a list excluding the last element of the specified list l.
-  (ensure-argument (list? l))
   (subseq l 0 (-- (length l))))
 
 (function .. (s e :opt (step 1))
   ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
-  (ensure-argument (number? s) (number? e) (number? step) (/= step 0)
-                   (or (and (< step 0) (>= s e)) (and (> step 0) (<= s e))))
   (let (acc nil test (if (> step 0) <= >=))
     (while (test s e)
       (push! acc s)
@@ -628,7 +613,6 @@
 
 (function append-atom (l x)
   ; Returns a new list with the specified x appended to the end of the specified list l.
-  (ensure-argument (list? l))
   (let (acc nil)
     (dolist (i l)
       (push! acc i))
@@ -638,7 +622,6 @@
 (macro push! (sym x)
   ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
   ; Returns x.
-  (ensure-argument (symbol? sym))
   (with-gensyms (y)
     (list let (list y x)
           (list <- sym (list cons y sym))
@@ -646,14 +629,12 @@
 
 (macro pop! (sym)
   ; Returns the head of the list that binds the specified symbol sym and rebinds sym with the cdr of the list.
-  (ensure-argument (symbol? sym))
   (list begin0
         (list car sym)
         (list <- sym (list cdr sym))))
 
 (function flatten (l)
   ; Returns a new list in which the car parts of all cons that make up the specified list l are elements.
-  (ensure-argument (list? l))
   (let (acc nil rec (lambda (x)
                       (if (atom? x) (push! acc x)
                           (dolist (i x) (rec i)))))
@@ -662,23 +643,20 @@
 
 (function map (args f)
   ; Returns a list of the results of mapping each element of the specified list args with the specified function f.
-  (ensure-argument (list? args) (function? f))
   (let (acc nil)
     (while args
       (push! acc (f (car args)))
       (<- args (cdr args)))
     (reverse! acc)))
 
-(function reduce (l f :key (identity nil identity?))
+(function reduce (l f)
   ; Reduce uses the specified binary operation f, to combine the elements of the specified list l.
   ; The function must accept as arguments two elements of list or the results from combining those elements.
   ; The function must also be able to accept no arguments.
-  ; If the specified identity is supplied, used as a unit.
-  (ensure-argument (list? l))
   (let (rec (lambda (l)
               (if (nil? (cdr l)) (car l)
                   (rec (cons (f (car l) (cadr l)) (cddr l))))))
-    (rec (if identity? (cons identity l) l))))
+    (rec l)))
 
 (function find-cons (l e :key (test same?) (key identity))
   ; Among the cons that make up the specified list l, the cons whose car part is equal to the specified e is returned.
@@ -686,7 +664,6 @@
   ; If there is no such cons, nil is returned.
   ; The comparison is done with the specified function test which default value is same?.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (ensure-argument (list? l) (function? test))
   (while true
     (if (nil? l) (return nil)
         (test (key (car l)) e) (return l)
@@ -697,7 +674,6 @@
   ; Evaluation is performed in order from left to right.
   ; If there is no such cons, nil is returned.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (ensure-argument (list? l) (function? f))
   (while l
     (if (f (key (car l))) (return l)
         (<- l (cdr l)))))
@@ -708,21 +684,18 @@
   ; The comparison is done with same? as a default.
   ; If test is supplied, the element is compared using the test function.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (ensure-argument (list? l))
   (car (find-cons l e :test test :key key)))
 
 (function find-if (l f :key (key identity))
   ; From the beginning of the specified list l, the specified function f returns the first element that does not evaluate to nil.
   ; If no such element exists, nil is returned.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (ensure-argument (list? l))
   (car (find-cons-if l f :key key)))
 
 (function all-satisfy? (l f)
   ; Returns true if all element of the specified list l returns a not nil value which evaluates as an argument to the specified function f.
   ; Otherwise returns nil.
   ; As soon as any element evaluates to nil, and returns nil without evaluating the remaining elements
-  (ensure-argument (list? l) (function? f))
   (while l
     (if (f (car l)) (<- l (cdr l))
         (return nil)))
@@ -733,14 +706,12 @@
   ; Otherwise returns nil.
   ; It returns nil if l is empty.
   ; As soon as any element evaluates to not nil, and returns it without evaluating the remaining elements.
-  (ensure-argument (list? l) (function? f))
   (while l
     (if (f (car l)) (return true)
         (<- l (cdr l)))))
 
 (function each-adjacent-satisfy? (l f)
   ; Returns true if each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
-  (ensure-argument (list? l) (function? f))
   (while true
     (if (nil? (cdr l)) (return true)
         (f (car l) (cadr l)) (<- l (cdr l))
@@ -751,22 +722,19 @@
 (function assoc (al k)
   ; Returns a value corresponding to the specified key k of the specified asoociate list al.
   ; Raises an exception if there is no value.
-  (ensure-argument (list? al) (or (keyword? k) (symbol? k)))
+  (if (not (or (keyword? k) (symbol? k))) (error "require symbol or keyword"))
   (while al
     (if (same? (car al) k) (return (cadr al))
         (<- al (cddr al))))
-  (throw (.message (.new IllegalArgumentException)
-                   (concat "property " (symbol->string k) " not found"))))
+  (error (concat "property " (symbol->string k) " not found")))
 
 (function assoc! (al k v)
   ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
   ; Raises an exception if there is no value.
-  (ensure-argument (list? al) (or (keyword? k) (symbol? k)))
   (while al
     (if (same? (car al) k) (return (car! (cdr al) v))
         (<- al (cddr al))))
-  (throw (.message (.new IllegalArgumentException)
-                   (concat "property " (symbol->string k) " not found"))))
+  (error "property not found"))
 
 ; symbol & keyword
 
@@ -786,39 +754,33 @@
 
 (function ascii-space? (c)
   ; Returns whether byte c can be considered a space character.
-  (ensure-argument (number? c))
   (find '(0x09 0x0A 0x0D 0x20) c :test =))
 
 (function ascii-alpha? (c)
   ; Returns whether byte c can be considered a alphabetic character.
-  (ensure-argument (number? c))
   (or (<= 0x41 c 0x5A) (<= 0x61 c 0x7A)))
 
 (function ascii-digit? (c)
   ; Returns whether byte c can be considered a digit character.
-  (ensure-argument (number? c))
   (<= 0x30 c 0x39))
 
 (function ascii-lower (c)
   ; Returns lowercase if byte c can be considered an alphabetic character, c otherwise.
-  (ensure-argument (byte? c))
   (if (<= 0x41 c 0x5A) (+ c 0x20)
       c))
 
 (function ascii-upper (c)
   ; Returns uppercase if byte c can be considered an alphabetic character, c otherwise.
-  (ensure-argument (byte? c))
   (if (<= 0x61 c 0x7A) (- c 0x20)
       c))
 
 (function ascii->digit (c :key (radix 10))
   ; Returns the numeric value when the specified byte c is regarded as the specified radix base character.
   ; Default radix is 10.
-  (ensure-argument (byte? c))
   (let (n (if (ascii-digit? c) (- c 0x30)
               (ascii-alpha? c) (+ (- (ascii-lower c) 0x61) 10)))
     (if (and n (< n radix)) n
-        (throw (.message (.new IllegalStateException) "illegal char")))))
+        (error "illegal char"))))
 
 ; string
 
@@ -833,7 +795,6 @@
   (->list s))
 ; (function string->list (s delimiter)
 ;   ; Returns a list delimited by the specified delimiter.
-;   (ensure-argument (string? s) (string? delimiter))
 ;   (let (s (->byte-array s) delimiter (->byte-array delimiter) match nil acc nil)
 ;     (while (<- match (byte-array-index s delimiter))
 ;       (<- acc (cons (subseq
@@ -964,12 +925,10 @@
 
 (function ++ (x)
   ; Returns the value of the specified number x + 1.
-  (ensure-argument (number? x))
   (+ x 1))
 
 (function -- (x)
   ; Returns the value of the specified number x - 1.
-  (ensure-argument (number? x))
   (- x 1))
 
 (function max (:rest args)
@@ -1143,48 +1102,43 @@
 (<- $class (splay-new))
 
 (function find-class (cls-sym)
-  (ensure-argument (symbol? cls-sym))
   (let (cls (splay-find $class cls-sym))
     (if cls cls
-        (throw (.message (.new IllegalStateException)
-                         (concat "class " (symbol->string cls-sym)
-                                  " not found"))))))
+        (error (concat "class " (symbol->string cls-sym) " not found")))))
 
 (function global-method-sym (cls-sym method-sym)
   (string->symbol (concat (symbol->string cls-sym)
                           (symbol->string method-sym))))
 
 (function find-method (cls-sym method-sym)
-  (ensure-argument (symbol? cls-sym) (symbol? method-sym))
   (let (m nil
         find-class-method
-            (lambda (cls-sym)
-              (let (gs (global-method-sym cls-sym method-sym))
-                (if (bound? gs) (eval gs))))
+          (lambda (cls-sym)
+            (let (gs (global-method-sym cls-sym method-sym))
+              (if (bound? gs) (eval gs))))
         rec
-            (lambda (cls-sym)
-              (for (cls-sym cls-sym cls (find-class cls-sym)) cls-sym
-                (<- cls-sym (nth cls 5) cls (find-class cls-sym))
-                (if (<- m (find-class-method cls-sym)) (return m)
-                    (dolist (feature (nth cls 7))
-                      (if (<- m (find-class-method feature))
-                          (return m)))))))
+          (lambda (cls-sym)
+            (for (cls-sym cls-sym cls (find-class cls-sym)) cls-sym
+              (<- cls-sym (nth cls 5) cls (find-class cls-sym))
+              (if (<- m (find-class-method cls-sym)) (return m)
+                  (dolist (feature (nth cls 7))
+                    (if (<- m (find-class-method feature))
+                        (return m)))))))
     (if (<- m (rec cls-sym)) m
-        (throw (.message (.new IllegalStateException)
-                         (concat "method " (symbol->string method-sym)
-                                  " not found"))))))
+        (error (concat "method " (symbol->string method-sym) " not found")))))
 
 (macro make-accessor (field)
   ; Create accessor for the specified field.
   ; If field name is 'xxx', create accessor &xxx.
   ; Works faster than method which defined with the method macro.
-  (let (key (symbol->keyword field) f (string->symbol
-                                        (concat "&" (symbol->string field))))
+  (let (key (symbol->keyword field)
+        f (string->symbol (concat "&" (symbol->string field))))
     (unless (bound? f)
       (with-gensyms (receiver val val?)
         (list 'function f (list receiver :opt (list val nil val?))
               :method
-              (list 'ensure-argument (list 'object? receiver))
+              (list if (list not (list 'object? receiver))
+                    (list 'error "require object"))
               (list if val? (list begin (list 'assoc! receiver key val)
                                   receiver)
                     (list 'assoc receiver key)))))))
@@ -1194,7 +1148,8 @@
     (with-gensyms (receiver args)
       (list 'function method-sym (list receiver :rest args)
             :method
-            (list 'ensure-argument (list object? receiver))
+            (list if (list not (list 'object? receiver))
+                  (list 'error "require object"))
             (list 'apply
                   (list 'find-method
                         (list 'cadr receiver)    ; <=> (assoc cls :class)
@@ -1209,7 +1164,8 @@
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
   ; Create class the specified cls-sym.
   (let (Object? (same? cls-sym 'Object))
-    (ensure-argument (all-satisfy? fields symbol?) (not (bound? cls-sym)))
+    (if (not (all-satisfy? fields symbol?)) (error "require symbol")
+        (bound? cls-sym) (error (concat name " already bound")))
     (list begin0
           (list quote cls-sym)
           (list <- cls-sym (list quote (list :class 'Class
@@ -1225,29 +1181,32 @@
   (let (global-sym (global-method-sym cls-sym method-sym)
         quoted-global-sym (list quote global-sym)
         method-lambda (cons lambda (cons (cons 'self args) body)))
-    (ensure-argument (find-class cls-sym) (not (bound? global-sym)))
+    (if (not (find-class cls-sym)) (error "class not found")
+        (bound? global-sym) (error (concat name " already bound")))
     (list begin0
           quoted-global-sym
           (list 'make-method-dispatcher method-sym)
           (list <- global-sym method-lambda))))
 
-(macro throw (o)
+(macro throw (o :opt message)
   (with-gensyms (e)
     (list let (list e o)
-          (list ensure-argument (list 'object? e) (list 'is-a? e 'Throwable))
+          (list if (list 'or (list not (list 'object? o))
+                         (list not (list 'is-a? e 'Exception)))
+                '(basic-throw (.message (.new Error)
+                                        "require instance of Exception class")))
           (list '&stack-trace e (list 'call-stack))
           (list basic-throw o))))
 
 (macro catch ((:rest handlers) :rest body)
-  ; (catch ((Exception1 (e) ...)
-  ;         (Exception2 (e) ...)
-  ;         (Exception3 (e) ...))
+  ; (catch ((Error1 (e) ...)
+  ;         (Error2 (e) ...)
+  ;         (Error3 (e) ...))
   ;   ...)
   ; (basic-catch (lambda (gsym)
-  ;                (ensure-argument (object? gsym) (is-a? Throwable))
-  ;                (if (is-a gsym Exception1) ((lambda (e) ...) gsym)
-  ;                    (is-a gsym Exception2) ((lambda (e) ...) gsym)
-  ;                    (is-a gsym Exception3) ((lambda (e) ...) gsym)
+  ;                (if (is-a gsym Error1) ((lambda (e) ...) gsym)
+  ;                    (is-a gsym Error2) ((lambda (e) ...) gsym)
+  ;                    (is-a gsym Error3) ((lambda (e) ...) gsym)
   ;                    (throw gsym)))
   ;              ...)
   (with-gensyms (gargs)
@@ -1259,12 +1218,11 @@
       (push! if-clause (list 'throw gargs))
       (list basic-catch
             (list lambda (list gargs)
-                  (list begin
-                        (list 'ensure-argument
-                              (list 'object? gargs)
-                              (list 'is-a? gargs 'Throwable))
-                        (reverse! if-clause)))
+                  (list begin (reverse! if-clause)))
             (cons begin body)))))
+
+(function error (:opt (message ""))
+  (throw (.message (.new Error) message)))
 
 (function object? (x)
   ; Returns true if the specified x is object.
@@ -1272,7 +1230,10 @@
 
 (function is-a? (o cls)
   ; Returns true if the specified object o regarded as the specified class cls's instance.
-  (ensure-argument (object? o) (object? cls) (same? (cadr cls) 'Class))
+  (if (or (not (object? o))
+          (not (object? cls))
+          (different? (cadr cls) 'Class))
+      (throw "illegal argument"))
   (let (o-cls-sym (cadr o) cls-sym (assoc cls :symbol))
     (while o-cls-sym
       (if (same? o-cls-sym cls-sym) (return true)
@@ -1336,66 +1297,46 @@
   ; Returns method list of this class, but excluding inherited methods.
   (&methods self))
 
-;; error, exception
+;; exception
 
-(class Throwable ()
-  ; The Throwable class is the superclass of all errors and exceptions.
+(class Exception ()
+  ; The Exception class is the superclass of all exceptions.
+  ; It is recommended that new exceptions derive from the Error class or one of its subclasses.
+  ; Do not derive from Exception.
   message stack-trace)
 
-(method Throwable .message (:opt (message nil message?))
-  ; Set the message.
+(method Exception .message (:opt (message nil message?))
+  ; Message accessors.
   (if message? (&message self message) (&message self)))
 
-(method Throwable .toString ()
+(method Exception .toString ()
   ; Returns a String representing the receiver.
   (let (class-name (symbol->string (&class self)) msg (.message self))
     (if msg (concat class-name " -- " msg)
         class-name)))
 
-(method Throwable .stackTrace ()
+(method Exception .stackTrace ()
   (&stack-trace self))
 
-(method Throwable .printStackTrace ()
+(method Exception .printStackTrace ()
   (write-string (.toString self))
   (write-new-line)
   (dolist (x (.stackTrace self))
     (write-string "\tat: ") (print x)))
 
-(method Throwable .printSimpleStackTrace ()
-  (write-string (.toString self))
-  (write-new-line)
-  (for (i 0 st (.stackTrace self)) st (<- i (++ i) st (cdr st))
-    (if (< i 15) (begin (write-string "\tat: ")
-                        (simple-print (car st))
-                        (write-new-line))
-        (begin (write-string "\t\t...\n")
-               (break)))))
-
-(class Error (Throwable)
-  ; An Error is a subclass of Throwable that indicates serious problems that a reasonable application should not try to catch.
-  ; Most such errors are abnormal conditions. 
+(class SystemExit (Exception)
+  ; Dispatched to shut down the Paren system.
+  ; In principle, this exception is not caught.
   )
 
-(class Exception (Throwable)
-  ; The class Exception and its subclasses are a form of Throwable that indicates conditions that a reasonable application might want to catch.
+(class Interrrupt (Exception)
+  ; Dispatched when the user presses the interrupt key (usually Ctrl-c or Delete).
   )
 
-(class IllegalArgumentException (Exception)
-  ; Thrown to indicate that a method has been passed an illegal or inappropriate argument.
+(class Error (Exception)
   )
 
-(class IllegalStateException (Exception)
-  ; Signals that a method has been invoked at an illegal or inappropriate time.
-  ; In other words, application is not in an appropriate state for the requested operation.
-  )
-
-(class UnimplementedException (Exception)
-  ; Exception that thrown when an abstract method is not implemented.
-  )
-
-(class QuitSignal (Error)
-  ; Error that terminates the system.
-  ; In principle, this Error is not caught and terminates Paren system itself.
+(class NotImplementedError (Error)
   )
 
 ;; stream I/O
@@ -1407,18 +1348,17 @@
 (method Stream .readByte (:rest args)
   ; Read 1byte from stream.
   ; Returns -1 when the stream reaches the end.
-  (throw (.new UnimplementedException)))
+  (throw (.new NotImplementedError)))
 
 (method Stream .writeByte (:rest args)
   ; Write 1byte to stream.
-  (throw (.new UnimplementedException)))
+  (throw (.new NotImplementedError)))
 
 (method Stream .readChar ()
   ; Read 1character from stream.
   (let (encoding (dynamic $external-encoding))
     (if (same? encoding :UTF-8)
-        (let (utf8-exception (.message (.new IllegalStateException)
-                                       "illegal UTF-8")
+        (let (utf8-exception (.message (.new Error) "illegal UTF-8")
               trail? (lambda (b) (= (bit-and b 0xC0) 0x80))
               ms (.new MemoryStream)
               b1 (.readByte self) b2 nil b3 nil b4 nil)
@@ -1449,15 +1389,14 @@
                                        (.writeByte ms b1) b2) b3) b4))
               (throw utf8-exception))
           (.toString ms))
-        (throw (.message (.new IllegalStateException) "unsupport encoding")))))
+        (throw (.message (.new NotImplementedError) "unsupport encoding")))))
 
 (method Stream .readLine (:rest args)
   ; Read line.
-  (throw (.new UnimplementedException)))
+  (throw (.new NotImplementedError)))
 
 (method Stream .writeString (s)
   ; Write string to stream.
-  (ensure-argument (string? s))
   (let (ba (->byte-array s))
     (dotimes (i (length ba))
       (.writeByte self (nth ba i))))
@@ -1465,11 +1404,11 @@
 
 (method Stream .seek (:rest args)
   ; Move the read position on the stream to the specified offset.
-  (throw (.new UnimplementedException)))
+  (throw (.new NotImplementedError)))
 
 (method Stream .tell (:rest args)
   ; Returns the read position on the stream as a byte offset from the beginning.
-  (throw (.new UnimplementedException)))
+  (throw (.new NotImplementedError)))
 
 (class MemoryStream (Stream)
   ; A stream whose contents are held in memory.
@@ -1484,7 +1423,6 @@
   self)
 
 (method MemoryStream _extend (size)
-  (ensure-argument (integer? size))
   (let (req (+ (&wrpos self) size) new-buf nil)
     (while (< (&buf-size self) req)
       (&buf-size self (* (&buf-size self) 2)))
@@ -1494,7 +1432,6 @@
   self)
 
 (method MemoryStream .writeByte (byte)
-  (ensure-argument (byte? byte))
   (let (wrpos (&wrpos self))
     (unless (< wrpos (&buf-size self)) (_extend self 1))
     (nth! (&buf self) wrpos byte)
@@ -1507,7 +1444,7 @@
                 (&rdpos self (++ rdpos))))))
 
 (method MemoryStream .seek (offset)
-  (ensure-argument (<= 0 offset (&wrpos self)))
+  (if (not (<= 0 offset (&wrpos self))) (error "index outof bound"))
   (&rdpos self offset))
 
 (method MemoryStream .tell (offset)
@@ -1530,7 +1467,6 @@
   fp)
 
 (method FileStream .init (:key fp)
-  (ensure-argument fp)
   (&fp self fp))
 
 (method FileStream .readByte ()
@@ -1540,11 +1476,9 @@
   (fgets (&fp self)))
 
 (method FileStream .writeByte (byte)
-  (ensure-argument (byte? byte))
   (fputc byte (&fp self)))
 
 (method FileStream .writeString(o)
-  (ensure-argument (or (byte-array? o) (string? o)))
   (let (o (->byte-array o))
     (fwrite o 0 (length o) (&fp self))))
 
@@ -1573,7 +1507,6 @@
 
 (method Path .resolve (:rest body)
   ; Resolve the given path against this path.
-  (ensure-argument (all-satisfy? body string?))
   (&files (.new Path) (concat (&files self)
                               (string->list (reduce body concat) "/"))))
 
@@ -1605,101 +1538,69 @@
   ; The file size cannot be reduced.
   (_open self 3))
 
-(class ByteAheadReader ()
+(class AheadReader ()
   ; A one-character look-ahead reader.
   ; While prefetching one character at a time from a character string or Reader, if necessary, cut out a part as a token.
   ; Can be used as a syllable reader or lexical analyzer.
   stream next buf)
 
-(method ByteAheadReader .init (:key string stream)
-  (ensure-argument (or (nil? string) (string? string))
-                   (or (nil? stream) (is-a? stream Stream)))
+(method AheadReader .init (:key string stream)
   (when string
     (<- stream (.writeString (.new MemoryStream) string)))
-  (&stream self (or stream (dynamic $stdin)))
+  (if (not (is-a? (<- stream (or stream (dynamic $stdin))) Stream))
+      (error "require instance of Stream class"))
+  (&stream self stream)
   (&next self (.readByte stream))
   (&buf self (.new MemoryStream))
   self)
 
-(method ByteAheadReader .next ()
+(method AheadReader .next ()
   ; Returns a pre-read Char type character.
   (&next self))
 
-(method ByteAheadReader .eof? ()
+(method AheadReader .eof? ()
   ; Returns true if eof reached.
   (= (&next self) -1))
 
-(method ByteAheadReader .skip ()
+(method AheadReader .skip ()
   ; Skip next character and returns it.
-  (if (.eof? self) (throw (.message (.new IllegalStateException) "EOF reached"))
-      (begin0 (&next self)
-              (&next self (.readByte (&stream self))))))
+  (if (.eof? self) (error "EOF reached"))
+  (begin0 (&next self)
+          (&next self (.readByte (&stream self)))))
 
-(method ByteAheadReader .get ()
+(method AheadReader .get ()
   ; Append next character to token and returns it.
   (let (c (.skip self))
     (.put self c)
     c))
 
-(method ByteAheadReader .put (b)
+(method AheadReader .put (b)
   ; Put the specified byte b to the end of the token regardless of the stream.
-  (ensure-argument (byte? b))
   (.writeByte (&buf self) b))
 
-(method ByteAheadReader .token ()
+(method AheadReader .token ()
   ; Returns the token string currently cut out.
   (.toString (&buf self)))
 
-(method ByteAheadReader .reset ()
+(method AheadReader .reset ()
   ; Reset token and returns self.
   (.reset (&buf self))
   self)
 
-(method ByteAheadReader .skipSpace ()
+(method AheadReader .skipSpace ()
   ; Skip as long as a space character follows.
   ; Returns self.
   (while (and (not (.eof? self)) (ascii-space? (&next self)))
     (.skip self))
   self)
 
-(class AheadReader (ByteAheadReader))
-
-(method AheadReader .init (:key string stream)
-  (ensure-argument (or (nil? string) (string? string))
-                   (or (nil? stream) (is-a? stream Stream)))
-  (when string
-    (<- stream (.writeString (.new MemoryStream) string)))
-  (&stream self (or stream (dynamic $stdin)))
-  (&next self (.readChar stream))
-  (&buf self (.new MemoryStream))
-  self)
-
-(method AheadReader .eof? ()
-  (same? (&next self) :EOF))
-
-(method AheadReader .skip ()
-  (begin0 (&next self)
-          (&next self (.readChar (&stream self)))))
-
-(method AheadReader .put (s)
-  (ensure-argument (string? s))
-  (.writeString (&buf self) s))
-
-(method AheadReader .skipSpace ()
-  (while (and (not (.eof? self))
-              (find '(" " "\r" "\n") (&next self) :test string=))
-    (.skip self))
-  self)
-
 ; Paren reader
 
-(class ParenLexer (ByteAheadReader))
+(class ParenLexer (AheadReader))
 
 (method ParenLexer .lex ()
   ; Returns (token-type [token]).
   (let (space? (lambda (x) (and (byte? x) (ascii-space? x)))
-        raise (lambda (message)
-                (throw (.message (.new IllegalStateException) message)))
         identifierLead? (lambda ()
                           (let (c (&next self))
                             (or (find '(0x21 0x24 0x25 0x26 0x2A 0x2B 0x2D 0x2F
@@ -1712,7 +1613,7 @@
         lex-string (lambda ()
                      (.skip self)
                      (while (/= 0x22 (&next self))
-                       (if (.eof? self) (raise "string not closed")
+                       (if (.eof? self) (error "string not closed")
                            (/= (&next self) 0x5C) (.get self)
                            (begin (.skip self)
                                   (let (c (.skip self))
@@ -1786,7 +1687,7 @@
                     (or sign (identifierLead?)) (begin
                                                   (if sign (.put self sign))
                                                   (list :symbol (lex-symbol)))
-                    (raise (concat (number->string (&next self))
+                    (error (concat (number->string (&next self))
                                     " illegal char"))))))
     (lex)))
 
@@ -1813,8 +1714,7 @@
                           (same? token-type :keyword)
                           (same? token-type :string)
                           (same? token-type :number)) token
-                      (throw (.message (.new IllegalStateException)
-                                       "syntax error"))))
+                      (error "syntax error")))
         parse-list (lambda ()
                      (scan)
                      (if (same? token-type :close-paren) nil
@@ -1824,38 +1724,32 @@
 (function read-byte (:opt stream)
   ; Read 1byte from the specified stream.
   ; Returns -1 when the stream reaches the end.
-  (if stream (ensure-argument (is-a? stream Stream)))
   (let (stream (or stream (dynamic $stdin)))
     (.readByte stream)))
 
 (function read-char (:opt stream)
   ; Read 1character from the specified stream.
-  (if stream (ensure-argument (is-a? stream Stream)))
   (let (stream (or stream (dynamic $stdin)))
     (.readChar stream)))
 
 (function read-line (:opt stream)
   ; Read line from the specified stream.
-  (if stream (ensure-argument (is-a? stream Stream)))
   (let (stream (or stream (dynamic $stdin)))
     (.readLine stream)))
 
 (function write-byte (byte :opt stream)
   ; Write 1byte to the specified stream.
   ; Returns byte.
-  (if stream (ensure-argument (is-a? stream Stream)))
   (let (stream (or stream (dynamic $stdout)))
     (.writeByte stream byte)
     byte))
 
 (function write-new-line (:opt stream)
-  (if stream (ensure-argument (is-a? stream Stream)))
   (let (stream (or stream (dynamic $stdout)))
     (write-byte 0x0A stream)))
 
 (function write-string (s :opt stream)
   ; Write the specified stirng s to the specified stream.
-  (if stream (ensure-argument (is-a? stream Stream)))
   (let (stream (or stream (dynamic $stdout)))
     (.writeString stream s)))
 
@@ -1875,10 +1769,10 @@
           (list '.toString ms))))
 
 (function with-open-mode (sym gsym path mode body)
-  (let (path (list if (list string? path) (list '.init '(.new Path) path)
-                   (list and (list 'object? path)
-                         (list 'is-a? path 'Path)) path
-                   (list ensure-argument nil)))
+  (list let (list path (list if
+                             (list string? path) (list '.init '(.new Path) path)
+                             (list 'and (list 'object? path)
+                                   (list 'is-a? path 'Path)) path))
     (list let (list gsym nil)
           (list unwind-protect
                 (cons let (cons (list sym (list mode path))
@@ -2006,15 +1900,15 @@
   ; Executed when there is no command line argument when paren starts.
   (with-gensyms (g)
     (while true
-      (catch ((QuitSignal (e) (break))
-              (Exception (e) (.printSimpleStackTrace e)))
+      (catch ((SystemExit (e) (break))
+              (Error (e) (.printStackTrace e)))
         (write-string ") ")
         (if (same? (<- g (read)) :EOF) (break))
         (print (eval g))))))
 
 (function quit ()
   ; Quit the system.
-  (throw (.new QuitSignal)))
+  (throw (.new SystemExit)))
 
 (function load (path)
   ; Load the specified file.
@@ -2035,8 +1929,8 @@
   ; Start paren shell.
   (let (s nil)
     (while true
-      (catch ((QuitSignal (e) (break))
-              (Exception (e) (.printSimpleStackTrace e)))
+      (catch ((SystemExit (e) (break))
+              (Error (e) (.printStackTrace e)))
         (write-string (.toString $paren-home))
         (write-string "> ")
         (let (expr nil)

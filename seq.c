@@ -161,30 +161,30 @@ DEFUN(barray_copy)
   if (!ip_ensure_arguments(argc, 5, 5)) return FALSE;
   from = argv->cons.car;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &fp)) {
-    ip_mark_exception("source array index must be integer");
+    ip_mark_error("source array index must be integer");
     return FALSE;
   }
   to = (argv = argv->cons.cdr)->cons.car;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &tp)) {
-    ip_mark_exception("destination array index must be integer");
+    ip_mark_error("destination array index must be integer");
     return FALSE;
   }
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) {
-    ip_mark_exception("copy size must be integer");
+    ip_mark_error("copy size must be integer");
     return FALSE;
   }
   if (!type_p(to, BARRAY))
-    ip_mark_exception("destination must be byte-array");
+    ip_mark_error("destination must be byte-array");
   else if (fp < 0)
-    ip_mark_exception("source array index must be positive");
+    ip_mark_error("source array index must be positive");
   else if (tp < 0)
-    ip_mark_exception("destination array index must be positive");
+    ip_mark_error("destination array index must be positive");
   else if (size <= 0)
-    ip_mark_exception("copy size must be positive");
+    ip_mark_error("copy size must be positive");
   else if ((fp + size) > from->barray.size)
-    ip_mark_exception("source array index out of bounds exception");
+    ip_mark_error("source array index out of bounds exception");
   else if ((tp + size) > to->barray.size)
-    ip_mark_exception("destination array index out of bounds exception");
+    ip_mark_error("destination array index out of bounds exception");
   else {
     memmove(to->barray.elt + tp, from->barray.elt + fp, size);
     *result = to;
@@ -337,7 +337,7 @@ static int char_size0(object o, int start, int *result)
 static int char_size(object o, int start, int *result)
 {
   if (char_size0(o, start, result)) return TRUE;
-  ip_mark_exception("illegal utf8 string");
+  ip_mark_error("illegal utf8 string");
   return FALSE;
 }
 

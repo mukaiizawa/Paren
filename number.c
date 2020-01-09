@@ -13,17 +13,17 @@
 
 static void mark_required_number(void)
 {
-  ip_mark_exception("required number");
+  ip_mark_error("required number");
 }
 
 static void mark_numeric_over_flow(void)
 {
-  ip_mark_exception("numeric overflow");
+  ip_mark_error("numeric overflow");
 }
 
 static void mark_division_by_zero(void)
 {
-  ip_mark_exception("division by zero");
+  ip_mark_error("division by zero");
 }
 
 DEFUN(number_p)
