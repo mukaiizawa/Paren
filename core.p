@@ -970,6 +970,8 @@
 (function splay-new (:opt (comparator
                             (lambda (k1 k2)
                               (- (address k1) (address k2)))))
+  ; Returns spray tree.
+  ; Be careful when handling because it will be a circular list.
   (cons comparator $splay-nil))
 
 (function splay-top (splay)
@@ -1082,8 +1084,9 @@
                (splay-node-val top)))))
 
 (global-symbol $splay-nil (splay-node-new nil nil nil nil)
-               ; End node of splay.
-               )
+  ; End node of splay.
+  ; Be careful when handling because it will be a circular list.
+  )
 
 ; kernel
 
@@ -1099,7 +1102,9 @@
 
 ; Paren object system
 
-(<- $class (splay-new))
+(global-symbol $class (splay-new)
+  ; List of defined classes.
+  )
 
 (function find-class (cls-sym)
   (let (cls (splay-find $class cls-sym))
@@ -1953,41 +1958,41 @@
 ; global symbol
 
 (global-symbol $import '(:core)
-               ; List of imported modules.
-               ; Referenced and updated when calling the import function.
-               ; Do not update directly.
-               )
+  ; List of imported modules.
+  ; Referenced and updated when calling the import function.
+  ; Do not update directly.
+  )
 
 (global-symbol $paren-home (.init (.new Path) $paren-home)
-               ; System directory.
-               ; Holds system files.
-               )
+  ; System directory.
+  ; Holds system files.
+  )
 
 (global-symbol $stdin (.init (.new FileStream) :fp (fp 0))
-               ; File stream object holding the standard input.
-               )
+  ; File stream object holding the standard input.
+  )
 
 (global-symbol $stdout (.init (.new FileStream) :fp (fp 1))
-               ; File stream object holding the standard ouput.
-               )
+  ; File stream object holding the standard ouput.
+  )
 
 (global-symbol $os $os
-               ; Host os.
-               ; Determined by compile-time arguments.
-               ; The values to be set are as follows.
-               ; - :Windows
-               ; - :Linux
-               ; - :Android
-               ; - :Mac
-               )
+  ; Host os.
+  ; Determined by compile-time arguments.
+  ; The values to be set are as follows.
+  ; - :Windows
+  ; - :Linux
+  ; - :Android
+  ; - :Mac
+  )
 
 (global-symbol $external-encoding :UTF-8
-               ; Input / output encoding.
-               ; Currently supported encodings are as follows.
-               ; - :UTF-8
-               ; Currently dummy encodings are as follows.
-               ; - :CP932
-               ; A dummy encoding is an encoding for which character handling is not properly implemented.
-               )
+  ; Input / output encoding.
+  ; Currently supported encodings are as follows.
+  ; - :UTF-8
+  ; Currently dummy encodings are as follows.
+  ; - :CP932
+  ; A dummy encoding is an encoding for which character handling is not properly implemented.
+  )
 
 (boot $args)
