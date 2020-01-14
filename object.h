@@ -93,13 +93,19 @@ extern object object_rest;
 extern object object_quote;
 extern object object_bytes[];
 extern object object_toplevel;
-extern object object_class;
-extern object object_message;
 extern object object_stack_trace;
-extern object object_Error;
-extern object object_Exception;
 extern object object_boot;
 extern object object_splay_nil;
+
+extern object object_Class;
+extern object object_Error;
+
+extern object object_class;
+extern object object_symbol;
+extern object object_super;
+extern object object_features;
+extern object object_fields;
+extern object object_message;
 
 extern int object_byte_size(object o);
 extern char *object_describe(object o, char *buf);

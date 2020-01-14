@@ -229,9 +229,10 @@ object gc_new_splay_node(object k, object v, object l, object r)
   return o;
 }
 
-object gc_new_throwable(object e, char *msg, object call_stack)
+object gc_new_error(char *msg, object call_stack)
 {
-  return gc_new_cons(object_class, gc_new_cons(e, gc_new_cons(object_message
+  return gc_new_cons(object_class, gc_new_cons(object_Error
+        , gc_new_cons(object_message
           , gc_new_cons(gc_new_barray_from(STRING, msg, strlen(msg))
             , gc_new_cons(object_stack_trace
               , gc_new_cons(call_stack , object_nil))))));

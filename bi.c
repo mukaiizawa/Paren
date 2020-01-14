@@ -64,14 +64,14 @@ DEFUN(gensym)
 
 static char *symbol_name_map[] = {
   // ip/DEFSP
-  "basic_catch", "basic-catch",
-  "basic_throw", "basic-throw",
   "symbol_bind", "<-",
   "unwind_protect", "unwind-protect",
   // ip/DEFUN
   "bound_p", "bound?",
   "call_stack", "call-stack",
   "expand_macro", "expand-macro",
+  "object_p", "object?",
+  "is_a_p", "is-a?",
   // bi
   "samep", "same?",
   // sequence

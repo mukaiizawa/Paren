@@ -105,18 +105,20 @@
           expr2
           ...))
 
-(special-operator basic-throw
-  ; Special operator basic-throw provide a mechanism to control global escape.
-  ; By using special operator basic-catch, it is possible to catch the occurrence of exception during evaluation.
-  ; Since paren often uses the throw macro wrapped in the object system, it is not used directly.
-  (basic-throw expr))
+(special-operator throw
+  ; Special operator throw provide a mechanism to control global escape.
+  ; By using special operator catch, it is possible to catch the occurrence of exception during evaluation.
+  ; The throwing object must be an instance of the Paren object system.
+  (throw expr))
 
-(special-operator basic-catch
-  ; Special operator basic-catch evaluate expr in order.
-  ; If an error is thrown by the basic-throw operator during expr evaluation, control is transferred to the handler and processing is performed.
+(special-operator catch
+  ; Special operator catch evaluate expr in order.
+  ; If an error is thrown by the throw operator during expr evaluation, control is transferred to the handler and processing is performed.
   ; Handler must be a function with one required parameter.
   ; Since paren often uses the catch macro wrapped in the object system, it is not used directly.
-  (basic-catch handler
+  (catch (Error1 handler1
+          Error2 handler2
+          ...)
     expr1
     expr2
     ...))
@@ -331,7 +333,7 @@
   ; Not executed if not in debug mode.
   ; It is used when an argument or an internal state is abnormal, or a process that can not be reached is executed.
   (list assert (list (list lambda '()
-                           (list basic-catch '(lambda (e) (return true))
+                           (list catch '(Error (lambda (e) (return true)))
                                  expr
                                  '(return nil))
                            true))))
@@ -339,7 +341,7 @@
 ; fundamental function
 
 (macro function (name args :rest body)
-  (if (bound? name) (error (concat name " already bound"))
+  (if (bound? name) (error (concat (symbol->string name) " already bound"))
       (list <- name (cons lambda (cons args (expand-macro-all body))))))
 
 (builtin-function same? (x y)
@@ -1170,7 +1172,8 @@
   ; Create class the specified cls-sym.
   (let (Object? (same? cls-sym 'Object))
     (if (not (all-satisfy? fields symbol?)) (error "require symbol")
-        (bound? cls-sym) (error (concat name " already bound")))
+        (bound? cls-sym) (error (concat (symbol->string cls-sym)
+                                        " already bound")))
     (list begin0
           (list quote cls-sym)
           (list <- cls-sym (list quote (list :class 'Class
@@ -1187,62 +1190,23 @@
         quoted-global-sym (list quote global-sym)
         method-lambda (cons lambda (cons (cons 'self args) body)))
     (if (not (find-class cls-sym)) (error "class not found")
-        (bound? global-sym) (error (concat name " already bound")))
+        (bound? global-sym) (error (concat (symbol->string global-sym)
+                                           " already bound")))
     (list begin0
           quoted-global-sym
           (list 'make-method-dispatcher method-sym)
           (list <- global-sym method-lambda))))
 
-(macro throw (o :opt message)
-  (with-gensyms (e)
-    (list let (list e o)
-          (list if (list 'or (list not (list 'object? o))
-                         (list not (list 'is-a? e 'Exception)))
-                '(basic-throw (.message (.new Error)
-                                        "require instance of Exception class")))
-          (list '&stack-trace e (list 'call-stack))
-          (list basic-throw o))))
-
-(macro catch ((:rest handlers) :rest body)
-  ; (catch ((Error1 (e) ...)
-  ;         (Error2 (e) ...)
-  ;         (Error3 (e) ...))
-  ;   ...)
-  ; (basic-catch (lambda (gsym)
-  ;                (if (is-a gsym Error1) ((lambda (e) ...) gsym)
-  ;                    (is-a gsym Error2) ((lambda (e) ...) gsym)
-  ;                    (is-a gsym Error3) ((lambda (e) ...) gsym)
-  ;                    (throw gsym)))
-  ;              ...)
-  (with-gensyms (gargs)
-    (let (if-clause nil)
-      (push! if-clause if)
-      (dolist (h handlers)
-        (push! if-clause (list 'is-a? gargs (car h)))
-        (push! if-clause (list (cons lambda (cons (cadr h) (cddr h))) gargs)))
-      (push! if-clause (list 'throw gargs))
-      (list basic-catch
-            (list lambda (list gargs)
-                  (list begin (reverse! if-clause)))
-            (cons begin body)))))
-
 (function error (:opt (message ""))
   (throw (.message (.new Error) message)))
 
-(function object? (x)
+(builtin-function object? (x)
   ; Returns true if the specified x is object.
-  (and (list? x) (same? (car x) :class)))
+  )
 
-(function is-a? (o cls)
+(builtin-function is-a? (o cls)
   ; Returns true if the specified object o regarded as the specified class cls's instance.
-  (if (or (not (object? o))
-          (not (object? cls))
-          (different? (cadr cls) 'Class))
-      (throw "illegal argument"))
-  (let (o-cls-sym (cadr o) cls-sym (assoc cls :symbol))
-    (while o-cls-sym
-      (if (same? o-cls-sym cls-sym) (return true)
-          (<- o-cls-sym (assoc (find-class o-cls-sym) :super))))))
+  )
 
 (class Object ()
   ; Object is a class that is the basis of all class hierarchies.
@@ -1777,7 +1741,7 @@
   (list let (list path (list if
                              (list string? path) (list '.init '(.new Path) path)
                              (list 'and (list 'object? path)
-                                   (list 'is-a? path 'Path)) path))
+                                   (list is-a? path 'Path)) path))
     (list let (list gsym nil)
           (list unwind-protect
                 (cons let (cons (list sym (list mode path))
@@ -1905,8 +1869,8 @@
   ; Executed when there is no command line argument when paren starts.
   (with-gensyms (g)
     (while true
-      (catch ((SystemExit (e) (break))
-              (Error (e) (.printStackTrace e)))
+      (catch (SystemExit (lambda (e) (break))
+              Error (lambda (e) (.printStackTrace e)))
         (write-string ") ")
         (if (same? (<- g (read)) :EOF) (break))
         (print (eval g))))))
@@ -1934,8 +1898,8 @@
   ; Start paren shell.
   (let (s nil)
     (while true
-      (catch ((SystemExit (e) (break))
-              (Error (e) (.printStackTrace e)))
+      (catch (SystemExit (lambda (e) (break))
+              Error (lambda (e) (.printStackTrace e)))
         (write-string (.toString $paren-home))
         (write-string "> ")
         (let (expr nil)

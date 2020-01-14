@@ -23,7 +23,6 @@ static long cycle;
 
 int ip_trap_code;
 static char *error_msg;
-static char *error_msg;
 
 void ip_mark_error(char *msg)
 {
@@ -72,7 +71,7 @@ int ip_ensure_type(int type, object o, object *result)
   return TRUE;
 }
 
-STATIC void mark_illegal_args_exception()
+STATIC void mark_illegal_args()
 {
   ip_mark_error("illegal parameter list");
 }
@@ -170,12 +169,12 @@ static struct xarray fb;
 #define   APPLY_BUILTIN_INST       0x00000013
 #define   ASSERT_INST              0x00000022
 #define   BIND_INST                0x00000033
-#define   BIND_PROPAGATION_INST    0x00000043
-#define   EVAL_INST                0x00000052
-#define   EVAL_ARGS_INST           0x00000064
-#define   EVAL_SEQUENTIAL_INST     0x00000073
-#define   FENCE_INST               0x00000082
-#define   FETCH_HANDLER_INST       0x00000093
+#define   BIND_HANDLER_INST        0x00000043
+#define   BIND_PROPAGATION_INST    0x00000053
+#define   EVAL_INST                0x00000062
+#define   EVAL_ARGS_INST           0x00000074
+#define   EVAL_SEQUENTIAL_INST     0x00000083
+#define   FENCE_INST               0x00000092
 #define   FETCH_OPERATOR_INST      0x00000103
 #define   GOTO_INST                0x00000112
 #define   HANDLER_INST             0x00000123
@@ -187,7 +186,6 @@ static struct xarray fb;
 #define   THROW_INST               0x00000182
 #define   TRACE_INST               0x00000193
 #define   UNWIND_PROTECT_INST      0x00000203
-
 
 char *inst_name(int inst)
 {
@@ -201,7 +199,6 @@ char *inst_name(int inst)
     case EVAL_ARGS_INST: return "EVAL_ARGS_INST";
     case EVAL_SEQUENTIAL_INST: return "EVAL_SEQUENTIAL_INST";
     case FENCE_INST: return "FENCE_INST";
-    case FETCH_HANDLER_INST: return "FETCH_HANDLER_INST";
     case FETCH_OPERATOR_INST: return "FETCH_OPERATOR_INST";
     case GOTO_INST: return "GOTO_INST";
     case HANDLER_INST: return "HANDLER_INST";
@@ -244,6 +241,12 @@ char *inst_name(int inst)
   xarray_add(&fb, o); \
   fb_gen0(inst); \
 }
+#define fb_gen2(inst, o, p) \
+{ \
+  xarray_add(&fb, p); \
+  xarray_add(&fb, o); \
+  fb_gen0(inst); \
+}
 
 STATIC void gen(int inst)
 {
@@ -260,22 +263,32 @@ STATIC void pop_frame(void)
   ip = prev_ip(ip);
 }
 
+STATIC void fb_reset(void)
+{
+  xarray_reset(&fb);
+}
+
 STATIC void fb_flush(void)
 {
   int i;
   object o;
   i = fb.size - 1;
   while (i > 0) {
-    o = fb.elt[i];
+    o = fb.elt[i--];
     gen(sint_val(o));
-    i--;
     switch (frame_size(sint_val(o))) {
-      case 2: break;
-      case 3: o = fb.elt[i]; set_frame_var(ip, 0, o); i--; break;
+      case 2:
+        break;
+      case 3:
+        set_frame_var(ip, 0, fb.elt[i--]);
+        break;
+      case 4:
+        set_frame_var(ip, 0, fb.elt[i--]);
+        set_frame_var(ip, 1, fb.elt[i--]);
+        break;
       default: xassert(FALSE); break;
     }
   }
-  xarray_reset(&fb);
 }
 
 STATIC void pop_swith_env_frame(void)
@@ -381,7 +394,7 @@ STATIC void parse_lambda_list(object env, object params, object args)
       fb_gen1(QUOTE_INST, args->cons.car);
       fb_gen1(BIND_INST, params->cons.car);
     } else if (!list_p(args->cons.car)) {
-      mark_illegal_args_exception();
+      mark_illegal_args();
       return;
     } else {
       parse_lambda_list(env, params->cons.car, args->cons.car);
@@ -486,6 +499,7 @@ STATIC void pop_apply_frame(void)
   object operator;
   operator = get_frame_var(ip, 0);
   pop_frame();
+  fb_reset();
   gen_switch_env_frame(operator->lambda.env);
   parse_lambda_list(reg[1], operator->lambda.params, reg[0]);
   gen_eval_sequential_frame(operator->lambda.body);
@@ -513,6 +527,30 @@ STATIC void pop_bind_frame(void)
 {
   symbol_bind(reg[1], get_frame_var(ip, 0), reg[0]);
   pop_frame();
+}
+
+STATIC void pop_bind_handler_frame(void)
+{
+  int i;
+  object cls, handler, handlers;
+  handler = reg[0];
+  cls = get_frame_var(ip, 0);
+  pop_frame();
+  if (!type_p(handler, LAMBDA)) {
+    ip_mark_error("required handler");
+    return;
+  }
+  if (object_list_len(handler->lambda.params) != 1) {
+    ip_mark_error("handler must be one required parameter");
+    return;
+  }
+  for (i = ip; i > 0; i = prev_ip(i)) {
+    if (sint_val(fs[i]) == HANDLER_INST) {
+      handlers = get_frame_var(i, 0);
+      splay_replace(handlers->env.binding, cls, handler);
+      return;
+    }
+  }
 }
 
 STATIC void pop_bind_propagation_frame(void)
@@ -598,24 +636,6 @@ STATIC void pop_goto_frame(void)
     o = o->cons.cdr;
   }
   gen_eval_sequential_frame(o);
-}
-
-STATIC void pop_fetch_handler_frame(void)
-{
-  object handler, body;
-  handler = reg[0];
-  body = get_frame_var(ip, 0);
-  pop_frame();
-  if (!type_p(handler, LAMBDA)) {
-    ip_mark_error("require exception handler");
-    return;
-  }
-  if (object_list_len(handler->lambda.params) != 1) {
-    ip_mark_error("handler parameter must be one required parameter");
-    return;
-  }
-  gen1(HANDLER_INST, handler);
-  gen_eval_sequential_frame(body);
 }
 
 STATIC void pop_fetch_operator_frame(void)
@@ -728,12 +748,19 @@ STATIC void exit1(void)
   exit(1);
 }
 
+static int object_p(object o);
+
 STATIC void pop_throw_frame(void)
 {
   int i;
-  object body, handler;
+  object body, cls, handlers, handler;
   i = ip;
   pop_frame();
+  if (!object_p(reg[0])) {
+    ip_mark_error("require object");
+    return;
+  }
+  cls = reg[0]->cons.cdr->cons.car;
   while (TRUE) {
     if (ip < 0) {
       ip = i;
@@ -748,9 +775,9 @@ STATIC void pop_throw_frame(void)
       return;
     }
     if (top_inst() == HANDLER_INST) {
-      handler = get_frame_var(ip, 0);
+      handlers = get_frame_var(ip, 0);
       pop_frame();
-      break;
+      if ((handler = splay_find(handlers->env.binding, cls)) != NULL) break;
     }
     pop_rewinding();
   }
@@ -758,7 +785,171 @@ STATIC void pop_throw_frame(void)
   reg[0] = gc_new_cons(reg[0], object_nil);
 }
 
-// special forms
+// built in functions
+
+DEFUN(eval)
+{
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  gen_eval_frame(argv->cons.car);
+  return TRUE;
+}
+
+DEFUN(apply)
+{
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  switch (type(argv->cons.car)) {
+    case FUNCITON:
+      gen1(APPLY_BUILTIN_INST, argv->cons.car);
+      reg[0] = argv->cons.cdr->cons.car;
+      return TRUE;
+    case LAMBDA:
+      gen_apply_frame(argv->cons.car);
+      reg[0] = argv->cons.cdr->cons.car;
+      return TRUE;
+    default: break;
+  }
+  ip_mark_error("requires function or symbol(built in function) to apply");
+  return FALSE;
+}
+
+DEFUN(expand_macro)
+{
+  object f, args;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  reg[0] = argv->cons.car;
+  if (!type_p(reg[0], CONS)) return TRUE;
+  f = reg[0]->cons.car;
+  args = reg[0]->cons.cdr;
+  if (!type_p(f, SYMBOL)) return TRUE;
+  if ((f = symbol_find_propagation(reg[1], f)) == NULL) return TRUE;
+  if (!type_p(f, MACRO)) return TRUE;
+  gen_apply_frame(f);
+  reg[0] = args;
+  return TRUE;
+}
+
+DEFUN(bound_p)
+{
+  object s;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!type_p((s = argv->cons.car), SYMBOL)) {
+    ip_mark_error("required symbol");
+    return FALSE;
+  }
+  reg[0] = object_bool(symbol_find_propagation(reg[1], s) != NULL);
+  return TRUE;
+}
+
+DEFUN(call_stack)
+{
+  if (!ip_ensure_no_args(argc)) return FALSE;
+  reg[0] = call_stack();
+  return TRUE;
+}
+
+STATIC void trap(void)
+{
+  switch (ip_trap_code) {
+    case TRAP_ERROR:
+      xassert(error_msg != NULL);
+      gen0(THROW_INST);
+      reg[0] = gc_new_error(error_msg, call_stack());
+      ip_trap_code = TRAP_NONE;
+      error_msg = NULL;
+      break;
+    default:
+      ip_trap_code = TRAP_NONE;
+      break;
+  }
+}
+
+// paren object system.
+
+#define class_sym(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.car)
+#define class_super(cls) \
+  ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.car)
+
+static int object_class_p(object o)
+{
+  if (!type_p(o, CONS)) return FALSE;
+  if (o->cons.car != object_class) return FALSE;
+  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (o->cons.car != object_Class) return FALSE;
+  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (o->cons.car != object_symbol) return FALSE;
+  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (o->cons.car != object_super) return FALSE;
+  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (o->cons.car != object_features) return FALSE;
+  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (o->cons.car != object_fields) return FALSE;
+  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  return o->cons.cdr == object_nil;
+}
+
+static int find_class(object sym, object *result)
+{
+  if (!type_p(sym, SYMBOL)) return FALSE;
+  if ((*result = symbol_find_propagation(reg[1], sym)) == NULL) return FALSE;
+  return object_class_p(*result);
+}
+
+static int object_p(object o)
+{
+  if (!type_p(o, CONS)) return FALSE;
+  if (o->cons.car != object_class) return FALSE;
+  o = o->cons.cdr;
+  while (TRUE) {
+    if (!type_p(o, CONS)) return FALSE;
+    if (o->cons.cdr == object_nil) return TRUE;
+    o = o->cons.cdr;
+    if (!type_p(o, CONS)) return FALSE;
+    if (!type_p(o->cons.car, KEYWORD)) return FALSE;
+    o = o->cons.cdr;
+  }
+}
+
+DEFUN(object_p)
+{
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  reg[0] = object_bool(object_p(argv->cons.car));
+  return TRUE;
+}
+
+DEFUN(is_a_p)
+{
+  object o, os, p, ps;
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!object_p(o = argv->cons.car)) {
+    ip_mark_error("require object");
+    return FALSE;
+  }
+  os = o->cons.cdr->cons.car;
+  if (!find_class(os, &o)) return FALSE;
+  if (!object_class_p(p = argv->cons.cdr->cons.car)) {
+    ip_mark_error("require Class instance");
+    return FALSE;
+  }
+  ps = class_sym(p);
+  reg[0] = object_nil;
+  while (TRUE) {
+    if (os == ps) {
+      reg[0] = object_true;
+      break;
+    }
+    os = class_super(o);
+    if (os == object_nil) break;
+    if (!find_class(os, &o)) return FALSE;
+  }
+  return TRUE;
+}
+
+
+
+// special operator
 
 /*
  * <lambda_list> ::= [<required_params>] 
@@ -831,6 +1022,7 @@ DEFSP(let)
   }
   if (args != object_nil) gen_switch_env_frame(reg[1]);
   gen_eval_sequential_frame(argv->cons.cdr);
+  fb_reset();
   while (args != object_nil) {
     if (!type_p((s = args->cons.car), SYMBOL)) {
       ip_mark_error("argument must be symbol");
@@ -885,6 +1077,7 @@ DEFSP(symbol_bind)
     ip_mark_error("must be pair");
     return FALSE;
   }
+  fb_reset();
   while (argc != 0) {
     s = argv->cons.car;
     if (!type_p(s, SYMBOL)) {
@@ -923,7 +1116,7 @@ DEFSP(macro)
   gen1(BIND_PROPAGATION_INST, argv->cons.car);
   argv = argv->cons.cdr;
   if (!valid_lambda_list_p(params = argv->cons.car, TRUE)) {
-    mark_illegal_args_exception();
+    mark_illegal_args();
     return FALSE;
   }
   reg[0] = gc_new_macro(reg[1], params, argv->cons.cdr);
@@ -936,7 +1129,7 @@ DEFSP(lambda)
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
   params = argv->cons.car;
   if (!valid_lambda_list_p(params, FALSE)) {
-    mark_illegal_args_exception();
+    mark_illegal_args();
     return FALSE;
   }
   reg[0] = gc_new_lambda(reg[1], params, argv->cons.cdr);
@@ -980,7 +1173,7 @@ DEFSP(goto)
   return TRUE;
 }
 
-DEFSP(basic_throw)
+DEFSP(throw)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   gen0(THROW_INST);
@@ -988,11 +1181,34 @@ DEFSP(basic_throw)
   return TRUE;
 }
 
-DEFSP(basic_catch)
+DEFSP(catch)
 {
-  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
-  gen1(FETCH_HANDLER_INST, argv->cons.cdr);
-  gen_eval_frame(argv->cons.car);
+  object cls, params, body;
+  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
+  params = argv->cons.car;
+  body = argv->cons.cdr;
+  fb_reset();
+  gen1(HANDLER_INST, gc_new_env(object_nil));
+  gen_eval_sequential_frame(body);
+  while (params != object_nil) {
+    if (!type_p(params, CONS)) {
+      mark_illegal_args();
+      return FALSE;
+    }
+    if (!type_p((cls = params->cons.car), SYMBOL)) {
+      mark_illegal_args();
+      return FALSE;
+    }
+    if (!type_p((params = params->cons.cdr), CONS)) {
+      ip_mark_error("parameter must be pair");
+      return FALSE;
+    }
+    fb_gen1(QUOTE_INST, params->cons.car);
+    fb_gen0(EVAL_INST);
+    fb_gen1(BIND_HANDLER_INST, cls);
+    params = params->cons.cdr;
+  }
+  fb_flush();
   return TRUE;
 }
 
@@ -1014,83 +1230,7 @@ DEFSP(assert)
   return TRUE;
 }
 
-DEFUN(eval)
-{
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  gen_eval_frame(argv->cons.car);
-  return TRUE;
-}
-
-DEFUN(apply)
-{
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
-  switch (type(argv->cons.car)) {
-    case FUNCITON:
-      gen1(APPLY_BUILTIN_INST, argv->cons.car);
-      reg[0] = argv->cons.cdr->cons.car;
-      return TRUE;
-    case LAMBDA:
-      gen_apply_frame(argv->cons.car);
-      reg[0] = argv->cons.cdr->cons.car;
-      return TRUE;
-    default: break;
-  }
-  ip_mark_error("requires function or symbol(built in function) to apply");
-  return FALSE;
-}
-
-DEFUN(expand_macro)
-{
-  object f, args;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  reg[0] = argv->cons.car;
-  if (!type_p(reg[0], CONS)) return TRUE;
-  f = reg[0]->cons.car;
-  args = reg[0]->cons.cdr;
-  if (!type_p(f, SYMBOL)) return TRUE;
-  if ((f = symbol_find_propagation(reg[1], f)) == NULL) return TRUE;
-  if (!type_p(f, MACRO)) return TRUE;
-  gen_apply_frame(f);
-  reg[0] = args;
-  return TRUE;
-}
-
-DEFUN(bound_p)
-{
-  object s;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!type_p((s = argv->cons.car), SYMBOL)) {
-    ip_mark_error("required symbol");
-    return FALSE;
-  }
-  *result = object_bool(symbol_find_propagation(reg[1], s) != NULL);
-  return TRUE;
-}
-
-DEFUN(call_stack)
-{
-  if (!ip_ensure_no_args(argc)) return FALSE;
-  *result = call_stack();
-  return TRUE;
-}
-
-STATIC void trap(void)
-{
-  object e;
-  switch (ip_trap_code) {
-    case TRAP_ERROR:
-      xassert(error_msg != NULL);
-      e = object_Error;
-      gen0(THROW_INST);
-      reg[0] = gc_new_throwable(e, error_msg, call_stack());
-      ip_trap_code = TRAP_NONE;
-      error_msg = NULL;
-      break;
-    default:
-      ip_trap_code = TRAP_NONE;
-      break;
-  }
-}
+// main
 
 STATIC void ip_main(void)
 {
@@ -1108,12 +1248,12 @@ STATIC void ip_main(void)
       case APPLY_BUILTIN_INST: pop_builtin_inst(); break;
       case ASSERT_INST: pop_assert_frame(); break;
       case BIND_INST: pop_bind_frame(); break;
+      case BIND_HANDLER_INST: pop_bind_handler_frame(); break;
       case BIND_PROPAGATION_INST: pop_bind_propagation_frame(); break;
       case EVAL_INST: pop_eval_frame(); break;
       case EVAL_ARGS_INST: pop_eval_args_frame(); break;
       case EVAL_SEQUENTIAL_INST: pop_eval_sequential_frame(); break;
       case FENCE_INST: pop_frame(); break;
-      case FETCH_HANDLER_INST: pop_fetch_handler_frame(); break;
       case FETCH_OPERATOR_INST: pop_fetch_operator_frame(); break;
       case GOTO_INST: pop_goto_frame(); break;
       case HANDLER_INST: pop_frame(); break;

@@ -209,10 +209,14 @@ static void make_initial_objects(int argc, char *argv[])
   home = symbol_new("$paren-home");
   bind_symbol(home, gc_new_barray_from(STRING, core_fn, strlen(core_fn)));
   object_class = keyword_new("class");
+  object_symbol = keyword_new("symbol");
+  object_super = keyword_new("super");
+  object_features = keyword_new("features");
+  object_fields = keyword_new("fields");
   object_message = keyword_new("message");
   object_stack_trace = keyword_new("stack-trace");
+  object_Class = symbol_new("Class");
   object_Error = symbol_new("Error");
-  object_Exception = symbol_new("Exception");
   args = symbol_new("$args");
   bind_symbol(args, parse_args(argc, argv));
   os = symbol_new("$os");

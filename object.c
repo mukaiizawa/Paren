@@ -18,13 +18,19 @@ object object_rest;
 object object_quote;
 object object_bytes[256];
 object object_toplevel;
-object object_class;
-object object_message;
 object object_stack_trace;
-object object_Error;
-object object_Exception;
 object object_boot;
 object object_splay_nil;
+
+object object_Class;
+object object_Error;
+
+object object_class;
+object object_symbol;
+object object_super;
+object object_features;
+object object_fields;
+object object_message;
 
 int object_list_len(object o)
 {
