@@ -33,7 +33,6 @@ endif
 
 paren=paren$(exe)
 all: $(paren)
-	./paren$(exe)
 
 defsp=ip.c
 defsp.wk: $(defsp)
