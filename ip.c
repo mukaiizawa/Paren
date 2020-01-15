@@ -952,6 +952,16 @@ DEFUN(is_a_p)
   return object_is_a_p(o, class_sym(cls), &(reg[0]));
 }
 
+DEFUN(find_class)
+{
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!find_class(argv->cons.car, result)) {
+    ip_mark_error("class not found");
+    return FALSE;
+  }
+  return TRUE;
+}
+
 DEFUN(stack_frame)
 {
   int i;

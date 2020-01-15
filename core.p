@@ -1099,15 +1099,21 @@
   )
 
 ; Paren object system
+; Paren object system is an object system implemented from a primitive paren.
+; Some functions are built-in.
+; Although it is a built-in function, it is only built in considering speed.
 
-(global-symbol $class (splay-new)
-  ; List of defined classes.
+(builtin-function object? (x)
+  ; Returns true if the specified x is object.
   )
 
-(function find-class (cls-sym)
-  (let (cls (splay-find $class cls-sym))
-    (if cls cls
-        (error (concat "class " (symbol->string cls-sym) " not found")))))
+(builtin-function is-a? (o cls)
+  ; Returns true if the specified object o regarded as the specified class cls's instance.
+  )
+
+(builtin-function find-class (cls-sym)
+  ; Returns the class corresponding to the specified symbol cls_sym.
+  )
 
 (function global-method-sym (cls-sym method-sym)
   (string->symbol (concat (symbol->string cls-sym)
@@ -1177,7 +1183,6 @@
                                              :super (if (not Object?) super)
                                              :features features
                                              :fields fields)))
-          (list 'splay-add '$class (list quote cls-sym) cls-sym)
           (cons begin
                 (map fields (lambda (field) (list 'make-accessor field)))))))
 
@@ -1195,14 +1200,6 @@
 
 (function error (:opt (message ""))
   (throw (.message (.new Error) message)))
-
-(builtin-function object? (x)
-  ; Returns true if the specified x is object.
-  )
-
-(builtin-function is-a? (o cls)
-  ; Returns true if the specified object o regarded as the specified class cls's instance.
-  )
 
 (class Object ()
   ; Object is a class that is the basis of all class hierarchies.
@@ -1313,10 +1310,12 @@
 (method Stream .readByte (:rest args)
   ; Read 1byte from stream.
   ; Returns -1 when the stream reaches the end.
-  (throw (.new NotImplementedError)))
+  ; Must be implemented in the inherited class.
+  (assert nil))
 
 (method Stream .writeByte (:rest args)
   ; Write 1byte to stream.
+  ; Must be implemented in the inherited class.
   (throw (.new NotImplementedError)))
 
 (method Stream .readChar ()
@@ -1358,6 +1357,7 @@
 
 (method Stream .readLine (:rest args)
   ; Read line.
+  ; Must be implemented in the inherited class.
   (throw (.new NotImplementedError)))
 
 (method Stream .writeString (s)
@@ -1369,10 +1369,12 @@
 
 (method Stream .seek (:rest args)
   ; Move the read position on the stream to the specified offset.
+  ; Must be implemented in the inherited class.
   (throw (.new NotImplementedError)))
 
 (method Stream .tell (:rest args)
   ; Returns the read position on the stream as a byte offset from the beginning.
+  ; Must be implemented in the inherited class.
   (throw (.new NotImplementedError)))
 
 (class MemoryStream (Stream)
