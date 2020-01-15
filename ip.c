@@ -773,7 +773,7 @@ STATIC void pop_throw_frame(void)
         for (j = 0; j < handlers->array.size; j += 2) {
           cls_sym = handlers->array.elt[j];
           handler = handlers->array.elt[j + 1];
-          if (!object_is_a_p(reg[0], cls_sym, &xbool)) xerror("illegal state");
+          if (!object_is_a_p(reg[0], cls_sym, &xbool)) continue;
           if (xbool == object_true) {
             gen_apply_frame(handler);
             reg[0] = gc_new_cons(reg[0], object_nil);
