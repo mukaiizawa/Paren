@@ -30,12 +30,12 @@ void ip_mark_error(char *msg)
   error_msg = msg;
 }
 
-STATIC void ip_mark_too_few_arguments_error(void)
+static void ip_mark_too_few_arguments_error(void)
 {
   ip_mark_error("too few arguments");
 }
 
-STATIC void ip_mark_too_many_arguments_error(void)
+static void ip_mark_too_many_arguments_error(void)
 {
   ip_mark_error("too many arguments");
 }
@@ -64,20 +64,20 @@ int ip_ensure_type(int type, object o, object *result)
   return TRUE;
 }
 
-STATIC void mark_illegal_args()
+static void mark_illegal_args()
 {
   ip_mark_error("illegal parameter list");
 }
 
 // symbol
 
-STATIC object symbol_find(object e, object s)
+static object symbol_find(object e, object s)
 {
   xassert(type_p(e, ENV));
   return splay_find(e->env.binding, s);
 }
 
-STATIC object symbol_find_propagation(object e, object s)
+static object symbol_find_propagation(object e, object s)
 {
   object v;
   while (e != object_nil) {
@@ -87,7 +87,7 @@ STATIC object symbol_find_propagation(object e, object s)
   return NULL;
 }
 
-STATIC void symbol_bind(object e, object s, object v)
+static void symbol_bind(object e, object s, object v)
 {
   object o;
   xassert(type_p(e, ENV) && type_p(s, SYMBOL));
@@ -100,7 +100,7 @@ STATIC void symbol_bind(object e, object s, object v)
   splay_replace(e->env.binding, s, v);
 }
 
-STATIC void symbol_bind_propagation(object e, object s, object v)
+static void symbol_bind_propagation(object e, object s, object v)
 {
   while (e != object_toplevel) {
     if (symbol_find(e, s) != NULL) {
@@ -240,7 +240,7 @@ char *frame_name(int frame_type)
   fb_gen1(frame_type, o); \
 }
 
-STATIC void gen(int frame_type)
+static void gen(int frame_type)
 {
   if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_mark_error("stack over flow");
   fs[sp + 1] = sint(fp);
@@ -249,7 +249,7 @@ STATIC void gen(int frame_type)
   sp = next_fp(fp);
 }
 
-STATIC void pop_frame(void)
+static void pop_frame(void)
 {
   sp = fp;
   fp = prev_fp(fp);
@@ -257,12 +257,12 @@ STATIC void pop_frame(void)
 
 // frame buffer
 
-STATIC void fb_reset(void)
+static void fb_reset(void)
 {
   xarray_reset(&fb);
 }
 
-STATIC void fb_flush(void)
+static void fb_flush(void)
 {
   int i;
   object o;
@@ -285,18 +285,18 @@ STATIC void fb_flush(void)
   }
 }
 
-STATIC void gen_apply_frame(object operator)
+static void gen_apply_frame(object operator)
 {
   gen0(FENCE_FRAME);
   gen1(APPLY_FRAME, operator);
 }
 
-STATIC void gen_eval_frame(object o)
+static void gen_eval_frame(object o)
 {
   if ((reg[0] = o)->header & EVAL_FRAME_MASK) gen0(EVAL_FRAME);
 }
 
-STATIC void gen_eval_args_frame(object args)
+static void gen_eval_args_frame(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else {
@@ -305,33 +305,33 @@ STATIC void gen_eval_args_frame(object args)
   }
 }
 
-STATIC void gen_eval_sequential_frame(object args)
+static void gen_eval_sequential_frame(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
   else gen1(EVAL_SEQUENTIAL_FRAME, args);
 }
 
-STATIC void gen_if_frame(object args)
+static void gen_if_frame(object args)
 {
   if (args == object_nil) return;
   if (args->cons.cdr != object_nil) gen1(IF_FRAME, args->cons.cdr);
   gen_eval_frame(args->cons.car);
 }
 
-STATIC void gen_switch_env_frame(object env)
+static void gen_switch_env_frame(object env)
 {
   gen1(SWITCH_ENV_FRAME, reg[1]);
   reg[1] = gc_new_env(env);
 }
 
-STATIC int same_symbol_keyword_p(object sym, object key)
+static int same_symbol_keyword_p(object sym, object key)
 {
   xassert(type_p(sym, SYMBOL) && type_p(key, KEYWORD));
   if (sym->barray.size != key->barray.size) return FALSE;
   return memcmp(sym->barray.elt, key->barray.elt, sym->barray.size) == 0;
 }
 
-STATIC int valid_keyword_p(object params, object args)
+static int valid_keyword_p(object params, object args)
 {
   object p, s;
   while (args != object_nil) {
@@ -360,7 +360,7 @@ STATIC int valid_keyword_p(object params, object args)
   return TRUE;
 }
 
-STATIC void parse_lambda_list(object env, object params, object args)
+static void parse_lambda_list(object env, object params, object args)
 {
   object o, pre, k, v, def_v, sup_k;
   // parse required parameter
@@ -473,7 +473,7 @@ STATIC void parse_lambda_list(object env, object params, object args)
   if (args != object_nil) ip_mark_too_many_arguments_error();
 }
 
-STATIC void pop_apply_frame(void)
+static void pop_apply_frame(void)
 {
   object operator;
   operator = get_frame_var(fp, 0);
@@ -485,7 +485,7 @@ STATIC void pop_apply_frame(void)
   fb_flush();
 }
 
-STATIC void pop_builtin_inst(void)
+static void pop_builtin_inst(void)
 {
   object args;
   int (*function)(int, object, object *);
@@ -496,19 +496,19 @@ STATIC void pop_builtin_inst(void)
   if (error_msg == NULL) ip_mark_error("built-in function failed");
 }
 
-STATIC void pop_assert_frame(void)
+static void pop_assert_frame(void)
 {
   pop_frame();
   if (reg[0] == object_nil) ip_mark_error("assert failed");
 }
 
-STATIC void pop_bind_frame(void)
+static void pop_bind_frame(void)
 {
   symbol_bind(reg[1], get_frame_var(fp, 0), reg[0]);
   pop_frame();
 }
 
-STATIC void pop_bind_handler_frame(void)
+static void pop_bind_handler_frame(void)
 {
   int i, j;
   object cls_sym, handler, handlers;
@@ -532,13 +532,13 @@ STATIC void pop_bind_handler_frame(void)
   xassert(FALSE);
 }
 
-STATIC void pop_bind_propagation_frame(void)
+static void pop_bind_propagation_frame(void)
 {
   symbol_bind_propagation(reg[1], get_frame_var(fp, 0), reg[0]);
   pop_frame();
 }
 
-STATIC void pop_eval_frame(void)
+static void pop_eval_frame(void)
 {
   object s;
   pop_frame();
@@ -573,13 +573,13 @@ STATIC void pop_eval_frame(void)
   }
 }
 
-STATIC void pop_swith_env_frame(void)
+static void pop_swith_env_frame(void)
 {
   reg[1] = get_frame_var(fp, 0);
   pop_frame();
 }
 
-STATIC void pop_rewinding(void)
+static void pop_rewinding(void)
 {
   switch (fs_top()) {
     case SWITCH_ENV_FRAME: pop_swith_env_frame(); break;
@@ -588,7 +588,7 @@ STATIC void pop_rewinding(void)
   }
 }
 
-STATIC void pop_unwind_protect_frame(void)
+static void pop_unwind_protect_frame(void)
 {
   object body;
   body = get_frame_var(fp, 0);
@@ -596,7 +596,7 @@ STATIC void pop_unwind_protect_frame(void)
   gen_eval_sequential_frame(body);
 }
 
-STATIC void pop_goto_frame(void)
+static void pop_goto_frame(void)
 {
   object o, label;
   label = reg[0];
@@ -632,7 +632,7 @@ STATIC void pop_goto_frame(void)
   gen_eval_sequential_frame(o);
 }
 
-STATIC void pop_fetch_operator_frame(void)
+static void pop_fetch_operator_frame(void)
 {
   object args;
   int (*special)(int, object);
@@ -661,7 +661,7 @@ STATIC void pop_fetch_operator_frame(void)
   ip_mark_error("is not a operator");
 }
 
-STATIC void pop_eval_args_frame(void)
+static void pop_eval_args_frame(void)
 {
   object rest, acc;
   rest = get_frame_var(fp, 0);
@@ -676,7 +676,7 @@ STATIC void pop_eval_args_frame(void)
   }
 }
 
-STATIC void pop_eval_sequential_frame(void)
+static void pop_eval_sequential_frame(void)
 {
   object args;
   args = get_frame_var(fp, 0);
@@ -696,7 +696,7 @@ static void pop_if_frame(void)
   else if ((args = args->cons.cdr) != object_nil) gen_if_frame(args);
 }
 
-STATIC void pop_return_frame(void)
+static void pop_return_frame(void)
 {
   object args;
   while (sp > 0) {
@@ -729,7 +729,7 @@ static object call_stack(void)
   return o;
 }
 
-STATIC void exit1(void)
+static void exit1(void)
 {
   char buf[MAX_STR_LEN];
   object o;
@@ -746,7 +746,7 @@ static int object_p(object o);
 static int object_is_a_p(object o, object cls_sym, object *result);
 static int find_class(object cls_sym, object *result);
 
-STATIC void pop_throw_frame(void)
+static void pop_throw_frame(void)
 {
   int i, j;
   object xbool, cls_sym, handler, handlers, body;
@@ -845,7 +845,7 @@ DEFUN(bound_p)
   return TRUE;
 }
 
-STATIC void trap(void)
+static void trap(void)
 {
   switch (ip_trap_code) {
     case TRAP_ERROR:
@@ -991,7 +991,7 @@ DEFUN(stack_frame)
  * <xparams> ::= <xparam> <xparam> ...
  * <xparam> ::= { <param> | (<param> <initial_value> [<supplyp>]) }
  */
-STATIC int valid_xparam_p(object o)
+static int valid_xparam_p(object o)
 {
   o = o->cons.car;
   if (type_p(o, SYMBOL)) return TRUE;
@@ -1002,7 +1002,7 @@ STATIC int valid_xparam_p(object o)
           && type_p(o->cons.car, SYMBOL) && o->cons.cdr == object_nil));
 }
 
-STATIC int parse_params(object *o)
+static int parse_params(object *o)
 {
   *o = (*o)->cons.cdr;
   if (!valid_xparam_p(*o)) return FALSE;
@@ -1016,7 +1016,7 @@ STATIC int parse_params(object *o)
   return TRUE;
 }
 
-STATIC int valid_lambda_list_p(object params, int nest_p)
+static int valid_lambda_list_p(object params, int nest_p)
 {
   int type;
   while (TRUE) {
@@ -1266,7 +1266,7 @@ DEFSP(assert)
 
 // main
 
-STATIC void ip_main(void)
+static void ip_main(void)
 {
   reg[0] = object_nil;
   reg[1] = object_toplevel;

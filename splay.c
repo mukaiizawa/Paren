@@ -32,7 +32,7 @@ int splay_strcmp(object o, object p)
 #define node_get_right(node) ((node)->array.elt[3])
 #define node_set_right(node, r) ((node)->array.elt[3] = r)
 
-STATIC object balance(object splay, object key)
+static object balance(object splay, object key)
 {
   object top, p, q;
   int (*cmp)(object p, object q), d;
@@ -84,7 +84,7 @@ STATIC object balance(object splay, object key)
   return top;
 }
 
-STATIC object resume(object top)
+static object resume(object top)
 {
   object l, r, p;
   l = node_get_left(top);

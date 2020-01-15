@@ -24,12 +24,6 @@ extern void *xrealloc(void *p, int size);
 extern char *xstrdup(char *s);
 
 #ifdef NDEBUG
-#define STATIC static
-#else
-#define STATIC
-#endif
-
-#ifdef NDEBUG
 #define xassert(cond) ;
 #else
 extern void xassert_failed(char *fn, int line);

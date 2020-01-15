@@ -23,7 +23,7 @@ static struct xarray *table, *work_table, table0, table1;
 #define set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= type;}
 #define regist(o) (xarray_add(table, o))
 
-STATIC object gc_alloc(int size)
+static object gc_alloc(int size)
 {
   object o;
   if (size <= LINK0_SIZE) {
@@ -58,7 +58,7 @@ object gc_new_env(object top)
   return o;
 }
 
-STATIC object new_lambda(object env, object params, object body)
+static object new_lambda(object env, object params, object body)
 {
   object o;
   xassert(type_p(env, ENV));
@@ -146,7 +146,7 @@ object gc_new_barray(int type, int size)
   return o;
 }
 
-STATIC object new_barray_from(int type, char *val, int size)
+static object new_barray_from(int type, char *val, int size)
 {
   object o;
   o = gc_new_barray(type, size);
@@ -176,7 +176,7 @@ object gc_new_barray_from(int type, char *val, int size)
   }
 }
 
-STATIC object new_array(int size)
+static object new_array(int size)
 {
   object o;
   xassert(size >= 0);
@@ -270,7 +270,7 @@ void gc_mark(object o)
   }
 }
 
-STATIC void gc_free(object o)
+static void gc_free(object o)
 {
   int size;
   size = object_byte_size(o);
@@ -286,7 +286,7 @@ STATIC void gc_free(object o)
   gc_used_memory -= size;
 }
 
-STATIC void sweep_s_expr(void)
+static void sweep_s_expr(void)
 {
   int i;
   object o;
