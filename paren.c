@@ -216,6 +216,7 @@ static void make_initial_objects(int argc, char *argv[])
   object_message = keyword_new("message");
   object_stack_trace = keyword_new("stack-trace");
   object_Class = symbol_new("Class");
+  object_Exception = symbol_new("Exception");
   object_Error = symbol_new("Error");
   args = symbol_new("$args");
   bind_symbol(args, parse_args(argc, argv));

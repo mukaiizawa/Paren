@@ -68,7 +68,6 @@ static char *symbol_name_map[] = {
   "unwind_protect", "unwind-protect",
   // ip/DEFUN
   "bound_p", "bound?",
-  "call_stack", "call-stack",
   "expand_macro", "expand-macro",
   "object_p", "object?",
   "is_a_p", "is-a?",

@@ -23,6 +23,7 @@ object object_boot;
 object object_splay_nil;
 
 object object_Class;
+object object_Exception;
 object object_Error;
 
 object object_class;

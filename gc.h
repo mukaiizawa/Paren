@@ -20,7 +20,7 @@ extern object gc_new_pointer(void *p);
 extern object gc_new_splay(object cmp);
 extern object gc_new_splay_node(object k, object v, object l, object r);
 
-extern object gc_new_error(char *msg, object call_stack);
+extern object gc_new_Error(char *msg);
 
 extern void gc_init(void);
 extern void gc_mark(object o);

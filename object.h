@@ -2,25 +2,25 @@
 
 typedef union s_expr *object;
 
-#define TYPE_MASK      0x0fffffff
-#define ALIVE_MASK     0xf0000000
-#define EVAL_INST_MASK 0x0f000000
-#define BARRAY_MASK    0x00f00000
-#define BUILTIN_MASK   0x000f0000
-#define NUMBER_MASK    0x0000f000
-#define   ENV          0x00000005
-#define   MACRO        0x00000106
-#define   LAMBDA       0x00000107
-#define   SPECIAL      0x00010008
-#define   FUNCITON     0x00010009
-#define   CONS         0x01000010
-#define   XINT         0x00001011
-#define   XFLOAT       0x00001012
-#define   SYMBOL       0x01100013
-#define   KEYWORD      0x00100014
-#define   STRING       0x00100015
-#define   BARRAY       0x00100016
-#define   ARRAY        0x00000017
+#define TYPE_MASK       0x0fffffff
+#define ALIVE_MASK      0xf0000000
+#define EVAL_FRAME_MASK 0x0f000000
+#define BARRAY_MASK     0x00f00000
+#define BUILTIN_MASK    0x000f0000
+#define NUMBER_MASK     0x0000f000
+#define   ENV           0x00000005
+#define   MACRO         0x00000106
+#define   LAMBDA        0x00000107
+#define   SPECIAL       0x00010008
+#define   FUNCITON      0x00010009
+#define   CONS          0x01000010
+#define   XINT          0x00001011
+#define   XFLOAT        0x00001012
+#define   SYMBOL        0x01100013
+#define   KEYWORD       0x00100014
+#define   STRING        0x00100015
+#define   BARRAY        0x00100016
+#define   ARRAY         0x00000017
 
 #define LINT_BITS 63
 
@@ -98,6 +98,7 @@ extern object object_boot;
 extern object object_splay_nil;
 
 extern object object_Class;
+extern object object_Exception;
 extern object object_Error;
 
 extern object object_class;

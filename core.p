@@ -333,7 +333,7 @@
   ; Not executed if not in debug mode.
   ; It is used when an argument or an internal state is abnormal, or a process that can not be reached is executed.
   (list assert (list (list lambda '()
-                           (list catch '(Error (lambda (e) (return true)))
+                           (list catch '(Error (lambda (e) true))
                                  expr
                                  '(return nil))
                            true))))
@@ -1091,10 +1091,6 @@
   )
 
 ; kernel
-
-(builtin-function call-stack ()
-  ; Returns call stack as a list.
-  (assert (same? (caar (call-stack)) 'caar)))
 
 (builtin-function fp (fd)
   ; Returns file pointer.
@@ -1958,5 +1954,6 @@
   ; - :CP932
   ; A dummy encoding is an encoding for which character handling is not properly implemented.
   )
+
 
 (boot $args)
