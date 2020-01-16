@@ -137,7 +137,7 @@ object gc_new_cons(object car, object cdr)
 object gc_new_barray(int type, int size)
 {
   object o;
-  xassert(size >= 0);
+  xassert(size > 0);
   o = gc_alloc(sizeof(struct barray) + size - 1);
   set_type(o, type);
   memset(o->barray.elt, 0, size);
@@ -179,7 +179,7 @@ object gc_new_barray_from(int type, char *val, int size)
 static object new_array(int size)
 {
   object o;
-  xassert(size >= 0);
+  xassert(size > 0);
   o = gc_alloc(sizeof(struct array) + sizeof(object) * (size - 1));
   set_type(o, ARRAY);
   o->array.size = size;

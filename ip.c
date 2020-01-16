@@ -733,8 +733,14 @@ static void exit1(void)
 {
   char buf[MAX_STR_LEN];
   object o;
-  o = call_stack();
-  printf("Error -- %s\n", object_describe(reg[0], buf));
+  o = reg[0]->cons.cdr;
+  printf("%s", object_describe(o->cons.car, buf));
+  o = o->cons.cdr->cons.cdr;
+  if (o->cons.car != object_nil)
+    printf(" -- %s.", object_describe(o->cons.car, buf));
+  printf("\n");
+  while (o->cons.car != object_stack_trace) o = o->cons.cdr;
+  o = o->cons.cdr->cons.car;
   while (o != object_nil) {
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
@@ -746,6 +752,18 @@ static int object_p(object o);
 static int object_is_a_p(object o, object cls_sym, object *result);
 static int find_class(object cls_sym, object *result);
 
+static void stack_call_stack(object o)
+{
+  while (type_p(o, CONS)) {
+    if (o->cons.car == object_stack_trace) {
+      if (type_p((o = o->cons.cdr), CONS) && o->cons.car == object_nil)
+        o->cons.car = call_stack();
+      return;
+    }
+    o = o->cons.cdr;
+  }
+}
+
 static void pop_throw_frame(void)
 {
   int i, j;
@@ -754,9 +772,7 @@ static void pop_throw_frame(void)
   pop_frame();
   if (!object_is_a_p(reg[0], object_Exception, &xbool) || xbool == object_nil)
     reg[0] = gc_new_Error("must be Exception object");
-  if (object_list_len(reg[0]) >= 6)
-    reg[0]->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.car
-      = call_stack();
+  stack_call_stack(reg[0]);
   while (fp > -1) {
     switch (fs_top()) {
       case UNWIND_PROTECT_FRAME:
