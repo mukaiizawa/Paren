@@ -309,10 +309,8 @@
   (with-gensyms (s)
     (list let (list s (list clock))
           (list begin0 (cons begin body)
-                (list 'write-string
-                      (list 'concat "time="
-                            (list 'number->string (list '- (list clock) s))))
-                (list 'write-new-line)))))
+                (list 'write-line
+                      (list 'string "time=" (list '- (list clock) s)))))))
 
 (builtin-function expand-macro (expr)
   ; Expand macro the specified expression expr.
@@ -963,10 +961,6 @@
   (assert (= (truncate 0) 0))
   (assert (= (truncate -1.1) -1)))
 
-(builtin-function number->string (x)
-  ; Returns the specified x as a string.
-  (assert (string= (number->string 1.1) "1.1")))
-
 ; kernel
 
 (builtin-function fp (fd)
@@ -1158,10 +1152,9 @@
   (&stack-trace self))
 
 (method Exception .printStackTrace ()
-  (write-string (.toString self))
-  (write-new-line)
+  (write-line (.toString self))
   (dolist (x (.stackTrace self))
-    (write-string "\tat: ") (print x)))
+    (write-line (string "\tat: " x))))
 
 (class SystemExit (Exception)
   ; Dispatched to shut down the Paren system.
@@ -1531,8 +1524,7 @@
                     (or sign (identifierLead?)) (begin
                                                   (if sign (.put self sign))
                                                   (list :symbol (lex-symbol)))
-                    (error (concat (number->string (&next self))
-                                    " illegal char"))))))
+                    (error " illegal char")))))
     (lex)))
 
 (class ParenParser ()
@@ -1588,10 +1580,6 @@
     (.writeByte stream byte)
     byte))
 
-(function write-new-line (:opt stream)
-  (let (stream (or stream (dynamic $stdout)))
-    (write-byte 0x0A stream)))
-
 (function write-string (s :opt stream)
   ; Write the specified stirng s to the specified stream.
   (let (stream (or stream (dynamic $stdout)))
@@ -1646,7 +1634,7 @@
   (let (stream (or stream (dynamic $stdin)))
     (.parse (.init (.new ParenParser) :stream stream))))
 
-(function write (x :opt stream :key readable? (radix 10))
+(function write (x :opt stream :key readable? (radix 10) write-line-feed?)
   ; Write the specified x to the specified stream.
   ; write is the general entry point to the Paren printer.
   ; If readable? is supplied, write in a format understood by the Paren reader.
@@ -1674,8 +1662,23 @@
             write-addr (lambda (x name)
                          (write-string "#<" name stream)
                          (write-string ":" stream)
-                         (write-string (number->string (address x)) stream)
+                         (write-integer (address x) 16)
                          (write-string ">" stream))
+            write-number (lambda (x)
+                           (if (integer? x) (write-integer x)
+                               (write-float x)))
+            write-integer (lambda (x)
+                            (if (minus? x) (begin (write-byte 0x2D stream)
+                                                  (write-integer (negated x)))
+                                (zero? x) (write-byte 0x30 stream)
+                                (let (upper (// x radix))
+                                  (if (not (zero? upper)) (write-integer upper))
+                                  (write-byte (+ (mod x radix) 0x30)
+                                              stream))))
+            write-float (lambda (x)
+                            (if (minus? x) (begin (write-byte 0x2D stream)
+                                                  (write-float (negated x)))
+                                (write-integer (// x 1))))
             write-atom
                 (lambda (x)
                   (if (builtin? x) (write-atom (builtin-name x))
@@ -1693,16 +1696,20 @@
                                           (write-string (symbol->string
                                                           (keyword->symbol x))
                                                         stream))
-                      (number? x) (write-string (number->string x) stream)
+                      (number? x) (write-number x)
                       (assert nil))))
         (write-s-expr x)
+        (if write-line-feed? (write-byte 0x0A stream))
         x)))
+
+(function write-line (x :opt stream)
+  (let (stream (or stream (dynamic $stdout)))
+    (write x stream :write-line-feed? true)))
 
 (function print (x :opt stream)
   ; Print the specified x as a readable format.
-  (write x stream :readable? true)
-  (write-new-line stream)
-  x)
+  (let (stream (or stream (dynamic $stdout)))
+    (write x stream :readable? true :write-line-feed? true)))
 
 ; execution
 
