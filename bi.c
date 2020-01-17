@@ -113,7 +113,6 @@ static char *symbol_name_map[] = {
   "number_modulo", "mod",
   "number_multiply", "*",
   "number_p", "number?",
-  "number_to_string", "number->string",
   "number_truncate", "truncate",
   // lambda
   "builtin_name", "builtin-name",

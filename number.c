@@ -224,7 +224,7 @@ DEFUN(number_floor)
   double x;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) return FALSE;
-  *result = gc_new_xfloat(floor(x));
+  *result = gc_new_xint(floor(x));
   return TRUE;
 }
 
@@ -233,7 +233,7 @@ DEFUN(number_ceiling)
   double x;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) return FALSE;
-  *result = gc_new_xfloat(ceil(x));
+  *result = gc_new_xint(ceil(x));
   return TRUE;
 }
 
@@ -242,7 +242,7 @@ DEFUN(number_truncate)
   double x;
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) return FALSE;
-  *result = gc_new_xfloat(trunc(x));
+  *result = gc_new_xint(trunc(x));
   return TRUE;
 }
 
@@ -259,24 +259,6 @@ DEFUN(number_to_integer)
     return FALSE;
   }
   *result = gc_new_xint((int64_t)x);
-  return TRUE;
-}
-
-DEFUN(number_to_string)
-{
-  int64_t i;
-  double d;
-  struct xbarray x;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  xbarray_init(&x);
-  if (bi_int64(argv->cons.car, &i)) xbarray_addf(&x, "%d", i);
-  else if (bi_double(argv->cons.car, &d)) xbarray_addf(&x, "%g", d);
-  else {
-    mark_numeric_over_flow();
-    return FALSE;
-  }
-  *result = gc_new_barray_from(STRING, x.elt, x.size);
-  xbarray_free(&x);
   return TRUE;
 }
 
