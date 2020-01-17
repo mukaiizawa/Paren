@@ -722,7 +722,7 @@ static object call_stack(void)
   int i;
   object o;
   o = object_nil;
-  for (i = 0; i < fp; i = next_fp(i)) {
+  for (i = 0; i <= fp; i = next_fp(i)) {
     if (sint_val(fs[i]) == TRACE_FRAME)
       o = gc_new_cons(get_frame_var(i, 0), o);
   }
