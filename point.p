@@ -1,4 +1,4 @@
-; point
+; Point class.
 
 (class Point ()
   ; Represents a point in a two-dimensional rectangular coordinate system.

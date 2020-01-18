@@ -1,127 +1,112 @@
-; splay
+; Splay tree class.
+
+(class SplayNode ()
+  key val left right)
+
+(method SplayNode .init (:key key val left right)
+  (&right (&left (&val (&key self key) val) left) right))
+
+(method SplayNode .rotL ()
+  (let (p (&left self))
+    (&left self (&right p))
+    (&right p self)
+    p))
+
+(method SplayNode .rotR ()
+  (let (p (&right self))
+    (&right self (&left p))
+    (&left p self)
+    p))
+
+(method SplayNode .rotLL ()
+  (let (p (&left self) q (&left p))
+    (&left p (&right q))
+    (&right q self)
+    q))
+
+(method SplayNode .rotRR ()
+  (let (p (&right self) q (&right p))
+    (&right p (&left q))
+    (&left q self)
+    q))
+
+(method SplayNode .rotLR ()
+  (let (p (&left self) q (&right p))
+    (&right p (&left q))
+    (&left q p)
+    (&left self (&right q))
+    (&right q self)
+    q))
+
+(method SplayNode .rotRL ()
+  (let (p (&right self) q (&left p))
+    (&left p (&right q))
+    (&right q p)
+    (&right self (&left q))
+    (&left q self)
+    q))
 
 (class Splay ()
-  comparator top)
+  top sentinel comparator)
 
-(function splay-new (:opt (comparator
-                            (lambda (k1 k2)
-                              (- (address k1) (address k2)))))
-  ; Returns spray tree.
-  (cons comparator $splay-nil))
+(method Splay .init (:opt (comparator (lambda (k1 k2)
+                                        (- (address k1) (address k2)))))
+  (let (node (.new SplayNode))
+    (&top self node)
+    (&sentinel self node)
+    (&comparator self comparator)))
 
-(function splay-top (splay)
-  (cdr splay))
-
-(function splay-top! (splay top)
-  (cdr! splay top))
-
-(function splay-comparator (splay)
-  (car splay))
-
-(function splay-node-new (k v l r)
-  (cons (cons k l) (cons v r)))
-
-(function splay-node-key (splay-node)
-  (caar splay-node))
-
-(function splay-node-key! (splay-node key)
-  (car! (car splay-node) key))
-
-(function splay-node-val (splay-node)
-  (cadr splay-node))
-
-(function splay-node-left (splay-node)
-  (cdar splay-node))
-
-(function splay-node-left! (splay-node val)
-  (cdr! (car splay-node) val))
-
-(function splay-node-right (splay-node)
-  (cddr splay-node))
-
-(function splay-node-right! (splay-node val)
-  (cdr! (cdr splay-node) val))
-
-(function splay-balance (splay k)
-  (let (top (splay-top splay) cmp (splay-comparator splay) p nil q nil d 0)
-    (splay-node-key! $splay-nil k)
-    (splay-node-left! $splay-nil $splay-nil)
-    (splay-node-right! $splay-nil $splay-nil)
-    (while (/= (<- d (cmp k (splay-node-key top))) 0)
-      (<- p top)
+(method Splay _balance (key)
+  (let (top (&top self) sentinel (&sentinel self) cmp (&comparator self)
+            p top q nil d nil)
+    (&right (&left (&key sentinel key) sentinel) sentinel)
+    (while (not (zero? (<- d (cmp (&key p) key))))
       (if (< d 0)
-          (begin
-            (<- q (splay-node-left p))
-            (if (= (<- d (cmp k (splay-node-key q))) 0)
-                (begin
-                  (<- top q)
-                  (splay-node-left! p (splay-node-right top))
-                  (splay-node-right! top p)
-                  (break))
-                (< d 0)
-                (begin
-                  (<- top (splay-node-left q))
-                  (splay-node-left! q (splay-node-right top))
-                  (splay-node-right! top p))
-                (begin
-                  (<- top (splay-node-right q))
-                  (splay-node-right! q (splay-node-left top))
-                  (splay-node-left! top q)
-                  (splay-node-left! p (splay-node-right top))
-                  (splay-node-right! top p))))
-          (begin
-            (<- q (splay-node-right p))
-            (if (= (<- d (cmp k (splay-node-key q))) 0)
-                (begin
-                  (<- top q)
-                  (splay-node-right! p (splay-node-left top))
-                  (splay-node-left! top p)
-                  (break))
-                (> d 0)
-                (begin
-                  (<- top (splay-node-right q))
-                  (splay-node-right! q (splay-node-left top))
-                  (splay-node-left! top p))
-                (begin
-                  (<- top (splay-node-left q))
-                  (splay-node-left! q (splay-node-right top))
-                  (splay-node-right! top q)
-                  (splay-node-right! p (splay-node-left top))
-                  (splay-node-left! top p))))))
-    top))
+          (begin (<- q (&left p))
+                 (if (zero? (<- d (cmp (&key q) key)))
+                     (begin (<- p (.rotL p)) (break))
+                     (<- p (if (< d 0) (.rotLL p) (.rotLR p)))))
+          (begin (<- q (&right p))
+                 (if (zero? (<- d (cmp (&key q) key)))
+                     (begin (<- p (.rotR p)) (break))
+                     (<- p (if (> d 0) (.rotRR p) (.rotRL p)))))))
+    (&top self p)
+    p))
 
-(function splay-resume (top)
-  (let (l (splay-node-left top) r (splay-node-right top) p nil)
-    (if (same? l $splay-nil) (return r)
-        (different? r $splay-nil)
-        (begin (<- p l)
-               (while (different? (splay-node-right p) $splay-nil)
-                 (<- p (splay-node-right p)))
-               (splay-node-right! p r)))
-    l))
+(method Splay _resume ()
+  (let (top (&top self) left (&left top) right (&right top)
+            sentinel (&sentinel self))
+    (if (same? left sentinel) (&top self right)
+        (same? right sentinel) (&top self left)
+        (let (p left)
+          (while (different? (&right p) sentinel)
+            (<- p (&right p)))
+          (&right p right)
+          (&top self left))))
+  nil)
 
-(function splay-add (splay k v)
-  ; Associates the specified v with the specified k in the specified splay.
-  ; Returns the v.
-  (let (top (splay-balance splay k))
-    (assert (same? top $splay-nil))
-    (splay-top! splay (splay-node-new k v (splay-node-left $splay-nil)
-                                      (splay-node-right $splay-nil)))
-    v))
+(method Splay .get (key)
+  (let (top (_balance self key) sentinel (&sentinel self))
+    (if (same? top sentinel) (_resume self)
+        (&val top))))
 
-(function splay-find (splay k)
-  ; Returns the value to which the specified k is associated in the specified splay.
-  ; If not found, return nil.
-  (let (top (splay-balance splay k))
-    (if (same? top $splay-nil) (begin (splay-top! splay (splay-resume top))
-                                      nil)
-        (begin (splay-top! splay top)
-               (splay-node-val top)))))
-
-(global-symbol $splay-nil (splay-node-new nil nil nil nil)
-  ; End node of splay.
-  ; Be careful when handling because it will be a circular list.
-  )
+(method Splay .put (key val)
+  (let (top (_balance self key) sentinel (&sentinel self))
+    (if (same? top sentinel)
+        (&top self (.init (.new SplayNode)
+                          :key key
+                          :val val
+                          :left (&left sentinel)
+                          :right (&right sentinel)))
+        (&val top val))
+    self))
 
 (function main ()
-  (assert nil))
+  (let (splay (.init (.new Splay)))
+    (.put (.put (.put splay :one 1) :two 2) :three 3)
+    (assert (= (.get splay :one) 1))
+    (assert (= (.get splay :one) 1))
+    (assert (= (.get splay :two) 2))
+    (assert (= (.get splay :one) 1))
+    (assert (= (.get splay :two) 2))
+    (assert (= (.get splay :three) 3))))

@@ -734,7 +734,7 @@
   (while al
     (if (same? (car al) k) (return (car! (cdr al) v))
         (<- al (cddr al))))
-  (error "property not found"))
+  (error (concat "property " (symbol->string k) " not found")))
 
 ; symbol & keyword
 
