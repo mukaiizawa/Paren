@@ -72,6 +72,7 @@ static char *symbol_name_map[] = {
   "object_p", "object?",
   "is_a_p", "is-a?",
   "find_class", "find-class",
+  "find_method", "find-method",
   // bi
   "samep", "same?",
   // sequence

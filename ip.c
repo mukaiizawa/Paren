@@ -749,8 +749,7 @@ static void exit1(void)
 }
 
 static int object_p(object o);
-static int object_is_a_p(object o, object cls_sym, object *result);
-static int find_class(object cls_sym, object *result);
+static int object_is_a_p(object e, object o, object cls_sym, object *result);
 
 static void stack_call_stack(object o)
 {
@@ -770,7 +769,7 @@ static void pop_throw_frame(void)
   object xbool, cls_sym, handler, handlers, body;
   i = fp;
   pop_frame();
-  if (!object_is_a_p(reg[0], object_Exception, &xbool) || xbool == object_nil)
+  if (!object_is_a_p(reg[1], reg[0], object_Exception, &xbool) || xbool == object_nil)
     reg[0] = gc_new_Error("must be Exception object");
   stack_call_stack(reg[0]);
   while (fp > -1) {
@@ -789,7 +788,7 @@ static void pop_throw_frame(void)
         for (j = 0; j < handlers->array.size; j += 2) {
           cls_sym = handlers->array.elt[j];
           handler = handlers->array.elt[j + 1];
-          if (!object_is_a_p(reg[0], cls_sym, &xbool)) continue;
+          if (!object_is_a_p(reg[1], reg[0], cls_sym, &xbool)) continue;
           if (xbool == object_true) {
             gen_apply_frame(handler);
             reg[0] = gc_new_cons(reg[0], object_nil);
@@ -882,6 +881,8 @@ static void trap(void)
 #define class_sym(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.car)
 #define class_super(cls) \
   ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.car)
+#define class_features(cls) \
+  ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.car)
 
 static int object_class_p(object o)
 {
@@ -904,18 +905,39 @@ static int object_class_p(object o)
   return o->cons.cdr == object_nil;
 }
 
-static int find_class(object cls_sym, object *result)
+static int find_class(object e, object cls_sym, object *result)
 {
   if (!type_p(cls_sym, SYMBOL)) return FALSE;
-  if ((*result = symbol_find_propagation(reg[1], cls_sym)) == NULL) return FALSE;
+  if ((*result = symbol_find_propagation(e, cls_sym)) == NULL) return FALSE;
   return object_class_p(*result);
 }
 
-static int find_super_class(object cls_sym, object *result)
+static int find_super_class(object e, object cls_sym, object *result)
 {
   object cls;
-  if (!find_class(cls_sym, &cls)) return FALSE;
-  return find_class(class_super(cls), result);
+  if (!find_class(e, cls_sym, &cls)) return FALSE;
+  return find_class(e, class_super(cls), result);
+}
+
+static int find_class_method(object e, object cls_sym, object mtd_sym
+    , object *result)
+{
+  int size1, size2;
+  object s;
+  xassert(type_p(cls_sym, SYMBOL));
+  xassert(type_p(mtd_sym, SYMBOL));
+  size1 = cls_sym->barray.size;
+  size2 = mtd_sym->barray.size;
+  s = gc_new_barray(SYMBOL, size1 + size2);
+  memcpy(s->barray.elt, cls_sym->barray.elt, size1);
+  memcpy(s->barray.elt + size1, mtd_sym->barray.elt, size2);
+  s = gc_intern_symbol(s);
+  if (((*result) = symbol_find_propagation(e, s)) == NULL) return TRUE;
+  if (!type_p(*result, LAMBDA)) {
+    ip_mark_error("is not a method");
+    return FALSE;
+  }
+  return TRUE;
 }
 
 static int object_p(object o)
@@ -933,7 +955,7 @@ static int object_p(object o)
   }
 }
 
-static int object_is_a_p(object o, object cls_sym, object *result) {
+static int object_is_a_p(object e, object o, object cls_sym, object *result) {
   object o_cls_sym;
   xassert(type_p(cls_sym, SYMBOL));
   if (!object_p(o)) return FALSE;
@@ -944,8 +966,8 @@ static int object_is_a_p(object o, object cls_sym, object *result) {
       *result = object_true;
       return TRUE;
     }
-    if (!find_super_class(o_cls_sym, &o)) return FALSE;
-    o_cls_sym = o->cons.cdr->cons.cdr->cons.cdr->cons.car;
+    if (!find_super_class(e, o_cls_sym, &o)) return FALSE;
+    o_cls_sym = class_sym(o);
   }
 }
 
@@ -965,17 +987,47 @@ DEFUN(is_a_p)
     ip_mark_error("require Class instance");
     return FALSE;
   }
-  return object_is_a_p(o, class_sym(cls), &(reg[0]));
+  return object_is_a_p(reg[1], o, class_sym(cls), &(reg[0]));
 }
 
 DEFUN(find_class)
 {
   if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!find_class(argv->cons.car, result)) {
+  if (!find_class(reg[1], argv->cons.car, result)) {
     ip_mark_error("class not found");
     return FALSE;
   }
   return TRUE;
+}
+
+DEFUN(find_method)
+{
+  object cls, cls_sym, mtd_sym, features;
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!ip_ensure_type(SYMBOL, argv->cons.car, &cls_sym)) return FALSE;
+  argv = argv->cons.cdr;
+  if (!ip_ensure_type(SYMBOL, argv->cons.car, &mtd_sym)) return FALSE;
+  while (TRUE) {
+    // find class mtehod
+    if (!find_class_method(reg[1], cls_sym, mtd_sym, result)) return FALSE;
+    if (*result != NULL) return TRUE;
+    // find feature method
+    if (!find_class(reg[1], cls_sym, &cls)) return FALSE;
+    features = class_features(cls);
+    while (features != object_nil) {
+      xassert(type_p(features, CONS));
+      if (!find_class_method(reg[1], features->cons.car, mtd_sym, result))
+        return FALSE;
+      if (*result != NULL) return TRUE;
+      features = features->cons.cdr;
+    }
+    // super class
+    if (!find_class(reg[1], class_super(cls), &cls)) {
+      ip_mark_error("method not found");
+      return FALSE;
+    }
+    cls_sym = class_sym(cls);
+  }
 }
 
 DEFUN(stack_frame)
@@ -1155,13 +1207,10 @@ DEFSP(begin)
 
 DEFSP(macro)
 {
-  object params;
+  object o, params;
   if (!ip_ensure_arguments(argc, 3, FALSE)) return FALSE;
-  if (!type_p(argv->cons.car, SYMBOL)) {
-    ip_mark_error("required macro name");
-    return FALSE;
-  }
-  gen1(BIND_PROPAGATION_FRAME, argv->cons.car);
+  if (!ip_ensure_type(SYMBOL, argv->cons.car, &o)) return FALSE;
+  gen1(BIND_PROPAGATION_FRAME, o);
   argv = argv->cons.cdr;
   if (!valid_lambda_list_p(params = argv->cons.car, TRUE)) {
     mark_illegal_args();

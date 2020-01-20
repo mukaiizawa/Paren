@@ -473,7 +473,7 @@ static int concat_symbol(object argv, object *result)
     memcpy((*result)->barray.elt + sp, p->barray.elt, p->barray.size);
     sp += p->barray.size;
   }
-  *result = gc_symbol(*result);
+  *result = gc_intern_symbol(*result);
   return TRUE;
 }
 

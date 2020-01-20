@@ -308,7 +308,8 @@
   ;               (print (- (clock) s))))
   (with-gensyms (s)
     (list let (list s (list clock))
-          (list begin0 (cons begin body)
+          (list 'begin0
+                (cons begin body)
                 (list 'write-line
                       (list 'string "time=" (list '- (list clock) s)))))))
 
@@ -986,26 +987,9 @@
   ; Returns the class corresponding to the specified symbol cls_sym.
   )
 
-(function global-method-sym (cls-sym method-sym)
-  (string->symbol (concat (symbol->string cls-sym)
-                          (symbol->string method-sym))))
-
-(function find-method (cls-sym method-sym)
-  (let (m nil
-        find-class-method
-          (lambda (cls-sym)
-            (let (gs (global-method-sym cls-sym method-sym))
-              (if (bound? gs) (eval gs))))
-        rec
-          (lambda (cls-sym)
-            (for (cls-sym cls-sym cls (find-class cls-sym)) cls-sym
-              (<- cls-sym (nth cls 5) cls (find-class cls-sym))
-              (if (<- m (find-class-method cls-sym)) (return m)
-                  (dolist (feature (nth cls 7))
-                    (if (<- m (find-class-method feature))
-                        (return m)))))))
-    (if (<- m (rec cls-sym)) m
-        (error (concat "method " (symbol->string method-sym) " not found")))))
+(builtin-function find-method (cls-sym method-sym)
+  ; Returns the class corresponding to the specified symbol cls_sym.
+  )
 
 (macro make-accessor (field)
   ; Create accessor for the specified field.
@@ -1058,7 +1042,7 @@
                 (map fields (lambda (field) (list 'make-accessor field)))))))
 
 (macro method (cls-sym method-sym args :rest body)
-  (let (global-sym (global-method-sym cls-sym method-sym)
+  (let (global-sym (concat cls-sym method-sym)
         quoted-global-sym (list quote global-sym)
         method-lambda (cons lambda (cons (cons 'self args) body)))
     (if (not (find-class cls-sym)) (error "class not found")
@@ -1755,6 +1739,7 @@
 
 (function shell ()
   ; Start paren shell.
+  (import :shell-command)
   (let (s nil)
     (while true
       (catch (SystemExit (lambda (e) (break))

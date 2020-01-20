@@ -160,7 +160,7 @@ object gc_new_barray_from(int type, char *val, int size)
   o = new_barray_from(type, val, size);
   switch (type) {
     case SYMBOL:
-      return gc_symbol(o);
+      return gc_intern_symbol(o);
     case KEYWORD:
       if ((p = splay_find(object_keyword_splay, o)) != NULL) return p;
       splay_add(object_keyword_splay, o, o);
@@ -174,7 +174,7 @@ object gc_new_barray_from(int type, char *val, int size)
   }
 }
 
-object gc_symbol(object o)
+object gc_intern_symbol(object o)
 {
   object p;
   xassert(type_p(o, SYMBOL));
