@@ -160,9 +160,7 @@ object gc_new_barray_from(int type, char *val, int size)
   o = new_barray_from(type, val, size);
   switch (type) {
     case SYMBOL:
-      if ((p = splay_find(object_symbol_splay, o)) != NULL) return p;
-      splay_add(object_symbol_splay, o, o);
-      return o;
+      return gc_symbol(o);
     case KEYWORD:
       if ((p = splay_find(object_keyword_splay, o)) != NULL) return p;
       splay_add(object_keyword_splay, o, o);
@@ -174,6 +172,15 @@ object gc_new_barray_from(int type, char *val, int size)
       xassert(FALSE);
       return NULL;
   }
+}
+
+object gc_symbol(object o)
+{
+  object p;
+  xassert(type_p(o, SYMBOL));
+  if ((p = splay_find(object_symbol_splay, o)) != NULL) return p;
+  splay_add(object_symbol_splay, o, o);
+  return o;
 }
 
 static object new_array(int size)

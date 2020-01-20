@@ -459,6 +459,24 @@ DEFUN(subseq)
   return FALSE;
 }
 
+static int concat_symbol(object argv, object *result)
+{
+  int sp, size;
+  object o, p;
+  for (o = argv, size = 0; o != object_nil; o = o->cons.cdr) {
+    if (!ip_ensure_type(SYMBOL, o->cons.car, &p)) return FALSE;
+    size += p->barray.size;
+  }
+  *result = gc_new_barray(SYMBOL, size);
+  for (sp = 0, o = argv; o != object_nil; o = o->cons.cdr) {
+    p = o->cons.car;
+    memcpy((*result)->barray.elt + sp, p->barray.elt, p->barray.size);
+    sp += p->barray.size;
+  }
+  *result = gc_symbol(*result);
+  return TRUE;
+}
+
 static int concat_cons(object argv, object *result)
 {
   object o, acc;
@@ -513,7 +531,8 @@ DEFUN(concat)
   if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
   switch (type(argv->cons.car)) {
     case SYMBOL:
-      if (argv->cons.car != object_nil) break;
+      if (argv->cons.car != object_nil)
+        return concat_symbol(argv, result);
     case CONS:
       return concat_cons(argv, result);
     case ARRAY:

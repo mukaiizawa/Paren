@@ -13,6 +13,7 @@ extern object gc_new_xfloat(double val);
 extern object gc_new_cons(object car, object cdr);
 extern object gc_new_barray(int type, int size);
 extern object gc_new_barray_from(int type, char *val, int size);
+extern object gc_symbol(object o);
 extern object gc_new_array(int size);
 extern object gc_new_array_from(object *o, int size);
 extern object gc_new_pointer(void *p);
