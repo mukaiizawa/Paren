@@ -1143,22 +1143,22 @@
   ; Read 1character from stream.
   (let (encoding (dynamic $external-encoding))
     (if (same? encoding :UTF-8)
-        (let (utf8-exception (.message (.new Error) "illegal UTF-8")
+        (let (illegal-utf8-error (.message (.new Error) "illegal UTF-8")
               trail? (lambda (b) (= (bit-and b 0xC0) 0x80))
               ms (.new MemoryStream)
               b1 (.readByte self) b2 nil b3 nil b4 nil)
           (if (< b1 0) (return :EOF)
               (< b1 0x80) (.writeByte ms b1)
-              (< b1 0xC2) (throw utf8-exception)
-              (not (trail? (<- b2 (.readByte self)))) (throw utf8-exception)
+              (< b1 0xC2) (throw illegal-utf8-error)
+              (not (trail? (<- b2 (.readByte self)))) (throw illegal-utf8-error)
               (< b1 0xE0) (begin (if (= (bit-and b1 0x3E) 0)
-                                     (throw utf8-exception))
+                                     (throw illegal-utf8-error))
                                  (.writeByte (.writeByte ms b1) b2))
               (< b1 0xF0) (begin (<- b3 (.readByte self))
                                  (if (or (and (= b1 0xE0)
                                               (= (bit-and b2 0x20) 0))
                                          (not (trail? b3)))
-                                     (throw utf8-exception))
+                                     (throw illegal-utf8-error))
                                  (.writeByte
                                    (.writeByte
                                      (.writeByte ms b1) b2) b3))
@@ -1167,12 +1167,12 @@
                                          (not (trail? b4))
                                          (and (= b1 0xf0)
                                               (= (bit-and b2 0x30) 0)))
-                                     (throw utf8-exception))
+                                     (throw illegal-utf8-error))
                                  (.writeByte
                                    (.writeByte
                                      (.writeByte
                                        (.writeByte ms b1) b2) b3) b4))
-              (throw utf8-exception))
+              (throw illegal-utf8-error))
           (.toString ms))
         (throw (.message (.new NotImplementedError) "unsupport encoding")))))
 
