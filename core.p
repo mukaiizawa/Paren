@@ -1139,11 +1139,6 @@
   ; Must be implemented in the inherited class.
   (assert nil))
 
-(method Stream .writeByte (:rest args)
-  ; Write 1byte to stream.
-  ; Must be implemented in the inherited class.
-  (throw (.new NotImplementedError)))
-
 (method Stream .readChar ()
   ; Read 1character from stream.
   (let (encoding (dynamic $external-encoding))
@@ -1186,12 +1181,89 @@
   ; Must be implemented in the inherited class.
   (throw (.new NotImplementedError)))
 
+(method Stream .read ()
+  ; Read expression from the specified stream.
+  ; Returns :EOF if eof reached.
+  (.parse (.init (.new ParenParser) :stream self)))
+
+(method Stream .writeByte (:rest args)
+  ; Write 1byte to stream.
+  ; Must be implemented in the inherited class.
+  (throw (.new NotImplementedError)))
+
 (method Stream .writeString (s)
   ; Write string to stream.
   (let (ba (->byte-array s))
     (dotimes (i (length ba))
       (.writeByte self (nth ba i))))
   self)
+
+(method Stream .write (x :key readable? (radix 10) write-line-feed?)
+  ; Write the specified x to the specified stream.
+  ; write is the general entry point to the Paren printer.
+  ; If readable? is supplied, write in a format understood by the Paren reader.
+  ; The default keyword parameters are intended to look good to people.
+  (let (write-s-expr (lambda (x)
+                       (if (cons? x) (write-cons x)
+                           (write-atom x)))
+        write-cons (lambda (x)
+                     (.writeByte self 0x28)
+                     (write-s-expr (car x))
+                     (map (cdr x) (lambda (x) 
+                                    (.writeByte self 0x20)
+                                    (write-s-expr x)))
+                     (.writeByte self 0x29))
+        write-operator (lambda (x name)
+                         (.writeByte self 0x28)
+                         (.writeString self name)
+                         (.writeByte self 0x20)
+                         (write-s-expr (lambda-parameter x))
+                         (dolist (body (lambda-body x))
+                           (.writeByte self 0x20)
+                           (write-s-expr body))
+                         (.writeByte self 0x29))
+        write-addr (lambda (x name)
+                     (.writeString self "#<")
+                     (.writeString name)
+                     (.writeByte self 0x3A)
+                     (write-integer (address x) 16)
+                     (.writeByte self 0x3E))
+        write-number (lambda (x)
+                       (if (integer? x) (write-integer x)
+                           (write-float x)))
+        write-integer (lambda (x)
+                        (if (minus? x) (begin (.writeByte self 0x2D)
+                                              (write-integer (negated x)))
+                            (zero? x) (.writeByte self 0x30)
+                            (let (upper (// x radix))
+                              (if (not (zero? upper)) (write-integer upper))
+                              (.writeByte self (+ (mod x radix) 0x30)))))
+        write-float (lambda (x)
+                      (if (minus? x) (begin (.writeByte self 0x2D)
+                                            (write-float (negated x)))
+                          (write-integer (// x 1))))
+        write-atom (lambda (x)
+                     (if (builtin? x) (write-atom (builtin-name x))
+                         (macro? x) (if readable? (write-operator x "macro")
+                                        (write-addr x "macro"))
+                         (function? x) (if readable? (write-operator x "lamdba")
+                                           (write-addr x "lambda"))
+                         (string? x) (if readable?
+                                         (begin (.writeByte self 0x22)
+                                                (.writeString self x)
+                                                (.writeByte self 0x22))
+                                         (.writeString self x))
+                         (symbol? x) (.writeString self (symbol->string x))
+                         (keyword? x) (begin
+                                        (.writeByte self 0x3A)
+                                        (.writeString self
+                                                      (symbol->string
+                                                        (keyword->symbol x))))
+                         (number? x) (write-number x)
+                         (assert nil))))
+    (write-s-expr x)
+    (if write-line-feed? (.writeByte self 0x0A))
+    x))
 
 (method Stream .seek (:rest args)
   ; Move the read position on the stream to the specified offset.
@@ -1585,87 +1657,21 @@
     (with-open-mode out stream path '.openUpdate body)))
 
 (function read (:opt stream)
-  ; Read expression from the specified stream.
-  ; Returns :EOF if eof reached.
   (let (stream (or stream (dynamic $stdin)))
-    (.parse (.init (.new ParenParser) :stream stream))))
+    (.read stream)))
 
 (function write (x :opt stream :key readable? (radix 10) write-line-feed?)
-  ; Write the specified x to the specified stream.
-  ; write is the general entry point to the Paren printer.
-  ; If readable? is supplied, write in a format understood by the Paren reader.
-  ; The default keyword parameters are intended to look good to people.
   (let (stream (or stream (dynamic $stdout)))
-      (let (write-s-expr (lambda (x)
-                           (if (cons? x) (write-cons x)
-                               (write-atom x)))
-            write-cons (lambda (x)
-                         (write-string "(" stream)
-                         (write-s-expr (car x))
-                         (map (cdr x) (lambda (x) 
-                                        (write-string " " stream)
-                                        (write-s-expr x)))
-                         (write-string ")" stream))
-            write-operator (lambda (x name)
-                             (write-string "(" stream)
-                             (write-string name stream)
-                             (write-string " " stream)
-                             (write-s-expr (lambda-parameter x))
-                             (dolist (body (lambda-body x))
-                               (write-string " " stream)
-                               (write-s-expr body))
-                             (write-string ")" stream))
-            write-addr (lambda (x name)
-                         (write-string "#<" name stream)
-                         (write-string ":" stream)
-                         (write-integer (address x) 16)
-                         (write-string ">" stream))
-            write-number (lambda (x)
-                           (if (integer? x) (write-integer x)
-                               (write-float x)))
-            write-integer (lambda (x)
-                            (if (minus? x) (begin (write-byte 0x2D stream)
-                                                  (write-integer (negated x)))
-                                (zero? x) (write-byte 0x30 stream)
-                                (let (upper (// x radix))
-                                  (if (not (zero? upper)) (write-integer upper))
-                                  (write-byte (+ (mod x radix) 0x30)
-                                              stream))))
-            write-float (lambda (x)
-                            (if (minus? x) (begin (write-byte 0x2D stream)
-                                                  (write-float (negated x)))
-                                (write-integer (// x 1))))
-            write-atom
-                (lambda (x)
-                  (if (builtin? x) (write-atom (builtin-name x))
-                      (macro? x) (if readable? (write-operator x "macro")
-                                     (write-addr x "macro"))
-                      (function? x) (if readable? (write-operator x "lamdba")
-                                        (write-addr x "lambda"))
-                      (string? x) (if readable?
-                                      (begin (write-byte 0x22 stream)
-                                             (write-string x stream)
-                                             (write-byte 0x22 stream))
-                                      (write-string x stream))
-                      (symbol? x) (write-string (symbol->string x) stream)
-                      (keyword? x) (begin (write-byte 0x3A stream)
-                                          (write-string (symbol->string
-                                                          (keyword->symbol x))
-                                                        stream))
-                      (number? x) (write-number x)
-                      (assert nil))))
-        (write-s-expr x)
-        (if write-line-feed? (write-byte 0x0A stream))
-        x)))
+    (.write stream x :radix radix :write-line-feed? write-line-feed?)))
 
 (function write-line (x :opt stream)
   (let (stream (or stream (dynamic $stdout)))
-    (write x stream :write-line-feed? true)))
+    (.write stream x :write-line-feed? true)))
 
 (function print (x :opt stream)
   ; Print the specified x as a readable format.
   (let (stream (or stream (dynamic $stdout)))
-    (write x stream :readable? true :write-line-feed? true)))
+    (.write stream x :readable? true :write-line-feed? true)))
 
 ; execution
 
