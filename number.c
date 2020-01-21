@@ -43,16 +43,14 @@ DEFUN(integer_p)
 DEFUN(number_equal_p)
 {
   double x, y;
+  *result = object_nil;
   if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
-  if (!bi_double(argv->cons.car, &x)) mark_required_number();
-  *result = object_true;
+  if (!bi_double(argv->cons.car, &x)) return TRUE;
   while ((argv = argv->cons.cdr) != object_nil) {
-    if (!bi_double(argv->cons.car, &y)) mark_required_number();
-    if (x != y) {
-      *result = object_nil;
-      break;
-    }
+    if (!bi_double(argv->cons.car, &y)) return TRUE;
+    if (x != y) return TRUE;
   }
+  *result = object_true;
   return TRUE;
 }
 

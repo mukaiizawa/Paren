@@ -117,14 +117,44 @@ DEFUN(last_cons)
   return TRUE;
 }
 
-DEFUN(to_barray)
+DEFUN(assoc)
 {
-  object x;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ensure_byte_seq(argv->cons.car, &x)) return FALSE;
-  if (type_p(x, BARRAY)) *result = x;
-  else *result = gc_new_barray_from(BARRAY, x->barray.elt, x->barray.size);
-  return TRUE;
+  object o, k;
+  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!ensure_list(argv->cons.car, &o)) return FALSE;
+  k = argv->cons.cdr->cons.car;
+  while (o != object_nil) {
+    if (o->cons.car == k) {
+      if (!ip_ensure_type(CONS, o->cons.cdr, &o)) break;
+      *result = o->cons.car;
+      return TRUE;
+    }
+    if (!ip_ensure_type(CONS, o->cons.cdr, &o)) break;
+    o = o->cons.cdr;
+  }
+  ip_mark_error("property not found");
+  return FALSE;
+}
+
+DEFUN(set_assoc)
+{
+  object o, k, v;
+  if (!ip_ensure_arguments(argc, 3, 3)) return FALSE;
+  if (!ensure_list(argv->cons.car, &o)) return FALSE;
+  k = argv->cons.cdr->cons.car;
+  v = argv->cons.cdr->cons.cdr->cons.car;
+  while (o != object_nil) {
+    if (o->cons.car == k) {
+      if (!ip_ensure_type(CONS, o->cons.cdr, &o)) break;
+      o->cons.car = v;
+      *result = v;
+      return TRUE;
+    }
+    if (!ip_ensure_type(CONS, o->cons.cdr, &o)) break;
+    o = o->cons.cdr;
+  }
+  ip_mark_error("property not found");
+  return FALSE;
 }
 
 // array
@@ -191,6 +221,16 @@ DEFUN(barray_copy)
     return TRUE;
   }
   return FALSE;
+}
+
+DEFUN(to_barray)
+{
+  object x;
+  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!ensure_byte_seq(argv->cons.car, &x)) return FALSE;
+  if (type_p(x, BARRAY)) *result = x;
+  else *result = gc_new_barray_from(BARRAY, x->barray.elt, x->barray.size);
+  return TRUE;
 }
 
 DEFUN(barray_to_string)

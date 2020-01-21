@@ -720,22 +720,17 @@
 
 ; associated list
 
-(function assoc (al k)
+(builtin-function assoc (al k)
   ; Returns a value corresponding to the specified key k of the specified asoociate list al.
   ; Raises an exception if there is no value.
-  (if (not (or (keyword? k) (symbol? k))) (error "require symbol or keyword"))
-  (while al
-    (if (same? (car al) k) (return (cadr al))
-        (<- al (cddr al))))
-  (error (concat "property " (symbol->string k) " not found")))
+  (assert (= (assoc '(:one 1 :two 2 :three 3) :one) 1))
+  (assert-error (assoc '(:one 1 :two 2 :three 3) :four)))
 
-(function assoc! (al k v)
+(builtin-function assoc! (al k v)
   ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
   ; Raises an exception if there is no value.
-  (while al
-    (if (same? (car al) k) (return (car! (cdr al) v))
-        (<- al (cddr al))))
-  (error (concat "property " (symbol->string k) " not found")))
+  (assert (same? (assoc! '(:one 1 :two 2 :three 3) :one 'one) 'one))
+  (assert-error (assoc! '(:one 1 :two 2 :three 3) :four 4)))
 
 ; symbol & keyword
 
@@ -864,7 +859,8 @@
 (builtin-function = (x y)
   ; Returns true if the specified number x and y are equal.
   (assert (= 3.14 3.140))
-  (assert-error (= 'x 'y)))
+  (assert (not (= 10 20)))
+  (assert (not (= 'x 'y))))
 
 (function /= (x y)
   ; Same as (not (= x y))).
@@ -932,35 +928,11 @@
   ; Returns the value of the specified number x - 1.
   (- x 1))
 
-(function max (:rest args)
-  (reduce args (lambda (x y) (if (> x y) x y))))
-
-(function min (:rest args)
-  (reduce args (lambda (x y) (if (< x y) x y))))
-
 (builtin-function < (:rest args)
   ; Returns true if each of the specified args are in monotonically decreasing order.
   ; Otherwise returns nil.
   (assert (< 0 1 2))
   (assert (nil? (< 0 0 1))))
-
-(builtin-function ceiling (x)
-  ; So-called ceiling function.
-  (assert (= (ceiling 1.1) 2))
-  (assert (= (ceiling 0) 0))
-  (assert (= (ceiling -1.1) -1)))
-
-(builtin-function floor (x)
-  ; So-called floor function.
-  (assert (= (floor 1.1) 1))
-  (assert (= (floor 0) 0))
-  (assert (= (floor -1.1) -2)))
-
-(builtin-function truncate (x)
-  ; Truncate specified number x.
-  (assert (= (truncate 1.1) 1))
-  (assert (= (truncate 0) 0))
-  (assert (= (truncate -1.1) -1)))
 
 ; kernel
 

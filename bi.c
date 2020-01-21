@@ -83,6 +83,7 @@ static char *symbol_name_map[] = {
   "barray_p", "byte-array?",
   "barray_to_string", "byte-array->string",
   "cons_p", "cons?",
+  "set_assoc", "assoc!",
   "keyword_p", "keyword?",
   "keyword_to_string", "keyword->string",
   "keyword_to_symbol", "keyword->symbol",
