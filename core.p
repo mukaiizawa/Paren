@@ -1717,7 +1717,6 @@
 
 (function shell ()
   ; Start paren shell.
-  (import :shell-command)
   (let (s nil)
     (while true
       (catch (SystemExit (lambda (e) (break))
