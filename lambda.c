@@ -10,21 +10,21 @@
 
 DEFUN(special_operator_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(type_p(argv->cons.car, SPECIAL));
   return TRUE;
 }
 
 DEFUN(builtin_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(builtin_p(argv->cons.car));
   return TRUE;
 }
 
 DEFUN(builtin_name)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (builtin_p(argv->cons.car)) {
     *result = argv->cons.car->builtin.name;
     return TRUE;
@@ -34,7 +34,7 @@ DEFUN(builtin_name)
 
 DEFUN(function_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (type(argv->cons.car)) {
     case FUNCITON:
     case LAMBDA:
@@ -49,7 +49,7 @@ DEFUN(function_p)
 
 DEFUN(macro_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(type_p(argv->cons.car, MACRO));
   return TRUE;
 }
@@ -57,8 +57,8 @@ DEFUN(macro_p)
 DEFUN(lambda_parameter)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!type_p(o = argv->cons.car, LAMBDA) && !type_p(o, MACRO)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_lambda(argv->cons.car, &o)) return FALSE;
   *result = o->lambda.params;
   return TRUE;
 }
@@ -66,8 +66,8 @@ DEFUN(lambda_parameter)
 DEFUN(lambda_body)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!type_p(o = argv->cons.car, LAMBDA) && !type_p(o, MACRO)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_lambda(argv->cons.car, &o)) return FALSE;
   *result = o->lambda.body;
   return TRUE;
 }

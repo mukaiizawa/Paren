@@ -18,31 +18,11 @@
 // endwith -- 特定のパターンで終端するか
 // startwith -- 特定のパターンで開始するか
 
-static int ensure_list(object o, object *result)
-{
-  if (!list_p(o)) {
-    ip_mark_illegal_type();
-    return FALSE;
-  }
-  *result = o;
-  return TRUE;
-}
-
-static int ensure_byte_seq(object o, object *result)
-{
-  if (!barray_p(o)) {
-    ip_mark_illegal_type();
-    return FALSE;
-  }
-  *result = o;
-  return TRUE;
-}
-
 // cons
 
 DEFUN(cons_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(type_p(argv->cons.car, CONS));
   return TRUE;
 }
@@ -50,8 +30,8 @@ DEFUN(cons_p)
 DEFUN(cons)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
-  if (!ensure_list(argv->cons.cdr->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_arg_list(argv->cons.cdr->cons.car, &o)) return FALSE;
   *result = gc_new_cons(argv->cons.car, o);
   return TRUE;
 }
@@ -65,8 +45,8 @@ DEFUN(list)
 DEFUN(car)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ensure_list(argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
   if (o == object_nil) *result = object_nil;
   else *result = o->cons.car;
   return TRUE;
@@ -75,8 +55,8 @@ DEFUN(car)
 DEFUN(set_car)
 {
   object o, p;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
-  if (!ip_ensure_type(CONS, argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, CONS, &o)) return FALSE;
   p = argv->cons.cdr->cons.car;
   o->cons.car = p;
   *result = p;
@@ -86,8 +66,8 @@ DEFUN(set_car)
 DEFUN(cdr)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ensure_list(argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
   if (o == object_nil) *result = object_nil;
   else *result = o->cons.cdr;
   return TRUE;
@@ -96,9 +76,9 @@ DEFUN(cdr)
 DEFUN(set_cdr)
 {
   object o, p;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
-  if (!ip_ensure_type(CONS, argv->cons.car, &o)) return FALSE;
-  if (!ensure_list(argv->cons.cdr->cons.car, &p)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, CONS, &o)) return FALSE;
+  if (!bi_arg_list(argv->cons.cdr->cons.car, &p)) return FALSE;
   p = argv->cons.cdr->cons.car;
   o->cons.cdr = p;
   *result = p;
@@ -108,8 +88,8 @@ DEFUN(set_cdr)
 DEFUN(last_cons)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ensure_list(argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
   if (o != object_nil) {
     while (o->cons.cdr != object_nil) o = o->cons.cdr;
   }
@@ -120,16 +100,16 @@ DEFUN(last_cons)
 DEFUN(assoc)
 {
   object o, k;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
-  if (!ensure_list(argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
   k = argv->cons.cdr->cons.car;
   while (o != object_nil) {
     if (o->cons.car == k) {
-      if (!ip_ensure_type(CONS, o->cons.cdr, &o)) break;
+      if (!bi_arg_type(o->cons.cdr, CONS, &o)) break;
       *result = o->cons.car;
       return TRUE;
     }
-    if (!ip_ensure_type(CONS, o->cons.cdr, &o)) break;
+    if (!bi_arg_type(o->cons.cdr, CONS, &o)) break;
     o = o->cons.cdr;
   }
   ip_mark_error("property not found");
@@ -139,18 +119,18 @@ DEFUN(assoc)
 DEFUN(set_assoc)
 {
   object o, k, v;
-  if (!ip_ensure_arguments(argc, 3, 3)) return FALSE;
-  if (!ensure_list(argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 3, 3)) return FALSE;
+  if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
   k = argv->cons.cdr->cons.car;
   v = argv->cons.cdr->cons.cdr->cons.car;
   while (o != object_nil) {
     if (o->cons.car == k) {
-      if (!ip_ensure_type(CONS, o->cons.cdr, &o)) break;
+      if (!bi_arg_type(o->cons.cdr, CONS, &o)) break;
       o->cons.car = v;
       *result = v;
       return TRUE;
     }
-    if (!ip_ensure_type(CONS, o->cons.cdr, &o)) break;
+    if (!bi_arg_type(o->cons.cdr, CONS, &o)) break;
     o = o->cons.cdr;
   }
   ip_mark_error("property not found");
@@ -161,7 +141,7 @@ DEFUN(set_assoc)
 
 DEFUN(array_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(type_p(argv->cons.car, ARRAY));
   return TRUE;
 }
@@ -170,7 +150,7 @@ DEFUN(array_p)
 
 DEFUN(barray_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(type_p(argv->cons.car, BARRAY));
   return TRUE;
 }
@@ -178,7 +158,7 @@ DEFUN(barray_p)
 DEFUN(barray_new)
 {
   int size;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_int(argv->cons.car, &size)) return FALSE;
   *result = gc_new_barray(BARRAY, size);
   return TRUE;
@@ -188,7 +168,7 @@ DEFUN(barray_copy)
 {
   int fp, tp, size;
   object from, to;
-  if (!ip_ensure_arguments(argc, 5, 5)) return FALSE;
+  if (!bi_argc_range(argc, 5, 5)) return FALSE;
   from = argv->cons.car;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &fp)) {
     ip_mark_error("source array index must be integer");
@@ -226,8 +206,8 @@ DEFUN(barray_copy)
 DEFUN(to_barray)
 {
   object x;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ensure_byte_seq(argv->cons.car, &x)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_barray(argv->cons.car, &x)) return FALSE;
   if (type_p(x, BARRAY)) *result = x;
   else *result = gc_new_barray_from(BARRAY, x->barray.elt, x->barray.size);
   return TRUE;
@@ -236,8 +216,8 @@ DEFUN(to_barray)
 DEFUN(barray_to_string)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ip_ensure_type(BARRAY, argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, BARRAY, &o)) return FALSE;
   *result = gc_new_barray_from(STRING, o->barray.elt, o->barray.size);
   return TRUE;
 }
@@ -246,7 +226,7 @@ DEFUN(barray_to_string)
 
 DEFUN(string_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(type_p(argv->cons.car, STRING));
   return TRUE;
 }
@@ -255,9 +235,9 @@ DEFUN(string_equal)
 {
   int b;
   object x, y;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
-  if (!ip_ensure_type(STRING, argv->cons.car, &x)) return FALSE;
-  if (!ip_ensure_type(STRING, argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, STRING, &x)) return FALSE;
+  if (!bi_arg_type(argv->cons.cdr->cons.car, STRING, &y)) return FALSE;
   if (x->barray.size != y->barray.size) b = FALSE;
   else b = memcmp(x->barray.elt, y->barray.elt, x->barray.size) == 0;
   *result = object_bool(b);
@@ -267,8 +247,8 @@ DEFUN(string_equal)
 DEFUN(string_to_symbol)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ip_ensure_type(STRING, argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, STRING, &o)) return FALSE;
   *result = gc_new_barray_from(SYMBOL, o->barray.elt, o->barray.size);
   return TRUE;
 }
@@ -276,8 +256,8 @@ DEFUN(string_to_symbol)
 DEFUN(string_to_keyword)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ip_ensure_type(STRING, argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, STRING, &o)) return FALSE;
   *result = gc_new_barray_from(KEYWORD, o->barray.elt, o->barray.size);
   return TRUE;
 }
@@ -286,7 +266,7 @@ DEFUN(string_to_keyword)
 
 DEFUN(symbol_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(type_p(argv->cons.car, SYMBOL));
   return TRUE;
 }
@@ -294,8 +274,8 @@ DEFUN(symbol_p)
 DEFUN(symbol_to_string)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ip_ensure_type(SYMBOL, argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
   *result = gc_new_barray_from(STRING, o->barray.elt, o->barray.size);
   return TRUE;
 }
@@ -303,8 +283,8 @@ DEFUN(symbol_to_string)
 DEFUN(symbol_to_keyword)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ip_ensure_type(SYMBOL, argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
   *result = gc_new_barray_from(KEYWORD, o->barray.elt, o->barray.size);
   return TRUE;
 }
@@ -313,7 +293,7 @@ DEFUN(symbol_to_keyword)
 
 DEFUN(keyword_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(type_p(argv->cons.car, KEYWORD));
   return TRUE;
 }
@@ -321,8 +301,8 @@ DEFUN(keyword_p)
 DEFUN(keyword_to_symbol)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ip_ensure_type(KEYWORD, argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, KEYWORD, &o)) return FALSE;
   *result = gc_new_barray_from(SYMBOL, o->barray.elt, o->barray.size);
   return TRUE;
 }
@@ -330,8 +310,8 @@ DEFUN(keyword_to_symbol)
 DEFUN(keyword_to_string)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ip_ensure_type(KEYWORD, argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, KEYWORD, &o)) return FALSE;
   *result = gc_new_barray(STRING, o->barray.size + 1);
   (*result)->barray.elt[0] = 0x3a;
   memcpy((*result)->barray.elt + 1, o->barray.elt, o->barray.size);
@@ -423,14 +403,13 @@ static int seq_length(object o, int *len)
       return string_length(o, len);
     default: break;
   }
-  ip_mark_illegal_type();
-  return FALSE;
+  return bi_arg_type(NULL, FALSE, NULL);
 }
 
 DEFUN(length)
 {
   int len;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!seq_length(argv->cons.car, &len)) return FALSE;
   *result = gc_new_xint(len);
   return TRUE;
@@ -471,13 +450,13 @@ DEFUN(subseq)
 {
   int start, end, len;
   object o, s, e;
-  if (!ip_ensure_arguments(argc, 2, 3)) return FALSE;
+  if (!bi_argc_range(argc, 2, 3)) return FALSE;
   if (!seq_length(o = argv->cons.car, &len)) return FALSE;
-  if (!ip_ensure_type(XINT, (argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
+  if (!bi_arg_type((argv = argv->cons.cdr)->cons.car, XINT, &s)) return FALSE;
   start = s->xint.val;
   if (argc == 2) end = len;
   else {
-    if (!ip_ensure_type(XINT, argv->cons.cdr->cons.car, &e)) return FALSE;
+    if (!bi_arg_type(argv->cons.cdr->cons.car, XINT, &e)) return FALSE;
     end = e->xint.val;
     if (end > len) return FALSE;
   }
@@ -495,8 +474,7 @@ DEFUN(subseq)
       return string_subseq(o, start, end, result);
     default: break;
   }
-  ip_mark_illegal_type();
-  return FALSE;
+  return bi_arg_type(NULL, FALSE, NULL);
 }
 
 static int concat_symbol(object argv, object *result)
@@ -504,7 +482,7 @@ static int concat_symbol(object argv, object *result)
   int sp, size;
   object o, p;
   for (o = argv, size = 0; o != object_nil; o = o->cons.cdr) {
-    if (!ip_ensure_type(SYMBOL, o->cons.car, &p)) return FALSE;
+    if (!bi_arg_type(o->cons.car, SYMBOL, &p)) return FALSE;
     size += p->barray.size;
   }
   *result = gc_new_barray(SYMBOL, size);
@@ -522,7 +500,7 @@ static int concat_cons(object argv, object *result)
   object o, acc;
   acc = object_nil;
   while (argv != object_nil) {
-    if (!ensure_list(argv->cons.car, &o)) return FALSE;
+    if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
     while (o != object_nil) {
       acc = gc_new_cons(o->cons.car, acc);
       o = o->cons.cdr;
@@ -539,7 +517,7 @@ static int concat_barray(int type, object argv, object *result)
   object o, p;
   *result = argv->cons.car;
   while ((argv = argv->cons.cdr) != object_nil) {
-    if (!ip_ensure_type(type, argv->cons.car, &o)) return FALSE;
+    if (!bi_arg_type(argv->cons.car, type, &o)) return FALSE;
     p = *result;
     psize = p->barray.size;
     *result = gc_new_barray(type, psize + o->barray.size);
@@ -555,7 +533,7 @@ static int concat_array(object argv, object *result)
   object o, p;
   *result = argv->cons.car;
   while ((argv = argv->cons.cdr) != object_nil) {
-    if (!ip_ensure_type(ARRAY, argv->cons.car, &o)) return FALSE;
+    if (!bi_arg_type(argv->cons.car, ARRAY, &o)) return FALSE;
     p = *result;
     psize = sizeof(object) * p->barray.size;
     osize = sizeof(object) * o->barray.size;
@@ -568,7 +546,7 @@ static int concat_array(object argv, object *result)
 
 DEFUN(concat)
 {
-  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   switch (type(argv->cons.car)) {
     case SYMBOL:
       if (argv->cons.car != object_nil)
@@ -583,8 +561,7 @@ DEFUN(concat)
       return concat_barray(STRING, argv, result);
     default: break;
   }
-  ip_mark_illegal_type();
-  return FALSE;
+  return bi_arg_type(NULL, FALSE, NULL);
 }
 
 static int nth_string(object o, int n, object *result)
@@ -599,7 +576,7 @@ DEFUN(nth)
 {
   object o;
   int i, len;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!seq_length(o = argv->cons.car, &len)) return FALSE;
   if (!bi_int(argv->cons.cdr->cons.car, &i)) return FALSE;
   if (i < 0 || i >= len) return FALSE;
@@ -618,8 +595,7 @@ DEFUN(nth)
       return nth_string(o, i, result);
     default: break;
   }
-  ip_mark_illegal_type();
-  return FALSE;
+  return bi_arg_type(NULL, FALSE, NULL);
 }
 
 static int nth_set_string(object o, int n, object v, object *result)
@@ -641,7 +617,7 @@ DEFUN(nth_set)
 {
   object o, v;
   int i, len;
-  if (!ip_ensure_arguments(argc, 3, 3)) return FALSE;
+  if (!bi_argc_range(argc, 3, 3)) return FALSE;
   if (!seq_length(o = argv->cons.car, &len)) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
   if (i < 0 || i >= len) return FALSE;
@@ -667,15 +643,14 @@ DEFUN(nth_set)
       return TRUE;
     default: break;
   }
-  ip_mark_illegal_type();
-  return FALSE;
+  return bi_arg_type(NULL, FALSE, NULL);
 }
 
 DEFUN(reverse)
 {
   int i, j, n, size, csize;
   object o, p;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (type(o = argv->cons.car)) {
     case SYMBOL:
       if (o != object_nil) break;
@@ -711,8 +686,7 @@ DEFUN(reverse)
       return TRUE;
     default: break;
   }
-  ip_mark_illegal_type();
-  return FALSE;
+  return bi_arg_type(NULL, FALSE, NULL);
 }
 
 DEFUN(xreverse)
@@ -720,7 +694,7 @@ DEFUN(xreverse)
   int i, size;
   unsigned char c;
   object o, p;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (type(o = argv->cons.car)) {
     case SYMBOL:
       if (argv->cons.car != object_nil) break;
@@ -747,6 +721,5 @@ DEFUN(xreverse)
       return TRUE;
     default: break;
   }
-  ip_mark_illegal_type();
-  return FALSE;
+  return bi_arg_type(NULL, FALSE, NULL);
 }

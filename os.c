@@ -14,20 +14,11 @@
 #include "pf.h"
 #include "ip.h"
 
-static int ensure_file_pointer(object o, FILE **fp)
-{
-  if (!bi_intptr(o, (intptr_t *)fp)) {
-    ip_mark_error("illegal file pointer");
-    return FALSE;
-  }
-  return TRUE;
-}
-
 DEFUN(fp)
 {
   int fd;
   FILE *fp;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_int(argv->cons.car, &fd)) {
     ip_mark_error("illegal file discripter");
     return FALSE;
@@ -55,7 +46,7 @@ DEFUN(fopen)
   int mode;
   FILE *fp;
   object ofn;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!type_p(ofn = argv->cons.car, STRING)) {
     ip_mark_error("illegal file name");
     return FALSE;
@@ -77,8 +68,8 @@ DEFUN(fgetc)
 {
   int ch;
   FILE *fp;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
-  if (!ensure_file_pointer(argv->cons.car, &fp)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_fp(argv->cons.car, &fp)) return FALSE;
   ch = fgetc(fp);
   if (ch == EOF && ferror(fp)) {
     clearerr(fp);
@@ -161,7 +152,7 @@ DEFUN(fseek)
 {
   int off;
   FILE *fp;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &off)) return FALSE;
   if (off == -1) return fseek(fp, 0, SEEK_END) == 0;
@@ -172,7 +163,7 @@ DEFUN(ftell)
 {
   int pos;
   FILE *fp;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   if ((pos = ftell(fp)) == -1) return FALSE;
   *result = gc_new_xint(pos);
@@ -182,7 +173,7 @@ DEFUN(ftell)
 DEFUN(fclose)
 {
   FILE *fp;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   fclose(fp);
   *result = object_true;
@@ -191,14 +182,14 @@ DEFUN(fclose)
 
 DEFUN(clock)
 {
-  if (!ip_ensure_arguments(argc, FALSE, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   *result = gc_new_xfloat((double)clock() / CLOCKS_PER_SEC);
   return TRUE;
 }
 
 DEFUN(milli_time)
 {
-  if (!ip_ensure_arguments(argc, FALSE, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   *result = gc_new_xint(time(NULL));
   return TRUE;
 }

@@ -30,40 +30,6 @@ void ip_mark_error(char *msg)
   error_msg = msg;
 }
 
-static void ip_mark_too_few_arguments_error(void)
-{
-  ip_mark_error("too few arguments");
-}
-
-static void ip_mark_too_many_arguments_error(void)
-{
-  ip_mark_error("too many arguments");
-}
-
-int ip_ensure_arguments(int argc, int min, int max)
-{
-  if (argc < min) ip_mark_too_few_arguments_error();
-  else if ((!min && !max && argc != 0) || (max && argc > max))
-    ip_mark_too_many_arguments_error();
-  else return TRUE;
-  return FALSE;
-}
-
-void ip_mark_illegal_type(void)
-{
-  ip_mark_error("illegal argument type");
-}
-
-int ip_ensure_type(int type, object o, object *result)
-{
-  if (!type_p(o, type)) {
-    ip_mark_illegal_type();
-    return FALSE;
-  }
-  *result = o;
-  return TRUE;
-}
-
 static void mark_illegal_args()
 {
   ip_mark_error("illegal parameter list");
@@ -366,7 +332,7 @@ static void parse_lambda_list(object env, object params, object args)
   // parse required parameter
   while (params != object_nil && !type_p(params->cons.car, KEYWORD)) {
     if (args == object_nil) {
-      ip_mark_too_few_arguments_error();
+      bi_argc_range(0, 1, 1);
       return;
     }
     if (!type_p(params->cons.car, CONS)) {
@@ -470,7 +436,7 @@ static void parse_lambda_list(object env, object params, object args)
       params = params->cons.cdr;
     }
   }
-  if (args != object_nil) ip_mark_too_many_arguments_error();
+  if (args != object_nil) bi_argc_range(2, 1, 1);
 }
 
 static void pop_apply_frame(void)
@@ -809,14 +775,14 @@ static void pop_throw_frame(void)
 
 DEFUN(eval)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   gen_eval_frame(argv->cons.car);
   return TRUE;
 }
 
 DEFUN(apply)
 {
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
   switch (type(argv->cons.car)) {
     case FUNCITON:
       gen1(APPLY_BUILTIN_FRAME, argv->cons.car);
@@ -835,7 +801,7 @@ DEFUN(apply)
 DEFUN(expand_macro)
 {
   object f, args;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   reg[0] = argv->cons.car;
   if (!type_p(reg[0], CONS)) return TRUE;
   f = reg[0]->cons.car;
@@ -851,7 +817,7 @@ DEFUN(expand_macro)
 DEFUN(bound_p)
 {
   object s;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!type_p((s = argv->cons.car), SYMBOL)) {
     ip_mark_error("required symbol");
     return FALSE;
@@ -973,7 +939,7 @@ static int object_is_a_p(object e, object o, object cls_sym, object *result) {
 
 DEFUN(object_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   reg[0] = object_bool(object_p(argv->cons.car));
   return TRUE;
 }
@@ -981,7 +947,7 @@ DEFUN(object_p)
 DEFUN(is_a_p)
 {
   object o, cls;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
   o = argv->cons.car;
   if (!object_class_p(cls = argv->cons.cdr->cons.car)) {
     ip_mark_error("require Class instance");
@@ -992,7 +958,7 @@ DEFUN(is_a_p)
 
 DEFUN(find_class)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!find_class(reg[1], argv->cons.car, result)) {
     ip_mark_error("class not found");
     return FALSE;
@@ -1003,10 +969,10 @@ DEFUN(find_class)
 DEFUN(find_method)
 {
   object cls, cls_sym, mtd_sym, features;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
-  if (!ip_ensure_type(SYMBOL, argv->cons.car, &cls_sym)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, SYMBOL, &cls_sym)) return FALSE;
   argv = argv->cons.cdr;
-  if (!ip_ensure_type(SYMBOL, argv->cons.car, &mtd_sym)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, SYMBOL, &mtd_sym)) return FALSE;
   while (TRUE) {
     // find class mtehod
     if (!find_class_method(reg[1], cls_sym, mtd_sym, result)) return FALSE;
@@ -1115,7 +1081,7 @@ static int valid_lambda_list_p(object params, int nest_p)
 DEFSP(let)
 {
   object args, s;
-  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   if (!list_p((args = argv->cons.car))) {
     ip_mark_error("argument must be list");
     return FALSE;
@@ -1145,7 +1111,7 @@ DEFSP(dynamic)
 {
   int i;
   object e, s, v;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!type_p((s = argv->cons.car), SYMBOL)) {
     ip_mark_error("argument must be symbol");
     return FALSE;
@@ -1208,8 +1174,8 @@ DEFSP(begin)
 DEFSP(macro)
 {
   object o, params;
-  if (!ip_ensure_arguments(argc, 3, FALSE)) return FALSE;
-  if (!ip_ensure_type(SYMBOL, argv->cons.car, &o)) return FALSE;
+  if (!bi_argc_range(argc, 3, FALSE)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
   gen1(BIND_PROPAGATION_FRAME, o);
   argv = argv->cons.cdr;
   if (!valid_lambda_list_p(params = argv->cons.car, TRUE)) {
@@ -1223,7 +1189,7 @@ DEFSP(macro)
 DEFSP(lambda)
 {
   object params;
-  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   params = argv->cons.car;
   if (!valid_lambda_list_p(params, FALSE)) {
     mark_illegal_args();
@@ -1235,21 +1201,21 @@ DEFSP(lambda)
 
 DEFSP(quote)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   reg[0] = argv->cons.car;
   return TRUE;
 }
 
 DEFSP(if)
 {
-  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   gen_if_frame(argv);
   return TRUE;
 }
 
 DEFSP(unwind_protect)
 {
-  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   gen1(UNWIND_PROTECT_FRAME, argv->cons.cdr);
   gen_eval_frame(argv->cons.car);
   return TRUE;
@@ -1264,7 +1230,7 @@ DEFSP(labels)
 
 DEFSP(goto)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   gen0(GOTO_FRAME);
   reg[0] = argv->cons.car;
   return TRUE;
@@ -1272,7 +1238,7 @@ DEFSP(goto)
 
 DEFSP(throw)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   gen0(THROW_FRAME);
   gen_eval_frame(argv->cons.car);
   return TRUE;
@@ -1282,7 +1248,7 @@ DEFSP(catch)
 {
   int size;
   object cls, params;
-  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   size = 0;
   params = argv->cons.car;
   fb_reset();
@@ -1313,7 +1279,7 @@ DEFSP(catch)
 
 DEFSP(return)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   gen0(RETURN_FRAME);
   gen_eval_frame(argv->cons.car);
   return TRUE;
@@ -1322,7 +1288,7 @@ DEFSP(return)
 DEFSP(assert)
 {
 #ifndef NDEBUG
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   gen0(ASSERT_FRAME);
   gen_eval_frame(argv->cons.car);
 #endif
@@ -1370,7 +1336,7 @@ static void ip_main(void)
   }
 }
 
-void ip_mark(void)
+void ip_mark_object(void)
 {
   int i;
   for (i = 0; i < REG_SIZE; i++) gc_mark(reg[i]);

@@ -11,10 +11,54 @@
 #include "bi.h"
 #include "ip.h"
 
+int bi_argc_range(int argc, int min, int max)
+{
+  if (argc < min) ip_mark_error("too few arguments");
+  else if ((!min && !max && argc != 0) || (max && argc > max))
+    ip_mark_error("too many arguments");
+  else return TRUE;
+  return FALSE;
+}
+
+static int arg(object o, int test, object *result)
+{
+  if (!test) {
+    ip_mark_error("illegal argument");
+    return FALSE;
+  }
+  *result = o;
+  return TRUE;
+}
+
+int bi_arg_type(object o, int type, object *result)
+{
+  return arg(o, type_p(o, type), result);
+}
+
+int bi_arg_list(object o, object *result)
+{
+  return arg(o, list_p(o), result);
+}
+
+int bi_arg_barray(object o, object *result)
+{
+  return arg(o, barray_p(o), result);
+}
+
+int bi_arg_lambda(object o, object *result)
+{
+  return arg(o, (type_p(o, LAMBDA) || type_p(o, MACRO)), result);
+}
+
+int bi_arg_fp(object o, FILE **result)
+{
+  return bi_intptr(o, (intptr_t *)result);
+}
+
 DEFUN(samep)
 {
   object o;
-  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   o = argv->cons.car;
   *result = object_true;
   while ((argv = argv->cons.cdr) != object_nil) {
@@ -28,14 +72,14 @@ DEFUN(samep)
 
 DEFUN(address)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = gc_new_xfloat((intptr_t)argv->cons.car);
   return TRUE;
 }
 
 DEFUN(not)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(argv->cons.car == object_nil);
   return TRUE;
 }

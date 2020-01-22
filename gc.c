@@ -315,7 +315,7 @@ void gc_chance(void)
 {
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
   if (GC_LOG_P) printf("before gc(used memory %d[byte])\n", gc_used_memory);
-  ip_mark();
+  ip_mark_object();
   gc_mark(object_symcmp);
   gc_mark(object_strcmp);
   gc_mark(object_symbol_splay);

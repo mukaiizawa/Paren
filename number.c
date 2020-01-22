@@ -28,14 +28,14 @@ static void mark_division_by_zero(void)
 
 DEFUN(number_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(number_p(argv->cons.car));
   return TRUE;
 }
 
 DEFUN(integer_p)
 {
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(type_p(argv->cons.car, XINT));
   return TRUE;
 }
@@ -44,7 +44,7 @@ DEFUN(number_equal_p)
 {
   double x, y;
   *result = object_nil;
-  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) return TRUE;
   while ((argv = argv->cons.cdr) != object_nil) {
     if (!bi_double(argv->cons.car, &y)) return TRUE;
@@ -87,7 +87,7 @@ static int int64_add(object argv, object *result)
 
 DEFUN(number_add)
 {
-  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   *result = argv->cons.car;
   return int64_add(argv->cons.cdr, result);
 }
@@ -134,7 +134,7 @@ static int int64_multiply(object argv, object *result)
 
 DEFUN(number_multiply)
 {
-  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   *result = argv->cons.car;
   return int64_multiply(argv->cons.cdr, result);
 }
@@ -181,7 +181,7 @@ static int int64_divide(object argv, object *result)
 
 DEFUN(number_divide)
 {
-  if (!ip_ensure_arguments(argc, 1, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   if (argc == 1) {
     *result = object_bytes[1];
     return int64_divide(argv, result);
@@ -193,7 +193,7 @@ DEFUN(number_divide)
 DEFUN(number_modulo)
 {
   int64_t x, y;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
   if (!bi_int64(argv->cons.cdr->cons.car, &y) || y == 0) return FALSE;
   *result = gc_new_xint(x % y);
@@ -203,7 +203,7 @@ DEFUN(number_modulo)
 DEFUN(number_lt)
 {
   double x, y;
-  if (!ip_ensure_arguments(argc, 2, FALSE)) return FALSE;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) return FALSE;
   while ((argv = argv->cons.cdr) != object_nil) {
     if (!bi_double(argv->cons.car, &y)) return FALSE;
@@ -220,7 +220,7 @@ DEFUN(number_lt)
 DEFUN(number_floor)
 {
   double x;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) return FALSE;
   *result = gc_new_xint(floor(x));
   return TRUE;
@@ -229,7 +229,7 @@ DEFUN(number_floor)
 DEFUN(number_ceiling)
 {
   double x;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) return FALSE;
   *result = gc_new_xint(ceil(x));
   return TRUE;
@@ -238,7 +238,7 @@ DEFUN(number_ceiling)
 DEFUN(number_truncate)
 {
   double x;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) return FALSE;
   *result = gc_new_xint(trunc(x));
   return TRUE;
@@ -247,7 +247,7 @@ DEFUN(number_truncate)
 DEFUN(number_to_integer)
 {
   double x;
-  if (!ip_ensure_arguments(argc, 1, 1)) return FALSE;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) {
     mark_required_number();
     return FALSE;
@@ -263,7 +263,7 @@ DEFUN(number_to_integer)
 DEFUN(bit_and)
 {
   int64_t x, y;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
   if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (x < 0 || y < 0) return FALSE;
@@ -274,7 +274,7 @@ DEFUN(bit_and)
 DEFUN(bit_or)
 {
   int64_t x, y;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
   if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (x < 0 || y < 0) return FALSE;
@@ -285,7 +285,7 @@ DEFUN(bit_or)
 DEFUN(bit_xor)
 {
   int64_t x, y;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
   if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (x < 0 || y < 0) return FALSE;
@@ -304,7 +304,7 @@ static int bits(int64_t x)
 DEFUN(bit_shift)
 {
   int64_t x, y;
-  if (!ip_ensure_arguments(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
   if (x < 0) return FALSE;
   if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
