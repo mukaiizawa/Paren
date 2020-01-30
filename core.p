@@ -836,25 +836,13 @@
   ; Returns true if the specified integer x is odd
   (not (even? x)))
 
-(function plus? (x)
-  ; Returns true if the specified number x is positive.
-  (> x 0))
-
-(function zero? (x)
-  ; Same as (= x 0).
-  (= x 0))
-
-(function minus? (x)
-  ; Returns true if the specified number x is negative.
-  (< x 0))
-
 (function byte? (x)
   ; Returns true if the specified x is integer and between 0 and 255.
   (and (integer? x ) (<= 0 x 255)))
 
 (function unsigned-integer? (x)
   ; Returns true if the specified x is integer and zero or positive.
-  (and (integer? x) (not (minus? x))))
+  (and (integer? x) (>= x 0)))
 
 (builtin-function = (x y)
   ; Returns true if the specified number x and y are equal.
@@ -873,12 +861,8 @@
 (function - (x :rest args)
   ; Returns the value of the specified x minus the sum of the specified args.
   ; If args is nil, return -x.
-  (if (nil? args) (negated x)
-      (+ x (negated (apply + args)))))
-
-(function negated (x)
-  ; Returns the inverted value of the specified x's sign.
-  (* x -1))
+  (if (nil? args) (* x -1)
+      (+ x (- (apply + args)))))
 
 (builtin-function * (x :rest args)
   ; Returns the product of the arguments.
@@ -1232,16 +1216,56 @@
                        (if (integer? x) (write-integer x)
                            (write-float x)))
         write-integer (lambda (x)
-                        (if (minus? x) (begin (.writeByte self 0x2D)
-                                              (write-integer (negated x)))
-                            (zero? x) (.writeByte self 0x30)
-                            (let (upper (// x radix))
-                              (if (not (zero? upper)) (write-integer upper))
-                              (.writeByte self (+ (mod x radix) 0x30)))))
+                        (if (= x 0) (.writeByte self 0x30)
+                            (begin
+                              (when (< x 0)
+                                (.writeByte self 0x2D)
+                                (<- x (- x)))
+                              (let (upper (// x radix))
+                                (if (/= upper 0)
+                                    (write-integer upper))
+                                (.writeByte self (+ (mod x radix) 0x30))))))
         write-float (lambda (x)
-                      (if (minus? x) (begin (.writeByte self 0x2D)
-                                            (write-float (negated x)))
-                          (write-integer (// x 1))))
+                      (if (= x 0) (.writeByte self 0x30)
+                          (let (mant x exp 8)
+                            (let (write-mant1
+                                   (lambda ()
+                                     (let (upper (// (truncate mant) 100000000))
+                                       (write-integer upper)
+                                       (<- mant (* (- mant (* upper 100000000))
+                                                   10))))
+                                  write-fraction
+                                   (lambda (x)
+                                     (write-mant1)
+                                     (dotimes (i (-- x))
+                                       (if (= mant 0) (break)
+                                           (write-mant1)))))
+                            (when (< mant 0)
+                              (.writeByte self 0x2D)
+                              (<- mant (- mant)))
+                            (while (>= mant 1000000000)
+                              (<- mant (/ mant 10.0) exp (++ exp)))
+                            (while (< mant 100000000)
+                              (<- mant (* mant 10.0) exp (-- exp)))
+                            (if (<= 0 exp 6)
+                                (begin
+                                  (dotimes (i (++ exp))
+                                    (write-mant1))
+                                  (.writeByte self 0x2E)
+                                  (write-fraction (- 16 exp 1)))
+                                (<= -3 exp -1)
+                                (begin
+                                  (.writeByte self 0x30)
+                                  (.writeByte self 0x2E)
+                                  (dotimes (i (- (- exp) 1))
+                                    (.writeByte self 0x30))
+                                  (write-fraction 16))
+                                (begin
+                                  (write-mant1)
+                                  (.writeByte self 0x2E)
+                                  (write-fraction 15)
+                                  (.writeByte self 0x65)
+                                  (write-integer exp)))))))
         write-atom (lambda (x)
                      (if (builtin? x) (write-atom (builtin-name x))
                          (macro? x) (if readable? (write-operator x "macro")
