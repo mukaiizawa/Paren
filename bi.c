@@ -73,7 +73,7 @@ DEFUN(samep)
 DEFUN(address)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = gc_new_xfloat((intptr_t)argv->cons.car);
+  *result = gc_new_xint((intptr_t)argv->cons.car);
   return TRUE;
 }
 

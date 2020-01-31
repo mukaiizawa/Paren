@@ -1208,30 +1208,35 @@
                          (.writeByte self 0x29))
         write-addr (lambda (x name)
                      (.writeString self "#<")
-                     (.writeString name)
+                     (.writeString self name)
                      (.writeByte self 0x3A)
                      (write-integer (address x) 16)
                      (.writeByte self 0x3E))
         write-number (lambda (x)
-                       (if (integer? x) (write-integer x)
+                       (if (integer? x) (write-integer x radix)
                            (write-float x)))
-        write-integer (lambda (x)
+        write-integer (lambda (x radix)
                         (if (= x 0) (.writeByte self 0x30)
-                            (begin
+                            (let (write-digit
+                                   (lambda (x)
+                                     (let (upper (// x radix)
+                                           digit (mod x radix))
+                                       (if (/= upper 0) (write-digit upper))
+                                       (.writeByte self
+                                                   (+ digit
+                                                      (if (< digit 10) 0x30
+                                                          (+ digit -10 0x41)))))))
                               (when (< x 0)
                                 (.writeByte self 0x2D)
                                 (<- x (- x)))
-                              (let (upper (// x radix))
-                                (if (/= upper 0)
-                                    (write-integer upper))
-                                (.writeByte self (+ (mod x radix) 0x30))))))
+                                (write-digit x))))
         write-float (lambda (x)
                       (if (= x 0) (.writeByte self 0x30)
                           (let (mant x exp 8)
                             (let (write-mant1
                                    (lambda ()
                                      (let (upper (// (truncate mant) 100000000))
-                                       (write-integer upper)
+                                       (write-integer upper 10)
                                        (<- mant (* (- mant (* upper 100000000))
                                                    10))))
                                   write-fraction
@@ -1265,7 +1270,7 @@
                                   (.writeByte self 0x2E)
                                   (write-fraction 15)
                                   (.writeByte self 0x65)
-                                  (write-integer exp)))))))
+                                  (write-integer exp 10)))))))
         write-atom (lambda (x)
                      (if (builtin? x) (write-atom (builtin-name x))
                          (macro? x) (if readable? (write-operator x "macro")
@@ -1684,13 +1689,19 @@
   (let (stream (or stream (dynamic $stdin)))
     (.read stream)))
 
-(function write (x :opt stream :key readable? (radix 10) write-line-feed?)
+(function write (x :key stream readable? (radix 10) write-line-feed?)
   (let (stream (or stream (dynamic $stdout)))
-    (.write stream x :radix radix :write-line-feed? write-line-feed?)))
+    (.write stream x
+            :readable? readable?
+            :radix radix
+            :write-line-feed? write-line-feed?)))
 
-(function write-line (x :opt stream)
+(function write-line (x :key stream readable? (radix 10))
   (let (stream (or stream (dynamic $stdout)))
-    (.write stream x :write-line-feed? true)))
+    (.write stream x
+            :readable? readable?
+            :radix radix
+            :write-line-feed? true)))
 
 (function print (x :opt stream)
   ; Print the specified x as a readable format.
