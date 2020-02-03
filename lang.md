@@ -149,7 +149,7 @@ atomは次のリテラルがある。
     identifier ::= (identifier_first identifier_rest* | identifier_special)
     identifier_first ::= [!$%&*/<=>?a-zA-Z^_|]
     identifier_rest ::= (identifier_first | [0-9+\-])*
-    identifier_special ::= ('+' | '-')
+    identifier_special ::= ('+' | '-' | '++' | '--')
 
 シンボルは一部の記号及び数字を除く文字から始まり、一部を除くascii文字が任意の数続く。
 
@@ -157,26 +157,22 @@ atomは次のリテラルがある。
 
     keyword ::= ':' identifier
 
-キーワードは`:`から始まるシンボルのことをいう。
+    キーワードは`:`から始まる識別子のことをいう。
 
 #### 数値（number）
 
     number ::= (integer | float)
+    integer ::= (digit+ 'x')? [0-9a-z]+
+    float ::= digit+ '.' digit+ ('E' [+-]? digit+)?
+    digit ::= [0-9]
 
 数値には整数と、浮動小数点数がある。
-
-#### 整数（integer）
-
-    integer ::= (digit+ 'x')? [0-9a-z]+
-    digit ::= [0-9]
 
 整数は数値と'x'を前置する事で基数を指定出来る。
 
 基数は36まで設定可能だが、例外として0を指定すると16が指定されたものと見做す。
 
-#### 浮動小数点数（float）
-
-    float ::= digit+ '.' digit+
+浮動小数点数は倍精度浮動小数点数値である。指数表記可能。
 
 #### 文字列（string）
 
