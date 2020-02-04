@@ -146,18 +146,17 @@ atomは次のリテラルがある。
 #### シンボル（symbol）
 
     symbol ::= identifier
-    identifier ::= (identifier_first identifier_rest* | identifier_special)
-    identifier_first ::= [!$%&*/<=>?a-zA-Z^_|]
-    identifier_rest ::= (identifier_first | [0-9+\-])*
-    identifier_special ::= ('+' | '-' | '++' | '--')
+    identifier ::= (identifier1 [identifier1 identifier_rest*])
+    identifier1 ::= [!$%&*+\-./<=>?a-zA-Z_]
+    identifier_rest ::= (identifier1 | [0-9])*
 
-シンボルは一部の記号及び数字を除く文字から始まり、一部を除くascii文字が任意の数続く。
+シンボルは一部のascii文字から始まり、数値以外の後に数値を含むascii文字からなる。
 
 #### キーワード（keyword）
 
-    keyword ::= ':' identifier
+    keyword ::= ':' symbol
 
-    キーワードは`:`から始まる識別子のことをいう。
+キーワードはシンボルに`:`を付与したもののことをいう。
 
 #### 数値（number）
 

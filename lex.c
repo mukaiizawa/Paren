@@ -60,6 +60,13 @@ void lex_start(FILE *infp)
   skip();
 }
 
+static int lex_comment(void)
+{
+  while (next_ch != '\n') skip();
+  skip();
+  return lex();
+}
+
 static int digit_val(int ch, int radix)
 {
   int result;
@@ -102,23 +109,35 @@ static int lex_string(void)
   return LEX_STRING;
 }
 
-static int identifier_lead_char_p(void)
+static int identifier_first_p(void)
 {
   switch (next_ch) {
-    case '!': case '$': case '%': case '&': case '*': case '+': case '-':
-    case '/': case '<': case '=': case '>': case '?': case '_': case '.':
-    case '[': case ']':
+    case '!':
+    case '$':
+    case '%':
+    case '&':
+    case '*':
+    case '+':
+    case '-':
+    case '.':
+    case '/':
+    case '<':
+    case '=':
+    case '>':
+    case '?':
+    case '_':
       return TRUE;
-    default: return isalpha(next_ch);
+    default:
+      return isalpha(next_ch);
   }
 }
 
 static int identifier_trail_char_p(void)
 {
-  return identifier_lead_char_p() || isdigit(next_ch);
+  return identifier_first_p() || isdigit(next_ch);
 }
 
-static int lex_number(int sign)
+static int lex_number(void)
 {
   int radix;
   double factor;
@@ -139,16 +158,53 @@ static int lex_number(int sign)
       lex_fval += factor * digit_val(skip(), 10);
       factor /= 10;
     }
-    if (sign == -1) lex_fval = sign * lex_fval;
     return LEX_FLOAT;
   }
-  if (sign == -1) lex_ival = sign * lex_ival;
   return LEX_INT;
+}
+
+static void lex_partial_identifier(void)
+{
+  if (!identifier_first_p()) return;
+  get();
+  while (identifier_trail_char_p()) get();
 }
 
 static void lex_identifier(void)
 {
-  while (identifier_trail_char_p()) get();
+  if (!identifier_first_p()) lex_error("illegal identifier");
+  get();
+  lex_partial_identifier();
+}
+
+static int lex_symbol(void)
+{
+  lex_identifier();
+  return LEX_SYMBOL;
+}
+
+static int lex_keyword(void)
+{
+  skip();
+  lex_identifier();
+  return LEX_KEYWORD;
+}
+
+static int lex_sign(void)
+{
+  int sign, token_type;
+  sign = get();
+  if (isspace(next_ch)) return LEX_SYMBOL;
+  if (identifier_first_p()) {
+    lex_partial_identifier();
+    return LEX_SYMBOL;
+  }
+  token_type = lex_number();
+  if (sign == '-') {
+    if (token_type == LEX_INT) lex_ival *= -1;
+    else lex_fval *= -1;
+  }
+  return token_type;
 }
 
 char *lex_token_name(char *buf, int token)
@@ -166,35 +222,27 @@ char *lex_token_name(char *buf, int token)
 
 int lex(void)
 {
-  int sign;
   xbarray_reset(&lex_str);
   while (isspace(next_ch)) skip();
-  if (next_ch == ';') {
-    while (next_ch != '\n') skip();
-    skip();
-    return lex();
+  switch (next_ch) {
+    case EOF:
+    case '(':
+    case ')':
+    case '\'':
+      return skip();
+    case ';':
+      return lex_comment();
+    case '"':
+      return lex_string();
+    case ':':
+      return lex_keyword();
+    case '+':
+    case '-':
+      return lex_sign();
+    default:
+      if (isdigit(next_ch)) return lex_number();
+      if (identifier_first_p()) return lex_symbol();
+      lex_error("illegal char '%c'", next_ch);
+      return -1;
   }
-  if (next_ch == EOF || next_ch == '(' || next_ch == ')' || next_ch == '\'')
-    return skip();
-  if (next_ch == '"') return lex_string();
-  if (next_ch == ':') {
-    skip();
-    lex_identifier();
-    return LEX_KEYWORD;
-  }
-  if (next_ch != '+' && next_ch != '-') sign = 0;
-  else {
-    if (next_ch == '+') sign = 1;
-    else sign = -1;
-    skip();
-  }
-  if (isdigit(next_ch)) return lex_number(sign);
-  else if (sign == 1) add('+');
-  else if (sign == -1) add('-');
-  if (sign != 0 || identifier_lead_char_p()) {
-    lex_identifier();
-    return LEX_SYMBOL;
-  }
-  lex_error("illegal char '%c'", next_ch);
-  return -1;
 }

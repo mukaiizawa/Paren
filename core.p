@@ -784,7 +784,7 @@
   ; Returns concatenated string which each of the specified args as string.
   (with-memory-stream (ms)
     (dolist (arg args)
-      (if arg (write arg ms)))))
+      (if arg (write arg :stream ms)))))
 
 'todo
 (function string->list (s delimiter)
@@ -1494,11 +1494,10 @@
 
 (method ParenLexer .lex ()
   ; Returns (token-type [token]).
-  (let (space? (lambda (x) (and (byte? x) (ascii-space? x)))
-        identifierLead? (lambda ()
+  (let (identifierLead? (lambda ()
                           (let (c (&next self))
-                            (or (find '(0x21 0x24 0x25 0x26 0x2A 0x2B 0x2D 0x2F
-                                        0x3C 0x3D 0x3E 0x3F 0x5F 0x2E 0x5B 0x5D)
+                            (or (find '(0x21 0x24 0x25 0x26 0x2A 0x2B 0x2D
+                                        0x2F 0x3C 0x3D 0x3E 0x3F 0x5F 0x2E)
                                       c :test =)
                                 (ascii-alpha? c))))
         identifierTrail? (lambda ()
@@ -1562,8 +1561,8 @@
         lex (lambda ()
               (.reset self)
               (let (sign nil next (&next self))
-                (if (space? next) (begin
-                                    (while (space? (&next self)) (.skip self))
+                (if (ascii-space? next) (begin
+                                    (while (ascii-space? (&next self)) (.skip self))
                                     (lex))
                     (.eof? self) '(:EOF)
                     (= next 0x22) (list :string (lex-string))
