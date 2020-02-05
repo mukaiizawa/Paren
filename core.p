@@ -1412,26 +1412,26 @@
 (method Path .to-s ()
   (reduce (&files self) (lambda (acc rest) (concat acc "/" rest))))
 
-(method Path _open (mode)
+(method Path -open (mode)
   (.init (.new FileStream) :fp (fopen (.to-s self) mode)))
 
 (method Path .open-read ()
   ; Returns a stream that reads the contents of the receiver.
-  (_open self 0))
+  (-open self 0))
 
 (method Path .open-write ()
   ; Returns a stream to write to the contents of the receiver.
-  (_open self 1))
+  (-open self 1))
 
 (method Path .open-append ()
   ; Returns a stream to append to the receiver's content.
-  (_open self 2))
+  (-open self 2))
 
 (method Path .openUpdate ()
   ; Returns a stream that updates the contents of the receiver.
   ; The read/write position is at the beginning of the file.
   ; The file size cannot be reduced.
-  (_open self 3))
+  (-open self 3))
 
 (class AheadReader ()
   ; A one-character look-ahead reader.
@@ -1592,36 +1592,38 @@
         (or (= next 0x2B) (= next 0x2D)) (-lex-sign self)
         (ascii-digit? next) (-lex-number self)
         (-identifier-first? self) (-lex-symbol self)
-        (error " illegal char"))))
+        (error "illegal char"))))
 
 (class ParenParser ()
-  lexer)
+  lexer token token-type)
 
 (method ParenParser .init (:key string stream)
   (&lexer self (.init (.new ParenLexer) :string string :stream stream))
   self)
 
+(method ParenParser -scan ()
+  (let (x (.lex (&lexer self)))
+    (&token (&token-type self (car x)) (cadr x)))
+  self)
+
+(method ParenParser -parse-s ()
+  (let (token-type (&token-type self))
+    (if (same? token-type :EOF) :EOF
+        (same? token-type :quote) (list quote (.parse self))
+        (same? token-type :open-paren) (-parse-list self)
+        (or (same? token-type :symbol)
+            (same? token-type :keyword)
+            (same? token-type :string)
+            (same? token-type :number)) (&token self)
+        (error "syntax error"))))
+
+(method ParenParser -parse-list ()
+  (-scan self)
+  (if (same? (&token-type self) :close-paren) nil
+      (cons (-parse-s self) (-parse-list self))))
+
 (method ParenParser .parse ()
-  (let (token-type nil
-        token nil
-        scan (lambda ()
-               (let (x (.lex (&lexer self)))
-                 (<- token-type (car x) token (cadr x))))
-        parse (lambda () (scan) (parse-s))
-        parse-s (lambda ()
-                  (if (same? token-type :EOF) :EOF
-                      (same? token-type :quote) (list quote (parse))
-                      (same? token-type :open-paren) (parse-list)
-                      (or (same? token-type :symbol)
-                          (same? token-type :keyword)
-                          (same? token-type :string)
-                          (same? token-type :number)) token
-                      (error "syntax error")))
-        parse-list (lambda ()
-                     (scan)
-                     (if (same? token-type :close-paren) nil
-                         (cons (parse-s) (parse-list)))))
-    (parse)))
+  (-parse-s (-scan self)))
 
 (function read-byte (:opt stream)
   ; Read 1byte from the specified stream.
