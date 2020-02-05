@@ -73,7 +73,7 @@
     (&top self p)
     p))
 
-(method Splay _resume ()
+(method Splay -resume ()
   (let (top (&top self) left (&left top) right (&right top)
             sentinel (&sentinel self))
     (if (same? left sentinel) (&top self right)
@@ -87,7 +87,7 @@
 
 (method Splay .get (key)
   (let (top (-barance self key) sentinel (&sentinel self))
-    (if (same? top sentinel) (_resume self)
+    (if (same? top sentinel) (-resume self)
         (&val top))))
 
 (method Splay .put (key val)
