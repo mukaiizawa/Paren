@@ -952,17 +952,24 @@
   ; Create accessor for the specified field.
   ; If field name is 'xxx', create accessor &xxx.
   ; Works faster than method which defined with the method macro.
-  (let (key (symbol->keyword field)
-        f (string->symbol (concat "&" (symbol->string field))))
-    (unless (bound? f)
-      (with-gensyms (receiver val val?)
-        (list 'function f (list receiver :opt (list val nil val?))
-              :method
-              (list if (list not (list 'object? receiver))
-                    (list 'error "require object"))
-              (list if val? (list begin (list 'assoc! receiver key val)
-                                  receiver)
-                    (list 'assoc receiver key)))))))
+  (with-gensyms (receiver val)
+    (let (key (symbol->keyword field)
+          field (symbol->string field)
+          getter (string->symbol (concat "&" field))
+          setter (string->symbol (concat "&" field "!"))
+          verify (list if (list not (list 'object? receiver))
+                       (list 'error "require object")))
+      (list begin
+            (unless (bound? getter)
+              (list 'function getter (list receiver)
+                    :method
+                    verify
+                    (list 'assoc receiver key)))
+            (unless (bound? setter)
+              (list 'function setter (list receiver val)
+                    :method
+                    verify
+                    (list begin (list 'assoc! receiver key val) receiver)))))))
 
 (macro make-method-dispatcher (method-sym)
   (unless (bound? method-sym)
@@ -1081,7 +1088,7 @@
 
 (method Exception .message (:opt (message nil message?))
   ; Message accessors.
-  (if message? (&message self message) (&message self)))
+  (if message? (&message! self message) (&message self)))
 
 (method Exception .to-s ()
   ; Returns a String representing the receiver.
@@ -1311,36 +1318,36 @@
 
 (method MemoryStream .init ()
   (let (buf-size 256)
-    (&buf-size self buf-size)
-    (&buf self (byte-array buf-size))
-    (&rdpos self 0)
-    (&wrpos self 0))
+    (&buf-size! self buf-size)
+    (&buf! self (byte-array buf-size))
+    (&rdpos! self 0)
+    (&wrpos! self 0))
   self)
 
 (method MemoryStream -extend (size)
   (let (req (+ (&wrpos self) size) new-buf nil)
     (while (< (&buf-size self) req)
-      (&buf-size self (* (&buf-size self) 2)))
+      (&buf-size! self (* (&buf-size self) 2)))
     (<- new-buf (byte-array (&buf-size self)))
     (byte-array-copy (&buf self) 0 new-buf 0  (&wrpos self))
-    (&buf self new-buf))
+    (&buf! self new-buf))
   self)
 
 (method MemoryStream .write-byte (byte)
   (let (wrpos (&wrpos self))
     (unless (< wrpos (&buf-size self)) (-extend self 1))
     (nth! (&buf self) wrpos byte)
-    (&wrpos self (++ wrpos))))
+    (&wrpos! self (++ wrpos))))
 
 (method MemoryStream .read-byte ()
   (let (rdpos (&rdpos self))
     (if (= rdpos (&wrpos self)) -1
         (begin0 (nth (&buf self) rdpos)
-                (&rdpos self (++ rdpos))))))
+                (&rdpos! self (++ rdpos))))))
 
 (method MemoryStream .seek (offset)
   (if (not (<= 0 offset (&wrpos self))) (error "index outof bound"))
-  (&rdpos self offset))
+  (&rdpos! self offset))
 
 (method MemoryStream .tell (offset)
   (&rdpos self))
@@ -1352,8 +1359,8 @@
 
 (method MemoryStream .reset ()
   ; Empty the contents of the stream.
-  (&rdpos self 0)
-  (&wrpos self 0))
+  (&rdpos! self 0)
+  (&wrpos! self 0))
 
 (class FileStream (Stream)
   ; Provides I/O functions for files.
@@ -1362,7 +1369,7 @@
   fp)
 
 (method FileStream .init (:key fp)
-  (&fp self fp))
+  (&fp! self fp))
 
 (method FileStream .read-byte ()
   (fgetc (&fp self)))
@@ -1393,17 +1400,17 @@
 
 (method Path .init (:rest files)
   ; Initialize by passing the specified list of files that make up this path.
-  (&files self (string->list (reduce files concat) "/"))
+  (&files! self (string->list (reduce files concat) "/"))
   self)
 
 (method Path .parent ()
   ; Returns the parent path, or nil if this path does not have a parent.
-  (&files (.init (.new Path)) (butlast (&files self))))
+  (&files! (.init (.new Path)) (butlast (&files self))))
 
 (method Path .resolve (:rest body)
   ; Resolve the given path against this path.
-  (&files (.new Path) (concat (&files self)
-                              (string->list (reduce body concat) "/"))))
+  (&files! (.new Path) (concat (&files self)
+                               (string->list (reduce body concat) "/"))))
 
 (method Path .file-name ()
   ; Resolve file name of receiver.
@@ -1444,9 +1451,9 @@
     (<- stream (.write-string (.new MemoryStream) string)))
   (if (not (is-a? (<- stream (or stream (dynamic $stdin))) Stream))
       (error "require instance of Stream class"))
-  (&stream self stream)
-  (&next self (.read-byte stream))
-  (&buf self (.new MemoryStream))
+  (&stream! self stream)
+  (&next! self (.read-byte stream))
+  (&buf! self (.new MemoryStream))
   self)
 
 (method AheadReader .next ()
@@ -1461,7 +1468,7 @@
   ; Skip next character and returns it.
   (if (.eof? self) (error "EOF reached"))
   (begin0 (&next self)
-          (&next self (.read-byte (&stream self)))))
+          (&next! self (.read-byte (&stream self)))))
 
 (method AheadReader .get ()
   ; Append next character to token and returns it.
@@ -1598,12 +1605,12 @@
   lexer token token-type)
 
 (method ParenParser .init (:key string stream)
-  (&lexer self (.init (.new ParenLexer) :string string :stream stream))
+  (&lexer! self (.init (.new ParenLexer) :string string :stream stream))
   self)
 
 (method ParenParser -scan ()
   (let (x (.lex (&lexer self)))
-    (&token (&token-type self (car x)) (cadr x)))
+    (&token! (&token-type! self (car x)) (cadr x)))
   self)
 
 (method ParenParser -parse-s ()
