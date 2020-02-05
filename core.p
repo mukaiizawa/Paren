@@ -340,7 +340,7 @@
 ; fundamental function
 
 (macro function (name args :rest body)
-  (if (bound? name) (error (concat (symbol->string name) " already bound"))
+  (if (bound? name) (error name " already bound")
       (list <- name (cons lambda (cons args (expand-macro-all body))))))
 
 (builtin-function same? (x y)
@@ -1010,8 +1010,7 @@
         quoted-global-sym (list quote global-sym)
         method-lambda (cons lambda (cons (cons 'self args) body)))
     (if (not (find-class cls-sym)) (error "class not found")
-        (bound? global-sym) (error (concat (symbol->string global-sym)
-                                           " already bound")))
+        (bound? global-sym) (error global-sym " already bound"))
     (list begin0
           quoted-global-sym
           (list 'make-method-dispatcher method-sym)
