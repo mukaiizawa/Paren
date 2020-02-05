@@ -6,9 +6,7 @@
 
 (method Point .init (:key (x 0) (y 0))
   ; Initialize by specifying x and y coordinates.
-  (&x self x)
-  (&y self y)
-  self)
+  (&y (&x self x) y))
 
 (method Point .x ()
   ; Returns x coordinate.
