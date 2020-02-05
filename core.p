@@ -784,6 +784,7 @@
   ; Returns concatenated string which each of the specified args as string.
   (with-memory-stream (ms)
     (dolist (arg args)
+      (if (object? arg) (<- arg (.to-s arg)))
       (if arg (write arg :stream ms)))))
 
 'todo
@@ -1009,8 +1010,8 @@
           (list 'make-method-dispatcher method-sym)
           (list <- global-sym method-lambda))))
 
-(function error (:opt message)
-  (throw (.message (.new Error) message)))
+(function error (:rest args)
+  (throw (.message (.new Error) (apply string args))))
 
 (class Object ()
   ; Object is a class that is the basis of all class hierarchies.
@@ -1034,7 +1035,7 @@
   ; Overwrite this method if there is class-specific comparisons.
   (same? self o))
 
-(method Object .toString ()
+(method Object .to-s ()
   ; Returns a String representing the receiver.
   "<object>")
 
@@ -1082,19 +1083,19 @@
   ; Message accessors.
   (if message? (&message self message) (&message self)))
 
-(method Exception .toString ()
+(method Exception .to-s ()
   ; Returns a String representing the receiver.
   (let (class-name (symbol->string (&class self)) msg (.message self))
     (if msg (concat class-name " -- " msg)
         class-name)))
 
-(method Exception .stackTrace ()
+(method Exception .stack-trace ()
   (&stack-trace self))
 
-(method Exception .printStackTrace ()
-  (write-line (.toString self))
-  (dolist (x (.stackTrace self))
-    (write-line (string "\tat: " x))))
+(method Exception .print-stack-trace ()
+  (write-line (.to-s self))
+  (dolist (x (.stack-trace self))
+    (write-string "\tat: ") (print x)))
 
 (class SystemExit (Exception)
   ; Dispatched to shut down the Paren system.
@@ -1117,50 +1118,50 @@
   ; Abstract class for reading and writing streams.
   )
 
-(method Stream .readByte (:rest args)
+(method Stream .read-byte (:rest args)
   ; Read 1byte from stream.
   ; Returns -1 when the stream reaches the end.
   ; Must be implemented in the inherited class.
   (assert nil))
 
-(method Stream .readChar ()
+(method Stream .read-char ()
   ; Read 1character from stream.
   (let (encoding (dynamic $external-encoding))
     (if (same? encoding :UTF-8)
         (let (illegal-utf8-error (.message (.new Error) "illegal UTF-8")
               trail? (lambda (b) (= (bit-and b 0xC0) 0x80))
               ms (.new MemoryStream)
-              b1 (.readByte self) b2 nil b3 nil b4 nil)
+              b1 (.read-byte self) b2 nil b3 nil b4 nil)
           (if (< b1 0) (return :EOF)
-              (< b1 0x80) (.writeByte ms b1)
+              (< b1 0x80) (.write-byte ms b1)
               (< b1 0xC2) (throw illegal-utf8-error)
-              (not (trail? (<- b2 (.readByte self)))) (throw illegal-utf8-error)
+              (not (trail? (<- b2 (.read-byte self)))) (throw illegal-utf8-error)
               (< b1 0xE0) (begin (if (= (bit-and b1 0x3E) 0)
                                      (throw illegal-utf8-error))
-                                 (.writeByte (.writeByte ms b1) b2))
-              (< b1 0xF0) (begin (<- b3 (.readByte self))
+                                 (.write-byte (.write-byte ms b1) b2))
+              (< b1 0xF0) (begin (<- b3 (.read-byte self))
                                  (if (or (and (= b1 0xE0)
                                               (= (bit-and b2 0x20) 0))
                                          (not (trail? b3)))
                                      (throw illegal-utf8-error))
-                                 (.writeByte
-                                   (.writeByte
-                                     (.writeByte ms b1) b2) b3))
-              (< b1 0xF8) (begin (<- b3 (.readByte self) b4 (.readByte self))
+                                 (.write-byte
+                                   (.write-byte
+                                     (.write-byte ms b1) b2) b3))
+              (< b1 0xF8) (begin (<- b3 (.read-byte self) b4 (.read-byte self))
                                  (if (or (not (trail? b3))
                                          (not (trail? b4))
                                          (and (= b1 0xf0)
                                               (= (bit-and b2 0x30) 0)))
                                      (throw illegal-utf8-error))
-                                 (.writeByte
-                                   (.writeByte
-                                     (.writeByte
-                                       (.writeByte ms b1) b2) b3) b4))
+                                 (.write-byte
+                                   (.write-byte
+                                     (.write-byte
+                                       (.write-byte ms b1) b2) b3) b4))
               (throw illegal-utf8-error))
-          (.toString ms))
+          (.to-s ms))
         (throw (.message (.new NotImplementedError) "unsupport encoding")))))
 
-(method Stream .readLine (:rest args)
+(method Stream .read-line (:rest args)
   ; Read line.
   ; Must be implemented in the inherited class.
   (throw (.new NotImplementedError)))
@@ -1170,16 +1171,16 @@
   ; Returns :EOF if eof reached.
   (.parse (.init (.new ParenParser) :stream self)))
 
-(method Stream .writeByte (:rest args)
+(method Stream .write-byte (:rest args)
   ; Write 1byte to stream.
   ; Must be implemented in the inherited class.
   (throw (.new NotImplementedError)))
 
-(method Stream .writeString (s)
+(method Stream .write-string (s)
   ; Write string to stream.
   (let (ba (->byte-array s))
     (dotimes (i (length ba))
-      (.writeByte self (nth ba i))))
+      (.write-byte self (nth ba i))))
   self)
 
 (method Stream .write (x :key readable? (radix 10) write-line-feed?)
@@ -1191,47 +1192,47 @@
                        (if (cons? x) (write-cons x)
                            (write-atom x)))
         write-cons (lambda (x)
-                     (.writeByte self 0x28)
+                     (.write-byte self 0x28)
                      (write-s-expr (car x))
                      (map (cdr x) (lambda (x) 
-                                    (.writeByte self 0x20)
+                                    (.write-byte self 0x20)
                                     (write-s-expr x)))
-                     (.writeByte self 0x29))
+                     (.write-byte self 0x29))
         write-operator (lambda (x name)
-                         (.writeByte self 0x28)
-                         (.writeString self name)
-                         (.writeByte self 0x20)
+                         (.write-byte self 0x28)
+                         (.write-string self name)
+                         (.write-byte self 0x20)
                          (write-s-expr (lambda-parameter x))
                          (dolist (body (lambda-body x))
-                           (.writeByte self 0x20)
+                           (.write-byte self 0x20)
                            (write-s-expr body))
-                         (.writeByte self 0x29))
+                         (.write-byte self 0x29))
         write-addr (lambda (x name)
-                     (.writeString self "#<")
-                     (.writeString self name)
-                     (.writeByte self 0x3A)
+                     (.write-string self "#<")
+                     (.write-string self name)
+                     (.write-byte self 0x3A)
                      (write-integer (address x) 16)
-                     (.writeByte self 0x3E))
+                     (.write-byte self 0x3E))
         write-number (lambda (x)
                        (if (integer? x) (write-integer x radix)
                            (write-float x)))
         write-integer (lambda (x radix)
-                        (if (= x 0) (.writeByte self 0x30)
+                        (if (= x 0) (.write-byte self 0x30)
                             (let (write-digit
                                    (lambda (x)
                                      (let (upper (// x radix)
                                            digit (mod x radix))
                                        (if (/= upper 0) (write-digit upper))
-                                       (.writeByte self
+                                       (.write-byte self
                                                    (+ digit
                                                       (if (< digit 10) 0x30
                                                           (+ digit -10 0x41)))))))
                               (when (< x 0)
-                                (.writeByte self 0x2D)
+                                (.write-byte self 0x2D)
                                 (<- x (- x)))
                                 (write-digit x))))
         write-float (lambda (x)
-                      (if (= x 0) (.writeByte self 0x30)
+                      (if (= x 0) (.write-byte self 0x30)
                           (let (mant x exp 8)
                             (let (write-mant1
                                    (lambda ()
@@ -1246,7 +1247,7 @@
                                        (if (= mant 0) (break)
                                            (write-mant1)))))
                             (when (< mant 0)
-                              (.writeByte self 0x2D)
+                              (.write-byte self 0x2D)
                               (<- mant (- mant)))
                             (while (>= mant 1000000000)
                               (<- mant (/ mant 10.0) exp (++ exp)))
@@ -1256,20 +1257,20 @@
                                 (begin
                                   (dotimes (i (++ exp))
                                     (write-mant1))
-                                  (.writeByte self 0x2E)
+                                  (.write-byte self 0x2E)
                                   (write-fraction (- 16 exp 1)))
                                 (<= -3 exp -1)
                                 (begin
-                                  (.writeByte self 0x30)
-                                  (.writeByte self 0x2E)
+                                  (.write-byte self 0x30)
+                                  (.write-byte self 0x2E)
                                   (dotimes (i (- (- exp) 1))
-                                    (.writeByte self 0x30))
+                                    (.write-byte self 0x30))
                                   (write-fraction 16))
                                 (begin
                                   (write-mant1)
-                                  (.writeByte self 0x2E)
+                                  (.write-byte self 0x2E)
                                   (write-fraction 15)
-                                  (.writeByte self 0x65)
+                                  (.write-byte self 0x65)
                                   (write-integer exp 10)))))))
         write-atom (lambda (x)
                      (if (builtin? x) (write-atom (builtin-name x))
@@ -1278,20 +1279,20 @@
                          (function? x) (if readable? (write-operator x "lamdba")
                                            (write-addr x "lambda"))
                          (string? x) (if readable?
-                                         (begin (.writeByte self 0x22)
-                                                (.writeString self x)
-                                                (.writeByte self 0x22))
-                                         (.writeString self x))
-                         (symbol? x) (.writeString self (symbol->string x))
+                                         (begin (.write-byte self 0x22)
+                                                (.write-string self x)
+                                                (.write-byte self 0x22))
+                                         (.write-string self x))
+                         (symbol? x) (.write-string self (symbol->string x))
                          (keyword? x) (begin
-                                        (.writeByte self 0x3A)
-                                        (.writeString self
+                                        (.write-byte self 0x3A)
+                                        (.write-string self
                                                       (symbol->string
                                                         (keyword->symbol x))))
                          (number? x) (write-number x)
                          (assert nil))))
     (write-s-expr x)
-    (if write-line-feed? (.writeByte self 0x0A))
+    (if write-line-feed? (.write-byte self 0x0A))
     x))
 
 (method Stream .seek (:rest args)
@@ -1316,7 +1317,7 @@
     (&wrpos self 0))
   self)
 
-(method MemoryStream _extend (size)
+(method MemoryStream -extend (size)
   (let (req (+ (&wrpos self) size) new-buf nil)
     (while (< (&buf-size self) req)
       (&buf-size self (* (&buf-size self) 2)))
@@ -1325,13 +1326,13 @@
     (&buf self new-buf))
   self)
 
-(method MemoryStream .writeByte (byte)
+(method MemoryStream .write-byte (byte)
   (let (wrpos (&wrpos self))
-    (unless (< wrpos (&buf-size self)) (_extend self 1))
+    (unless (< wrpos (&buf-size self)) (-extend self 1))
     (nth! (&buf self) wrpos byte)
     (&wrpos self (++ wrpos))))
 
-(method MemoryStream .readByte ()
+(method MemoryStream .read-byte ()
   (let (rdpos (&rdpos self))
     (if (= rdpos (&wrpos self)) -1
         (begin0 (nth (&buf self) rdpos)
@@ -1344,7 +1345,7 @@
 (method MemoryStream .tell (offset)
   (&rdpos self))
 
-(method MemoryStream .toString ()
+(method MemoryStream .to-s ()
   (let (pos (&wrpos self) str (byte-array pos))
     (if (= pos 0) ""
         (byte-array->string (byte-array-copy (&buf self) 0 str 0 pos)))))
@@ -1363,16 +1364,16 @@
 (method FileStream .init (:key fp)
   (&fp self fp))
 
-(method FileStream .readByte ()
+(method FileStream .read-byte ()
   (fgetc (&fp self)))
 
-(method FileStream .readLine ()
+(method FileStream .read-line ()
   (fgets (&fp self)))
 
-(method FileStream .writeByte (byte)
+(method FileStream .write-byte (byte)
   (fputc byte (&fp self)))
 
-(method FileStream .writeString(o)
+(method FileStream .write-string(o)
   (let (o (->byte-array o))
     (fwrite o 0 (length o) (&fp self))))
 
@@ -1404,25 +1405,25 @@
   (&files (.new Path) (concat (&files self)
                               (string->list (reduce body concat) "/"))))
 
-(method Path .fileName ()
+(method Path .file-name ()
   ; Resolve file name of receiver.
   (last (&files self)))
 
-(method Path .toString ()
+(method Path .to-s ()
   (reduce (&files self) (lambda (acc rest) (concat acc "/" rest))))
 
 (method Path _open (mode)
-  (.init (.new FileStream) :fp (fopen (.toString self) mode)))
+  (.init (.new FileStream) :fp (fopen (.to-s self) mode)))
 
-(method Path .openRead ()
+(method Path .open-read ()
   ; Returns a stream that reads the contents of the receiver.
   (_open self 0))
 
-(method Path .openWrite ()
+(method Path .open-write ()
   ; Returns a stream to write to the contents of the receiver.
   (_open self 1))
 
-(method Path .openAppend ()
+(method Path .open-append ()
   ; Returns a stream to append to the receiver's content.
   (_open self 2))
 
@@ -1440,11 +1441,11 @@
 
 (method AheadReader .init (:key string stream)
   (when string
-    (<- stream (.writeString (.new MemoryStream) string)))
+    (<- stream (.write-string (.new MemoryStream) string)))
   (if (not (is-a? (<- stream (or stream (dynamic $stdin))) Stream))
       (error "require instance of Stream class"))
   (&stream self stream)
-  (&next self (.readByte stream))
+  (&next self (.read-byte stream))
   (&buf self (.new MemoryStream))
   self)
 
@@ -1460,7 +1461,7 @@
   ; Skip next character and returns it.
   (if (.eof? self) (error "EOF reached"))
   (begin0 (&next self)
-          (&next self (.readByte (&stream self)))))
+          (&next self (.read-byte (&stream self)))))
 
 (method AheadReader .get ()
   ; Append next character to token and returns it.
@@ -1470,21 +1471,21 @@
 
 (method AheadReader .put (b)
   ; Put the specified byte b to the end of the token regardless of the stream.
-  (.writeByte (&buf self) b))
+  (.write-byte (&buf self) b))
 
 (method AheadReader .token ()
   ; Returns the token string currently cut out.
-  (.toString (&buf self)))
+  (.to-s (&buf self)))
 
 (method AheadReader .reset ()
   ; Reset token and returns self.
   (.reset (&buf self))
   self)
 
-(method AheadReader .skipSpace ()
+(method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
   ; Returns self.
-  (while (and (not (.eof? self)) (ascii-space? (&next self)))
+  (while (and (ascii-space? (&next self)) (not (.eof? self)))
     (.skip self))
   self)
 
@@ -1506,9 +1507,10 @@
   (.lex self))
 
 (method ParenLexer -get-identifier ()
+  (unless (-identifier-first? self)
+    (error "illegal identifier '" (.token self) "'"))
   (.get self)
-  (if (-identifier-first? self) (-get-partial-identifier self)
-      (error "illegal identifier")))
+  (-get-partial-identifier self))
 
 (method ParenLexer -get-partial-identifier ()
   (when (-identifier-first? self)
@@ -1578,8 +1580,7 @@
     (list :number val)))
 
 (method ParenLexer .lex ()
-  (.reset self)
-  (while (ascii-space? (&next self)) (.skip self))
+  (.skip-space (.reset self))
   (let (next (&next self))
     (if (.eof? self) '(:EOF)
         (= next 0x22) (-lex-string self)
@@ -1626,29 +1627,29 @@
   ; Read 1byte from the specified stream.
   ; Returns -1 when the stream reaches the end.
   (let (stream (or stream (dynamic $stdin)))
-    (.readByte stream)))
+    (.read-byte stream)))
 
 (function read-char (:opt stream)
   ; Read 1character from the specified stream.
   (let (stream (or stream (dynamic $stdin)))
-    (.readChar stream)))
+    (.read-char stream)))
 
 (function read-line (:opt stream)
   ; Read line from the specified stream.
   (let (stream (or stream (dynamic $stdin)))
-    (.readLine stream)))
+    (.read-line stream)))
 
 (function write-byte (byte :opt stream)
   ; Write 1byte to the specified stream.
   ; Returns byte.
   (let (stream (or stream (dynamic $stdout)))
-    (.writeByte stream byte)
+    (.write-byte stream byte)
     byte))
 
 (function write-string (s :opt stream)
   ; Write the specified stirng s to the specified stream.
   (let (stream (or stream (dynamic $stdout)))
-    (.writeString stream s)))
+    (.write-string stream s)))
 
 (macro with-memory-stream ((ms :opt s) :rest body)
   ; Create memory stream context.
@@ -1656,14 +1657,14 @@
   ; (with-memory-stream (ms s)
   ;    expr1 expr2 ...)
   ; (let (ms (.new MemoryStream))
-  ;    (if s (.writeString ms s))
+  ;    (if s (.write-string ms s))
   ;    expr1 expr2 ...
-  ;    (.toString ms))
+  ;    (.to-s ms))
   (with-gensyms (g)
     (list let (list ms (list '.new 'MemoryStream) g s)
-          (list if g (list '.writeString ms g))
+          (list if g (list '.write-string ms g))
           (cons begin body)
-          (list '.toString ms))))
+          (list '.to-s ms))))
 
 (function with-open-mode (sym gsym path mode body)
   (list let (list path (list if
@@ -1679,15 +1680,15 @@
 
 (macro with-open-read ((in path) :rest body)
   (with-gensyms (stream)
-    (with-open-mode in stream path '.openRead body)))
+    (with-open-mode in stream path '.open-read body)))
 
 (macro with-open-write ((out path) :rest body)
   (with-gensyms (stream)
-    (with-open-mode out stream path '.openWrite body)))
+    (with-open-mode out stream path '.open-write body)))
 
 (macro with-open-append ((out path) :rest body)
   (with-gensyms (stream)
-    (with-open-mode out stream path '.openAppend body)))
+    (with-open-mode out stream path '.open-append body)))
 
 (macro with-open-update ((out path) :rest body)
   (with-gensyms (stream)
@@ -1734,7 +1735,7 @@
   (with-gensyms (g)
     (while true
       (catch (SystemExit (lambda (e) (break))
-              Error (lambda (e) (.printStackTrace e)))
+              Error (lambda (e) (.print-stack-trace e)))
         (write-string ") ")
         (if (same? (<- g (read)) :EOF) (break))
         (print (eval g))))))
@@ -1763,8 +1764,8 @@
   (let (s nil)
     (while true
       (catch (SystemExit (lambda (e) (break))
-              Error (lambda (e) (.printStackTrace e)))
-        (write-string (.toString $paren-home))
+              Error (lambda (e) (.print-stack-trace e)))
+        (write-string (.to-s $paren-home))
         (write-string "> ")
         (let (expr nil)
           (with-memory-stream (out (with-memory-stream (in)

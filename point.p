@@ -16,7 +16,7 @@
   ; Returns y coordinate.
   (&y self))
 
-(method Point .toString ()
+(method Point .to-s ()
   (string "(" (&x self) "," (&y self) ")"))
 
 (method Point .equal (p)
@@ -33,4 +33,4 @@
     (assert (not (.equal p (.init (.new Point) :x 2 :y 4))))
     (assert (not (.equal p (.init (.new Point) :x 3 :y 5))))
     (assert (not (.equal p (.init (.new Point) :x 2 :y 5))))
-    (assert (string= (.toString p) "(3,4)"))))
+    (assert (string= (.to-s p) "(3,4)"))))
