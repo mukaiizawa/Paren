@@ -8,7 +8,6 @@
 #include "ip.h"
 #include "bi.h"
 
-
 // TODO
 // join -- デリミタを用いてシーケンスを結合
 // split -- デリミタでシーケンスを分割
@@ -313,17 +312,6 @@ DEFUN(keyword_to_symbol)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_arg_type(argv->cons.car, KEYWORD, &o)) return FALSE;
   *result = gc_new_barray_from(SYMBOL, o->barray.elt, o->barray.size);
-  return TRUE;
-}
-
-DEFUN(keyword_to_string)
-{
-  object o;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, KEYWORD, &o)) return FALSE;
-  *result = gc_new_barray(STRING, o->barray.size + 1);
-  (*result)->barray.elt[0] = 0x3a;
-  memcpy((*result)->barray.elt + 1, o->barray.elt, o->barray.size);
   return TRUE;
 }
 

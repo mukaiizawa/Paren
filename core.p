@@ -929,7 +929,7 @@
   (assert (= (length '(1)) 1))
   (assert (= (length (byte-array 2)) 2))
   (assert (= (length (array 3)) 3))
-  (assert (= (length "あい") 2)))
+  (assert (= (length "ΣΠ") 2)))
 
 (builtin-function nth (seq i)
   ; Returns the ith element of a sequence.
@@ -937,8 +937,7 @@
   (assert (= (nth '(0 1) 0) 0)))
 
 (function first (seq)
-  (if (list? seq) (car seq)
-      (nth seq 0)))
+  (nth seq 0))
 
 ; kernel
 

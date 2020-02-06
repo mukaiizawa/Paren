@@ -130,7 +130,6 @@ static char *symbol_name_map[] = {
   "cons_p", "cons?",
   "set_assoc", "assoc!",
   "keyword_p", "keyword?",
-  "keyword_to_string", "keyword->string",
   "keyword_to_symbol", "keyword->symbol",
   "last_cons", "last-cons",
   "nth_set", "nth!",
