@@ -919,6 +919,24 @@
   (assert (< 0 1 2))
   (assert (nil? (< 0 0 1))))
 
+; sequential api
+;
+; Sequential API provides transparent operations on sequences(list, string, array, byte-array).
+
+(builtin-function length (seq)
+  ; Returns the length of the specified sequence seq.
+  (assert (= (length nil) 0))
+  (assert (= (length '(1)) 1)))
+
+(builtin-function nth (seq i)
+  ; Returns the ith element of a sequence.
+  ; If index is out of range, it is considered an error.
+  (assert (= (nth '(0 1) 0) 0)))
+
+(function first (seq)
+  (if (list? seq) (car seq)
+      (nth seq 0)))
+
 ; kernel
 
 (builtin-function fp (fd)
@@ -928,6 +946,7 @@
   )
 
 ; Paren object system
+;
 ; Paren object system is an object system implemented from a primitive paren.
 ; Some functions are built-in.
 ; Although it is a built-in function, it is only built in considering speed.
