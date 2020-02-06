@@ -137,15 +137,6 @@ DEFUN(set_assoc)
   return FALSE;
 }
 
-// array
-
-DEFUN(array_p)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(type_p(argv->cons.car, ARRAY));
-  return TRUE;
-}
-
 // barray
 
 DEFUN(barray_p)
@@ -219,6 +210,24 @@ DEFUN(barray_to_string)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_arg_type(argv->cons.car, BARRAY, &o)) return FALSE;
   *result = gc_new_barray_from(STRING, o->barray.elt, o->barray.size);
+  return TRUE;
+}
+
+// array
+
+DEFUN(array_p)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  *result = object_bool(type_p(argv->cons.car, ARRAY));
+  return TRUE;
+}
+
+DEFUN(array_new)
+{
+  int size;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_int(argv->cons.car, &size)) return FALSE;
+  *result = gc_new_array(size);
   return TRUE;
 }
 

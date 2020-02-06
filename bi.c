@@ -121,6 +121,7 @@ static char *symbol_name_map[] = {
   "samep", "same?",
   // sequence
   "array_p", "array?",
+  "array_new", "array",
   "barray_copy", "byte-array-copy",
   "barray_index", "byte-array-index",
   "barray_new", "byte-array",

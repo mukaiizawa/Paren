@@ -926,7 +926,10 @@
 (builtin-function length (seq)
   ; Returns the length of the specified sequence seq.
   (assert (= (length nil) 0))
-  (assert (= (length '(1)) 1)))
+  (assert (= (length '(1)) 1))
+  (assert (= (length (byte-array 2)) 2))
+  (assert (= (length (array 3)) 3))
+  (assert (= (length "あい") 2)))
 
 (builtin-function nth (seq i)
   ; Returns the ith element of a sequence.
