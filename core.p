@@ -845,10 +845,12 @@
   ; Returns true if the specified x is integer and zero or positive.
   (and (integer? x) (>= x 0)))
 
-(builtin-function = (x y)
+(builtin-function = (x :rest args)
   ; Returns true if the specified number x and y are equal.
+  ; If the argument is not a number, compare addresses.
   (assert (= 3.14 3.140))
   (assert (not (= 10 20)))
+  (assert (= 'x 'x))
   (assert (not (= 'x 'y))))
 
 (function /= (x y)
@@ -931,13 +933,55 @@
   (assert (= (length (array 3)) 3))
   (assert (= (length "ΣΠ") 2)))
 
+(function seq= (seq i :key (test same?))
+  ; Returns the ith element of a sequence.
+  ; If index is out of range, it is considered an error.
+  (error 'todo))
+
 (builtin-function nth (seq i)
   ; Returns the ith element of a sequence.
   ; If index is out of range, it is considered an error.
+  (assert (= (nth nil 0) nil))
   (assert (= (nth '(0 1) 0) 0)))
+
+(builtin-function nth! (seq i v)
+  ; Replaces the element at the specified position in this list with the specified element v.
+  (assert (nth! '(0 1) 0 0)))
 
 (function first (seq)
   (nth seq 0))
+
+(function second (seq)
+  (nth seq 1))
+
+(function third (seq)
+  (nth seq 2))
+
+(function fourth (seq)
+  (nth seq 3))
+
+(function fifth (seq)
+  (nth seq 4))
+
+(function sixth (seq)
+  (nth seq 5))
+
+(function seventh (seq)
+  (nth seq 6))
+
+(function eighth (seq)
+  (nth seq 7))
+
+(function ninth (seq)
+  (nth seq 8))
+
+(function tenth (seq)
+  (nth seq 9))
+
+(builtin-function concat (seq i)
+  ; Returns the ith element of a sequence.
+  ; If index is out of range, it is considered an error.
+  )
 
 ; kernel
 

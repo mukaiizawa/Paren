@@ -574,14 +574,23 @@ DEFUN(nth)
   object o;
   int i, len;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!seq_length(o = argv->cons.car, &len)) return FALSE;
+  o = argv->cons.car;
   if (!bi_int(argv->cons.cdr->cons.car, &i)) return FALSE;
-  if (i < 0 || i >= len) return FALSE;
+  if (i < 0) return FALSE;
+  if (list_p(o)) {
+    while (o != object_nil) {
+      if (i-- == 0) {
+        o = o->cons.car;
+        break;
+      }
+      o = o->cons.cdr;
+    }
+    *result = o;
+    return TRUE;
+  }
+  if (!seq_length(o = argv->cons.car, &len)) return FALSE;
+  if (i >= len) return FALSE;
   switch (type(o)) {
-    case CONS:
-      while (i--) o = o->cons.cdr;
-      *result = o->cons.car;
-      return TRUE;
     case ARRAY:
       *result = o->array.elt[i];
       return TRUE;

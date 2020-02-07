@@ -42,13 +42,19 @@ DEFUN(integer_p)
 
 DEFUN(number_equal_p)
 {
+  object o;
   double x, y;
   *result = object_nil;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_double(argv->cons.car, &x)) return TRUE;
-  while ((argv = argv->cons.cdr) != object_nil) {
-    if (!bi_double(argv->cons.car, &y)) return TRUE;
-    if (x != y) return TRUE;
+  if (!bi_double(argv->cons.car, &x)) {
+    o = argv->cons.car;
+    while ((argv = argv->cons.cdr) != object_nil)
+      if (o != argv->cons.car) return TRUE;
+  } else {
+    while ((argv = argv->cons.cdr) != object_nil) {
+      if (!bi_double(argv->cons.car, &y)) return TRUE;
+      if (x != y) return TRUE;
+    }
   }
   *result = object_true;
   return TRUE;
