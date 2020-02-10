@@ -750,11 +750,11 @@
 
 (function ascii-space? (c)
   ; Returns whether byte c can be considered a space character.
-  (find '(0x09 0x0A 0x0D 0x20) c :test =))
+  (find '(0x09 0x0a 0x0d 0x20) c :test =))
 
 (function ascii-alpha? (c)
   ; Returns whether byte c can be considered a alphabetic character.
-  (or (<= 0x41 c 0x5A) (<= 0x61 c 0x7A)))
+  (or (<= 0x41 c 0x5a) (<= 0x61 c 0x7a)))
 
 (function ascii-digit? (c)
   ; Returns whether byte c can be considered a digit character.
@@ -762,12 +762,12 @@
 
 (function ascii-lower (c)
   ; Returns lowercase if byte c can be considered an alphabetic character, c otherwise.
-  (if (<= 0x41 c 0x5A) (+ c 0x20)
+  (if (<= 0x41 c 0x5a) (+ c 0x20)
       c))
 
 (function ascii-upper (c)
   ; Returns uppercase if byte c can be considered an alphabetic character, c otherwise.
-  (if (<= 0x61 c 0x7A) (- c 0x20)
+  (if (<= 0x61 c 0x7a) (- c 0x20)
       c))
 
 (function ascii->digit (c :key (radix 10))
@@ -1200,25 +1200,25 @@
   (let (encoding (dynamic $external-encoding))
     (if (same? encoding :UTF-8)
         (let (illegal-utf8-error (.message (.new Error) "illegal UTF-8")
-              trail? (lambda (b) (= (bit-and b 0xC0) 0x80))
+              trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
               ms (.new MemoryStream)
               b1 (.read-byte self) b2 nil b3 nil b4 nil)
           (if (< b1 0) (return :EOF)
               (< b1 0x80) (.write-byte ms b1)
-              (< b1 0xC2) (throw illegal-utf8-error)
+              (< b1 0xc2) (throw illegal-utf8-error)
               (not (trail? (<- b2 (.read-byte self)))) (throw illegal-utf8-error)
-              (< b1 0xE0) (begin (if (= (bit-and b1 0x3E) 0)
+              (< b1 0xe0) (begin (if (= (bit-and b1 0x3e) 0)
                                      (throw illegal-utf8-error))
                                  (.write-byte (.write-byte ms b1) b2))
-              (< b1 0xF0) (begin (<- b3 (.read-byte self))
-                                 (if (or (and (= b1 0xE0)
+              (< b1 0xf0) (begin (<- b3 (.read-byte self))
+                                 (if (or (and (= b1 0xe0)
                                               (= (bit-and b2 0x20) 0))
                                          (not (trail? b3)))
                                      (throw illegal-utf8-error))
                                  (.write-byte
                                    (.write-byte
                                      (.write-byte ms b1) b2) b3))
-              (< b1 0xF8) (begin (<- b3 (.read-byte self) b4 (.read-byte self))
+              (< b1 0xf8) (begin (<- b3 (.read-byte self) b4 (.read-byte self))
                                  (if (or (not (trail? b3))
                                          (not (trail? b4))
                                          (and (= b1 0xf0)
@@ -1281,9 +1281,9 @@
         write-addr (lambda (x name)
                      (.write-string self "#<")
                      (.write-string self name)
-                     (.write-byte self 0x3A)
+                     (.write-byte self 0x3a)
                      (write-integer (address x) 16)
-                     (.write-byte self 0x3E))
+                     (.write-byte self 0x3e))
         write-number (lambda (x)
                        (if (integer? x) (write-integer x radix)
                            (write-float x)))
@@ -1299,7 +1299,7 @@
                                                       (if (< digit 10) 0x30
                                                           (+ digit -10 0x41)))))))
                               (when (< x 0)
-                                (.write-byte self 0x2D)
+                                (.write-byte self 0x2d)
                                 (<- x (- x)))
                                 (write-digit x))))
         write-float (lambda (x)
@@ -1318,7 +1318,7 @@
                                        (if (= mant 0) (break)
                                            (write-mant1)))))
                             (when (< mant 0)
-                              (.write-byte self 0x2D)
+                              (.write-byte self 0x2d)
                               (<- mant (- mant)))
                             (while (>= mant 1000000000)
                               (<- mant (/ mant 10.0) exp (++ exp)))
@@ -1328,18 +1328,18 @@
                                 (begin
                                   (dotimes (i (++ exp))
                                     (write-mant1))
-                                  (.write-byte self 0x2E)
+                                  (.write-byte self 0x2e)
                                   (write-fraction (- 16 exp 1)))
                                 (<= -3 exp -1)
                                 (begin
                                   (.write-byte self 0x30)
-                                  (.write-byte self 0x2E)
+                                  (.write-byte self 0x2e)
                                   (dotimes (i (- (- exp) 1))
                                     (.write-byte self 0x30))
                                   (write-fraction 16))
                                 (begin
                                   (write-mant1)
-                                  (.write-byte self 0x2E)
+                                  (.write-byte self 0x2e)
                                   (write-fraction 15)
                                   (.write-byte self 0x65)
                                   (write-integer exp 10)))))))
@@ -1356,14 +1356,14 @@
                                          (.write-string self x))
                          (symbol? x) (.write-string self (symbol->string x))
                          (keyword? x) (begin
-                                        (.write-byte self 0x3A)
+                                        (.write-byte self 0x3a)
                                         (.write-string self
                                                       (symbol->string
                                                         (keyword->symbol x))))
                          (number? x) (write-number x)
                          (assert nil))))
     (write-s-expr x)
-    (if write-line-feed? (.write-byte self 0x0A))
+    (if write-line-feed? (.write-byte self 0x0a))
     x))
 
 (method Stream .seek (:rest args)
@@ -1566,15 +1566,15 @@
 
 (method ParenLexer -identifier-first? ()
   (let (c (&next self))
-    (or (find '(0x21 0x24 0x25 0x26 0x2A 0x2B 0x2D
-                0x2F 0x3C 0x3D 0x3E 0x3F 0x5F 0x2E) c)
+    (or (find '(0x21 0x24 0x25 0x26 0x2a 0x2b 0x2d
+                0x2f 0x3c 0x3d 0x3e 0x3f 0x5f 0x2e) c)
         (ascii-alpha? c))))
 
 (method ParenLexer -identifier-trail? ()
   (or (-identifier-first? self) (ascii-digit? (&next self))))
 
 (method ParenLexer -lex-comment ()
-  (while (/= (&next self) 0x0A) (.skip self))
+  (while (/= (&next self) 0x0a) (.skip self))
   (.lex self))
 
 (method ParenLexer -get-identifier ()
@@ -1593,7 +1593,7 @@
   (let (sign (.get self))
     (if (ascii-space? (&next self)) (-get-symbol self)
         (-identifier-first? self) (-get-symbol (-get-partial-identifier self))
-        (if (= sign 0x2B) (-lex-number self)
+        (if (= sign 0x2b) (-lex-number self)
             (list :number (- (cadr (-lex-number self))))))))
 
 (method ParenLexer -get-symbol ()
@@ -1610,17 +1610,17 @@
   (.skip self)
   (while (/= 0x22 (&next self))
     (if (.eof? self) (error "string not closed")
-        (/= (&next self) 0x5C) (.get self)
+        (/= (&next self) 0x5c) (.get self)
         (begin (.skip self)
                (let (c (.skip self))
                  (if (= c 0x61) (.put self 0x07)
                      (= c 0x62) (.put self 0x08)
-                     (= c 0x65) (.put self 0x1B)
-                     (= c 0x66) (.put self 0x0C)
-                     (= c 0x6E) (.put self 0x0A)
-                     (= c 0x72) (.put self 0x0D)
+                     (= c 0x65) (.put self 0x1b)
+                     (= c 0x66) (.put self 0x0c)
+                     (= c 0x6e) (.put self 0x0a)
+                     (= c 0x72) (.put self 0x0d)
                      (= c 0x74) (.put self 0x09)
-                     (= c 0x76) (.put self 0x0B)
+                     (= c 0x76) (.put self 0x0b)
                      (= c 0x78) (.put self
                                       (+ (* 16
                                             (ascii->digit (.skip self)
@@ -1642,7 +1642,7 @@
                           (ascii-digit? (&next self)))
                  (<- val (+ (* val radix)
                             (ascii->digit (.skip self) :radix radix)))))
-        (= (&next self) 0x2E)
+        (= (&next self) 0x2e)
         (begin (.skip self)
                (<- factor 0.1)
                (while (ascii-digit? (&next self))
@@ -1658,9 +1658,9 @@
         (= next 0x27) (begin (.skip self) '(:quote))
         (= next 0x28) (begin (.skip self) '(:open-paren))
         (= next 0x29) (begin (.skip self) '(:close-paren))
-        (= next 0x3A) (-lex-keyword self)
-        (= next 0x3B) (-lex-comment self)
-        (or (= next 0x2B) (= next 0x2D)) (-lex-sign self)
+        (= next 0x3a) (-lex-keyword self)
+        (= next 0x3b) (-lex-comment self)
+        (or (= next 0x2b) (= next 0x2d)) (-lex-sign self)
         (ascii-digit? next) (-lex-number self)
         (-identifier-first? self) (-lex-symbol self)
         (error "illegal char"))))
