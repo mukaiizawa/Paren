@@ -927,9 +927,9 @@
       (let (val base)
         (if (> power 0)
             (dotimes (i power)
-              (<- val (* val power)))
+              (<- val (* val base)))
             (dotimes (i (- power))
-              (<- val (/ val power))))
+              (<- val (/ val base))))
         val)))
 
 ; sequential api
@@ -1546,7 +1546,7 @@
 (method AheadReader .numeric-alpha? ()
   ; Returns true if eof reached.
   (and (not (.eof? self))
-       (or (.ascii-digit? self)
+       (or (.digit? self)
            (ascii-alpha? (&next self)))))
 
 (method AheadReader .skip ()
@@ -1590,7 +1590,7 @@
 (method AheadReader -skip-unsigned-integer ()
   (if (ascii-digit? (&next self))
       (let (val 0)
-        (while (ascii-digit? (&next self))
+        (while (.digit? self)
           (<- val (+ (* val 10) (ascii->digit (.skip self)))))
         val)
       (error "missing digits")))
