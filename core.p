@@ -921,16 +921,18 @@
   (assert (< 0 1 2))
   (assert (nil? (< 0 0 1))))
 
+(function abs (x)
+  ; Returns the absolute value of the specified number x.
+  (if (< x 0) (- x)
+      x))
+
 (function exp (base power)
   ; Returns base-number raised to the power power-number.
-  (if (= base 0) 1
-      (let (val base)
-        (if (> power 0)
-            (dotimes (i power)
-              (<- val (* val base)))
-            (dotimes (i (- power))
-              (<- val (/ val base))))
-        val)))
+  (let (val 1)
+    (dotimes (i (abs power))
+      (<- val (* val base)))
+    (if (> power 0) val
+        (/ val))))
 
 ; sequential api
 ;
@@ -1618,7 +1620,7 @@
                 factor (/ factor 10)))
           (when (= (&next self) 0x65)
             (.skip self)
-            (<- val (exp 10 (-skip-integer self))))))
+            (<- val (* val (exp 10 (-skip-integer self)))))))
     val))
 
 (method AheadReader .skip-number ()
