@@ -261,15 +261,6 @@ DEFUN(string_to_symbol)
   return TRUE;
 }
 
-DEFUN(string_to_keyword)
-{
-  object o;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, STRING, &o)) return FALSE;
-  *result = gc_new_barray_from(KEYWORD, o->barray.elt, o->barray.size);
-  return TRUE;
-}
-
 // symbol
 
 DEFUN(symbol_p)

@@ -921,6 +921,17 @@
   (assert (< 0 1 2))
   (assert (nil? (< 0 0 1))))
 
+(function exp (base power)
+  ; Returns base-number raised to the power power-number.
+  (if (= base 0) 1
+      (let (val base)
+        (if (> power 0)
+            (dotimes (i power)
+              (<- val (* val power)))
+            (dotimes (i (- power))
+              (<- val (/ val power))))
+        val)))
+
 ; sequential api
 ;
 ; Sequential API provides transparent operations on sequences(list, string, array, byte-array).
@@ -1528,6 +1539,16 @@
   ; Returns true if eof reached.
   (= (&next self) -1))
 
+(method AheadReader .digit? ()
+  ; Returns true if eof reached.
+  (and (not (.eof? self)) (ascii-digit? (&next self))))
+
+(method AheadReader .numeric-alpha? ()
+  ; Returns true if eof reached.
+  (and (not (.eof? self))
+       (or (.ascii-digit? self)
+           (ascii-alpha? (&next self)))))
+
 (method AheadReader .skip ()
   ; Skip next character and returns it.
   (if (.eof? self) (error "EOF reached"))
@@ -1560,41 +1581,86 @@
     (.skip self))
   self)
 
+(method AheadReader -skip-sign ()
+  (let (next (&next self))
+    (if (= next 0x2b) (begin (.skip self) nil)
+        (= next 0x2d) (begin (.skip self) true)
+        nil)))
+
+(method AheadReader -skip-unsigned-integer ()
+  (if (ascii-digit? (&next self))
+      (let (val 0)
+        (while (ascii-digit? (&next self))
+          (<- val (+ (* val 10) (ascii->digit (.skip self)))))
+        val)
+      (error "missing digits")))
+
+(method AheadReader -skip-integer ()
+  (let (minus? (-skip-sign self) val (-skip-unsigned-integer self))
+    (if minus? (- val)
+        val)))
+
+(method AheadReader -skip-unsigned-number ()
+  (let (val (-skip-unsigned-integer self))
+    (if (= (&next self) 0x78)
+        (let (radix (if (= val 0) 16 val) val 0)
+          (.skip self)
+          (if (not (.numeric-alpha? self))
+              (error "missing lower or digits")
+              (while (.numeric-alpha? self)
+                (<- val (+ (* val radix)
+                           (ascii->digit (.skip self) :radix radix))))))
+        (= (&next self) 0x2e)
+        (let (factor 0.1)
+          (.skip self)
+          (while (.digit? self)
+            (<- val (+ val (* factor (ascii->digit (.skip self))))
+                factor (/ factor 10)))
+          (when (= (&next self) 0x65)
+            (.skip self)
+            (<- val (exp 10 (-skip-integer self))))))
+    val))
+
+(method AheadReader .skip-number ()
+  (let (minus? (-skip-sign (.skip-space self)) val (-skip-unsigned-number self))
+    (if minus? (- val)
+        val)))
+
 ; Paren reader
 
 (class ParenLexer (AheadReader))
 
-(method ParenLexer -identifier-first? ()
+(method ParenLexer -identifier-head? ()
   (let (c (&next self))
     (or (find '(0x21 0x24 0x25 0x26 0x2a 0x2b 0x2d
                 0x2f 0x3c 0x3d 0x3e 0x3f 0x5f 0x2e) c)
         (ascii-alpha? c))))
 
 (method ParenLexer -identifier-trail? ()
-  (or (-identifier-first? self) (ascii-digit? (&next self))))
+  (or (-identifier-head? self) (ascii-digit? (&next self))))
 
 (method ParenLexer -lex-comment ()
   (while (/= (&next self) 0x0a) (.skip self))
   (.lex self))
 
 (method ParenLexer -get-identifier ()
-  (unless (-identifier-first? self)
+  (unless (-identifier-head? self)
     (error "illegal identifier '" (.token self) "'"))
   (.get self)
   (-get-partial-identifier self))
 
 (method ParenLexer -get-partial-identifier ()
-  (when (-identifier-first? self)
+  (when (-identifier-head? self)
     (.get self)
     (while (-identifier-trail? self) (.get self)))
   self)
 
 (method ParenLexer -lex-sign ()
   (let (sign (.get self))
-    (if (ascii-space? (&next self)) (-get-symbol self)
-        (-identifier-first? self) (-get-symbol (-get-partial-identifier self))
-        (if (= sign 0x2b) (-lex-number self)
-            (list :number (- (cadr (-lex-number self))))))))
+    (if (ascii-digit? (&next self))
+        (let (val (.skip-number self))
+          (list :number (if (= sign 0x2d) (- val) val)))
+        (-get-symbol (-get-partial-identifier self)))))
 
 (method ParenLexer -get-symbol ()
   (list :symbol (string->symbol (.token self))))
@@ -1604,7 +1670,8 @@
 
 (method ParenLexer -lex-keyword ()
   (.skip self)
-  (list :keyword (string->keyword (.token (-get-identifier self)))))
+  (list :keyword (symbol->keyword
+                   (string->symbol (.token (-get-identifier self))))))
 
 (method ParenLexer -lex-string ()
   (.skip self)
@@ -1631,25 +1698,6 @@
   (.skip self)
   (list :string (.token self)))
 
-(method ParenLexer -lex-number ()
-  (let (radix 10 factor 0 val 0)
-    (while (ascii-digit? (&next self))
-      (<- val (+ (* val 10) (ascii->digit (.skip self)))))
-    (if (= (&next self) 0x78)
-        (begin (.skip self)
-               (<- radix (if (= val 0) 16 val) val 0)
-               (while (or (ascii-alpha? (&next self))
-                          (ascii-digit? (&next self)))
-                 (<- val (+ (* val radix)
-                            (ascii->digit (.skip self) :radix radix)))))
-        (= (&next self) 0x2e)
-        (begin (.skip self)
-               (<- factor 0.1)
-               (while (ascii-digit? (&next self))
-                 (<- val (+ val (* factor (ascii->digit (.skip self))))
-                     factor (/ factor 10)))))
-    (list :number val)))
-
 (method ParenLexer .lex ()
   (.skip-space (.reset self))
   (let (next (&next self))
@@ -1661,8 +1709,8 @@
         (= next 0x3a) (-lex-keyword self)
         (= next 0x3b) (-lex-comment self)
         (or (= next 0x2b) (= next 0x2d)) (-lex-sign self)
-        (ascii-digit? next) (-lex-number self)
-        (-identifier-first? self) (-lex-symbol self)
+        (.digit? self) (list :number (.skip-number self))
+        (-identifier-head? self) (-lex-symbol self)
         (error "illegal char"))))
 
 (class ParenParser ()

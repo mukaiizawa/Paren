@@ -137,7 +137,6 @@ static char *symbol_name_map[] = {
   "set_cdr", "cdr!",
   "string_equal", "string=",
   "string_p", "string?",
-  "string_to_keyword", "string->keyword",
   "string_to_symbol", "string->symbol",
   "symbol_p", "symbol?",
   "symbol_to_keyword", "symbol->keyword",

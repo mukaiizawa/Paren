@@ -146,9 +146,9 @@ atomは次のリテラルがある。
 #### シンボル（symbol）
 
     symbol ::= identifier
-    identifier ::= (identifier1 [identifier1 identifier_rest*])
-    identifier1 ::= [!$%&*+\-./<=>?a-zA-Z_]
-    identifier_rest ::= (identifier1 | [0-9])*
+    identifier ::= (identifier_head [identifier_head identifier_rest*])
+    identifier_head ::= [!$%&*+\-./<=>?a-zA-Z_]
+    identifier_rest ::= (identifier_head | [0-9])*
 
 シンボルは一部のascii文字から始まり、数値以外の後に数値を含むascii文字からなる。
 

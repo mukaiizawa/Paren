@@ -109,7 +109,7 @@ static int lex_string(void)
   return LEX_STRING;
 }
 
-static int identifier_first_p(void)
+static int identifier_head_p(void)
 {
   switch (next_ch) {
     case '!':
@@ -134,7 +134,7 @@ static int identifier_first_p(void)
 
 static int identifier_trail_char_p(void)
 {
-  return identifier_first_p() || isdigit(next_ch);
+  return identifier_head_p() || isdigit(next_ch);
 }
 
 static int lex_number(void)
@@ -165,14 +165,14 @@ static int lex_number(void)
 
 static void lex_partial_identifier(void)
 {
-  if (!identifier_first_p()) return;
+  if (!identifier_head_p()) return;
   get();
   while (identifier_trail_char_p()) get();
 }
 
 static void lex_identifier(void)
 {
-  if (!identifier_first_p()) lex_error("illegal identifier");
+  if (!identifier_head_p()) lex_error("illegal identifier");
   get();
   lex_partial_identifier();
 }
@@ -194,17 +194,16 @@ static int lex_sign(void)
 {
   int sign, token_type;
   sign = get();
-  if (isspace(next_ch)) return LEX_SYMBOL;
-  if (identifier_first_p()) {
-    lex_partial_identifier();
-    return LEX_SYMBOL;
+  if (isdigit(next_ch)) {
+    token_type = lex_number();
+    if (sign == '-') {
+      if (token_type == LEX_INT) lex_ival *= -1;
+      else lex_fval *= -1;
+    }
+    return token_type;
   }
-  token_type = lex_number();
-  if (sign == '-') {
-    if (token_type == LEX_INT) lex_ival *= -1;
-    else lex_fval *= -1;
-  }
-  return token_type;
+  lex_partial_identifier();
+  return LEX_SYMBOL;
 }
 
 char *lex_token_name(char *buf, int token)
@@ -241,7 +240,7 @@ int lex(void)
       return lex_sign();
     default:
       if (isdigit(next_ch)) return lex_number();
-      if (identifier_first_p()) return lex_symbol();
+      if (identifier_head_p()) return lex_symbol();
       lex_error("illegal char '%c'", next_ch);
       return -1;
   }
