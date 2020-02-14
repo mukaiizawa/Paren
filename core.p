@@ -928,7 +928,7 @@
 
 (function exp (base power)
   ; Returns base-number raised to the power power-number.
-  (let (val 1)
+  (let (val 1.0)
     (dotimes (i (abs power))
       (<- val (* val base)))
     (if (> power 0) val
