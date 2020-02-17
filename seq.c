@@ -377,22 +377,23 @@ static int string_length(object o, int *len)
 static int seq_length(object o, int *len)
 {
   switch (type(o)) {
-    case SYMBOL:
-      if (o != object_nil) break;
     case CONS:
       *len = object_list_len(o);
       return TRUE;
     case ARRAY:
       *len = o->array.size;
       return TRUE;
+    case SYMBOL:
+    case KEYWORD:
     case BARRAY:
-      *len = o->barray.size;
+      if (o == object_nil) *len = 0;
+      else *len = o->barray.size;
       return TRUE;
     case STRING:
       return string_length(o, len);
-    default: break;
+    default:
+      return FALSE;
   }
-  return bi_arg_type(NULL, FALSE, NULL);
 }
 
 DEFUN(length)
@@ -461,9 +462,9 @@ DEFUN(subseq)
       return TRUE;
     case STRING:
       return string_subseq(o, start, end, result);
-    default: break;
+    default:
+      return FALSE;
   }
-  return bi_arg_type(NULL, FALSE, NULL);
 }
 
 static int concat_symbol(object argv, object *result)
@@ -548,9 +549,9 @@ DEFUN(concat)
       return concat_barray(BARRAY, argv, result);
     case STRING:
       return concat_barray(STRING, argv, result);
-    default: break;
+    default:
+      return FALSE;
   }
-  return bi_arg_type(NULL, FALSE, NULL);
 }
 
 static int nth_string(object o, int n, object *result)
@@ -591,9 +592,9 @@ DEFUN(nth)
       return TRUE;
     case STRING:
       return nth_string(o, i, result);
-    default: break;
+    default:
+      return FALSE;
   }
-  return bi_arg_type(NULL, FALSE, NULL);
 }
 
 static int nth_set_string(object o, int n, object v, object *result)
@@ -641,7 +642,7 @@ DEFUN(nth_set)
       return TRUE;
     default: break;
   }
-  return bi_arg_type(NULL, FALSE, NULL);
+  return FALSE;
 }
 
 DEFUN(reverse)
@@ -684,7 +685,7 @@ DEFUN(reverse)
       return TRUE;
     default: break;
   }
-  return bi_arg_type(NULL, FALSE, NULL);
+  return FALSE;
 }
 
 DEFUN(xreverse)
@@ -719,5 +720,5 @@ DEFUN(xreverse)
       return TRUE;
     default: break;
   }
-  return bi_arg_type(NULL, FALSE, NULL);
+  return FALSE;
 }
