@@ -4,18 +4,10 @@
 #include "xarray.h"
 #include "xbarray.h"
 #include "object.h"
+#include "mem.h"
 #include "gc.h"
 #include "ip.h"
 #include "bi.h"
-
-// TODO
-// join -- デリミタを用いてシーケンスを結合
-// split -- デリミタでシーケンスを分割
-// replace -- シーケンスの置換
-// last
-// 述語
-// endwith -- 特定のパターンで終端するか
-// startwith -- 特定のパターンで開始するか
 
 // cons
 
@@ -239,19 +231,6 @@ DEFUN(string_p)
   return TRUE;
 }
 
-DEFUN(string_equal)
-{
-  int b;
-  object x, y;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, STRING, &x)) return FALSE;
-  if (!bi_arg_type(argv->cons.cdr->cons.car, STRING, &y)) return FALSE;
-  if (x->barray.size != y->barray.size) b = FALSE;
-  else b = memcmp(x->barray.elt, y->barray.elt, x->barray.size) == 0;
-  *result = object_bool(b);
-  return TRUE;
-}
-
 DEFUN(string_to_symbol)
 {
   object o;
@@ -358,6 +337,28 @@ static int string_nth_index(object o, int n, int *i, int *size)
     *i += *size;
     n--;
   }
+  return TRUE;
+}
+
+DEFUN(barray_unmatch_index)
+{
+  int i, oi, pi, size;
+  object o, p;
+  if (!bi_argc_range(argc, 5, 5)) return FALSE;
+  o = argv->cons.car;
+  if (!barray_p(o)) return FALSE;
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &oi)) return FALSE;
+  p = (argv = argv->cons.cdr)->cons.car;
+  if (!barray_p(p)) return FALSE;
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
+  if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if(oi + size > o->barray.size) return FALSE;
+  if(pi + size > o->barray.size) return FALSE;
+  for(i = 0; i < size; i++) {
+    if(LC(o->barray.elt + oi + i) != LC(o->barray.elt + pi + i)) break;
+  }
+  if (i == size) *result = object_nil;
+  else *result = gc_new_xint(oi + i);
   return TRUE;
 }
 

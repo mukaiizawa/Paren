@@ -566,15 +566,6 @@
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
   (reduce l (lambda (x y) (string x delimiter y))))
 
-(function list= (x y :key (test same?))
-  ; Returns whether the result of comparing each element of the specified lists x and y with the specified function test is true.
-  ; Always returns nil if x and y are different lengths.
-  (while true
-    (if (and (nil? x) (nil? y)) (return true)
-        (or (nil? x) (nil? y)) (return nil)
-        (test (car x) (car y)) (<- x (cdr x) y (cdr y))
-        (return nil))))
-
 (builtin-function last-cons (x)
   ; Returns the last cons to follow from the specified cons x.
   ; Error if x is not cons.
@@ -934,7 +925,7 @@
     (if (> power 0) val
         (/ val))))
 
-; sequential api
+; Sequential api
 ;
 ; Sequential API provides transparent operations on sequences(list, string, array, byte-array).
 
@@ -946,10 +937,18 @@
   (assert (= (length (array 3)) 3))
   (assert (= (length "ΣΠ") 2)))
 
-(function seq= (seq i :key (test same?))
+(function seqeq? (x y :key (test same?))
   ; Returns the ith element of a sequence.
   ; If index is out of range, it is considered an error.
-  (error 'todo))
+  (if (and (list? x) (list? y))
+      (while true
+        (if (and (nil? x) (nil? y)) (return true)
+            (or (nil? x) (nil? y)) (return nil)
+            (test (car x) (car y)) (<- x (cdr x) y (cdr y))
+            (return nil)))
+      (let (len (length x))
+        (and (= len (length y))
+             (not (byte-array-unmatch-index x 0 y 0 (length x)))))))
 
 (builtin-function nth (seq i)
   ; Returns the ith element of a sequence.
