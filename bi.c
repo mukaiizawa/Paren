@@ -73,11 +73,11 @@ DEFUN(neq_p)
   object o;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   o = argv->cons.car;
-  *result = object_true;
-  while ((argv = argv->cons.cdr) != object_nil) {
-    if (o != argv->cons.car) return TRUE;
-  }
   *result = object_nil;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (o == argv->cons.car) return TRUE;
+  }
+  *result = object_true;
   return TRUE;
 }
 
