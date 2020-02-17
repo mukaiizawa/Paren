@@ -55,18 +55,29 @@ int bi_arg_fp(object o, FILE **result)
   return bi_intptr(o, (intptr_t *)result);
 }
 
-DEFUN(samep)
+DEFUN(eq_p)
+{
+  object o;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
+  o = argv->cons.car;
+  *result = object_nil;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (o != argv->cons.car) return TRUE;
+  }
+  *result = object_true;
+  return TRUE;
+}
+
+DEFUN(neq_p)
 {
   object o;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   o = argv->cons.car;
   *result = object_true;
   while ((argv = argv->cons.cdr) != object_nil) {
-    if (o != argv->cons.car) {
-      *result = object_nil;
-      break;
-    }
+    if (o != argv->cons.car) return TRUE;
   }
+  *result = object_nil;
   return TRUE;
 }
 
@@ -118,7 +129,8 @@ static char *symbol_name_map[] = {
   "find_class", "find-class",
   "find_method", "find-method",
   // bi
-  "samep", "same?",
+  "eq_p", "eq?",
+  "neq_p", "neq?",
   // sequence
   "array_p", "array?",
   "array_new", "array",

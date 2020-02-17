@@ -76,8 +76,8 @@
 (method Splay -resume ()
   (let (top (&top self) left (&left top) right (&right top)
             sentinel (&sentinel self))
-    (if (same? left sentinel) (&top! self right)
-        (same? right sentinel) (&top! self left)
+    (if (eq? left sentinel) (&top! self right)
+        (eq? right sentinel) (&top! self left)
         (let (p left)
           (while (different? (&right p) sentinel)
             (<- p (&right p)))
@@ -87,12 +87,12 @@
 
 (method Splay .get (key)
   (let (top (-barance self key) sentinel (&sentinel self))
-    (if (same? top sentinel) (-resume self)
+    (if (eq? top sentinel) (-resume self)
         (&val top))))
 
 (method Splay .put (key val)
   (let (top (-barance self key) sentinel (&sentinel self))
-    (if (same? top sentinel)
+    (if (eq? top sentinel)
         (&top! self (.init (.new SplayNode)
                            :key key
                            :val val
