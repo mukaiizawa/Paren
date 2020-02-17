@@ -588,10 +588,6 @@
   (if (nil? l) nil
       (subseq l 0 (length l))))
 
-(function last (l)
-  ; Returns the last element of the specified list l.
-  (car (last-cons l)))
-
 (function butlast (l)
   ; Returns a list excluding the last element of the specified list l.
   (subseq l 0 (-- (length l))))
@@ -990,6 +986,10 @@
 
 (function tenth (seq)
   (nth seq 9))
+
+(function last (l)
+  ; Returns the last element of the specified list l.
+  (nth l (-- (length l))))
 
 (builtin-function concat (seq i)
   ; Returns the ith element of a sequence.
