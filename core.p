@@ -960,33 +960,6 @@
 (function first (seq)
   (nth seq 0))
 
-(function second (seq)
-  (nth seq 1))
-
-(function third (seq)
-  (nth seq 2))
-
-(function fourth (seq)
-  (nth seq 3))
-
-(function fifth (seq)
-  (nth seq 4))
-
-(function sixth (seq)
-  (nth seq 5))
-
-(function seventh (seq)
-  (nth seq 6))
-
-(function eighth (seq)
-  (nth seq 7))
-
-(function ninth (seq)
-  (nth seq 8))
-
-(function tenth (seq)
-  (nth seq 9))
-
 (function last (l)
   ; Returns the last element of the specified list l.
   (nth l (-- (length l))))
