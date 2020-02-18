@@ -345,11 +345,9 @@ DEFUN(barray_unmatch_index)
   int i, oi, pi, size;
   object o, p;
   if (!bi_argc_range(argc, 5, 5)) return FALSE;
-  o = argv->cons.car;
-  if (!barray_p(o)) return FALSE;
+  if (!bi_arg_barray(argv->cons.car, &o)) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &oi)) return FALSE;
-  p = (argv = argv->cons.cdr)->cons.car;
-  if (!barray_p(p)) return FALSE;
+  if (!bi_arg_barray((argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
   if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if(oi + size > o->barray.size) return FALSE;

@@ -922,6 +922,34 @@
     (if (> power 0) val
         (/ val))))
 
+; byte-array
+
+(builtin-function byte-array (size)
+  ; Create a byte-array of size the specified size
+  )
+
+(builtin-function byte-array-copy (size)
+  ; Create a byte-array of size the specified size
+  )
+
+(builtin-function byte-array? (seq)
+  ; Returns true if the argument is a byte-array.
+  (assert (byte-array? (byte-array 3)))
+  (assert (not (byte-array? nil)))
+  (assert (not (byte-array? (array 3)))))
+
+; array
+
+(builtin-function array (size)
+  ; Create a array of size the specified size
+  )
+
+(builtin-function array? (seq)
+  ; Returns true if the argument is a array.
+  (assert (array? (array 3)))
+  (assert (not (array? nil)))
+  (assert (not (array? (byte-array 3)))))
+
 ; Sequential api
 ;
 ; Sequential API provides transparent operations on sequences(list, string, array, byte-array).
