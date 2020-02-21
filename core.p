@@ -582,12 +582,6 @@
     (<- l (cdr l)))
   l)
 
-(function copy-list (l)
-  ; Create and return a duplicate of the specified list l.
-  ; It is shallow copy.
-  (if (nil? l) nil
-      (subseq l 0 (length l))))
-
 (function butlast (l)
   ; Returns a list excluding the last element of the specified list l.
   (subseq l 0 (-- (length l))))
@@ -932,7 +926,7 @@
   ; Create a byte-array of size the specified size
   )
 
-(builtin-function byte-array? (seq)
+(builtin-function byte-array? (x)
   ; Returns true if the argument is a byte-array.
   (assert (byte-array? (byte-array 3)))
   (assert (not (byte-array? nil)))
@@ -944,7 +938,7 @@
   ; Create a array of size the specified size
   )
 
-(builtin-function array? (seq)
+(builtin-function array? (x)
   ; Returns true if the argument is a array.
   (assert (array? (array 3)))
   (assert (not (array? nil)))
@@ -954,8 +948,8 @@
 ;
 ; Sequential API provides transparent operations on sequences(list, string, array, byte-array).
 
-(builtin-function length (seq)
-  ; Returns the length of the specified sequence seq.
+(builtin-function length (x)
+  ; Returns the length of the specified sequence x
   (assert (= (length nil) 0))
   (assert (= (length '(1)) 1))
   (assert (= (length (byte-array 2)) 2))
@@ -975,24 +969,30 @@
         (and (= len (length y))
              (not (byte-array-unmatch-index x 0 y 0 (length x)))))))
 
-(builtin-function nth (seq i)
+(function copyseq (x)
+  ; Create and return a duplicate of the specified list l.
+  ; It is shallow copy.
+  (if (nil? x) nil
+      (subseq x 0 (length x))))
+
+(builtin-function nth (x i)
   ; Returns the ith element of a sequence.
   ; If index is out of range, it is considered an error.
   (assert (= (nth nil 0) nil))
   (assert (= (nth '(0 1) 0) 0)))
 
-(builtin-function nth! (seq i v)
+(builtin-function nth! (x i v)
   ; Replaces the element at the specified position in this list with the specified element v.
   (assert (nth! '(0 1) 0 0)))
 
-(function first (seq)
-  (nth seq 0))
+(function first (x)
+  (nth x 0))
 
-(function last (l)
+(function last (x)
   ; Returns the last element of the specified list l.
-  (nth l (-- (length l))))
+  (nth x (-- (length x))))
 
-(builtin-function concat (seq i)
+(builtin-function concat (x i)
   ; Returns the ith element of a sequence.
   ; If index is out of range, it is considered an error.
   )
