@@ -225,7 +225,7 @@ object gc_new_splay(int (*cmp)(object p, object q))
 object gc_new_splay_node(object k, object v, object l, object r)
 {
   object o;
-  o = gc_new_array(4);
+  o = new_array(4);
   o->array.elt[0] = k;
   o->array.elt[1] = v;
   o->array.elt[2] = l;

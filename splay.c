@@ -20,64 +20,56 @@ int splay_strcmp(object o, object p)
 }
 
 #define nil object_splay_nil
-#define splay_get_top(s) ((s)->splay.top)
-#define splay_set_top(s, t) ((s)->splay.top = t)
-#define splay_get_cmp(s) ((s)->splay.cmp)
-#define node_get_key(n) ((n)->array.elt[0])
-#define node_set_key(n, k) ((n)->array.elt[0] = k)
-#define node_get_val(n) ((n)->array.elt[1])
-#define node_set_val(n, v) ((n)->array.elt[1] = v)
-#define node_get_left(n) ((n)->array.elt[2])
-#define node_set_left(n, l) ((n)->array.elt[2] = l)
-#define node_get_right(n) ((n)->array.elt[3])
-#define node_set_right(n, r) ((n)->array.elt[3] = r)
+#define K 0
+#define V 1
+#define L 2
+#define R 3
 
-static object balance(object splay, object key)
+static object balance(object s, object key)
 {
   object top, p, q;
   int (*cmp)(object p, object q), d;
-  cmp = splay_get_cmp(splay);
-  top = splay_get_top(splay);
-  node_set_key(nil, key);
-  node_set_left(nil, nil);
-  node_set_right(nil, nil);
-  while ((d = cmp(key, node_get_key(top))) != 0) {
+  cmp = s->splay.cmp;
+  top = s->splay.top;
+  nil->array.elt[K] = key;
+  nil->array.elt[L] = nil->array.elt[R] = nil;
+  while ((d = cmp(key, top->array.elt[K])) != 0) {
     p = top;
     if (d < 0) {
-      q = node_get_left(p);
-      if ((d = cmp(key, node_get_key(q))) == 0) {
+      q = p->array.elt[L];
+      if ((d = (*cmp)(key, q->array.elt[K])) == 0) {
         top = q;
-        node_set_left(p, node_get_right(top));
-        node_set_right(top, p);
+        p->array.elt[L] = top->array.elt[R];
+        top->array.elt[R] = p;
         break;
-      } else if (d < 0) {
-        top = node_get_left(q);
-        node_set_left(q, node_get_right(top));
-        node_set_right(top, p);
+      } else if (d < K) {
+        top = q->array.elt[L];
+        q->array.elt[L] = top->array.elt[R];
+        top->array.elt[R] = p;
       } else {
-        top = node_get_right(q);
-        node_set_right(q, node_get_left(top));
-        node_set_left(top, q);
-        node_set_left(p, node_get_right(top));
-        node_set_right(top, p);
+        top = q->array.elt[R];
+        q->array.elt[R] = top->array.elt[L];
+        top->array.elt[L] = q;
+        p->array.elt[L] = top->array.elt[R];
+        top->array.elt[R] = p;
       }
     } else {
-      q = node_get_right(p);
-      if ((d = cmp(key, node_get_key(q))) == 0) {
+      q = p->array.elt[R];
+      if ((d = (*cmp)(key, q->array.elt[K])) == 0) {
         top = q;
-        node_set_right(p, node_get_left(top));
-        node_set_left(top, p);
+        p->array.elt[R] = top->array.elt[L];
+        top->array.elt[L] = p;
         break;
-      } else if (d > 0) {
-        top = node_get_right(q);
-        node_set_right(q, node_get_left(top));
-        node_set_left(top, p);
+      } else if (d > K) {
+        top = q->array.elt[R];
+        q->array.elt[R] = top->array.elt[L];
+        top->array.elt[L] = p;
       } else {
-        top = node_get_left(q);
-        node_set_left(q, node_get_right(top));
-        node_set_right(top, q);
-        node_set_right(p, node_get_left(top));
-        node_set_left(top, p);
+        top = q->array.elt[L];
+        q->array.elt[L] = top->array.elt[R];
+        top->array.elt[R] = q;
+        p->array.elt[R] = top->array.elt[L];
+        top->array.elt[L] = p;
       }
     }
   }
@@ -87,44 +79,43 @@ static object balance(object splay, object key)
 static object resume(object top)
 {
   object l, r, p;
-  l = node_get_left(top);
-  r = node_get_right(top);
+  l = top->array.elt[L];
+  r = top->array.elt[R];
   if (l == nil) return r;
   if (r != nil) {
     p = l;
-    while (node_get_right(p) != nil) p = node_get_right(p);
-    node_set_right(p, r);
+    while (p->array.elt[R] != nil) p = p->array.elt[R];
+    p->array.elt[R] = r;
   }
   return l;
 }
 
-void splay_add(object splay, object key, object val)
+void splay_add(object s, object key, object val)
 {
   object top;
-  top = balance(splay, key);
+  top = balance(s, key);
   xassert(top == nil);
-  top = gc_new_splay_node(key, val, node_get_left(nil), node_get_right(nil));
-  splay_set_top(splay, top);
+  top = gc_new_splay_node(key, val, nil->array.elt[L], nil->array.elt[R]);
+  s->splay.top = top;
 }
 
-void splay_replace(object splay, object key, object val)
+void splay_replace(object s, object key, object val)
 {
   object top;
-  top = balance(splay, key);
-  if (top == nil)
-    top = gc_new_splay_node(key, val, node_get_left(nil), node_get_right(nil));
-  else node_set_val(top, val);
-  splay_set_top(splay, top);
+  top = balance(s, key);
+  if (top != nil) top->array.elt[V] = val;
+  else top = gc_new_splay_node(key, val, nil->array.elt[L], nil->array.elt[R]);
+  s->splay.top = top;
 }
 
-object splay_find(object splay, object key)
+object splay_find(object s, object key)
 {
   object top;
-  top = balance(splay, key);
+  top = balance(s, key);
   if (top == nil) {
-    splay_set_top(splay, resume(top));
+    s->splay.top = resume(top);
     return NULL;
   }
-  splay_set_top(splay, top);
-  return node_get_val(top);
+  s->splay.top = top;
+  return top->array.elt[V];
 }
