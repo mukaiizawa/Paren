@@ -7,8 +7,6 @@
 
 object object_symbol_splay;
 object object_keyword_splay;
-object object_symcmp;
-object object_strcmp;
 
 object object_nil;
 object object_true;
@@ -64,6 +62,8 @@ object object_reverse(object o)
 int object_byte_size(object o)
 {
   switch (type(o)) {
+    case SPLAY:
+      return sizeof(struct splay);
     case ENV:
       return sizeof(struct env);
     case MACRO:
@@ -133,6 +133,9 @@ static void describe_s_expr(object o, struct xbarray *x)
   object p;
   if (x->size > MAX_STR_LEN) return;
   switch (type(o)) {
+    case SPLAY:
+      xbarray_addf(x, "#(:splay %p :top %p)", o, o->env.top);
+      break;
     case ENV:
       xbarray_addf(x, "#(:environment %p :top %p)", o, o->env.top);
       break;

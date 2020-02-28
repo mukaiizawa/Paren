@@ -8,19 +8,20 @@ typedef union s_expr *object;
 #define BARRAY_MASK     0x00f00000
 #define BUILTIN_MASK    0x000f0000
 #define NUMBER_MASK     0x0000f000
-#define   ENV           0x00000005
-#define   MACRO         0x00000106
-#define   LAMBDA        0x00000107
-#define   SPECIAL       0x00010008
-#define   FUNCITON      0x00010009
-#define   CONS          0x01000010
-#define   XINT          0x00001011
-#define   XFLOAT        0x00001012
-#define   SYMBOL        0x01100013
-#define   KEYWORD       0x00100014
-#define   STRING        0x00100015
-#define   BARRAY        0x00100016
-#define   ARRAY         0x00000017
+#define   SPLAY         0x00000001
+#define   ENV           0x00000002
+#define   MACRO         0x00000103
+#define   LAMBDA        0x00000104
+#define   SPECIAL       0x00010005
+#define   FUNCITON      0x00010006
+#define   CONS          0x01000007
+#define   XINT          0x00001008
+#define   XFLOAT        0x00001009
+#define   SYMBOL        0x01100010
+#define   KEYWORD       0x00100011
+#define   STRING        0x00100012
+#define   BARRAY        0x00100013
+#define   ARRAY         0x00000014
 
 #define LINT_BITS 63
 
@@ -35,6 +36,11 @@ typedef union s_expr *object;
 
 union s_expr {
   int header;
+  struct splay {
+    int header;
+    object top;
+    int (*cmp)(object p, object q);
+  } splay;
   struct env {
     int header;
     object top, binding;
@@ -75,14 +81,10 @@ union s_expr {
     object elt[1];
   } array;
   object next;
-  void *p;
-  int (*cmp)(object p, object q);
 };
 
 extern object object_symbol_splay;
 extern object object_keyword_splay;
-extern object object_symcmp;
-extern object object_strcmp;
 
 // global object
 extern object object_nil;

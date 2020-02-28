@@ -20,17 +20,17 @@ int splay_strcmp(object o, object p)
 }
 
 #define nil object_splay_nil
-#define splay_get_top(splay) ((splay)->cons.car)
-#define splay_set_top(splay, top) ((splay)->cons.car = top)
-#define splay_get_cmp(splay) ((splay)->cons.cdr->cmp)
-#define node_get_key(node) ((node)->array.elt[0])
-#define node_set_key(node, k) ((node)->array.elt[0] = k)
-#define node_get_val(node) ((node)->array.elt[1])
-#define node_set_val(node, v) ((node)->array.elt[1] = v)
-#define node_get_left(node) ((node)->array.elt[2])
-#define node_set_left(node, l) ((node)->array.elt[2] = l)
-#define node_get_right(node) ((node)->array.elt[3])
-#define node_set_right(node, r) ((node)->array.elt[3] = r)
+#define splay_get_top(s) ((s)->splay.top)
+#define splay_set_top(s, t) ((s)->splay.top = t)
+#define splay_get_cmp(s) ((s)->splay.cmp)
+#define node_get_key(n) ((n)->array.elt[0])
+#define node_set_key(n, k) ((n)->array.elt[0] = k)
+#define node_get_val(n) ((n)->array.elt[1])
+#define node_set_val(n, v) ((n)->array.elt[1] = v)
+#define node_get_left(n) ((n)->array.elt[2])
+#define node_set_left(n, l) ((n)->array.elt[2] = l)
+#define node_get_right(n) ((n)->array.elt[3])
+#define node_set_right(n, r) ((n)->array.elt[3] = r)
 
 static object balance(object splay, object key)
 {

@@ -195,10 +195,8 @@ static void make_initial_objects(int argc, char *argv[])
   memcpy(nil->barray.elt, "nil", 3);
   object_nil = nil;
   object_splay_nil = gc_new_splay_node(nil, nil, nil, nil);
-  object_symcmp = gc_new_pointer(&splay_symcmp);
-  object_strcmp = gc_new_pointer(&splay_strcmp);
-  object_symbol_splay = gc_new_splay(object_strcmp);
-  object_keyword_splay = gc_new_splay(object_strcmp);
+  object_symbol_splay = gc_new_splay(splay_strcmp);
+  object_keyword_splay = gc_new_splay(splay_strcmp);
   splay_add(object_symbol_splay, object_nil, object_nil);
   object_true = symbol_new("true");
   object_key = keyword_new("key");

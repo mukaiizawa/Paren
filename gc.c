@@ -53,7 +53,7 @@ object gc_new_env(object top)
   o = gc_alloc(sizeof(struct env));
   set_type(o, ENV);
   o->env.top = top;
-  o->env.binding = gc_new_splay(object_symcmp);
+  o->env.binding = gc_new_splay(splay_symcmp);
   regist(o);
   return o;
 }
@@ -211,18 +211,15 @@ object gc_new_array_from(object *o, int size)
   return p;
 }
 
-object gc_new_pointer(void *p)
+object gc_new_splay(int (*cmp)(object p, object q))
 {
   object o;
-  o = gc_alloc(sizeof(void *));
-  o->p = p;
+  o = gc_alloc(sizeof(struct splay));
+  set_type(o, SPLAY);
+  o->splay.cmp = cmp;
+  o->splay.top = object_splay_nil;
   regist(o);
   return o;
-}
-
-object gc_new_splay(object cmp)
-{
-  return gc_new_cons(object_splay_nil, cmp);
 }
 
 object gc_new_splay_node(object k, object v, object l, object r)
@@ -252,6 +249,9 @@ void gc_mark(object o)
   if (alivep(o)) return;
   set_alive(o);
   switch (type(o)) {
+    case SPLAY:
+      gc_mark(o->splay.top);
+      break;
     case ENV:
       gc_mark(o->env.top);
       gc_mark(o->env.binding);
@@ -316,8 +316,6 @@ void gc_chance(void)
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
   if (GC_LOG_P) printf("before gc(used memory %d[byte])\n", gc_used_memory);
   ip_mark_object();
-  gc_mark(object_symcmp);
-  gc_mark(object_strcmp);
   gc_mark(object_symbol_splay);
   gc_mark(object_keyword_splay);
   sweep_s_expr();
