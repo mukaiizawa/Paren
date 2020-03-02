@@ -405,7 +405,7 @@ static void parse_lambda_list(object env, object params, object args)
       o = args;
       pre = NULL;
       while (o != object_nil) {
-        if (same_symbol_keyword_p(k,o->cons.car)) {
+        if (same_symbol_keyword_p(k, o->cons.car)) {
           v = (o = o->cons.cdr)->cons.car;
           o = o->cons.cdr;
           if (pre == NULL) args = o;
