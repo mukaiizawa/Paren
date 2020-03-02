@@ -14,7 +14,6 @@ int splay_symcmp(object o, object p)
 int splay_strcmp(object o, object p)
 {
   int i, len;
-  len = o->barray.size;
   if ((i = (len = o->barray.size) - p->barray.size) != 0) return i;
   return memcmp(o->barray.elt, p->barray.elt, len);
 }
@@ -42,7 +41,7 @@ static object balance(object s, object key)
         p->array.elt[L] = top->array.elt[R];
         top->array.elt[R] = p;
         break;
-      } else if (d < K) {
+      } else if (d < 0) {
         top = q->array.elt[L];
         q->array.elt[L] = top->array.elt[R];
         top->array.elt[R] = p;
@@ -60,7 +59,7 @@ static object balance(object s, object key)
         p->array.elt[R] = top->array.elt[L];
         top->array.elt[L] = p;
         break;
-      } else if (d > K) {
+      } else if (d > 0) {
         top = q->array.elt[R];
         q->array.elt[R] = top->array.elt[L];
         top->array.elt[L] = p;
