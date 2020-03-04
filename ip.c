@@ -93,7 +93,7 @@ static void symbol_bind_propagation(object e, object s, object v)
  * +-----------------+
  * |       ...       |
  * | 3: frame_var[1] |
- * | 2: frame_var 0  |
+ * | 2: frame_var[0] |
  * | 1: return addr  |
  * | 0: frame_type   | <- fp
  * +-----------------+
