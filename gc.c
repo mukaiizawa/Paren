@@ -271,7 +271,8 @@ void gc_mark(object o)
       gc_mark(o->cons.cdr);
       break;
     case ARRAY:
-      for (i = 0; i < o->array.size; i++) gc_mark(o->array.elt[i]);
+      for (i = 0; i < o->array.size; i++)
+        gc_mark(o->array.elt[i]);
       break;
     default: break;
   }
@@ -325,6 +326,7 @@ void gc_chance(void)
 void gc_init(void)
 {
   gc_used_memory = gc_max_used_memory = 0;
+  heap_init(&heap);
   link0 = link1 = NULL;
   xarray_init(&table0);
   xarray_init(&table1);
