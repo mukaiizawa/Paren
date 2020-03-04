@@ -1856,13 +1856,13 @@
 (function repl ()
   ; Enter repl(read eval print loop) mode.
   ; Executed when there is no command line argument when paren starts.
-  (with-gensyms (g)
+  (let (expr nil)
     (while true
       (catch (SystemExit (lambda (e) (break))
               Error (lambda (e) (.print-stack-trace e)))
         (write-string ") ")
-        (if (eq? (<- g (read)) :EOF) (break))
-        (print (eval g))))))
+        (if (eq? (<- expr (read)) :EOF) (break))
+        (print (eval expr))))))
 
 (function quit ()
   ; Quit the system.
