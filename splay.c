@@ -32,7 +32,7 @@ static object balance(object s, object key)
   top = s->splay.top;
   nil->array.elt[K] = key;
   nil->array.elt[L] = nil->array.elt[R] = nil;
-  while ((d = cmp(key, top->array.elt[K])) != 0) {
+  while ((d = (*cmp)(key, top->array.elt[K])) != 0) {
     p = top;
     if (d < 0) {
       q = p->array.elt[L];
@@ -117,4 +117,30 @@ object splay_find(object s, object key)
   }
   s->splay.top = top;
   return top->array.elt[V];
+}
+
+static void splay_dump_rec(object node, int level)
+{
+  int i;
+  char buf[MAX_STR_LEN];
+  xassert(type_p(node, ARRAY));
+  if (node == object_splay_nil) {
+    // printf(" nil\n");
+    return;
+  }
+  // for (i = 0; i < level; i++) printf(" ");
+  for (i = 0; i < level; i++) printf("	");
+  // printf("(%s,", object_describe(node->array.elt[K], buf));
+  // printf(" %s)\n", object_describe(node->array.elt[V], buf));
+  printf("%s\n", object_describe(node->array.elt[K], buf));
+  // printf("L");
+  splay_dump_rec(node->array.elt[L], ++level);
+  // printf("R");
+  splay_dump_rec(node->array.elt[R], level);
+}
+
+void splay_dump(object s)
+{
+  xassert(type_p(s, SPLAY));
+  splay_dump_rec(s->splay.top, 0);
 }
