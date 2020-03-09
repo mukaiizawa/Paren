@@ -1305,7 +1305,7 @@ static void ip_main(void)
   while (fp != -1) {
     xassert(fp >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
-    if(cycle % IP_POLLING_INTERVAL == 0) {
+    if (cycle % IP_POLLING_INTERVAL == 0) {
       gc_chance();
     }
     switch (fs_top()) {
