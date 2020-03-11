@@ -259,7 +259,7 @@ static void gen_apply_frame(object operator)
 
 static void gen_eval_frame(object o)
 {
-  if ((reg[0] = o)->header & EVAL_FRAME_MASK) gen0(EVAL_FRAME);
+  if ((reg[0] = o)->header & EVAL_FRAME_BIT) gen0(EVAL_FRAME);
 }
 
 static void gen_eval_args_frame(object args)

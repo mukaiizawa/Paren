@@ -2,35 +2,35 @@
 
 typedef union s_expr *object;
 
-#define TYPE_MASK       0x0fffffff
-#define ALIVE_MASK      0xf0000000
-#define EVAL_FRAME_MASK 0x0f000000
-#define BARRAY_MASK     0x00f00000
-#define BUILTIN_MASK    0x000f0000
-#define NUMBER_MASK     0x0000f000
-#define   SPLAY         0x00000001
-#define   ENV           0x00000002
-#define   MACRO         0x00000103
-#define   LAMBDA        0x00000104
-#define   SPECIAL       0x00010005
-#define   FUNCITON      0x00010006
-#define   CONS          0x01000007
-#define   XINT          0x00001008
-#define   XFLOAT        0x00001009
-#define   SYMBOL        0x01100010
-#define   KEYWORD       0x00100011
-#define   STRING        0x00100012
-#define   BARRAY        0x00100013
-#define   ARRAY         0x00000014
+#define TYPE_MASK      0x00000fff
+#define ALIVE_BIT      0x00001000
+#define EVAL_FRAME_BIT 0x00000100
+#define BARRAY_BIT     0x00000200
+#define BUILTIN_BIT    0x00000400
+#define NUMBER_BIT     0x00000800
+#define   SPLAY        0x00000001
+#define   ENV          0x00000002
+#define   MACRO        0x00000003
+#define   LAMBDA       0x00000004
+#define   SPECIAL     (0x00000005 | BUILTIN_BIT)
+#define   FUNCITON    (0x00000006 | BUILTIN_BIT)
+#define   CONS        (0x00000007 | EVAL_FRAME_BIT)
+#define   XINT        (0x00000008 | NUMBER_BIT)
+#define   XFLOAT      (0x00000009 | NUMBER_BIT)
+#define   SYMBOL      (0x0000000a | BARRAY_BIT | EVAL_FRAME_BIT)
+#define   KEYWORD     (0x0000000b | BARRAY_BIT)
+#define   STRING      (0x0000000c | BARRAY_BIT)
+#define   BARRAY      (0x0000000d | BARRAY_BIT)
+#define   ARRAY        0x0000000e
 
 #define LINT_BITS 63
 
 #define type(o) ((o)->header & TYPE_MASK)
 #define type_p(o, t) (type(o) == t)
 #define list_p(o) ((o) == object_nil || type_p(o, CONS))
-#define barray_p(o) ((o)->header & BARRAY_MASK)
-#define number_p(o) ((o)->header & NUMBER_MASK)
-#define builtin_p(o) ((o)->header & BUILTIN_MASK)
+#define barray_p(o) ((o)->header & BARRAY_BIT)
+#define number_p(o) ((o)->header & NUMBER_BIT)
+#define builtin_p(o) ((o)->header & BUILTIN_BIT)
 #define byte_range_p(x) ((x >= 0) && (x < 256))
 #define byte_p(o) (type_p(o, XINT) && byte_range_p((o)->xint.val))
 
