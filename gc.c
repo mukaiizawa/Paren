@@ -17,7 +17,7 @@ static object link0, link1;
 static struct heap heap;
 static struct xarray *table, *work_table, table0, table1;
 
-#define alivep(o) ((o)->header & ALIVE_BIT)
+#define alive_p(o) ((o)->header & ALIVE_BIT)
 #define set_alive(o) ((o)->header |= ALIVE_BIT)
 #define set_dead(o) ((o)->header &= ~ALIVE_BIT)
 #define set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= type;}
@@ -247,7 +247,7 @@ object gc_new_Error(char *msg)
 void gc_mark(object o)
 {
   int i;
-  if (alivep(o)) return;
+  if (alive_p(o)) return;
   set_alive(o);
   switch (type(o)) {
     case SPLAY:
@@ -303,7 +303,7 @@ static void sweep_s_expr(void)
   xarray_reset(work_table);
   for (i = 0; i < (*table).size; i++) {
     o = (*table).elt[i];
-    if (alivep(o)) {
+    if (alive_p(o)) {
       set_dead(o);
       xarray_add(work_table, o);
     } else gc_free(o);
