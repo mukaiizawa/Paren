@@ -17,9 +17,9 @@ static object link0, link1;
 static struct heap heap;
 static struct xarray *table, *work_table, table0, table1;
 
-#define alivep(o) ((o)->header & ALIVE_MASK)
-#define set_alive(o) ((o)->header |= ALIVE_MASK)
-#define set_dead(o) ((o)->header &= ~ALIVE_MASK)
+#define alivep(o) ((o)->header & ALIVE_BIT)
+#define set_alive(o) ((o)->header |= ALIVE_BIT)
+#define set_dead(o) ((o)->header &= ~ALIVE_BIT)
 #define set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= type;}
 #define regist(o) (xarray_add(table, o))
 
@@ -41,6 +41,7 @@ static object gc_alloc(int size)
       link1 = o->next;
     }
   } else o = xmalloc(size);
+  o->header &= 0;
   set_dead(o);
   gc_used_memory += size;
   if (gc_used_memory > gc_max_used_memory) gc_max_used_memory = gc_used_memory;
