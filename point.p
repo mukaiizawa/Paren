@@ -33,4 +33,4 @@
     (assert (not (.equal p (.init (.new Point) :x 2 :y 4))))
     (assert (not (.equal p (.init (.new Point) :x 3 :y 5))))
     (assert (not (.equal p (.init (.new Point) :x 2 :y 5))))
-    (assert (string= (.to-s p) "(3,4)"))))
+    (assert (seqeq? (.to-s p) "(3,4)"))))
