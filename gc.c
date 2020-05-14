@@ -5,10 +5,15 @@
 #include "heap.h"
 #include "object.h"
 #include "splay.h"
+#include "st.h"
 #include "ip.h"
 #include "gc.h"
 
-int gc_used_memory, gc_max_used_memory;
+int gc_used_memory;
+int gc_max_used_memory;
+
+static struct st symbol_table;
+static struct st keyword_table;
 
 #define LINK0_SIZE (sizeof(struct cons))
 #define LINK1_SIZE (2 * LINK0_SIZE)
@@ -54,7 +59,7 @@ object gc_new_env(object top)
   o = gc_alloc(sizeof(struct env));
   set_type(o, ENV);
   o->env.top = top;
-  o->env.binding = gc_new_splay(splay_symcmp);
+  o->env.binding = gc_new_splay();
   regist(o);
   return o;
 }
@@ -135,53 +140,51 @@ object gc_new_cons(object car, object cdr)
   return o;
 }
 
-object gc_new_barray(int type, int size)
+static object new_barray(int type, int size)
 {
   object o;
   xassert(size >= 0);
   o = gc_alloc(sizeof(struct barray) + size - 1);
   set_type(o, type);
-  memset(o->barray.elt, 0, size);
   o->barray.size = size;
   regist(o);
+  return o;
+}
+
+object gc_new_barray(int type, int size)
+{
+  object o;
+  o = new_barray(type, size);
+  memset(o->barray.elt, 0, size);
   return o;
 }
 
 static object new_barray_from(int type, char *val, int size)
 {
   object o;
-  o = gc_new_barray(type, size);
+  o = new_barray(type, size);
   memcpy(o->barray.elt, val, size);
   return o;
 }
 
 object gc_new_barray_from(int type, char *val, int size)
 {
-  object o, p;
-  o = new_barray_from(type, val, size);
+  object o;
+  struct st *s;
   switch (type) {
     case SYMBOL:
-      return gc_intern_symbol(o);
     case KEYWORD:
-      if ((p = splay_find(object_keyword_splay, o)) != NULL) return p;
-      splay_add(object_keyword_splay, o, o);
-      return o;
+      if (type == SYMBOL) s = &symbol_table;
+      else s = &keyword_table;
+      if ((o = st_get(s, val, size)) != NULL) return o;
+      return st_put(s, new_barray_from(type, val, size));
     case STRING:
     case BARRAY:
-      return o;
+      return new_barray_from(type, val, size);
     default:
       xassert(FALSE);
       return NULL;
   }
-}
-
-object gc_intern_symbol(object o)
-{
-  object p;
-  xassert(type_p(o, SYMBOL));
-  if ((p = splay_find(object_symbol_splay, o)) != NULL) return p;
-  splay_add(object_symbol_splay, o, o);
-  return o;
 }
 
 static object new_array(int size)
@@ -212,12 +215,11 @@ object gc_new_array_from(object *o, int size)
   return p;
 }
 
-object gc_new_splay(int (*cmp)(object p, object q))
+object gc_new_splay(void)
 {
   object o;
   o = gc_alloc(sizeof(struct splay));
   set_type(o, SPLAY);
-  o->splay.cmp = cmp;
   o->splay.top = object_splay_nil;
   regist(o);
   return o;
@@ -301,9 +303,16 @@ static void sweep_s_expr(void)
   object o;
   struct xarray *p;
   xarray_reset(work_table);
+  st_reset(&symbol_table);
+  st_reset(&keyword_table);
   for (i = 0; i < (*table).size; i++) {
     o = (*table).elt[i];
     if (alive_p(o)) {
+      switch (type(o)) {
+        case SYMBOL: st_put(&symbol_table, o); break;
+        case KEYWORD: st_put(&keyword_table, o); break;
+        default: break;
+      }
       set_dead(o);
       xarray_add(work_table, o);
     } else gc_free(o);
@@ -318,8 +327,6 @@ void gc_chance(void)
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
   if (GC_LOG_P) printf("before gc(used memory %d[byte])\n", gc_used_memory);
   ip_mark_object();
-  gc_mark(object_symbol_splay);
-  gc_mark(object_keyword_splay);
   sweep_s_expr();
   if (GC_LOG_P) printf("after gc(used memory %d[byte])\n", gc_used_memory);
 }
@@ -333,4 +340,6 @@ void gc_init(void)
   xarray_init(&table1);
   table = &table0;
   work_table = &table1;
+  st_init(&symbol_table);
+  st_init(&keyword_table);
 }

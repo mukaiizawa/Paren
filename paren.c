@@ -16,7 +16,7 @@ static char *core_fn;
 // parser
 
 static int next_token;
-struct xbarray token_str;
+static char token_str[MAX_STR_LEN];
 
 static int parse_skip(void)
 {
@@ -31,7 +31,8 @@ static int parse_token(int token)
     case LEX_SYMBOL:
     case LEX_KEYWORD:
     case LEX_STRING:
-      xbarray_copy(&token_str, &lex_str);
+      memcpy(token_str, lex_str.elt, lex_str.size);
+      token_str[lex_str.size] = '\0';
       break;
     default:
       break;
@@ -39,22 +40,27 @@ static int parse_token(int token)
   return parse_skip();
 }
 
+static object new_barray(int type)
+{
+  return gc_new_barray_from(type, token_str, strlen(token_str));
+}
+
 static object parse_symbol(void)
 {
   parse_token(LEX_SYMBOL);
-  return gc_new_barray_from(SYMBOL, token_str.elt, token_str.size);
+  return new_barray(SYMBOL);
 }
 
 static object parse_keyword(void)
 {
   parse_token(LEX_KEYWORD);
-  return gc_new_barray_from(KEYWORD, token_str.elt, token_str.size);
+  return new_barray(KEYWORD);
 }
 
 static object parse_string(void)
 {
   parse_token(LEX_STRING);
-  return gc_new_barray_from(STRING, token_str.elt, token_str.size);
+  return new_barray(STRING);
 }
 
 static object parse_integer(void)
@@ -190,22 +196,17 @@ static object parse_args(int argc, char *argv[])
 static void make_initial_objects(int argc, char *argv[])
 {
   int i;
-  object nil, args, os, home;
-  nil = gc_new_barray(SYMBOL, 3);
-  memcpy(nil->barray.elt, "nil", 3);
-  object_nil = nil;
+  object nil, args, os;
+  object_nil = nil = symbol_new("nil");
   object_splay_nil = gc_new_splay_node(nil, nil, nil, nil);
-  object_symbol_splay = gc_new_splay(splay_strcmp);
-  object_keyword_splay = gc_new_splay(splay_strcmp);
-  splay_add(object_symbol_splay, object_nil, object_nil);
   object_true = symbol_new("true");
   object_key = keyword_new("key");
   object_opt = keyword_new("opt");
   object_rest = keyword_new("rest");
   object_quote = symbol_new("quote");
   object_toplevel = gc_new_env(nil);
-  home = symbol_new("$paren-home");
-  bind_symbol(home, gc_new_barray_from(STRING, core_fn, strlen(core_fn)));
+  bind_symbol(symbol_new("$paren-home")
+      , gc_new_barray_from(STRING, core_fn, strlen(core_fn)));
   object_class = keyword_new("class");
   object_symbol = keyword_new("symbol");
   object_super = keyword_new("super");
@@ -251,7 +252,6 @@ int main(int argc, char *argv[])
   core_fn = buf;
   gc_init();
   make_initial_objects(argc, argv);
-  xbarray_init(&token_str);
   object_boot = gc_new_lambda(object_toplevel, object_nil, load());
   ip_start();
   return 0;

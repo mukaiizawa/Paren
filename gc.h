@@ -17,7 +17,7 @@ extern object gc_intern_symbol(object o);
 extern object gc_new_array(int size);
 extern object gc_new_array_from(object *o, int size);
 
-extern object gc_new_splay(int (*cmp)(object p, object q));
+extern object gc_new_splay(void);
 extern object gc_new_splay_node(object k, object v, object l, object r);
 
 extern object gc_new_Error(char *msg);

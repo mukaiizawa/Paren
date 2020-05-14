@@ -2,6 +2,7 @@
 
 typedef union s_expr *object;
 
+#define HASH_MASK      0x00ffffff
 #define TYPE_MASK      0x00000fff
 #define ALIVE_BIT      0x00001000
 #define EVAL_FRAME_BIT 0x00000100
@@ -39,7 +40,6 @@ union s_expr {
   struct splay {
     int header;
     object top;
-    int (*cmp)(object p, object q);
   } splay;
   struct env {
     int header;
@@ -82,9 +82,6 @@ union s_expr {
   } array;
   object next;
 };
-
-extern object object_symbol_splay;
-extern object object_keyword_splay;
 
 // global object
 extern object object_nil;

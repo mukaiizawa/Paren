@@ -888,16 +888,15 @@ static int find_super_class(object e, object cls_sym, object *result)
 static int find_class_method(object e, object cls_sym, object mtd_sym
     , object *result)
 {
-  int size1, size2;
+  struct xbarray x;
   object s;
   xassert(type_p(cls_sym, SYMBOL));
   xassert(type_p(mtd_sym, SYMBOL));
-  size1 = cls_sym->barray.size;
-  size2 = mtd_sym->barray.size;
-  s = gc_new_barray(SYMBOL, size1 + size2);
-  memcpy(s->barray.elt, cls_sym->barray.elt, size1);
-  memcpy(s->barray.elt + size1, mtd_sym->barray.elt, size2);
-  s = gc_intern_symbol(s);
+  xbarray_init(&x);
+  xbarray_copy(&x, cls_sym->barray.elt, cls_sym->barray.size);
+  xbarray_copy(&x, mtd_sym->barray.elt, mtd_sym->barray.size);
+  s = gc_new_barray_from(SYMBOL, x.elt, x.size);
+  xbarray_free(&x);
   if (((*result) = symbol_find_propagation(e, s)) == NULL) return TRUE;
   if (!type_p(*result, LAMBDA)) {
     ip_mark_error("is not a method");
