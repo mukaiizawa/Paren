@@ -43,7 +43,7 @@ defun.wk: $(defun)
 	cat $+ | grep ^DEFUN>$@
 
 xc.a: std.o xarray.o xbarray.o xgetopt.o heap.o pf.o \
-	object.o gc.o lex.o splay.o \
+	object.o gc.o lex.o splay.o st.o \
 	$(defsp:%.c=%.o) $(defun:%.c=%.o) 
 	ar -ru xc.a $+
 

@@ -467,19 +467,16 @@ DEFUN(subseq)
 
 static int concat_symbol(object argv, object *result)
 {
-  int sp, size;
-  object o, p;
-  for (o = argv, size = 0; o != object_nil; o = o->cons.cdr) {
-    if (!bi_arg_type(o->cons.car, SYMBOL, &p)) return FALSE;
-    size += p->barray.size;
+  struct xbarray x;
+  object o;
+  xbarray_init(&x);
+  while (argv != object_nil) {
+    if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
+    xbarray_copy(&x, o->barray.elt, o->barray.size);
+    argv = argv->cons.cdr;
   }
-  *result = gc_new_barray(SYMBOL, size);
-  for (sp = 0, o = argv; o != object_nil; o = o->cons.cdr) {
-    p = o->cons.car;
-    memcpy((*result)->barray.elt + sp, p->barray.elt, p->barray.size);
-    sp += p->barray.size;
-  }
-  *result = gc_intern_symbol(*result);
+  *result = gc_new_barray_from(SYMBOL, x.elt, x.size);
+  xbarray_free(&x);
   return TRUE;
 }
 

@@ -63,6 +63,11 @@ char *xbarray_reserve(struct xbarray *x, int size)
   return p;
 }
 
+void xbarray_copy(struct xbarray *x, char *s, int size)
+{
+  memcpy(xbarray_reserve(x, size), s, size);
+}
+
 void xbarray_add(struct xbarray *x, int ch)
 {
   *xbarray_reserve(x, 1) = ch;
@@ -70,9 +75,7 @@ void xbarray_add(struct xbarray *x, int ch)
 
 void xbarray_adds(struct xbarray *x, char *s)
 {
-  int len;
-  len = strlen(s);
-  memcpy(xbarray_reserve(x, len), s, len);
+  xbarray_copy(x, s, strlen(s));
 }
 
 void xbarray_addf(struct xbarray *x, char *fmt, ...)
@@ -83,12 +86,6 @@ void xbarray_addf(struct xbarray *x, char *fmt, ...)
   xvsprintf(buf, fmt, va);
   va_end(va);
   xbarray_adds(x, buf);
-}
-
-void xbarray_copy(struct xbarray *dst, struct xbarray *src)
-{
-  xbarray_reserve(dst, src->size);
-  memcpy(dst->elt, src->elt, dst->size = src->size);
 }
 
 char *xbarray_fgets(struct xbarray *x, FILE *fp)

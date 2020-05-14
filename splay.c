@@ -5,38 +5,30 @@
 #include "gc.h"
 #include "splay.h"
 
-int splay_symcmp(object o, object p)
-{
-  xassert(type_p(o, SYMBOL));
-  return (intptr_t)o - (intptr_t)p;
-}
-
-int splay_strcmp(object o, object p)
-{
-  int i, len;
-  if ((i = (len = o->barray.size) - p->barray.size) != 0) return i;
-  return memcmp(o->barray.elt, p->barray.elt, len);
-}
-
 #define nil object_splay_nil
 #define K 0
 #define V 1
 #define L 2
 #define R 3
 
+static int symcmp(object o, object p)
+{
+  xassert(type_p(o, SYMBOL));
+  return (intptr_t)o - (intptr_t)p;
+}
+
 static object balance(object s, object key)
 {
+  int d;
   object top, p, q;
-  int (*cmp)(object p, object q), d;
-  cmp = s->splay.cmp;
   top = s->splay.top;
   nil->array.elt[K] = key;
   nil->array.elt[L] = nil->array.elt[R] = nil;
-  while ((d = (*cmp)(key, top->array.elt[K])) != 0) {
+  while ((d = symcmp(key, top->array.elt[K])) != 0) {
     p = top;
     if (d < 0) {
       q = p->array.elt[L];
-      if ((d = (*cmp)(key, q->array.elt[K])) == 0) {
+      if ((d = symcmp(key, q->array.elt[K])) == 0) {
         top = q;
         p->array.elt[L] = top->array.elt[R];
         top->array.elt[R] = p;
@@ -54,7 +46,7 @@ static object balance(object s, object key)
       }
     } else {
       q = p->array.elt[R];
-      if ((d = (*cmp)(key, q->array.elt[K])) == 0) {
+      if ((d = symcmp(key, q->array.elt[K])) == 0) {
         top = q;
         p->array.elt[R] = top->array.elt[L];
         top->array.elt[L] = p;
