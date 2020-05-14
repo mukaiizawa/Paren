@@ -116,18 +116,10 @@ static void splay_dump_rec(object node, int level)
   int i;
   char buf[MAX_STR_LEN];
   xassert(type_p(node, ARRAY));
-  if (node == object_splay_nil) {
-    // printf(" nil\n");
-    return;
-  }
-  // for (i = 0; i < level; i++) printf(" ");
+  if (node == object_splay_nil) return;
   for (i = 0; i < level; i++) printf("	");
-  // printf("(%s,", object_describe(node->array.elt[K], buf));
-  // printf(" %s)\n", object_describe(node->array.elt[V], buf));
   printf("%s\n", object_describe(node->array.elt[K], buf));
-  // printf("L");
   splay_dump_rec(node->array.elt[L], ++level);
-  // printf("R");
   splay_dump_rec(node->array.elt[R], level);
 }
 
