@@ -1513,7 +1513,7 @@
   ; Returns a stream to append to the receiver's content.
   (-open self 2))
 
-(method Path .openUpdate ()
+(method Path .open-update ()
   ; Returns a stream that updates the contents of the receiver.
   ; The read/write position is at the beginning of the file.
   ; The file size cannot be reduced.
@@ -1791,33 +1791,33 @@
           (cons begin body)
           (list '.to-s ms))))
 
-(function with-open-mode (sym gsym path mode body)
-  (list let (list path (list if
-                             (list string? path) (list '.init '(.new Path) path)
-                             (list 'and (list 'object? path)
-                                   (list is-a? path 'Path)) path))
-    (list let (list gsym nil)
-          (list unwind-protect
-                (cons let (cons (list sym (list mode path))
-                                (cons (list <- gsym sym)
-                                      body)))
-                (list if gsym (list '.close gsym))))))
+(function with-open-mode (sym path mode body)
+  (with-gensyms (gsym gpath)
+    (list let (list gpath
+                    (list if (list string? path)
+                          (list '.init '(.new Path) path)
+                          path))
+          (list if (or (list not (list object? gpath))
+                       (list not (list is-a? gpath 'Path)))
+                (list error gpath " is not a path"))
+          (list let (list gsym nil)
+                (list unwind-protect
+                      (cons let (cons (list sym (list mode gpath))
+                                      (cons (list <- gsym sym)
+                                            body)))
+                      (list if gsym (list '.close gsym)))))))
 
 (macro with-open-read ((in path) :rest body)
-  (with-gensyms (stream)
-    (with-open-mode in stream path '.open-read body)))
+  (with-open-mode in path '.open-read body))
 
 (macro with-open-write ((out path) :rest body)
-  (with-gensyms (stream)
-    (with-open-mode out stream path '.open-write body)))
+  (with-open-mode in path '.open-write body))
 
 (macro with-open-append ((out path) :rest body)
-  (with-gensyms (stream)
-    (with-open-mode out stream path '.open-append body)))
+  (with-open-mode in path '.open-append body))
 
 (macro with-open-update ((out path) :rest body)
-  (with-gensyms (stream)
-    (with-open-mode out stream path '.openUpdate body)))
+  (with-open-mode in path '.open-update body))
 
 (function read (:opt stream)
   (let (stream (or stream (dynamic $stdin)))
