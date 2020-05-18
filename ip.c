@@ -717,7 +717,7 @@ static void exit1(void)
 static int object_p(object o);
 static int object_is_a_p(object e, object o, object cls_sym, object *result);
 
-static void stack_call_stack(object o)
+static void push_call_stack(object o)
 {
   while (type_p(o, CONS)) {
     if (o->cons.car == object_stack_trace) {
@@ -737,7 +737,7 @@ static void pop_throw_frame(void)
   pop_frame();
   if (!object_is_a_p(reg[1], reg[0], object_Exception, &xbool) || xbool == object_nil)
     reg[0] = gc_new_Error("must be Exception object");
-  stack_call_stack(reg[0]);
+  push_call_stack(reg[0]);
   while (fp > -1) {
     switch (fs_top()) {
       case UNWIND_PROTECT_FRAME:
