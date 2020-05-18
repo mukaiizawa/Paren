@@ -1498,7 +1498,8 @@
   (reduce (&files self) (lambda (acc rest) (concat acc "/" rest))))
 
 (method Path -open (mode)
-  (.init (.new FileStream) :fp (fopen (.to-s self) mode)))
+  (catch (Error (lambda (e) (error (concat "open failed " (.to-s self)))))
+    (.init (.new FileStream) :fp (fopen (.to-s self) mode))))
 
 (method Path .open-read ()
   ; Returns a stream that reads the contents of the receiver.
