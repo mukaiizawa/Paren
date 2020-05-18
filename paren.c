@@ -25,8 +25,8 @@ static int parse_skip(void)
 
 static int parse_token(int token)
 {
-  char buf[MAX_STR_LEN];
-  if (next_token != token) lex_error("missing %s", lex_token_name(buf, token));
+  if (next_token != token)
+    lex_error("missing %s", lex_token_name(token_str, token));
   switch (token) {
     case LEX_SYMBOL:
     case LEX_KEYWORD:
@@ -168,6 +168,11 @@ static object keyword_new(char *name)
   return gc_new_barray_from(KEYWORD, name, strlen(name));
 }
 
+static object string_new(char *name)
+{
+  return gc_new_barray_from(STRING, name, strlen(name));
+}
+
 static void make_builtin(void)
 {
   int i;
@@ -189,7 +194,7 @@ static object parse_args(int argc, char *argv[])
   object o;
   o = object_nil;
   for (i = 1; i < argc; i++)
-    o = gc_new_cons(gc_new_barray_from(STRING, argv[i], strlen(argv[i])), o);
+    o = gc_new_cons(string_new(argv[i]), o);
   return o;
 }
 
@@ -205,8 +210,7 @@ static void make_initial_objects(int argc, char *argv[])
   object_rest = keyword_new("rest");
   object_quote = symbol_new("quote");
   object_toplevel = gc_new_env(nil);
-  bind_symbol(symbol_new("$paren-home")
-      , gc_new_barray_from(STRING, core_fn, strlen(core_fn)));
+  bind_symbol(symbol_new("$paren-home"), string_new(core_fn));
   object_class = keyword_new("class");
   object_symbol = keyword_new("symbol");
   object_super = keyword_new("super");
