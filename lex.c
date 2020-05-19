@@ -77,6 +77,32 @@ static int digit_val(int ch, int radix)
   return result;
 }
 
+static int lex_number(void)
+{
+  int radix;
+  double factor;
+  lex_ival = 0;
+  while (isdigit(next_ch)) lex_ival = lex_ival * 10 + digit_val(skip(), 10);
+  if (next_ch == 'x') {
+    skip();
+    radix = lex_ival;
+    lex_ival = 0;
+    if (radix == 0) radix = 16;
+    while (isalnum(next_ch))
+      lex_ival = lex_ival * radix + digit_val(skip(), radix);
+  } else if (next_ch == '.') {
+    skip();
+    lex_fval = lex_ival;
+    factor = 0.1;
+    while (isdigit(next_ch)) {
+      lex_fval += factor * digit_val(skip(), 10);
+      factor /= 10;
+    }
+    return LEX_FLOAT;
+  }
+  return LEX_INT;
+}
+
 static int lex_string(void)
 {
   int quote, next;
@@ -109,7 +135,7 @@ static int lex_string(void)
   return LEX_STRING;
 }
 
-static int identifier_head_p(void)
+static int identifier_symbol_alpha_p(void)
 {
   switch (next_ch) {
     case '!':
@@ -117,8 +143,6 @@ static int identifier_head_p(void)
     case '%':
     case '&':
     case '*':
-    case '+':
-    case '-':
     case '.':
     case '/':
     case '<':
@@ -132,49 +156,40 @@ static int identifier_head_p(void)
   }
 }
 
+static int identifier_sign_p(void)
+{
+  switch (next_ch) {
+    case '+':
+    case '-':
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
 static int identifier_trail_char_p(void)
 {
-  return identifier_head_p() || isdigit(next_ch);
+  return identifier_symbol_alpha_p() || isdigit(next_ch) || identifier_sign_p();
 }
 
-static int lex_number(void)
+static void lex_identifier_sign(void)
 {
-  int radix;
-  double factor;
-  lex_ival = 0;
-  while (isdigit(next_ch)) lex_ival = lex_ival * 10 + digit_val(skip(), 10);
-  if (next_ch == 'x') {
-    skip();
-    radix = lex_ival;
-    lex_ival = 0;
-    if (radix == 0) radix = 16;
-    while (isalnum(next_ch))
-      lex_ival = lex_ival * radix + digit_val(skip(), radix);
-  } else if (next_ch == '.') {
-    skip();
-    lex_fval = lex_ival;
-    factor = 0.1;
-    while (isdigit(next_ch)) {
-      lex_fval += factor * digit_val(skip(), 10);
-      factor /= 10;
-    }
-    return LEX_FLOAT;
-  }
-  return LEX_INT;
-}
-
-static void lex_partial_identifier(void)
-{
-  if (!identifier_head_p()) return;
-  get();
-  while (identifier_trail_char_p()) get();
+  if (identifier_sign_p() || identifier_symbol_alpha_p())
+    while (identifier_trail_char_p()) get();
 }
 
 static void lex_identifier(void)
 {
-  if (!identifier_head_p()) lex_error("illegal identifier");
-  get();
-  lex_partial_identifier();
+  if (identifier_sign_p()) {
+    get();
+    lex_identifier_sign();
+    return;
+  }
+  if (identifier_symbol_alpha_p()) {
+    while (identifier_trail_char_p()) get();
+    return;
+  }
+  lex_error("illegal identifier");
 }
 
 static int lex_symbol(void)
@@ -202,7 +217,7 @@ static int lex_sign(void)
     }
     return token_type;
   }
-  lex_partial_identifier();
+  lex_identifier_sign();
   return LEX_SYMBOL;
 }
 
@@ -240,8 +255,6 @@ int lex(void)
       return lex_sign();
     default:
       if (isdigit(next_ch)) return lex_number();
-      if (identifier_head_p()) return lex_symbol();
-      lex_error("illegal char '%c'", next_ch);
-      return -1;
+      return lex_symbol();
   }
 }

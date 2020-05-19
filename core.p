@@ -1634,43 +1634,49 @@
 
 (class ParenLexer (AheadReader))
 
-(method ParenLexer -identifier-head? ()
+(method ParenLexer -identifier-symbol-alpha? ()
   (let (c (&next self))
-    (or (find '(0x21 0x24 0x25 0x26 0x2a 0x2b 0x2d
-                0x2f 0x3c 0x3d 0x3e 0x3f 0x5f 0x2e) c)
+    (or (find '(0x21 0x24 0x25 0x26 0x2a 0x2f 0x3c 0x3d 0x3e 0x3f 0x5f 0x2e) c)
         (ascii-alpha? c))))
 
+(method ParenLexer -identifier-sign? ()
+  (let (c (&next self))
+    (find '(0x2b 0x2d) c)))
+
 (method ParenLexer -identifier-trail? ()
-  (or (-identifier-head? self) (ascii-digit? (&next self))))
+  (or (-identifier-symbol-alpha? self)
+      (-identifier-sign? self)
+      (ascii-digit? (&next self))))
 
 (method ParenLexer -lex-comment ()
   (while (/= (&next self) 0x0a) (.skip self))
   (.lex self))
 
-(method ParenLexer -get-identifier ()
-  (unless (-identifier-head? self)
-    (error "illegal identifier '" (.token self) "'"))
-  (.get self)
-  (-get-partial-identifier self))
-
-(method ParenLexer -get-partial-identifier ()
-  (when (-identifier-head? self)
-    (.get self)
+(method ParenLexer -get-identifier-sign ()
+  (when (or (-identifier-sign? self) (-identifier-symbol-alpha? self))
     (while (-identifier-trail? self) (.get self)))
   self)
+
+(method ParenLexer -get-identifier ()
+  (if (-identifier-sign? self)
+      (begin (.get self)
+             (-get-identifier-sign self))
+      (-identifier-symbol-alpha? self)
+      (begin
+        (while (-identifier-trail? self)
+          (.get self))
+        self)
+      (error "illegal identifier '" (.token self) "'")))
 
 (method ParenLexer -lex-sign ()
   (let (sign (.get self))
     (if (ascii-digit? (&next self))
         (let (val (.skip-number self))
           (list :number (if (= sign 0x2d) (- val) val)))
-        (-get-symbol (-get-partial-identifier self)))))
-
-(method ParenLexer -get-symbol ()
-  (list :symbol (string->symbol (.token self))))
+        (list :symbol (string->symbol (.token (-get-identifier-sign self)))))))
 
 (method ParenLexer -lex-symbol ()
-  (-get-symbol (-get-identifier self)))
+  (list :symbol (string->symbol (.token (-get-identifier self)))))
 
 (method ParenLexer -lex-keyword ()
   (.skip self)
@@ -1714,8 +1720,7 @@
         (= next 0x3b) (-lex-comment self)
         (or (= next 0x2b) (= next 0x2d)) (-lex-sign self)
         (.digit? self) (list :number (.skip-number self))
-        (-identifier-head? self) (-lex-symbol self)
-        (error "illegal char"))))
+        (-lex-symbol self))))
 
 (class ParenParser ()
   lexer token token-type)

@@ -83,14 +83,15 @@ carは任意のParenデータ型を参照することができるが、cdrはコ
 Parenの文法を以下のEBNF表記で定義する。
 
     x? -- xは省略可能。
+    x | y -- x又はy。
     . -- 任意の一文字
     x* -- xの零回以上の繰り返し。
     x+ -- xの一回以上の繰り返し。
-    (x | y) -- xまたはy。
+    () -- グループ化。
     'x' -- 固定字句。文字の並びxを示す。xは複数の場合もある。
     [...] -- 文字グループ。[]内で指定された文字の何れか。
              x-yと表記された場合はxとyの間の何れかを表す。
-             先頭に~を指定した場合は[]内で指定された文字以外の何れかを示す。
+             先頭に^を指定した場合は[]内で指定された文字以外の何れかを示す。
     ::= -- 定義。左辺で示される構文要素を右辺で定義される。
 
 ### 注意事項
@@ -128,13 +129,13 @@ S式はリストまたはアトムである。
 
 ### リスト（list）
 
-    list ::= '(' (s_expr (separator s_expr)* )? ')'
+    list ::= '(' (s_expr separator s_expr* )? ')'
 
 リストは零以上のS式を括弧で括ったものである。
 
 ### アトム（atom）
 
-    atom ::= (symbol | keyword | number | string)
+    atom ::= symbol | keyword | number | string
 
 atomは次のリテラルがある。
 
@@ -143,24 +144,35 @@ atomは次のリテラルがある。
 - 数値
 - 文字列
 
+#### 識別子（identifier）
+
+    identifier ::= identifier_symbol_alpha identifier_rest*
+                    | identifier_sign ( (identifier_symbol_alpha | identifier_sign) identifier_rest* )?
+    identifier_rest ::= identifier_symbol_alpha
+                        | identifier_digit
+                        | identifier_sign
+    identifier_symbol_alpha ::= [!$%&*./<=>?a-zA-Z_]
+    identifier_digit ::= [0-9]
+    identifier_sign ::= [+\-]
+
+識別子はシンボル、キーワードを定義するために定義する。
+
 #### シンボル（symbol）
 
     symbol ::= identifier
-    identifier ::= (identifier_head [identifier_head identifier_rest*])
-    identifier_head ::= [!$%&*+\-./<=>?a-zA-Z_]
-    identifier_rest ::= (identifier_head | [0-9])*
 
-シンボルは一部のascii文字から始まり、数値以外の後に数値を含むascii文字からなる。
+シンボルは識別子である。
 
 #### キーワード（keyword）
 
-    keyword ::= ':' symbol
+    keyword ::= ':' identifier
 
-キーワードはシンボルに`:`を付与したもののことをいう。
+キーワードは先頭に`:`を付与した識別子である。
 
 #### 数値（number）
 
-    number ::= (integer | float)
+    number ::= sign? (integer | float)
+    sign ::= '+' | '-'
     integer ::= (digit+ 'x')? [0-9a-z]+
     float ::= digit+ '.' digit+ ('E' [+-]? digit+)?
     digit ::= [0-9]
