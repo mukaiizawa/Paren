@@ -70,7 +70,6 @@ DEFUN(set_cdr)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_arg_type(argv->cons.car, CONS, &o)) return FALSE;
   if (!bi_arg_list(argv->cons.cdr->cons.car, &p)) return FALSE;
-  p = argv->cons.cdr->cons.car;
   o->cons.cdr = p;
   *result = p;
   return TRUE;
