@@ -210,7 +210,6 @@ static void make_initial_objects(int argc, char *argv[])
   object_rest = keyword_new("rest");
   object_quote = symbol_new("quote");
   object_toplevel = gc_new_env(nil);
-  bind_symbol(symbol_new("$paren-home"), string_new(core_fn));
   object_class = keyword_new("class");
   object_symbol = keyword_new("symbol");
   object_super = keyword_new("super");

@@ -136,14 +136,14 @@
 
 ; fundamental macro
 
-(macro global-symbol (s v)
+(macro global-symbol (s :opt (v nil v?))
   ; In Paren, explicitly binding symbols to the global environment is rare and bad practice.
   ; It is the programmer's responsibility to call it in the global environment because it is only macro-expanded into a special operator '<-'.
   ; By convention, the binding symbol name starts with '$'.
   ; Macro expansion image is as follows.
   ;     (global-symbol s v)
   ;     (<- s v)
-  (list <- s v))
+  (if v? (list <- s v)))
 
 (macro function (name args :rest body)
   ; Create a lambda function which parameter list the specified args and lambda function body the specified body.
@@ -1895,8 +1895,7 @@
     (while true
       (catch (SystemExit (lambda (e) (break))
               Error (lambda (e) (.print-stack-trace e)))
-        (write-string (.to-s $paren-home))
-        (write-string "> ")
+        (write-string "pshell> ")
         (let (expr nil)
           (with-memory-stream (out (with-memory-stream (in)
                                      (write-string (read-line) in)))
@@ -1922,9 +1921,8 @@
   ; Do not update directly.
   )
 
-(global-symbol $paren-home (.init (.new Path) $paren-home)
-  ; System directory.
-  ; Holds system files.
+(global-symbol $args
+  ; List of command line arguments.
   )
 
 (global-symbol $stdin (.init (.new FileStream) :fp (fp 0))
@@ -1935,7 +1933,7 @@
   ; File stream object holding the standard ouput.
   )
 
-(global-symbol $os $os
+(global-symbol $os
   ; Host os.
   ; Determined by compile-time arguments.
   ; The values to be set are as follows.
@@ -1946,7 +1944,7 @@
   )
 
 (global-symbol $external-encoding :UTF-8
-  ; Input / output encoding.
+  ; Input / Output encoding.
   ; Currently supported encodings are as follows.
   ; - :UTF-8
   ; Currently dummy encodings are as follows.
