@@ -5,9 +5,6 @@
 #include "xbarray.h"
 #include "object.h"
 
-object object_symbol_splay;
-object object_keyword_splay;
-
 object object_nil;
 object object_true;
 object object_key;
