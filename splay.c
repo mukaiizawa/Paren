@@ -122,9 +122,3 @@ static void splay_dump_rec(object node, int level)
   splay_dump_rec(node->array.elt[L], ++level);
   splay_dump_rec(node->array.elt[R], level);
 }
-
-void splay_dump(object s)
-{
-  xassert(type_p(s, SPLAY));
-  splay_dump_rec(s->splay.top, 0);
-}
