@@ -110,15 +110,3 @@ object splay_find(object s, object key)
   s->splay.top = top;
   return top->array.elt[V];
 }
-
-static void splay_dump_rec(object node, int level)
-{
-  int i;
-  char buf[MAX_STR_LEN];
-  xassert(type_p(node, ARRAY));
-  if (node == object_splay_nil) return;
-  for (i = 0; i < level; i++) printf("	");
-  printf("%s\n", object_describe(node->array.elt[K], buf));
-  splay_dump_rec(node->array.elt[L], ++level);
-  splay_dump_rec(node->array.elt[R], level);
-}
