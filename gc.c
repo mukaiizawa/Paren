@@ -3,8 +3,8 @@
 #include "std.h"
 #include "xarray.h"
 #include "heap.h"
-#include "object.h"
 #include "splay.h"
+#include "object.h"
 #include "st.h"
 #include "ip.h"
 #include "gc.h"
@@ -58,7 +58,7 @@ object gc_new_env(object top)
   o = gc_alloc(sizeof(struct env));
   set_type(o, ENV);
   o->env.top = top;
-  o->env.binding = gc_new_splay();
+  splay_init(&o->env.binding);
   regist(o);
   return o;
 }
@@ -214,27 +214,6 @@ object gc_new_array_from(object *o, int size)
   return p;
 }
 
-object gc_new_splay(void)
-{
-  object o;
-  o = gc_alloc(sizeof(struct splay));
-  set_type(o, SPLAY);
-  o->splay.top = object_splay_nil;
-  regist(o);
-  return o;
-}
-
-object gc_new_splay_node(object k, object v, object l, object r)
-{
-  object o;
-  o = new_array(4);
-  o->array.elt[0] = k;
-  o->array.elt[1] = v;
-  o->array.elt[2] = l;
-  o->array.elt[3] = r;
-  return o;
-}
-
 object gc_new_Error(char *msg)
 {
   return gc_new_cons(object_class
@@ -245,18 +224,21 @@ object gc_new_Error(char *msg)
               , gc_new_cons(object_nil , object_nil))))));
 }
 
+static void mark_binding(void *key, void *data)
+{
+  gc_mark(key);
+  gc_mark(data);
+}
+
 void gc_mark(object o)
 {
   int i;
   if (alive_p(o)) return;
   set_alive(o);
   switch (type(o)) {
-    case SPLAY:
-      gc_mark(o->splay.top);
-      break;
     case ENV:
       gc_mark(o->env.top);
-      gc_mark(o->env.binding);
+      splay_foreach(&o->env.binding, mark_binding);
       break;
     case SPECIAL:
     case FUNCITON:

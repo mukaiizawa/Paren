@@ -3,6 +3,7 @@
 #include "std.h"
 #include "xarray.h"
 #include "xbarray.h"
+#include "splay.h"
 #include "object.h"
 #include "gc.h"
 #include "bi.h"

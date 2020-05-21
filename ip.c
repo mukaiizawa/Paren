@@ -3,10 +3,10 @@
 #include "std.h"
 #include "xarray.h"
 #include "xbarray.h"
+#include "splay.h"
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
-#include "splay.h"
 #include "ip.h"
 
 /*
@@ -40,7 +40,7 @@ static void mark_illegal_args()
 static object symbol_find(object e, object s)
 {
   xassert(type_p(e, ENV));
-  return splay_find(e->env.binding, s);
+  return splay_find(&e->env.binding, s);
 }
 
 static object symbol_find_propagation(object e, object s)
@@ -57,13 +57,13 @@ static void symbol_bind(object e, object s, object v)
 {
   object o;
   xassert(type_p(e, ENV) && type_p(s, SYMBOL));
-  if ((o = splay_find(e->env.binding, s)) != NULL) {
+  if ((o = splay_find(&e->env.binding, s)) != NULL) {
     if (type_p(o, SPECIAL)) {
       ip_mark_error("special operator could not bind");
       return;
     }
   }
-  splay_replace(e->env.binding, s, v);
+  splay_replace(&e->env.binding, s, v);
 }
 
 static void symbol_bind_propagation(object e, object s, object v)

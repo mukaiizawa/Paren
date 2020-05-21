@@ -9,20 +9,19 @@ typedef union s_expr *object;
 #define BARRAY_BIT     0x00000200
 #define BUILTIN_BIT    0x00000400
 #define NUMBER_BIT     0x00000800
-#define   SPLAY        0x00000001
-#define   ENV          0x00000002
-#define   MACRO        0x00000003
-#define   LAMBDA       0x00000004
-#define   SPECIAL     (0x00000005 | BUILTIN_BIT)
-#define   FUNCITON    (0x00000006 | BUILTIN_BIT)
-#define   CONS        (0x00000007 | EVAL_FRAME_BIT)
-#define   XINT        (0x00000008 | NUMBER_BIT)
-#define   XFLOAT      (0x00000009 | NUMBER_BIT)
-#define   SYMBOL      (0x0000000a | BARRAY_BIT | EVAL_FRAME_BIT)
-#define   KEYWORD     (0x0000000b | BARRAY_BIT)
-#define   STRING      (0x0000000c | BARRAY_BIT)
-#define   BARRAY      (0x0000000d | BARRAY_BIT)
-#define   ARRAY        0x0000000e
+#define   ENV          0x00000001
+#define   MACRO        0x00000002
+#define   LAMBDA       0x00000003
+#define   SPECIAL     (0x00000004 | BUILTIN_BIT)
+#define   FUNCITON    (0x00000005 | BUILTIN_BIT)
+#define   CONS        (0x00000006 | EVAL_FRAME_BIT)
+#define   XINT        (0x00000007 | NUMBER_BIT)
+#define   XFLOAT      (0x00000008 | NUMBER_BIT)
+#define   SYMBOL      (0x00000009 | BARRAY_BIT | EVAL_FRAME_BIT)
+#define   KEYWORD     (0x0000000a | BARRAY_BIT)
+#define   STRING      (0x0000000b | BARRAY_BIT)
+#define   BARRAY      (0x0000000c | BARRAY_BIT)
+#define   ARRAY        0x0000000d
 
 #define LINT_BITS 63
 
@@ -37,13 +36,10 @@ typedef union s_expr *object;
 
 union s_expr {
   int header;
-  struct splay {
-    int header;
-    object top;
-  } splay;
   struct env {
     int header;
-    object top, binding;
+    object top;
+    struct splay binding;
   } env;
   struct lambda {
     int header;
@@ -83,6 +79,8 @@ union s_expr {
   object next;
 };
 
+extern object object_toplevel;
+
 // global object
 extern object object_nil;
 extern object object_true;
@@ -91,10 +89,8 @@ extern object object_opt;
 extern object object_rest;
 extern object object_quote;
 extern object object_bytes[];
-extern object object_toplevel;
 extern object object_stack_trace;
 extern object object_boot;
-extern object object_splay_nil;
 
 extern object object_Class;
 extern object object_Exception;

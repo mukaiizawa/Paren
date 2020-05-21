@@ -2,12 +2,12 @@
 
 #include "std.h"
 #include "xgetopt.h"
-#include "xarray.h"
 #include "pf.h"
+#include "xarray.h"
+#include "splay.h"
 #include "object.h"
 #include "lex.h"
 #include "gc.h"
-#include "splay.h"
 #include "ip.h"
 #include "bi.h"
 
@@ -150,7 +150,7 @@ static object load(void)
 
 static void bind_symbol(object k, object v)
 {
-  splay_add(object_toplevel->env.binding, k, v);
+  splay_add(&object_toplevel->env.binding, k, v);
 }
 
 static void bind_pseudo_symbol(object o)
@@ -201,15 +201,14 @@ static object parse_args(int argc, char *argv[])
 static void make_initial_objects(int argc, char *argv[])
 {
   int i;
-  object nil, args, os;
-  object_nil = nil = symbol_new("nil");
-  object_splay_nil = gc_new_splay_node(nil, nil, nil, nil);
+  object args, os;
+  object_nil = symbol_new("nil");
   object_true = symbol_new("true");
   object_key = keyword_new("key");
   object_opt = keyword_new("opt");
   object_rest = keyword_new("rest");
   object_quote = symbol_new("quote");
-  object_toplevel = gc_new_env(nil);
+  object_toplevel = gc_new_env(object_nil);
   object_class = keyword_new("class");
   object_symbol = keyword_new("symbol");
   object_super = keyword_new("super");
@@ -235,7 +234,7 @@ static void make_initial_objects(int argc, char *argv[])
   xassert(FALSE);
 #endif
   for (i = 0; i < 256; i++) object_bytes[i] = gc_new_bytes(i);
-  bind_pseudo_symbol(nil);
+  bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
   make_builtin();
 }
