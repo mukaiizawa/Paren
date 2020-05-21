@@ -12,15 +12,14 @@
 int gc_used_memory;
 int gc_max_used_memory;
 
-static struct st symbol_table;
-static struct st keyword_table;
-
 #define LINK0_SIZE (sizeof(struct cons))
 #define LINK1_SIZE (2 * LINK0_SIZE)
 static object link0, link1;
 
 static struct heap heap;
 static struct xarray *table, *work_table, table0, table1;
+static struct st symbol_table;
+static struct st keyword_table;
 
 #define alive_p(o) ((o)->header & ALIVE_BIT)
 #define set_alive(o) ((o)->header |= ALIVE_BIT)
