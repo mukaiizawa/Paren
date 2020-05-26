@@ -24,7 +24,7 @@ int bi_argc_range(int argc, int min, int max)
 static int arg(object o, int test, object *result)
 {
   if (!test) {
-    ip_mark_error("illegal argument");
+    ip_mark_error("illegal argument type");
     return FALSE;
   }
   *result = o;
