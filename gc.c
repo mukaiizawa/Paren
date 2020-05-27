@@ -63,7 +63,7 @@ object gc_new_env(object top)
   return o;
 }
 
-static object new_lambda(object env, object params, object body)
+static object new_lambda(int type, object env, object params, object body)
 {
   object o;
   xassert(type_p(env, ENV));
@@ -71,24 +71,19 @@ static object new_lambda(object env, object params, object body)
   o->lambda.env = env;
   o->lambda.params = params;
   o->lambda.body = body;
+  set_type(o, type);
   regist(o);
   return o;
 }
 
 object gc_new_macro(object env, object params, object body)
 {
-  object o;
-  o = new_lambda(env, params, body);
-  set_type(o, MACRO);
-  return o;
+  return new_lambda(MACRO, env, params, body);
 }
 
 object gc_new_lambda(object env, object params, object body)
 {
-  object o;
-  o = new_lambda(env, params, body);
-  set_type(o, LAMBDA);
-  return o;
+  return new_lambda(LAMBDA, env, params, body);
 }
 
 object gc_new_builtin(int type, object name, void *p)
@@ -237,8 +232,8 @@ void gc_mark(object o)
   set_alive(o);
   switch (type(o)) {
     case ENV:
-      gc_mark(o->env.top);
       splay_foreach(&o->env.binding, mark_binding);
+      gc_mark(o->env.top);
       break;
     case SPECIAL:
     case FUNCITON:

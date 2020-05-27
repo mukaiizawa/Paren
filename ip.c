@@ -326,10 +326,10 @@ static int valid_keyword_p(object params, object args)
   return TRUE;
 }
 
-static void parse_lambda_list(object env, object params, object args)
+static void parse_args(object env, object params, object args)
 {
   object o, pre, k, v, def_v, sup_k;
-  // parse required parameter
+  // parse required args
   while (params != object_nil && !type_p(params->cons.car, KEYWORD)) {
     if (args == object_nil) {
       bi_argc_range(0, 1, 1);
@@ -342,13 +342,13 @@ static void parse_lambda_list(object env, object params, object args)
       mark_illegal_args();
       return;
     } else {
-      parse_lambda_list(env, params->cons.car, args->cons.car);
+      parse_args(env, params->cons.car, args->cons.car);
       if (ip_trap_code != TRAP_NONE) return;
     }
     params = params->cons.cdr;
     args = args->cons.cdr;
   }
-  // parse optional parameter
+  // parse optional args
   if (params->cons.car == object_opt) {
     params = params->cons.cdr;
     while (params != object_nil && !type_p(params->cons.car, KEYWORD)) {
@@ -382,14 +382,14 @@ static void parse_lambda_list(object env, object params, object args)
       }
     }
   }
-  // parse rest parameter
+  // parse rest args
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
     fb_gen1(QUOTE_FRAME, args);
     fb_gen1(BIND_FRAME, params->cons.car);
     return;
   }
-  // parse keyword parameter
+  // parse keyword args
   if (params->cons.car == object_key) {
     params = params->cons.cdr;
     if (!valid_keyword_p(params, args)) return;
@@ -446,7 +446,7 @@ static void pop_apply_frame(void)
   pop_frame();
   fb_reset();
   gen_switch_env_frame(operator->lambda.env);
-  parse_lambda_list(reg[1], operator->lambda.params, reg[0]);
+  parse_args(reg[1], operator->lambda.params, reg[0]);
   gen_eval_sequential_frame(operator->lambda.body);
   fb_flush();
 }
@@ -1077,33 +1077,36 @@ static int valid_lambda_list_p(object params, int nest_p)
   return params == object_nil;
 }
 
+static int gen_let_binding(int i, object args)
+{
+  object o;
+  if (args == object_nil) return TRUE;
+  if (!type_p(args->cons.car, SYMBOL)) {
+    ip_mark_error("argument must be symbol");
+    return FALSE;
+  }
+  if ((o = args->cons.cdr) == object_nil) {
+    ip_mark_error("argument must be pairs");
+    return FALSE;
+  }
+  if (!gen_let_binding(i + 2, o->cons.cdr)) return FALSE;
+  gen1(BIND_FRAME, args->cons.car);
+  gen0(EVAL_FRAME);
+  gen1(QUOTE_FRAME, args->cons.cdr->cons.car);
+  return TRUE;
+}
+
 DEFSP(let)
 {
-  object args, s;
+  object args;
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   if (!list_p((args = argv->cons.car))) {
     ip_mark_error("argument must be list");
     return FALSE;
   }
-  if (args != object_nil) gen_switch_env_frame(reg[1]);
+  gen_switch_env_frame(reg[1]);
   gen_eval_sequential_frame(argv->cons.cdr);
-  fb_reset();
-  while (args != object_nil) {
-    if (!type_p((s = args->cons.car), SYMBOL)) {
-      ip_mark_error("argument must be symbol");
-      return FALSE;
-    }
-    if ((args = args->cons.cdr) == object_nil) {
-      ip_mark_error("argument must be association list");
-      return FALSE;
-    }
-    fb_gen1(QUOTE_FRAME, args->cons.car);
-    fb_gen0(EVAL_FRAME);
-    fb_gen1(BIND_FRAME, s);
-    args = args->cons.cdr;
-  }
-  fb_flush();
-  return TRUE;
+  return gen_let_binding(0, args);
 }
 
 DEFSP(dynamic)
@@ -1139,7 +1142,7 @@ DEFSP(symbol_bind)
   object s;
   if (argc == 0) return TRUE;
   if (argc % 2 != 0) {
-    ip_mark_error("must be pair");
+    ip_mark_error("argument must be pair");
     return FALSE;
   }
   fb_reset();

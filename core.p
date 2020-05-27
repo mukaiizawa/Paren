@@ -641,39 +641,20 @@
                   (rec (cons (f (car l) (cadr l)) (cddr l))))))
     (rec l)))
 
-(function find-cons (l e :key (test eq?) (key identity))
-  ; Among the cons that make up the specified list l, the cons whose car part is equal to the specified e is returned.
-  ; Evaluation is performed in order from left to right.
-  ; If there is no such cons, nil is returned.
-  ; The comparison is done with the specified function test which default value is eq?.
-  ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (while true
-    (if (nil? l) (return nil)
-        (test (key (car l)) e) (return l)
-        (<- l (cdr l)))))
-
-(function find-cons-if (l f :key (key identity))
+(function find-cons (l f)
   ; Returns the cons that make up the specified list l that are not nil when the car part is evaluated as an argument of the specified function f.
   ; Evaluation is performed in order from left to right.
   ; If there is no such cons, nil is returned.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
   (while l
-    (if (f (key (car l))) (return l)
+    (if (f (car l)) (return l)
         (<- l (cdr l)))))
 
-(function find (l e :key (test eq?) (key identity))
-  ; Returns an element equal to the specified element e from the beginning of the specified list l.
-  ; Returns nil if e does not exist.
-  ; The comparison is done with eq? as a default.
-  ; If test is supplied, the element is compared using the test function.
-  ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (car (find-cons l e :test test :key key)))
-
-(function find-if (l f :key (key identity))
+(function find (l f)
   ; From the beginning of the specified list l, the specified function f returns the first element that does not evaluate to nil.
   ; If no such element exists, nil is returned.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (car (find-cons-if l f :key key)))
+  (car (find-cons l f)))
 
 (function all-satisfy? (l f)
   ; Returns true if all element of the specified list l returns a not nil value which evaluates as an argument to the specified function f.
@@ -732,7 +713,7 @@
 
 (function ascii-space? (c)
   ; Returns whether byte c can be considered a space character.
-  (find '(0x09 0x0a 0x0d 0x20) c :test =))
+  (find '(0x09 0x0a 0x0d 0x20) (lambda (x) (= c x))))
 
 (function ascii-alpha? (c)
   ; Returns whether byte c can be considered a alphabetic character.
@@ -1402,7 +1383,7 @@
     (&wrpos! self 0))
   self)
 
-(method MemoryStream -extend (size)
+(method MemoryStream .extend (size)
   (let (req (+ (&wrpos self) size) new-buf nil)
     (while (< (&buf-size self) req)
       (&buf-size! self (* (&buf-size self) 2)))
@@ -1413,7 +1394,7 @@
 
 (method MemoryStream .write-byte (byte)
   (let (wrpos (&wrpos self))
-    (unless (< wrpos (&buf-size self)) (-extend self 1))
+    (unless (< wrpos (&buf-size self)) (.extend self 1))
     (nth! (&buf self) wrpos byte)
     (&wrpos! self (++ wrpos))))
 
@@ -1585,13 +1566,13 @@
     (.skip self))
   self)
 
-(method AheadReader -skip-sign ()
+(method AheadReader .skip-sign ()
   (let (next (&next self))
     (if (= next 0x2b) (begin (.skip self) nil)
         (= next 0x2d) (begin (.skip self) true)
         nil)))
 
-(method AheadReader -skip-unsigned-integer ()
+(method AheadReader .skip-unsigned-integer ()
   (if (ascii-digit? (&next self))
       (let (val 0)
         (while (.digit? self)
@@ -1600,12 +1581,12 @@
       (error "missing digits")))
 
 (method AheadReader -skip-integer ()
-  (let (minus? (-skip-sign self) val (-skip-unsigned-integer self))
+  (let (minus? (.skip-sign self) val (.skip-unsigned-integer self))
     (if minus? (- val)
         val)))
 
-(method AheadReader -skip-unsigned-number ()
-  (let (val (-skip-unsigned-integer self))
+(method AheadReader .skip-unsigned-number ()
+  (let (val (.skip-unsigned-integer self))
     (if (= (&next self) 0x78)
         (let (radix (if (= val 0) 16 val) val 0)
           (.skip self)
@@ -1626,7 +1607,7 @@
     val))
 
 (method AheadReader .skip-number ()
-  (let (minus? (-skip-sign (.skip-space self)) val (-skip-unsigned-number self))
+  (let (minus? (.skip-sign (.skip-space self)) val (.skip-unsigned-number self))
     (if minus? (- val)
         val)))
 
@@ -1634,56 +1615,57 @@
 
 (class ParenLexer (AheadReader))
 
-(method ParenLexer -identifier-symbol-alpha? ()
+(method ParenLexer .identifier-symbol-alpha? ()
   (let (c (&next self))
-    (or (find '(0x21 0x24 0x25 0x26 0x2a 0x2f 0x3c 0x3d 0x3e 0x3f 0x5f 0x2e) c)
+    (or (find '(0x21 0x24 0x25 0x26 0x2a 0x2f 0x3c 0x3d 0x3e 0x3f 0x5f 0x2e)
+                 (lambda (x) (= x c)))
         (ascii-alpha? c))))
 
-(method ParenLexer -identifier-sign? ()
+(method ParenLexer .identifier-sign? ()
   (let (c (&next self))
-    (find '(0x2b 0x2d) c)))
+    (find '(0x2b 0x2d) (lambda (x) (= x c)))))
 
-(method ParenLexer -identifier-trail? ()
-  (or (-identifier-symbol-alpha? self)
-      (-identifier-sign? self)
+(method ParenLexer .identifier-trail? ()
+  (or (.identifier-symbol-alpha? self)
+      (.identifier-sign? self)
       (ascii-digit? (&next self))))
 
-(method ParenLexer -lex-comment ()
+(method ParenLexer .lex-comment ()
   (while (/= (&next self) 0x0a) (.skip self))
   (.lex self))
 
-(method ParenLexer -get-identifier-sign ()
-  (when (or (-identifier-sign? self) (-identifier-symbol-alpha? self))
-    (while (-identifier-trail? self) (.get self)))
+(method ParenLexer .get-identifier-sign ()
+  (when (or (.identifier-sign? self) (.identifier-symbol-alpha? self))
+    (while (.identifier-trail? self) (.get self)))
   self)
 
-(method ParenLexer -get-identifier ()
-  (if (-identifier-sign? self)
+(method ParenLexer .get-identifier ()
+  (if (.identifier-sign? self)
       (begin (.get self)
-             (-get-identifier-sign self))
-      (-identifier-symbol-alpha? self)
+             (.get-identifier-sign self))
+      (.identifier-symbol-alpha? self)
       (begin
-        (while (-identifier-trail? self)
+        (while (.identifier-trail? self)
           (.get self))
         self)
       (error "illegal identifier '" (.token self) "'")))
 
-(method ParenLexer -lex-sign ()
+(method ParenLexer .lex-sign ()
   (let (sign (.get self))
     (if (ascii-digit? (&next self))
         (let (val (.skip-number self))
           (list :number (if (= sign 0x2d) (- val) val)))
-        (list :symbol (string->symbol (.token (-get-identifier-sign self)))))))
+        (list :symbol (string->symbol (.token (.get-identifier-sign self)))))))
 
-(method ParenLexer -lex-symbol ()
-  (list :symbol (string->symbol (.token (-get-identifier self)))))
+(method ParenLexer .lex-symbol ()
+  (list :symbol (string->symbol (.token (.get-identifier self)))))
 
-(method ParenLexer -lex-keyword ()
+(method ParenLexer .lex-keyword ()
   (.skip self)
   (list :keyword (symbol->keyword
                    (string->symbol (.token (-get-identifier self))))))
 
-(method ParenLexer -lex-string ()
+(method ParenLexer .lex-string ()
   (.skip self)
   (while (/= 0x22 (&next self))
     (if (.eof? self) (error "string not closed")
@@ -1712,15 +1694,15 @@
   (.skip-space (.reset self))
   (let (next (&next self))
     (if (.eof? self) '(:EOF)
-        (= next 0x22) (-lex-string self)
+        (= next 0x22) (.lex-string self)
         (= next 0x27) (begin (.skip self) '(:quote))
         (= next 0x28) (begin (.skip self) '(:open-paren))
         (= next 0x29) (begin (.skip self) '(:close-paren))
-        (= next 0x3a) (-lex-keyword self)
-        (= next 0x3b) (-lex-comment self)
-        (or (= next 0x2b) (= next 0x2d)) (-lex-sign self)
+        (= next 0x3a) (.lex-keyword self)
+        (= next 0x3b) (.lex-comment self)
+        (or (= next 0x2b) (= next 0x2d)) (.lex-sign self)
         (.digit? self) (list :number (.skip-number self))
-        (-lex-symbol self))))
+        (.lex-symbol self))))
 
 (class ParenParser ()
   lexer token token-type)
@@ -1885,7 +1867,7 @@
   ; Load the file corresponding to the specified keyword.
   ; Search the current directory and directories in the execution environment.
   ; Returns true if successfully loaded.
-  (if (find $import key) true
+  (if (find $import (lambda (x) (eq? x key))) true
       (begin0 (load (string (keyword->symbol key) ".p"))
               (push! $import key))))
 

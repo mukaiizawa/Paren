@@ -43,7 +43,9 @@ union s_expr {
   } env;
   struct lambda {
     int header;
-    object env, params, body;
+    object env;
+    object params;
+    object body;
   } lambda;
   struct builtin {
     int header;
@@ -56,7 +58,8 @@ union s_expr {
   } builtin;
   struct cons {
     int header;
-    object car, cdr; 
+    object car;
+    object cdr;
   } cons;
   struct xint {
     int header;
