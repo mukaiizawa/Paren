@@ -261,6 +261,7 @@ static void gc_free(object o)
 {
   int size;
   size = object_byte_size(o);
+  if (type_p(o, ENV)) splay_free(&o->env.binding);
   if (size <= LINK0_SIZE) {
     size = LINK0_SIZE;
     o->next = link0;
