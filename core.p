@@ -1850,7 +1850,7 @@
               Error (lambda (e) (.print-stack-trace e)))
         (write-string ") ")
         (if (eq? (<- expr (read)) :EOF) (break))
-        (print (eval expr))))))
+        (print (eval (expand-macro-all expr)))))))
 
 (function quit ()
   ; Quit the system.
@@ -1870,20 +1870,6 @@
   (if (find $import (lambda (x) (eq? x key))) true
       (begin0 (load (string (keyword->symbol key) ".p"))
               (push! $import key))))
-
-(function shell ()
-  ; Start paren shell.
-  (let (s nil)
-    (while true
-      (catch (SystemExit (lambda (e) (break))
-              Error (lambda (e) (.print-stack-trace e)))
-        (write-string "pshell> ")
-        (let (expr nil)
-          (with-memory-stream (out (with-memory-stream (in)
-                                     (write-string (read-line) in)))
-            (while (neq? (<- s (read out)) :EOF)
-              (push! expr s)))
-          (print (eval (reverse! expr))))))))
 
 (function boot (args)
   ; Executed when paren is executed.
