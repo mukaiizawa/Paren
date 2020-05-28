@@ -1873,8 +1873,8 @@
 
 (function boot ()
   ; Executed when paren is executed.
-  ; Invoke repl if there are no command line arguments.
-  ; If there are command line arguments, first argument is regarded as a file name and loaded in the specified order.
+  ; Invoke repl if there are no command line arguments that bound to the symbol $args.
+  ; If command line arguments are specified, read the first argument as the script file name and bind the remaining arguments to $args and execute.
   (if (nil? $args) (repl)
       (let (script (car $args) args (cdr $args))
         (<- $args args)
