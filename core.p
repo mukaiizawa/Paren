@@ -1711,12 +1711,12 @@
   (&lexer! self (.init (.new ParenLexer) :string string :stream stream))
   self)
 
-(method ParenParser -scan ()
+(method ParenParser .scan ()
   (let (x (.lex (&lexer self)))
     (&token! (&token-type! self (car x)) (cadr x)))
   self)
 
-(method ParenParser -parse-s ()
+(method ParenParser .parse-s ()
   (let (token-type (&token-type self))
     (if (eq? token-type :EOF) :EOF
         (eq? token-type :quote) (list quote (.parse self))
@@ -1728,12 +1728,12 @@
         (error "syntax error"))))
 
 (method ParenParser -parse-list ()
-  (-scan self)
+  (.scan self)
   (if (eq? (&token-type self) :close-paren) nil
-      (cons (-parse-s self) (-parse-list self))))
+      (cons (.parse-s self) (-parse-list self))))
 
 (method ParenParser .parse ()
-  (-parse-s (-scan self)))
+  (.parse-s (.scan self)))
 
 (function read-byte (:opt stream)
   ; Read 1byte from the specified stream.
