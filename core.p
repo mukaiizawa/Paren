@@ -1478,27 +1478,27 @@
 (method Path .to-s ()
   (reduce (&files self) (lambda (acc rest) (concat acc "/" rest))))
 
-(method Path -open (mode)
+(method Path .open (mode)
   (catch (Error (lambda (e) (error (concat "open failed " (.to-s self)))))
     (.init (.new FileStream) :fp (fopen (.to-s self) mode))))
 
 (method Path .open-read ()
   ; Returns a stream that reads the contents of the receiver.
-  (-open self 0))
+  (.open self 0))
 
 (method Path .open-write ()
   ; Returns a stream to write to the contents of the receiver.
-  (-open self 1))
+  (.open self 1))
 
 (method Path .open-append ()
   ; Returns a stream to append to the receiver's content.
-  (-open self 2))
+  (.open self 2))
 
 (method Path .open-update ()
   ; Returns a stream that updates the contents of the receiver.
   ; The read/write position is at the beginning of the file.
   ; The file size cannot be reduced.
-  (-open self 3))
+  (.open self 3))
 
 (class AheadReader ()
   ; A one-character look-ahead reader.
@@ -1663,7 +1663,7 @@
 (method ParenLexer .lex-keyword ()
   (.skip self)
   (list :keyword (symbol->keyword
-                   (string->symbol (.token (-get-identifier self))))))
+                   (string->symbol (.token (.get-identifier self))))))
 
 (method ParenLexer .lex-string ()
   (.skip self)
@@ -1871,14 +1871,14 @@
       (begin0 (load (string (keyword->symbol key) ".p"))
               (push! $import key))))
 
-(function boot (args)
+(function boot ()
   ; Executed when paren is executed.
   ; Invoke repl if there are no command line arguments.
-  ; If there are command line arguments, each is regarded as a file name and loaded in the specified order.
-  (if (nil? args) (repl)
-      (begin
-        (dolist (arg args)
-          (load arg))
+  ; If there are command line arguments, first argument is regarded as a file name and loaded in the specified order.
+  (if (nil? $args) (repl)
+      (let (script (car $args) args (cdr $args))
+        (<- $args args)
+        (load script)
         (if (bound? 'main) (main)))))
 
 ; global symbol
@@ -1920,4 +1920,4 @@
   ; A dummy encoding is an encoding for which character handling is not properly implemented.
   )
 
-(boot $args)
+(boot)

@@ -190,11 +190,9 @@ static void make_builtin(void)
 
 static object parse_args(int argc, char *argv[])
 {
-  int i;
   object o;
   o = object_nil;
-  for (i = 1; i < argc; i++)
-    o = gc_new_cons(string_new(argv[i]), o);
+  while (argc-- > 1) o = gc_new_cons(string_new(argv[argc]), o);
   return o;
 }
 
