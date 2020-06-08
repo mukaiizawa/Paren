@@ -20,7 +20,7 @@ DEFUN(fp)
   int fd;
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_int(argv->cons.car, &fd)) {
+  if (!bi_sint(argv->cons.car, &fd)) {
     ip_mark_error("illegal file discripter");
     return FALSE;
   }
@@ -48,12 +48,12 @@ DEFUN(fopen)
   FILE *fp;
   object ofn;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!type_p(ofn = argv->cons.car, STRING)) {
+  if (!object_type_p(ofn = argv->cons.car, STRING)) {
     ip_mark_error("illegal file name");
     return FALSE;
   }
   fn = ofn->barray.elt;
-  if (!bi_int((argv = argv->cons.cdr)->cons.car, &mode)
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &mode)
       || (0 > mode || mode >= sizeof(mode_table) / sizeof(char *)))
     ip_mark_error("illegal open mode");
   else if ((fp = fopen(fn, mode_table[mode])) == NULL)
@@ -85,7 +85,8 @@ DEFUN(fputc)
   int byte;
   FILE *fp;
   if (argc != 2) return FALSE;
-  if (!bi_int(argv->cons.car, &byte) || !byte_range_p(byte)) return FALSE;
+  if (!bi_sint(argv->cons.car, &byte)) return FALSE;
+  if (!byte_p(byte)) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   if (fputc((int)byte, fp) == EOF) return FALSE;
   return TRUE;
@@ -115,9 +116,9 @@ DEFUN(fread)
   int from, size;
   FILE *fp;
   if (argc != 4) return FALSE;
-  if (!type_p((o = argv->cons.car), BARRAY)) return FALSE;
-  if (!bi_int((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
-  if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!object_type_p((o = argv->cons.car), BARRAY)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!(0 <= from && from + size <= o->barray.size)) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   size = fread(o->barray.elt + from, 1, size, fp);
@@ -134,10 +135,10 @@ DEFUN(fwrite)
   object o;
   int from, size;
   FILE *fp;
-  if (argc != 4) return FALSE;
-  if (!(type_p((o = argv->cons.car), BARRAY) || type_p(o, STRING))) return FALSE;
-  if (!bi_int((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
-  if (!bi_int((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!bi_argc_range(argc, 4, 4)) return FALSE;
+  if (!bi_arg_barray(argv->cons.car, &o)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!(0 <= from && from + size <= o->barray.size)) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   size = fwrite(o->barray.elt + from, 1, size, fp);
@@ -155,7 +156,7 @@ DEFUN(fseek)
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
-  if (!bi_int((argv = argv->cons.cdr)->cons.car, &off)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &off)) return FALSE;
   if (off == -1) return fseek(fp, 0, SEEK_END) == 0;
   return fseek(fp, off, SEEK_SET)==0;
 }

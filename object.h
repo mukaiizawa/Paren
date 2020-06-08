@@ -5,34 +5,31 @@ typedef union s_expr *object;
 #define HASH_MASK      0x00ffffff
 #define TYPE_MASK      0x00000fff
 #define ALIVE_BIT      0x00001000
-#define EVAL_FRAME_BIT 0x00000100
-#define BARRAY_BIT     0x00000200
-#define BUILTIN_BIT    0x00000400
-#define NUMBER_BIT     0x00000800
 #define   ENV          0x00000001
 #define   MACRO        0x00000002
 #define   LAMBDA       0x00000003
-#define   SPECIAL     (0x00000004 | BUILTIN_BIT)
-#define   FUNCITON    (0x00000005 | BUILTIN_BIT)
-#define   CONS        (0x00000006 | EVAL_FRAME_BIT)
-#define   XINT        (0x00000007 | NUMBER_BIT)
-#define   XFLOAT      (0x00000008 | NUMBER_BIT)
-#define   SYMBOL      (0x00000009 | BARRAY_BIT | EVAL_FRAME_BIT)
-#define   KEYWORD     (0x0000000a | BARRAY_BIT)
-#define   STRING      (0x0000000b | BARRAY_BIT)
-#define   BARRAY      (0x0000000c | BARRAY_BIT)
-#define   ARRAY        0x0000000d
+#define   SPECIAL      0x00000004
+#define   FUNCITON     0x00000005
+#define   CONS         0x00000006
+#define   SINT         0x00000007
+#define   XINT         0x00000008
+#define   XFLOAT       0x00000009
+#define   SYMBOL       0x0000000a
+#define   KEYWORD      0x0000000b
+#define   STRING       0x0000000c
+#define   BARRAY       0x0000000d
+#define   ARRAY        0x0000000e
 
-#define LINT_BITS 63
+#define SINT_BITS 30
+#define SINT_MAX 0x3fffffff
+#define SINT_MIN (-SINT_MAX-1)
 
-#define type(o) ((o)->header & TYPE_MASK)
-#define type_p(o, t) (type(o) == t)
-#define list_p(o) ((o) == object_nil || type_p(o, CONS))
-#define barray_p(o) ((o)->header & BARRAY_BIT)
-#define number_p(o) ((o)->header & NUMBER_BIT)
-#define builtin_p(o) ((o)->header & BUILTIN_BIT)
-#define byte_range_p(x) ((x >= 0) && (x < 256))
-#define byte_p(o) (type_p(o, XINT) && byte_range_p((o)->xint.val))
+#define byte_p(i) (0 <= i && i < 256)
+#define sint_p(o) ((((intptr_t)o) & 1) == 1)
+#define sint_val(o) ((int)(((intptr_t)o) >> 1))
+#define sint(i) ((object)((((uintptr_t)i) << 1) | 1))
+
+#define XINT_BITS 63
 
 union s_expr {
   int header;
@@ -79,6 +76,11 @@ union s_expr {
     int size;
     object elt[1];
   } array;
+  struct xxxxx {
+    int header;
+    int size;
+    char elt[100];
+  } xxxxx;
   object next;
 };
 
@@ -91,7 +93,6 @@ extern object object_key;
 extern object object_opt;
 extern object object_rest;
 extern object object_quote;
-extern object object_bytes[];
 extern object object_stack_trace;
 extern object object_boot;
 
@@ -106,6 +107,9 @@ extern object object_features;
 extern object object_fields;
 extern object object_message;
 
+extern int object_type(object o);
+extern int object_type_p(object o, int type);
+extern int object_list_p(object o);
 extern int object_byte_size(object o);
 extern char *object_describe(object o, char *buf);
 extern int object_list_len(object o);

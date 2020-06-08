@@ -12,31 +12,41 @@
 DEFUN(special_operator_p)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(type_p(argv->cons.car, SPECIAL));
+  *result = object_bool(object_type_p(argv->cons.car, SPECIAL));
   return TRUE;
 }
 
 DEFUN(builtin_p)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(builtin_p(argv->cons.car));
-  return TRUE;
+  switch (object_type(argv->cons.car)) {
+    case FUNCITON:
+    case SPECIAL:
+      *result = object_true;
+      return TRUE;
+    default:
+      *result = object_nil;
+      return TRUE;
+  }
 }
 
 DEFUN(builtin_name)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (builtin_p(argv->cons.car)) {
-    *result = argv->cons.car->builtin.name;
-    return TRUE;
+  switch (object_type(argv->cons.car)) {
+    case FUNCITON:
+    case SPECIAL:
+      *result = argv->cons.car->builtin.name;
+      return TRUE;
+    default:
+      return FALSE;
   }
-  return FALSE;
 }
 
 DEFUN(function_p)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (type(argv->cons.car)) {
+  switch (object_type(argv->cons.car)) {
     case FUNCITON:
     case LAMBDA:
       *result = object_bool(TRUE);
@@ -51,7 +61,7 @@ DEFUN(function_p)
 DEFUN(macro_p)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(type_p(argv->cons.car, MACRO));
+  *result = object_bool(object_type_p(argv->cons.car, MACRO));
   return TRUE;
 }
 

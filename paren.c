@@ -68,7 +68,7 @@ static object parse_integer(void)
   int val;
   val = lex_ival;
   parse_skip();
-  return gc_new_xint(val);
+  return sint(val);
 }
 
 static object parse_float(void)
@@ -198,7 +198,6 @@ static object parse_args(int argc, char *argv[])
 
 static void make_initial_objects(int argc, char *argv[])
 {
-  int i;
   object args, os;
   object_nil = symbol_new("nil");
   object_true = symbol_new("true");
@@ -231,7 +230,6 @@ static void make_initial_objects(int argc, char *argv[])
 #else
   xassert(FALSE);
 #endif
-  for (i = 0; i < 256; i++) object_bytes[i] = gc_new_bytes(i);
   bind_pseudo_symbol(object_nil);
   bind_pseudo_symbol(object_true);
   make_builtin();

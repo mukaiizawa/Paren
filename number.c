@@ -30,14 +30,30 @@ static void mark_division_by_zero(void)
 DEFUN(number_p)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(number_p(argv->cons.car));
-  return TRUE;
+  switch (object_type(argv->cons.car)) {
+    case SINT:
+    case XINT:
+    case XFLOAT:
+      *result = object_true;
+      return TRUE;
+    default:
+      *result = object_nil;
+      return TRUE;
+  }
 }
 
 DEFUN(integer_p)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(type_p(argv->cons.car, XINT));
+  switch (object_type(argv->cons.car)) {
+    case SINT:
+    case XINT:
+      *result = object_true;
+      return TRUE;
+    default:
+      *result = object_nil;
+      return TRUE;
+  }
   return TRUE;
 }
 
@@ -190,7 +206,7 @@ DEFUN(number_divide)
 {
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   if (argc == 1) {
-    *result = object_bytes[1];
+    *result = sint(1);
     return int64_divide(argv, result);
   }
   *result = argv->cons.car;
@@ -303,9 +319,9 @@ DEFUN(bit_xor)
 static int bits(int64_t x)
 {
   int i;
-  for (i = 0; i < LINT_BITS; i++)
+  for (i = 0; i < XINT_BITS; i++)
     if (x < (1LL << i)) return i;
-  return LINT_BITS;
+  return XINT_BITS;
 }
 
 DEFUN(bit_shift)
@@ -317,7 +333,7 @@ DEFUN(bit_shift)
   if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (x != 0) {
     if (y > 0) {
-      if ((bits(x) + y) > LINT_BITS) return FALSE;
+      if ((bits(x) + y) > XINT_BITS) return FALSE;
       x <<= y;
     } else x >>= -y;
   }

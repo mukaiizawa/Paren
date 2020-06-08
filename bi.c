@@ -33,27 +33,37 @@ static int arg(object o, int test, object *result)
 
 int bi_arg_type(object o, int type, object *result)
 {
-  return arg(o, type_p(o, type), result);
-}
-
-int bi_arg_list(object o, object *result)
-{
-  return arg(o, list_p(o), result);
+  return arg(o, object_type_p(o, type), result);
 }
 
 int bi_arg_barray(object o, object *result)
 {
-  return arg(o, barray_p(o), result);
-}
-
-int bi_arg_lambda(object o, object *result)
-{
-  return arg(o, (type_p(o, LAMBDA) || type_p(o, MACRO)), result);
+  switch (object_type(o)) {
+    case BARRAY:
+    case STRING:
+    case SYMBOL:
+    case KEYWORD:
+      *result = o;
+      return TRUE;
+    default:
+      ip_mark_error("illegal argument type");
+      return FALSE;
+  }
 }
 
 int bi_arg_fp(object o, FILE **result)
 {
   return bi_intptr(o, (intptr_t *)result);
+}
+
+int bi_arg_lambda(object o, object *result)
+{
+  return arg(o, (object_type_p(o, LAMBDA) || object_type_p(o, MACRO)), result);
+}
+
+int bi_arg_list(object o, object *result)
+{
+  return arg(o, object_list_p(o), result);
 }
 
 DEFUN(eq_p)
@@ -222,15 +232,19 @@ char *bi_as_symbol_name(char *name)
   return name;
 }
 
-int bi_int(object o, int *p) {
-  if (!type_p(o, XINT)) return FALSE;
-  *p = o->xint.val;
+int bi_sint(object o, int *p) {
+  if (!sint_p(o)) {
+    ip_mark_error("illegal argument type");
+    return FALSE;
+  }
+  *p = sint_val(o);
   return TRUE;
 }
 
 int bi_int64(object o, int64_t *p) {
-  if (!type_p(o, XINT)) return FALSE;
-  *p = o->xint.val;
+  if (sint_p(o)) *p = sint_val(o);
+  else if (object_type_p(o, XINT)) *p = o->xint.val;
+  else return FALSE;
   return TRUE;
 }
 
@@ -245,7 +259,7 @@ int bi_intptr(object o, intptr_t *p) {
 int bi_double(object o, double *p) {
   int64_t i;
   if (bi_int64(o, &i)) *p = (double)i;
-  else if (type_p(o, XFLOAT)) *p = o->xfloat.val;
+  else if (object_type_p(o, XFLOAT)) *p = o->xfloat.val;
   else return FALSE;
   return TRUE;
 }

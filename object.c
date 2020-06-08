@@ -13,7 +13,6 @@ object object_key;
 object object_opt;
 object object_rest;
 object object_quote;
-object object_bytes[256];
 object object_stack_trace;
 object object_boot;
 
@@ -31,8 +30,8 @@ object object_message;
 int object_list_len(object o)
 {
   int i;
-  xassert(list_p(o));
-  for (i = 0; type_p(o, CONS); i++) o = o->cons.cdr;
+  xassert(object_list_p(o));
+  for (i = 0; object_type_p(o, CONS); i++) o = o->cons.cdr;
   return i;
 }
 
@@ -45,7 +44,7 @@ object object_bool(int b)
 object object_reverse(object o)
 {
   object p, acc;
-  xassert(list_p(o));
+  xassert(object_list_p(o));
   acc = object_nil;
   while (o != object_nil) {
     p = o->cons.cdr;
@@ -56,9 +55,26 @@ object object_reverse(object o)
   return acc;
 }
 
+int object_type(object o)
+{
+  if (sint_p(o)) return SINT;
+  return o->header & TYPE_MASK;
+}
+
+int object_type_p(object o, int type)
+{
+  return object_type(o) == type;
+}
+
+int object_list_p(object o)
+{
+  if (o == object_nil) return TRUE;
+  return object_type_p(o, CONS);
+}
+
 int object_byte_size(object o)
 {
-  switch (type(o)) {
+  switch (object_type(o)) {
     case ENV:
       return sizeof(struct env);
     case MACRO:
@@ -127,13 +143,13 @@ static void describe_s_expr(object o, struct xbarray *x)
 {
   object p;
   if (x->size > MAX_STR_LEN) return;
-  switch (type(o)) {
+  switch (object_type(o)) {
     case ENV:
       xbarray_addf(x, "#(:environment %p :top %p)", o, o->env.top);
       break;
     case MACRO:
     case LAMBDA:
-      if (type_p(o, MACRO)) xbarray_adds(x, "(macro ");
+      if (object_type_p(o, MACRO)) xbarray_adds(x, "(macro ");
       else xbarray_adds(x, "(lambda ");
       if (o->lambda.params == object_nil) xbarray_adds(x, "()");
       else describe_s_expr(o->lambda.params, x);
@@ -145,7 +161,7 @@ static void describe_s_expr(object o, struct xbarray *x)
       break;
     case CONS:
       p = o->cons.car;
-      if (p == object_quote && type_p(o->cons.cdr, CONS)
+      if (p == object_quote && object_type_p(o->cons.cdr, CONS)
           && o->cons.cdr->cons.cdr == object_nil)
       {
         xbarray_add(x, '\'');
@@ -155,6 +171,9 @@ static void describe_s_expr(object o, struct xbarray *x)
         describe_cons(o, x);
         xbarray_add(x, ')');
       }
+      break;
+    case SINT:
+      xbarray_addf(x, "%d", sint_val(o));
       break;
     case XINT:
       xbarray_addf(x, "%d", o->xint.val);

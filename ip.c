@@ -39,7 +39,7 @@ static void mark_illegal_args()
 
 static object symbol_find(object e, object s)
 {
-  xassert(type_p(e, ENV));
+  xassert(object_type_p(e, ENV));
   return splay_find(&e->env.binding, s);
 }
 
@@ -56,9 +56,9 @@ static object symbol_find_propagation(object e, object s)
 static void symbol_bind(object e, object s, object v)
 {
   object o;
-  xassert(type_p(e, ENV) && type_p(s, SYMBOL));
+  xassert(object_type_p(e, ENV) && object_type_p(s, SYMBOL));
   if ((o = splay_find(&e->env.binding, s)) != NULL) {
-    if (type_p(o, SPECIAL)) {
+    if (object_type_p(o, SPECIAL)) {
       ip_mark_error("special operator could not bind");
       return;
     }
@@ -81,7 +81,6 @@ static void symbol_bind_propagation(object e, object s, object v)
 // stack frame
 
 #define STACK_GAP 10
-#define FRAME_STACK_SIZE 10000
 #define FRAME_STACK_SIZE 10000
 
 /*
@@ -173,9 +172,6 @@ char *frame_name(int frame_type)
   }
 }
 
-#define sint_p(o) ((((intptr_t)o) & 1) == 1)
-#define sint_val(o) ((int)(((intptr_t)o) >> 1))
-#define sint(i) ((object)((((uintptr_t)i) << 1) | 1))
 #define fs_top() (sint_val(fs[fp]))
 #define get_frame_var(base_fp, n) (fs[base_fp + 2 + n])
 #define set_frame_var(base_fp, n, o) (fs[base_fp + 2 + n] = o)
@@ -259,7 +255,15 @@ static void gen_apply_frame(object operator)
 
 static void gen_eval_frame(object o)
 {
-  if ((reg[0] = o)->header & EVAL_FRAME_BIT) gen0(EVAL_FRAME);
+  reg[0] = o;
+  switch (object_type(reg[0])) {
+    case SYMBOL:
+    case CONS:
+      gen0(EVAL_FRAME);
+      return;
+    default:
+      return;
+  }
 }
 
 static void gen_eval_args_frame(object args)
@@ -292,7 +296,7 @@ static void gen_switch_env_frame(object env)
 
 static int same_symbol_keyword_p(object sym, object key)
 {
-  xassert(type_p(sym, SYMBOL) && type_p(key, KEYWORD));
+  xassert(object_type_p(sym, SYMBOL) && object_type_p(key, KEYWORD));
   if (sym->barray.size != key->barray.size) return FALSE;
   return memcmp(sym->barray.elt, key->barray.elt, sym->barray.size) == 0;
 }
@@ -301,15 +305,15 @@ static int valid_keyword_p(object params, object args)
 {
   object p, s;
   while (args != object_nil) {
-    if (!type_p(args->cons.car, KEYWORD)) {
+    if (!object_type_p(args->cons.car, KEYWORD)) {
       ip_mark_error("expected keyword parameter");
       return FALSE;
     }
     p = params;
     while (p != object_nil) {
       s = p->cons.car;
-      if (type_p(s, CONS)) s = s->cons.car;
-      xassert(type_p(s, SYMBOL));
+      if (object_type_p(s, CONS)) s = s->cons.car;
+      xassert(object_type_p(s, SYMBOL));
       if (same_symbol_keyword_p(s, args->cons.car)) break;
       p = p->cons.cdr;
     }
@@ -330,15 +334,15 @@ static void parse_args(object env, object params, object args)
 {
   object o, pre, k, v, def_v, sup_k;
   // parse required args
-  while (params != object_nil && !type_p(params->cons.car, KEYWORD)) {
+  while (params != object_nil && !object_type_p(params->cons.car, KEYWORD)) {
     if (args == object_nil) {
       bi_argc_range(0, 1, 1);
       return;
     }
-    if (!type_p(params->cons.car, CONS)) {
+    if (!object_type_p(params->cons.car, CONS)) {
       fb_gen1(QUOTE_FRAME, args->cons.car);
       fb_gen1(BIND_FRAME, params->cons.car);
-    } else if (!list_p(args->cons.car)) {
+    } else if (!object_list_p(args->cons.car)) {
       mark_illegal_args();
       return;
     } else {
@@ -351,10 +355,10 @@ static void parse_args(object env, object params, object args)
   // parse optional args
   if (params->cons.car == object_opt) {
     params = params->cons.cdr;
-    while (params != object_nil && !type_p(params->cons.car, KEYWORD)) {
+    while (params != object_nil && !object_type_p(params->cons.car, KEYWORD)) {
       o = params->cons.car;
       def_v = sup_k = NULL;
-      if (!type_p(o, CONS)) k = o;
+      if (!object_type_p(o, CONS)) k = o;
       else {
         k = o->cons.car;
         def_v = (o = o->cons.cdr)->cons.car;
@@ -396,7 +400,7 @@ static void parse_args(object env, object params, object args)
     while (params != object_nil) {
       o = params->cons.car;
       v = def_v = sup_k = NULL;
-      if (!type_p(o, CONS)) k = o;
+      if (!object_type_p(o, CONS)) k = o;
       else {
         k = o->cons.car;
         def_v = (o = o->cons.cdr)->cons.car;
@@ -482,7 +486,7 @@ static void pop_bind_handler_frame(void)
   i = sint_val(get_frame_var(fp, 0));
   cls_sym = get_frame_var(fp, 1);
   pop_frame();
-  if (!type_p(handler, LAMBDA)) {
+  if (!object_type_p(handler, LAMBDA)) {
     ip_mark_error("required handler");
     return;
   }
@@ -508,7 +512,7 @@ static void pop_eval_frame(void)
 {
   object s;
   pop_frame();
-  switch (type(reg[0])) {
+  switch (object_type(reg[0])) {
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
         gen1(TRACE_FRAME, reg[0]);
@@ -526,6 +530,7 @@ static void pop_eval_frame(void)
     case LAMBDA:
     case FUNCITON:
     case SPECIAL:
+    case SINT:
     case XINT:
     case XFLOAT:
     case KEYWORD:
@@ -566,7 +571,7 @@ static void pop_goto_frame(void)
 {
   object o, label;
   label = reg[0];
-  if (!type_p(label, KEYWORD)) {
+  if (!object_type_p(label, KEYWORD)) {
     ip_mark_error("label must be keyword");
     return;
   }
@@ -604,7 +609,7 @@ static void pop_fetch_operator_frame(void)
   int (*special)(int, object);
   args = get_frame_var(fp, 0);
   pop_frame();
-  switch (type(reg[0])) {
+  switch (object_type(reg[0])) {
     case SPECIAL:
       special = reg[0]->builtin.u.special;
       (*special)(object_list_len(args), args);
@@ -719,9 +724,9 @@ static int object_is_a_p(object e, object o, object cls_sym, object *result);
 
 static void push_call_stack(object o)
 {
-  while (type_p(o, CONS)) {
+  while (object_type_p(o, CONS)) {
     if (o->cons.car == object_stack_trace) {
-      if (type_p((o = o->cons.cdr), CONS) && o->cons.car == object_nil)
+      if (object_type_p((o = o->cons.cdr), CONS) && o->cons.car == object_nil)
         o->cons.car = call_stack();
       return;
     }
@@ -749,7 +754,7 @@ static void pop_throw_frame(void)
         return;
       case HANDLERS_FRAME:
         handlers = get_frame_var(fp, 0);
-        xassert(type_p(handlers, ARRAY));
+        xassert(object_type_p(handlers, ARRAY));
         pop_frame();
         for (j = 0; j < handlers->array.size; j += 2) {
           cls_sym = handlers->array.elt[j];
@@ -783,7 +788,7 @@ DEFUN(eval)
 DEFUN(apply)
 {
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  switch (type(argv->cons.car)) {
+  switch (object_type(argv->cons.car)) {
     case FUNCITON:
       gen1(APPLY_BUILTIN_FRAME, argv->cons.car);
       reg[0] = argv->cons.cdr->cons.car;
@@ -803,12 +808,12 @@ DEFUN(expand_macro)
   object f, args;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   reg[0] = argv->cons.car;
-  if (!type_p(reg[0], CONS)) return TRUE;
+  if (!object_type_p(reg[0], CONS)) return TRUE;
   f = reg[0]->cons.car;
   args = reg[0]->cons.cdr;
-  if (!type_p(f, SYMBOL)) return TRUE;
+  if (!object_type_p(f, SYMBOL)) return TRUE;
   if ((f = symbol_find_propagation(reg[1], f)) == NULL) return TRUE;
-  if (!type_p(f, MACRO)) return TRUE;
+  if (!object_type_p(f, MACRO)) return TRUE;
   gen_apply_frame(f);
   reg[0] = args;
   return TRUE;
@@ -818,7 +823,7 @@ DEFUN(bound_p)
 {
   object s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!type_p((s = argv->cons.car), SYMBOL)) {
+  if (!object_type_p((s = argv->cons.car), SYMBOL)) {
     ip_mark_error("required symbol");
     return FALSE;
   }
@@ -845,35 +850,35 @@ static void trap(void)
 // paren object system.
 
 #define class_sym(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.car)
-#define class_super(cls) \
-  ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.car)
-#define class_features(cls) \
-  ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.car)
+#define class_super(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr \
+    ->cons.cdr->cons.car)
+#define class_features(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr \
+    ->cons.cdr->cons.cdr->cons.cdr->cons.car)
 
 static int object_class_p(object o)
 {
-  if (!type_p(o, CONS)) return FALSE;
+  if (!object_type_p(o, CONS)) return FALSE;
   if (o->cons.car != object_class) return FALSE;
-  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
   if (o->cons.car != object_Class) return FALSE;
-  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
   if (o->cons.car != object_symbol) return FALSE;
-  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
-  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
   if (o->cons.car != object_super) return FALSE;
-  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
-  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
   if (o->cons.car != object_features) return FALSE;
-  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
-  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
   if (o->cons.car != object_fields) return FALSE;
-  if (!type_p(o = o->cons.cdr, CONS)) return FALSE;
+  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
   return o->cons.cdr == object_nil;
 }
 
 static int find_class(object e, object cls_sym, object *result)
 {
-  if (!type_p(cls_sym, SYMBOL)) return FALSE;
+  if (!object_type_p(cls_sym, SYMBOL)) return FALSE;
   if ((*result = symbol_find_propagation(e, cls_sym)) == NULL) return FALSE;
   return object_class_p(*result);
 }
@@ -890,15 +895,15 @@ static int find_class_method(object e, object cls_sym, object mtd_sym
 {
   struct xbarray x;
   object s;
-  xassert(type_p(cls_sym, SYMBOL));
-  xassert(type_p(mtd_sym, SYMBOL));
+  xassert(object_type_p(cls_sym, SYMBOL));
+  xassert(object_type_p(mtd_sym, SYMBOL));
   xbarray_init(&x);
   xbarray_copy(&x, cls_sym->barray.elt, cls_sym->barray.size);
   xbarray_copy(&x, mtd_sym->barray.elt, mtd_sym->barray.size);
   s = gc_new_barray_from(SYMBOL, x.elt, x.size);
   xbarray_free(&x);
   if (((*result) = symbol_find_propagation(e, s)) == NULL) return TRUE;
-  if (!type_p(*result, LAMBDA)) {
+  if (!object_type_p(*result, LAMBDA)) {
     ip_mark_error("is not a method");
     return FALSE;
   }
@@ -907,22 +912,22 @@ static int find_class_method(object e, object cls_sym, object mtd_sym
 
 static int object_p(object o)
 {
-  if (!type_p(o, CONS)) return FALSE;
+  if (!object_type_p(o, CONS)) return FALSE;
   if (o->cons.car != object_class) return FALSE;
   o = o->cons.cdr;
   while (TRUE) {
-    if (!type_p(o, CONS)) return FALSE;
+    if (!object_type_p(o, CONS)) return FALSE;
     if (o->cons.cdr == object_nil) return TRUE;
     o = o->cons.cdr;
-    if (!type_p(o, CONS)) return FALSE;
-    if (!type_p(o->cons.car, KEYWORD)) return FALSE;
+    if (!object_type_p(o, CONS)) return FALSE;
+    if (!object_type_p(o->cons.car, KEYWORD)) return FALSE;
     o = o->cons.cdr;
   }
 }
 
 static int object_is_a_p(object e, object o, object cls_sym, object *result) {
   object o_cls_sym;
-  xassert(type_p(cls_sym, SYMBOL));
+  xassert(object_type_p(cls_sym, SYMBOL));
   if (!object_p(o)) return FALSE;
   o_cls_sym = o->cons.cdr->cons.car;
   *result = object_nil;
@@ -980,7 +985,7 @@ DEFUN(find_method)
     if (!find_class(reg[1], cls_sym, &cls)) return FALSE;
     features = class_features(cls);
     while (features != object_nil) {
-      xassert(type_p(features, CONS));
+      xassert(object_type_p(features, CONS));
       if (!find_class_method(reg[1], features->cons.car, mtd_sym, result))
         return FALSE;
       if (*result != NULL) return TRUE;
@@ -1027,12 +1032,12 @@ DEFUN(stack_frame)
 static int valid_xparam_p(object o)
 {
   o = o->cons.car;
-  if (type_p(o, SYMBOL)) return TRUE;
-  return type_p(o, CONS) && type_p(o->cons.car, SYMBOL)
-    && type_p(o = o->cons.cdr, CONS)
+  if (object_type_p(o, SYMBOL)) return TRUE;
+  return object_type_p(o, CONS) && object_type_p(o->cons.car, SYMBOL)
+    && object_type_p(o = o->cons.cdr, CONS)
     && (o->cons.cdr == object_nil
-        || (type_p(o = o->cons.cdr, CONS)
-          && type_p(o->cons.car, SYMBOL) && o->cons.cdr == object_nil));
+        || (object_type_p(o = o->cons.cdr, CONS)
+          && object_type_p(o->cons.car, SYMBOL) && o->cons.cdr == object_nil));
 }
 
 static int parse_params(object *o)
@@ -1042,7 +1047,7 @@ static int parse_params(object *o)
   *o = (*o)->cons.cdr;
   while (TRUE) {
     if (*o == object_nil) break;
-    if (type_p((*o)->cons.car, KEYWORD)) break;
+    if (object_type_p((*o)->cons.car, KEYWORD)) break;
     if (!valid_xparam_p(*o)) return FALSE;
     *o = (*o)->cons.cdr;
   }
@@ -1053,9 +1058,9 @@ static int valid_lambda_list_p(object params, int nest_p)
 {
   int type;
   while (TRUE) {
-    if (!list_p(params)) return FALSE;
+    if (!object_list_p(params)) return FALSE;
     if (params == object_nil) return TRUE;
-    type = type(params->cons.car);
+    type = object_type(params->cons.car);
     if (type == KEYWORD) break;
     else if (type == SYMBOL) params = params->cons.cdr;
     else if (type == CONS) {
@@ -1069,7 +1074,7 @@ static int valid_lambda_list_p(object params, int nest_p)
     if (!parse_params(&params)) return FALSE;
   if (params->cons.car == object_rest) {
     params = params->cons.cdr;
-    if (!type_p(params->cons.car, SYMBOL)) return FALSE;
+    if (!object_type_p(params->cons.car, SYMBOL)) return FALSE;
     params = params->cons.cdr;
   } else if (params->cons.car == object_key) {
     if (!parse_params(&params)) return FALSE;
@@ -1081,7 +1086,7 @@ static int gen_let_binding(int i, object args)
 {
   object o;
   if (args == object_nil) return TRUE;
-  if (!type_p(args->cons.car, SYMBOL)) {
+  if (!object_type_p(args->cons.car, SYMBOL)) {
     ip_mark_error("argument must be symbol");
     return FALSE;
   }
@@ -1100,7 +1105,7 @@ DEFSP(let)
 {
   object args;
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
-  if (!list_p((args = argv->cons.car))) {
+  if (!object_list_p((args = argv->cons.car))) {
     ip_mark_error("argument must be list");
     return FALSE;
   }
@@ -1114,7 +1119,7 @@ DEFSP(dynamic)
   int i;
   object e, s, v;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!type_p((s = argv->cons.car), SYMBOL)) {
+  if (!object_type_p((s = argv->cons.car), SYMBOL)) {
     ip_mark_error("argument must be symbol");
     return FALSE;
   }
@@ -1148,7 +1153,7 @@ DEFSP(symbol_bind)
   fb_reset();
   while (argc != 0) {
     s = argv->cons.car;
-    if (!type_p(s, SYMBOL)) {
+    if (!object_type_p(s, SYMBOL)) {
       ip_mark_error("cannot bind except symbol");
       return FALSE;
     }
@@ -1255,15 +1260,15 @@ DEFSP(catch)
   params = argv->cons.car;
   fb_reset();
   while (params != object_nil) {
-    if (!type_p(params, CONS)) {
+    if (!object_type_p(params, CONS)) {
       mark_illegal_args();
       return FALSE;
     }
-    if (!type_p((cls = params->cons.car), SYMBOL)) {
+    if (!object_type_p((cls = params->cons.car), SYMBOL)) {
       mark_illegal_args();
       return FALSE;
     }
-    if (!type_p((params = params->cons.cdr), CONS)) {
+    if (!object_type_p((params = params->cons.cdr), CONS)) {
       ip_mark_error("parameter must be pair");
       return FALSE;
     }
@@ -1345,7 +1350,6 @@ void ip_mark_object(void)
   for (i = 0; i < sp; i++) {
     if (!sint_p(fs[i])) gc_mark(fs[i]);
   }
-  for (i = 0; byte_range_p(i); i++) gc_mark(object_bytes[i]);
 }
 
 void ip_start(void)

@@ -11,12 +11,12 @@ extern char *bi_as_symbol_name(char *name);
 
 extern int bi_argc_range(int argc, int min, int max);
 extern int bi_arg_type(object o, int type, object *result);
-extern int bi_arg_list(object o, object *result);
 extern int bi_arg_barray(object o, object *result);
-extern int bi_arg_lambda(object o, object *result);
 extern int bi_arg_fp(object o, FILE **result);
+extern int bi_arg_lambda(object o, object *result);
+extern int bi_arg_list(object o, object *result);
 
-extern int bi_int(object o, int *p);
+extern int bi_sint(object o, int *p);
 extern int bi_int64(object o, int64_t *p);
 extern int bi_intptr(object o, intptr_t *p);
 extern int bi_double(object o, double *p);

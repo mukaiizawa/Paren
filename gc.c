@@ -66,7 +66,7 @@ object gc_new_env(object top)
 static object new_lambda(int type, object env, object params, object body)
 {
   object o;
-  xassert(type_p(env, ENV));
+  xassert(object_type_p(env, ENV));
   o = gc_alloc(sizeof(struct lambda));
   o->lambda.env = env;
   o->lambda.params = params;
@@ -97,20 +97,15 @@ object gc_new_builtin(int type, object name, void *p)
   return o;
 }
 
-object gc_new_bytes(int64_t val)
+object gc_new_xint(int64_t val)
 {
   object o;
+	if (SINT_MIN <= val && val <= SINT_MAX) return sint((int)val);
   o = gc_alloc(sizeof(struct xint));
   set_type(o, XINT);
   o->xint.val = val;
   regist(o);
   return o;
-}
-
-object gc_new_xint(int64_t val)
-{
-  if (byte_range_p(val)) return object_bytes[val];
-  return gc_new_bytes(val);
 }
 
 object gc_new_xfloat(double val)
@@ -228,9 +223,10 @@ static void mark_binding(void *key, void *data)
 void gc_mark(object o)
 {
   int i;
+  if (sint_p(o)) return;
   if (alive_p(o)) return;
   set_alive(o);
-  switch (type(o)) {
+  switch (object_type(o)) {
     case ENV:
       splay_foreach(&o->env.binding, mark_binding);
       gc_mark(o->env.top);
@@ -261,7 +257,7 @@ static void gc_free(object o)
 {
   int size;
   size = object_byte_size(o);
-  if (type_p(o, ENV)) splay_free(&o->env.binding);
+  if (object_type_p(o, ENV)) splay_free(&o->env.binding);
   if (size <= LINK0_SIZE) {
     size = LINK0_SIZE;
     o->next = link0;
@@ -285,7 +281,7 @@ static void sweep_s_expr(void)
   for (i = 0; i < (*table).size; i++) {
     o = (*table).elt[i];
     if (alive_p(o)) {
-      switch (type(o)) {
+      switch (object_type(o)) {
         case SYMBOL: st_put(&symbol_table, o); break;
         case KEYWORD: st_put(&keyword_table, o); break;
         default: break;
