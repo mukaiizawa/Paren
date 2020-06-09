@@ -1784,8 +1784,7 @@
                     (list if (list string? path)
                           (list '.init '(.new Path) path)
                           path))
-          (list if (or (list not (list object? gpath))
-                       (list not (list is-a? gpath 'Path)))
+          (list if (list not (list is-a? gpath 'Path))
                 (list error gpath " is not a path"))
           (list let (list gsym nil)
                 (list unwind-protect

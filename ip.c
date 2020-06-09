@@ -720,7 +720,7 @@ static void exit1(void)
 }
 
 static int object_p(object o);
-static int object_is_a_p(object e, object o, object cls_sym, object *result);
+static int object_is_a_p(object e, object o, object cls_sym);
 
 static void push_call_stack(object o)
 {
@@ -737,10 +737,10 @@ static void push_call_stack(object o)
 static void pop_throw_frame(void)
 {
   int i, j;
-  object xbool, cls_sym, handler, handlers, body;
+  object cls_sym, handler, handlers, body;
   i = fp;
   pop_frame();
-  if (!object_is_a_p(reg[1], reg[0], object_Exception, &xbool) || xbool == object_nil)
+  if (!object_is_a_p(reg[1], reg[0], object_Exception))
     reg[0] = gc_new_Error("must be Exception object");
   push_call_stack(reg[0]);
   while (fp > -1) {
@@ -759,12 +759,10 @@ static void pop_throw_frame(void)
         for (j = 0; j < handlers->array.size; j += 2) {
           cls_sym = handlers->array.elt[j];
           handler = handlers->array.elt[j + 1];
-          if (!object_is_a_p(reg[1], reg[0], cls_sym, &xbool)) continue;
-          if (xbool == object_true) {
-            gen_apply_frame(handler);
-            reg[0] = gc_new_cons(reg[0], object_nil);
-            return;
-          }
+          if (!object_is_a_p(reg[1], reg[0], cls_sym)) continue;
+          gen_apply_frame(handler);
+          reg[0] = gc_new_cons(reg[0], object_nil);
+          return;
         }
         break;
       default:
@@ -925,17 +923,13 @@ static int object_p(object o)
   }
 }
 
-static int object_is_a_p(object e, object o, object cls_sym, object *result) {
+static int object_is_a_p(object e, object o, object cls_sym) {
   object o_cls_sym;
   xassert(object_type_p(cls_sym, SYMBOL));
   if (!object_p(o)) return FALSE;
   o_cls_sym = o->cons.cdr->cons.car;
-  *result = object_nil;
   while (TRUE) {
-    if (o_cls_sym == cls_sym) {
-      *result = object_true;
-      return TRUE;
-    }
+    if (o_cls_sym == cls_sym) return TRUE;
     if (!find_super_class(e, o_cls_sym, &o)) return FALSE;
     o_cls_sym = class_sym(o);
   }
@@ -957,7 +951,8 @@ DEFUN(is_a_p)
     ip_mark_error("require Class instance");
     return FALSE;
   }
-  return object_is_a_p(reg[1], o, class_sym(cls), &(reg[0]));
+  reg[0] = object_bool(object_is_a_p(reg[1], o, class_sym(cls)));
+  return TRUE;
 }
 
 DEFUN(find_class)
