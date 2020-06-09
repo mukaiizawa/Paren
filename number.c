@@ -286,33 +286,42 @@ DEFUN(number_to_integer)
 DEFUN(bit_and)
 {
   int64_t x, y;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
-  if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
-  if (x < 0 || y < 0) return FALSE;
-  *result = gc_new_xint(x & y);
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (!bi_int64(argv->cons.car, &y)) return FALSE;
+    if (x < 0 || y < 0) return FALSE;
+    x &= y;
+  }
+  *result = gc_new_xint(x);
   return TRUE;
 }
 
 DEFUN(bit_or)
 {
   int64_t x, y;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
-  if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
-  if (x < 0 || y < 0) return FALSE;
-  *result = gc_new_xint(x | y);
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (!bi_int64(argv->cons.car, &y)) return FALSE;
+    if (x < 0 || y < 0) return FALSE;
+    x |= y;
+  }
+  *result = gc_new_xint(x);
   return TRUE;
 }
 
 DEFUN(bit_xor)
 {
   int64_t x, y;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_int64(argv->cons.car, &x)) return FALSE;
-  if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
-  if (x < 0 || y < 0) return FALSE;
-  *result = gc_new_xint(x ^ y);
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (!bi_int64(argv->cons.car, &y)) return FALSE;
+    if (x < 0 || y < 0) return FALSE;
+    x ^= y;
+  }
+  *result = gc_new_xint(x);
   return TRUE;
 }
 
