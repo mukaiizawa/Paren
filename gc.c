@@ -100,7 +100,7 @@ object gc_new_builtin(int type, object name, void *p)
 object gc_new_xint(int64_t val)
 {
   object o;
-	if (SINT_MIN <= val && val <= SINT_MAX) return sint((int)val);
+  if (SINT_MIN <= val && val <= SINT_MAX) return sint((int)val);
   o = gc_alloc(sizeof(struct xint));
   set_type(o, XINT);
   o->xint.val = val;
