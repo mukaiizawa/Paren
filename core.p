@@ -738,8 +738,8 @@
   ; Default radix is 10.
   (let (n (if (ascii-digit? c) (- c 0x30)
               (ascii-alpha? c) (+ (- (ascii-lower c) 0x61) 10)))
-    (if (and n (< n radix)) n
-        (error "illegal char"))))
+    (if (or (nil? n) (>= n radix)) (error "not numeric char")
+        n)))
 
 ; string
 
@@ -1356,6 +1356,7 @@
                                                       (symbol->string
                                                         (keyword->symbol x))))
                          (number? x) (write-number x)
+                         (byte-array? x) (.write-string self "<a byte-array>")
                          (assert nil))))
     (write-s-expr x)
     (if write-line-feed? (.write-byte self 0x0a))
@@ -1529,7 +1530,7 @@
   (and (not (.eof? self)) (ascii-digit? (&next self))))
 
 (method AheadReader .numeric-alpha? ()
-  ; Returns true if eof reached.
+  ; Returns true if next character is digit or alphabetic.
   (and (not (.eof? self))
        (or (.digit? self)
            (ascii-alpha? (&next self)))))
@@ -1573,14 +1574,13 @@
         nil)))
 
 (method AheadReader .skip-unsigned-integer ()
-  (if (ascii-digit? (&next self))
+  (if (not (ascii-digit? (&next self))) (error "missing digits")
       (let (val 0)
         (while (.digit? self)
           (<- val (+ (* val 10) (ascii->digit (.skip self)))))
-        val)
-      (error "missing digits")))
+        val)))
 
-(method AheadReader -skip-integer ()
+(method AheadReader .skip-integer ()
   (let (minus? (.skip-sign self) val (.skip-unsigned-integer self))
     (if minus? (- val)
         val)))
@@ -1588,13 +1588,12 @@
 (method AheadReader .skip-unsigned-number ()
   (let (val (.skip-unsigned-integer self))
     (if (= (&next self) 0x78)
-        (let (radix (if (= val 0) 16 val) val 0)
+        (let (radix (if (= val 0) 16 val))
+          (<- val 0)
           (.skip self)
-          (if (not (.numeric-alpha? self))
-              (error "missing lower or digits")
+          (if (not (.numeric-alpha? self)) (error "missing lower or digits")
               (while (.numeric-alpha? self)
-                (<- val (+ (* val radix)
-                           (ascii->digit (.skip self) :radix radix))))))
+                (<- val (+ (* val radix) (ascii->digit (.skip self) :radix radix))))))
         (= (&next self) 0x2e)
         (let (factor 0.1)
           (.skip self)
@@ -1603,8 +1602,8 @@
                 factor (/ factor 10)))
           (when (= (&next self) 0x65)
             (.skip self)
-            (<- val (* val (exp 10 (-skip-integer self)))))))
-    val))
+            (<- val (* val (exp 10 (.skip-integer self)))))))
+    (print val)))
 
 (method AheadReader .skip-number ()
   (let (minus? (.skip-sign (.skip-space self)) val (.skip-unsigned-number self))
