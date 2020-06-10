@@ -68,7 +68,7 @@ static object parse_integer(void)
   int val;
   val = lex_ival;
   parse_skip();
-  return sint(val);
+  return gc_new_xint(val);
 }
 
 static object parse_float(void)
