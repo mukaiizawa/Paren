@@ -206,7 +206,7 @@ DEFUN(number_divide)
 {
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   if (argc == 1) {
-    *result = sint(1);
+    *result = gc_new_xint(1);
     return int64_divide(argv, result);
   }
   *result = argv->cons.car;
