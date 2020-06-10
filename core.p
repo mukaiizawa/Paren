@@ -1603,7 +1603,7 @@
           (when (= (&next self) 0x65)
             (.skip self)
             (<- val (* val (exp 10 (.skip-integer self)))))))
-    (print val)))
+    val))
 
 (method AheadReader .skip-number ()
   (let (minus? (.skip-sign (.skip-space self)) val (.skip-unsigned-number self))
