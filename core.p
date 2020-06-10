@@ -341,7 +341,8 @@
 
 (macro function (name args :rest body)
   (if (bound? name) (error name " already bound")
-      (list <- name (cons lambda (cons args (expand-macro-all body))))))
+      (list begin0 (list quote name)
+            (list <- name (cons lambda (cons args (expand-macro-all body)))))))
 
 (builtin-function eq? (x y)
   ; Returns true if the specified x is same object.
