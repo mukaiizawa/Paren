@@ -893,8 +893,10 @@
   ; Create a byte-array of size the specified size
   )
 
-(builtin-function byte-array-copy (size)
-  ; Create a byte-array of size the specified size
+(builtin-function byte-array-copy (src src-i dst dst-i size)
+  ; Copy size elements from the `src-i`th element of the src byte-array to the dst byte-array `dst-i`th element and beyond.
+  ; The copy source and the copy destination may be the same array.
+  ; Even if the areas to be copied overlap, it operates correctly.
   )
 
 (builtin-function byte-array? (x)
@@ -1397,9 +1399,9 @@
   (&rdpos self))
 
 (method MemoryStream .to-s ()
-  (let (pos (&wrpos self) str (byte-array pos))
+  (let (pos (&wrpos self))
     (if (= pos 0) ""
-        (byte-array->string (byte-array-copy (&buf self) 0 str 0 pos)))))
+        (byte-array->string (subseq (&buf self) 0 pos)))))
 
 (method MemoryStream .reset ()
   ; Empty the contents of the stream.
