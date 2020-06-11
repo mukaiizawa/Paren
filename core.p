@@ -11,9 +11,7 @@
   ; First evaluates the expression init-expr1, then binds the symbol sym1 to that value,  then it evaluates init-expr2 and binds sym2, and so on.
   ; The expressions are then evaluated in order.
   ; The values of all but the last are discarded.
-  (let (sym1 init-expr1
-        sym2 init-expr2
-        ...)
+  (let (sym1 init-expr1 sym2 init-expr2 ...)
     expr1
     expr2
     ...))
@@ -22,16 +20,15 @@
   ; Special operator '<-' is the simple symbol binding statement of Paren.
   ; First expr1 is evaluated and the bind sym1 with result, and so on.
   ; This special operator may be used for lexical and dynamic binding.
-  (<- sym1 expr1
-      sym2 expr2
-      ...))
+  (<- sym1 expr1 sym2 expr2 ...))
 
 (special-operator begin
   ; Special operator progn evaluates expressions, in the order in which they are given.
   ; The values of each form but the last are discarded.
-  (begin expr1
-         expr2
-         ...))
+  (begin
+    expr1
+    expr2
+    ...))
 
 (special-operator quote
   ; Special operator quote returns just expr.
@@ -116,9 +113,7 @@
   ; If an error is thrown by the throw operator during expr evaluation, control is transferred to the handler and processing is performed.
   ; Handler must be a function with one required parameter.
   ; Since paren often uses the catch macro wrapped in the object system, it is not used directly.
-  (catch (Error1 handler1
-          Error2 handler2
-          ...)
+  (catch (Error1 handler1 Error2 handler2 ...)
     expr1
     expr2
     ...))
@@ -537,11 +532,6 @@
 (function cddddr (x)
   ; Same as (cdr (cdddr x)).
   (cdr (cdddr x)))
-
-(function identity (x)
-  ; Returns the specified x.
-  ; So-called identity function.
-  x)
 
 (builtin-function list (:rest args)
   ; Returns a list whose elements are the specified args.
@@ -1826,8 +1816,7 @@
 (builtin-function apply (f args)
   ; Evaluates the specified expression and returns a value.
   ; Applies the function to the args.
-  (assert (= (apply car '((1))) 1))
-  (assert (= (apply identity '(1)) 1)))
+  (assert (= (apply car '((1))) 1)))
 
 (function repl ()
   ; Enter repl(read eval print loop) mode.
