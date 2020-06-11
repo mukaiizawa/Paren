@@ -285,8 +285,7 @@
   ; Returns nil.
   (if (not (symbol? i)) (error "require symbol"))
   (with-gensyms (gl)
-    (list 'for (list gl l i (list car gl)) gl (list <- gl (list cdr gl)
-                                                        i (list car gl))
+    (list 'for (list gl l i (list car gl)) gl (list <- gl (list cdr gl) i (list car gl))
           (cons begin body))))
 
 (macro dotimes ((i n) :rest body)
@@ -625,7 +624,7 @@
     (rec l)
     (reverse! acc)))
 
-(function map (args f)
+(function map (f args)
   ; Returns a list of the results of mapping each element of the specified list args with the specified function f.
   (let (acc nil)
     (while args
@@ -1064,7 +1063,7 @@
                                              :features features
                                              :fields fields)))
           (cons begin
-                (map fields (lambda (field) (list 'make-accessor field)))))))
+                (map (lambda (field) (list 'make-accessor field)) fields)))))
 
 (macro method (cls-sym method-sym args :rest body)
   (let (global-sym (concat cls-sym method-sym)
@@ -1116,9 +1115,8 @@
   ; If .init method has argument, must invoke after create an instance.
   ; Otherwise automatically invoke .init method.
   (let (o nil)
-    (for (cls self) cls (<- cls (and (assoc cls :super)
-                                     (find-class (assoc cls :super))))
-      (dolist (field (reverse! (map (assoc cls :fields) symbol->keyword)))
+    (for (cls self) cls (<- cls (and (assoc cls :super) (find-class (assoc cls :super))))
+      (dolist (field (reverse! (map symbol->keyword (assoc cls :fields))))
         (push! o nil)
         (push! o field)))
     (car! (cdr o) (assoc self :symbol))
@@ -1132,7 +1130,7 @@
 
 (method Class .features ()
   ; Returns the feature list representing the feature of the receiver.
-  (map (&features self) find-class))
+  (map find-class (&features self)))
 
 (method Class .methods ()
   ; Returns method list of this class, but excluding inherited methods.
@@ -1261,9 +1259,10 @@
         write-cons (lambda (x)
                      (.write-byte self 0x28)
                      (write-s-expr (car x))
-                     (map (cdr x) (lambda (x) 
-                                    (.write-byte self 0x20)
-                                    (write-s-expr x)))
+                     (map  (lambda (x) 
+                             (.write-byte self 0x20)
+                             (write-s-expr x))
+                           (cdr x))
                      (.write-byte self 0x29))
         write-operator (lambda (x name)
                          (.write-byte self 0x28)
