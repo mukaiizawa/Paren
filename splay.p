@@ -58,7 +58,7 @@
 (method Splay -barance (key)
   (let (top (&top self) sentinel (&sentinel self) cmp (&comparator self) p top q nil d nil)
     (&right! (&left! (&key! sentinel key) sentinel) sentinel)
-    (while (not (= (<- d (cmp (&key p) key)) 0))
+    (while (/= (<- d (cmp (&key p) key)) 0)
       (if (< d 0)
           (begin (<- q (&left p))
                  (if (= (<- d (cmp (&key q) key)) 0)
