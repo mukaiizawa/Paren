@@ -689,7 +689,7 @@ Parenに組み込みで用意されている汎関数をいくつか示す。汎
 ### リストを写像する
 mapは引数のリストを写像した結果を返す汎関数である。
 
-    (map list fn) => result
+    (map fn list) => result
     fn -- 写像関数
     list -- 写像前のリスト
     result -- 写像後のリスト
@@ -698,7 +698,7 @@ mapは引数のリストを写像した結果を返す汎関数である。
 
     ) (function double (* 2 x))
     double
-    ) (map '(1 2 3) double)
+    ) (map double '(1 2 3))
     (2 4 6)
 
 ### リストをグルーピングする
@@ -954,12 +954,12 @@ lambdaが作る関数のことをその名前がないことにちなみ、無�
 
     ) (function double (* 2 x))
     double
-    ) (map '(1 2 3) double)
+    ) (map double '(1 2 3))
     (2 4 6)
 
 これは、しばしば次のように書かかれる。
 
-    ) (map '(1 2 3) (lambda (x) (* 2 x)))
+    ) (map (lambda (x) (* 2 x)) '(1 2 3))
     (2 4 6)
 
 ## if(条件分岐)
