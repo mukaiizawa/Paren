@@ -841,8 +841,8 @@
 
 (function // (x y)
   ; Perform truncation division.
-  ; Same as (truncate (/ x y))).
-  (truncate (/ x y)))
+  ; Same as (Math.truncate (/ x y))).
+  (Math.truncate (/ x y)))
 
 (builtin-function mod (x y)
   ; Returns the remainder of dividing x by y.
@@ -1285,15 +1285,12 @@
                            (write-float x)))
         write-integer (lambda (x radix)
                         (if (= x 0) (.write-byte self 0x30)
-                            (let (write-digit
-                                   (lambda (x)
-                                     (let (upper (// x radix)
-                                           digit (mod x radix))
-                                       (if (/= upper 0) (write-digit upper))
-                                       (.write-byte self
-                                                   (+ digit
-                                                      (if (< digit 10) 0x30
-                                                          (+ digit -10 0x41)))))))
+                            (let (write-digit (lambda (x)
+                                                (let (upper (// x radix) digit (mod x radix))
+                                                  (if (/= upper 0) (write-digit upper))
+                                                  (.write-byte self (+ digit
+                                                                       (if (< digit 10) 0x30
+                                                                           (+ digit -10 0x41)))))))
                               (when (< x 0)
                                 (.write-byte self 0x2d)
                                 (<- x (- x)))
@@ -1303,10 +1300,9 @@
                           (let (mant x exp 8)
                             (let (write-mant1
                                    (lambda ()
-                                     (let (upper (// (truncate mant) 100000000))
+                                     (let (upper (// (Math.truncate mant) 100000000))
                                        (write-integer upper 10)
-                                       (<- mant (* (- mant (* upper 100000000))
-                                                   10))))
+                                       (<- mant (* (- mant (* upper 100000000)) 10))))
                                   write-fraction
                                    (lambda (x)
                                      (write-mant1)
@@ -1353,9 +1349,7 @@
                          (symbol? x) (.write-string self (symbol->string x))
                          (keyword? x) (begin
                                         (.write-byte self 0x3a)
-                                        (.write-string self
-                                                      (symbol->string
-                                                        (keyword->symbol x))))
+                                        (.write-string self (symbol->string (keyword->symbol x))))
                          (number? x) (write-number x)
                          (byte-array? x) (.write-string self "<a byte-array>")
                          (assert nil))))
@@ -1680,12 +1674,8 @@
                      (= c 0x72) (.put self 0x0d)
                      (= c 0x74) (.put self 0x09)
                      (= c 0x76) (.put self 0x0b)
-                     (= c 0x78) (.put self
-                                      (+ (* 16
-                                            (ascii->digit (.skip self)
-                                                          :radix 16))
-                                         (ascii->digit (.skip self)
-                                                       :radix 16)))
+                     (= c 0x78) (.put self (+ (* 16 (ascii->digit (.skip self) :radix 16))
+                                              (ascii->digit (.skip self) :radix 16)))
                      (.put self c))))))
   (.skip self)
   (list :string (.token self)))
