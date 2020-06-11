@@ -425,15 +425,14 @@ static int string_subseq(object o, int start, int end, object *result)
 DEFUN(subseq)
 {
   int start, end, len;
-  object o, s, e;
+  object o;
   if (!bi_argc_range(argc, 2, 3)) return FALSE;
-  if (!seq_length(o = argv->cons.car, &len)) return FALSE;
-  if (!bi_arg_type((argv = argv->cons.cdr)->cons.car, XINT, &s)) return FALSE;
-  start = s->xint.val;
+  o = argv->cons.car;
+  if (!seq_length(o, &len)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
   if (argc == 2) end = len;
   else {
-    if (!bi_arg_type(argv->cons.cdr->cons.car, XINT, &e)) return FALSE;
-    end = e->xint.val;
+    if (!bi_sint(argv->cons.cdr->cons.car, &end)) return FALSE;
     if (end > len) return FALSE;
   }
   if (start > end) return FALSE;
