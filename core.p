@@ -565,7 +565,7 @@
 
 (function list->string (l delimiter)
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
-  (reduce l (lambda (x y) (string x delimiter y))))
+  (reduce (lambda (x y) (string x delimiter y)) l))
 
 (builtin-function last-cons (x)
   ; Returns the last cons to follow from the specified cons x.
@@ -632,7 +632,7 @@
       (<- args (cdr args)))
     (reverse! acc)))
 
-(function reduce (l f)
+(function reduce (f l)
   ; Reduce uses the specified binary operation f, to combine the elements of the specified list l.
   ; The function must accept as arguments two elements of list or the results from combining those elements.
   ; The function must also be able to accept no arguments.
@@ -1454,7 +1454,7 @@
 
 (method Path .init (:rest files)
   ; Initialize by passing the specified list of files that make up this path.
-  (&files! self (string->list (reduce files concat) "/"))
+  (&files! self (string->list (reduce concat files) "/"))
   self)
 
 (method Path .parent ()
@@ -1464,14 +1464,14 @@
 (method Path .resolve (:rest body)
   ; Resolve the given path against this path.
   (&files! (.new Path) (concat (&files self)
-                               (string->list (reduce body concat) "/"))))
+                               (string->list (reduce concat body) "/"))))
 
 (method Path .file-name ()
   ; Resolve file name of receiver.
   (last (&files self)))
 
 (method Path .to-s ()
-  (reduce (&files self) (lambda (acc rest) (concat acc "/" rest))))
+  (reduce (lambda (acc rest) (concat acc "/" rest)) (&files self)))
 
 (method Path .open (mode)
   (catch (Error (lambda (e) (error (concat "open failed " (.to-s self)))))

@@ -3,10 +3,10 @@
 (global-symbol Math.pi 3.14159265358979323846)
 
 (function Math.max (:rest args)
-  (reduce args (lambda (x y) (if (> x y) x y))))
+  (reduce (lambda (x y) (if (> x y) x y)) args))
 
 (function Math.min (:rest args)
-  (reduce args (lambda (x y) (if (< x y) x y))))
+  (reduce (lambda (x y) (if (< x y) x y)) args))
 
 (builtin-function Math.ceiling (x)
   ; So-called ceiling function.
