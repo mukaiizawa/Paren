@@ -1,4 +1,4 @@
-; math
+; Math module.
 
 (global-symbol Math.pi 3.14159265358979323846)
 

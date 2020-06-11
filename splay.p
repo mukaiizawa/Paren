@@ -1,4 +1,4 @@
-; Splay tree class.
+; Splay module.
 
 (class SplayNode ()
   key val left right)
@@ -49,16 +49,14 @@
 (class Splay ()
   top sentinel comparator)
 
-(method Splay .init (:opt (comparator (lambda (k1 k2)
-                                        (- (address k1) (address k2)))))
+(method Splay .init (:opt (comparator (lambda (k1 k2) (- (address k1) (address k2)))))
   (let (node (.new SplayNode))
     (&top! self node)
     (&sentinel! self node)
     (&comparator! self comparator)))
 
 (method Splay -barance (key)
-  (let (top (&top self) sentinel (&sentinel self) cmp (&comparator self)
-            p top q nil d nil)
+  (let (top (&top self) sentinel (&sentinel self) cmp (&comparator self) p top q nil d nil)
     (&right! (&left! (&key! sentinel key) sentinel) sentinel)
     (while (not (zero? (<- d (cmp (&key p) key))))
       (if (< d 0)
@@ -74,8 +72,7 @@
     p))
 
 (method Splay -resume ()
-  (let (top (&top self) left (&left top) right (&right top)
-            sentinel (&sentinel self))
+  (let (top (&top self) left (&left top) right (&right top) sentinel (&sentinel self))
     (if (eq? left sentinel) (&top! self right)
         (eq? right sentinel) (&top! self left)
         (let (p left)

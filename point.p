@@ -1,4 +1,4 @@
-; Point class.
+; Point module.
 
 (class Point ()
   ; Represents a point in a two-dimensional rectangular coordinate system.
