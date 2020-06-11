@@ -641,7 +641,7 @@
                   (rec (cons (f (car l) (cadr l)) (cddr l))))))
     (rec l)))
 
-(function find-cons (l f)
+(function find-cons (f l)
   ; Returns the cons that make up the specified list l that are not nil when the car part is evaluated as an argument of the specified function f.
   ; Evaluation is performed in order from left to right.
   ; If there is no such cons, nil is returned.
@@ -650,13 +650,13 @@
     (if (f (car l)) (return l)
         (<- l (cdr l)))))
 
-(function find (l f)
+(function find (f l)
   ; From the beginning of the specified list l, the specified function f returns the first element that does not evaluate to nil.
   ; If no such element exists, nil is returned.
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
-  (car (find-cons l f)))
+  (car (find-cons f l)))
 
-(function all-satisfy? (l f)
+(function all-satisfy? (f l)
   ; Returns true if all element of the specified list l returns a not nil value which evaluates as an argument to the specified function f.
   ; Otherwise returns nil.
   ; As soon as any element evaluates to nil, and returns nil without evaluating the remaining elements
@@ -665,7 +665,7 @@
         (return nil)))
   true)
 
-(function any-satisfy? (l f)
+(function any-satisfy? (f l)
   ; Returns true if any element of the specified list l returns a not nil value which evaluated as an argument to the specified function f.
   ; Otherwise returns nil.
   ; It returns nil if l is empty.
@@ -674,7 +674,7 @@
     (if (f (car l)) (return true)
         (<- l (cdr l)))))
 
-(function each-adjacent-satisfy? (l f)
+(function each-adjacent-satisfy? (f l)
   ; Returns true if each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
   (while true
     (if (nil? (cdr l)) (return true)
@@ -713,7 +713,7 @@
 
 (function ascii-space? (c)
   ; Returns whether byte c can be considered a space character.
-  (find '(0x09 0x0a 0x0d 0x20) (lambda (x) (= c x))))
+  (find (lambda (x) (= c x)) '(0x09 0x0a 0x0d 0x20)))
 
 (function ascii-alpha? (c)
   ; Returns whether byte c can be considered a alphabetic character.
@@ -858,17 +858,17 @@
 (function > (:rest args)
   ; Returns true if each of the specified args are in monotonically decreasing order.
   ; Otherwise returns nil.
-  (each-adjacent-satisfy? args (lambda (x y) (< y x))))
+  (each-adjacent-satisfy? (lambda (x y) (< y x)) args))
 
 (function <= (:rest args)
   ; Returns true if each of the specified args are in monotonically nondecreasing order.
   ; Otherwise returns nil.
-  (each-adjacent-satisfy? args (lambda (x y) (not (< y x)))))
+  (each-adjacent-satisfy? (lambda (x y) (not (< y x))) args))
 
 (function >= (:rest args)
   ; Returns true if each of the specified args are in monotonically nonincreasing order.
   ; Otherwise returns nil.
-  (each-adjacent-satisfy? args (lambda (x y) (not (< x y)))))
+  (each-adjacent-satisfy? (lambda (x y) (not (< x y))) args))
 
 (function ++ (x)
   ; Returns the value of the specified number x + 1.
@@ -1052,7 +1052,7 @@
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
   ; Create class the specified cls-sym.
   (let (Object? (eq? cls-sym 'Object))
-    (if (not (all-satisfy? fields symbol?)) (error "require symbol")
+    (if (not (all-satisfy? symbol? fields)) (error "require symbol")
         (bound? cls-sym) (error (concat (symbol->string cls-sym)
                                         " already bound")))
     (list begin0
@@ -1610,13 +1610,13 @@
 
 (method ParenLexer .identifier-symbol-alpha? ()
   (let (c (&next self))
-    (or (find '(0x21 0x24 0x25 0x26 0x2a 0x2f 0x3c 0x3d 0x3e 0x3f 0x5f 0x2e)
-                 (lambda (x) (= x c)))
+    (or (find (lambda (x) (= x c))
+              '(0x21 0x24 0x25 0x26 0x2a 0x2f 0x3c 0x3d 0x3e 0x3f 0x5f 0x2e))
         (ascii-alpha? c))))
 
 (method ParenLexer .identifier-sign? ()
   (let (c (&next self))
-    (find '(0x2b 0x2d) (lambda (x) (= x c)))))
+    (find (lambda (x) (= x c)) '(0x2b 0x2d))))
 
 (method ParenLexer .identifier-trail? ()
   (or (.identifier-symbol-alpha? self)
@@ -1855,7 +1855,7 @@
   ; Load the file corresponding to the specified keyword.
   ; Search the current directory and directories in the execution environment.
   ; Returns true if successfully loaded.
-  (if (find $import (lambda (x) (eq? x key))) true
+  (if (find (lambda (x) (eq? x key)) $import) true
       (begin0 (load (string (keyword->symbol key) ".p"))
               (push! $import key))))
 
