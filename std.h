@@ -27,5 +27,5 @@ extern char *xstrdup(char *s);
 #define xassert(cond) ;
 #else
 extern void xassert_failed(char *fn, int line);
-#define xassert(cond) if(!(cond)) xassert_failed(__FILE__, __LINE__);
+#define xassert(cond) if (!(cond)) xassert_failed(__FILE__, __LINE__);
 #endif
