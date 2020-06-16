@@ -33,29 +33,29 @@ static char *cur = NULL;
 int xgetopt(int argc, char **argv, char *opt)
 {
   char *p;
-  if(cur == NULL || *cur == '\0') {
+  if (cur == NULL || *cur == '\0') {
     xoptind++;
-    if(xoptind == argc) return EOF;
+    if (xoptind == argc) return EOF;
     cur = argv[xoptind];
-    if(*cur != '-') return EOF;
+    if (*cur != '-') return EOF;
     cur++;
-    if(*cur == '\0') return EOF;
+    if (*cur == '\0') return EOF;
   }
-  if(*cur == '-') {
+  if (*cur == '-') {
     xoptind++;
     return EOF;
   }
-  for(p = opt; *p != *cur; p++) {
-    if(*p == '\0') {
+  for (p = opt; *p != *cur; p++) {
+    if (*p == '\0') {
       fprintf(stderr, "illegal option -- %c.\n", *cur);
       return '?';
     }
   }
   cur++;
-  if(*(p + 1) != ':');
-  else if(*cur == '\0') {
+  if (*(p + 1) != ':');
+  else if (*cur == '\0') {
     xoptind++;
-    if(xoptind == argc) {
+    if (xoptind == argc) {
       fprintf(stderr, "option requires an argument -- %c.\n", *p);
       return '?';
     }
