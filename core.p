@@ -177,6 +177,10 @@
           (cons begin (cdr body))
           val)))
 
+(macro with ((k v) :rest body)
+  (list let (list k v)
+        (cons begin0 (cons k body))))
+
 (macro when (test :rest body)
   ; Evaluate the specified test and if it is not nil then evaluate each of the specified body.
   (list if test (cons begin body)))
@@ -293,19 +297,18 @@
     (list 'for (list i 0 gn n) (list < i gn) (list <- i (list '++ i))
           (cons begin body))))
 
-(macro measure (:rest body)
-  ; Measure the time it takes to evaluate the specified body.
+(macro clock (:rest body)
+  ; clock the time it takes to evaluate the specified body.
   ; Macro expansion image is as follows.
-  ;     (measure expr1 expr2 ...)
-  ;     (let (s (clock))
+  ;     (clock expr1 expr2 ...)
+  ;     (let (s (OS.clock))
   ;       (begin0 (begin expr1 expr2 ...)
-  ;               (print (- (clock) s))))
-  (with-gensyms (s)
-    (list let (list s (list clock))
+  ;               (print (- (OS.clock) s))))
+  (with-gensyms (offset)
+    (list let (list offset (list OS.clock))
           (list 'begin0
                 (cons begin body)
-                (list 'write-line
-                      (list 'string "time=" (list '- (list clock) s)))))))
+                (list 'write-line (list 'string "time=" (list '- (list OS.clock) offset)))))))
 
 (builtin-function expand-macro (expr)
   ; Expand macro the specified expression expr.
@@ -970,14 +973,6 @@
   ; If index is out of range, it is considered an error.
   )
 
-; kernel
-
-(builtin-function fp (fd)
-  ; Returns file pointer.
-  ; Used to define standard input and output.
-  ; Never used directly.
-  )
-
 ; Paren object system
 ;
 ; Paren object system is an object system implemented from a primitive paren.
@@ -1095,7 +1090,12 @@
 
 (method Object .to-s ()
   ; Returns a String representing the receiver.
-  "<object>")
+  (with-memory-stream (mem)
+    (.write-string mem "<")
+    (.write mem (&symbol (.class self)))
+    (.write-string mem ":")
+    (.write mem (address self))
+    (.write-string mem ">")))
 
 (class Class ()
   ; Class of class object.
@@ -1251,7 +1251,7 @@
         write-cons (lambda (x)
                      (.write-byte self 0x28)
                      (write-s-expr (car x))
-                     (map  (lambda (x) 
+                     (map (lambda (x)
                              (.write-byte self 0x20)
                              (write-s-expr x))
                            (cdr x))
@@ -1343,6 +1343,7 @@
                                         (.write-string self (symbol->string (keyword->symbol x))))
                          (number? x) (write-number x)
                          (byte-array? x) (.write-string self "<a byte-array>")
+                         (array? x) (.write-string self "<an array>")
                          (assert nil))))
     (write-s-expr x)
     (if write-line-feed? (.write-byte self 0x0a))
@@ -1410,7 +1411,7 @@
 
 (class FileStream (Stream)
   ; Provides I/O functions for files.
-  ; Construct with methods such as Path.openRead, Path.openWrite.
+  ; Construct with methods such as Path.open-read, Path.open-write.
   ; It should not be construct by new.
   fp)
 
@@ -1418,26 +1419,26 @@
   (&fp! self fp))
 
 (method FileStream .read-byte ()
-  (fgetc (&fp self)))
+  (OS.fgetc (&fp self)))
 
 (method FileStream .read-line ()
-  (fgets (&fp self)))
+  (OS.fgets (&fp self)))
 
 (method FileStream .write-byte (byte)
-  (fputc byte (&fp self)))
+  (OS.fputc byte (&fp self)))
 
 (method FileStream .write-string(o)
   (let (o (->byte-array o))
-    (fwrite o 0 (length o) (&fp self))))
+    (OS.fwrite o 0 (length o) (&fp self))))
 
 (method FileStream .seek (offset)
-  (fseek (&fp self) offset))
+  (OS.fseek (&fp self) offset))
 
 (method FileStream .tell ()
-  (ftell (&fp self)))
+  (OS.ftell (&fp self)))
 
 (method FileStream .close ()
-  (fclose (&fp self)))
+  (OS.fclose (&fp self)))
 
 (class Path ()
   ; Means a file or directory and provides a series of functions such as file information acquisition, creation and deletion, and stream construction.
@@ -1466,8 +1467,9 @@
   (reduce (lambda (acc rest) (concat acc "/" rest)) (&files self)))
 
 (method Path .open (mode)
-  (catch (Error (lambda (e) (error (concat "open failed " (.to-s self)))))
-    (.init (.new FileStream) :fp (fopen (.to-s self) mode))))
+  (catch (Error (lambda (e)
+                  (throw (.message e (concat "open failed " (.to-s self))))))
+    (.init (.new FileStream) :fp (OS.fopen (.to-s self) mode))))
 
 (method Path .open-read ()
   ; Returns a stream that reads the contents of the receiver.
@@ -1797,7 +1799,7 @@
             :radix radix
             :write-line-feed? write-line-feed?)))
 
-(function write-line (x :key stream readable? (radix 10))
+(function write-line (:opt (x "") :key stream readable? (radix 10))
   (let (stream (or stream (dynamic $stdout)))
     (.write stream x
             :readable? readable?
@@ -1862,7 +1864,7 @@
 
 ; global symbol
 
-(global-symbol $import '(:core)
+(global-symbol $import '(:core :os)
   ; List of imported modules.
   ; Referenced and updated when calling the import function.
   ; Do not update directly.
@@ -1872,22 +1874,12 @@
   ; List of command line arguments.
   )
 
-(global-symbol $stdin (.init (.new FileStream) :fp (fp 0))
+(global-symbol $stdin (.init (.new FileStream) :fp (OS.fp 0))
   ; File stream object holding the standard input.
   )
 
-(global-symbol $stdout (.init (.new FileStream) :fp (fp 1))
+(global-symbol $stdout (.init (.new FileStream) :fp (OS.fp 1))
   ; File stream object holding the standard ouput.
-  )
-
-(global-symbol $os
-  ; Host os.
-  ; Determined by compile-time arguments.
-  ; The values to be set are as follows.
-  ; - :Windows
-  ; - :Linux
-  ; - :Android
-  ; - :Mac
   )
 
 (global-symbol $external-encoding :UTF-8

@@ -3,6 +3,8 @@
 #define DEFSP(name) int special_##name(int argc, object argv)
 #define DEFUN(name) int function_##name(int argc, object argv, object *result)
 
+struct xbarray bi_buf;
+
 extern char *special_name_table[];
 extern char *function_name_table[];
 extern int (*special_table[])(int argc, object argv);
@@ -20,3 +22,5 @@ extern int bi_sint(object o, int *p);
 extern int bi_int64(object o, int64_t *p);
 extern int bi_intptr(object o, intptr_t *p);
 extern int bi_double(object o, double *p);
+extern int bi_strings(int n, object argv, char **ss);
+extern char *bi_string(object argv);

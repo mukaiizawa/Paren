@@ -117,7 +117,9 @@ static void symbol_bind_propagation(object e, object s, object v)
 
 static int fp;
 static int sp;
+
 static object fs[FRAME_STACK_SIZE];
+
 static struct xarray fb;
 
 // frame_type
@@ -694,8 +696,7 @@ static object call_stack(void)
   object o;
   o = object_nil;
   for (i = 0; i <= fp; i = next_fp(i)) {
-    if (sint_val(fs[i]) == TRACE_FRAME)
-      o = gc_new_cons(get_frame_var(i, 0), o);
+    if (sint_val(fs[i]) == TRACE_FRAME) o = gc_new_cons(get_frame_var(i, 0), o);
   }
   return o;
 }
@@ -726,8 +727,9 @@ static void push_call_stack(object o)
 {
   while (object_type_p(o, CONS)) {
     if (o->cons.car == object_stack_trace) {
-      if (object_type_p((o = o->cons.cdr), CONS) && o->cons.car == object_nil)
-        o->cons.car = call_stack();
+      if (object_type_p((o = o->cons.cdr), CONS)) {
+        if (o->cons.car == object_nil) o->cons.car = call_stack();
+      }
       return;
     }
     o = o->cons.cdr;
@@ -775,6 +777,55 @@ static void pop_throw_frame(void)
 }
 
 // built in functions
+
+DEFUN(eq_p)
+{
+  object o;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
+  o = argv->cons.car;
+  reg[0] = object_nil;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (o != argv->cons.car) return TRUE;
+  }
+  reg[0] = object_true;
+  return TRUE;
+}
+
+DEFUN(neq_p)
+{
+  object o;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
+  o = argv->cons.car;
+  reg[0] = object_nil;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (o == argv->cons.car) return TRUE;
+  }
+  reg[0] = object_true;
+  return TRUE;
+}
+
+DEFUN(address)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  reg[0] = gc_new_xint((intptr_t)argv->cons.car);
+  return TRUE;
+}
+
+DEFUN(not)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  reg[0] = object_bool(argv->cons.car == object_nil);
+  return TRUE;
+}
+
+DEFUN(gensym)
+{
+  static int c = 0;
+  xbarray_reset(&bi_buf);
+  xbarray_addf(&bi_buf, "$G-%d", ++c);
+  reg[0] = gc_new_barray_from(SYMBOL, bi_buf.elt, bi_buf.size);
+  return TRUE;
+}
 
 DEFUN(eval)
 {
@@ -891,15 +942,13 @@ static int find_super_class(object e, object cls_sym, object *result)
 static int find_class_method(object e, object cls_sym, object mtd_sym
     , object *result)
 {
-  struct xbarray x;
   object s;
   xassert(object_type_p(cls_sym, SYMBOL));
   xassert(object_type_p(mtd_sym, SYMBOL));
-  xbarray_init(&x);
-  xbarray_copy(&x, cls_sym->barray.elt, cls_sym->barray.size);
-  xbarray_copy(&x, mtd_sym->barray.elt, mtd_sym->barray.size);
-  s = gc_new_barray_from(SYMBOL, x.elt, x.size);
-  xbarray_free(&x);
+  xbarray_reset(&bi_buf);
+  xbarray_copy(&bi_buf, cls_sym->barray.elt, cls_sym->barray.size);
+  xbarray_copy(&bi_buf, mtd_sym->barray.elt, mtd_sym->barray.size);
+  s = gc_new_barray_from(SYMBOL, bi_buf.elt, bi_buf.size);
   if (((*result) = symbol_find_propagation(e, s)) == NULL) return TRUE;
   if (!object_type_p(*result, LAMBDA)) {
     ip_mark_error("is not a method");
@@ -1342,9 +1391,7 @@ void ip_mark_object(void)
 {
   int i;
   for (i = 0; i < REG_SIZE; i++) gc_mark(reg[i]);
-  for (i = 0; i < sp; i++) {
-    if (!sint_p(fs[i])) gc_mark(fs[i]);
-  }
+  for (i = 0; i < sp; i++) gc_mark(fs[i]);
 }
 
 void ip_start(void)
@@ -1353,6 +1400,7 @@ void ip_start(void)
   fp = -1;
   cycle = 0;
   xarray_init(&fb);
+  xbarray_init(&bi_buf);
   ip_trap_code = TRAP_NONE;
   ip_main();
 }

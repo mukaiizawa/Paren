@@ -218,7 +218,7 @@ static void make_initial_objects(int argc, char *argv[])
   object_Error = symbol_new("Error");
   args = symbol_new("$args");
   bind_symbol(args, parse_args(argc, argv));
-  os = symbol_new("$os");
+  os = symbol_new("OS.name");
 #if WINDOWS_P
   bind_symbol(os, keyword_new("Windows"));
 #elif OS_CODE == OS_LINUX
