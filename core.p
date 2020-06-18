@@ -1403,7 +1403,7 @@
 
 (class FileStream (Stream)
   ; Provides I/O functions for files.
-  ; Construct with methods such as Path.open-read, Path.open-write.
+  ; Construct with methods such as File.open-read, File.open-write.
   ; It should not be construct by new.
   fp)
 
@@ -1432,50 +1432,49 @@
 (method FileStream .close ()
   (OS.fclose (&fp self)))
 
-(class Path ()
+(class File ()
   ; Means a file or directory and provides a series of functions such as file information acquisition, creation and deletion, and stream construction.
   ; Use '/' to separate path names regardless of the host OS.
-  files mode)
+  path mode)
 
-(method Path .init (:rest files)
-  ; Initialize by passing the specified list of files that make up this path.
-  (&files! self (string->list (reduce concat files) "/"))
+(method File .init (:rest file-names)
+  ; Initialize by passing the specified list of file-names that make up this path.
+  (&path! self (string->list (reduce concat file-names) "/"))
   self)
 
-(method Path .parent ()
+(method File .parent ()
   ; Returns the parent path, or nil if this path does not have a parent.
-  (&files! (.init (.new Path)) (butlast (&files self))))
+  (&path! (.init (.new File)) (butlast (&path self))))
 
-(method Path .resolve (:rest body)
+(method File .resolve (:rest body)
   ; Resolve the given path against this path.
-  (&files! (.new Path) (concat (&files self)
-                               (string->list (reduce concat body) "/"))))
+  (&path! (.new File) (concat (&path self) (string->list (reduce concat body) "/"))))
 
-(method Path .file-name ()
+(method File .file-name ()
   ; Resolve file name of receiver.
-  (last (&files self)))
+  (last (&path self)))
 
-(method Path .to-s ()
-  (reduce (lambda (acc rest) (concat acc "/" rest)) (&files self)))
+(method File .to-s ()
+  (reduce (lambda (acc rest) (concat acc "/" rest)) (&path self)))
 
-(method Path .open (mode)
+(method File .open (mode)
   (catch (Error (lambda (e)
                   (throw (.message e (concat "open failed " (.to-s self))))))
     (.init (.new FileStream) :fp (OS.fopen (.to-s self) mode))))
 
-(method Path .open-read ()
+(method File .open-read ()
   ; Returns a stream that reads the contents of the receiver.
   (.open self 0))
 
-(method Path .open-write ()
+(method File .open-write ()
   ; Returns a stream to write to the contents of the receiver.
   (.open self 1))
 
-(method Path .open-append ()
+(method File .open-append ()
   ; Returns a stream to append to the receiver's content.
   (.open self 2))
 
-(method Path .open-update ()
+(method File .open-update ()
   ; Returns a stream that updates the contents of the receiver.
   ; The read/write position is at the beginning of the file.
   ; The file size cannot be reduced.
@@ -1755,9 +1754,9 @@
   (with-gensyms (gsym gpath)
     (list let (list gpath
                     (list if (list string? path)
-                          (list '.init '(.new Path) path)
+                          (list '.init '(.new File) path)
                           path))
-          (list if (list not (list is-a? gpath 'Path))
+          (list if (list not (list is-a? gpath 'File))
                 (list error gpath " is not a path"))
           (list let (list gsym nil)
                 (list unwind-protect
