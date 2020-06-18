@@ -1,4 +1,4 @@
-; Splay module.
+; splay module.
 
 (class SplayNode ()
   key val left right)
@@ -98,8 +98,8 @@
         (&val! top val))
     self))
 
-(function main ()
-  (let (splay (.init (.new Splay)))
+(function! main ()
+  (with (splay (.init (.new Splay)))
     (.put (.put (.put splay :one 1) :two 2) :three 3)
     (assert (= (.get splay :one) 1))
     (assert (= (.get splay :one) 1))

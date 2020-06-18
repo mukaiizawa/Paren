@@ -26,6 +26,6 @@
   (assert (= (Math.truncate 0) 0))
   (assert (= (Math.truncate -1.1) -1)))
 
-(function main ()
+(function! main ()
   (assert (= (Math.max 1 2 3) 3))
   (assert (= (Math.min 1 2 3) 1)))

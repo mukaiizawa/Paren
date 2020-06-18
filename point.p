@@ -1,8 +1,11 @@
-; Point module.
+; point module.
 
 (class Point ()
   ; Represents a point in a two-dimensional rectangular coordinate system.
   x y)
+
+(function point (x y)
+  (.init (.new Point) :x x :y y))
 
 (method Point .init (:key (x 0) (y 0))
   ; Initialize by specifying x and y coordinates.
@@ -19,7 +22,7 @@
 (method Point .to-s ()
   (string "(" (&x self) "," (&y self) ")"))
 
-(method Point .equal (p)
+(method Point .eq (p)
   (and (is-a? p Point) (= (&x self) (&x p)) (= (&y self) (&y p))))
 
 (method Point .add (p)
@@ -27,10 +30,10 @@
          :x (+ (&x self) (&x p))
          :y (+ (&y self) (&y p))))
 
-(function main ()
-  (let (p (.init (.new Point) :x 3 :y 4))
-    (assert (.equal p (.init (.new Point) :x 3 :y 4)))
-    (assert (not (.equal p (.init (.new Point) :x 2 :y 4))))
-    (assert (not (.equal p (.init (.new Point) :x 3 :y 5))))
-    (assert (not (.equal p (.init (.new Point) :x 2 :y 5))))
+(function! main ()
+  (with (p (point 3 4))
+    (assert (.eq p (point 3 4)))
+    (assert (not (.eq p (point 2 4))))
+    (assert (not (.eq p (point 3 5))))
+    (assert (not (.eq p (point 2 5))))
     (assert (seqeq? (.to-s p) "(3,4)"))))

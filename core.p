@@ -140,11 +140,11 @@
   ;     (<- s v)
   (if v? (list <- s v)))
 
-(macro function (name args :rest body)
-  ; Create a lambda function which parameter list the specified args and lambda function body the specified body.
-  ; Then, bind a created lambda function with the specified name.
-  ; If the specified name is bound, throw error.
-  ; Expand the macro inline.
+(macro function! (name args :rest body)
+  ; Bind a lambda to a specified symbol name.
+  ; Same as function macro except for the following points.
+  ; - No error even if the symbol is already bound.
+  ; - Do not inline macros
   (list <- name (cons lambda (cons args body))))
 
 (macro builtin-function (name args :rest body)
@@ -282,7 +282,6 @@
   ; Evaluate each of the specified body once for each element in list l, with index i bound to the element.
   ; Supports break, continue macro.
   ; Returns nil.
-  (if (not (symbol? i)) (error "require symbol"))
   (with-gensyms (gl)
     (list 'for (list gl l i (list car gl)) gl (list <- gl (list cdr gl) i (list car gl))
           (cons begin body))))
@@ -292,7 +291,6 @@
   ; The specified body once for each integer from 0 up to but not including the value of n, with the specified i bound to each integer.
   ; Supports break, continue macro.
   ; Returns nil.
-  (if (not (symbol? i)) (error "require symbol"))
   (with-gensyms (gn)
     (list 'for (list i 0 gn n) (list < i gn) (list <- i (list '++ i))
           (cons begin body))))
@@ -314,7 +312,7 @@
   ; Expand macro the specified expression expr.
   (assert (eq? (car (expand-macro '(begin0 1 2 3))) let)))
 
-(function expand-macro-all (expr)
+(function! expand-macro-all (expr)
   ; Expand macro the specified expression expr recursively.
   (let (expand-each-element (lambda (expr)
                               (if expr (cons (expand-expr (car expr))
@@ -337,6 +335,10 @@
 ; fundamental function
 
 (macro function (name args :rest body)
+  ; Create a lambda function which parameter list the specified args and lambda function body the specified body.
+  ; Then, bind a created lambda function with the specified name.
+  ; If the specified name is bound, throw error.
+  ; Expand the macro inline.
   (if (bound? name) (error name " already bound")
       (list begin0 (list quote name)
             (list <- name (cons lambda (cons args (expand-macro-all body)))))))
@@ -740,7 +742,6 @@
   ; Returns concatenated string which each of the specified args as string.
   (with-memory-stream (ms)
     (dolist (arg args)
-      (if (object? arg) (<- arg (.to-s arg)))
       (if arg (write arg :stream ms)))))
 
 'todo
@@ -1004,18 +1005,18 @@
           field (symbol->string field)
           getter (string->symbol (concat "&" field))
           setter (string->symbol (concat "&" field "!"))
-          verify (list if (list not (list 'object? receiver))
+          verifier (list if (list not (list 'object? receiver))
                        (list 'error "require object")))
       (list begin
             (unless (bound? getter)
               (list 'function getter (list receiver)
                     :method
-                    verify
+                    verifier
                     (list 'assoc receiver key)))
             (unless (bound? setter)
               (list 'function setter (list receiver val)
                     :method
-                    verify
+                    verifier
                     (list begin (list 'assoc! receiver key val) receiver)))))))
 
 (macro make-method-dispatcher (method-sym)
@@ -1039,9 +1040,8 @@
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
   ; Create class the specified cls-sym.
   (let (Object? (eq? cls-sym 'Object))
-    (if (not (all-satisfy? symbol? fields)) (error "require symbol")
-        (bound? cls-sym) (error (concat (symbol->string cls-sym)
-                                        " already bound")))
+    (if (not (all-satisfy? symbol? fields)) (error "fields must be symbol")
+        (bound? cls-sym) (error (concat (symbol->string cls-sym) " already bound")))
     (list begin0
           (list quote cls-sym)
           (list <- cls-sym (list quote (list :class 'Class
@@ -1083,19 +1083,14 @@
   ; Returns the class of receiver.
   (find-class (&class self)))
 
-(method Object .equal? (o)
+(method Object .eq? (o)
   ; Returns true if the receiver and the specified object o are the same object.
   ; Overwrite this method if there is class-specific comparisons.
   (eq? self o))
 
 (method Object .to-s ()
   ; Returns a String representing the receiver.
-  (with-memory-stream (mem)
-    (.write-string mem "<")
-    (.write mem (&symbol (.class self)))
-    (.write-string mem ":")
-    (.write mem (address self))
-    (.write-string mem ">")))
+  (string "<" (&symbol (.class self)) ":" (address self)  ">"))
 
 (class Class ()
   ; Class of class object.
@@ -1193,12 +1188,10 @@
               (< b1 0x80) (.write-byte ms b1)
               (< b1 0xc2) (throw illegal-utf8-error)
               (not (trail? (<- b2 (.read-byte self)))) (throw illegal-utf8-error)
-              (< b1 0xe0) (begin (if (= (bit-and b1 0x3e) 0)
-                                     (throw illegal-utf8-error))
+              (< b1 0xe0) (begin (if (= (bit-and b1 0x3e) 0) (throw illegal-utf8-error))
                                  (.write-byte (.write-byte ms b1) b2))
               (< b1 0xf0) (begin (<- b3 (.read-byte self))
-                                 (if (or (and (= b1 0xe0)
-                                              (= (bit-and b2 0x20) 0))
+                                 (if (or (and (= b1 0xe0) (= (bit-and b2 0x20) 0))
                                          (not (trail? b3)))
                                      (throw illegal-utf8-error))
                                  (.write-byte
@@ -1207,8 +1200,7 @@
               (< b1 0xf8) (begin (<- b3 (.read-byte self) b4 (.read-byte self))
                                  (if (or (not (trail? b3))
                                          (not (trail? b4))
-                                         (and (= b1 0xf0)
-                                              (= (bit-and b2 0x30) 0)))
+                                         (and (= b1 0xf0) (= (bit-and b2 0x30) 0)))
                                      (throw illegal-utf8-error))
                                  (.write-byte
                                    (.write-byte
@@ -1631,10 +1623,9 @@
       (begin (.get self)
              (.get-identifier-sign self))
       (.identifier-symbol-alpha? self)
-      (begin
-        (while (.identifier-trail? self)
-          (.get self))
-        self)
+      (begin (while (.identifier-trail? self)
+               (.get self))
+             self)
       (error "illegal identifier '" (.token self) "'")))
 
 (method ParenLexer .lex-sign ()
@@ -1649,8 +1640,7 @@
 
 (method ParenLexer .lex-keyword ()
   (.skip self)
-  (list :keyword (symbol->keyword
-                   (string->symbol (.token (.get-identifier self))))))
+  (list :keyword (symbol->keyword (string->symbol (.token (.get-identifier self))))))
 
 (method ParenLexer .lex-string ()
   (.skip self)
