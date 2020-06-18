@@ -339,9 +339,10 @@ DEFUN(os_getenv)
 
 DEFUN(os_putenv)
 {
-  char *s;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if ((s = bi_string(argv)) == NULL) return FALSE;
+  char *kv[2];
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_strings(2, argv, kv)) return FALSE;
+  *strchr(kv[0], '\0') = '=';
   *result = object_nil;
-  return putenv(xstrdup(s)) == 0;
+  return putenv(xstrdup(kv[0])) == 0;
 }
