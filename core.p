@@ -1435,7 +1435,7 @@
 (class File ()
   ; Means a file or directory and provides a series of functions such as file information acquisition, creation and deletion, and stream construction.
   ; Use '/' to separate path names regardless of the host OS.
-  path mode)
+  path)
 
 (method File .init (:rest file-names)
   ; Initialize by passing the specified list of file-names that make up this path.
