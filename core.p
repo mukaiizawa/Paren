@@ -1897,4 +1897,8 @@
   ; A dummy encoding is an encoding for which character handling is not properly implemented.
   )
 
+(global-symbol $paren-home
+  ; Paren directory. Holds system files.
+  )
+
 (boot)

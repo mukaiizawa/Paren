@@ -153,11 +153,6 @@ static void bind_symbol(object k, object v)
   splay_add(&object_toplevel->env.binding, k, v);
 }
 
-static void bind_pseudo_symbol(object o)
-{
-  bind_symbol(o, o);
-}
-
 static object symbol_new(char *name)
 {
   return gc_new_barray_from(SYMBOL, name, strlen(name));
@@ -198,14 +193,16 @@ static object parse_args(int argc, char *argv[])
 
 static void make_initial_objects(int argc, char *argv[])
 {
-  object args, os;
+  char *os_name, buf[MAX_STR_LEN];
   object_nil = symbol_new("nil");
   object_true = symbol_new("true");
+  object_toplevel = gc_new_env(object_nil);
+  bind_symbol(object_nil, object_nil);
+  bind_symbol(object_true, object_true);
   object_key = keyword_new("key");
   object_opt = keyword_new("opt");
   object_rest = keyword_new("rest");
   object_quote = symbol_new("quote");
-  object_toplevel = gc_new_env(object_nil);
   object_class = keyword_new("class");
   object_symbol = keyword_new("symbol");
   object_super = keyword_new("super");
@@ -216,38 +213,29 @@ static void make_initial_objects(int argc, char *argv[])
   object_Class = symbol_new("Class");
   object_Exception = symbol_new("Exception");
   object_Error = symbol_new("Error");
-  args = symbol_new("$args");
-  bind_symbol(args, parse_args(argc, argv));
-  os = symbol_new("OS.name");
+  bind_symbol(symbol_new("$args"), parse_args(argc, argv));
+  pf_getcwd(buf);
+  bind_symbol(symbol_new("$paren-home"), string_new(buf));
+  strcat(buf, "/core.p");
+  core_fn = xstrdup(buf);
 #if WINDOWS_P
-  bind_symbol(os, keyword_new("Windows"));
+  os_name = "windows";
 #elif OS_CODE == OS_LINUX
-  bind_symbol(os, keyword_new("Linux"));
+  os_name = "linux";
 #elif OS_CODE == OS_ANDROID
-  bind_symbol(os, keyword_new("Android"));
+  os_name = "android";
 #elif OS_CODE == OS_MACOSX
-  bind_symbol(os, keyword_new("Mac"));
+  os_name = "mac";
 #else
   xassert(FALSE);
 #endif
-  bind_pseudo_symbol(object_nil);
-  bind_pseudo_symbol(object_true);
+  bind_symbol(symbol_new("OS.name"), keyword_new(os_name));
   make_builtin();
 }
 
 int main(int argc, char *argv[])
 {
-  int i;
-  char buf[MAX_STR_LEN];
   setbuf(stdout, NULL);
-  pf_exepath(argv[0], buf);
-#if !UNIX_P
-  *strrchr(buf, '.') = '\0';
-#endif
-  strcpy(buf + strlen(buf) - 5, "core.p");
-  for (i = 0; i < strlen(buf); i++)
-    if (buf[i] == '\\') buf[i] = '/';
-  core_fn = buf;
   gc_init();
   make_initial_objects(argc, argv);
   object_boot = gc_new_lambda(object_toplevel, object_nil, load());
