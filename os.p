@@ -4,10 +4,10 @@
   ; Host os.
   ; Determined by compile-time arguments.
   ; The values to be set are as follows.
-  ; - :Windows
-  ; - :Linux
-  ; - :Android
-  ; - :Mac
+  ; - :windows
+  ; - :linux
+  ; - :android
+  ; - :mac
   )
 
 (builtin-function OS.fp (fd)
