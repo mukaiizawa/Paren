@@ -339,9 +339,9 @@ DEFUN(barray_unmatch_index)
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (oi + size > o->barray.size) return FALSE;
-  if (pi + size > o->barray.size) return FALSE;
+  if (pi + size > p->barray.size) return FALSE;
   for(i = 0; i < size; i++) {
-    if(LC(o->barray.elt + oi + i) != LC(o->barray.elt + pi + i)) break;
+    if (LC(o->barray.elt + oi + i) != LC(p->barray.elt + pi + i)) break;
   }
   if (i == size) *result = object_nil;
   else *result = gc_new_xint(oi + i);
