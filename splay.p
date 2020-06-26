@@ -99,7 +99,7 @@
     self))
 
 (function! main ()
-  (with (splay (.init (.new Splay)))
+  (let (splay (.init (.new Splay)))
     (.put (.put (.put splay :one 1) :two 2) :three 3)
     (assert (= (.get splay :one) 1))
     (assert (= (.get splay :one) 1))

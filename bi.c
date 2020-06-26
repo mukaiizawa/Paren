@@ -109,6 +109,8 @@ static char *symbol_name_map[] = {
   "barray_index", "byte-array-index",
   "barray_new", "byte-array",
   "barray_p", "byte-array?",
+  "barray_nth", "byte-array-nth",
+  "barray_length", "byte-array-length",
   "barray_to_string", "byte-array->string",
   "barray_unmatch_index", "byte-array-unmatch-index",
   "cons_p", "cons?",

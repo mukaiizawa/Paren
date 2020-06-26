@@ -130,13 +130,6 @@ DEFUN(set_assoc)
 
 // barray
 
-DEFUN(barray_p)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(object_type_p(argv->cons.car, BARRAY));
-  return TRUE;
-}
-
 DEFUN(barray_new)
 {
   int size;
@@ -144,6 +137,48 @@ DEFUN(barray_new)
   if (!bi_sint(argv->cons.car, &size)) return FALSE;
   *result = gc_new_barray(BARRAY, size);
   return TRUE;
+}
+
+DEFUN(barray_p)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  *result = object_bool(object_type_p(argv->cons.car, BARRAY));
+  return TRUE;
+}
+
+DEFUN(barray_nth)
+{
+  object o;
+  int i;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  o = argv->cons.car;
+  if (!bi_sint(argv->cons.cdr->cons.car, &i)) return FALSE;
+  switch (object_type(argv->cons.car)) {
+    case SYMBOL:
+    case KEYWORD:
+    case BARRAY:
+    case STRING:
+      if (i < 0 || i >= o->barray.size) return FALSE;
+      *result = sint(LC(o->barray.elt + i));
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
+DEFUN(barray_length)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  switch (object_type(argv->cons.car)) {
+    case SYMBOL:
+    case KEYWORD:
+    case BARRAY:
+    case STRING:
+      *result = gc_new_xint(argv->cons.car->barray.size);
+      return TRUE;
+    default:
+      return FALSE;
+  }
 }
 
 DEFUN(barray_copy)
@@ -172,6 +207,87 @@ DEFUN(barray_copy)
     return TRUE;
   }
   return FALSE;
+}
+
+DEFUN(barray_index)
+{
+  object o, p;
+  int b, s, e;
+  if (!bi_argc_range(argc, 4, 4)) return FALSE;
+  switch (object_type(argv->cons.car)) {
+    case SYMBOL:
+    case KEYWORD:
+    case BARRAY:
+    case STRING:
+      o = argv->cons.car;
+      break;
+    default:
+      return FALSE;
+  }
+  p = NULL;
+  switch (object_type((argv = argv->cons.cdr)->cons.car)) {
+    case SINT:
+      b = sint_val(argv->cons.car);
+      if (!byte_p(b)) return FALSE;
+      break;
+    case SYMBOL:
+    case KEYWORD:
+    case BARRAY:
+    case STRING:
+      p = argv->cons.car;
+      if (o->barray.size < p->barray.size) {
+        *result = object_nil;
+        return TRUE;
+      }
+      break;
+    default:
+      return FALSE;
+  }
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
+  if (!bi_sint(argv->cons.cdr->cons.car, &e)) return FALSE;
+  if (s > e) return FALSE;
+  if (s < 0 || s >= o->barray.size) return FALSE;
+  if (e < 0 || e >= o->barray.size) return FALSE;
+  if (p == NULL) {
+    while (s <= e) {
+      if (LC(o->barray.elt + s) == b) {
+        *result = sint(s);
+        return TRUE;
+      }
+      s++;
+    }
+  } else {
+    while (s <= e) {
+      if (s + p->barray.size > o->barray.size) break;
+      if (memcmp(o->barray.elt + s, p->barray.elt, p->barray.size) == 0) {
+        *result = sint(s);
+        return TRUE;
+      }
+      s++;
+    }
+  }
+  *result = object_nil;
+  return TRUE;
+}
+
+DEFUN(barray_unmatch_index)
+{
+  int i, oi, pi, size;
+  object o, p;
+  if (!bi_argc_range(argc, 5, 5)) return FALSE;
+  if (!bi_arg_barray(argv->cons.car, &o)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &oi)) return FALSE;
+  if (!bi_arg_barray((argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (oi + size > o->barray.size) return FALSE;
+  if (pi + size > p->barray.size) return FALSE;
+  for(i = 0; i < size; i++) {
+    if (LC(o->barray.elt + oi + i) != LC(p->barray.elt + pi + i)) break;
+  }
+  if (i == size) *result = object_nil;
+  else *result = gc_new_xint(oi + i);
+  return TRUE;
 }
 
 DEFUN(to_barray)
@@ -325,26 +441,6 @@ static int string_nth_index(object o, int n, int *i, int *size)
     *i += *size;
     n--;
   }
-  return TRUE;
-}
-
-DEFUN(barray_unmatch_index)
-{
-  int i, oi, pi, size;
-  object o, p;
-  if (!bi_argc_range(argc, 5, 5)) return FALSE;
-  if (!bi_arg_barray(argv->cons.car, &o)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &oi)) return FALSE;
-  if (!bi_arg_barray((argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (oi + size > o->barray.size) return FALSE;
-  if (pi + size > p->barray.size) return FALSE;
-  for(i = 0; i < size; i++) {
-    if (LC(o->barray.elt + oi + i) != LC(p->barray.elt + pi + i)) break;
-  }
-  if (i == size) *result = object_nil;
-  else *result = gc_new_xint(oi + i);
   return TRUE;
 }
 
@@ -570,7 +666,7 @@ DEFUN(nth)
       *result = o->array.elt[i];
       return TRUE;
     case BARRAY:
-      *result = gc_new_xint((unsigned char)o->barray.elt[i]);
+      *result = gc_new_xint(LC(o->barray.elt + i));
       return TRUE;
     case STRING:
       return nth_string(o, i, result);

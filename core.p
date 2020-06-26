@@ -177,19 +177,9 @@
           (cons begin (cdr body))
           val)))
 
-(macro with ((k v) :rest body)
-  ; Like let, bind the symbol k with v and then evaluate the body sequentially.
-  ; Returns k;
-  (list let (list k v)
-        (cons 'begin0 (cons k body))))
-
 (macro when (test :rest body)
   ; Evaluate the specified test and if it is not nil then evaluate each of the specified body.
   (list if test (cons begin body)))
-
-(macro unless (test :rest body)
-  ; Evaluate the specified test and if it is nil then evaluate each of the specified body.
-  (list if (list nil? test) (cons begin body)))
 
 (macro or (:rest args)
   ; Evaluate each of the specified args, one at a time, from left to right.
@@ -653,6 +643,13 @@
   ; If key is supplied, the element is evaluated with the key function at first and then compared.
   (car (find-cons f l)))
 
+(function remove (f l)
+  (let (acc nil)
+    (dolist (x l)
+      (if (nil? (f x))
+          (push! acc x)))
+    (reverse! acc)))
+
 (function all-satisfy? (f l)
   ; Returns true if all element of the specified list l returns a not nil value which evaluates as an argument to the specified function f.
   ; Otherwise returns nil.
@@ -746,32 +743,20 @@
     (dolist (arg args)
       (if arg (write arg :stream ms)))))
 
-'todo
-(function string->list (s delimiter)
-  (->list s))
-; (function string->list (s delimiter)
-;   ; Returns a list delimited by the specified delimiter.
-;   (let (s (->byte-array s) delimiter (->byte-array delimiter) match nil acc nil)
-;     (while (<- match (byte-array-index s delimiter))
-;       (<- acc (cons (subseq
-;     (let (rec (lambda (s acc)
-;                 (let (match )
-;                   (if match (begin
-;                               (push! acc (byte-array->string
-;                                            (byte-array-slice s 0 match)))
-;                               (if (<= (+ match (length delimiter))
-;                                       (length s))
-;                                   (rec (byte-array-slice
-;                                          s
-;                                          (+ match (length delimiter))
-;                                          (length s))
-;                                        acc)
-;                                   (begin (push! acc s)
-;                                          (reverse! acc))))
-;                       (begin 
-;                         (push! acc s)
-;                         (reverse! acc))))))
-;       (rec s nil))))
+(function string->list (s delim)
+  ; Returns a list of strings s delimited by delimiter.
+  ;     (string->list "a/a", "/") <=> '("a" "a")
+  ;     (string->list "a/", "/") <=> '("a" "")
+  ;     (string->list "/a", "/") <=> '("" "a")
+  ;     (string->list "/", "/") <=> '("" "")
+  ;     (string->list "aaa", "") <=> Error
+  (let (acc nil i 0 pos nil slen (byte-array-length s) dlen (byte-array-length delim) e (-- slen))
+    (if (= dlen 0) (error "delimiter must not be the empty string"))
+    (while (and (<= i e) (<- pos (byte-array-index s delim i e)))
+      (push! acc (subseq s i pos))
+      (<- i (+ pos dlen)))
+    (push! acc (subseq s i slen))
+    (reverse! acc)))
 
 ; number
 
@@ -798,7 +783,7 @@
 
 (function byte? (x)
   ; Returns true if the specified x is integer and between 0 and 255.
-  (and (integer? x ) (<= 0 x 255)))
+  (and (integer? x) (<= 0 x 255)))
 
 (function unsigned-integer? (x)
   ; Returns true if the specified x is integer and zero or positive.
@@ -896,8 +881,24 @@
 ; byte-array
 
 (builtin-function byte-array (size)
-  ; Create a byte-array of size the specified size
+  ; Create a byte-array of size the specified size.
+  ; The element is cleared to 0.
   )
+
+(builtin-function byte-array? (x)
+  ; Returns true if the argument is a byte-array.
+  (assert (byte-array? (byte-array 3)))
+  (assert (not (byte-array? (array 3)))))
+
+(builtin-function byte-array-nth (ba i)
+  ; Consider the argument as a byte string and get the i-th element.
+  (assert (= (byte-array-nth "012" 1) 0x31)))
+
+(builtin-function byte-array-index (ba x s e)
+  ; Returns the position of the specified byte x in the s-th to e-th elements of the specified byte-array ba.
+  ; You can also specify a byte-array for x, in which case the location of the first occurrence of the partial byte-array is returned.
+  (assert (= (byte-array-index "012" 0x31 0 2) 1))
+  (assert (= (byte-array-index "012" "12" 0 2) 1)))
 
 (builtin-function byte-array-copy (src src-i dst dst-i size)
   ; Copy size elements from the `src-i`th element of the src byte-array to the dst byte-array `dst-i`th element and beyond.
@@ -905,11 +906,13 @@
   ; Even if the areas to be copied overlap, it operates correctly.
   )
 
-(builtin-function byte-array? (x)
-  ; Returns true if the argument is a byte-array.
-  (assert (byte-array? (byte-array 3)))
-  (assert (not (byte-array? nil)))
-  (assert (not (byte-array? (array 3)))))
+(builtin-function ->byte-array (x)
+  ; Convert argument to byte-array and return.
+  )
+
+(builtin-function byte-array->string (ba)
+  ; Convert byte-array to string and return.
+  )
 
 ; array
 
@@ -946,7 +949,7 @@
             (return nil)))
       (let (len (length x))
         (and (= len (length y))
-             (not (byte-array-unmatch-index x 0 y 0 (length x)))))))
+             (not (byte-array-unmatch-index x 0 y 0 len))))))
 
 (function copyseq (x)
   ; Create and return a duplicate of the specified list l.
@@ -1008,21 +1011,21 @@
           getter (string->symbol (concat "&" field))
           setter (string->symbol (concat "&" field "!"))
           verifier (list if (list not (list 'object? receiver))
-                       (list 'error "require object")))
+                             (list 'error "require object")))
       (list begin
-            (unless (bound? getter)
-              (list 'function getter (list receiver)
-                    :method
-                    verifier
-                    (list 'assoc receiver key)))
-            (unless (bound? setter)
-              (list 'function setter (list receiver val)
-                    :method
-                    verifier
-                    (list begin (list 'assoc! receiver key val) receiver)))))))
+            (list if (list 'not (list 'bound? (list quote getter)))
+                  (list 'function getter (list receiver)
+                        :method
+                        verifier
+                        (list 'assoc receiver key)))
+            (list if (list 'not (list 'bound? (list quote setter)))
+                  (list 'function setter (list receiver val)
+                        :method
+                        verifier
+                        (list begin (list 'assoc! receiver key val) receiver)))))))
 
 (macro make-method-dispatcher (method-sym)
-  (unless (bound? method-sym)
+  (when (not (bound? method-sym))
     (with-gensyms (receiver args)
       (list 'function method-sym (list receiver :rest args)
             :method
@@ -1157,7 +1160,7 @@
   )
 
 (class Interrrupt (Exception)
-  ; Dispatched when the user presses the interrupt key (usually Ctrl-c or Delete).
+  ; Dispatched when the user presses the interrupt key (usually Ctrl-c).
   )
 
 (class Error (Exception)
@@ -1165,6 +1168,118 @@
 
 (class NotImplementedError (Error)
   )
+
+(class Path ()
+  ; A class that handles a file path.
+  ; Construct with Path.of function.
+  ; It should not be construct by new.
+  ; The corresponding file does not have to exist.
+  ; You can read and write files to the corresponding path as needed.
+  path)
+
+(global-symbol Path.separator "/"
+  ; Separator of path.
+  ; Always use `/` for the string representation of the path regardless of the host OS.
+  )
+
+(function Path.of (path-name)
+  ; Constructs and returns the path object corresponding to path-name.
+  ; Internally it just holds the string path-name as a list of filenames.
+  ;     (Path.of "foo/bar/buzz") -- ("foo" "bar" "buzz")
+  ;     (Path.of "/etc") -- ("/" "etc")
+  ; The first `~` expands to the home directory using the environment variable.
+  ; Any `~` other than the beginning is ignored.
+  ;     (Path.of "~/.vimrc") <=> ("home" "foo" ".vimrc")
+  ;     (Path.of "~/~.vimrc") <=> ("home" "foo" ".vimrc")
+  ; All characters `\` in path-name are replaced with `/` for processing.
+  ;     (Path.of "C:\\foo") <=> ("C:" "foo")
+  ; `.` and `..` included in path-name are not treated specially.
+  ; Path class places the highest priority on keeping the implementation simple, and assumes that these features are implemente where necessary.
+  ;     (Path.of "foo/bar/../buzz") <=> ("foo" "bar" ".." "buzz")
+  ; Two or more consecutive `/`s or trailing `/`s are ignored.
+  ;     (Path.of "foo//bar/") <=> ("foo" "bar")
+  (let (c nil path nil first-letter (nth path-name 0) root? nil)
+    (if (seqeq? first-letter "~")
+        (<- path-name (concat (if (eq? OS.name :windows)
+                                  (concat (OS.getenv "HOMEDRIVE") (OS.getenv "HOMEPATH"))
+                                  (OS.getenv "HOME"))
+                              Path.separator path-name))
+        (seqeq? first-letter Path.separator)
+        (<- root? true))
+    (<- path (remove (lambda (file-name)
+                       (or (seqeq? file-name "") (seqeq? file-name "~")))
+                     (string->list
+                       (with-memory-stream (out)
+                         (with-memory-stream (in path-name)
+                           (while (neq? (<- c (read-char in)) :EOF)
+                             (if (seqeq? c "\\") (write-string Path.separator out)
+                                 (write-string c out)))))
+                       Path.separator)))
+    (if root? (<- path (cons Path.separator path)))
+    (&path! (.new Path) path)))
+
+(function Path.getcwd ()
+  ; Returns the path corresponding to the current directory.
+  (Path.of (OS.getcwd)))
+
+(method Path .name ()
+  ; Returns file name.
+  (last (&path self)))
+
+(method Path .parent ()
+  ; Returns the parent path, or nil if this path does not have a parent.
+  ; When used for relative path, non-root directory may return nil.
+  (&path! (.new Path) (butlast (&path self))))
+
+(method Path .resolve (path)
+  ; Resolve the given path against this path.
+  ; If the argument is a character string, convert it to a path object before processing.
+  ; If the path parameter is an absolute path then this method trivially returns path
+  ; Otherwise this method concatenate this path and the speciifed path.
+  ; `.` and `..` included in path-name are not treated specially.
+  (if (string? path) (<- path (Path.of path)))
+  (if (.absolute? path) path
+      (Path.of (concat (.to-s self) Path.separator (.to-s path)))))
+
+(method Path .absolute? ()
+  ; Returns true if this path regarded as the absolute path.
+  (let (first-file (car (&path self)))
+    (if (eq? OS.name :windows)
+        (and (= (length first-file) 2)
+             (byte-array-index first-file ":" 1 1))
+        (seqeq? first-file Path.separator))))
+
+(method Path .relative? ()
+  ; Same as (not (.absolute? self))
+  (not (.absolute? self)))
+
+(method Path .to-s ()
+  (reduce (lambda (acc rest)
+            (concat (if (seqeq? acc Path.separator) "" acc) Path.separator rest))
+          (&path self)))
+
+(method Path .open (mode)
+  (catch (Error (lambda (e)
+                  (throw (.message e (concat "open failed " (.to-s self))))))
+    (.init (.new FileStream) (OS.fopen (.to-s self) mode))))
+
+(method Path .open-read ()
+  ; Returns a stream that reads the contents of the receiver.
+  (.open self 0))
+
+(method Path .open-write ()
+  ; Returns a stream to write to the contents of the receiver.
+  (.open self 1))
+
+(method Path .open-append ()
+  ; Returns a stream to append to the receiver's content.
+  (.open self 2))
+
+(method Path .open-update ()
+  ; Returns a stream that updates the contents of the receiver.
+  ; The read/write position is at the beginning of the file.
+  ; The file size cannot be reduced.
+  (.open self 3))
 
 ;; stream I/O
 
@@ -1220,7 +1335,7 @@
 (method Stream .read ()
   ; Read expression from the specified stream.
   ; Returns :EOF if eof reached.
-  (.parse (.init (.new ParenParser) :stream self)))
+  (.parse (.init (.new ParenParser) self)))
 
 (method Stream .write-byte (:rest args)
   ; Write 1byte to stream.
@@ -1231,7 +1346,8 @@
   ; Write string to stream.
   (let (ba (->byte-array s))
     (dotimes (i (length ba))
-      (.write-byte self (nth ba i)))))
+      (.write-byte self (nth ba i)))
+    self))
 
 (method Stream .write-integer (n :key (radix 10))
   ; Write integer to stream.
@@ -1390,7 +1506,7 @@
 
 (method MemoryStream .write-byte (byte)
   (let (wrpos (&wrpos self))
-    (unless (< wrpos (&buf-size self)) (.extend self 1))
+    (if (not (< wrpos (&buf-size self))) (.extend self 1))
     (nth! (&buf self) wrpos byte)
     (&wrpos! self (++ wrpos))))
 
@@ -1423,7 +1539,7 @@
   ; It should not be construct by new.
   fp)
 
-(method FileStream .init (:key fp)
+(method FileStream .init (fp)
   (&fp! self fp))
 
 (method FileStream .read-byte ()
@@ -1449,93 +1565,45 @@
 (method FileStream .close ()
   (OS.fclose (&fp self)))
 
-(class File ()
-  ; Means a file or directory and provides a series of functions such as file information acquisition, creation and deletion, and stream construction.
-  ; Use '/' to separate path names regardless of the host OS.
-  path)
-
-(method File .init (:rest file-names)
-  ; Initialize by passing the specified list of file-names that make up this path.
-  (&path! self (string->list (reduce concat file-names) "/"))
-  self)
-
-(method File .parent ()
-  ; Returns the parent path, or nil if this path does not have a parent.
-  (&path! (.init (.new File)) (butlast (&path self))))
-
-(method File .resolve (:rest body)
-  ; Resolve the given path against this path.
-  (&path! (.new File) (concat (&path self) (string->list (reduce concat body) "/"))))
-
-(method File .file-name ()
-  ; Resolve file name of receiver.
-  (last (&path self)))
-
-(method File .to-s ()
-  (reduce (lambda (acc rest) (concat acc "/" rest)) (&path self)))
-
-(method File .open (mode)
-  (catch (Error (lambda (e)
-                  (throw (.message e (concat "open failed " (.to-s self))))))
-    (.init (.new FileStream) :fp (OS.fopen (.to-s self) mode))))
-
-(method File .open-read ()
-  ; Returns a stream that reads the contents of the receiver.
-  (.open self 0))
-
-(method File .open-write ()
-  ; Returns a stream to write to the contents of the receiver.
-  (.open self 1))
-
-(method File .open-append ()
-  ; Returns a stream to append to the receiver's content.
-  (.open self 2))
-
-(method File .open-update ()
-  ; Returns a stream that updates the contents of the receiver.
-  ; The read/write position is at the beginning of the file.
-  ; The file size cannot be reduced.
-  (.open self 3))
-
 (class AheadReader ()
   ; A one-character look-ahead reader.
   ; While prefetching one character at a time from a character string or Reader, if necessary, cut out a part as a token.
   ; Can be used as a syllable reader or lexical analyzer.
-  stream next buf)
+  stream next token)
 
-(method AheadReader .init (:key string stream)
-  (when string
-    (<- stream (.write-string (.new MemoryStream) string)))
-  (if (not (is-a? (<- stream (or stream (dynamic $stdin))) Stream))
-      (error "require instance of Stream class"))
+(method AheadReader .init (stream)
+  (if (string? stream) (<- stream (.write-string (.new MemoryStream) stream))
+      (nil? stream) (<- stream (dynamic $stdin)))
   (&stream! self stream)
-  (&next! self (.read-byte stream))
-  (&buf! self (.new MemoryStream))
-  self)
+  (&next! self (.read-char stream))
+  (&token! self (.new MemoryStream)))
 
 (method AheadReader .next ()
-  ; Returns a pre-read Char type character.
+  ; Returns a pre-read character.
   (&next self))
 
-(method AheadReader .eof? ()
-  ; Returns true if eof reached.
-  (= (&next self) -1))
-
-(method AheadReader .digit? ()
-  ; Returns true if eof reached.
-  (and (not (.eof? self)) (ascii-digit? (&next self))))
-
-(method AheadReader .numeric-alpha? ()
-  ; Returns true if next character is digit or alphabetic.
-  (and (not (.eof? self))
-       (or (.digit? self)
-           (ascii-alpha? (&next self)))))
+(method AheadReader .next-byte ()
+  ; Returns next character as a byte.
+  (assert (.ascii? self))
+  (byte-array-nth (&next self) 0))
 
 (method AheadReader .skip ()
   ; Skip next character and returns it.
   (if (.eof? self) (error "EOF reached"))
   (begin0 (&next self)
-          (&next! self (.read-byte (&stream self)))))
+          (&next! self (.read-char (&stream self)))))
+
+(method AheadReader .skip-byte ()
+  ; Skip as a byte.
+  (assert (.ascii? self))
+  (byte-array-nth (.skip self) 0))
+
+(method AheadReader .skip-line ()
+  (while (and (not (.eof? self))
+              (or (not (.ascii? self))
+                  (/= (.next-byte self) 0x0a)))
+    (.skip self))
+  self)
 
 (method AheadReader .get ()
   ; Append next character to token and returns it.
@@ -1543,37 +1611,62 @@
     (.put self c)
     c))
 
-(method AheadReader .put (b)
-  ; Put the specified byte b to the end of the token regardless of the stream.
-  (.write-byte (&buf self) b))
+(method AheadReader .put (o)
+  ; Put the o to the end of the token regardless of the stream.
+  (if (byte? o) (.write-byte (&token self) o)
+      (.write-string (&token self) o)))
 
 (method AheadReader .token ()
   ; Returns the token string currently cut out.
-  (.to-s (&buf self)))
+  (.to-s (&token self)))
 
 (method AheadReader .reset ()
   ; Reset token and returns self.
-  (.reset (&buf self))
+  (.reset (&token self))
   self)
+
+(method AheadReader .ascii? ()
+  ; Returns true, if next character is a single byte character.
+  (and (not (.eof? self))
+       (< (byte-array-nth (&next self) 0) 0x80)))
+
+(method AheadReader .eof? ()
+  ; Returns true if eof reached.
+  (eq? (&next self) :EOF))
+
+(method AheadReader .alpha? ()
+  ; Returns true if next character is alphabetic.
+  (and (.ascii? self) (ascii-alpha? (.next-byte self))))
+
+(method AheadReader .digit? ()
+  ; Returns true if next character is digit.
+  (and (.ascii? self) (ascii-digit? (.next-byte self))))
+
+(method AheadReader .numeric-alpha? ()
+  ; Returns true if next character is digit or alphabetic.
+  (and (.ascii? self)
+       (let (b (.next-byte self))
+         (or (ascii-digit? b)
+             (ascii-alpha? b)))))
 
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
   ; Returns self.
-  (while (and (ascii-space? (&next self)) (not (.eof? self)))
+  (while (and (.ascii? self) (ascii-space? (.next-byte self)))
     (.skip self))
   self)
 
 (method AheadReader .skip-sign ()
   (let (next (&next self))
-    (if (= next 0x2b) (begin (.skip self) nil)
-        (= next 0x2d) (begin (.skip self) true)
+    (if (seqeq? next "+") (begin (.skip self) nil)
+        (seqeq? next "-") (begin (.skip self) true)
         nil)))
 
 (method AheadReader .skip-unsigned-integer ()
-  (if (not (ascii-digit? (&next self))) (error "missing digits")
+  (if (not (.digit? self)) (error "missing digits")
       (let (val 0)
         (while (.digit? self)
-          (<- val (+ (* val 10) (ascii->digit (.skip self)))))
+          (<- val (+ (* val 10) (ascii->digit (.skip-byte self)))))
         val)))
 
 (method AheadReader .skip-integer ()
@@ -1583,18 +1676,18 @@
 
 (method AheadReader .skip-unsigned-number ()
   (let (val (.skip-unsigned-integer self))
-    (if (= (&next self) 0x78)
+    (if (seqeq? (&next self) "x")
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
           (.skip self)
           (if (not (.numeric-alpha? self)) (error "missing lower or digits")
               (while (.numeric-alpha? self)
-                (<- val (+ (* val radix) (ascii->digit (.skip self) :radix radix))))))
-        (= (&next self) 0x2e)
+                (<- val (+ (* val radix) (ascii->digit (.skip-byte self) :radix radix))))))
+        (seqeq? (&next self) ".")
         (let (factor 0.1)
           (.skip self)
           (while (.digit? self)
-            (<- val (+ val (* factor (ascii->digit (.skip self))))
+            (<- val (+ val (* factor (ascii->digit (.skip-byte self))))
                 factor (/ factor 10)))
           (when (= (&next self) 0x65)
             (.skip self)
@@ -1611,23 +1704,21 @@
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (let (c (&next self))
-    (or (find (lambda (x) (= x c))
-              '(0x21 0x24 0x25 0x26 0x2a 0x2f 0x3c 0x3d 0x3e 0x3f 0x5f 0x2e))
-        (ascii-alpha? c))))
+  (and (.ascii? self)
+       (or (byte-array-index "!$%&*./<=>?_" (.next-byte self) 0 11)
+           (.alpha? self))))
 
 (method ParenLexer .identifier-sign? ()
-  (let (c (&next self))
-    (find (lambda (x) (= x c)) '(0x2b 0x2d))))
+  (and (.ascii? self)
+       (byte-array-index "+-" (.next-byte self) 0 1)))
 
 (method ParenLexer .identifier-trail? ()
   (or (.identifier-symbol-alpha? self)
       (.identifier-sign? self)
-      (ascii-digit? (&next self))))
+      (.digit? self)))
 
 (method ParenLexer .lex-comment ()
-  (while (/= (&next self) 0x0a) (.skip self))
-  (.lex self))
+  (.lex (.skip-line self)))
 
 (method ParenLexer .get-identifier-sign ()
   (when (or (.identifier-sign? self) (.identifier-symbol-alpha? self))
@@ -1646,9 +1737,9 @@
 
 (method ParenLexer .lex-sign ()
   (let (sign (.get self))
-    (if (ascii-digit? (&next self))
+    (if (.digit? self)
         (let (val (.skip-number self))
-          (list :number (if (= sign 0x2d) (- val) val)))
+          (list :number (if (seqeq? sign "-") (- val) val)))
         (list :symbol (string->symbol (.token (.get-identifier-sign self)))))))
 
 (method ParenLexer .lex-symbol ()
@@ -1660,21 +1751,21 @@
 
 (method ParenLexer .lex-string ()
   (.skip self)
-  (while (/= 0x22 (&next self))
+  (while (not (seqeq? (&next self) "\""))
     (if (.eof? self) (error "string not closed")
-        (/= (&next self) 0x5c) (.get self)
+        (not (seqeq? (&next self) "\\")) (.get self)
         (begin (.skip self)
                (let (c (.skip self))
-                 (if (= c 0x61) (.put self 0x07)
-                     (= c 0x62) (.put self 0x08)
-                     (= c 0x65) (.put self 0x1b)
-                     (= c 0x66) (.put self 0x0c)
-                     (= c 0x6e) (.put self 0x0a)
-                     (= c 0x72) (.put self 0x0d)
-                     (= c 0x74) (.put self 0x09)
-                     (= c 0x76) (.put self 0x0b)
-                     (= c 0x78) (.put self (+ (* 16 (ascii->digit (.skip self) :radix 16))
-                                              (ascii->digit (.skip self) :radix 16)))
+                 (if (seqeq? c "a") (.put self 0x07)
+                     (seqeq? c "b") (.put self 0x08)
+                     (seqeq? c "e") (.put self 0x1b)
+                     (seqeq? c "f") (.put self 0x0c)
+                     (seqeq? c "n") (.put self 0x0a)
+                     (seqeq? c "r") (.put self 0x0d)
+                     (seqeq? c "t") (.put self 0x09)
+                     (seqeq? c "v") (.put self 0x0b)
+                     (seqeq? c "x") (.put self (+ (* 16 (ascii->digit (.skip-byte self) :radix 16))
+                                                  (ascii->digit (.skip-byte self) :radix 16)))
                      (.put self c))))))
   (.skip self)
   (list :string (.token self)))
@@ -1683,21 +1774,21 @@
   (.skip-space (.reset self))
   (let (next (&next self))
     (if (.eof? self) '(:EOF)
-        (= next 0x22) (.lex-string self)
-        (= next 0x27) (begin (.skip self) '(:quote))
-        (= next 0x28) (begin (.skip self) '(:open-paren))
-        (= next 0x29) (begin (.skip self) '(:close-paren))
-        (= next 0x3a) (.lex-keyword self)
-        (= next 0x3b) (.lex-comment self)
-        (or (= next 0x2b) (= next 0x2d)) (.lex-sign self)
+        (seqeq? next "\"") (.lex-string self)
+        (seqeq? next "'") (begin (.skip self) '(:quote))
+        (seqeq? next "(") (begin (.skip self) '(:open-paren))
+        (seqeq? next ")") (begin (.skip self) '(:close-paren))
+        (seqeq? next ":") (.lex-keyword self)
+        (seqeq? next ";") (.lex-comment self)
+        (or (seqeq? next "+") (seqeq? next "-")) (.lex-sign self)
         (.digit? self) (list :number (.skip-number self))
         (.lex-symbol self))))
 
 (class ParenParser ()
   lexer token token-type)
 
-(method ParenParser .init (:key string stream)
-  (&lexer! self (.init (.new ParenLexer) :string string :stream stream))
+(method ParenParser .init (stream)
+  (&lexer! self (.init (.new ParenLexer) stream))
   self)
 
 (method ParenParser .scan ()
@@ -1770,11 +1861,8 @@
 (function with-open-mode (sym path mode body)
   (with-gensyms (gsym gpath)
     (list let (list gpath
-                    (list if (list string? path)
-                          (list '.init '(.new File) path)
+                    (list if (list string? path) (list 'Path.of path)
                           path))
-          (list if (list not (list is-a? gpath 'File))
-                (list error gpath " is not a path"))
           (list let (list gsym nil)
                 (list unwind-protect
                       (cons let (cons (list sym (list mode gpath))
@@ -1852,10 +1940,10 @@
 
 (function import (key)
   ; Load the file corresponding to the specified keyword.
-  ; Search the current directory and directories in the execution environment.
+  ; Search the $paren-home directory.
   ; Returns true if successfully loaded.
   (if (find (lambda (x) (eq? x key)) $import) true
-      (begin0 (load (string (keyword->symbol key) ".p"))
+      (begin0 (load (.resolve $paren-home (string (keyword->symbol key) ".p")))
               (push! $import key))))
 
 (function boot ()
@@ -1880,11 +1968,11 @@
   ; List of command line arguments.
   )
 
-(global-symbol $stdin (.init (.new FileStream) :fp (OS.fp 0))
+(global-symbol $stdin (.init (.new FileStream) (OS.fp 0))
   ; File stream object holding the standard input.
   )
 
-(global-symbol $stdout (.init (.new FileStream) :fp (OS.fp 1))
+(global-symbol $stdout (.init (.new FileStream) (OS.fp 1))
   ; File stream object holding the standard ouput.
   )
 
@@ -1897,7 +1985,7 @@
   ; A dummy encoding is an encoding for which character handling is not properly implemented.
   )
 
-(global-symbol $paren-home
+(global-symbol $paren-home (.parent (.resolve (Path.getcwd) core.p))
   ; Paren directory. Holds system files.
   )
 

@@ -193,7 +193,7 @@ static object parse_args(int argc, char *argv[])
 
 static void make_initial_objects(int argc, char *argv[])
 {
-  char *os_name, buf[MAX_STR_LEN];
+  char *os_name;
   object_nil = symbol_new("nil");
   object_true = symbol_new("true");
   object_toplevel = gc_new_env(object_nil);
@@ -214,10 +214,7 @@ static void make_initial_objects(int argc, char *argv[])
   object_Exception = symbol_new("Exception");
   object_Error = symbol_new("Error");
   bind_symbol(symbol_new("$args"), parse_args(argc, argv));
-  pf_getcwd(buf);
-  bind_symbol(symbol_new("$paren-home"), string_new(buf));
-  strcat(buf, "/core.p");
-  core_fn = xstrdup(buf);
+  bind_symbol(symbol_new("core.p"), string_new(core_fn));
 #if WINDOWS_P
   os_name = "windows";
 #elif OS_CODE == OS_LINUX
@@ -235,7 +232,14 @@ static void make_initial_objects(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+  char buf[MAX_STR_LEN];
   setbuf(stdout, NULL);
+  pf_exepath(argv[0], buf);
+#if !UNIX_P
+  *strrchr(buf, '.') = '\0';
+#endif
+  buf[strlen(buf) - strlen("paren")] = '\0';
+  core_fn = strcat(buf, "core.p");
   gc_init();
   make_initial_objects(argc, argv);
   object_boot = gc_new_lambda(object_toplevel, object_nil, load());
