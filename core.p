@@ -599,10 +599,10 @@
 
 (function butlast (l)
   ; Returns a list excluding the last element of the specified list l.
-  (let (rec (lambda (rest acc)
-              (if (cdr rest) (rec (cdr rest) (cons (car rest) acc))
-                  acc)))
-    (rec l nil)))
+  (let (rec (lambda (rest)
+              (if (cdr rest) (cons (car rest) (rec (cdr rest)))
+                  nil)))
+    (rec l)))
 
 (function .. (s e :opt (step 1))
   ; Returns a list with the specified step increments from the specified integer s to the specified integer e.

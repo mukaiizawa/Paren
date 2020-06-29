@@ -47,23 +47,13 @@ DEFUN(os_fopen)
   char *fn;
   int mode;
   FILE *fp;
-  object ofn;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!object_type_p(ofn = argv->cons.car, STRING)) {
-    ip_mark_error("illegal file name");
-    return FALSE;
-  }
-  fn = ofn->barray.elt;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &mode)) return FALSE;
-  if (0 > mode || mode >= sizeof(mode_table) / sizeof(char *))
-    ip_mark_error("illegal open mode");
-  else if ((fp = fopen(fn, mode_table[mode])) == NULL)
-    ip_mark_error("cannot open file");
-  else {
-    *result = gc_new_xint((intptr_t) fp);
-    return TRUE;
-  }
-  return FALSE;
+  if ((fn = bi_string(argv)) == NULL) return FALSE;
+  if (!bi_sint(argv->cons.cdr->cons.car, &mode)) return FALSE;
+  if (0 > mode || mode >= sizeof(mode_table) / sizeof(char *)) return FALSE;
+  if ((fp = fopen(fn, mode_table[mode])) == NULL) return FALSE;
+  *result = gc_new_xint((intptr_t) fp);
+  return TRUE;
 }
 
 DEFUN(os_fgetc)
@@ -117,7 +107,7 @@ DEFUN(os_fread)
   int from, size;
   FILE *fp;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
-  if (!object_type_p((o = argv->cons.car), BARRAY)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, BARRAY, &o)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!(0 <= from && from + size <= o->barray.size)) return FALSE;
