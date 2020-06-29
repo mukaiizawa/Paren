@@ -998,7 +998,6 @@
 
 (builtin-function byte-array-copy (src src-i dst dst-i size)
   ; Copy size elements from the `src-i`th element of the src byte-array to the dst byte-array `dst-i`th element and beyond.
-  ; The copy source and the copy destination may be the same array.
   ; Even if the areas to be copied overlap, it operates correctly.
   )
 
@@ -1010,8 +1009,8 @@
   ; Convert argument to byte-array and return.
   )
 
-(builtin-function byte-array->string (ba)
-  ; Convert byte-array to string and return.
+(builtin-function byte-array->string (ba i size)
+  ; Returns string of length size from the i'th element of byte-array ba.
   )
 
 ; array
@@ -1572,6 +1571,12 @@
     (byte-array-at! (&buf self) wrpos byte)
     (&wrpos! self (++ wrpos))))
 
+(method MemoryStream .write-string (s)
+  (let (pos (&wrpos self) size (byte-array-length s))
+    (.extend self size)
+    (byte-array-copy s 0 (&buf self) pos size)
+    (&wrpos! self (+ pos size))))
+
 (method MemoryStream .read-byte ()
   (let (rdpos (&rdpos self))
     (if (= rdpos (&wrpos self)) -1
@@ -1588,9 +1593,7 @@
 (method MemoryStream .to-s ()
   (let (size (&wrpos self))
     (if (= size 0) ""
-        (let (ba (byte-array size))
-          (byte-array-copy (&buf self) 0 ba 0 size)
-          (byte-array->string ba)))))
+        (byte-array->string (&buf self) 0 size))))
 
 (method MemoryStream .reset ()
   ; Empty the contents of the stream.
@@ -1616,7 +1619,7 @@
   (OS.fputc byte (&fp self))
   self)
 
-(method FileStream .write-string(o)
+(method FileStream .write-string (o)
   (OS.fwrite o 0 (byte-array-length o) (&fp self)))
 
 (method FileStream .seek (offset)
@@ -1908,7 +1911,8 @@
 (function write-string (s :opt stream)
   ; Write the specified stirng s to the specified stream.
   (let (stream (or stream (dynamic $stdout)))
-    (.write-string stream s)))
+    (.write-string stream s)
+    s))
 
 (macro with-memory-stream ((ms :opt s) :rest body)
   ; Create memory stream context.

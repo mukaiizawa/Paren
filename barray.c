@@ -64,44 +64,20 @@ DEFUN(barray_length)
 
 DEFUN(barray_copy)
 {
-  int so, sp, size;
+  int oi, pi, size;
   object o, p;
   if (!bi_argc_range(argc, 5, 5)) return FALSE;
-  switch (object_type(argv->cons.car)) {
-    case BARRAY:
-    case STRING:
-      o = argv->cons.car;
-      break;
-    default:
-      return FALSE;
-  }
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &so)) return FALSE;
-  switch (object_type((argv = argv->cons.cdr)->cons.car)) {
-    case BARRAY:
-    case STRING:
-      p = argv->cons.car;
-      break;
-    default:
-      return FALSE;
-  }
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &sp)) return FALSE;
+  if (!bi_arg_barray(argv->cons.car, &o)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &oi)) return FALSE;
+  if (!bi_arg_type((argv = argv->cons.cdr)->cons.car, BARRAY, &p)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (so < 0)
-    ip_mark_error("source array index must be positive");
-  else if (sp < 0)
-    ip_mark_error("destination array index must be positive");
-  else if (size <= 0)
-    ip_mark_error("copy size must be positive");
-  else if ((so + size) > o->barray.size)
-    ip_mark_error("source array index out of bounds exception");
-  else if ((sp + size) > p->barray.size)
-    ip_mark_error("destination array index out of bounds exception");
-  else {
-    memmove(p->barray.elt + sp, o->barray.elt + so, size);
-    *result = p;
-    return TRUE;
-  }
-  return FALSE;
+  if (size < 0) return FALSE;
+  if (oi < 0 || (oi + size) > o->barray.size) return FALSE;
+  if (pi < 0 || (pi + size) > p->barray.size) return FALSE;
+  memmove(p->barray.elt + pi, o->barray.elt + oi, size);
+  *result = p;
+  return TRUE;
 }
 
 DEFUN(barray_index)
@@ -187,10 +163,14 @@ DEFUN(to_barray)
 
 DEFUN(barray_to_string)
 {
+  int i, size;
   object o;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, BARRAY, &o)) return FALSE;
-  *result = gc_new_barray_from(STRING, o->barray.elt, o->barray.size);
+  if (!bi_argc_range(argc, 3, 3)) return FALSE;
+  if (!bi_arg_barray(argv->cons.car, &o)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
+  if (!bi_sint(argv->cons.cdr->cons.car, &size)) return FALSE;
+  if (i < 0 || i + size > o->barray.size) return FALSE;
+  *result = gc_new_barray_from(STRING, o->barray.elt + i, size);
   return TRUE;
 }
 
