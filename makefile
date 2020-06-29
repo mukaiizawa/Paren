@@ -38,13 +38,13 @@ defsp=ip.c
 defsp.wk: $(defsp)
 	cat $+ | grep ^DEFSP>$@
 
-defun=ip.c bi.c seq.c number.c lambda.c os.c
+defun=ip.c bi.c array.c barray.c cons.c keyword.c lambda.c number.c string.c symbol.c os.c
 defun.wk: $(defun)
 	cat $+ | grep ^DEFUN>$@
 
-xc.a: std.o xsleep.o xarray.o xbarray.o xgetopt.o heap.o pf.o \
-	object.o gc.o lex.o splay.o st.o \
-	$(defsp:%.c=%.o) $(defun:%.c=%.o) 
+xc.a: std.o xsleep.o xarray.o xbarray.o xgetopt.o heap.o pf.o object.o gc.o lex.o splay.o st.o \
+	$(defsp:%.c=%.o) \
+	$(defun:%.c=%.o) 
 	ar -ru xc.a $+
 
 $(paren): paren.o xc.a

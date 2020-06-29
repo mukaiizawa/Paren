@@ -336,7 +336,7 @@
             (list <- name (cons lambda (cons args (expand-macro-all body)))))))
 
 (builtin-function eq? (x y)
-  ; Returns true if the specified x is same object.
+  ; Returns true if the specified x and y is same object.
   (assert (not (eq? 'x 'y 'z)))
   (assert (eq? 'x 'x 'x)))
 
@@ -554,6 +554,14 @@
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
   (reduce (lambda (x y) (string x delimiter y)) l))
 
+(function length (l)
+  ; Returns the length of the specified list l.
+  (let (i 0)
+    (while l
+      (<- i (++ i)
+          l (cdr l)))
+    i))
+
 (builtin-function last-cons (x)
   ; Returns the last cons to follow from the specified cons x.
   ; Error if x is not cons.
@@ -561,17 +569,40 @@
   (assert (nil? (last-cons nil)))
   (assert-error (last-cons 1)))
 
+(function nth (l n)
+  ; Get the the specified nth element of the specified list l.
+  ; If n is greater than the length of l, nil is returned.
+  (car (nthcdr l n)))
+
 (function nthcdr (l n)
   ; Get the the specified nth cons of the specified list l.
   ; If n is greater than the length of l, nil is returned.
-  (if (not (unsigned-integer? n)) (error "require unsigned integer"))
   (for (i 0) (< i n) (<- i (++ i))
     (<- l (cdr l)))
   l)
 
+(function first (x)
+  ; Same as (nth x 0)
+  (nth x 0))
+
+(function second (x)
+  ; Same as (nth x 1)
+  (nth x 1))
+
+(function third (x)
+  ; Same as (nth x 2)
+  (nth x 2))
+
+(function last (x)
+  ; Same as (nth x (-- (length x)))
+  (nth x (-- (length x))))
+
 (function butlast (l)
   ; Returns a list excluding the last element of the specified list l.
-  (subseq l 0 (-- (length l))))
+  (let (rec (lambda (rest acc)
+              (if (cdr rest) (rec (cdr rest) (cons (car rest) acc))
+                  acc)))
+    (rec l nil)))
 
 (function .. (s e :opt (step 1))
   ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
@@ -580,6 +611,18 @@
       (push! acc s)
       (<- s (+ s step)))
     (reverse! acc)))
+
+(function reverse (l)
+  ; Same as reverse except that it destructively modifies the argument list.
+  (let (acc nil)
+    (dolist (x l)
+      (<- acc (cons x acc)))
+    acc))
+
+(builtin-function reverse! (l)
+  ; Same as reverse except that it destructively modifies the argument list.
+  ; Generally faster than reverse.
+  )
 
 (function append-atom (l x)
   ; Returns a new list with the specified x appended to the end of the specified list l.
@@ -743,6 +786,31 @@
     (dolist (arg args)
       (if arg (write arg :stream ms)))))
 
+(builtin-function string? (x)
+  ; Returns true if the specified x is a string
+  (assert (string? ""))
+  (assert (string? "aaa"))
+  (assert (not (string? (byte-array 1)))))
+
+(function string-eq? (x y)
+  ; Same as (byte-array-eq? x y).
+  (byte-array-eq? x y))
+
+(function substring (s start :opt end)
+  ; Returns a string that is a substring of the specified string s.
+  ; The substring begins at the specified start and extends to the character at index end - 1.
+  ; Thus the length of the substring is `end - start`.
+  (let (len (string-length s))
+    (if (< start 0) (error "illegal start: " start)
+        (nil? end) (<- end len)
+        (> end len) (error "illegal end: " end))
+    (with-ahead-reader (ar s)
+      (dotimes (i len)
+        (if (>= i end) (break)
+            (>= i start) (.get ar)
+            (.skip ar)))
+      (.token ar))))
+
 (function string->list (s delim)
   ; Returns a list of strings s delimited by delimiter.
   ;     (string->list "a/a", "/") <=> '("a" "a")
@@ -753,10 +821,27 @@
   (let (acc nil i 0 pos nil slen (byte-array-length s) dlen (byte-array-length delim) e (-- slen))
     (if (= dlen 0) (error "delimiter must not be the empty string"))
     (while (and (<= i e) (<- pos (byte-array-index s delim i e)))
-      (push! acc (subseq s i pos))
+      (push! acc (substring s i pos))
       (<- i (+ pos dlen)))
-    (push! acc (subseq s i slen))
+    (push! acc (substring s i slen))
     (reverse! acc)))
+
+(function string-at (s i)
+  ; Returns the i-th character of string s.
+  (let (c nil)
+    (with-memory-stream (in s)
+      (dotimes (ci (++ i))
+        (if (eq? (<- c (read-char in)) :EOF)
+            (error "index outof bounds"))))
+    c))
+
+(function string-length (s)
+  ; Returns the number of characters in string s.
+  (let (length 0)
+    (with-memory-stream (in s)
+      (while (neq? (read-char in) :EOF)
+        (<- length (++ length))))
+    length))
 
 ; number
 
@@ -890,9 +975,20 @@
   (assert (byte-array? (byte-array 3)))
   (assert (not (byte-array? (array 3)))))
 
-(builtin-function byte-array-nth (ba i)
+(function byte-array-eq? (x y)
+  ; Returns true if the specified x is same object.
+  (let (len (byte-array-length x))
+    (and (= len (byte-array-length y))
+         (not (byte-array-unmatch-index x 0 y 0 len)))))
+
+(builtin-function byte-array-at (ba i)
   ; Consider the argument as a byte string and get the i-th element.
-  (assert (= (byte-array-nth "012" 1) 0x31)))
+  (assert (= (byte-array-at "012" 1) 0x31)))
+
+(builtin-function byte-array-at! (ba i v)
+  ; Consider the argument ba as a byte array, and substitute v at the i-th position.
+  ; Returns nil.
+  )
 
 (builtin-function byte-array-index (ba x s e)
   ; Returns the position of the specified byte x in the s-th to e-th elements of the specified byte-array ba.
@@ -904,6 +1000,10 @@
   ; Copy size elements from the `src-i`th element of the src byte-array to the dst byte-array `dst-i`th element and beyond.
   ; The copy source and the copy destination may be the same array.
   ; Even if the areas to be copied overlap, it operates correctly.
+  )
+
+(builtin-function byte-array-concat (x :rest args)
+  ; Concatenate each argument to byte-array x
   )
 
 (builtin-function ->byte-array (x)
@@ -926,58 +1026,9 @@
   (assert (not (array? nil)))
   (assert (not (array? (byte-array 3)))))
 
-; Sequential api
-;
-; Sequential API provides transparent operations on sequences(list, string, array, byte-array).
-
-(builtin-function length (x)
-  ; Returns the length of the specified sequence x
-  (assert (= (length nil) 0))
-  (assert (= (length '(1)) 1))
-  (assert (= (length (byte-array 2)) 2))
-  (assert (= (length (array 3)) 3))
-  (assert (= (length "ΣΠ") 2)))
-
-(function seqeq? (x y :key (test eq?))
-  ; Returns the ith element of a sequence.
-  ; If index is out of range, it is considered an error.
-  (if (and (list? x) (list? y))
-      (while true
-        (if (and (nil? x) (nil? y)) (return true)
-            (or (nil? x) (nil? y)) (return nil)
-            (test (car x) (car y)) (<- x (cdr x) y (cdr y))
-            (return nil)))
-      (let (len (length x))
-        (and (= len (length y))
-             (not (byte-array-unmatch-index x 0 y 0 len))))))
-
-(function copyseq (x)
-  ; Create and return a duplicate of the specified list l.
-  ; It is shallow copy.
-  (if (nil? x) nil
-      (subseq x 0 (length x))))
-
-(builtin-function nth (x i)
-  ; Returns the ith element of a sequence.
-  ; If index is out of range, it is considered an error.
-  (assert (= (nth nil 0) nil))
-  (assert (= (nth '(0 1) 0) 0)))
-
-(builtin-function nth! (x i v)
-  ; Replaces the element at the specified position in this list with the specified element v.
-  (assert (nth! '(0 1) 0 0)))
-
-(function first (x)
-  (nth x 0))
-
-(function last (x)
-  ; Returns the last element of the specified list l.
-  (nth x (-- (length x))))
-
-(builtin-function concat (x i)
-  ; Returns the ith element of a sequence.
-  ; If index is out of range, it is considered an error.
-  )
+(builtin-function array-length (x)
+  ; Returns the length of the specified array x.
+  (assert (= (array-length (array 3)) 3)))
 
 ; Paren object system
 ;
@@ -1008,8 +1059,8 @@
   (with-gensyms (receiver val)
     (let (key (symbol->keyword field)
           field (symbol->string field)
-          getter (string->symbol (concat "&" field))
-          setter (string->symbol (concat "&" field "!"))
+          getter (string->symbol (byte-array-concat "&" field))
+          setter (string->symbol (byte-array-concat "&" field "!"))
           verifier (list if (list not (list 'object? receiver))
                              (list 'error "require object")))
       (list begin
@@ -1046,7 +1097,7 @@
   ; Create class the specified cls-sym.
   (let (Object? (eq? cls-sym 'Object))
     (if (not (all-satisfy? symbol? fields)) (error "fields must be symbol")
-        (bound? cls-sym) (error (concat (symbol->string cls-sym) " already bound")))
+        (bound? cls-sym) (error (symbol->string cls-sym) " already bound"))
     (list begin0
           (list quote cls-sym)
           (list <- cls-sym (list quote (list :class 'Class
@@ -1058,7 +1109,7 @@
                 (map (lambda (field) (list 'make-accessor field)) fields)))))
 
 (macro method (cls-sym method-sym args :rest body)
-  (let (global-sym (concat cls-sym method-sym)
+  (let (global-sym (byte-array-concat cls-sym method-sym)
         quoted-global-sym (list quote global-sym)
         method-lambda (cons lambda (cons (cons 'self args) body)))
     (if (not (find-class cls-sym)) (error "class not found")
@@ -1143,7 +1194,7 @@
 (method Exception .to-s ()
   ; Returns a String representing the receiver.
   (let (class-name (symbol->string (&class self)) msg (.message self))
-    (if msg (concat class-name " -- " msg)
+    (if msg (byte-array-concat class-name " -- " msg)
         class-name)))
 
 (method Exception .stack-trace ()
@@ -1198,21 +1249,22 @@
   ;     (Path.of "foo/bar/../buzz") <=> ("foo" "bar" ".." "buzz")
   ; Two or more consecutive `/`s or trailing `/`s are ignored.
   ;     (Path.of "foo//bar/") <=> ("foo" "bar")
-  (let (c nil path nil first-letter (nth path-name 0) root? nil)
-    (if (seqeq? first-letter "~")
-        (<- path-name (concat (if (eq? OS.name :windows)
-                                  (concat (OS.getenv "HOMEDRIVE") (OS.getenv "HOMEPATH"))
-                                  (OS.getenv "HOME"))
-                              Path.separator path-name))
-        (seqeq? first-letter Path.separator)
+  (let (c nil path nil first-letter (string-at path-name 0) root? nil)
+    (if (string-eq? first-letter "~")
+        (<- path-name (byte-array-concat
+                        (if (eq? OS.name :windows)
+                            (byte-array-concat (OS.getenv "HOMEDRIVE") (OS.getenv "HOMEPATH"))
+                            (OS.getenv "HOME"))
+                        Path.separator path-name))
+        (string-eq? first-letter Path.separator)
         (<- root? true))
     (<- path (remove (lambda (file-name)
-                       (or (seqeq? file-name "") (seqeq? file-name "~")))
+                       (or (string-eq? file-name "") (string-eq? file-name "~")))
                      (string->list
                        (with-memory-stream (out)
                          (with-memory-stream (in path-name)
                            (while (neq? (<- c (read-char in)) :EOF)
-                             (if (seqeq? c "\\") (write-string Path.separator out)
+                             (if (string-eq? c "\\") (write-string Path.separator out)
                                  (write-string c out)))))
                        Path.separator)))
     (if root? (<- path (cons Path.separator path)))
@@ -1239,15 +1291,15 @@
   ; `.` and `..` included in path-name are not treated specially.
   (if (string? path) (<- path (Path.of path)))
   (if (.absolute? path) path
-      (Path.of (concat (.to-s self) Path.separator (.to-s path)))))
+      (Path.of (byte-array-concat (.to-s self) Path.separator (.to-s path)))))
 
 (method Path .absolute? ()
   ; Returns true if this path regarded as the absolute path.
   (let (first-file (car (&path self)))
     (if (eq? OS.name :windows)
-        (and (= (length first-file) 2)
+        (and (= (byte-array-length first-file) 2)
              (byte-array-index first-file ":" 1 1))
-        (seqeq? first-file Path.separator))))
+        (string-eq? first-file Path.separator))))
 
 (method Path .relative? ()
   ; Same as (not (.absolute? self))
@@ -1255,12 +1307,12 @@
 
 (method Path .to-s ()
   (reduce (lambda (acc rest)
-            (concat (if (seqeq? acc Path.separator) "" acc) Path.separator rest))
+            (byte-array-concat (if (string-eq? acc Path.separator) "" acc) Path.separator rest))
           (&path self)))
 
 (method Path .open (mode)
   (catch (Error (lambda (e)
-                  (throw (.message e (concat "open failed " (.to-s self))))))
+                  (throw (.message e (byte-array-concat "open failed " (.to-s self))))))
     (.init (.new FileStream) (OS.fopen (.to-s self) mode))))
 
 (method Path .open-read ()
@@ -1306,23 +1358,24 @@
               (< b1 0xc2) (throw illegal-utf8-error)
               (not (trail? (<- b2 (.read-byte self)))) (throw illegal-utf8-error)
               (< b1 0xe0) (begin (if (= (bit-and b1 0x3e) 0) (throw illegal-utf8-error))
-                                 (.write-byte (.write-byte ms b1) b2))
+                                 (.write-byte ms b1)
+                                 (.write-byte ms b2))
               (< b1 0xf0) (begin (<- b3 (.read-byte self))
                                  (if (or (and (= b1 0xe0) (= (bit-and b2 0x20) 0))
                                          (not (trail? b3)))
                                      (throw illegal-utf8-error))
-                                 (.write-byte
-                                   (.write-byte
-                                     (.write-byte ms b1) b2) b3))
+                                 (.write-byte ms b1)
+                                 (.write-byte ms b2)
+                                 (.write-byte ms b3))
               (< b1 0xf8) (begin (<- b3 (.read-byte self) b4 (.read-byte self))
                                  (if (or (not (trail? b3))
                                          (not (trail? b4))
                                          (and (= b1 0xf0) (= (bit-and b2 0x30) 0)))
                                      (throw illegal-utf8-error))
-                                 (.write-byte
-                                   (.write-byte
-                                     (.write-byte
-                                       (.write-byte ms b1) b2) b3) b4))
+                                 (.write-byte ms b1)
+                                 (.write-byte ms b2)
+                                 (.write-byte ms b3)
+                                 (.write-byte ms b4))
               (throw illegal-utf8-error))
           (.to-s ms))
         (throw (.message (.new NotImplementedError) "unsupport encoding")))))
@@ -1345,8 +1398,8 @@
 (method Stream .write-string (s)
   ; Write string to stream.
   (let (ba (->byte-array s))
-    (dotimes (i (length ba))
-      (.write-byte self (nth ba i)))
+    (dotimes (i (byte-array-length ba))
+      (.write-byte self (byte-array-at ba i)))
     self))
 
 (method Stream .write-integer (n :key (radix 10))
@@ -1404,12 +1457,21 @@
                 (.write-byte self 0x65)
                 (.write-integer self exp)))))))
 
+(method Stream .write-byte-array (ba)
+  (.write-byte self 0x23)
+  (.write-byte self 0x5b)
+  (dotimes (i (byte-array-length ba))
+    (if (/= i 0) (.write-byte self 0x20))
+    (.write self (byte-array-at ba i)))
+  (.write-byte self 0x5d)
+  self)
+
 (method Stream .write-array (a)
   (.write-byte self 0x23)
   (.write-byte self 0x5b)
-  (for (i 0) (< i (length a)) (<- i (++ i))
+  (dotimes (i (array-length a))
     (if (/= i 0) (.write-byte self 0x20))
-    (.write self (nth a i)))
+    (.write self (array-at a i)))
   (.write-byte self 0x5d)
   self)
 
@@ -1455,16 +1517,16 @@
                               (write-addr x "macro"))
                (function? x) (if readable? (write-operator x "lamdba")
                                  (write-addr x "lambda"))
-               (string? x) (if readable?  (begin (.write-byte self 0x22)
-                                                 (.write-string self x)
-                                                 (.write-byte self 0x22))
+               (string? x) (if readable? (begin (.write-byte self 0x22)
+                                                (.write-string self x)
+                                                (.write-byte self 0x22))
                                (.write-string self x))
                (symbol? x) (.write-string self (symbol->string x))
                (keyword? x) (begin
                               (.write-byte self 0x3a)
                               (.write-string self (symbol->string (keyword->symbol x))))
                (number? x) (.write-number self x)
-               (byte-array? x) (if readable? (.write-array self x)
+               (byte-array? x) (if readable? (.write-byte-array self x)
                                    (write-addr x "byte-array"))
                (array? x) (if readable? (.write-array self x)
                               (write-addr x "array"))
@@ -1507,13 +1569,13 @@
 (method MemoryStream .write-byte (byte)
   (let (wrpos (&wrpos self))
     (if (not (< wrpos (&buf-size self))) (.extend self 1))
-    (nth! (&buf self) wrpos byte)
+    (byte-array-at! (&buf self) wrpos byte)
     (&wrpos! self (++ wrpos))))
 
 (method MemoryStream .read-byte ()
   (let (rdpos (&rdpos self))
     (if (= rdpos (&wrpos self)) -1
-        (begin0 (nth (&buf self) rdpos)
+        (begin0 (byte-array-at (&buf self) rdpos)
                 (&rdpos! self (++ rdpos))))))
 
 (method MemoryStream .seek (offset)
@@ -1524,9 +1586,11 @@
   (&rdpos self))
 
 (method MemoryStream .to-s ()
-  (let (pos (&wrpos self))
-    (if (= pos 0) ""
-        (byte-array->string (subseq (&buf self) 0 pos)))))
+  (let (size (&wrpos self))
+    (if (= size 0) ""
+        (let (ba (byte-array size))
+          (byte-array-copy (&buf self) 0 ba 0 size)
+          (byte-array->string ba)))))
 
 (method MemoryStream .reset ()
   ; Empty the contents of the stream.
@@ -1553,8 +1617,7 @@
   self)
 
 (method FileStream .write-string(o)
-  (let (o (->byte-array o))
-    (OS.fwrite o 0 (length o) (&fp self))))
+  (OS.fwrite o 0 (byte-array-length o) (&fp self)))
 
 (method FileStream .seek (offset)
   (OS.fseek (&fp self) offset))
@@ -1585,7 +1648,7 @@
 (method AheadReader .next-byte ()
   ; Returns next character as a byte.
   (assert (.ascii? self))
-  (byte-array-nth (&next self) 0))
+  (byte-array-at (&next self) 0))
 
 (method AheadReader .skip ()
   ; Skip next character and returns it.
@@ -1596,7 +1659,7 @@
 (method AheadReader .skip-byte ()
   ; Skip as a byte.
   (assert (.ascii? self))
-  (byte-array-nth (.skip self) 0))
+  (byte-array-at (.skip self) 0))
 
 (method AheadReader .skip-line ()
   (while (and (not (.eof? self))
@@ -1628,7 +1691,7 @@
 (method AheadReader .ascii? ()
   ; Returns true, if next character is a single byte character.
   (and (not (.eof? self))
-       (< (byte-array-nth (&next self) 0) 0x80)))
+       (< (byte-array-at (&next self) 0) 0x80)))
 
 (method AheadReader .eof? ()
   ; Returns true if eof reached.
@@ -1658,8 +1721,8 @@
 
 (method AheadReader .skip-sign ()
   (let (next (&next self))
-    (if (seqeq? next "+") (begin (.skip self) nil)
-        (seqeq? next "-") (begin (.skip self) true)
+    (if (string-eq? next "+") (begin (.skip self) nil)
+        (string-eq? next "-") (begin (.skip self) true)
         nil)))
 
 (method AheadReader .skip-unsigned-integer ()
@@ -1676,14 +1739,14 @@
 
 (method AheadReader .skip-unsigned-number ()
   (let (val (.skip-unsigned-integer self))
-    (if (seqeq? (&next self) "x")
+    (if (string-eq? (&next self) "x")
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
           (.skip self)
           (if (not (.numeric-alpha? self)) (error "missing lower or digits")
               (while (.numeric-alpha? self)
                 (<- val (+ (* val radix) (ascii->digit (.skip-byte self) :radix radix))))))
-        (seqeq? (&next self) ".")
+        (string-eq? (&next self) ".")
         (let (factor 0.1)
           (.skip self)
           (while (.digit? self)
@@ -1698,6 +1761,10 @@
   (let (minus? (.skip-sign (.skip-space self)) val (.skip-unsigned-number self))
     (if minus? (- val)
         val)))
+
+(macro with-ahead-reader ((ar stream) :rest body)
+  (list let (list ar (list '.init '(.new AheadReader) stream))
+        (cons begin body)))
 
 ; Paren reader
 
@@ -1739,7 +1806,7 @@
   (let (sign (.get self))
     (if (.digit? self)
         (let (val (.skip-number self))
-          (list :number (if (seqeq? sign "-") (- val) val)))
+          (list :number (if (string-eq? sign "-") (- val) val)))
         (list :symbol (string->symbol (.token (.get-identifier-sign self)))))))
 
 (method ParenLexer .lex-symbol ()
@@ -1751,20 +1818,20 @@
 
 (method ParenLexer .lex-string ()
   (.skip self)
-  (while (not (seqeq? (&next self) "\""))
+  (while (not (string-eq? (&next self) "\""))
     (if (.eof? self) (error "string not closed")
-        (not (seqeq? (&next self) "\\")) (.get self)
+        (not (string-eq? (&next self) "\\")) (.get self)
         (begin (.skip self)
                (let (c (.skip self))
-                 (if (seqeq? c "a") (.put self 0x07)
-                     (seqeq? c "b") (.put self 0x08)
-                     (seqeq? c "e") (.put self 0x1b)
-                     (seqeq? c "f") (.put self 0x0c)
-                     (seqeq? c "n") (.put self 0x0a)
-                     (seqeq? c "r") (.put self 0x0d)
-                     (seqeq? c "t") (.put self 0x09)
-                     (seqeq? c "v") (.put self 0x0b)
-                     (seqeq? c "x") (.put self (+ (* 16 (ascii->digit (.skip-byte self) :radix 16))
+                 (if (string-eq? c "a") (.put self 0x07)
+                     (string-eq? c "b") (.put self 0x08)
+                     (string-eq? c "e") (.put self 0x1b)
+                     (string-eq? c "f") (.put self 0x0c)
+                     (string-eq? c "n") (.put self 0x0a)
+                     (string-eq? c "r") (.put self 0x0d)
+                     (string-eq? c "t") (.put self 0x09)
+                     (string-eq? c "v") (.put self 0x0b)
+                     (string-eq? c "x") (.put self (+ (* 16 (ascii->digit (.skip-byte self) :radix 16))
                                                   (ascii->digit (.skip-byte self) :radix 16)))
                      (.put self c))))))
   (.skip self)
@@ -1774,13 +1841,13 @@
   (.skip-space (.reset self))
   (let (next (&next self))
     (if (.eof? self) '(:EOF)
-        (seqeq? next "\"") (.lex-string self)
-        (seqeq? next "'") (begin (.skip self) '(:quote))
-        (seqeq? next "(") (begin (.skip self) '(:open-paren))
-        (seqeq? next ")") (begin (.skip self) '(:close-paren))
-        (seqeq? next ":") (.lex-keyword self)
-        (seqeq? next ";") (.lex-comment self)
-        (or (seqeq? next "+") (seqeq? next "-")) (.lex-sign self)
+        (string-eq? next "\"") (.lex-string self)
+        (string-eq? next "'") (begin (.skip self) '(:quote))
+        (string-eq? next "(") (begin (.skip self) '(:open-paren))
+        (string-eq? next ")") (begin (.skip self) '(:close-paren))
+        (string-eq? next ":") (.lex-keyword self)
+        (string-eq? next ";") (.lex-comment self)
+        (or (string-eq? next "+") (string-eq? next "-")) (.lex-sign self)
         (.digit? self) (list :number (.skip-number self))
         (.lex-symbol self))))
 
