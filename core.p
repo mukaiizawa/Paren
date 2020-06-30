@@ -612,6 +612,19 @@
       (<- s (+ s step)))
     (reverse! acc)))
 
+(function group (l n)
+  ; Returns a new list in which the elements of l are grouped into sublists of length n.
+  (if (<= n 0) (error "illegal arguments")
+      (let (lis nil)
+        (while l
+          (let (sublis nil)
+            (dotimes (i n)
+              (if (nil? l) (error "list l of length indivisible by n."))
+              (push! sublis (car l))
+              (<- l (cdr l))))
+          (push! lis (reverse! sublis))))
+      (reverse! lis))))
+
 (function reverse (l)
   ; Same as reverse except that it destructively modifies the argument list.
   (let (acc nil)
