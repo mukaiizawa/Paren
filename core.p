@@ -205,6 +205,46 @@
                       (car l))))
         (rec args))))
 
+(macro switch (expr :rest body)
+  ; The switch macro help control complex conditional and branching operations.
+  ; As shown below, the switch macro consists of one expr and multiple branches.
+  ;     (switch expr
+  ;       <branch>
+  ;       <branch>
+  ;       ...)
+  ;     <branch> ::= <labels> expr
+  ;     <labels> -- list of candidates for address comparison. Generally a symbol or keyword.
+  ; You can also pass an atom in <labels>, in which case the elements are converted internally as a list.
+  ; expr is evaluated only once and compared from left to right for matching elements in the <labels> of each branch.
+  ; If there is a matching element, control is transferred to that branch.
+  ; Otherwise, an error will occur.
+  ; If you specify keyword `:default` (-- must be atom) in <labels>, you can unconditionally transfer control to that branch regardless of the value of expr.
+  ; Macro expansion image is as follows.
+  ;     (switch :a
+  ;       :a "a"
+  ;       (:b) "b"
+  ;       (:c :d) "c or d"
+  ;       :default "others")
+  ;     (if (or (eq? :a :a)) "a"
+  ;         (or (eq? :a :b)) "b"
+  ;         (or (eq? :a :c) (eq? :a :d)) "c or d"
+  ;         "others")
+  (with-gensyms (gexpr branches)
+    (let (branches (group body 2)
+          candidates (list 'flatten (list 'map car (list quote branches)))
+          parse-branch (lambda (branches)
+                         (if (nil? branches)
+                             (list true (list 'error gexpr "not included in" candidates))
+                             (let (label (caar branches) then (cadar branches))
+                               (cons (if (eq? label :default) true
+                                         (cons 'or (map (lambda (label)
+                                                          (list eq? label gexpr))
+                                                        (->list label))))
+                                     (cons then
+                                           (parse-branch (cdr branches))))))))
+      (list let (list gexpr expr)
+            (cons if (parse-branch branches))))))
+
 (macro break ()
   ; The break macro is expected evaluated in the iteration context like a for, while.
   ; Jump to :break label which causes the inner-most loop to be terminated immediately when executed.
@@ -331,7 +371,7 @@
   ; Then, bind a created lambda function with the specified name.
   ; If the specified name is bound, throw error.
   ; Expand the macro inline.
-  (if (bound? name) (error name " already bound")
+  (if (bound? name) (error name "already bound")
       (list begin0 (list quote name)
             (list <- name (cons lambda (cons args (expand-macro-all body)))))))
 
@@ -619,11 +659,11 @@
         (while l
           (let (sublis nil)
             (dotimes (i n)
-              (if (nil? l) (error "list l of length indivisible by n."))
+              (if (nil? l) (error "list l of length indivisible by" n))
               (push! sublis (car l))
-              (<- l (cdr l))))
-          (push! lis (reverse! sublis))))
-      (reverse! lis))))
+              (<- l (cdr l)))
+            (push! lis (reverse! sublis))))
+        (reverse! lis))))
 
 (function reverse (l)
   ; Same as reverse except that it destructively modifies the argument list.
@@ -1109,7 +1149,7 @@
   ; Create class the specified cls-sym.
   (let (Object? (eq? cls-sym 'Object))
     (if (not (all-satisfy? symbol? fields)) (error "fields must be symbol")
-        (bound? cls-sym) (error (symbol->string cls-sym) " already bound"))
+        (bound? cls-sym) (error (symbol->string cls-sym) "already bound"))
     (list begin0
           (list quote cls-sym)
           (list <- cls-sym (list quote (list :class 'Class
@@ -1125,14 +1165,14 @@
         quoted-global-sym (list quote global-sym)
         method-lambda (cons lambda (cons (cons 'self args) body)))
     (if (not (find-class cls-sym)) (error "class not found")
-        (bound? global-sym) (error global-sym " already bound"))
+        (bound? global-sym) (error global-sym "already bound"))
     (list begin0
           quoted-global-sym
           (list 'make-method-dispatcher method-sym)
           (list <- global-sym method-lambda))))
 
 (function error (:rest args)
-  (throw (.message (.new Error) (apply string args))))
+  (throw (.message (.new Error) (list->string (map string args) " "))))
 
 (class Object ()
   ; Object is a class that is the basis of all class hierarchies.
@@ -1324,7 +1364,7 @@
 
 (method Path .open (mode)
   (catch (Error (lambda (e)
-                  (throw (.message e (byte-array-concat "open failed " (.to-s self))))))
+                  (throw (.message e (byte-array-concat "open failed" (.to-s self))))))
     (.init (.new FileStream) (OS.fopen (.to-s self) mode))))
 
 (method Path .open-read ()
