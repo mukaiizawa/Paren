@@ -350,8 +350,8 @@
                               (if expr (cons (expand-expr (car expr))
                                              (expand-each-element (cdr expr)))))
         expand-expr (lambda (expr)
-                      (if (! (cons? expr)) expr
-                          (expand-each-element (expand-macro expr)))))
+                      (if (cons? expr) (expand-each-element (expand-macro expr))
+                          expr)))
     (expand-expr expr)))
 
 (macro assert-error (expr)
@@ -1029,7 +1029,7 @@
   ; Returns true if the specified x is same object.
   (let (len (byte-array-length x))
     (&& (= len (byte-array-length y))
-         (! (byte-array-unmatch-index x 0 y 0 len)))))
+        (! (byte-array-unmatch-index x 0 y 0 len)))))
 
 (builtin-function byte-array-at (ba i)
   ; Consider the argument as a byte string and get the i-th element.
@@ -1111,7 +1111,7 @@
           getter (string->symbol (byte-array-concat "&" field))
           setter (string->symbol (byte-array-concat "&" field "!"))
           verifier (list if (list ! (list 'object? receiver))
-                             (list 'error "require object")))
+                         (list 'error "require object")))
       (list begin
             (list if (list ! (list 'bound? (list quote getter)))
                   (list 'function getter (list receiver)
@@ -1140,7 +1140,7 @@
 (function method? (o)
   ; Returns true if the specified o is method.
   (&& (function? o)
-       (eq? (car (lambda-body o)) :method)))
+      (eq? (car (lambda-body o)) :method)))
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
   ; Create class the specified cls-sym.
@@ -1347,7 +1347,7 @@
   (let (first-file (car (&path self)))
     (if (eq? OS.name :windows)
         (&& (= (byte-array-length first-file) 2)
-             (byte-array-index first-file ":" 1 1))
+            (byte-array-index first-file ":" 1 1))
         (string-eq? first-file Path.separator))))
 
 (method Path .relative? ()
@@ -1716,8 +1716,8 @@
 
 (method AheadReader .skip-line ()
   (while (&& (! (.eof? self))
-              (|| (! (.ascii? self))
-                  (/= (.next-byte self) 0x0a)))
+             (|| (! (.ascii? self))
+                 (/= (.next-byte self) 0x0a)))
     (.skip self))
   self)
 
@@ -1744,7 +1744,7 @@
 (method AheadReader .ascii? ()
   ; Returns true, if next character is a single byte character.
   (&& (! (.eof? self))
-       (< (byte-array-at (&next self) 0) 0x80)))
+      (< (byte-array-at (&next self) 0) 0x80)))
 
 (method AheadReader .eof? ()
   ; Returns true if eof reached.
@@ -1761,9 +1761,9 @@
 (method AheadReader .numeric-alpha? ()
   ; Returns true if next character is digit or alphabetic.
   (&& (.ascii? self)
-       (let (b (.next-byte self))
-         (|| (ascii-digit? b)
-             (ascii-alpha? b)))))
+      (let (b (.next-byte self))
+        (|| (ascii-digit? b)
+            (ascii-alpha? b)))))
 
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
@@ -1825,12 +1825,12 @@
 
 (method ParenLexer .identifier-symbol-alpha? ()
   (&& (.ascii? self)
-       (|| (byte-array-index "!$%&*./<=>?^_|" (.next-byte self) 0 13)
-           (.alpha? self))))
+      (|| (byte-array-index "!$%&*./<=>?^_|" (.next-byte self) 0 13)
+          (.alpha? self))))
 
 (method ParenLexer .identifier-sign? ()
   (&& (.ascii? self)
-       (byte-array-index "+-" (.next-byte self) 0 1)))
+      (byte-array-index "+-" (.next-byte self) 0 1)))
 
 (method ParenLexer .identifier-trail? ()
   (|| (.identifier-symbol-alpha? self)
@@ -1885,7 +1885,7 @@
                      (string-eq? c "t") (.put self 0x09)
                      (string-eq? c "v") (.put self 0x0b)
                      (string-eq? c "x") (.put self (+ (* 16 (ascii->digit (.skip-byte self) :radix 16))
-                                                  (ascii->digit (.skip-byte self) :radix 16)))
+                                                      (ascii->digit (.skip-byte self) :radix 16)))
                      (.put self c))))))
   (.skip self)
   (list :string (.token self)))
