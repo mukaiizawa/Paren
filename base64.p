@@ -1,57 +1,52 @@
 ; Base64 module.
-; base64 encoding as specified by RFC 4648.
 
-; # input
-;     ABCDEFG
-;
-; # radix 16
-;     0100 0001 0100 0010 0100 0011 0100 0100 0100 0101 0100 0110 0100 0111
-;
-; # split 6bit
-;     010000 010100 001001 000011 010001 000100 010101 000110 010001 11
-;
-; # align
-;     010000 010100 001001 000011 010001 000100 010101 000110 010001 110000
-;
-; # convert each 4 bytes.
-;     QUJD REVG Rw
-;
-; # remain
-;     QUJD REVG Rw==
-;
-; # result
-;     QUJDREVGRw==
+(global-symbol Base64.mapping "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+(global-symbol Base64.url-mapping "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+(global-symbol Base64.padding "=")
 
-(global-symbol Base64.mapping (->byte-array "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"))
+(function Base64.encode (src :key (mapping Base64.mapping) (padding Base64.padding))
+  ; Base64 encoding as specified by RFC 4648.
+  (let (val 0 src-len (byte-array-length src) remain (mod src-len 3))
+    (with-memory-stream (out)
+      (with-memory-stream (in src)
+        (dotimes (i (// src-len 3))
+          (<- val (bit-or (bit-shift (read-byte in) 16)
+                          (bit-shift (read-byte in) 8)
+                          (read-byte in)))
+          (write-byte (byte-array-at mapping (bit-and (bit-shift val -18) 0x3f)) out)
+          (write-byte (byte-array-at mapping (bit-and (bit-shift val -12) 0x3f)) out)
+          (write-byte (byte-array-at mapping (bit-and (bit-shift val -6) 0x3f)) out)
+          (write-byte (byte-array-at mapping (bit-and val 0x3f)) out))
+        (when (/= remain 0)
+          (<- val (bit-shift (read-byte in) 16))
+          (if (= remain 2) (<- val (bit-or val (bit-shift (read-byte in) 8))))
+          (write-byte (byte-array-at mapping (bit-and (bit-shift val -18) 0x3f)) out)
+          (write-byte (byte-array-at mapping (bit-and (bit-shift val -12) 0x3f)) out)
+          (if (= remain 2)
+              (begin
+                (write-byte (byte-array-at mapping (bit-and (bit-shift val -6) 0x3f)) out)
+                (write-string padding out))
+              (begin
+                (write-string padding out)
+                (write-string padding out))))))))
 
-(class Base64 ())
-(class Base64.encoder ())
-(class Base64.decoder ())
+(function Base64.url-encode (src)
+  ; Base64.url-encode is the alternate base64 encoding defined in RFC 4648.
+  ; It is typically used in URLs and file names.
+  (Base64.encode src :mapping Base64.url-mapping))
 
-(function Base64.encode (src))
-(function Base64.decode (src))
+; (function Base64.decode (src)
+;   (let (si 0 di 0 src-len (byte-array-length src) n (* (// src-len 3) 3) val 0)
+;     (with-memory-stream (out)
+;       (with-memory-stream (in src)
 
-(function Base64.url-safe-encode (src))
-(function Base64.url-safe-decode (src))
-
-(method Base64 encode (src)
-  ; Encodes byte-array (or string) src.
-  (let (src (->byte-array src) di 0 si 0 n (* (// (length src) 3) 3))
-    (with-memory-stream (dst)
-      (while (< si n)
-        (let (val (nth src si)
-                  (nth src si)
-                  (nth src si)
-                  (nth src si))
-          val (<- n (++ n))
-
-              ; todo see test.go
-
-)
-
-(method Base64 decode (s)
-  (error "not yet implementd"))
-
-(function main ()
-  ; test cases.
-  (error "not yet implementd"))
+(function! main ()
+  (assert (string-eq? (Base64.encode "A") "QQ=="))
+  (assert (string-eq? (Base64.encode "AB") "QUI="))
+  (assert (string-eq? (Base64.encode "ABC") "QUJD"))
+  (assert (string-eq? (Base64.encode "ABCD") "QUJDRA=="))
+  (assert (string-eq? (Base64.encode "ABCDE") "QUJDREU="))
+  (assert (string-eq? (Base64.encode "ABCDEF") "QUJDREVG"))
+  (assert (string-eq? (Base64.encode "ABCDEFG") "QUJDREVGRw=="))
+  (assert (string-eq? (Base64.encode "abc123!?$*&()'-=@~") "YWJjMTIzIT8kKiYoKSctPUB+"))
+  (assert (string-eq? (Base64.url-encode "abc123!?$*&()'-=@~") "YWJjMTIzIT8kKiYoKSctPUB-")))
