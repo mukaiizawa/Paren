@@ -165,9 +165,9 @@ Parenではすべての実数は数値型として扱われる。
     "hello paren"
 
 ## 文字列の結合
-文字列の結合はstring+を使用する。
+文字列の結合はstringを使用する。
 
-    ) (string+ "hello" "_" "paren")
+    ) (string "hello" "_" "paren")
     "hello_paren"
 
 ## 文字列の長さの取得
@@ -177,51 +177,27 @@ Parenではすべての実数は数値型として扱われる。
     11
 
 ## 部分文字列の取得
-部分文字列を取得するにはstring-sliceを使用する。
+部分文字列を取得するにはsubstringを使用する。
 
-    ) (string-slice "hello paren" 6)
+    ) (substring "hello paren" 6)
     "paren"
-    ) (string-slice "hello paren" 0 5)
+    ) (substring "hello paren" 0 5)
     "hello"
 
 第一引数のみ指定されている場合はその値以降の部分文字列を取得する。第二引数まで指定してある場合は、第一引数から第二引数の値の前までの部分文字列を取得する。ただし、どちらの場合も零から数える。
 
 ## 文字列の比較
-文字列の比較は比較関数string=で行う。
+文字列の比較は比較関数string-eq?で行う。
 
-    ) (string= "hello paren" "hello paren")
+    ) (string-eq? "hello paren" "hello paren")
     true
-    ) (string= "Hello Paren" "hello paren")
-    nil
-
-## 部分文字列が含まれるか判定
-部分文字列が含まれているかどうか判定するにはstring-include?を使用する。
-
-    ) (string-include? "Hello Paren" "Hello")
-    true
-    ) (string-include? "Hello Paren" "hello")
-    nil
-
-## 文字列の先頭がある部分文字列と一致するか判定
-string-start-with?は文字列が特定の文字列で始まっているかを判定する。
-
-    ) (string-start-with? "Hello Paren" "Hello")
-    true
-    ) (string-start-with? "Hello Paren" "hello")
-    nil
-
-## 文字列の末尾がある部分文字列と一致するか判定
-string-end-with?は文字列が特定の文字列で終了しているか判定する。
-
-    ) (string-end-with? "Hello Paren" "Paren")
-    true
-    ) (string-end-with? "Hello Paren" "Hello")
+    ) (string-eq? "Hello Paren" "hello paren")
     nil
 
 ## 正規表現
-Parenで正規表現を使用したい場合は:Regexモジュールをインクルードする。
+Parenで正規表現を使用したい場合は:regexモジュールimportする。
 
-詳細は:Regexモジュールのドキュメントを参照のこと。
+詳細は:regexモジュールのドキュメントを参照のこと。
 
 # シンボル
 シンボルは任意のParenオブジェクトへの参照を保持するためのオブジェクトである。既に述べた数値や文字列の他、関数やリストやシンボルなどもParenのオブジェクトであるため、シンボルで参照を保持することができる。
@@ -254,7 +230,7 @@ Parenにはそのための関数`eq?`が用意してある。
     ) (eq? 'a (string->symbol "a"))
     true
 
-`eq?`はメモリ番地の比較をするだけなので高速である。また、Parenでは同じシンボルとキーワードはすべて同一なオブジェクトであることが保証されている。
+`eq?`はメモリ番地の比較をするだけなので高速である。
 
 ## 環境
 シンボルが保持するオブジェクトへの参照は環境で管理されている。
@@ -330,23 +306,8 @@ letは唯一の環境を作る方法である。
     true     真の代表値
     nil      空の代表値
 
-## 定数
-Parenでは言語機能として定数は存在しない。その代わりに、シンボルを定数として扱いたい値で束縛して用いる。この用途で使用するシンボルは他のシンボルと見分けがつくように慣習としてすべて大文字のシンボル名を使用する。
-
-    ) (<- FIX_NUM 3.141592)
-    3.141592
-
-これらのシンボルを定数の用途として機能させるには、プログラマが注意を払わなければならない。
-    ) (<- FIX_NUM "pi")    ; 誤り
-    "pi"
-
 # キーワード
 キーワードは同名であるならばプログラムでただ一つだけ存在するという性質を持つオブジェクトである。アドレス比較で同一か判定可能なため列挙等に使用される。
-
-キーワードを取得するためには次のいずれかの方法を用いる。
-
-- キーワードリテラルを使用する
-- `string->keyword`関数を使用する
 
 ## キーワードリテラル
 キーワードリテラルは`:`から始まる英数字と一部の記号の列である。
@@ -356,13 +317,7 @@ Parenでは言語機能として定数は存在しない。その代わりに、
     :0123
     :keyword
 
-使用できる厳密な文字は言語仕様書の字句定義の章を参照のこと。
-
-## string->keyword関数
-`string->keyword`関数は文字列を受け取り、それに対応するキーワードを返す。
-
-    ) (string->keyword "key")
-    :key
+使用できる文字は言語仕様書の字句定義の章を参照のこと。
 
 ## キーワードの評価
 キーワードは評価されると自身を返す。
@@ -595,12 +550,14 @@ functionは与えられた名前の関数を定義し、その関数を返す。
 ## 仮引数
 仮引数には次の種類がある。
 
-1. 必須パラメーター
-2. オプショナルパラメーター
-3. レストパラメーター
-4. キーワードパラメーター
+- 必須パラメーター
+- オプショナルパラメーター
+- レストパラメーター
+- キーワードパラメーター
 
-任意の仮引数を同時に組み合わせることができるが、その場合は上の順番で指定しなければならない。
+複数の仮引数を同時に組み合わせることができるが、その場合は上の順番で指定しなければならない。
+
+ただし、レストパラメーターとキーワードパラメーターは同時に指定できない。
 
 ### 必須パラメーター
 必須パラメーターは関数呼び出し時に必ず与えなければならない仮引数を定義する。
@@ -635,7 +592,7 @@ functionは与えられた名前の関数を定義し、その関数を返す。
 オプショナルパラメーターは複数定義することもできる。
 
     ) (function cat-string (s1 :opt (s2 "") (s3 ""))
-        (string+ s1 s2 s3))
+        (string s1 s2 s3))
     ) (cat-string "hello")
     "hello"
     ) (cat-string "hello" " world")
@@ -715,16 +672,16 @@ group-byは指定した関数が返した結果でグルーピングする。
     ((1 -1 1) (2 2) (3 -3 3))
 
 ### リストから要素を取り除く
-remove-ifは引数のリストの要素のち、関数が真を返す要素を取り除いたリストを返す。
+removeは引数のリストの要素のち、関数が真を返す要素を取り除いたリストを返す。
 
-    (remove-if fn list) => result
+    (remove fn list) => result
     fn -- 要素を取り除くか決める関数
     list -- 要素を取り除く対象のリスト
     result -- 要素を取り除いた後のリスト
 
 次の例は、負の数を取り除いたリストを返す。
 
-    ) (remove-if minus? '(0 1 -2 3))
+    ) (remove (lambda (x) (< x 0)) '(0 1 -2 3))
     (0 1 3)
 
 ## 再帰関数
@@ -814,11 +771,10 @@ ifは条件分岐を行うスペシャルオペレーターである。
     ) (number->roman 4)
     :more
 
-## when/unless
-whenとunlessは条件が真または偽を返したときのみ複数フォームを評価したい場合に用いる。
+## when
+whenは条件が真を返したときのみ複数フォームを評価したい場合に用いる。
 
     (when test then-form ...)
-    (unless test else-form ...)
     test -- 真偽値
     then-form -- testが真の場合に評価するフォーム
     else-form -- testが偽の場合に評価するフォーム
@@ -830,12 +786,12 @@ whenとunlessは条件が真または偽を返したときのみ複数フォー�
 
     名称 処理
     ------------------------------------------------------------------------
-    and  すべての引数の評価結果が真の場合に最後の評価結果を返す。
+    &&   すべての引数の評価結果が真の場合に最後の評価結果を返す。
          ただし、評価途中に偽を返す式があったら以降の評価を中断しnilを返す。
-    or   どれか一つの引数の評価結果が真の場合にその値を返す。
+    ||   どれか一つの引数の評価結果が真の場合にその値を返す。
          ただし、評価途中に真を返す式があったら以降の引数は評価しない。
          また、すべての引数の評価結果が偽の場合はnilを返す。
-    not  述語が真の場合は偽を、偽の場合は真を返す。
+    !    述語が真の場合は偽を、偽の場合は真を返す。
 
 # 反復
 Parenには反復処理を行うためのオペレーターがいくつか存在する。
@@ -909,7 +865,7 @@ forは次の手順で評価される。
 - quote
 - if
 - labels/goto
-- basic-throw/basic-catch
+- throw/catch
 - return
 - unwind-protect
 - assert
@@ -970,7 +926,7 @@ labels及びgotoはセットで使われるジャンプ機構である。
 
 使用頻度の低さから、この文書では説明を割愛する。
 
-## basic-throw/basic-catch(例外処理機構)
+## throw/catch(例外処理機構)
 これらのスペシャルオペレーターは例外処理の章で述べる。
 
 ## return(大域脱出)
@@ -1023,7 +979,7 @@ quoteは引数を評価しないようにするスペシャルオペレーター
 
 Parenのマクロが他の言語と大きく異なるのは、マクロが言語と調和していることである。これにより、マクロが言語の拡張を容易にする。
 
-例えば、C言語のそれは、言語とは全く関係ない一つの言語に等しく、本質的には単に文字列の置換相当の処理を行っているに過ぎない。
+例えば、C言語のマクロはC言語とは全く関係ない一つの言語に等しく、本質的には単に文字列の置換相当の処理を行っているに過ぎない。
 
 ## マクロ定義
 マクロはスペシャルオペレーターmacroを使って定義する。
@@ -1137,20 +1093,18 @@ Parenは関数型言語として設計されているが、ここではマクロ
 生成したオブジェクトのインスタンス変数はすべてnilで初期化される。
 
 ## インスタンス変数の参照と代入
-クラス定義時にインスタンス変数へのアクセサが、識別子`'&' + インスタンス変数名`として自動で生成される。
+クラス定義時にインスタンス変数へのアクセサが、`'&' + インスタンス変数名`、`'&' + インスタンス変数名 + '!'`として自動で生成される。
 
-Pointクラスにはx及びyというインスタンス変数があったため、それぞれ&x、 &yというアクセサが自動で生成されている。
+Pointクラスにはx及びyというインスタンス変数があったため、それぞれ`&x, &x!`、`&y, &y!`というアクセサが自動で生成されている。
 
-    ) (&x (<- p (.new Point)) 10)
+    ) (&x! (<- p (.new Point)) 10)
     (:class Point ...)
     ) (&x p)
     10
 
-アクセサに引数を一つ渡すとインスタンス変数へのゲッターとして、二つ渡すとセッターとして振る舞う。
+セッターの返り値は自身となる。そのため、メソッドチェーンによる記述も可能。
 
-ただし、セッターの返り値は自身となる。そのため、メソッドチェーンによる記述も可能。
-
-    ) (&x (&y (&x (<- p (.new Point)) 10) 20))
+    ) (&x! (&y! (&x! (<- p (.new Point)) 10) 20))
     10
 
 POSでは、他のクラスのメソッド内でアクセサを直接呼び出すことはマナー違反となる。
@@ -1196,6 +1150,21 @@ methodマクロはclassを指定することを除き、functionマクロと同�
     ) (.sound (new Cat))
     "myaa"
 
+## メソッドの完全修飾名
+methodマクロを用いると、内部的にクラス名とメソッド名を結合した名前のシンボルを束縛する。
+
+スーパークラスのメソッドをオーバーライドした場合などに、明示的にスーパークラスのメソッドを指定する用途などで使用できる。
+
+以下に、簡単な例を示す。
+
+    (class Duck ())
+    (class XDuck (Duck))
+    (method Duck .sound () "quack")
+    (method XDuck .sound () "xquack")
+
+    (.sound (.new XDuck)) ; xquack
+    (Duck.sound (.new XDuck)) ; quack
+
 # 初期化メソッド
 POSでは、インスタンスを初期化するメソッドを.initという名称で作成する。
 
@@ -1212,69 +1181,22 @@ POSでは、インスタンスを初期化するメソッドを.initという名
 
 また、最初にディスパッチされたメソッド以外を取得する方法は公開していない。
 
-# POSの一例
-簡単なPOSの例としてPointクラスは相応しいので今まで出てきたコード片をまとめる。
-
-    ; Point class
-
-    (class Point ()
-      ; 二次元直行座標系上の点を表す。
-      x y)
-
-    (method Point .init (:key (x 0) (y 0))
-      (&x self x)
-      (&y self y)
-      self)
-
-    (method Point .x ()
-      ; x座標を返す。
-      (&x self))
-
-    (method Point .y ()
-      ; y座標を返す。
-      (&y self))
-
-    (method Point .toString ()
-      ; 印字表現を返す。
-      (string+ "(" (number->string (&x self)) "," (number->string (&y self)) ")"))
-
-    (method Point .equal (p)
-      ; 同一か否か返す。
-      (and (= (&x self) (&x p)) (= (&y self) (&y p))))
-
-    (method Point .add (p)
-      (.init (.new Point)
-             :x (+ (&x self) (&x p))
-             :y (+ (&y self) (&y p))))
-
-    (<- p (.init (.new Point) :x 3 :y 4))
-    (assert (.equal p (.init (.new Point) :x 3 :y 4)))
-    (assert (not (.equal p (.init (.new Point) :x 2 :y 4))))
-    (assert (not (.equal p (.init (.new Point) :x 3 :y 5))))
-    (assert (not (.equal p (.init (.new Point) :x 2 :y 5))))
-    (assert (string= (.toString p) "(3,4)"))
-
 # 例外処理機構
-ここでは、POSによって拡張された例外処理機構について説明をする。
-
 ## 階層構造
-Parenのすべてのエラー/例外はThrowableクラスを継承している。また、すべてのエラーはErrorクラスを、すべての例外はExceptionクラスを継承している。
+Parenのすべてのエラー/例外はExceptionクラスを継承している。
 
     Object
-        Throwable
-            Error
-                OutOfMemoryError
-                ...
-            Exception
-                IllegalArgumentsException
-                ...
+        Exception
+                Error
+
+一般に、新たにクラスを作成する場合はErrorクラスを継承すべきである。
 
 ## 例外のスロー
-例外をスローさせるにはthrowマクロを使用する。
+例外をスローさせるにはthrowを使用する。
 
-    (throw (.new IllegalStateException))
+    (throw (.new Error))
 
-throwの引数は必ずThrowableオブジェクトのサブクラスでなければならない。
+throwの引数は必ずExceptionオブジェクトのサブクラスでなければならない。
 
 ## 例外の補足
 例外を補足させるにはcatchマクロを使用する。
@@ -1291,9 +1213,9 @@ body内で例外がスローされた場合、catchに登録されたハンド�
 
 例えば、次のコードはcatchの本体にて例外がスローされた場合に、Exception2のインスタンスである場合は、Exception2のハンドラーの本体処理が実行される。
 
-    (catch ((Exception1 (e) body ...)
-            (Exception2 (e) body ...)    // catch!
-            (Exception3 (e) body ...))
+    (catch (Exception1 (lambda (e) body ...)
+            Exception2 (lambda (e) body ...)    ; catch!
+            Exception3 (lambda (e) body ...))
     ...
     (throw (.new Exception2))
     ...)
