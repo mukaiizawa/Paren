@@ -126,7 +126,7 @@
 (builtin-function OS.sleep (sec)
   ; Sleep for a specified number of seconds.
   ; Returns nil.
-  (assert (not (OS.sleep 0.001))))
+  (assert (! (OS.sleep 0.001))))
 
 (builtin-function OS.getenv (name)
   ; Looks up the environment variable named name in the environment list and returns value string.

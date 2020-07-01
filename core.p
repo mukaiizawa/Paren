@@ -160,7 +160,7 @@
   ;     (let (a (gensym) b (gensym) c (gensym))
   ;       ...)
   (let (rec (lambda (syms :opt acc)
-              (if (not syms) acc
+              (if (! syms) acc
                   (cons (car syms) (cons '(gensym) (rec (cdr syms) acc))))))
     (cons let (cons (rec syms) body))))
 
@@ -181,7 +181,7 @@
   ; Evaluate the specified test and if it is not nil then evaluate each of the specified body.
   (list if test (cons begin body)))
 
-(macro or (:rest args)
+(macro || (:rest args)
   ; Evaluate each of the specified args, one at a time, from left to right.
   ; The evaluation of all args terminates when a args evaluates to true.
   ; Return last evaluated value.
@@ -194,7 +194,7 @@
           (list let (list g nil)
                 (cons if (rec args)))))))
 
-(macro and (:rest args)
+(macro && (:rest args)
   ; Evaluate each of the specified args, one at a time, from left to right.
   ; As soon as any form evaluates to nil, and returns nil without evaluating the remaining forms.
   ; If all args but the last evaluate to true values, and returns the results produced by evaluating the last args.
@@ -225,9 +225,9 @@
   ;       (:b) "b"
   ;       (:c :d) "c or d"
   ;       :default "others")
-  ;     (if (or (eq? :a :a)) "a"
-  ;         (or (eq? :a :b)) "b"
-  ;         (or (eq? :a :c) (eq? :a :d)) "c or d"
+  ;     (if (|| (eq? :a :a)) "a"
+  ;         (|| (eq? :a :b)) "b"
+  ;         (|| (eq? :a :c) (eq? :a :d)) "c or d"
   ;         "others")
   (with-gensyms (gexpr branches)
     (let (branches (group body 2)
@@ -237,7 +237,7 @@
                              (list true (list 'error gexpr "not included in" candidates))
                              (let (label (caar branches) then (cadar branches))
                                (cons (if (eq? label :default) (return (list true then))
-                                         (cons 'or (map (lambda (label)
+                                         (cons '|| (map (lambda (label)
                                                           (list eq? label gexpr))
                                                         (->list label))))
                                      (cons then
@@ -267,7 +267,7 @@
   ;         ...)
   ;     (let (i 0)
   ;        (labels :start
-  ;                (if (not test) (goto :break))
+  ;                (if (! test) (goto :break))
   ;                expr1
   ;                expr2
   ;                ...
@@ -279,7 +279,7 @@
   (list let binding
         (list labels
               :start
-              (list if (list not test) '(goto :break))
+              (list if (list ! test) '(goto :break))
               (cons begin body)
               :continue
               update
@@ -302,7 +302,7 @@
   ;        ...)
   (list labels
         :start
-        (list if (list not test) '(goto :break))
+        (list if (list ! test) '(goto :break))
         (cons begin body)
         :continue
         '(goto :start)
@@ -350,7 +350,7 @@
                               (if expr (cons (expand-expr (car expr))
                                              (expand-each-element (cdr expr)))))
         expand-expr (lambda (expr)
-                      (if (not (cons? expr)) expr
+                      (if (! (cons? expr)) expr
                           (expand-each-element (expand-macro expr)))))
     (expand-expr expr)))
 
@@ -377,39 +377,39 @@
 
 (builtin-function eq? (x y)
   ; Returns true if the specified x and y is same object.
-  (assert (not (eq? 'x 'y 'z)))
+  (assert (! (eq? 'x 'y 'z)))
   (assert (eq? 'x 'x 'x)))
 
 (builtin-function neq? (x y)
-  ; Same as (not (eq? x y)).
+  ; Same as (! (eq? x y)).
   (assert (neq? 'x 'y 'z))
-  (assert (not (neq? 'x 'x 'x))))
+  (assert (! (neq? 'x 'x 'x))))
 
 (builtin-function address (x)
   ; Returns address of the specified x.
   ; The addresses of symbols or keywords with the same name are always equal.
   (assert (= (address 'x) (address 'x)))
-  (assert (not (= (address 'x) (address 'y)))))
+  (assert (! (= (address 'x) (address 'y)))))
 
-(builtin-function not (x)
+(builtin-function ! (x)
   ; Returns true if the specified x is nil.
-  (assert (not nil))
-  (assert (eq? (not true) nil)))
+  (assert (! nil))
+  (assert (eq? (! true) nil)))
 
 (function nil? (x)
-  ; Alias for not.
-  (not x))
+  ; Alias for `!`.
+  (! x))
 
 (builtin-function cons? (x)
   ; Returns true if the specified x is cons.
   (assert (cons? '(1)))
-  (assert (not (cons? nil)))
-  (assert (not (cons? '()))))
+  (assert (! (cons? nil)))
+  (assert (! (cons? '()))))
 
 (function atom? (x)
   ; Returns true if the specified x is of type atom.
   ; It means x is cons or not.
-  (not (cons? x)))
+  (! (cons? x)))
 
 ; list
 
@@ -582,8 +582,8 @@
 
 (function list? (x)
   ; Returns true if the specified x is of type list.
-  ; Same as (or (nil? x) (cons? x)).
-  (or (nil? x) (cons? x)))
+  ; Same as (|| (nil? x) (cons? x)).
+  (|| (nil? x) (cons? x)))
 
 (function ->list (x)
   ; Returns the specified x if x is a list, otherwise returns x as a list.
@@ -807,7 +807,7 @@
 
 (function ascii-alpha? (c)
   ; Returns whether byte c can be considered a alphabetic character.
-  (or (<= 0x41 c 0x5a) (<= 0x61 c 0x7a)))
+  (|| (<= 0x41 c 0x5a) (<= 0x61 c 0x7a)))
 
 (function ascii-digit? (c)
   ; Returns whether byte c can be considered a digit character.
@@ -828,7 +828,7 @@
   ; Default radix is 10.
   (let (n (if (ascii-digit? c) (- c 0x30)
               (ascii-alpha? c) (+ (- (ascii-lower c) 0x61) 10)))
-    (if (or (nil? n) (>= n radix)) (error "not numeric char")
+    (if (|| (nil? n) (>= n radix)) (error "not numeric char")
         n)))
 
 ; string
@@ -843,7 +843,7 @@
   ; Returns true if the specified x is a string
   (assert (string? ""))
   (assert (string? "aaa"))
-  (assert (not (string? (byte-array 1)))))
+  (assert (! (string? (byte-array 1)))))
 
 (function string-eq? (x y)
   ; Same as (byte-array-eq? x y).
@@ -873,7 +873,7 @@
   ;     (string->list "aaa", "") <=> Error
   (let (acc nil i 0 pos nil slen (byte-array-length s) dlen (byte-array-length delim) e (-- slen))
     (if (= dlen 0) (error "delimiter must not be the empty string"))
-    (while (and (<= i e) (<- pos (byte-array-index s delim i e)))
+    (while (&& (<= i e) (<- pos (byte-array-index s delim i e)))
       (push! acc (substring s i pos))
       (<- i (+ pos dlen)))
     (push! acc (substring s i slen))
@@ -913,15 +913,15 @@
 
 (function byte? (x)
   ; Returns true if the specified x is integer and between 0 and 255.
-  (and (integer? x) (<= 0 x 255)))
+  (&& (integer? x) (<= 0 x 255)))
 
 (builtin-function = (x :rest args)
   ; Returns true if the specified number x and y are equal.
   ; If the argument is not a number, compare addresses.
   (assert (= 3.14 3.140))
-  (assert (not (= 10 20)))
+  (assert (! (= 10 20)))
   (assert (= 'x 'x))
-  (assert (not (= 'x 'y))))
+  (assert (! (= 'x 'y))))
 
 (builtin-function & (x y)
   (assert (= (& 0x333333333 0x555555555) 0x111111111)))
@@ -939,8 +939,8 @@
   (assert (= (^ 3 0x500000000) 0x500000003)))
 
 (function /= (x y)
-  ; Same as (not (= x y))).
-  (not (= x y)))
+  ; Same as (! (= x y))).
+  (! (= x y)))
 
 (builtin-function + (x :rest args)
   ; Returns the sum of the arguments.
@@ -985,12 +985,12 @@
 (function <= (:rest args)
   ; Returns true if each of the specified args are in monotonically nondecreasing order.
   ; Otherwise returns nil.
-  (each-adjacent-satisfy? (lambda (x y) (not (< y x))) args))
+  (each-adjacent-satisfy? (lambda (x y) (! (< y x))) args))
 
 (function >= (:rest args)
   ; Returns true if each of the specified args are in monotonically nonincreasing order.
   ; Otherwise returns nil.
-  (each-adjacent-satisfy? (lambda (x y) (not (< x y))) args))
+  (each-adjacent-satisfy? (lambda (x y) (! (< x y))) args))
 
 (function ++ (x)
   ; Returns the value of the specified number x + 1.
@@ -1023,13 +1023,13 @@
 (builtin-function byte-array? (x)
   ; Returns true if the argument is a byte-array.
   (assert (byte-array? (byte-array 3)))
-  (assert (not (byte-array? (array 3)))))
+  (assert (! (byte-array? (array 3)))))
 
 (function byte-array-eq? (x y)
   ; Returns true if the specified x is same object.
   (let (len (byte-array-length x))
-    (and (= len (byte-array-length y))
-         (not (byte-array-unmatch-index x 0 y 0 len)))))
+    (&& (= len (byte-array-length y))
+         (! (byte-array-unmatch-index x 0 y 0 len)))))
 
 (builtin-function byte-array-at (ba i)
   ; Consider the argument as a byte string and get the i-th element.
@@ -1072,8 +1072,8 @@
 (builtin-function array? (x)
   ; Returns true if the argument is a array.
   (assert (array? (array 3)))
-  (assert (not (array? nil)))
-  (assert (not (array? (byte-array 3)))))
+  (assert (! (array? nil)))
+  (assert (! (array? (byte-array 3)))))
 
 (builtin-function array-length (x)
   ; Returns the length of the specified array x.
@@ -1110,26 +1110,26 @@
           field (symbol->string field)
           getter (string->symbol (byte-array-concat "&" field))
           setter (string->symbol (byte-array-concat "&" field "!"))
-          verifier (list if (list not (list 'object? receiver))
+          verifier (list if (list ! (list 'object? receiver))
                              (list 'error "require object")))
       (list begin
-            (list if (list 'not (list 'bound? (list quote getter)))
+            (list if (list ! (list 'bound? (list quote getter)))
                   (list 'function getter (list receiver)
                         :method
                         verifier
                         (list 'assoc receiver key)))
-            (list if (list 'not (list 'bound? (list quote setter)))
+            (list if (list ! (list 'bound? (list quote setter)))
                   (list 'function setter (list receiver val)
                         :method
                         verifier
                         (list begin (list 'assoc! receiver key val) receiver)))))))
 
 (macro make-method-dispatcher (method-sym)
-  (when (not (bound? method-sym))
+  (when (! (bound? method-sym))
     (with-gensyms (receiver args)
       (list 'function method-sym (list receiver :rest args)
             :method
-            (list if (list not (list 'object? receiver))
+            (list if (list ! (list 'object? receiver))
                   (list 'error "require object"))
             (list 'apply
                   (list 'find-method
@@ -1139,19 +1139,19 @@
 
 (function method? (o)
   ; Returns true if the specified o is method.
-  (and (function? o)
+  (&& (function? o)
        (eq? (car (lambda-body o)) :method)))
 
 (macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
   ; Create class the specified cls-sym.
   (let (Object? (eq? cls-sym 'Object))
-    (if (not (all-satisfy? symbol? fields)) (error "fields must be symbol")
+    (if (! (all-satisfy? symbol? fields)) (error "fields must be symbol")
         (bound? cls-sym) (error (symbol->string cls-sym) "already bound"))
     (list begin0
           (list quote cls-sym)
           (list <- cls-sym (list quote (list :class 'Class
                                              :symbol cls-sym
-                                             :super (if (not Object?) super)
+                                             :super (if (! Object?) super)
                                              :features features
                                              :fields fields)))
           (cons begin
@@ -1161,7 +1161,7 @@
   (let (global-sym (byte-array-concat cls-sym method-sym)
         quoted-global-sym (list quote global-sym)
         method-lambda (cons lambda (cons (cons 'self args) (expand-macro-all body))))
-    (if (not (find-class cls-sym)) (error "class not found")
+    (if (! (find-class cls-sym)) (error "class not found")
         (bound? global-sym) (error global-sym "already bound"))
     (list begin0
           quoted-global-sym
@@ -1207,7 +1207,7 @@
   ; If .init method has argument, must invoke after create an instance.
   ; Otherwise automatically invoke .init method.
   (let (o nil)
-    (for (cls self) cls (<- cls (and (assoc cls :super) (find-class (assoc cls :super))))
+    (for (cls self) cls (<- cls (&& (assoc cls :super) (find-class (assoc cls :super))))
       (dolist (field (reverse! (map symbol->keyword (assoc cls :fields))))
         (push! o nil)
         (push! o field)))
@@ -1308,7 +1308,7 @@
         (string-eq? first-letter Path.separator)
         (<- root? true))
     (<- path (remove (lambda (file-name)
-                       (or (string-eq? file-name "") (string-eq? file-name "~")))
+                       (|| (string-eq? file-name "") (string-eq? file-name "~")))
                      (string->list
                        (with-memory-stream (out)
                          (with-memory-stream (in path-name)
@@ -1346,13 +1346,13 @@
   ; Returns true if this path regarded as the absolute path.
   (let (first-file (car (&path self)))
     (if (eq? OS.name :windows)
-        (and (= (byte-array-length first-file) 2)
+        (&& (= (byte-array-length first-file) 2)
              (byte-array-index first-file ":" 1 1))
         (string-eq? first-file Path.separator))))
 
 (method Path .relative? ()
-  ; Same as (not (.absolute? self))
-  (not (.absolute? self)))
+  ; Same as (! (.absolute? self))
+  (! (.absolute? self)))
 
 (method Path .to-s ()
   (reduce (lambda (acc rest)
@@ -1405,21 +1405,21 @@
                (if (< b1 0) (return :EOF)
                    (< b1 0x80) (.write-byte ms b1)
                    (< b1 0xc2) (throw illegal-utf8-error)
-                   (not (trail? (<- b2 (.read-byte self)))) (throw illegal-utf8-error)
+                   (! (trail? (<- b2 (.read-byte self)))) (throw illegal-utf8-error)
                    (< b1 0xe0) (begin (if (= (& b1 0x3e) 0) (throw illegal-utf8-error))
                                       (.write-byte ms b1)
                                       (.write-byte ms b2))
                    (< b1 0xf0) (begin (<- b3 (.read-byte self))
-                                      (if (or (and (= b1 0xe0) (= (& b2 0x20) 0))
-                                              (not (trail? b3)))
+                                      (if (|| (&& (= b1 0xe0) (= (& b2 0x20) 0))
+                                              (! (trail? b3)))
                                           (throw illegal-utf8-error))
                                       (.write-byte ms b1)
                                       (.write-byte ms b2)
                                       (.write-byte ms b3))
                    (< b1 0xf8) (begin (<- b3 (.read-byte self) b4 (.read-byte self))
-                                      (if (or (not (trail? b3))
-                                              (not (trail? b4))
-                                              (and (= b1 0xf0) (= (& b2 0x30) 0)))
+                                      (if (|| (! (trail? b3))
+                                              (! (trail? b4))
+                                              (&& (= b1 0xf0) (= (& b2 0x30) 0)))
                                           (throw illegal-utf8-error))
                                       (.write-byte ms b1)
                                       (.write-byte ms b2)
@@ -1617,7 +1617,7 @@
 
 (method MemoryStream .write-byte (byte)
   (let (wrpos (&wrpos self))
-    (if (not (< wrpos (&buf-size self))) (.extend self 1))
+    (if (! (< wrpos (&buf-size self))) (.extend self 1))
     (byte-array-at! (&buf self) wrpos byte)
     (&wrpos! self (++ wrpos))))
 
@@ -1634,7 +1634,7 @@
                 (&rdpos! self (++ rdpos))))))
 
 (method MemoryStream .seek (offset)
-  (if (not (<= 0 offset (&wrpos self))) (error "index outof bound"))
+  (if (! (<= 0 offset (&wrpos self))) (error "index outof bound"))
   (&rdpos! self offset))
 
 (method MemoryStream .tell (offset)
@@ -1715,8 +1715,8 @@
   (byte-array-at (.skip self) 0))
 
 (method AheadReader .skip-line ()
-  (while (and (not (.eof? self))
-              (or (not (.ascii? self))
+  (while (&& (! (.eof? self))
+              (|| (! (.ascii? self))
                   (/= (.next-byte self) 0x0a)))
     (.skip self))
   self)
@@ -1743,7 +1743,7 @@
 
 (method AheadReader .ascii? ()
   ; Returns true, if next character is a single byte character.
-  (and (not (.eof? self))
+  (&& (! (.eof? self))
        (< (byte-array-at (&next self) 0) 0x80)))
 
 (method AheadReader .eof? ()
@@ -1752,23 +1752,23 @@
 
 (method AheadReader .alpha? ()
   ; Returns true if next character is alphabetic.
-  (and (.ascii? self) (ascii-alpha? (.next-byte self))))
+  (&& (.ascii? self) (ascii-alpha? (.next-byte self))))
 
 (method AheadReader .digit? ()
   ; Returns true if next character is digit.
-  (and (.ascii? self) (ascii-digit? (.next-byte self))))
+  (&& (.ascii? self) (ascii-digit? (.next-byte self))))
 
 (method AheadReader .numeric-alpha? ()
   ; Returns true if next character is digit or alphabetic.
-  (and (.ascii? self)
+  (&& (.ascii? self)
        (let (b (.next-byte self))
-         (or (ascii-digit? b)
+         (|| (ascii-digit? b)
              (ascii-alpha? b)))))
 
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
   ; Returns self.
-  (while (and (.ascii? self) (ascii-space? (.next-byte self)))
+  (while (&& (.ascii? self) (ascii-space? (.next-byte self)))
     (.skip self))
   self)
 
@@ -1779,7 +1779,7 @@
         nil)))
 
 (method AheadReader .skip-unsigned-integer ()
-  (if (not (.digit? self)) (error "missing digits")
+  (if (! (.digit? self)) (error "missing digits")
       (let (val 0)
         (while (.digit? self)
           (<- val (+ (* val 10) (ascii->digit (.skip-byte self)))))
@@ -1796,7 +1796,7 @@
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
           (.skip self)
-          (if (not (.numeric-alpha? self)) (error "missing lower or digits")
+          (if (! (.numeric-alpha? self)) (error "missing lower or digits")
               (while (.numeric-alpha? self)
                 (<- val (+ (* val radix) (ascii->digit (.skip-byte self) :radix radix))))))
         (string-eq? (&next self) ".")
@@ -1824,16 +1824,16 @@
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (and (.ascii? self)
-       (or (byte-array-index "!$%&*./<=>?^_|" (.next-byte self) 0 13)
+  (&& (.ascii? self)
+       (|| (byte-array-index "!$%&*./<=>?^_|" (.next-byte self) 0 13)
            (.alpha? self))))
 
 (method ParenLexer .identifier-sign? ()
-  (and (.ascii? self)
+  (&& (.ascii? self)
        (byte-array-index "+-" (.next-byte self) 0 1)))
 
 (method ParenLexer .identifier-trail? ()
-  (or (.identifier-symbol-alpha? self)
+  (|| (.identifier-symbol-alpha? self)
       (.identifier-sign? self)
       (.digit? self)))
 
@@ -1841,7 +1841,7 @@
   (.lex (.skip-line self)))
 
 (method ParenLexer .get-identifier-sign ()
-  (when (or (.identifier-sign? self) (.identifier-symbol-alpha? self))
+  (when (|| (.identifier-sign? self) (.identifier-symbol-alpha? self))
     (while (.identifier-trail? self) (.get self)))
   self)
 
@@ -1871,9 +1871,9 @@
 
 (method ParenLexer .lex-string ()
   (.skip self)
-  (while (not (string-eq? (&next self) "\""))
+  (while (! (string-eq? (&next self) "\""))
     (if (.eof? self) (error "string not closed")
-        (not (string-eq? (&next self) "\\")) (.get self)
+        (! (string-eq? (&next self) "\\")) (.get self)
         (begin (.skip self)
                (let (c (.skip self))
                  (if (string-eq? c "a") (.put self 0x07)
@@ -1900,7 +1900,7 @@
         (string-eq? next ")") (begin (.skip self) '(:close-paren))
         (string-eq? next ":") (.lex-keyword self)
         (string-eq? next ";") (.lex-comment self)
-        (or (string-eq? next "+") (string-eq? next "-")) (.lex-sign self)
+        (|| (string-eq? next "+") (string-eq? next "-")) (.lex-sign self)
         (.digit? self) (list :number (.skip-number self))
         (.lex-symbol self))))
 
@@ -1935,29 +1935,29 @@
 (function read-byte (:opt stream)
   ; Read 1byte from the specified stream.
   ; Returns -1 when the stream reaches the end.
-  (let (stream (or stream (dynamic $stdin)))
+  (let (stream (|| stream (dynamic $stdin)))
     (.read-byte stream)))
 
 (function read-char (:opt stream)
   ; Read 1character from the specified stream.
-  (let (stream (or stream (dynamic $stdin)))
+  (let (stream (|| stream (dynamic $stdin)))
     (.read-char stream)))
 
 (function read-line (:opt stream)
   ; Read line from the specified stream.
-  (let (stream (or stream (dynamic $stdin)))
+  (let (stream (|| stream (dynamic $stdin)))
     (.read-line stream)))
 
 (function write-byte (byte :opt stream)
   ; Write 1byte to the specified stream.
   ; Returns byte.
-  (let (stream (or stream (dynamic $stdout)))
+  (let (stream (|| stream (dynamic $stdout)))
     (.write-byte stream byte)
     byte))
 
 (function write-string (s :opt stream)
   ; Write the specified stirng s to the specified stream.
-  (let (stream (or stream (dynamic $stdout)))
+  (let (stream (|| stream (dynamic $stdout)))
     (.write-string stream s)
     s))
 
@@ -2001,18 +2001,18 @@
   (with-open-mode in path '.open-update body))
 
 (function read (:opt stream)
-  (let (stream (or stream (dynamic $stdin)))
+  (let (stream (|| stream (dynamic $stdin)))
     (.read stream)))
 
 (function write (x :key stream readable? (radix 10) write-line-feed?)
-  (let (stream (or stream (dynamic $stdout)))
+  (let (stream (|| stream (dynamic $stdout)))
     (.write stream x
             :readable? readable?
             :radix radix
             :write-line-feed? write-line-feed?)))
 
 (function write-line (:opt (x "") :key stream readable? (radix 10))
-  (let (stream (or stream (dynamic $stdout)))
+  (let (stream (|| stream (dynamic $stdout)))
     (.write stream x
             :readable? readable?
             :radix radix
@@ -2020,7 +2020,7 @@
 
 (function print (x :opt stream)
   ; Print the specified x as a readable format.
-  (let (stream (or stream (dynamic $stdout)))
+  (let (stream (|| stream (dynamic $stdout)))
     (.write stream x :readable? true :write-line-feed? true)))
 
 ; execution

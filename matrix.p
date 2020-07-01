@@ -17,11 +17,11 @@
   (&height self))
 
 (method Matrix .inside? (p)
-  (and (<= 0 (.x p) (-- (&width self)))
-       (<= 0 (.y p) (-- (&height self)))))
+  (&& (<= 0 (.x p) (-- (&width self)))
+      (<= 0 (.y p) (-- (&height self)))))
 
 (method Matrix .index (p)
-  (if (not (.inside? self p)) (error "index out of bounds " (.to-s p))
+  (if (! (.inside? self p)) (error "index out of bounds " (.to-s p))
       (+ (.x p) (* (.y p) (&width self)))))
 
 (method Matrix .at (p)
@@ -42,7 +42,6 @@
   (let (m (.init (.new Matrix) :point (Point.of 2 3)))
     (assert (= (&width m) 2))
     (assert (= (&height m) 3))
-    (assert (nil? (.at m (Point.of 0 0))))
     (domatrix (p m)
       (.at! m p (.x p)))
     (domatrix (p m)

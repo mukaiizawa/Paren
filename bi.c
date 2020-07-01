@@ -95,10 +95,11 @@ static char *symbol_name_map[] = {
   // ip/DEFUN
   "bound_p", "bound?",
   "expand_macro", "expand-macro",
-  "object_p", "object?",
-  "is_a_p", "is-a?",
   "find_class", "find-class",
   "find_method", "find-method",
+  "is_a_p", "is-a?",
+  "not", "!",
+  "object_p", "object?",
   // bi
   "eq_p", "eq?",
   "neq_p", "neq?",
