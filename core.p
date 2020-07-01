@@ -659,7 +659,7 @@
         (while l
           (let (sublis nil)
             (dotimes (i n)
-              (if (nil? l) (error "list l of length indivisible by" n))
+              (if (nil? l) (error "list l of length indivisible by " n))
               (push! sublis (car l))
               (<- l (cdr l)))
             (push! lis (reverse! sublis))))
@@ -864,21 +864,6 @@
             (.skip ar)))
       (.token ar))))
 
-(function string->list (s delim)
-  ; Returns a list of strings s delimited by delimiter.
-  ;     (string->list "a/a", "/") <=> '("a" "a")
-  ;     (string->list "a/", "/") <=> '("a" "")
-  ;     (string->list "/a", "/") <=> '("" "a")
-  ;     (string->list "/", "/") <=> '("" "")
-  ;     (string->list "aaa", "") <=> Error
-  (let (acc nil i 0 pos nil slen (byte-array-length s) dlen (byte-array-length delim) e (-- slen))
-    (if (= dlen 0) (error "delimiter must not be the empty string"))
-    (while (&& (<= i e) (<- pos (byte-array-index s delim i e)))
-      (push! acc (substring s i pos))
-      (<- i (+ pos dlen)))
-    (push! acc (substring s i slen))
-    (reverse! acc)))
-
 (function string-at (s i)
   ; Returns the i-th character of string s.
   (let (c nil)
@@ -895,6 +880,21 @@
       (while (neq? (read-char in) :EOF)
         (<- length (++ length))))
     length))
+
+(function string->list (s delim)
+  ; Returns a list of strings s delimited by delimiter.
+  ;     (string->list "a/a" "/") <=> '("a" "a")
+  ;     (string->list "a/" "/") <=> '("a" "")
+  ;     (string->list "/a" "/") <=> '("" "a")
+  ;     (string->list "/" "/") <=> '("" "")
+  ;     (string->list "aaa" "") <=> Error
+  (let (acc nil i 0 pos nil slen (byte-array-length s) dlen (byte-array-length delim))
+    (if (= dlen 0) (error "delimiter must not be the empty string"))
+    (while (&& (< i slen) (<- pos (byte-array-index s delim i slen)))
+      (push! acc (substring s i pos))
+      (<- i (+ pos dlen)))
+    (push! acc (substring s i slen))
+    (reverse! acc)))
 
 ; number
 
@@ -1041,10 +1041,10 @@
   )
 
 (builtin-function byte-array-index (ba x s e)
-  ; Returns the position of the specified byte x in the s-th to e-th elements of the specified byte-array ba.
+  ; Returns the position of the specified byte x in the s-th to (e - 1)-th elements of the specified byte-array ba.
   ; You can also specify a byte-array for x, in which case the location of the first occurrence of the partial byte-array is returned.
-  (assert (= (byte-array-index "012" 0x31 0 2) 1))
-  (assert (= (byte-array-index "012" "12" 0 2) 1)))
+  (assert (= (byte-array-index "012" 0x31 0 3) 1))
+  (assert (= (byte-array-index "012" "12" 0 3) 1)))
 
 (builtin-function byte-array-copy (src src-i dst dst-i size)
   ; Copy size elements from the `src-i`th element of the src byte-array to the dst byte-array `dst-i`th element and beyond.
@@ -1146,7 +1146,7 @@
   ; Create class the specified cls-sym.
   (let (Object? (eq? cls-sym 'Object))
     (if (! (all-satisfy? symbol? fields)) (error "fields must be symbol")
-        (bound? cls-sym) (error (symbol->string cls-sym) "already bound"))
+        (bound? cls-sym) (error (symbol->string cls-sym) " already bound"))
     (list begin0
           (list quote cls-sym)
           (list <- cls-sym (list quote (list :class 'Class
@@ -1162,14 +1162,14 @@
         quoted-global-sym (list quote global-sym)
         method-lambda (cons lambda (cons (cons 'self args) (expand-macro-all body))))
     (if (! (find-class cls-sym)) (error "class not found")
-        (bound? global-sym) (error global-sym "already bound"))
+        (bound? global-sym) (error global-sym " already bound"))
     (list begin0
           quoted-global-sym
           (list 'make-method-dispatcher method-sym)
           (list <- global-sym method-lambda))))
 
 (function error (:rest args)
-  (throw (.message (.new Error) (list->string (map string args) " "))))
+  (throw (.message (.new Error) (map string args))))
 
 (class Object ()
   ; Object is a class that is the basis of all class hierarchies.
@@ -1347,7 +1347,7 @@
   (let (first-file (car (&path self)))
     (if (eq? OS.name :windows)
         (&& (= (byte-array-length first-file) 2)
-            (byte-array-index first-file ":" 1 1))
+            (byte-array-index first-file ":" 1 2))
         (string-eq? first-file Path.separator))))
 
 (method Path .relative? ()
@@ -1825,12 +1825,12 @@
 
 (method ParenLexer .identifier-symbol-alpha? ()
   (&& (.ascii? self)
-      (|| (byte-array-index "!$%&*./<=>?^_|" (.next-byte self) 0 13)
+      (|| (byte-array-index "!$%&*./<=>?^_|" (.next-byte self) 0 14)
           (.alpha? self))))
 
 (method ParenLexer .identifier-sign? ()
   (&& (.ascii? self)
-      (byte-array-index "+-" (.next-byte self) 0 1)))
+      (byte-array-index "+-" (.next-byte self) 0 2)))
 
 (method ParenLexer .identifier-trail? ()
   (|| (.identifier-symbol-alpha? self)

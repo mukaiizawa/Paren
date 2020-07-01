@@ -108,10 +108,10 @@ DEFUN(barray_index)
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
   if (!bi_sint(argv->cons.cdr->cons.car, &e)) return FALSE;
   if (s > e) return FALSE;
-  if (s < 0 || s >= o->barray.size) return FALSE;
-  if (e < 0 || e >= o->barray.size) return FALSE;
+  if (s < 0 || s > o->barray.size) return FALSE;
+  if (e < 0 || e > o->barray.size) return FALSE;
   if (p == NULL) {
-    while (s <= e) {
+    while (s < e) {
       if (LC(o->barray.elt + s) == b) {
         *result = sint(s);
         return TRUE;
@@ -119,7 +119,7 @@ DEFUN(barray_index)
       s++;
     }
   } else {
-    while (s <= e) {
+    while (s < e) {
       if (s + p->barray.size > o->barray.size) break;
       if (memcmp(o->barray.elt + s, p->barray.elt, p->barray.size) == 0) {
         *result = sint(s);
