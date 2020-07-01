@@ -911,21 +911,9 @@
   (assert (nil? (integer? 3.14)))
   (assert (nil? (integer? 'x))))
 
-(function even? (x)
-  ; Returns true if the specified integer x is even.
-  (= (mod x 2) 0))
-
-(function odd? (x)
-  ; Returns true if the specified integer x is odd
-  (not (even? x)))
-
 (function byte? (x)
   ; Returns true if the specified x is integer and between 0 and 255.
   (and (integer? x) (<= 0 x 255)))
-
-(function unsigned-integer? (x)
-  ; Returns true if the specified x is integer and zero or positive.
-  (and (integer? x) (>= x 0)))
 
 (builtin-function = (x :rest args)
   ; Returns true if the specified number x and y are equal.
@@ -934,6 +922,21 @@
   (assert (not (= 10 20)))
   (assert (= 'x 'x))
   (assert (not (= 'x 'y))))
+
+(builtin-function & (x y)
+  (assert (= (& 0x333333333 0x555555555) 0x111111111)))
+
+(builtin-function | (x y)
+  (assert (= (| 0x333333333 0x555555555) 0x777777777)))
+
+(builtin-function << (x y)
+  (assert (= (<< 3 2) 12)))
+
+(function >> (x y)
+  (<< x (- y)))
+
+(builtin-function ^ (x y)
+  (assert (= (^ 3 0x500000000) 0x500000003)))
 
 (function /= (x y)
   ; Same as (not (= x y))).
@@ -996,12 +999,6 @@
 (function -- (x)
   ; Returns the value of the specified number x - 1.
   (- x 1))
-
-(builtin-function < (:rest args)
-  ; Returns true if each of the specified args are in monotonically decreasing order.
-  ; Otherwise returns nil.
-  (assert (< 0 1 2))
-  (assert (nil? (< 0 0 1))))
 
 (function abs (x)
   ; Returns the absolute value of the specified number x.
@@ -1402,18 +1399,18 @@
   (let (encoding (dynamic $external-encoding))
     (switch encoding
       :UTF-8 (let (illegal-utf8-error (.message (.new Error) "illegal UTF-8")
-                   trail? (lambda (b) (= (bit-and b 0xc0) 0x80))
+                   trail? (lambda (b) (= (& b 0xc0) 0x80))
                    ms (.new MemoryStream)
                    b1 (.read-byte self) b2 nil b3 nil b4 nil)
                (if (< b1 0) (return :EOF)
                    (< b1 0x80) (.write-byte ms b1)
                    (< b1 0xc2) (throw illegal-utf8-error)
                    (not (trail? (<- b2 (.read-byte self)))) (throw illegal-utf8-error)
-                   (< b1 0xe0) (begin (if (= (bit-and b1 0x3e) 0) (throw illegal-utf8-error))
+                   (< b1 0xe0) (begin (if (= (& b1 0x3e) 0) (throw illegal-utf8-error))
                                       (.write-byte ms b1)
                                       (.write-byte ms b2))
                    (< b1 0xf0) (begin (<- b3 (.read-byte self))
-                                      (if (or (and (= b1 0xe0) (= (bit-and b2 0x20) 0))
+                                      (if (or (and (= b1 0xe0) (= (& b2 0x20) 0))
                                               (not (trail? b3)))
                                           (throw illegal-utf8-error))
                                       (.write-byte ms b1)
@@ -1422,7 +1419,7 @@
                    (< b1 0xf8) (begin (<- b3 (.read-byte self) b4 (.read-byte self))
                                       (if (or (not (trail? b3))
                                               (not (trail? b4))
-                                              (and (= b1 0xf0) (= (bit-and b2 0x30) 0)))
+                                              (and (= b1 0xf0) (= (& b2 0x30) 0)))
                                           (throw illegal-utf8-error))
                                       (.write-byte ms b1)
                                       (.write-byte ms b2)
@@ -1828,7 +1825,7 @@
 
 (method ParenLexer .identifier-symbol-alpha? ()
   (and (.ascii? self)
-       (or (byte-array-index "!$%&*./<=>?_" (.next-byte self) 0 11)
+       (or (byte-array-index "!$%&*./<=>?^_|" (.next-byte self) 0 13)
            (.alpha? self))))
 
 (method ParenLexer .identifier-sign? ()

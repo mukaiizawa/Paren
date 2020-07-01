@@ -149,7 +149,9 @@ static int identifier_symbol_alpha_p(void)
     case '=':
     case '>':
     case '?':
+    case '^':
     case '_':
+    case '|':
       return TRUE;
     default:
       return isalpha(next_ch);
