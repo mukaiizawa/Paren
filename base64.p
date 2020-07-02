@@ -7,49 +7,36 @@
         (< b6 62) (+ 0x30 b6 -52)
         (= b6 62) (if url-safe? 0x2d 0x2b)
         (= b6 63) (if url-safe? 0x5f 0x2f)
-        (= b6 64) 0x3d
-        (assert nil))))
+        (= b6 64) 0x3d)))
 
 (function Base64.encode (src :opt url-safe?)
   ; Base64 encoding as specified by RFC 4648.
-  (let (val 0 src-len (byte-array-length src) remain (mod src-len 3))
+  (let (val 0 b1 0 b2 0 b3 0 size 3 src-len (byte-array-length src) remain (mod src-len 3))
     (with-memory-stream (out)
       (with-memory-stream (in src)
-        (dotimes (i (// src-len 3))
-          (<- val (| (<< (read-byte in) 16)
-                     (<< (read-byte in) 8)
-                     (read-byte in)))
+        (while (= size 3)
+          (if (= (<- b1 (read-byte in)) -1) (break)
+              (= (<- b2 (read-byte in)) -1) (<- size 1 b2 9)
+              (= (<- b3 (read-byte in)) -1) (<- size 2 b3 9)
+              (<- size 3))
+          (<- val (| (<< b1 16) (<< b2 8) b3))
           (write-byte (Base64.encode-6bit (>> val 18)) out)
           (write-byte (Base64.encode-6bit (& (>> val 12) 0x3f)) out)
-          (write-byte (Base64.encode-6bit (& (>> val 6) 0x3f)) out)
-          (write-byte (Base64.encode-6bit (& val 0x3f)) out))
-        (if (= remain 2)
-            (begin
-              (<- val (| (<< (read-byte in) 16) (<< (read-byte in) 8)))
-              (write-byte (Base64.encode-6bit (& (>> val 18) 0x3f)) out)
-              (write-byte (Base64.encode-6bit (& (>> val 12) 0x3f)) out)
-              (write-byte (Base64.encode-6bit (& (>> val 6) 0x3f)) out)
-              (write-byte (Base64.encode-6bit 64) out))
-            (= remain 1)
-            (begin
-              (<- val (<< (read-byte in) 4))
-              (write-byte (Base64.encode-6bit (& (>> val 6) 0x3f)) out)
-              (write-byte (Base64.encode-6bit (& val 0x3f)) out)
-              (write-byte (Base64.encode-6bit 64) out)
-              (write-byte (Base64.encode-6bit 64) out)))))))
+          (write-byte (Base64.encode-6bit (if (= size 1) 64 (& (>> val 6) 0x3f))) out)
+          (write-byte (Base64.encode-6bit (if (<= size 2) 64 (& val 0x3f))) out))))))
 
 (function Base64.url-safe-encode (src)
   ; Base64.url-safe-encode is the alternate base64 encoding defined in RFC 4648.
   ; It is typically used in URLs and file names.
   (Base64.encode src true))
 
-(function Base64.decode-byte (b :opt possible-padding?)
+(function Base64.decode-byte (b :opt accept-padding?)
   (if (<= 0x41 b 0x5a) (- b 0x41)
       (<= 0x61 b 0x7a) (+ (- b 0x61) 26)
       (<= 0x30 b 0x39) (+ (- b 0x30) 52)
       (|| (= b 0x2d) (= b 0x2b)) 62
       (|| (= b 0x5f) (= b 0x2f)) 63
-      (&& possible-padding? (|| (= b -1) (= b 0x3d))) nil
+      (&& accept-padding? (|| (= b -1) (= b 0x3d))) nil
       (error "illegal base64")))
 
 (function Base64.decode (src)
