@@ -1,13 +1,13 @@
 ; Base64 module.
 
-(function Base64.encode-6bit (b6)
+(function Base64.encode-bits (bits)
   (let (url-safe? (dynamic url-safe?))
-    (if (< b6 26) (+ 0x41 b6)
-        (< b6 52) (+ 0x61 b6 -26)
-        (< b6 62) (+ 0x30 b6 -52)
-        (= b6 62) (if url-safe? 0x2d 0x2b)
-        (= b6 63) (if url-safe? 0x5f 0x2f)
-        (= b6 64) 0x3d)))
+    (if (< bits 26) (+ 0x41 bits)
+        (< bits 52) (+ 0x61 bits -26)
+        (< bits 62) (+ 0x30 bits -52)
+        (= bits 62) (if url-safe? 0x2d 0x2b)
+        (= bits 63) (if url-safe? 0x5f 0x2f)
+        (= bits 64) 0x3d)))
 
 (function Base64.encode (src :opt url-safe?)
   ; Base64 encoding as specified by RFC 4648.
@@ -20,10 +20,10 @@
               (= (<- b3 (read-byte in)) -1) (<- size 2 b3 0)
               (<- size 3))
           (<- val (| (<< b1 16) (<< b2 8) b3))
-          (write-byte (Base64.encode-6bit (>> val 18)) out)
-          (write-byte (Base64.encode-6bit (& (>> val 12) 0x3f)) out)
-          (write-byte (Base64.encode-6bit (if (= size 1) 64 (& (>> val 6) 0x3f))) out)
-          (write-byte (Base64.encode-6bit (if (<= size 2) 64 (& val 0x3f))) out))))))
+          (write-byte (Base64.encode-bits (>> val 18)) out)
+          (write-byte (Base64.encode-bits (& (>> val 12) 0x3f)) out)
+          (write-byte (Base64.encode-bits (if (= size 1) 64 (& (>> val 6) 0x3f))) out)
+          (write-byte (Base64.encode-bits (if (<= size 2) 64 (& val 0x3f))) out))))))
 
 (function Base64.url-safe-encode (src)
   ; Base64.url-safe-encode is the alternate base64 encoding defined in RFC 4648.
@@ -36,23 +36,26 @@
       (<= 0x30 b 0x39) (+ (- b 0x30) 52)
       (|| (= b 0x2d) (= b 0x2b)) 62
       (|| (= b 0x5f) (= b 0x2f)) 63
-      (&& accept-padding? (|| (= b -1) (= b 0x3d))) nil
+      (&& (= b 0x3d) accept-padding?) nil
       (error "illegal base64")))
 
 (function Base64.decode (src)
   ; Base64 decoding as specified by RFC 4648.
   ; Processing after the padding character `=` is not performed.
-  (let (val 0 b6 0 size 0)
+  (let (val 0 x 0 b1 0 b2 0 b3 0 b4 0 size 3)
     (with-memory-stream (out)
       (with-memory-stream (in src)
-        (while (&& (/= (<- val (read-byte in)) -1) b6)
-          (<- val (| (<< (Base64.decode-byte val) 18)
-                     (<< (Base64.decode-byte (read-byte in)) 12)))
-          (if (! (<- b6 (Base64.decode-byte (read-byte in) true))) (<- size 1)
-              (if (! (<- val (| val (<< b6 6))
-                         b6 (Base64.decode-byte (read-byte in) true))) (<- size 2)
-                  (<- val (| val b6)
-                      size 3)))
+        (while (= size 3)
+          (if (= (<- b1 (read-byte in)) -1) (break)
+              (= (<- b2 (read-byte in)) -1) (<- b2 0x3d b3 b2 b4 b2)
+              (= (<- b3 (read-byte in)) -1) (<- b3 0x3d b4 b3)
+              (= (<- b4 (read-byte in)) -1) (<- b4 0x3d))
+          (<- val (| (<< (Base64.decode-byte b1) 18)
+                     (<< (Base64.decode-byte b2) 12)))
+          (if (! (<- x (Base64.decode-byte b3 true))) (<- size 1)
+              (! (<- val (| val (<< x 6))
+                     x (Base64.decode-byte b4 true))) (<- size 2)
+              (<- val (| val x) size 3))
           (write-byte (>> val 16) out)
           (if (>= size 2) (write-byte (& (>> val 8) 0xff) out))
           (if (= size 3) (write-byte (& val 0xff) out)))))))
