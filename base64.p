@@ -55,11 +55,11 @@
 (function Base64.decode (src)
   ; Base64 decoding as specified by RFC 4648.
   ; Processing after the padding character `=` is not performed.
-  (let (val 0 b8 0 b6 0 size 0)
+  (let (val 0 b6 0 size 0)
     (with-memory-stream (out)
       (with-memory-stream (in src)
-        (while (&& (/= (<- b8 (read-byte in)) -1) b6)
-          (<- val (| (<< (Base64.decode-byte b8) 18)
+        (while (&& (/= (<- val (read-byte in)) -1) b6)
+          (<- val (| (<< (Base64.decode-byte val) 18)
                      (<< (Base64.decode-byte (read-byte in)) 12)))
           (if (! (<- b6 (Base64.decode-byte (read-byte in) true))) (<- size 1)
               (if (! (<- val (| val (<< b6 6))
