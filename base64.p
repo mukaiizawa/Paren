@@ -11,13 +11,13 @@
 
 (function Base64.encode (src :opt url-safe?)
   ; Base64 encoding as specified by RFC 4648.
-  (let (val 0 b1 0 b2 0 b3 0 size 3 src-len (byte-array-length src) remain (mod src-len 3))
+  (let (val 0 b1 0 b2 0 b3 0 size 3)
     (with-memory-stream (out)
       (with-memory-stream (in src)
         (while (= size 3)
           (if (= (<- b1 (read-byte in)) -1) (break)
-              (= (<- b2 (read-byte in)) -1) (<- size 1 b2 9)
-              (= (<- b3 (read-byte in)) -1) (<- size 2 b3 9)
+              (= (<- b2 (read-byte in)) -1) (<- size 1 b2 0)
+              (= (<- b3 (read-byte in)) -1) (<- size 2 b3 0)
               (<- size 3))
           (<- val (| (<< b1 16) (<< b2 8) b3))
           (write-byte (Base64.encode-6bit (>> val 18)) out)
