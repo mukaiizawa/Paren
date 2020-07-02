@@ -127,7 +127,7 @@ static struct xarray fb;
 #define   APPLY_FRAME            0x00000003
 #define   APPLY_BUILTIN_FRAME    0x00000013
 #define   ASSERT_FRAME           0x00000022
-#define   BIND_HANDLER_FRAME     0x00000034
+#define   BIND_HANDLER_FRAME     0x00000033
 #define   BIND_FRAME             0x00000043
 #define   BIND_PROPAGATION_FRAME 0x00000053
 #define   EVAL_FRAME             0x00000062
@@ -198,11 +198,6 @@ char *frame_name(int frame_type)
   xarray_add(&fb, o); \
   fb_gen0(frame_type); \
 }
-#define fb_gen2(frame_type, o, p) \
-{ \
-  xarray_add(&fb, p); \
-  fb_gen1(frame_type, o); \
-}
 
 static void gen(int frame_type)
 {
@@ -239,10 +234,6 @@ static void fb_flush(void)
         break;
       case 3:    // fb_gen1
         set_frame_var(fp, 0, fb.elt[i--]);
-        break;
-      case 4:    // fb_gen2
-        set_frame_var(fp, 0, fb.elt[i--]);
-        set_frame_var(fp, 1, fb.elt[i--]);
         break;
       default: xassert(FALSE); break;
     }
@@ -482,24 +473,21 @@ static void pop_bind_frame(void)
 
 static void pop_bind_handler_frame(void)
 {
-  int i, j;
+  int i;
   object cls_sym, handler, handlers;
-  handler = reg[0];
-  i = sint_val(get_frame_var(fp, 0));
-  cls_sym = get_frame_var(fp, 1);
+  cls_sym = get_frame_var(fp, 0);
   pop_frame();
-  if (!object_type_p(handler, LAMBDA)) {
-    ip_mark_error("required handler");
-    return;
-  }
-  for (j = fp; j > -1; j = prev_fp(j)) {
-    if (sint_val(fs[j]) == HANDLERS_FRAME) {
-      handlers = get_frame_var(j, 0);
-      xassert(i + 1 < handlers->array.size);
+  if (!bi_arg_type(reg[0], LAMBDA, &handler)) return;
+  for (i = fp; i > -1; i = prev_fp(i)) {
+    if (sint_val(fs[i]) != HANDLERS_FRAME) continue;
+    handlers = get_frame_var(i, 0);
+    for (i = 0; i < handlers->array.size; i += 2) {
+      if (handlers->array.elt[i] != object_nil) continue;
       handlers->array.elt[i] = cls_sym;
       handlers->array.elt[i + 1] = handler;
       return;
     }
+    xassert(FALSE);
   }
   xassert(FALSE);
 }
@@ -1046,13 +1034,20 @@ DEFUN(find_method)
 
 DEFUN(stack_frame)
 {
-  int i;
+  int i, j;
   char buf[MAX_STR_LEN];
+  object o;
   for (i = 0; i <= fp; i = next_fp(i)) {
     printf("+-----------------------------\n");
     printf("|%d: %s\n", i, frame_name(sint_val(fs[i])));
     switch (sint_val(fs[i])) {
       case HANDLERS_FRAME:
+        o = get_frame_var(i, 0);
+        for (j = 0; j < o->array.size; j++) {
+          printf("|%s\n", object_describe(o->array.elt[j], buf));
+        }
+        break;
+      case QUOTE_FRAME:
       case TRACE_FRAME:
         printf("|%s\n", object_describe(get_frame_var(i, 0), buf));
         break;
@@ -1126,7 +1121,7 @@ static int valid_lambda_list_p(object params, int nest_p)
   return params == object_nil;
 }
 
-static int gen_symbol_binding(object args, int bind_frame_type)
+static int gen_symbol_binding(object args, int frame_type)
 {
   object o;
   if (args == object_nil) return TRUE;
@@ -1138,8 +1133,8 @@ static int gen_symbol_binding(object args, int bind_frame_type)
     ip_mark_error("argument must be pairs");
     return FALSE;
   }
-  if (!gen_symbol_binding(args->cons.cdr, bind_frame_type)) return FALSE;
-  gen1(bind_frame_type, o->cons.car);
+  if (!gen_symbol_binding(args->cons.cdr, frame_type)) return FALSE;
+  gen1(frame_type, o->cons.car);
   gen0(EVAL_FRAME);
   gen1(QUOTE_FRAME, o->cons.cdr->cons.car);
   return TRUE;
@@ -1272,35 +1267,12 @@ DEFSP(throw)
 
 DEFSP(catch)
 {
-  int size;
-  object cls, params;
+  object params;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  size = 0;
-  params = argv->cons.car;
-  fb_reset();
-  while (params != object_nil) {
-    if (!object_type_p(params, CONS)) {
-      mark_illegal_args();
-      return FALSE;
-    }
-    if (!object_type_p((cls = params->cons.car), SYMBOL)) {
-      mark_illegal_args();
-      return FALSE;
-    }
-    if (!object_type_p((params = params->cons.cdr), CONS)) {
-      ip_mark_error("parameter must be pair");
-      return FALSE;
-    }
-    fb_gen1(QUOTE_FRAME, params->cons.car);
-    fb_gen0(EVAL_FRAME);
-    fb_gen2(BIND_HANDLER_FRAME, sint(size), cls);
-    params = params->cons.cdr;
-    size += 2;
-  }
-  gen1(HANDLERS_FRAME, gc_new_array(size));
+  if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
+  gen1(HANDLERS_FRAME, gc_new_array(object_list_len(params)));
   gen_eval_sequential_frame(argv->cons.cdr);
-  fb_flush();
-  return TRUE;
+  return gen_symbol_binding(params, BIND_HANDLER_FRAME);
 }
 
 DEFSP(return)

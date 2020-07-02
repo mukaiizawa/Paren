@@ -1169,7 +1169,7 @@
           (list <- global-sym method-lambda))))
 
 (function error (:rest args)
-  (throw (.message (.new Error) (map string args))))
+  (throw (.message (.new Error) (apply string args))))
 
 (class Object ()
   ; Object is a class that is the basis of all class hierarchies.
