@@ -1126,22 +1126,22 @@ static int valid_lambda_list_p(object params, int nest_p)
   return params == object_nil;
 }
 
-static int gen_let_binding(int i, object args)
+static int gen_symbol_binding(object args, int bind_frame_type)
 {
   object o;
   if (args == object_nil) return TRUE;
-  if (!object_type_p(args->cons.car, SYMBOL)) {
+  if (!object_type_p((o = args)->cons.car, SYMBOL)) {
     ip_mark_error("argument must be symbol");
     return FALSE;
   }
-  if ((o = args->cons.cdr) == object_nil) {
+  if ((args = args->cons.cdr) == object_nil) {
     ip_mark_error("argument must be pairs");
     return FALSE;
   }
-  if (!gen_let_binding(i + 2, o->cons.cdr)) return FALSE;
-  gen1(BIND_FRAME, args->cons.car);
+  if (!gen_symbol_binding(args->cons.cdr, bind_frame_type)) return FALSE;
+  gen1(bind_frame_type, o->cons.car);
   gen0(EVAL_FRAME);
-  gen1(QUOTE_FRAME, args->cons.cdr->cons.car);
+  gen1(QUOTE_FRAME, o->cons.cdr->cons.car);
   return TRUE;
 }
 
@@ -1155,7 +1155,7 @@ DEFSP(let)
   }
   gen_switch_env_frame(reg[1]);
   gen_eval_sequential_frame(argv->cons.cdr);
-  return gen_let_binding(0, args);
+  return gen_symbol_binding(args, BIND_FRAME);
 }
 
 DEFSP(dynamic)
@@ -1188,32 +1188,7 @@ DEFSP(dynamic)
 
 DEFSP(symbol_bind)
 {
-  object s;
-  if (argc == 0) return TRUE;
-  if (argc % 2 != 0) {
-    ip_mark_error("argument must be pair");
-    return FALSE;
-  }
-  fb_reset();
-  while (argc != 0) {
-    s = argv->cons.car;
-    if (!object_type_p(s, SYMBOL)) {
-      ip_mark_error("cannot bind except symbol");
-      return FALSE;
-    }
-    if (s == object_nil) {
-      ip_mark_error("cannot bind nil");
-      return FALSE;
-    }
-    argv = argv->cons.cdr;
-    fb_gen1(QUOTE_FRAME, argv->cons.car);
-    fb_gen0(EVAL_FRAME);
-    fb_gen1(BIND_PROPAGATION_FRAME, s);
-    argv = argv->cons.cdr;
-    argc -= 2;
-  }
-  fb_flush();
-  return TRUE;
+  return gen_symbol_binding(argv, BIND_PROPAGATION_FRAME);
 }
 
 DEFSP(begin)
