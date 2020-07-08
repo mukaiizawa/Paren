@@ -120,8 +120,6 @@ static int sp;
 
 static object fs[FRAME_STACK_SIZE];
 
-static struct xarray fb;
-
 // frame_type
 #define FRAME_SIZE_MASK          0x0000000f
 #define   APPLY_FRAME            0x00000003
@@ -192,12 +190,6 @@ char *frame_name(int frame_type)
   set_frame_var(fp, 0, lv0); \
   set_frame_var(fp, 1, lv1); \
 }
-#define fb_gen0(frame_type) xarray_add(&fb, sint(frame_type));
-#define fb_gen1(frame_type, o) \
-{ \
-  xarray_add(&fb, o); \
-  fb_gen0(frame_type); \
-}
 
 static void gen(int frame_type)
 {
@@ -212,32 +204,6 @@ static void pop_frame(void)
 {
   sp = fp;
   fp = prev_fp(fp);
-}
-
-// frame buffer
-
-static void fb_reset(void)
-{
-  xarray_reset(&fb);
-}
-
-static void fb_flush(void)
-{
-  int i;
-  object o;
-  i = fb.size - 1;
-  while (i > 0) {
-    o = fb.elt[i--];
-    gen(sint_val(o));
-    switch (frame_size(sint_val(o))) {
-      case 2:    // fb_gen0
-        break;
-      case 3:    // fb_gen1
-        set_frame_var(fp, 0, fb.elt[i--]);
-        break;
-      default: xassert(FALSE); break;
-    }
-  }
 }
 
 static void gen_apply_frame(object operator)
@@ -294,9 +260,9 @@ static int same_symbol_keyword_p(object sym, object key)
   return memcmp(sym->barray.elt, key->barray.elt, sym->barray.size) == 0;
 }
 
-static int valid_keyword_p(object params, object args)
+static int valid_keyword_args(object params, object args)
 {
-  object p, s;
+  object p;
   while (args != object_nil) {
     if (!object_type_p(args->cons.car, KEYWORD)) {
       ip_mark_error("expected keyword parameter");
@@ -304,10 +270,7 @@ static int valid_keyword_p(object params, object args)
     }
     p = params;
     while (p != object_nil) {
-      s = p->cons.car;
-      if (object_type_p(s, CONS)) s = s->cons.car;
-      xassert(object_type_p(s, SYMBOL));
-      if (same_symbol_keyword_p(s, args->cons.car)) break;
+      if (same_symbol_keyword_p(p->cons.car, args->cons.car)) break;
       p = p->cons.cdr;
     }
     if (p == object_nil) {
@@ -323,24 +286,21 @@ static int valid_keyword_p(object params, object args)
   return TRUE;
 }
 
-static void parse_args(object env, object params, object args)
+static int parse_args(object params, object args)
 {
-  object o, pre, k, v, def_v, sup_k;
+  object o, k, v;
   // parse required args
-  while (params != object_nil && !object_type_p(params->cons.car, KEYWORD)) {
+  while (params != object_nil) {
+    if (object_type_p(params->cons.car, KEYWORD)) break;
     if (args == object_nil) {
       bi_argc_range(0, 1, 1);
-      return;
+      return FALSE;
     }
-    if (!object_type_p(params->cons.car, CONS)) {
-      fb_gen1(QUOTE_FRAME, args->cons.car);
-      fb_gen1(BIND_FRAME, params->cons.car);
-    } else if (!object_list_p(args->cons.car)) {
-      mark_illegal_args();
-      return;
-    } else {
-      parse_args(env, params->cons.car, args->cons.car);
-      if (ip_trap_code != TRAP_NONE) return;
+    if (object_type_p(params->cons.car, SYMBOL))
+      symbol_bind(reg[1], params->cons.car, args->cons.car);
+    else {
+      if (!object_list_p(args->cons.car)) return FALSE;
+      if (!parse_args(params->cons.car, args->cons.car)) return FALSE;
     }
     params = params->cons.cdr;
     args = args->cons.cdr;
@@ -348,92 +308,48 @@ static void parse_args(object env, object params, object args)
   // parse optional args
   if (params->cons.car == object_opt) {
     params = params->cons.cdr;
-    while (params != object_nil && !object_type_p(params->cons.car, KEYWORD)) {
-      o = params->cons.car;
-      def_v = sup_k = NULL;
-      if (!object_type_p(o, CONS)) k = o;
+    while (params != object_nil) {
+      if (object_type_p(params->cons.car, KEYWORD)) break;
+      k = params->cons.car;
+      if (args == object_nil) symbol_bind(reg[1], k, object_nil);
       else {
-        k = o->cons.car;
-        def_v = (o = o->cons.cdr)->cons.car;
-        if ((o = o->cons.cdr) != object_nil) sup_k = o->cons.car;
+        symbol_bind(reg[1], k, args->cons.car);
+        args = args->cons.cdr;
       }
       params = params->cons.cdr;
-      if (sup_k != NULL) {
-        v = object_bool(args != object_nil);
-        fb_gen1(QUOTE_FRAME, v);
-        fb_gen1(BIND_FRAME, sup_k);
-      }
-      if (args != object_nil) {
-        fb_gen1(QUOTE_FRAME, args->cons.car);
-        fb_gen1(BIND_FRAME, k);
-        args = args->cons.cdr;
-      } else {
-        if (def_v == NULL) {
-          fb_gen1(QUOTE_FRAME, object_nil);
-          fb_gen1(BIND_FRAME, k);
-        } else {
-          fb_gen1(QUOTE_FRAME, def_v);
-          fb_gen0(EVAL_FRAME);
-          fb_gen1(BIND_FRAME, k);
-        }
-      }
     }
   }
   // parse rest args
   if (params->cons.car == object_rest) {
-    params = params->cons.cdr;
-    fb_gen1(QUOTE_FRAME, args);
-    fb_gen1(BIND_FRAME, params->cons.car);
-    return;
+    symbol_bind(reg[1], params->cons.cdr->cons.car, args);
+    return TRUE;
   }
   // parse keyword args
   if (params->cons.car == object_key) {
     params = params->cons.cdr;
-    if (!valid_keyword_p(params, args)) return;
+    if (!valid_keyword_args(params, args)) return FALSE;
+    o = args;
     while (params != object_nil) {
-      o = params->cons.car;
-      v = def_v = sup_k = NULL;
-      if (!object_type_p(o, CONS)) k = o;
-      else {
-        k = o->cons.car;
-        def_v = (o = o->cons.cdr)->cons.car;
-        if ((o = o->cons.cdr) != object_nil) sup_k = o->cons.car;
-      }
-      o = args;
-      pre = NULL;
-      while (o != object_nil) {
-        if (same_symbol_keyword_p(k, o->cons.car)) {
-          v = (o = o->cons.cdr)->cons.car;
-          o = o->cons.cdr;
-          if (pre == NULL) args = o;
-          else pre->cons.cdr = o;
+      k = params->cons.car;
+      v = object_nil;
+      args = o;
+      while (args != object_nil) {
+        if (same_symbol_keyword_p(k, args->cons.car)) {
+          v = args->cons.cdr->cons.car;
           break;
         }
-        pre = o = o->cons.cdr;
-        o = o->cons.cdr;
+        args = args->cons.cdr->cons.cdr;
       }
-      if (sup_k != NULL) {
-        fb_gen1(QUOTE_FRAME, object_bool(v != NULL));
-        fb_gen1(BIND_FRAME, sup_k);
-      }
-      if (v != NULL) {
-        fb_gen1(QUOTE_FRAME, v);
-        fb_gen1(BIND_FRAME, k);
-      }
-      else {
-        if (def_v == NULL) {
-          fb_gen1(QUOTE_FRAME, object_nil);
-          fb_gen1(BIND_FRAME, k);
-        } else {
-          fb_gen1(QUOTE_FRAME, def_v);
-          fb_gen0(EVAL_FRAME);
-          fb_gen1(BIND_FRAME, k);
-        }
-      }
+      symbol_bind(reg[1], k, v);
       params = params->cons.cdr;
     }
+    return TRUE;
   }
-  if (args != object_nil) bi_argc_range(2, 1, 1);
+  if (args != object_nil) {
+    bi_argc_range(2, 1, 1);
+    return FALSE;
+  }
+  return TRUE;
 }
 
 static void pop_apply_frame(void)
@@ -441,11 +357,9 @@ static void pop_apply_frame(void)
   object operator;
   operator = get_frame_var(fp, 0);
   pop_frame();
-  fb_reset();
   gen_switch_env_frame(operator->lambda.env);
-  parse_args(reg[1], operator->lambda.params, reg[0]);
   gen_eval_sequential_frame(operator->lambda.body);
-  fb_flush();
+  parse_args(operator->lambda.params, reg[0]);
 }
 
 static void pop_builtin_inst(void)
@@ -1060,65 +974,75 @@ DEFUN(stack_frame)
 
 // special operator
 
-/*
- * <lambda_list> ::= [<required_params>] 
- *                   [:opt <xparams>]
- *                   { [:rest <param>] | [:key <xparams>] }
- * <required_params> ::= <param> <param> ...
- * <xparams> ::= <xparam> <xparam> ...
- * <xparam> ::= { <param> | (<param> <initial_value> [<supplyp>]) }
- */
-static int valid_xparam_p(object o)
+static int parse_rest_param(object params)
 {
-  o = o->cons.car;
-  if (object_type_p(o, SYMBOL)) return TRUE;
-  return object_type_p(o, CONS) && object_type_p(o->cons.car, SYMBOL)
-    && object_type_p(o = o->cons.cdr, CONS)
-    && (o->cons.cdr == object_nil
-        || (object_type_p(o = o->cons.cdr, CONS)
-          && object_type_p(o->cons.car, SYMBOL) && o->cons.cdr == object_nil));
+  switch (object_type(params->cons.car)) {
+    case SYMBOL:
+      break;
+    default:
+      return FALSE;
+  }
+  return params->cons.cdr == object_nil;
 }
 
-static int parse_params(object *o)
+static int parse_keyword_params(object params)
 {
-  *o = (*o)->cons.cdr;
-  if (!valid_xparam_p(*o)) return FALSE;
-  *o = (*o)->cons.cdr;
-  while (TRUE) {
-    if (*o == object_nil) break;
-    if (object_type_p((*o)->cons.car, KEYWORD)) break;
-    if (!valid_xparam_p(*o)) return FALSE;
-    *o = (*o)->cons.cdr;
+  while (params != object_nil) {
+    switch (object_type(params->cons.car)) {
+      case SYMBOL:
+        params = params->cons.cdr;
+        break;
+      default:
+        return FALSE;
+    }
   }
   return TRUE;
 }
 
-static int valid_lambda_list_p(object params, int nest_p)
+static int parse_optional_params(object params)
 {
-  int type;
-  while (TRUE) {
-    if (!object_list_p(params)) return FALSE;
-    if (params == object_nil) return TRUE;
-    type = object_type(params->cons.car);
-    if (type == KEYWORD) break;
-    else if (type == SYMBOL) params = params->cons.cdr;
-    else if (type == CONS) {
-      if (!nest_p) return FALSE;
-      if (!valid_lambda_list_p(params->cons.car, nest_p)) return FALSE;
-      params = params->cons.cdr;
+  object p;
+  while (params != object_nil) {
+    p = params->cons.car;
+    switch (object_type(params->cons.car)) {
+      case KEYWORD:
+        if (p == object_key) return parse_keyword_params(params->cons.cdr);
+        if (p == object_rest) return parse_rest_param(params->cons.cdr);
+        return FALSE;
+      case SYMBOL:
+        params = params->cons.cdr;
+        break;
+      default:
+        return FALSE;
     }
-    else return FALSE;
   }
-  if (params->cons.car == object_opt)
-    if (!parse_params(&params)) return FALSE;
-  if (params->cons.car == object_rest) {
-    params = params->cons.cdr;
-    if (!object_type_p(params->cons.car, SYMBOL)) return FALSE;
-    params = params->cons.cdr;
-  } else if (params->cons.car == object_key) {
-    if (!parse_params(&params)) return FALSE;
+  return TRUE;
+}
+
+static int parse_required_params(object params, int nest_p)
+{
+  object p;
+  while (params != object_nil) {
+    p = params->cons.car;
+    switch (object_type(params->cons.car)) {
+      case KEYWORD:
+        if (p == object_opt) return parse_optional_params(params->cons.cdr);
+        if (p == object_key) return parse_keyword_params(params->cons.cdr);
+        if (p == object_rest) return parse_rest_param(params->cons.cdr);
+        return FALSE;
+      case CONS:
+        if (!nest_p) return FALSE;
+        if (!parse_required_params(params->cons.car, nest_p)) return FALSE;
+        params = params->cons.cdr;
+        break;
+      case SYMBOL:
+        params = params->cons.cdr;
+        break;
+      default:
+        return FALSE;
+    }
   }
-  return params == object_nil;
+  return TRUE;
 }
 
 static int gen_symbol_binding(object args, int frame_type)
@@ -1199,7 +1123,7 @@ DEFSP(macro)
   if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
   gen1(BIND_PROPAGATION_FRAME, o);
   argv = argv->cons.cdr;
-  if (!valid_lambda_list_p(params = argv->cons.car, TRUE)) {
+  if (!parse_required_params(params = argv->cons.car, TRUE)) {
     mark_illegal_args();
     return FALSE;
   }
@@ -1212,7 +1136,7 @@ DEFSP(lambda)
   object params;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   params = argv->cons.car;
-  if (!valid_lambda_list_p(params, FALSE)) {
+  if (!parse_required_params(params, FALSE)) {
     mark_illegal_args();
     return FALSE;
   }
@@ -1346,7 +1270,6 @@ void ip_start(void)
   sp = 0;
   fp = -1;
   cycle = 0;
-  xarray_init(&fb);
   xbarray_init(&bi_buf);
   ip_trap_code = TRAP_NONE;
   ip_main();

@@ -49,11 +49,11 @@
 (class Splay ()
   top sentinel comparator)
 
-(method Splay .init (:opt (comparator (lambda (k1 k2) (- (address k1) (address k2)))))
+(method Splay .init (:opt comparator)
   (let (node (.new SplayNode))
     (&top! self node)
     (&sentinel! self node)
-    (&comparator! self comparator)))
+    (&comparator! self (|| comparator (lambda (k1 k2) (- (address k1) (address k2)))))))
 
 (method Splay -barance (key)
   (let (top (&top self) sentinel (&sentinel self) cmp (&comparator self) p top q nil d nil)

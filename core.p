@@ -51,13 +51,10 @@
   ; Optional parameters are parameters that need not be specified when calling the function.
   ; Keyword parameters are specified with names without regard to order when calling the function.
   ; Rest parameters implement variable length arguments.
-  ;     <lambda_parameter> ::= [<required_params>]
-  ;                            [:opt <xparams>]
-  ;                            { [:rest <param>] | [:key <xparams>] }
-  ;     <required_params> ::= <param> <param> ...
-  ;     <xparams> ::= <xparam> <xparam> ...
-  ;     <xparam> ::= { <param> | (<param> <initial_value> [<supplyp>]) }
-  (lambda <lambda_parameter>
+  ;     params ::= ([required_param] ...
+  ;                 [:opt optional_param ...]
+  ;                 [{ :rest rest_param | :key keyword_param ... }] )
+  (lambda <params>
     expr1
     expr2
     ...))
@@ -71,13 +68,12 @@
   ; Special operator macro creates macro named the specified name.
   ; Macro expands without evaluating its arguments.
   ; The macro-parameters that can be specified for macros differ in that macro-parameters can be specified recursively instead of required parameters.
-  ;     <macro_parameter> ::= [<macro_parameter> || <required_params>]
-  ;                           [:opt <xparams>]
-  ;                           { [:rest <param>] | [:key <xparams>] }
-  ;     <required_params> ::= <param> <param> ...
-  ;     <xparams> ::= <xparam> <xparam> ...
-  ;     <xparam> ::= { <param> | (<param> <initial_value> [<supplyp>]) }
-  (macro name <macro_parameter>
+  ;     param ::= '('
+  ;                   [{ param | required_param } ...  ]
+  ;                   [:opt optional_param ...]
+  ;                   [{ :rest rest_param | :key keyword_param ... }]
+  ;               ')'
+  (macro name <params>
     expr1
     expr2
     ...))
@@ -131,14 +127,14 @@
 
 ; fundamental macro
 
-(macro global-symbol (s :opt (v nil v?))
+(macro global-symbol (s :opt v)
   ; In Paren, explicitly binding symbols to the global environment is rare and bad practice.
   ; It is the programmer's responsibility to call it in the global environment because it is only macro-expanded into a special operator '<-'.
   ; By convention, the binding symbol name starts with '$'.
   ; Macro expansion image is as follows.
   ;     (global-symbol s v)
   ;     (<- s v)
-  (if v? (list <- s v)))
+  (if v (list <- s v)))
 
 (macro function! (name args :rest body)
   ; Bind a lambda to a specified symbol name.
@@ -371,7 +367,7 @@
   ; Then, bind a created lambda function with the specified name.
   ; If the specified name is bound, throw error.
   ; Expand the macro inline.
-  (if (bound? name) (error name "already bound")
+  (if (bound? name) (error name " already bound")
       (list begin0 (list quote name)
             (list <- name (cons lambda (cons args (expand-macro-all body)))))))
 
@@ -644,10 +640,10 @@
                   nil)))
     (rec l)))
 
-(function .. (s e :opt (step 1))
+(function .. (s e :opt step)
   ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
-  (let (acc nil test (if (> step 0) <= >=))
-    (while (test s e)
+  (let (acc nil step (|| step 1))
+    (while (<= s e)
       (push! acc s)
       (<- s (+ s step)))
     (reverse! acc)))
@@ -823,12 +819,12 @@
   (if (<= 0x61 c 0x7a) (- c 0x20)
       c))
 
-(function ascii->digit (c :key (radix 10))
+(function ascii->digit (c :key radix)
   ; Returns the numeric value when the specified byte c is regarded as the specified radix base character.
   ; Default radix is 10.
   (let (n (if (ascii-digit? c) (- c 0x30)
               (ascii-alpha? c) (+ (- (ascii-lower c) 0x61) 10)))
-    (if (|| (nil? n) (>= n radix)) (error "not numeric char")
+    (if (|| (nil? n) (>= n (|| radix 10))) (error "not numeric char")
         n)))
 
 ; string
@@ -1142,20 +1138,19 @@
   (&& (function? o)
       (eq? (car (lambda-body o)) :method)))
 
-(macro class (cls-sym (:opt (super 'Object) :rest features) :rest fields)
+(macro class (cls-sym (:opt super :rest features) :rest fields)
   ; Create class the specified cls-sym.
-  (let (Object? (eq? cls-sym 'Object))
-    (if (! (all-satisfy? symbol? fields)) (error "fields must be symbol")
-        (bound? cls-sym) (error (symbol->string cls-sym) " already bound"))
-    (list begin0
-          (list quote cls-sym)
-          (list <- cls-sym (list quote (list :class 'Class
-                                             :symbol cls-sym
-                                             :super (if (! Object?) super)
-                                             :features features
-                                             :fields fields)))
-          (cons begin
-                (map (lambda (field) (list 'make-accessor field)) fields)))))
+  (if (! (all-satisfy? symbol? fields)) (error "fields must be symbol")
+      (bound? cls-sym) (error (symbol->string cls-sym) " already bound"))
+  (list begin0
+        (list quote cls-sym)
+        (list <- cls-sym (list quote (list :class 'Class
+                                           :symbol cls-sym
+                                           :super (if (eq? cls-sym 'Object) nil (|| super 'Object))
+                                           :features features
+                                           :fields fields)))
+        (cons begin
+              (map (lambda (field) (list 'make-accessor field)) fields))))
 
 (macro method (cls-sym method-sym args :rest body)
   (let (global-sym (byte-array-concat cls-sym method-sym)
@@ -1236,13 +1231,13 @@
   ; Do not derive from Exception.
   message stack-trace)
 
-(method Exception .message (:opt (message nil message?))
+(method Exception .message (message)
   ; Message accessors.
-  (if message? (&message! self message) (&message self)))
+  (&message! self message))
 
 (method Exception .to-s ()
   ; Returns a String representing the receiver.
-  (let (class-name (symbol->string (&class self)) msg (.message self))
+  (let (class-name (symbol->string (&class self)) msg (&message self))
     (if msg (byte-array-concat class-name " -- " msg)
         class-name)))
 
@@ -1451,8 +1446,9 @@
       (.write-byte self (byte-array-at ba i)))
     self))
 
-(method Stream .write-integer (n :key (radix 10))
+(method Stream .write-integer (n :key radix)
   ; Write integer to stream.
+  (<- radix (|| radix 10))
   (if (= n 0) (.write-byte self 0x30)
       (let (write-digit (lambda (n)
                           (let (upper (// n radix) digit (mod n radix))
@@ -1524,7 +1520,7 @@
   (.write-byte self 0x5d)
   self)
 
-(method Stream .write (x :key readable? (radix 10) write-line-feed?)
+(method Stream .write (x :key readable? write-line-feed?)
   ; Write the specified x to the specified stream.
   ; write is the general entry point to the Paren printer.
   ; If readable? is supplied, write in a format understood by the Paren reader.
@@ -2004,19 +2000,18 @@
   (let (stream (|| stream (dynamic $stdin)))
     (.read stream)))
 
-(function write (x :key stream readable? (radix 10) write-line-feed?)
+(function write (x :key stream readable? write-line-feed?)
   (let (stream (|| stream (dynamic $stdout)))
     (.write stream x
             :readable? readable?
-            :radix radix
             :write-line-feed? write-line-feed?)))
 
-(function write-line (:opt (x "") :key stream readable? (radix 10))
+(function write-line (:opt x :key stream readable?)
+  ; Write a print representation of x and a newline character to the stream.
+  ; If x is not supplied, outputs a newline character to the stream.
   (let (stream (|| stream (dynamic $stdout)))
-    (.write stream x
-            :readable? readable?
-            :radix radix
-            :write-line-feed? true)))
+    (if x (.write stream x :readable? readable?  :write-line-feed? true)
+        (.write-byte stream 0x0a))))
 
 (function print (x :opt stream)
   ; Print the specified x as a readable format.
