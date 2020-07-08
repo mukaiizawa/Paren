@@ -895,9 +895,10 @@ beginは主にifのthen節やマクロ定義時に使用される。
     (lambda ([var] ...  [:opt sym-val ...] [:rest var] [:key sym-val ...])
         body_form ...)
     => result
-    sym-val ::= { sym | (sym val) }
+    sym-val ::= { sym | (sym val) | (sym val supply?) }
     sym -- 仮引数名
     val -- 仮引数の初期値
+    supply? -- 本体評価時、実引数が与えられたか否かが束縛されるシンボル
     result -- 作成した関数
 
 lambdaは関数を作成するスペシャルオペレーターである。
