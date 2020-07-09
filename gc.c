@@ -223,6 +223,7 @@ static void mark_binding(void *key, void *data)
 void gc_mark(object o)
 {
   int i;
+  object p;
   if (sint_p(o)) return;
   if (alive_p(o)) return;
   set_alive(o);
@@ -242,8 +243,15 @@ void gc_mark(object o)
       gc_mark(o->lambda.body);
       break;
     case CONS:
-      gc_mark(o->cons.car);
-      gc_mark(o->cons.cdr);
+      p = o;
+      while (o != object_nil) {
+        o = o->cons.cdr;
+        set_alive(o);    // for stack overflow
+      }
+      while (p != object_nil) {
+        gc_mark(p->cons.car);
+        p = p->cons.cdr;
+      }
       break;
     case ARRAY:
       for (i = 0; i < o->array.size; i++)
