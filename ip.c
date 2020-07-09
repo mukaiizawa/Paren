@@ -131,18 +131,17 @@ static object fs[FRAME_STACK_SIZE];
 #define   EVAL_FRAME             0x00000062
 #define   EVAL_ARGS_FRAME        0x00000074
 #define   EVAL_SEQUENTIAL_FRAME  0x00000083
-#define   FENCE_FRAME            0x00000092
-#define   FETCH_OPERATOR_FRAME   0x00000103
-#define   GOTO_FRAME             0x00000112
-#define   HANDLERS_FRAME         0x00000123
-#define   IF_FRAME               0x00000133
-#define   LABELS_FRAME           0x00000143
-#define   QUOTE_FRAME            0x00000153
-#define   RETURN_FRAME           0x00000162
-#define   SWITCH_ENV_FRAME       0x00000173
+#define   FETCH_OPERATOR_FRAME   0x00000093
+#define   GOTO_FRAME             0x00000102
+#define   HANDLERS_FRAME         0x00000113
+#define   IF_FRAME               0x00000123
+#define   LABELS_FRAME           0x00000133
+#define   LAMBDA_FRAME           0x00000144
+#define   LET_FRAME              0x00000153
+#define   QUOTE_FRAME            0x00000163
+#define   RETURN_FRAME           0x00000172
 #define   THROW_FRAME            0x00000182
-#define   TRACE_FRAME            0x00000193
-#define   UNWIND_PROTECT_FRAME   0x00000203
+#define   UNWIND_PROTECT_FRAME   0x00000193
 
 char *frame_name(int frame_type)
 {
@@ -156,23 +155,23 @@ char *frame_name(int frame_type)
     case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
-    case FENCE_FRAME: return "FENCE_FRAME";
     case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
     case GOTO_FRAME: return "GOTO_FRAME";
     case HANDLERS_FRAME: return "HANDLERS_FRAME";
     case IF_FRAME: return "IF_FRAME";
     case LABELS_FRAME: return "LABELS_FRAME";
+    case LAMBDA_FRAME: return "LAMBDA_FRAME";
+    case LET_FRAME: return "LET_FRAME";
     case QUOTE_FRAME: return "QUOTE_FRAME";
     case RETURN_FRAME: return "RETURN_FRAME";
-    case SWITCH_ENV_FRAME: return "SWITCH_ENV_FRAME";
     case THROW_FRAME: return "THROW_FRAME";
-    case TRACE_FRAME: return "TRACE_FRAME";
     case UNWIND_PROTECT_FRAME: return "UNWIND_PROTECT_FRAME";
     default: xassert(FALSE); return NULL;
   }
 }
 
 #define fs_top() (sint_val(fs[fp]))
+#define fs_nth(i) (sint_val(fs[i]))
 #define get_frame_var(base_fp, n) (fs[base_fp + 2 + n])
 #define set_frame_var(base_fp, n, o) (fs[base_fp + 2 + n] = o)
 #define frame_size(frame_type) (frame_type & FRAME_SIZE_MASK)
@@ -191,6 +190,21 @@ char *frame_name(int frame_type)
   set_frame_var(fp, 1, lv1); \
 }
 
+static void dump_fs(void)
+{
+  int i, j, frame_type;
+  char buf[MAX_STR_LEN];
+  for (i = 0; i <= fp; i = next_fp(i)) {
+    frame_type = sint_val(fs[i]);
+    printf("+-----------------------------\n");
+    printf("|%d: %s\n", i, frame_name(frame_type));
+    printf("|%d: %d\n", i + 1, sint_val(fs[i + 1]));
+    for (j = 0; j < frame_size(frame_type) - 2; j++) {
+      printf("|%d: %s\n", i + j + 2, object_describe(get_frame_var(i, j), buf));
+    }
+  }
+}
+
 static void gen(int frame_type)
 {
   if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_mark_error("stack over flow");
@@ -204,12 +218,6 @@ static void pop_frame(void)
 {
   sp = fp;
   fp = prev_fp(fp);
-}
-
-static void gen_apply_frame(object operator)
-{
-  gen0(FENCE_FRAME);
-  gen1(APPLY_FRAME, operator);
 }
 
 static void gen_eval_frame(object o)
@@ -234,23 +242,11 @@ static void gen_eval_args_frame(object args)
   }
 }
 
-static void gen_eval_sequential_frame(object args)
-{
-  if (args == object_nil) reg[0] = object_nil;
-  else gen1(EVAL_SEQUENTIAL_FRAME, args);
-}
-
 static void gen_if_frame(object args)
 {
   if (args == object_nil) return;
   if (args->cons.cdr != object_nil) gen1(IF_FRAME, args->cons.cdr);
   gen_eval_frame(args->cons.car);
-}
-
-static void gen_switch_env_frame(object env)
-{
-  gen1(SWITCH_ENV_FRAME, reg[1]);
-  reg[1] = gc_new_env(env);
 }
 
 static int same_symbol_keyword_p(object sym, object key)
@@ -357,12 +353,13 @@ static void pop_apply_frame(void)
   object operator;
   operator = get_frame_var(fp, 0);
   pop_frame();
-  gen_switch_env_frame(operator->lambda.env);
-  gen_eval_sequential_frame(operator->lambda.body);
+  gen2(LAMBDA_FRAME, reg[1], operator);
+  reg[1] = gc_new_env(operator->lambda.env);
+  gen1(EVAL_SEQUENTIAL_FRAME, operator->lambda.body);
   parse_args(operator->lambda.params, reg[0]);
 }
 
-static void pop_builtin_inst(void)
+static void pop_apply_builtin_frame(void)
 {
   object args;
   int (*function)(int, object, object *);
@@ -419,14 +416,12 @@ static void pop_eval_frame(void)
   switch (object_type(reg[0])) {
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
-        gen1(TRACE_FRAME, reg[0]);
         ip_mark_error("unbind symbol");
         return;
       }
       reg[0] = s;
       return;
     case CONS:
-      gen1(TRACE_FRAME, reg[0]);
       gen1(FETCH_OPERATOR_FRAME, reg[0]->cons.cdr);
       gen_eval_frame(reg[0]->cons.car);
       return;
@@ -448,16 +443,23 @@ static void pop_eval_frame(void)
   }
 }
 
-static void pop_swith_env_frame(void)
+static void pop_lambda_frame(void)
 {
   reg[1] = get_frame_var(fp, 0);
+  pop_frame();
+}
+
+static void pop_let_frame(void)
+{
+  reg[1] = reg[1]->env.top;
   pop_frame();
 }
 
 static void pop_rewinding(void)
 {
   switch (fs_top()) {
-    case SWITCH_ENV_FRAME: pop_swith_env_frame(); break;
+    case LAMBDA_FRAME: pop_lambda_frame(); break;
+    case LET_FRAME: pop_let_frame(); break;
     case UNWIND_PROTECT_FRAME: xassert(FALSE); break;    // must be protected.
     default: pop_frame(); break;
   }
@@ -468,7 +470,7 @@ static void pop_unwind_protect_frame(void)
   object body;
   body = get_frame_var(fp, 0);
   pop_frame();
-  gen_eval_sequential_frame(body);
+  gen1(EVAL_SEQUENTIAL_FRAME, body);
 }
 
 static void pop_goto_frame(void)
@@ -489,7 +491,7 @@ static void pop_goto_frame(void)
       pop_frame();
       gen0(GOTO_FRAME);
       gen1(QUOTE_FRAME, label);
-      gen_eval_sequential_frame(o);
+      gen1(EVAL_SEQUENTIAL_FRAME, o);
       return;
     }
     if (fs_top() == LABELS_FRAME) break;
@@ -504,7 +506,7 @@ static void pop_goto_frame(void)
     if (o->cons.car == label) break;
     o = o->cons.cdr;
   }
-  gen_eval_sequential_frame(o);
+  gen1(EVAL_SEQUENTIAL_FRAME, o);
 }
 
 static void pop_fetch_operator_frame(void)
@@ -524,11 +526,11 @@ static void pop_fetch_operator_frame(void)
       return;
     case MACRO:
       gen0(EVAL_FRAME);
-      gen_apply_frame(reg[0]);
+      gen1(APPLY_FRAME, reg[0]);
       reg[0] = args;
       return;
     case LAMBDA:
-      gen_apply_frame(reg[0]);
+      gen1(APPLY_FRAME, reg[0]);
       gen_eval_args_frame(args);
       return;
     default: break;
@@ -557,7 +559,8 @@ static void pop_eval_sequential_frame(void)
   args = get_frame_var(fp, 0);
   if (args == object_nil) pop_frame();
   else {
-    set_frame_var(fp, 0, args->cons.cdr);
+    if (args->cons.cdr == object_nil) pop_frame();
+    else set_frame_var(fp, 0, args->cons.cdr);
     gen_eval_frame(args->cons.car);
   }
 }
@@ -574,16 +577,17 @@ static void pop_if_frame(void)
 static void pop_return_frame(void)
 {
   object args;
-  while (sp > 0) {
+  while (fp != -1) {
     switch (fs_top()) {
-      case FENCE_FRAME:
+      case LAMBDA_FRAME:
+        pop_lambda_frame();
         return;
       case UNWIND_PROTECT_FRAME: 
         args = get_frame_var(fp, 0);
         pop_frame();
         gen0(RETURN_FRAME);
         gen1(QUOTE_FRAME, reg[0]);
-        gen_eval_sequential_frame(args);
+        gen1(EVAL_SEQUENTIAL_FRAME, args);
         return;
       default:
         pop_rewinding();
@@ -592,13 +596,43 @@ static void pop_return_frame(void)
   }
 }
 
+static object anonimous_lambda;
+static object named_lambda;
+
+static void find_named_lambda(void *key, void *data)
+{
+  if (anonimous_lambda == data) named_lambda = key;
+}
+
+static int resolve_anonimous_lambda(void)
+{
+  object e;
+  xassert(named_lambda == NULL);
+  e = reg[1];
+  while (e != object_nil) {
+    splay_foreach(&e->env.binding, find_named_lambda);
+    if (named_lambda != NULL) return TRUE;
+    e = e->env.top;
+  }
+  return FALSE;
+}
+
 static object call_stack(void)
 {
   int i;
   object o;
   o = object_nil;
   for (i = 0; i <= fp; i = next_fp(i)) {
-    if (sint_val(fs[i]) == TRACE_FRAME) o = gc_new_cons(get_frame_var(i, 0), o);
+    switch (fs_nth(i)) {
+      case LAMBDA_FRAME:
+        named_lambda = NULL;
+        anonimous_lambda = get_frame_var(i, 1);
+        if (resolve_anonimous_lambda()) o = gc_new_cons(named_lambda, o);
+        else o = gc_new_cons(anonimous_lambda, o);
+        break;
+      default:
+        break;
+    }
   }
   return o;
 }
@@ -607,6 +641,7 @@ static void exit1(void)
 {
   char buf[MAX_STR_LEN];
   object o;
+  dump_fs();
   o = reg[0]->cons.cdr;
   printf("%s", object_describe(o->cons.car, buf));
   o = o->cons.cdr->cons.cdr;
@@ -654,7 +689,7 @@ static void pop_throw_frame(void)
         pop_frame();
         gen0(THROW_FRAME);
         gen1(QUOTE_FRAME, reg[0]);
-        gen_eval_sequential_frame(body);
+        gen1(EVAL_SEQUENTIAL_FRAME, body);
         return;
       case HANDLERS_FRAME:
         handlers = get_frame_var(fp, 0);
@@ -664,7 +699,7 @@ static void pop_throw_frame(void)
           cls_sym = handlers->array.elt[j];
           handler = handlers->array.elt[j + 1];
           if (!object_is_a_p(reg[1], reg[0], cls_sym)) continue;
-          gen_apply_frame(handler);
+          gen1(APPLY_FRAME, handler);
           reg[0] = gc_new_cons(reg[0], object_nil);
           return;
         }
@@ -745,7 +780,7 @@ DEFUN(apply)
       reg[0] = argv->cons.cdr->cons.car;
       return TRUE;
     case LAMBDA:
-      gen_apply_frame(argv->cons.car);
+      gen1(APPLY_FRAME, argv->cons.car);
       reg[0] = argv->cons.cdr->cons.car;
       return TRUE;
     default: break;
@@ -765,7 +800,7 @@ DEFUN(expand_macro)
   if (!object_type_p(f, SYMBOL)) return TRUE;
   if ((f = symbol_find_propagation(reg[1], f)) == NULL) return TRUE;
   if (!object_type_p(f, MACRO)) return TRUE;
-  gen_apply_frame(f);
+  gen1(APPLY_FRAME, f);
   reg[0] = args;
   return TRUE;
 }
@@ -948,28 +983,8 @@ DEFUN(find_method)
 
 DEFUN(stack_frame)
 {
-  int i, j;
-  char buf[MAX_STR_LEN];
-  object o;
-  for (i = 0; i <= fp; i = next_fp(i)) {
-    printf("+-----------------------------\n");
-    printf("|%d: %s\n", i, frame_name(sint_val(fs[i])));
-    switch (sint_val(fs[i])) {
-      case HANDLERS_FRAME:
-        o = get_frame_var(i, 0);
-        for (j = 0; j < o->array.size; j++) {
-          printf("|%s\n", object_describe(o->array.elt[j], buf));
-        }
-        break;
-      case QUOTE_FRAME:
-      case TRACE_FRAME:
-        printf("|%s\n", object_describe(get_frame_var(i, 0), buf));
-        break;
-      default:
-        break;
-    }
-  }
-  exit(1);
+  dump_fs();
+  return TRUE;
 }
 
 // special operator
@@ -1068,41 +1083,36 @@ DEFSP(let)
 {
   object args;
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
-  if (!object_list_p((args = argv->cons.car))) {
-    ip_mark_error("argument must be list");
-    return FALSE;
-  }
-  gen_switch_env_frame(reg[1]);
-  gen_eval_sequential_frame(argv->cons.cdr);
+  if (!bi_arg_list(argv->cons.car, &args)) return FALSE;
+  gen1(LET_FRAME, reg[1]);
+  gen1(EVAL_SEQUENTIAL_FRAME, argv->cons.cdr);
+  reg[1] = gc_new_env(reg[1]);
   return gen_symbol_binding(args, BIND_FRAME);
 }
 
 DEFSP(dynamic)
 {
   int i;
-  object e, s, v;
+  object e, s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!object_type_p((s = argv->cons.car), SYMBOL)) {
-    ip_mark_error("argument must be symbol");
-    return FALSE;
-  }
+  if (!bi_arg_type(argv->cons.car, SYMBOL, &s)) return FALSE;
   i = fp;
   e = reg[1];
-  while (TRUE) {
-    if ((v = symbol_find(e, s)) != NULL) break;
-    while ((i = prev_fp(i)) > 0) {
-      if (sint_val(fs[i]) == SWITCH_ENV_FRAME) {
+  if ((reg[0] = symbol_find(e, s)) != NULL) return TRUE;
+  while ((i = prev_fp(i)) != -1) {
+    switch (fs_nth(i)) {
+      case LET_FRAME:
+        e = e->env.top;
+        break;
+      case LAMBDA_FRAME:
         e = get_frame_var(i, 0);
         break;
-      }
+      default:
+        continue;
     }
-    if (i < 0) {
-      ip_mark_error("unbind symbol");
-      return FALSE;
-    }
+    if ((reg[0] = symbol_find(e, s)) != NULL) return TRUE;
   }
-  reg[0] = v;
-  return TRUE;
+  return FALSE;
 }
 
 DEFSP(symbol_bind)
@@ -1112,7 +1122,7 @@ DEFSP(symbol_bind)
 
 DEFSP(begin)
 {
-  gen_eval_sequential_frame(argv);
+  gen1(EVAL_SEQUENTIAL_FRAME, argv);
   return TRUE;
 }
 
@@ -1169,7 +1179,7 @@ DEFSP(unwind_protect)
 DEFSP(labels)
 {
   gen1(LABELS_FRAME, argv);
-  gen_eval_sequential_frame(argv);
+  gen1(EVAL_SEQUENTIAL_FRAME, argv);
   return TRUE;
 }
 
@@ -1195,7 +1205,7 @@ DEFSP(catch)
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
   gen1(HANDLERS_FRAME, gc_new_array(object_list_len(params)));
-  gen_eval_sequential_frame(argv->cons.cdr);
+  gen1(EVAL_SEQUENTIAL_FRAME, argv->cons.cdr);
   return gen_symbol_binding(params, BIND_HANDLER_FRAME);
 }
 
@@ -1219,11 +1229,11 @@ DEFSP(assert)
 
 // main
 
-static void ip_main(void)
+static void ip_main(object args)
 {
   reg[0] = object_nil;
   reg[1] = object_toplevel;
-  gen_apply_frame(object_boot);
+  gen1(EVAL_SEQUENTIAL_FRAME, args);
   while (fp != -1) {
     xassert(fp >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
@@ -1232,7 +1242,7 @@ static void ip_main(void)
     }
     switch (fs_top()) {
       case APPLY_FRAME: pop_apply_frame(); break;
-      case APPLY_BUILTIN_FRAME: pop_builtin_inst(); break;
+      case APPLY_BUILTIN_FRAME: pop_apply_builtin_frame(); break;
       case ASSERT_FRAME: pop_assert_frame(); break;
       case BIND_FRAME: pop_bind_frame(); break;
       case BIND_HANDLER_FRAME: pop_bind_handler_frame(); break;
@@ -1240,17 +1250,16 @@ static void ip_main(void)
       case EVAL_FRAME: pop_eval_frame(); break;
       case EVAL_ARGS_FRAME: pop_eval_args_frame(); break;
       case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
-      case FENCE_FRAME: pop_frame(); break;
       case FETCH_OPERATOR_FRAME: pop_fetch_operator_frame(); break;
       case GOTO_FRAME: pop_goto_frame(); break;
       case HANDLERS_FRAME: pop_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
       case LABELS_FRAME: pop_frame(); break;
+      case LAMBDA_FRAME: pop_lambda_frame(); break;
+      case LET_FRAME: pop_let_frame(); break;
       case QUOTE_FRAME: reg[0] = get_frame_var(fp, 0); pop_frame(); break;
       case RETURN_FRAME: pop_return_frame(); break;
-      case SWITCH_ENV_FRAME: pop_swith_env_frame(); break;
       case THROW_FRAME: pop_throw_frame(); break;
-      case TRACE_FRAME: pop_frame(); break;
       case UNWIND_PROTECT_FRAME: pop_unwind_protect_frame(); break;
       default: xassert(FALSE); break;
     }
@@ -1265,12 +1274,12 @@ void ip_mark_object(void)
   for (i = 0; i < sp; i++) gc_mark(fs[i]);
 }
 
-void ip_start(void)
+void ip_start(object args)
 {
   sp = 0;
   fp = -1;
   cycle = 0;
   xbarray_init(&bi_buf);
   ip_trap_code = TRAP_NONE;
-  ip_main();
+  ip_main(args);
 }

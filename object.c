@@ -14,7 +14,6 @@ object object_opt;
 object object_rest;
 object object_quote;
 object object_stack_trace;
-object object_boot;
 
 object object_Class;
 object object_Exception;
@@ -145,7 +144,7 @@ static void describe_s_expr(object o, struct xbarray *x)
   if (x->size > MAX_STR_LEN) return;
   switch (object_type(o)) {
     case ENV:
-      xbarray_addf(x, "#(:environment %p :top %p)", o, o->env.top);
+      xbarray_addf(x, "#(:environment 0x%p :top 0x%p)", o, o->env.top);
       break;
     case MACRO:
     case LAMBDA:

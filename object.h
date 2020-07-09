@@ -94,7 +94,6 @@ extern object object_opt;
 extern object object_rest;
 extern object object_quote;
 extern object object_stack_trace;
-extern object object_boot;
 
 extern object object_Class;
 extern object object_Exception;

@@ -242,7 +242,6 @@ int main(int argc, char *argv[])
   core_fn = strcat(buf, "core.p");
   gc_init();
   make_initial_objects(argc, argv);
-  object_boot = gc_new_lambda(object_toplevel, object_nil, load());
-  ip_start();
+  ip_start(load());
   return 0;
 }

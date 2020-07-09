@@ -8,4 +8,4 @@ extern int ip_trap_code;
 
 extern void ip_mark_error(char *msg);
 extern void ip_mark_object(void);
-extern void ip_start(void);
+extern void ip_start(object args);
