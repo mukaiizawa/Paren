@@ -1356,7 +1356,7 @@
 
 (method Path .open (mode)
   (catch (Error (lambda (e)
-                  (throw (.message e (byte-array-concat "open failed" (.to-s self))))))
+                  (throw (.message e (byte-array-concat "open failed -- " (.to-s self))))))
     (.init (.new FileStream) (OS.fopen (.to-s self) mode))))
 
 (method Path .open-read ()

@@ -348,12 +348,26 @@ static int parse_args(object params, object args)
   return TRUE;
 }
 
+static void pop_lambda_frame(void)
+{
+  reg[1] = get_frame_var(fp, 0);
+  pop_frame();
+}
+
+static void pop_let_frame(void)
+{
+  reg[1] = reg[1]->env.top;
+  pop_frame();
+}
+
 static void pop_apply_frame(void)
 {
   object operator;
   operator = get_frame_var(fp, 0);
   pop_frame();
-  gen2(LAMBDA_FRAME, reg[1], operator);
+  // optimize tail recursion
+  if (fs_top() == LAMBDA_FRAME) set_frame_var(fp, 1, operator);
+  else gen2(LAMBDA_FRAME, reg[1], operator);
   reg[1] = gc_new_env(operator->lambda.env);
   gen1(EVAL_SEQUENTIAL_FRAME, operator->lambda.body);
   parse_args(operator->lambda.params, reg[0]);
@@ -441,18 +455,6 @@ static void pop_eval_frame(void)
       xassert(FALSE);
       return;
   }
-}
-
-static void pop_lambda_frame(void)
-{
-  reg[1] = get_frame_var(fp, 0);
-  pop_frame();
-}
-
-static void pop_let_frame(void)
-{
-  reg[1] = reg[1]->env.top;
-  pop_frame();
 }
 
 static void pop_rewinding(void)
@@ -557,12 +559,13 @@ static void pop_eval_sequential_frame(void)
 {
   object args;
   args = get_frame_var(fp, 0);
-  if (args == object_nil) pop_frame();
-  else {
-    if (args->cons.cdr == object_nil) pop_frame();
-    else set_frame_var(fp, 0, args->cons.cdr);
-    gen_eval_frame(args->cons.car);
+  if (args == object_nil) {
+    pop_frame();
+    return;
   }
+  if (args->cons.cdr == object_nil) pop_frame();
+  else set_frame_var(fp, 0, args->cons.cdr);
+  gen_eval_frame(args->cons.car);
 }
 
 static void pop_if_frame(void)
@@ -641,7 +644,6 @@ static void exit1(void)
 {
   char buf[MAX_STR_LEN];
   object o;
-  dump_fs();
   o = reg[0]->cons.cdr;
   printf("%s", object_describe(o->cons.car, buf));
   o = o->cons.cdr->cons.cdr;
