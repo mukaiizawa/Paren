@@ -129,34 +129,34 @@ object gc_new_cons(object car, object cdr)
   return o;
 }
 
-static object new_barray(int type, int size)
+static object new_bytes(int type, int size)
 {
   object o;
   xassert(size >= 0);
-  o = gc_alloc(sizeof(struct barray) + size - 1);
+  o = gc_alloc(sizeof(struct bytes) + size - 1);
   set_type(o, type);
-  o->barray.size = size;
+  o->bytes.size = size;
   regist(o);
   return o;
 }
 
-object gc_new_barray(int type, int size)
+object gc_new_bytes(int type, int size)
 {
   object o;
-  o = new_barray(type, size);
-  memset(o->barray.elt, 0, size);
+  o = new_bytes(type, size);
+  memset(o->bytes.elt, 0, size);
   return o;
 }
 
-static object new_barray_from(int type, char *val, int size)
+static object new_bytes_from(int type, char *val, int size)
 {
   object o;
-  o = new_barray(type, size);
-  memcpy(o->barray.elt, val, size);
+  o = new_bytes(type, size);
+  memcpy(o->bytes.elt, val, size);
   return o;
 }
 
-object gc_new_barray_from(int type, char *val, int size)
+object gc_new_bytes_from(int type, char *val, int size)
 {
   object o;
   struct st *s;
@@ -166,10 +166,10 @@ object gc_new_barray_from(int type, char *val, int size)
       if (type == SYMBOL) s = &symbol_table;
       else s = &keyword_table;
       if ((o = st_get(s, val, size)) != NULL) return o;
-      return st_put(s, new_barray_from(type, val, size));
+      return st_put(s, new_bytes_from(type, val, size));
     case STRING:
-    case BARRAY:
-      return new_barray_from(type, val, size);
+    case BYTES:
+      return new_bytes_from(type, val, size);
     default:
       xassert(FALSE);
       return NULL;
@@ -209,7 +209,7 @@ object gc_new_Error(char *msg)
   return gc_new_cons(object_class
       , gc_new_cons(object_Error
         , gc_new_cons(object_message
-          , gc_new_cons(gc_new_barray_from(STRING, msg, strlen(msg))
+          , gc_new_cons(gc_new_bytes_from(STRING, msg, strlen(msg))
             , gc_new_cons(object_stack_trace
               , gc_new_cons(object_nil , object_nil))))));
 }

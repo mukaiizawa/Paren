@@ -1,7 +1,7 @@
 // xc extensible byte array.
 
-#ifndef INCLUDE_XBARRAY_H
-#define INCLUDE_XBARRAY_H
+#ifndef INCLUDE_xbarray_H
+#define INCLUDE_xbarray_H
 
 struct xbarray {
   char *elt;

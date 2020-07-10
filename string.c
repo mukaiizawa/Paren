@@ -22,6 +22,6 @@ DEFUN(string_to_symbol)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_arg_type(argv->cons.car, STRING, &o)) return FALSE;
-  *result = gc_new_barray_from(SYMBOL, o->barray.elt, o->barray.size);
+  *result = gc_new_bytes_from(SYMBOL, o->bytes.elt, o->bytes.size);
   return TRUE;
 }

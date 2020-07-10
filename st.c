@@ -26,8 +26,8 @@ static object *alloc_table(int size)
 static int eq_p(object sym, char *val, int size)
 {
   if (sym == NULL) return FALSE;
-  if (sym->barray.size != size) return FALSE;
-  return memcmp(sym->barray.elt, val, size) == 0;
+  if (sym->bytes.size != size) return FALSE;
+  return memcmp(sym->bytes.elt, val, size) == 0;
 }
 
 static void extend(struct st *s)
@@ -71,7 +71,7 @@ object st_get(struct st *s, char *val, int size)
 object st_put(struct st *s, object sym)
 {
   int hval;
-  hval = hash(sym->barray.elt, sym->barray.size);
+  hval = hash(sym->bytes.elt, sym->bytes.size);
   while (at(s, hval) != NULL) hval++;
   at(s, hval) = sym;
   if (s->size++ > s->alloc_size / 2) extend(s);

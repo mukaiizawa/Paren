@@ -17,7 +17,7 @@ typedef union s_expr *object;
 #define   SYMBOL       0x0000000a
 #define   KEYWORD      0x0000000b
 #define   STRING       0x0000000c
-#define   BARRAY       0x0000000d
+#define   BYTES        0x0000000d
 #define   ARRAY        0x0000000e
 
 #define SINT_BITS 30
@@ -66,21 +66,16 @@ union s_expr {
     int header;
     double val; 
   } xfloat;
-  struct barray {
+  struct bytes {
     int header;
     int size;
     char elt[1];
-  } barray;
+  } bytes;
   struct array {
     int header;
     int size;
     object elt[1];
   } array;
-  struct xxxxx {
-    int header;
-    int size;
-    char elt[100];
-  } xxxxx;
   object next;
 };
 

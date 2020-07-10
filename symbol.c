@@ -22,7 +22,7 @@ DEFUN(symbol_to_string)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
-  *result = gc_new_barray_from(STRING, o->barray.elt, o->barray.size);
+  *result = gc_new_bytes_from(STRING, o->bytes.elt, o->bytes.size);
   return TRUE;
 }
 
@@ -31,6 +31,6 @@ DEFUN(symbol_to_keyword)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
-  *result = gc_new_barray_from(KEYWORD, o->barray.elt, o->barray.size);
+  *result = gc_new_bytes_from(KEYWORD, o->bytes.elt, o->bytes.size);
   return TRUE;
 }

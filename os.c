@@ -94,8 +94,8 @@ DEFUN(os_fgets)
   s = xbarray_fgets(&x, fp);
   if (s == NULL) *result = object_nil;
   else {
-    *result = gc_new_barray(STRING, --x.size);    // remove last NUL
-    memcpy((*result)->barray.elt, x.elt, x.size);
+    *result = gc_new_bytes(STRING, --x.size);    // remove last NUL
+    memcpy((*result)->bytes.elt, x.elt, x.size);
   }
   xbarray_free(&x);
   return TRUE;
@@ -107,12 +107,12 @@ DEFUN(os_fread)
   int from, size;
   FILE *fp;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, BARRAY, &o)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, BYTES, &o)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (!(0 <= from && from + size <= o->barray.size)) return FALSE;
+  if (!(0 <= from && from + size <= o->bytes.size)) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
-  size = fread(o->barray.elt + from, 1, size, fp);
+  size = fread(o->bytes.elt + from, 1, size, fp);
   if (size == 0 && ferror(fp)) {
     clearerr(fp);
     return FALSE;
@@ -127,12 +127,12 @@ DEFUN(os_fwrite)
   int from, size;
   FILE *fp;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
-  if (!bi_arg_barray(argv->cons.car, &o)) return FALSE;
+  if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (!(0 <= from && from + size <= o->barray.size)) return FALSE;
+  if (!(0 <= from && from + size <= o->bytes.size)) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
-  size = fwrite(o->barray.elt + from, 1, size, fp);
+  size = fwrite(o->bytes.elt + from, 1, size, fp);
   if (size == 0 && ferror(fp)) {
     clearerr(fp);
     return FALSE;
@@ -210,7 +210,7 @@ DEFUN(os_getcwd)
   char buf[MAX_STR_LEN];
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   pf_getcwd(buf);
-  *result = gc_new_barray_from(STRING, buf, strlen(buf));
+  *result = gc_new_bytes_from(STRING, buf, strlen(buf));
   return TRUE;
 }
 
@@ -231,7 +231,7 @@ DEFUN(os_readdir)
   if ((path = bi_string(argv)) == NULL) return FALSE;
   xbarray_init(&dirs);
   if (!pf_readdir(path, &dirs)) return FALSE;
-  *result = gc_new_barray_from(STRING, dirs.elt, dirs.size);
+  *result = gc_new_bytes_from(STRING, dirs.elt, dirs.size);
   xbarray_free(&dirs);
   return TRUE;
 }
@@ -323,7 +323,7 @@ DEFUN(os_getenv)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if ((s = bi_string(argv)) == NULL) return FALSE;
   if ((s = getenv(s)) == NULL) *result = object_nil;
-  else *result = gc_new_barray_from(STRING, s, strlen(s));
+  else *result = gc_new_bytes_from(STRING, s, strlen(s));
   return TRUE;
 }
 

@@ -8,8 +8,8 @@
 (function show (board)
   (domatrix (p board)
     (if (= (.y p) 0) (write-line))
-    (if (.at board p) (write-string "X")
-        (write-string "-")))
+    (if (.at board p) (write-bytes "X")
+        (write-bytes "-")))
   (write-line))
 
 (function putable? (board p)

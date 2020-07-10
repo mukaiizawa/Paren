@@ -43,10 +43,10 @@ int bi_arg_type(object o, int type, object *result)
   return arg_type(o, object_type_p(o, type), result);
 }
 
-int bi_arg_barray(object o, object *result)
+int bi_arg_bytes(object o, object *result)
 {
   switch (object_type(o)) {
-    case BARRAY:
+    case BYTES:
     case STRING:
     case SYMBOL:
     case KEYWORD:
@@ -109,17 +109,17 @@ static char *symbol_name_map[] = {
   "array_new", "array",
   "array_length", "array-length",
   "array_put", "array-at!",
-  // byte-array
-  "barray_at", "byte-array-at",
-  "barray_concat", "byte-array-concat",
-  "barray_copy", "byte-array-copy",
-  "barray_index", "byte-array-index",
-  "barray_length", "byte-array-length",
-  "barray_new", "byte-array",
-  "barray_p", "byte-array?",
-  "barray_put", "byte-array-at!",
-  "barray_to_string", "byte-array->string",
-  "barray_unmatch_index", "byte-array-unmatch-index",
+  // bytes
+  "bytes_at", "bytes-at",
+  "bytes_concat", "bytes-concat",
+  "bytes_copy", "bytes-copy",
+  "bytes_index", "bytes-index",
+  "bytes_length", "bytes-length",
+  "bytes_new", "bytes",
+  "bytes_p", "bytes?",
+  "bytes_put", "bytes-at!",
+  "bytes_to_string", "bytes->string",
+  "bytes_unmatch_index", "bytes-unmatch-index",
   // cons
   "cons_p", "cons?",
   "set_assoc", "assoc!",
@@ -161,7 +161,7 @@ static char *symbol_name_map[] = {
   "symbol_p", "symbol?",
   "symbol_to_keyword", "symbol->keyword",
   "symbol_to_string", "symbol->string",
-  "to_barray", "->byte-array",
+  "to_bytes", "->bytes",
   // os
   "os_fp", "OS.fp",
   "os_fopen", "OS.fopen",
@@ -280,8 +280,8 @@ int bi_strings(int n, object argv, char **ss)
       mark_type_error();
       return FALSE;
     }
-    ss[i] = xbarray_reserve(&bi_buf, o->barray.size);
-    memcpy(ss[i], o->barray.elt, o->barray.size);
+    ss[i] = xbarray_reserve(&bi_buf, o->bytes.size);
+    memcpy(ss[i], o->bytes.elt, o->bytes.size);
     xbarray_add(&bi_buf, '\0');
     argv = argv->cons.cdr;
   }

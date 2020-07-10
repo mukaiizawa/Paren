@@ -329,12 +329,12 @@
   ;     (clock expr1 expr2 ...)
   ;     (let (s (OS.clock))
   ;       (begin0 (begin expr1 expr2 ...)
-  ;               (print (- (OS.clock) s))))
+  ;               (write (- (OS.clock) s))))
   (with-gensyms (offset)
     (list let (list offset (list OS.clock))
           (list 'begin0
                 (cons begin body)
-                (list 'write-line (list 'string "time=" (list '- (list OS.clock) offset)))))))
+                (list 'write-bytes (list 'string "time=" (list '- (list OS.clock) offset)))))))
 
 (builtin-function expand-macro (expr)
   ; Expand macro the specified expression expr.
@@ -814,17 +814,18 @@
   ; Returns concatenated string which each of the specified args as string.
   (with-memory-stream (ms)
     (dolist (arg args)
-      (if arg (write arg :stream ms)))))
+      (if (string? arg) (write-bytes arg ms)
+          arg (write arg ms :end "")))))
 
 (builtin-function string? (x)
   ; Returns true if the specified x is a string
   (assert (string? ""))
   (assert (string? "aaa"))
-  (assert (! (string? (byte-array 1)))))
+  (assert (! (string? (bytes 1)))))
 
 (function string-eq? (x y)
-  ; Same as (byte-array-eq? x y).
-  (byte-array-eq? x y))
+  ; Same as (bytes-eq? x y).
+  (bytes-eq? x y))
 
 (function substring (s start :opt end)
   ; Returns a string that is a substring of the specified string s.
@@ -846,8 +847,7 @@
   (let (c nil)
     (with-memory-stream (in s)
       (dotimes (ci (++ i))
-        (if (eq? (<- c (read-char in)) :EOF)
-            (error "index outof bounds"))))
+        (if (eq? (<- c (read-char in)) :EOF) (error "index outof bounds"))))
     c))
 
 (function string-length (s)
@@ -865,9 +865,9 @@
   ;     (string->list "/a" "/") <=> '("" "a")
   ;     (string->list "/" "/") <=> '("" "")
   ;     (string->list "aaa" "") <=> Error
-  (let (acc nil i 0 pos nil slen (byte-array-length s) dlen (byte-array-length delim))
+  (let (acc nil i 0 pos nil slen (bytes-length s) dlen (bytes-length delim))
     (if (= dlen 0) (error "delimiter must not be the empty string"))
-    (while (&& (< i slen) (<- pos (byte-array-index s delim i slen)))
+    (while (&& (< i slen) (<- pos (bytes-index s delim i slen)))
       (push! acc (substring s i pos))
       (<- i (+ pos dlen)))
     (push! acc (substring s i slen))
@@ -996,54 +996,54 @@
     (if (> power 0) val
         (/ val))))
 
-; byte-array
+; bytes
 
-(builtin-function byte-array (size)
-  ; Create a byte-array of size the specified size.
+(builtin-function bytes (size)
+  ; Create a bytes of size the specified size.
   ; The element is cleared to 0.
   )
 
-(builtin-function byte-array? (x)
-  ; Returns true if the argument is a byte-array.
-  (assert (byte-array? (byte-array 3)))
-  (assert (! (byte-array? (array 3)))))
+(builtin-function bytes? (x)
+  ; Returns true if the argument is a bytes.
+  (assert (bytes? (bytes 3)))
+  (assert (! (bytes? (array 3)))))
 
-(function byte-array-eq? (x y)
+(function bytes-eq? (x y)
   ; Returns true if the specified x is same object.
-  (let (len (byte-array-length x))
-    (&& (= len (byte-array-length y))
-        (! (byte-array-unmatch-index x 0 y 0 len)))))
+  (let (len (bytes-length x))
+    (&& (= len (bytes-length y))
+        (! (bytes-unmatch-index x 0 y 0 len)))))
 
-(builtin-function byte-array-at (ba i)
+(builtin-function bytes-at (ba i)
   ; Consider the argument as a byte string and get the i-th element.
-  (assert (= (byte-array-at "012" 1) 0x31)))
+  (assert (= (bytes-at "012" 1) 0x31)))
 
-(builtin-function byte-array-at! (ba i v)
+(builtin-function bytes-at! (ba i v)
   ; Consider the argument ba as a byte array, and substitute v at the i-th position.
   ; Returns nil.
   )
 
-(builtin-function byte-array-index (ba x s e)
-  ; Returns the position of the specified byte x in the s-th to (e - 1)-th elements of the specified byte-array ba.
-  ; You can also specify a byte-array for x, in which case the location of the first occurrence of the partial byte-array is returned.
-  (assert (= (byte-array-index "012" 0x31 0 3) 1))
-  (assert (= (byte-array-index "012" "12" 0 3) 1)))
+(builtin-function bytes-index (ba x s e)
+  ; Returns the position of the specified byte x in the s-th to (e - 1)-th elements of the specified bytes ba.
+  ; You can also specify a bytes for x, in which case the location of the first occurrence of the partial bytes is returned.
+  (assert (= (bytes-index "012" 0x31 0 3) 1))
+  (assert (= (bytes-index "012" "12" 0 3) 1)))
 
-(builtin-function byte-array-copy (src src-i dst dst-i size)
-  ; Copy size elements from the `src-i`th element of the src byte-array to the dst byte-array `dst-i`th element and beyond.
+(builtin-function bytes-copy (src src-i dst dst-i size)
+  ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
   ; Even if the areas to be copied overlap, it operates correctly.
   )
 
-(builtin-function byte-array-concat (x :rest args)
-  ; Concatenate each argument to byte-array x
+(builtin-function bytes-concat (x :rest args)
+  ; Concatenate each argument to bytes x
   )
 
-(builtin-function ->byte-array (x)
-  ; Convert argument to byte-array and return.
+(builtin-function ->bytes (x)
+  ; Convert argument to bytes and return.
   )
 
-(builtin-function byte-array->string (ba i size)
-  ; Returns string of length size from the i'th element of byte-array ba.
+(builtin-function bytes->string (ba i size)
+  ; Returns string of length size from the i'th element of bytes ba.
   )
 
 ; array
@@ -1056,7 +1056,7 @@
   ; Returns true if the argument is a array.
   (assert (array? (array 3)))
   (assert (! (array? nil)))
-  (assert (! (array? (byte-array 3)))))
+  (assert (! (array? (bytes 3)))))
 
 (builtin-function array-length (x)
   ; Returns the length of the specified array x.
@@ -1091,8 +1091,8 @@
   (with-gensyms (receiver val)
     (let (key (symbol->keyword field)
           field (symbol->string field)
-          getter (string->symbol (byte-array-concat "&" field))
-          setter (string->symbol (byte-array-concat "&" field "!"))
+          getter (bytes-concat '& field)
+          setter (bytes-concat '& field '!)
           verifier (list if (list ! (list 'object? receiver))
                          (list 'error "require object")))
       (list begin
@@ -1128,7 +1128,7 @@
 (macro class (cls-sym (:opt super :rest features) :rest fields)
   ; Create class the specified cls-sym.
   (if (! (all-satisfy? symbol? fields)) (error "fields must be symbol")
-      (bound? cls-sym) (error (symbol->string cls-sym) " already bound"))
+      (bound? cls-sym) (error cls-sym " already bound"))
   (list begin0
         (list quote cls-sym)
         (list <- cls-sym (list quote (list :class 'Class
@@ -1140,7 +1140,7 @@
               (map (lambda (field) (list 'make-accessor field)) fields))))
 
 (macro method (cls-sym method-sym args :rest body)
-  (let (global-sym (byte-array-concat cls-sym method-sym)
+  (let (global-sym (bytes-concat cls-sym method-sym)
         quoted-global-sym (list quote global-sym)
         method-lambda (cons lambda (cons (cons 'self args) (expand-macro-all body))))
     (if (! (find-class cls-sym)) (error "class not found")
@@ -1225,16 +1225,16 @@
 (method Exception .to-s ()
   ; Returns a String representing the receiver.
   (let (class-name (symbol->string (&class self)) msg (&message self))
-    (if msg (byte-array-concat class-name " -- " msg)
+    (if msg (bytes-concat class-name " -- " msg)
         class-name)))
 
 (method Exception .stack-trace ()
   (&stack-trace self))
 
 (method Exception .print-stack-trace ()
-  (write-line (.to-s self))
+  (write (.to-s self))
   (dolist (x (.stack-trace self))
-    (write-string "\tat: ") (print x)))
+    (write-bytes "\tat: ") (write x)))
 
 (class SystemExit (Exception)
   ; Dispatched to shut down the Paren system.
@@ -1246,9 +1246,6 @@
   )
 
 (class Error (Exception)
-  )
-
-(class NotImplementedError (Error)
   )
 
 (class Path ()
@@ -1282,9 +1279,9 @@
   ;     (Path.of "foo//bar/") <=> ("foo" "bar")
   (let (c nil path nil first-letter (string-at path-name 0) root? nil)
     (if (string-eq? first-letter "~")
-        (<- path-name (byte-array-concat
+        (<- path-name (bytes-concat
                         (if (eq? OS.name :windows)
-                            (byte-array-concat (OS.getenv "HOMEDRIVE") (OS.getenv "HOMEPATH"))
+                            (bytes-concat (OS.getenv "HOMEDRIVE") (OS.getenv "HOMEPATH"))
                             (OS.getenv "HOME"))
                         Path.separator path-name))
         (string-eq? first-letter Path.separator)
@@ -1295,8 +1292,8 @@
                        (with-memory-stream (out)
                          (with-memory-stream (in path-name)
                            (while (neq? (<- c (read-char in)) :EOF)
-                             (if (string-eq? c "\\") (write-string Path.separator out)
-                                 (write-string c out)))))
+                             (if (string-eq? c "\\") (write-bytes Path.separator out)
+                                 (write-bytes c out)))))
                        Path.separator)))
     (if root? (<- path (cons Path.separator path)))
     (&path! (.new Path) path)))
@@ -1322,14 +1319,14 @@
   ; `.` and `..` included in path-name are not treated specially.
   (if (string? path) (<- path (Path.of path)))
   (if (.absolute? path) path
-      (Path.of (byte-array-concat (.to-s self) Path.separator (.to-s path)))))
+      (Path.of (bytes-concat (.to-s self) Path.separator (.to-s path)))))
 
 (method Path .absolute? ()
   ; Returns true if this path regarded as the absolute path.
   (let (first-file (car (&path self)))
     (if (eq? OS.name :windows)
-        (&& (= (byte-array-length first-file) 2)
-            (byte-array-index first-file ":" 1 2))
+        (&& (= (bytes-length first-file) 2)
+            (bytes-index first-file ":" 1 2))
         (string-eq? first-file Path.separator))))
 
 (method Path .relative? ()
@@ -1338,12 +1335,12 @@
 
 (method Path .to-s ()
   (reduce (lambda (acc rest)
-            (byte-array-concat (if (string-eq? acc Path.separator) "" acc) Path.separator rest))
+            (bytes-concat (if (string-eq? acc Path.separator) "" acc) Path.separator rest))
           (&path self)))
 
 (method Path .open (mode)
   (catch (Error (lambda (e)
-                  (throw (.message e (byte-array-concat "open failed -- " (.to-s self))))))
+                  (throw (.message e (bytes-concat "open failed -- " (.to-s self))))))
     (.init (.new FileStream) (OS.fopen (.to-s self) mode))))
 
 (method Path .open-read ()
@@ -1399,9 +1396,9 @@
                                       (.write-byte ms b2)
                                       (.write-byte ms b3))
                    (< b1 0xf8) (begin (<- b3 (.read-byte self) b4 (.read-byte self))
-                                      (if (|| (! (trail? b3))
-                                              (! (trail? b4))
-                                              (&& (= b1 0xf0) (= (& b2 0x30) 0)))
+                                      (if (|| (&& (= b1 0xf0) (= (& b2 0x30) 0))
+                                              (! (trail? b3))
+                                              (! (trail? b4)))
                                           (throw illegal-utf8-error))
                                       (.write-byte ms b1)
                                       (.write-byte ms b2)
@@ -1409,29 +1406,24 @@
                                       (.write-byte ms b4))
                    (throw illegal-utf8-error))
                (.to-s ms))
-      :default (throw (.message (.new NotImplementedError) "unsupport encoding")))))
-
-(method Stream .read-line (:rest args)
-  ; Read line.
-  ; Must be implemented in the inherited class.
-  (throw (.new NotImplementedError)))
+      :default (error "unsupport encoding"))))
 
 (method Stream .read ()
   ; Read expression from the specified stream.
   ; Returns :EOF if eof reached.
   (.parse (.init (.new ParenParser) self)))
 
-(method Stream .write-byte (:rest args)
-  ; Write 1byte to stream.
-  ; Must be implemented in the inherited class.
-  (throw (.new NotImplementedError)))
+(method Stream .read-line ()
+  ; Read line.
+  (with-memory-stream (out)
+    (let (c nil)
+      (while true
+        (if (= (<- c (.read-byte self)) -1) (return :EOF)
+            (= c 0x0a) (break)
+            (.write-byte out c))))))
 
-(method Stream .write-string (s)
-  ; Write string to stream.
-  (let (ba (->byte-array s))
-    (dotimes (i (byte-array-length ba))
-      (.write-byte self (byte-array-at ba i)))
-    self))
+(method Stream .write-line ()
+  (.write-byte self 0x0a))
 
 (method Stream .write-integer (n :key radix)
   ; Write integer to stream.
@@ -1489,93 +1481,57 @@
                 (.write-byte self 0x65)
                 (.write-integer self exp)))))))
 
-(method Stream .write-byte-array (ba)
-  (.write-byte self 0x23)
-  (.write-byte self 0x5b)
-  (dotimes (i (byte-array-length ba))
-    (if (/= i 0) (.write-byte self 0x20))
-    (.write self (byte-array-at ba i)))
-  (.write-byte self 0x5d)
-  self)
-
-(method Stream .write-array (a)
-  (.write-byte self 0x23)
-  (.write-byte self 0x5b)
-  (dotimes (i (array-length a))
-    (if (/= i 0) (.write-byte self 0x20))
-    (.write self (array-at a i)))
-  (.write-byte self 0x5d)
-  self)
-
-(method Stream .write (x :key readable? write-line-feed?)
-  ; Write the specified x to the specified stream.
-  ; write is the general entry point to the Paren printer.
-  ; If readable? is supplied, write in a format understood by the Paren reader.
-  ; The default keyword parameters are intended to look good to people.
-  (let (write-s-expr
-         (lambda (x)
-           (if (cons? x) (write-cons x)
-               (write-atom x)))
-         write-cons
-         (lambda (x)
-           (.write-byte self 0x28)
-           (write-s-expr (car x))
-           (map (lambda (x)
-                  (.write-byte self 0x20)
-                  (write-s-expr x))
-                (cdr x))
-           (.write-byte self 0x29))
-         write-operator
-         (lambda (x name)
-           (.write-byte self 0x28)
-           (.write-string self name)
-           (.write-byte self 0x20)
-           (write-s-expr (lambda-parameter x))
-           (dolist (body (lambda-body x))
+(method Stream .write (x :key start end)
+  ; Write the specified x as a readable format.
+  ; Returns x.
+  (if start (.write-bytes self start))
+  (if (cons? x)
+      (begin (.write-byte self 0x28)
+             (.write self (car x) :end "")
+             (while (<- x (cdr x))
+               (.write self (car x) :start " " :end ""))
+             (.write-byte self 0x29))
+      (builtin? x)
+      (.write-bytes self (builtin-name x))
+      (string? x)
+      (begin (.write-byte self 0x22)
+             (.write-bytes self x)
+             (.write-byte self 0x22))
+      (symbol? x)
+      (.write-bytes self x)
+      (keyword? x)
+      (begin (.write-byte self 0x3a)
+             (.write-bytes self x))
+      (number? x)
+      (.write-number self x)
+      (bytes? x)
+      (begin (.write-byte self 0x23)
+             (.write-byte self 0x62)
+             (.write-byte self 0x5b)
+             (dotimes (i (bytes-length x))
+               (if (/= i 0) (.write-byte self 0x20))
+               (.write-bytes self "0x")
+               (.write-integer self (bytes-at x i) :radix 16))
+             (.write-byte self 0x5d))
+      (array? x)
+      (begin (.write-byte self 0x23)
+             (.write-byte self 0x5b)
+             (dotimes (i (array-length x))
+               (.write self (array-at x i) :start (&& (/= i 0) " ") :end ""))
+             (.write-byte self 0x5d))
+      (|| (macro? x)
+          (function? x))
+      (begin (.write-byte self 0x28)
+             (if (macro? x) (.write-bytes self "macro")
+                 (.write-bytes self "lambda"))
              (.write-byte self 0x20)
-             (write-s-expr body))
-           (.write-byte self 0x29))
-         write-addr
-         (lambda (x name)
-           (.write-string self "#<")
-           (.write-string self name)
-           (.write-byte self 0x3a)
-           (.write-integer self (address x) :radix 16)
-           (.write-byte self 0x3e))
-         write-atom
-         (lambda (x)
-           (if (builtin? x) (.write-string self (builtin-name x))
-               (macro? x) (if readable? (write-operator x "macro")
-                              (write-addr x "macro"))
-               (function? x) (if readable? (write-operator x "lamdba")
-                                 (write-addr x "lambda"))
-               (string? x) (if readable? (begin (.write-byte self 0x22)
-                                                (.write-string self x)
-                                                (.write-byte self 0x22))
-                               (.write-string self x))
-               (symbol? x) (.write-string self (symbol->string x))
-               (keyword? x) (begin
-                              (.write-byte self 0x3a)
-                              (.write-string self (symbol->string (keyword->symbol x))))
-               (number? x) (.write-number self x)
-               (byte-array? x) (if readable? (.write-byte-array self x)
-                                   (write-addr x "byte-array"))
-               (array? x) (if readable? (.write-array self x)
-                              (write-addr x "array"))
-               (assert nil))))
-    (write-s-expr x)
-    (if write-line-feed? (.write-byte self 0x0a))
-    x))
-
-(method Stream .seek (:rest args)
-  ; Move the read position on the stream to the specified offset.
-  ; Must be implemented in the inherited class.
-  (throw (.new NotImplementedError)))
-
-(method Stream .tell (:rest args)
-  ; Returns the read position on the stream as a byte offset from the beginning.
-  ; Must be implemented in the inherited class.
-  (throw (.new NotImplementedError)))
+             (.write self (lambda-parameter x) :end "")
+             (dolist (body (lambda-body x))
+               (.write self body :start " " :end ""))
+             (.write-byte self 0x29))
+      (assert nil))
+  (.write-bytes self (|| end "\n"))
+  x)
 
 (class MemoryStream (Stream)
   ; A stream whose contents are held in memory.
@@ -1584,7 +1540,7 @@
 (method MemoryStream .init ()
   (let (buf-size 256)
     (&buf-size! self buf-size)
-    (&buf! self (byte-array buf-size))
+    (&buf! self (bytes buf-size))
     (&rdpos! self 0)
     (&wrpos! self 0))
   self)
@@ -1593,27 +1549,27 @@
   (let (req (+ (&wrpos self) size) new-buf nil)
     (while (< (&buf-size self) req)
       (&buf-size! self (* (&buf-size self) 2)))
-    (<- new-buf (byte-array (&buf-size self)))
-    (byte-array-copy (&buf self) 0 new-buf 0  (&wrpos self))
+    (<- new-buf (bytes (&buf-size self)))
+    (bytes-copy (&buf self) 0 new-buf 0 (&wrpos self))
     (&buf! self new-buf))
   self)
 
 (method MemoryStream .write-byte (byte)
   (let (wrpos (&wrpos self))
     (if (! (< wrpos (&buf-size self))) (.extend self 1))
-    (byte-array-at! (&buf self) wrpos byte)
+    (bytes-at! (&buf self) wrpos byte)
     (&wrpos! self (++ wrpos))))
 
-(method MemoryStream .write-string (s)
-  (let (pos (&wrpos self) size (byte-array-length s))
-    (.extend self size)
-    (byte-array-copy s 0 (&buf self) pos size)
-    (&wrpos! self (+ pos size))))
+(method MemoryStream .write-bytes (bytes :opt from size)
+  (.extend self (|| size (<- size (bytes-length bytes))))
+  (bytes-copy bytes (|| from 0) (&buf self) (&wrpos self) size)
+  (&wrpos! self (+ (&wrpos self) size))
+  size)
 
 (method MemoryStream .read-byte ()
   (let (rdpos (&rdpos self))
     (if (= rdpos (&wrpos self)) -1
-        (begin0 (byte-array-at (&buf self) rdpos)
+        (begin0 (bytes-at (&buf self) rdpos)
                 (&rdpos! self (++ rdpos))))))
 
 (method MemoryStream .seek (offset)
@@ -1626,7 +1582,7 @@
 (method MemoryStream .to-s ()
   (let (size (&wrpos self))
     (if (= size 0) ""
-        (byte-array->string (&buf self) 0 size))))
+        (bytes->string (&buf self) 0 size))))
 
 (method MemoryStream .reset ()
   ; Empty the contents of the stream.
@@ -1652,8 +1608,8 @@
   (OS.fputc byte (&fp self))
   self)
 
-(method FileStream .write-string (o)
-  (OS.fwrite o 0 (byte-array-length o) (&fp self)))
+(method FileStream .write-bytes (x :opt from size)
+  (OS.fwrite x (|| from 0) (|| size (bytes-length x)) (&fp self)))
 
 (method FileStream .seek (offset)
   (OS.fseek (&fp self) offset))
@@ -1671,7 +1627,7 @@
   stream next token)
 
 (method AheadReader .init (stream)
-  (if (string? stream) (<- stream (.write-string (.new MemoryStream) stream))
+  (if (string? stream) (let (s stream) (.write-bytes (<- stream (.new MemoryStream)) s))
       (nil? stream) (<- stream (dynamic $stdin)))
   (&stream! self stream)
   (&next! self (.read-char stream))
@@ -1684,7 +1640,7 @@
 (method AheadReader .next-byte ()
   ; Returns next character as a byte.
   (assert (.ascii? self))
-  (byte-array-at (&next self) 0))
+  (bytes-at (&next self) 0))
 
 (method AheadReader .skip ()
   ; Skip next character and returns it.
@@ -1695,7 +1651,7 @@
 (method AheadReader .skip-byte ()
   ; Skip as a byte.
   (assert (.ascii? self))
-  (byte-array-at (.skip self) 0))
+  (bytes-at (.skip self) 0))
 
 (method AheadReader .skip-line ()
   (while (&& (! (.eof? self))
@@ -1713,7 +1669,8 @@
 (method AheadReader .put (o)
   ; Put the o to the end of the token regardless of the stream.
   (if (byte? o) (.write-byte (&token self) o)
-      (.write-string (&token self) o)))
+      (begin0 o
+              (.write-bytes (&token self) o))))
 
 (method AheadReader .token ()
   ; Returns the token string currently cut out.
@@ -1727,7 +1684,7 @@
 (method AheadReader .ascii? ()
   ; Returns true, if next character is a single byte character.
   (&& (! (.eof? self))
-      (< (byte-array-at (&next self) 0) 0x80)))
+      (< (bytes-at (&next self) 0) 0x80)))
 
 (method AheadReader .eof? ()
   ; Returns true if eof reached.
@@ -1808,12 +1765,12 @@
 
 (method ParenLexer .identifier-symbol-alpha? ()
   (&& (.ascii? self)
-      (|| (byte-array-index "!$%&*./<=>?^_|" (.next-byte self) 0 14)
+      (|| (bytes-index "!$%&*./<=>?^_|" (.next-byte self) 0 14)
           (.alpha? self))))
 
 (method ParenLexer .identifier-sign? ()
   (&& (.ascii? self)
-      (byte-array-index "+-" (.next-byte self) 0 2)))
+      (bytes-index "+-" (.next-byte self) 0 2)))
 
 (method ParenLexer .identifier-trail? ()
   (|| (.identifier-symbol-alpha? self)
@@ -1918,31 +1875,33 @@
 (function read-byte (:opt stream)
   ; Read 1byte from the specified stream.
   ; Returns -1 when the stream reaches the end.
-  (let (stream (|| stream (dynamic $stdin)))
-    (.read-byte stream)))
+  (.read-byte (|| stream (dynamic $stdin))))
 
 (function read-char (:opt stream)
   ; Read 1character from the specified stream.
-  (let (stream (|| stream (dynamic $stdin)))
-    (.read-char stream)))
+  (.read-char (|| stream (dynamic $stdin))))
 
 (function read-line (:opt stream)
   ; Read line from the specified stream.
-  (let (stream (|| stream (dynamic $stdin)))
-    (.read-line stream)))
+  (.read-line (|| stream (dynamic $stdin))))
+
+(function read (:opt stream)
+  (.read (|| stream (dynamic $stdin))))
 
 (function write-byte (byte :opt stream)
   ; Write 1byte to the specified stream.
-  ; Returns byte.
-  (let (stream (|| stream (dynamic $stdout)))
-    (.write-byte stream byte)
-    byte))
+  (.write-byte (|| stream (dynamic $stdout)) byte))
 
-(function write-string (s :opt stream)
-  ; Write the specified stirng s to the specified stream.
-  (let (stream (|| stream (dynamic $stdout)))
-    (.write-string stream s)
-    s))
+(function write-bytes (bytes :opt stream)
+  ; Write the specified stirng bytes to the specified stream.
+  (.write-bytes (|| stream (dynamic $stdout)) bytes))
+
+(function write-line (:opt stream)
+  (.write-line (|| stream (dynamic $stdout))))
+
+(function write (x :opt stream :key start end)
+  ; Write the specified x as a readable format.
+  (.write (|| stream (dynamic $stdout)) x :start start :end end))
 
 (macro with-memory-stream ((ms :opt s) :rest body)
   ; Create memory stream context.
@@ -1950,12 +1909,12 @@
   ; (with-memory-stream (ms s)
   ;    expr1 expr2 ...)
   ; (let (ms (.new MemoryStream))
-  ;    (if s (.write-string ms s))
+  ;    (if s (.write-bytes ms s))
   ;    expr1 expr2 ...
   ;    (.to-s ms))
   (with-gensyms (g)
     (list let (list ms (list '.new 'MemoryStream) g s)
-          (list if g (list '.write-string ms g))
+          (list if g (list '.write-bytes ms g))
           (cons begin body)
           (list '.to-s ms))))
 
@@ -1983,28 +1942,6 @@
 (macro with-open-update ((out path) :rest body)
   (with-open-mode in path '.open-update body))
 
-(function read (:opt stream)
-  (let (stream (|| stream (dynamic $stdin)))
-    (.read stream)))
-
-(function write (x :key stream readable? write-line-feed?)
-  (let (stream (|| stream (dynamic $stdout)))
-    (.write stream x
-            :readable? readable?
-            :write-line-feed? write-line-feed?)))
-
-(function write-line (:opt x :key stream readable?)
-  ; Write a print representation of x and a newline character to the stream.
-  ; If x is not supplied, outputs a newline character to the stream.
-  (let (stream (|| stream (dynamic $stdout)))
-    (if x (.write stream x :readable? readable?  :write-line-feed? true)
-        (.write-byte stream 0x0a))))
-
-(function print (x :opt stream)
-  ; Print the specified x as a readable format.
-  (let (stream (|| stream (dynamic $stdout)))
-    (.write stream x :readable? true :write-line-feed? true)))
-
 ; execution
 
 (builtin-function eval (expr)
@@ -2023,9 +1960,9 @@
     (while true
       (catch (SystemExit (lambda (e) (break))
               Error (lambda (e) (.print-stack-trace e)))
-        (write-string ") ")
+        (write-bytes ") ")
         (if (eq? (<- expr (read)) :EOF) (break))
-        (print (eval (expand-macro-all expr)))))))
+        (write (eval (expand-macro-all expr)))))))
 
 (function quit ()
   ; Quit the system.
