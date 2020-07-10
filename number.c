@@ -59,19 +59,23 @@ DEFUN(integer_p)
 
 DEFUN(number_equal_p)
 {
-  object o;
+  object o, p;
   double x, y;
-  *result = object_nil;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_double(argv->cons.car, &x)) {
-    o = argv->cons.car;
-    while ((argv = argv->cons.cdr) != object_nil)
-      if (o != argv->cons.car) return TRUE;
-  } else {
-    while ((argv = argv->cons.cdr) != object_nil) {
-      if (!bi_double(argv->cons.car, &y)) return TRUE;
-      if (x != y) return TRUE;
+  o = argv;
+  p = o->cons.car;
+  *result = object_true;
+  while ((o = o->cons.cdr) != object_nil) {
+    if (o->cons.car != p) {
+      *result = object_nil;
+      break;
     }
+  }
+  if (*result == object_true) return TRUE;
+  if (!bi_double(argv->cons.car, &x)) return TRUE;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (!bi_double(argv->cons.car, &y)) return TRUE;
+    if (x != y) return TRUE;
   }
   *result = object_true;
   return TRUE;
