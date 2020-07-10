@@ -847,16 +847,16 @@
   (let (c nil)
     (with-memory-stream (in s)
       (dotimes (ci (++ i))
-        (if (eq? (<- c (read-char in)) :EOF) (error "index outof bounds"))))
+        (if (nil? (<- c (read-char in))) (error "index outof bounds"))))
     c))
 
 (function string-length (s)
   ; Returns the number of characters in string s.
-  (let (length 0)
+  (let (len 0)
     (with-memory-stream (in s)
-      (while (neq? (read-char in) :EOF)
-        (<- length (++ length))))
-    length))
+      (while (read-char in)
+        (<- len (++ len))))
+    len))
 
 (function string->list (s delim)
   ; Returns a list of strings s delimited by delimiter.
@@ -1291,7 +1291,7 @@
                      (string->list
                        (with-memory-stream (out)
                          (with-memory-stream (in path-name)
-                           (while (neq? (<- c (read-char in)) :EOF)
+                           (while (<- c (read-char in))
                              (if (string-eq? c "\\") (write-bytes Path.separator out)
                                  (write-bytes c out)))))
                        Path.separator)))
@@ -1374,14 +1374,14 @@
   (assert nil))
 
 (method Stream .read-char ()
-  ; Read 1character from stream.
+  ; Read 1 character from stream.
   (let (encoding (dynamic $external-encoding))
     (switch encoding
       :UTF-8 (let (illegal-utf8-error (.message (.new Error) "illegal UTF-8")
                    trail? (lambda (b) (= (& b 0xc0) 0x80))
                    ms (.new MemoryStream)
                    b1 (.read-byte self) b2 nil b3 nil b4 nil)
-               (if (< b1 0) (return :EOF)
+               (if (< b1 0) (return nil)
                    (< b1 0x80) (.write-byte ms b1)
                    (< b1 0xc2) (throw illegal-utf8-error)
                    (! (trail? (<- b2 (.read-byte self)))) (throw illegal-utf8-error)
@@ -1410,7 +1410,7 @@
 
 (method Stream .read ()
   ; Read expression from the specified stream.
-  ; Returns :EOF if eof reached.
+  ; Returns nil if eof reached.
   (.parse (.init (.new ParenParser) self)))
 
 (method Stream .read-line ()
@@ -1418,7 +1418,7 @@
   (with-memory-stream (out)
     (let (c nil)
       (while true
-        (if (= (<- c (.read-byte self)) -1) (return :EOF)
+        (if (= (<- c (.read-byte self)) -1) (return nil)
             (= c 0x0a) (break)
             (.write-byte out c))))))
 
@@ -1688,7 +1688,7 @@
 
 (method AheadReader .eof? ()
   ; Returns true if eof reached.
-  (eq? (&next self) :EOF))
+  (nil? (&next self)))
 
 (method AheadReader .alpha? ()
   ; Returns true if next character is alphabetic.
@@ -1961,8 +1961,8 @@
       (catch (SystemExit (lambda (e) (break))
               Error (lambda (e) (.print-stack-trace e)))
         (write-bytes ") ")
-        (if (eq? (<- expr (read)) :EOF) (break))
-        (write (eval (expand-macro-all expr)))))))
+        (if (eq? (<- expr (read)) :EOF) (break)
+            (write (eval (expand-macro-all expr))))))))
 
 (function quit ()
   ; Quit the system.
