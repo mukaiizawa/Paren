@@ -350,16 +350,6 @@
                           expr)))
     (expand-expr expr)))
 
-(macro assert-error (expr)
-  ; Evaluates the specified expression and kill the system if no exception is thrown.
-  ; Not executed if not in debug mode.
-  ; It is used when an argument or an internal state is abnormal, or a process that can not be reached is executed.
-  (list assert (list (list lambda '()
-                           (list catch '(Error (lambda (e) true))
-                                 expr
-                                 '(return nil))
-                           true))))
-
 ; fundamental function
 
 (macro function (name args :rest body)
@@ -371,12 +361,12 @@
       (list begin0 (list quote name)
             (list <- name (cons lambda (cons args (expand-macro-all body)))))))
 
-(builtin-function eq? (x y)
+(builtin-function eq? (x y :rest args)
   ; Returns true if the specified x and y is same object.
   (assert (! (eq? 'x 'y 'z)))
   (assert (eq? 'x 'x 'x)))
 
-(builtin-function neq? (x y)
+(builtin-function neq? (x y :rest args)
   ; Same as (! (eq? x y)).
   (assert (neq? 'x 'y 'z))
   (assert (! (neq? 'x 'x 'x))))
@@ -414,16 +404,14 @@
   ; Returns nil if x is nil.
   ; If x is not cons treated as an error.
   (assert (eq? (car (cons 'x nil)) 'x))
-  (assert (nil? (cdr (cons 'x nil))))
-  (assert-error (cons 'x 'y)))
+  (assert (nil? (cdr (cons 'x nil)))))
 
 (builtin-function car (x)
   ; Returns car of the specified cons x.
   ; Returns nil if x is nil.
   ; If x is not cons treated as an error.
   (assert (= (car '(1 2 3)) 1))
-  (assert (nil? (car '())))
-  (assert-error (car 1)))
+  (assert (nil? (car '()))))
 
 (builtin-function car! (x val)
   ; Destructively change the car part of the specified cons x to the specified val.
@@ -431,16 +419,14 @@
   ; Error if x is not cons.
   (let (x '(1 2 3))
     (assert (eq? (car! x 'one) 'one))
-    (assert (eq? (car x) 'one))
-    (assert-error (car! nil 1))))
+    (assert (eq? (car x) 'one))))
 
 (builtin-function cdr (x)
   ; Returns cdr of the specified cons x.
   ; Returns nil if x is nil.
   ; If x is not cons treated as an error.
   (assert (= (car (cdr '(1 2 3))) 2))
-  (assert (nil? (cdr '())))
-  (assert-error (cdr 1)))
+  (assert (nil? (cdr '()))))
 
 (builtin-function cdr! (x val)
   ; Destructively change the car part of the specified cons x to the specified val.
@@ -450,9 +436,7 @@
     (assert (nil? (cdr! x nil)))
     (assert (nil? (cdr x)))
     (cdr! x '(two))
-    (assert (eq? (car (cdr x)) 'two))
-    (assert-error (cdr! '(1) 2))
-    (assert-error (cdr! nil 1))))
+    (assert (eq? (car (cdr x)) 'two))))
 
 (function caar (x)
   ; Same as (car (car x)).
@@ -602,8 +586,7 @@
   ; Returns the last cons to follow from the specified cons x.
   ; Error if x is not cons.
   (assert (= (car (last-cons '(1 2 3))) 3))
-  (assert (nil? (last-cons nil)))
-  (assert-error (last-cons 1)))
+  (assert (nil? (last-cons nil))))
 
 (function nth (l n)
   ; Get the the specified nth element of the specified list l.
@@ -772,14 +755,12 @@
 (builtin-function assoc (al k)
   ; Returns a value corresponding to the specified key k of the specified asoociate list al.
   ; Raises an exception if there is no value.
-  (assert (= (assoc '(:one 1 :two 2 :three 3) :one) 1))
-  (assert-error (assoc '(:one 1 :two 2 :three 3) :four)))
+  (assert (= (assoc '(:one 1 :two 2 :three 3) :one) 1)))
 
 (builtin-function assoc! (al k v)
   ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
   ; Raises an exception if there is no value.
-  (assert (eq? (assoc! '(:one 1 :two 2 :three 3) :one 'one) 'one))
-  (assert-error (assoc! '(:one 1 :two 2 :three 3) :four 4)))
+  (assert (eq? (assoc! '(:one 1 :two 2 :three 3) :one 'one) 'one)))
 
 ; symbol & keyword
 
@@ -911,7 +892,7 @@
   ; Returns true if the specified x is integer and between 0 and 255.
   (&& (integer? x) (<= 0 x 255)))
 
-(builtin-function = (x :rest args)
+(builtin-function = (x y :rest args)
   ; Returns true if the specified number x and y are equal.
   ; If the argument is not a number, compare addresses.
   (assert (= 3.14 3.140))
@@ -920,19 +901,25 @@
   (assert (! (= 'x 'y))))
 
 (builtin-function & (x y)
+  ; bitwise and.
   (assert (= (& 0x333333333 0x555555555) 0x111111111)))
 
 (builtin-function | (x y)
+  ; bitwise or.
   (assert (= (| 0x333333333 0x555555555) 0x777777777)))
 
 (builtin-function << (x y)
+  ; bitwise left shift.
   (assert (= (<< 3 2) 12)))
 
 (function >> (x y)
+  ; bitwise right shift.
   (<< x (- y)))
 
 (builtin-function ^ (x y)
-  (assert (= (^ 3 0x500000000) 0x500000003)))
+  ; bitwise xor.
+  (assert (= (^ 3 0x500000000) 0x500000003))
+  (assert (= (^ 0x500000000 0x500000003) 3)))
 
 (function /= (x y)
   ; Same as (! (= x y))).
