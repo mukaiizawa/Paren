@@ -139,7 +139,7 @@ DEFUN(bytes_index)
 {
   object o, p;
   int b, s, e;
-  if (!bi_argc_range(argc, 4, 4)) return FALSE;
+  if (!bi_argc_range(argc, 2, 4)) return FALSE;
   if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
   p = NULL;
   switch (object_type((argv = argv->cons.cdr)->cons.car)) {
@@ -160,8 +160,10 @@ DEFUN(bytes_index)
     default:
       return FALSE;
   }
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
-  if (!bi_sint(argv->cons.cdr->cons.car, &e)) return FALSE;
+  if (argc < 3) s = 0;
+  else if (!bi_sint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
+  if (argc < 4) e = o->bytes.size;
+  else if (!bi_sint(argv->cons.cdr->cons.car, &e)) return FALSE;
   if (s > e) return FALSE;
   if (s < 0 || s > o->bytes.size) return FALSE;
   if (e < 0 || e > o->bytes.size) return FALSE;
