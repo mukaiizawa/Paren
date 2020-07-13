@@ -24,15 +24,11 @@ static long cycle;
 int ip_trap_code;
 static char *error_msg;
 
-void ip_mark_error(char *msg)
+int ip_mark_error(char *msg)
 {
   ip_trap_code = TRAP_ERROR;
   error_msg = msg;
-}
-
-static void mark_illegal_args()
-{
-  ip_mark_error("illegal parameter list");
+  return FALSE;
 }
 
 // symbol
@@ -55,14 +51,7 @@ static object symbol_find_propagation(object e, object s)
 
 static void symbol_bind(object e, object s, object v)
 {
-  object o;
   xassert(object_type_p(e, ENV) && object_type_p(s, SYMBOL));
-  if ((o = splay_find(&e->env.binding, s)) != NULL) {
-    if (object_type_p(o, SPECIAL)) {
-      ip_mark_error("special operator could not bind");
-      return;
-    }
-  }
   splay_replace(&e->env.binding, s, v);
 }
 
@@ -280,23 +269,17 @@ static int valid_keyword_args(object params, object args)
 {
   object p;
   while (args != object_nil) {
-    if (!object_type_p(args->cons.car, KEYWORD)) {
-      ip_mark_error("expected keyword parameter");
-      return FALSE;
-    }
+    if (!object_type_p(args->cons.car, KEYWORD))
+      return ip_mark_error("expected keyword parameter");
     p = params;
     while (p != object_nil) {
       if (same_symbol_keyword_p(p->cons.car, args->cons.car)) break;
       p = p->cons.cdr;
     }
-    if (p == object_nil) {
-      ip_mark_error("undeclared keyword parameter");
-      return FALSE;
-    }
-    if ((args = args->cons.cdr) == object_nil) {
-      ip_mark_error("expected keyword parameter value");
-      return FALSE;
-    }
+    if (p == object_nil)
+      return ip_mark_error("undeclared keyword parameter");
+    if ((args = args->cons.cdr) == object_nil)
+      return ip_mark_error("expected keyword parameter value");
     args = args->cons.cdr;
   }
   return TRUE;
@@ -451,7 +434,7 @@ static void pop_eval_frame(void)
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
         gen2(LAMBDA_FRAME, reg[1], reg[0]);    // for stack trace
-        ip_mark_error("unbind symbol");
+        ip_mark_error("unbound symbol");
         return;
       }
       reg[0] = s;
@@ -513,7 +496,7 @@ static void pop_goto_frame(void)
           }
           o = o->cons.cdr;
         }
-        ip_mark_error("label not found");
+        ip_mark_error("undeclared label");
         set_fp(i);
         return;
       case UNWIND_PROTECT_FRAME:
@@ -556,9 +539,10 @@ static void pop_fetch_operator_frame(void)
       gen1(APPLY_FRAME, reg[0]);
       gen_eval_args_frame(args);
       return;
-    default: break;
+    default:
+      break;
   }
-  ip_mark_error("is not a operator");
+  ip_mark_error("expected operator");
 }
 
 static void pop_eval_args_frame(void)
@@ -785,10 +769,9 @@ DEFUN(apply)
       gen1(APPLY_FRAME, argv->cons.car);
       reg[0] = argv->cons.cdr->cons.car;
       return TRUE;
-    default: break;
+    default:
+      return ip_mark_error("expected function");
   }
-  ip_mark_error("requires function or symbol(built in function) to apply");
-  return FALSE;
 }
 
 DEFUN(expand_macro)
@@ -809,13 +792,10 @@ DEFUN(expand_macro)
 
 DEFUN(bound_p)
 {
-  object s;
+  object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!object_type_p((s = argv->cons.car), SYMBOL)) {
-    ip_mark_error("required symbol");
-    return FALSE;
-  }
-  reg[0] = object_bool(symbol_find_propagation(reg[1], s) != NULL);
+  if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
+  reg[0] = object_bool(symbol_find_propagation(reg[1], o) != NULL);
   return TRUE;
 }
 
@@ -888,10 +868,6 @@ static int find_class_method(object cls_sym, object mtd_sym, object *result)
   xbarray_copy(&bi_buf, mtd_sym->bytes.elt, mtd_sym->bytes.size);
   s = gc_new_bytes_from(SYMBOL, bi_buf.elt, bi_buf.size);
   if (((*result) = symbol_find_propagation(reg[1], s)) == NULL) return TRUE;
-  if (!object_type_p(*result, LAMBDA)) {
-    ip_mark_error("is not a method");
-    return FALSE;
-  }
   return TRUE;
 }
 
@@ -945,11 +921,8 @@ DEFUN(is_a_p)
 DEFUN(find_class)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!find_class(argv->cons.car, result)) {
-    ip_mark_error("class not found");
-    return FALSE;
-  }
-  return TRUE;
+  if (find_class(argv->cons.car, result)) return TRUE;
+  return ip_mark_error("undeclared class");
 }
 
 DEFUN(find_method)
@@ -968,18 +941,15 @@ DEFUN(find_method)
     features = class_features(cls);
     while (features != object_nil) {
       xassert(object_type_p(features, CONS));
-      if (!find_class_method(features->cons.car, mtd_sym, result))
-        return FALSE;
+      if (!find_class_method(features->cons.car, mtd_sym, result)) return FALSE;
       if (*result != NULL) return TRUE;
       features = features->cons.cdr;
     }
     // super class
-    if (!find_class(class_super(cls), &cls)) {
-      ip_mark_error("method not found");
-      return FALSE;
-    }
+    if (!find_class(class_super(cls), &cls)) break;
     cls_sym = class_sym(cls);
   }
+  return ip_mark_error("undeclared method");
 }
 
 DEFUN(stack_frame)
@@ -1065,14 +1035,10 @@ static int gen_symbol_binding(object args, int frame_type)
 {
   object o;
   if (args == object_nil) return TRUE;
-  if (!object_type_p((o = args)->cons.car, SYMBOL)) {
-    ip_mark_error("argument must be symbol");
-    return FALSE;
-  }
-  if ((args = args->cons.cdr) == object_nil) {
-    ip_mark_error("argument must be pairs");
-    return FALSE;
-  }
+  if (!object_type_p((o = args)->cons.car, SYMBOL))
+    return ip_mark_error("expected symbol");
+  if ((args = args->cons.cdr) == object_nil)
+    return ip_mark_error("expected symbol-value pairs");
   if (!gen_symbol_binding(args->cons.cdr, frame_type)) return FALSE;
   gen1(frame_type, o->cons.car);
   gen0(EVAL_FRAME);
@@ -1134,10 +1100,8 @@ DEFSP(macro)
   if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
   gen1(BIND_PROPAGATION_FRAME, o);
   argv = argv->cons.cdr;
-  if (!parse_required_params(params = argv->cons.car, TRUE)) {
-    mark_illegal_args();
-    return FALSE;
-  }
+  if (!parse_required_params(params = argv->cons.car, TRUE))
+    return ip_mark_error("illegal macro parameter list");
   reg[0] = gc_new_macro(reg[1], params, argv->cons.cdr);
   return TRUE;
 }
@@ -1147,10 +1111,8 @@ DEFSP(lambda)
   object params;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   params = argv->cons.car;
-  if (!parse_required_params(params, FALSE)) {
-    mark_illegal_args();
-    return FALSE;
-  }
+  if (!parse_required_params(params, FALSE))
+    return ip_mark_error("illegal lambda parameter list");
   reg[0] = gc_new_lambda(reg[1], params, argv->cons.cdr);
   return TRUE;
 }
@@ -1197,10 +1159,8 @@ DEFSP(goto)
 DEFSP(throw)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!object_is_a_p(reg[0], object_Exception)) {
-    ip_mark_error("must be Exception object");
-    return FALSE;
-  }
+  if (!object_is_a_p(reg[0], object_Exception))
+    return ip_mark_error("expected Exception object");
   gen0(THROW_FRAME);
   gen_eval_frame(argv->cons.car);
   return TRUE;

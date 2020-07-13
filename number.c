@@ -14,7 +14,7 @@
 
 static void mark_required_number(void)
 {
-  ip_mark_error("required number");
+  ip_mark_error("expected number");
 }
 
 static void mark_numeric_over_flow(void)

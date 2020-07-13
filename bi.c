@@ -16,11 +16,11 @@ struct xbarray bi_buf;
 
 int bi_argc_range(int argc, int min, int max)
 {
-  if (argc < min) ip_mark_error("too few arguments");
-  else if ((!min && !max && argc != 0) || (max && argc > max))
-    ip_mark_error("too many arguments");
-  else return TRUE;
-  return FALSE;
+  if (argc < min)
+    return ip_mark_error("too few arguments");
+  if ((!min && !max && argc != 0) || (max && argc > max))
+    return ip_mark_error("too many arguments");
+  return TRUE;
 }
 
 static void mark_type_error(void)
@@ -226,10 +226,7 @@ char *bi_as_symbol_name(char *name)
 
 int bi_sint(object o, int *p)
 {
-  if (!sint_p(o)) {
-    ip_mark_error("illegal argument type");
-    return FALSE;
-  }
+  if (!sint_p(o)) return ip_mark_error("expected integer");
   *p = sint_val(o);
   return TRUE;
 }

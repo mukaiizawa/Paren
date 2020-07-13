@@ -119,8 +119,7 @@ DEFUN(assoc)
     if (!bi_arg_type(o->cons.cdr, CONS, &o)) break;
     o = o->cons.cdr;
   }
-  ip_mark_error("property not found");
-  return FALSE;
+  return ip_mark_error("property not found");
 }
 
 DEFUN(set_assoc)
@@ -140,6 +139,5 @@ DEFUN(set_assoc)
     if (!bi_arg_type(o->cons.cdr, CONS, &o)) break;
     o = o->cons.cdr;
   }
-  ip_mark_error("property not found");
-  return FALSE;
+  return ip_mark_error("property not found");
 }

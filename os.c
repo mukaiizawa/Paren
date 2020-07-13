@@ -21,15 +21,12 @@ DEFUN(os_fp)
   int fd;
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_sint(argv->cons.car, &fd)) {
-    ip_mark_error("illegal file discripter");
-    return FALSE;
-  }
+  if (!bi_sint(argv->cons.car, &fd)) return FALSE;
   switch (fd) {
     case 0: fp = stdin; break;
     case 1: fp = stdout; break;
     case 2: fp = stderr; break;
-    default: ip_mark_error("unknown file discripter"); return FALSE;
+    default: return ip_mark_error("unexpected file discripter");
   }
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;

@@ -771,12 +771,12 @@
 
 (builtin-function assoc (al k)
   ; Returns a value corresponding to the specified key k of the specified asoociate list al.
-  ; Raises an exception if there is no value.
+  ; Raises an exception if there is no key.
   (assert (= (assoc '(:one 1 :two 2 :three 3) :one) 1)))
 
 (builtin-function assoc! (al k v)
   ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
-  ; Raises an exception if there is no value.
+  ; Raises an exception if there is no key.
   (assert (eq? (assoc! '(:one 1 :two 2 :three 3) :one 'one) 'one)))
 
 ; ascii character code.
