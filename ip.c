@@ -662,7 +662,7 @@ static object call_stack(void)
 }
 
 static int object_p(object o);
-static int object_is_a_p(object e, object o, object cls_sym);
+static int object_is_a_p(object o, object cls_sym);
 
 static void push_call_stack(object o)
 {
@@ -700,7 +700,7 @@ static void pop_throw_frame(void)
         for (j = 0; j < handlers->array.size; j += 2) {
           cls_sym = handlers->array.elt[j];
           handler = handlers->array.elt[j + 1];
-          if (!object_is_a_p(reg[1], reg[0], cls_sym)) continue;
+          if (!object_is_a_p(reg[0], cls_sym)) continue;
           gen1(APPLY_FRAME, handler);
           reg[0] = gc_new_cons(reg[0], object_nil);
           return;
@@ -864,22 +864,21 @@ static int object_class_p(object o)
   return o->cons.cdr == object_nil;
 }
 
-static int find_class(object e, object cls_sym, object *result)
+static int find_class(object cls_sym, object *result)
 {
   if (!object_type_p(cls_sym, SYMBOL)) return FALSE;
-  if ((*result = symbol_find_propagation(e, cls_sym)) == NULL) return FALSE;
+  if ((*result = symbol_find_propagation(reg[1], cls_sym)) == NULL) return FALSE;
   return object_class_p(*result);
 }
 
-static int find_super_class(object e, object cls_sym, object *result)
+static int find_super_class(object cls_sym, object *result)
 {
   object cls;
-  if (!find_class(e, cls_sym, &cls)) return FALSE;
-  return find_class(e, class_super(cls), result);
+  if (!find_class(cls_sym, &cls)) return FALSE;
+  return find_class(class_super(cls), result);
 }
 
-static int find_class_method(object e, object cls_sym, object mtd_sym
-    , object *result)
+static int find_class_method(object cls_sym, object mtd_sym, object *result)
 {
   object s;
   xassert(object_type_p(cls_sym, SYMBOL));
@@ -888,7 +887,7 @@ static int find_class_method(object e, object cls_sym, object mtd_sym
   xbarray_copy(&bi_buf, cls_sym->bytes.elt, cls_sym->bytes.size);
   xbarray_copy(&bi_buf, mtd_sym->bytes.elt, mtd_sym->bytes.size);
   s = gc_new_bytes_from(SYMBOL, bi_buf.elt, bi_buf.size);
-  if (((*result) = symbol_find_propagation(e, s)) == NULL) return TRUE;
+  if (((*result) = symbol_find_propagation(reg[1], s)) == NULL) return TRUE;
   if (!object_type_p(*result, LAMBDA)) {
     ip_mark_error("is not a method");
     return FALSE;
@@ -911,14 +910,14 @@ static int object_p(object o)
   }
 }
 
-static int object_is_a_p(object e, object o, object cls_sym) {
+static int object_is_a_p(object o, object cls_sym) {
   object o_cls_sym;
   xassert(object_type_p(cls_sym, SYMBOL));
   if (!object_p(o)) return FALSE;
   o_cls_sym = o->cons.cdr->cons.car;
   while (TRUE) {
     if (o_cls_sym == cls_sym) return TRUE;
-    if (!find_super_class(e, o_cls_sym, &o)) return FALSE;
+    if (!find_super_class(o_cls_sym, &o)) return FALSE;
     o_cls_sym = class_sym(o);
   }
 }
@@ -939,14 +938,14 @@ DEFUN(is_a_p)
     ip_mark_error("require Class instance");
     return FALSE;
   }
-  reg[0] = object_bool(object_is_a_p(reg[1], o, class_sym(cls)));
+  reg[0] = object_bool(object_is_a_p(o, class_sym(cls)));
   return TRUE;
 }
 
 DEFUN(find_class)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!find_class(reg[1], argv->cons.car, result)) {
+  if (!find_class(argv->cons.car, result)) {
     ip_mark_error("class not found");
     return FALSE;
   }
@@ -962,20 +961,20 @@ DEFUN(find_method)
   if (!bi_arg_type(argv->cons.car, SYMBOL, &mtd_sym)) return FALSE;
   while (TRUE) {
     // find class mtehod
-    if (!find_class_method(reg[1], cls_sym, mtd_sym, result)) return FALSE;
+    if (!find_class_method(cls_sym, mtd_sym, result)) return FALSE;
     if (*result != NULL) return TRUE;
     // find feature method
-    if (!find_class(reg[1], cls_sym, &cls)) return FALSE;
+    if (!find_class(cls_sym, &cls)) return FALSE;
     features = class_features(cls);
     while (features != object_nil) {
       xassert(object_type_p(features, CONS));
-      if (!find_class_method(reg[1], features->cons.car, mtd_sym, result))
+      if (!find_class_method(features->cons.car, mtd_sym, result))
         return FALSE;
       if (*result != NULL) return TRUE;
       features = features->cons.cdr;
     }
     // super class
-    if (!find_class(reg[1], class_super(cls), &cls)) {
+    if (!find_class(class_super(cls), &cls)) {
       ip_mark_error("method not found");
       return FALSE;
     }
@@ -1198,7 +1197,7 @@ DEFSP(goto)
 DEFSP(throw)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!object_is_a_p(reg[1], reg[0], object_Exception)) {
+  if (!object_is_a_p(reg[0], object_Exception)) {
     ip_mark_error("must be Exception object");
     return FALSE;
   }
