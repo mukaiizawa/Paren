@@ -574,13 +574,11 @@
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
   (reduce (lambda (x y) (string x delimiter y)) l))
 
-(function length (l)
+(builtin-function length (l)
   ; Returns the length of the specified list l.
-  (let (i 0)
-    (while l
-      (<- i (++ i)
-          l (cdr l)))
-    i))
+  ; This function is a built-in function for performance.
+  (assert (= (length nil) 0))
+  (assert (= (length '(1)) 1)))
 
 (builtin-function last-cons (x)
   ; Returns the last cons to follow from the specified cons x.
@@ -654,7 +652,8 @@
 (builtin-function reverse! (l)
   ; Same as reverse except that it destructively modifies the argument list.
   ; Generally faster than reverse.
-  )
+  (assert (nil? (reverse! nil)))
+  (assert (= (car (reverse! '(0 1))) 1)))
 
 (function append-atom (l x)
   ; Returns a new list with the specified x appended to the end of the specified list l.
