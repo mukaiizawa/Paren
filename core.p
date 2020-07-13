@@ -830,14 +830,14 @@
   ; Same as (bytes-eq? x y).
   (bytes-eq? x y))
 
-(function substring (s start :opt end)
+(function string-slice (s start :opt end)
   ; Returns a string that is a substring of the specified string s.
   ; The substring begins at the specified start and extends to the character at index end - 1.
   ; Thus the length of the substring is `end - start`.
   (let (len (string-length s))
-    (if (< start 0) (error "illegal start: " start)
+    (if (< start 0) (error "illegal start")
         (nil? end) (<- end len)
-        (> end len) (error "illegal end: " end))
+        (> end len) (error "illegal end"))
     (with-ahead-reader (ar s)
       (dotimes (i len)
         (if (>= i end) (break)
@@ -852,6 +852,18 @@
       (dotimes (ci (++ i))
         (if (nil? (<- c (read-char in))) (error "index outof bounds"))))
     c))
+
+(function string-index (s t)
+  ; Returns the i-th character of string s.
+  (let (i 0 c nil tlen (bytes-length t) mem (.new MemoryStream))
+    (with-memory-stream (in s)
+      (while (<- c (read-char in))
+        (.write-bytes mem c)
+        (write (.to-s mem))
+        (if (string-eq? t (.to-s mem)) (return (- i (-- (string-length t))))
+            (>= (.size mem) tlen) (.reset mem))
+        (<- i (++ i)))))
+  nil)
 
 (function string-length (s)
   ; Returns the number of characters in string s.
@@ -871,9 +883,9 @@
   (let (acc nil i 0 pos nil slen (bytes-length s) dlen (bytes-length delim))
     (if (= dlen 0) (error "delimiter must not be the empty string"))
     (while (&& (< i slen) (<- pos (bytes-index s delim i slen)))
-      (push! acc (substring s i pos))
+      (push! acc (string-slice s i pos))
       (<- i (+ pos dlen)))
-    (push! acc (substring s i slen))
+    (push! acc (string-slice s i slen))
     (reverse! acc)))
 
 ; number
@@ -1047,9 +1059,11 @@
   (assert (= (bytes-length "") 0))
   (assert (= (bytes-length "012") 3)))
 
-(builtin-function bytes-index (x b s e)
+(builtin-function bytes-index (x b :opt s e)
   ; Returns the position of the specified byte b in the s-th to (e - 1)-th elements of the specified bytes ba.
   ; You can also specify a bytes for b, in which case the location of the first occurrence of the partial bytes is returned.
+  ; If s is not specified, 0 is assumed.
+  ; If e is not specified, length of x is assumed.
   (assert (= (bytes-index "012" 0x31 0 3) 1))
   (assert (= (bytes-index "012" "12" 0 3) 1)))
 
@@ -1060,6 +1074,15 @@
   ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
   ; Even if the areas to be copied overlap, it operates correctly.
   )
+
+(function bytes-slice (x start :opt end)
+  ; Returns a new bytes object selected from start to end (end not included) where start and end represent the index of items in that bytes x.
+  (let (xlen (bytes-length x))
+    (if (< start 0) (error "illegal start")
+        (nil? end) (<- end xlen)
+        (> end xlen) (error "illegal end"))
+    (let (new-bytes-len (- end start) new-bytes (bytes (- end start)))
+      (bytes-copy x start new-bytes 0 new-bytes-len))))
 
 (builtin-function bytes-concat (x :rest args)
   ; Concatenate each argument to bytes x
@@ -1336,6 +1359,12 @@
   ; Returns file name.
   (last (&path self)))
 
+(method Path .base-name ()
+  ; Returns base name.
+  (let (name (.name self) i (string-index name "."))
+    (if i (string-slice name 0 i)
+        name)))
+
 (method Path .parent ()
   ; Returns the parent path, or nil if this path does not have a parent.
   ; When used for relative path, non-root directory may return nil.
@@ -1574,6 +1603,10 @@
     (&rdpos! self 0)
     (&wrpos! self 0))
   self)
+
+(method MemoryStream .size ()
+  ; Returns the number of bytes written to the stream.
+  (&wrpos self))
 
 (method MemoryStream .extend (size)
   (let (req (+ (&wrpos self) size) new-buf nil)
