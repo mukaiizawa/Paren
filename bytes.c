@@ -19,11 +19,66 @@ DEFUN(bytes_new)
   return TRUE;
 }
 
-DEFUN(bytes_p)
+static int bytes_p(int argc, object argv, object *result, int type)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(object_type_p(argv->cons.car, BYTES));
+  *result = object_bool(object_type_p(argv->cons.car, type));
   return TRUE;
+}
+
+DEFUN(symbol_p)
+{
+  return bytes_p(argc, argv, result, SYMBOL);
+}
+
+DEFUN(keyword_p)
+{
+  return bytes_p(argc, argv, result, KEYWORD);
+}
+
+DEFUN(string_p)
+{
+  return bytes_p(argc, argv, result, STRING);
+}
+
+DEFUN(bytes_p)
+{
+  return bytes_p(argc, argv, result, BYTES);
+}
+
+static int bytes_to(int argc, object argv, object *result, int type)
+{
+  int i, size;
+  object o;
+  if (!bi_argc_range(argc, 1, 3)) return FALSE;
+  if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
+  if (argc < 2) i = 0;
+  else if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
+  if (argc < 3) size = o->bytes.size;
+  else if (!bi_sint(argv->cons.cdr->cons.car, &size)) return FALSE;
+  if (i < 0 || i + size > o->bytes.size) return FALSE;
+  *result = gc_new_bytes_from(type, o->bytes.elt + i, size);
+  return TRUE;
+}
+
+DEFUN(to_bytes)
+{
+  return bytes_to(argc, argv, result, BYTES);
+}
+
+DEFUN(bytes_to_symbol)
+{
+  return bytes_to(argc, argv, result, SYMBOL);
+}
+
+DEFUN(bytes_to_keyword)
+{
+  return bytes_to(argc, argv, result, KEYWORD);
+}
+
+DEFUN(bytes_to_string)
+{
+  return bytes_to(argc, argv, result, STRING);
 }
 
 DEFUN(bytes_at)
@@ -149,28 +204,6 @@ DEFUN(bytes_unmatch_index)
   }
   if (i == size) *result = object_nil;
   else *result = gc_new_xint(oi + i);
-  return TRUE;
-}
-
-DEFUN(to_bytes)
-{
-  object o;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
-  *result = gc_new_bytes_from(BYTES, o->bytes.elt, o->bytes.size);
-  return TRUE;
-}
-
-DEFUN(bytes_to_string)
-{
-  int i, size;
-  object o;
-  if (!bi_argc_range(argc, 3, 3)) return FALSE;
-  if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
-  if (!bi_sint(argv->cons.cdr->cons.car, &size)) return FALSE;
-  if (i < 0 || i + size > o->bytes.size) return FALSE;
-  *result = gc_new_bytes_from(STRING, o->bytes.elt + i, size);
   return TRUE;
 }
 

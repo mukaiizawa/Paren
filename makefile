@@ -38,7 +38,7 @@ defsp=ip.c
 defsp.wk: $(defsp)
 	cat $+ | grep ^DEFSP>$@
 
-defun=ip.c bi.c array.c bytes.c cons.c keyword.c lambda.c number.c string.c symbol.c os.c
+defun=ip.c bi.c array.c bytes.c cons.c lambda.c number.c os.c
 defun.wk: $(defun)
 	cat $+ | grep ^DEFUN>$@
 

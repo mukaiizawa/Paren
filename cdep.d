@@ -5,7 +5,6 @@ cons.o: cons.c bi.h ip.h gc.h object.h splay.h xbarray.h xarray.h config.h std.h
 gc.o: gc.c gc.h ip.h st.h object.h splay.h heap.h xarray.h config.h std.h
 heap.o: heap.c heap.h config.h std.h
 ip.o: ip.c ip.h bi.h gc.h object.h splay.h xbarray.h xarray.h config.h std.h
-keyword.o: keyword.c bi.h ip.h gc.h mem.h object.h splay.h xbarray.h xarray.h config.h std.h
 lambda.o: lambda.c ip.h bi.h gc.h object.h splay.h xbarray.h xarray.h config.h std.h
 lex.o: lex.c xbarray.h lex.h config.h std.h
 number.o: number.c ip.h bi.h gc.h object.h splay.h xbarray.h xarray.h config.h std.h
@@ -16,8 +15,6 @@ pf.o: pf.c pf.h xbarray.h config.h std.h
 splay.o: splay.c splay.h heap.h config.h std.h
 st.o: st.c st.h mem.h object.h splay.h config.h std.h
 std.o: std.c config.h std.h
-string.o: string.c bi.h ip.h gc.h mem.h object.h splay.h xbarray.h xarray.h config.h std.h
-symbol.o: symbol.c bi.h ip.h gc.h mem.h object.h splay.h xbarray.h xarray.h config.h std.h
 xarray.o: xarray.c xarray.h config.h std.h
 xbarray.o: xbarray.c xbarray.h config.h std.h
 xgetopt.o: xgetopt.c xgetopt.h config.h std.h

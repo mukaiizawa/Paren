@@ -118,8 +118,14 @@ static char *symbol_name_map[] = {
   "bytes_new", "bytes",
   "bytes_p", "bytes?",
   "bytes_put", "bytes-at!",
+  "to_bytes", "->bytes",
+  "bytes_to_keyword", "bytes->keyword",
   "bytes_to_string", "bytes->string",
+  "bytes_to_symbol", "bytes->symbol",
   "bytes_unmatch_index", "bytes-unmatch-index",
+  "keyword_p", "keyword?",
+  "string_p", "string?",
+  "symbol_p", "symbol?",
   // cons
   "cons_p", "cons?",
   "set_assoc", "assoc!",
@@ -152,16 +158,6 @@ static char *symbol_name_map[] = {
   "number_multiply", "*",
   "number_p", "number?",
   "number_truncate", "Math.truncate",
-  // string
-  "string_p", "string?",
-  "string_to_symbol", "string->symbol",
-  // symbol
-  "keyword_p", "keyword?",
-  "keyword_to_symbol", "keyword->symbol",
-  "symbol_p", "symbol?",
-  "symbol_to_keyword", "symbol->keyword",
-  "symbol_to_string", "symbol->string",
-  "to_bytes", "->bytes",
   // os
   "os_fp", "OS.fp",
   "os_fopen", "OS.fopen",
