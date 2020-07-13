@@ -19,14 +19,17 @@
     ...))
 
 (special-operator <-
-  ; Special operator '<-' is the symbol binding statement of Paren.
-  ; First expr1 is evaluated and the bind sym1 with result, and so on.
-  ; This special operator may be used for lexical and dynamic binding.
+  ; Special operator `<-` is the symbol binding statement of Paren.
+  ; First evaluate expr1 and bind sym1 to the result, and so on.
+  ; If the symbol is not bound to the current environment, the parent environment is searched in turn.
+  ; If it is not bound to the global environment, bind to the global environment.
+  ; If the symbol is already bound, it will be bound again with the result of the evaluation.
+  ; Returns the last evaluation result.
   (<- sym1 expr1 sym2 expr2 ...))
 
 (special-operator begin
   ; Special operator progn evaluates expressions, in the order in which they are given.
-  ; The values of each form but the last are discarded.
+  ; Returns the last evaluation result.
   (begin
     expr1
     expr2
@@ -38,25 +41,28 @@
 
 (special-operator if
   ; Special operator if allows the execution of exprs to be dependent on test.
-  ; Test-expressions are evaluated one at a time in the order in which they are given in the expression list until a test-expr is found that evaluates to true.
-  ; Once one test-expr has yielded true, no additional test-exprs are evaluated.
-  ; If no test-expr yields true, nil is returned.
-  ; The last even-numbered expression is optional, in which case the evaluation result of odd-numberd is returned.
-  (if test1 then1
-      test2 then2
-      ...))
+  ; Statements are evaluated one at a time in the order in which they are given in the expression list until a stmt is found that evaluates to true.
+  ; Once one stmt has evaluated to true, no additional stmt are evaluated.
+  ; If no stmt yields true, nil is returned.
+  ; An odd number of arguments can be passed, in which case last argument act as a default phrase.
+  ; Returns the last evaluation result.
+  (if stmt1 expr1
+      stmt2 expr2
+      ...
+      stmt-n expr-n
+      [default-phrase]))
 
 (special-operator lambda
-  ; Special operator lambda creates an  anonymous function.
+  ; Special operator lambda creates an anonymous function.
   ; Parameters include required parameters, optional parameters, keyword parameters and rest parameters.
   ; Required parameters are a parameter that results in an error if not specified when calling the function.
   ; Optional parameters are parameters that need not be specified when calling the function.
   ; Keyword parameters are specified with names without regard to order when calling the function.
   ; Rest parameters implement variable length arguments.
-  ;     params ::= ([required_param] ...
-  ;                 [:opt optional_param ...]
-  ;                 [{ :rest rest_param | :key keyword_param ... }] )
-  (lambda <params>
+  ; Returns the anonymous function.
+  (lambda ([required_param] ...
+           [:opt optional_param ...]
+           [{ :rest rest_param | :key keyword_param ... }] )
     expr1
     expr2
     ...))
@@ -70,12 +76,10 @@
   ; Special operator macro creates macro named the specified name.
   ; Macro expands without evaluating its arguments.
   ; The macro-parameters that can be specified for macros differ in that macro-parameters can be specified recursively instead of required parameters.
-  ;     param ::= '('
-  ;                   [{ param | required_param } ...  ]
-  ;                   [:opt optional_param ...]
-  ;                   [{ :rest rest_param | :key keyword_param ... }]
-  ;               ')'
-  (macro name <params>
+  ; Returns the macro.
+  (macro name ([{ param | required_param } ...  ]
+               [:opt optional_param ...]
+               [{ :rest rest_param | :key keyword_param ... }])
     expr1
     expr2
     ...))
@@ -1791,7 +1795,7 @@
 
 (method ParenLexer .identifier-symbol-alpha? ()
   (&& (.ascii? self)
-      (|| (bytes-index "!$%&*./<=>?^_|" (.next-byte self) 0 14)
+      (|| (bytes-index "!$%&*./<=>?^[]_{|}" (.next-byte self) 0 18)
           (.alpha? self))))
 
 (method ParenLexer .identifier-sign? ()

@@ -172,6 +172,7 @@ char *frame_name(int frame_type)
 
 #define fs_top() (sint_val(fs[fp]))
 #define fs_nth(i) (sint_val(fs[i]))
+#define set_fp(i) { fp = i; sp = next_fp(fp); }
 #define get_frame_var(base_fp, n) (fs[base_fp + 2 + n])
 #define set_frame_var(base_fp, n, o) (fs[base_fp + 2 + n] = o)
 #define frame_size(frame_type) (frame_type & FRAME_SIZE_MASK)
@@ -205,13 +206,32 @@ static void dump_fs(void)
   }
 }
 
+static void exit1(void)
+{
+  char buf[MAX_STR_LEN];
+  object o;
+  o = reg[0]->cons.cdr;
+  printf("%s", object_describe(o->cons.car, buf));
+  o = o->cons.cdr->cons.cdr;
+  if (o->cons.car != object_nil)
+    printf(" -- %s.", object_describe(o->cons.car, buf));
+  printf("\n");
+  while (o->cons.car != object_stack_trace) o = o->cons.cdr;
+  o = o->cons.cdr->cons.car;
+  while (o != object_nil) {
+    printf("	at: %s\n", object_describe(o->cons.car, buf));
+    o = o->cons.cdr;
+  }
+  dump_fs();
+  exit(1);
+}
+
 static void gen(int frame_type)
 {
   if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_mark_error("stack over flow");
   fs[sp + 1] = sint(fp);
   fs[sp] = sint(frame_type);
-  fp = sp;
-  sp = next_fp(fp);
+  set_fp(sp);
 }
 
 static void pop_frame(void)
@@ -478,38 +498,38 @@ static void pop_unwind_protect_frame(void)
 
 static void pop_goto_frame(void)
 {
+  int i;
   object o, label;
+  i = fp;
   label = reg[0];
-  if (!object_type_p(label, KEYWORD)) {
-    ip_mark_error("label must be keyword");
-    return;
-  }
-  while (TRUE) {
-    if (fp < 0) {
-      ip_mark_error("labels context not found");
-      return;
+  while (fp > -1) {
+    switch (fs_top()) {
+      case LABELS_FRAME:
+        o = get_frame_var(fp, 0);
+        while (o != object_nil) {
+          if (o->cons.car == label) {
+            gen1(EVAL_SEQUENTIAL_FRAME, o->cons.cdr);
+            return;
+          }
+          o = o->cons.cdr;
+        }
+        ip_mark_error("label not found");
+        set_fp(i);
+        return;
+      case UNWIND_PROTECT_FRAME:
+        o = get_frame_var(fp, 0);
+        pop_frame();
+        gen0(GOTO_FRAME);
+        gen1(QUOTE_FRAME, label);
+        gen1(EVAL_SEQUENTIAL_FRAME, o);
+        return;
+      default:
+        pop_rewinding();
+        break;
     }
-    if (fs_top() == UNWIND_PROTECT_FRAME) {
-      o = get_frame_var(fp, 0);
-      pop_frame();
-      gen0(GOTO_FRAME);
-      gen1(QUOTE_FRAME, label);
-      gen1(EVAL_SEQUENTIAL_FRAME, o);
-      return;
-    }
-    if (fs_top() == LABELS_FRAME) break;
-    pop_rewinding();
   }
-  o = get_frame_var(fp, 0);
-  while (TRUE) {
-    if (o == object_nil) {
-      ip_mark_error("label not found");
-      return;
-    }
-    if (o->cons.car == label) break;
-    o = o->cons.cdr;
-  }
-  gen1(EVAL_SEQUENTIAL_FRAME, o);
+  set_fp(i);
+  exit1();
 }
 
 static void pop_fetch_operator_frame(void)
@@ -641,25 +661,6 @@ static object call_stack(void)
   return o;
 }
 
-static void exit1(void)
-{
-  char buf[MAX_STR_LEN];
-  object o;
-  o = reg[0]->cons.cdr;
-  printf("%s", object_describe(o->cons.car, buf));
-  o = o->cons.cdr->cons.cdr;
-  if (o->cons.car != object_nil)
-    printf(" -- %s.", object_describe(o->cons.car, buf));
-  printf("\n");
-  while (o->cons.car != object_stack_trace) o = o->cons.cdr;
-  o = o->cons.cdr->cons.car;
-  while (o != object_nil) {
-    printf("	at: %s\n", object_describe(o->cons.car, buf));
-    o = o->cons.cdr;
-  }
-  exit(1);
-}
-
 static int object_p(object o);
 static int object_is_a_p(object e, object o, object cls_sym);
 
@@ -682,8 +683,6 @@ static void pop_throw_frame(void)
   object cls_sym, handler, handlers, body;
   i = fp;
   pop_frame();
-  if (!object_is_a_p(reg[1], reg[0], object_Exception))
-    reg[0] = gc_new_Error("must be Exception object");
   push_call_stack(reg[0]);
   while (fp > -1) {
     switch (fs_top()) {
@@ -712,7 +711,7 @@ static void pop_throw_frame(void)
         break;
     }
   }
-  fp = i;
+  set_fp(i);
   exit1();
 }
 
@@ -1188,15 +1187,21 @@ DEFSP(labels)
 
 DEFSP(goto)
 {
+  object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, KEYWORD, &o)) return FALSE;
   gen0(GOTO_FRAME);
-  reg[0] = argv->cons.car;
+  reg[0] = o;
   return TRUE;
 }
 
 DEFSP(throw)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!object_is_a_p(reg[1], reg[0], object_Exception)) {
+    ip_mark_error("must be Exception object");
+    return FALSE;
+  }
   gen0(THROW_FRAME);
   gen_eval_frame(argv->cons.car);
   return TRUE;

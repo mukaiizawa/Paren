@@ -151,7 +151,7 @@ atomは次のリテラルがある。
     identifier_rest ::= identifier_symbol_alpha
                         | identifier_digit
                         | identifier_sign
-    identifier_symbol_alpha ::= [!$%&*./<=>?a-z^_A-Z|]
+    identifier_symbol_alpha ::= [!$%&*./<=>?A-Z[\]^_a-z{|}]
     identifier_digit ::= [0-9]
     identifier_sign ::= [+\-]
 
