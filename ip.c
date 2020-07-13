@@ -211,7 +211,6 @@ static void exit1(void)
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
-  dump_fs();
   exit(1);
 }
 
@@ -365,12 +364,13 @@ static void pop_let_frame(void)
 
 static void pop_apply_frame(void)
 {
-  object operator;
+  object operator, fvar;
   operator = get_frame_var(fp, 0);
   pop_frame();
+  fvar = gc_new_cons(operator, reg[0]);
   // optimize tail recursion
-  if (fs_top() == LAMBDA_FRAME) set_frame_var(fp, 1, operator);
-  else gen2(LAMBDA_FRAME, reg[1], operator);
+  if (fs_top() == LAMBDA_FRAME) set_frame_var(fp, 1, fvar);
+  else gen2(LAMBDA_FRAME, reg[1], fvar);
   reg[1] = gc_new_env(operator->lambda.env);
   gen1(EVAL_SEQUENTIAL_FRAME, operator->lambda.body);
   parse_args(operator->lambda.params, reg[0]);
@@ -378,12 +378,14 @@ static void pop_apply_frame(void)
 
 static void pop_apply_builtin_frame(void)
 {
-  object args;
+  object f, args;
   int (*function)(int, object, object *);
+  f = get_frame_var(fp, 0);
   args = reg[0];
-  function = get_frame_var(fp, 0)->builtin.u.function;
+  function = f->builtin.u.function;
   pop_frame();
   if ((*function)(object_list_len(args), args, &(reg[0]))) return;
+  gen2(LAMBDA_FRAME, reg[1], gc_new_cons(f->builtin.name, args));    // for stack trace
   if (error_msg == NULL) ip_mark_error("built-in function failed");
 }
 
@@ -524,7 +526,8 @@ static void pop_fetch_operator_frame(void)
   switch (object_type(reg[0])) {
     case SPECIAL:
       special = reg[0]->builtin.u.special;
-      (*special)(object_list_len(args), args);
+      if ((*special)(object_list_len(args), args)) return;
+      gen2(LAMBDA_FRAME, reg[1], gc_new_cons(reg[0]->builtin.name, args));    // for stack trace
       return;
     case FUNCITON:
       gen1(APPLY_BUILTIN_FRAME, reg[0]);
@@ -628,15 +631,22 @@ static int resolve_anonimous_lambda(void)
 static object call_stack(void)
 {
   int i;
-  object o;
+  object o, p, f, args;
   o = object_nil;
   for (i = 0; i <= fp; i = next_fp(i)) {
     switch (fs_nth(i)) {
       case LAMBDA_FRAME:
-        named_lambda = NULL;
-        anonimous_lambda = get_frame_var(i, 1);
-        if (resolve_anonimous_lambda()) o = gc_new_cons(named_lambda, o);
-        else o = gc_new_cons(anonimous_lambda, o);
+        p = get_frame_var(i, 1);
+        if (!object_type_p(p, CONS)) o = gc_new_cons(p, o);
+        else {
+          f = p->cons.car;
+          args = p->cons.cdr;
+          named_lambda = NULL;
+          anonimous_lambda = f;
+          if (resolve_anonimous_lambda()) f = named_lambda;
+          else f = anonimous_lambda;
+          o = gc_new_cons(gc_new_cons(f, args), o);
+        }
         break;
       default:
         break;
@@ -667,6 +677,8 @@ static void pop_throw_frame(void)
   object cls_sym, handler, handlers, body;
   i = fp;
   pop_frame();
+  if (!object_is_a_p(reg[0], object_Exception))
+    reg[0] = gc_new_Error("expected Exception object");
   push_call_stack(reg[0]);
   while (fp > -1) {
     switch (fs_top()) {
@@ -1159,8 +1171,6 @@ DEFSP(goto)
 DEFSP(throw)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!object_is_a_p(reg[0], object_Exception))
-    return ip_mark_error("expected Exception object");
   gen0(THROW_FRAME);
   gen_eval_frame(argv->cons.car);
   return TRUE;
