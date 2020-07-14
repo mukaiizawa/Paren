@@ -781,33 +781,40 @@
 
 ; ascii character code.
 
-(function ascii-space? (c)
-  ; Returns whether byte c can be considered a space character.
-  (find (lambda (x) (= c x)) '(0x09 0x0a 0x0d 0x20)))
+(function code-point (s)
+  (let (b 0 val 0)
+    (with-memory-stream (in s)
+      (while (/= (<- b (read-byte in)) -1)
+        (<- val (| (<< val 8) b))))
+    val))
 
-(function ascii-alpha? (c)
-  ; Returns whether byte c can be considered a alphabetic character.
-  (|| (<= 0x41 c 0x5a) (<= 0x61 c 0x7a)))
+(function ascii-space? (b)
+  ; Returns whether byte b can be considered a space character.
+  (find (lambda (x) (= b x)) '(0x09 0x0a 0x0d 0x20)))
 
-(function ascii-digit? (c)
-  ; Returns whether byte c can be considered a digit character.
-  (<= 0x30 c 0x39))
+(function ascii-alpha? (b)
+  ; Returns whether byte b can be considered a alphabetic character.
+  (|| (<= 0x41 b 0x5a) (<= 0x61 b 0x7a)))
 
-(function ascii-lower (c)
-  ; Returns lowercase if byte c can be considered an alphabetic character, c otherwise.
-  (if (<= 0x41 c 0x5a) (+ c 0x20)
-      c))
+(function ascii-digit? (b)
+  ; Returns whether byte b can be considered a digit character.
+  (<= 0x30 b 0x39))
 
-(function ascii-upper (c)
-  ; Returns uppercase if byte c can be considered an alphabetic character, c otherwise.
-  (if (<= 0x61 c 0x7a) (- c 0x20)
-      c))
+(function ascii-lower (b)
+  ; Returns lowercase if byte b can be considered an alphabetic character, b otherwise.
+  (if (&& (ascii-alpha? b) (<= 0x41 b 0x5a)) (+ b 0x20)
+      b))
 
-(function ascii->digit (c :key radix)
-  ; Returns the numeric value when the specified byte c is regarded as the specified radix base character.
+(function ascii-upper (b)
+  ; Returns uppercase if byte b can be considered an alphabetic character, b otherwise.
+  (if (&& (ascii-alpha? b) (<= 0x61 b 0x7a)) (- b 0x20)
+      b))
+
+(function ascii->digit (b :key radix)
+  ; Returns the numeric value when the specified byte b is regarded as the specified radix base character.
   ; Default radix is 10.
-  (let (n (if (ascii-digit? c) (- c 0x30)
-              (ascii-alpha? c) (+ (- (ascii-lower c) 0x61) 10)))
+  (let (n (if (ascii-digit? b) (- b 0x30)
+              (ascii-alpha? b) (+ (- (ascii-lower b) 0x61) 10)))
     (if (|| (nil? n) (>= n (|| radix 10))) (error "not numeric char")
         n)))
 
@@ -1702,26 +1709,15 @@
   ; Returns a pre-read character.
   (&next self))
 
-(method AheadReader .next-byte ()
-  ; Returns next character as a byte.
-  (assert (.ascii? self))
-  (bytes-at (&next self) 0))
-
 (method AheadReader .skip ()
   ; Skip next character and returns it.
   (if (.eof? self) (error "EOF reached"))
   (begin0 (&next self)
           (&next! self (.read-char (&stream self)))))
 
-(method AheadReader .skip-byte ()
-  ; Skip as a byte.
-  (assert (.ascii? self))
-  (bytes-at (.skip self) 0))
-
 (method AheadReader .skip-line ()
   (while (&& (! (.eof? self))
-             (|| (! (.ascii? self))
-                 (/= (.next-byte self) 0x0a)))
+             (! (string-eq? (&next self) "\n")))
     (.skip self))
   self)
 
@@ -1746,34 +1742,28 @@
   (.reset (&token self))
   self)
 
-(method AheadReader .ascii? ()
-  ; Returns true, if next character is a single byte character.
-  (&& (! (.eof? self))
-      (< (bytes-at (&next self) 0) 0x80)))
-
 (method AheadReader .eof? ()
   ; Returns true if eof reached.
   (nil? (&next self)))
 
 (method AheadReader .alpha? ()
   ; Returns true if next character is alphabetic.
-  (&& (.ascii? self) (ascii-alpha? (.next-byte self))))
+  (ascii-alpha? (code-point (&next self))))
 
 (method AheadReader .digit? ()
   ; Returns true if next character is digit.
-  (&& (.ascii? self) (ascii-digit? (.next-byte self))))
+  (ascii-digit? (code-point (&next self))))
 
 (method AheadReader .numeric-alpha? ()
   ; Returns true if next character is digit or alphabetic.
-  (&& (.ascii? self)
-      (let (b (.next-byte self))
-        (|| (ascii-digit? b)
-            (ascii-alpha? b)))))
+  (let (b (code-point (&next self)))
+    (|| (ascii-digit? b)
+        (ascii-alpha? b))))
 
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
   ; Returns self.
-  (while (&& (.ascii? self) (ascii-space? (.next-byte self)))
+  (while (ascii-space? (code-point (&next self)))
     (.skip self))
   self)
 
@@ -1783,11 +1773,14 @@
         (string-eq? next "-") (begin (.skip self) true)
         nil)))
 
+(method AheadReader .skip-digit (:key radix)
+  (ascii->digit (code-point (.skip self)) :radix (|| radix 10)))
+
 (method AheadReader .skip-unsigned-integer ()
   (if (! (.digit? self)) (error "missing digits")
       (let (val 0)
         (while (.digit? self)
-          (<- val (+ (* val 10) (ascii->digit (.skip-byte self)))))
+          (<- val (+ (* val 10) (.skip-digit self))))
         val)))
 
 (method AheadReader .skip-integer ()
@@ -1803,12 +1796,12 @@
           (.skip self)
           (if (! (.numeric-alpha? self)) (error "missing lower or digits")
               (while (.numeric-alpha? self)
-                (<- val (+ (* val radix) (ascii->digit (.skip-byte self) :radix radix))))))
+                (<- val (+ (* val radix) (.skip-digit self :radix 16))))))
         (string-eq? (&next self) ".")
         (let (factor 0.1)
           (.skip self)
           (while (.digit? self)
-            (<- val (+ val (* factor (ascii->digit (.skip-byte self))))
+            (<- val (+ val (* factor (.skip-digit self :radix 16)))
                 factor (/ factor 10)))
           (when (= (&next self) 0x65)
             (.skip self)
@@ -1829,13 +1822,11 @@
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (&& (.ascii? self)
-      (|| (bytes-index "!$%&*./<=>?^[]_{|}" (.next-byte self) 0 18)
-          (.alpha? self))))
+  (|| (bytes-index "!$%&*./<=>?^[]_{|}" (.next self) 0 18)
+      (.alpha? self)))
 
 (method ParenLexer .identifier-sign? ()
-  (&& (.ascii? self)
-      (bytes-index "+-" (.next-byte self) 0 2)))
+  (bytes-index "+-" (.next self) 0 2))
 
 (method ParenLexer .identifier-trail? ()
   (|| (.identifier-symbol-alpha? self)
@@ -1889,8 +1880,8 @@
                      (string-eq? c "r") (.put self 0x0d)
                      (string-eq? c "t") (.put self 0x09)
                      (string-eq? c "v") (.put self 0x0b)
-                     (string-eq? c "x") (.put self (+ (* 16 (ascii->digit (.skip-byte self) :radix 16))
-                                                      (ascii->digit (.skip-byte self) :radix 16)))
+                     (string-eq? c "x") (.put self (+ (* 16 (.skip-digit self 16))
+                                                      (.skip-digit self 16)))
                      (.put self c))))))
   (.skip self)
   (list :string (.token self)))
