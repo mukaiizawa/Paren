@@ -864,17 +864,21 @@
         (if (nil? (<- c (read-char in))) (error "index outof bounds"))))
     c))
 
-(function string-index (s t)
-  ; Returns the i-th character of string s.
-  (let (i 0 c nil tlen (bytes-length t) mem (.new MemoryStream))
+(function string-index (s pat)
+  ; Returns the first occurrence of pat.
+  ; Returns nil if no substring is included.
+  (let (slen (string-length s) sblen (bytes-length s) patlen (string-length) patblen (bytes-length patblen))
+    (if (= patlen 0) 0
+        (= patlen 1)
+
+
+(function string-length (s)
+  ; Returns the number of characters in string s.
+  (let (len 0)
     (with-memory-stream (in s)
-      (while (<- c (read-char in))
-        (.write-bytes mem c)
-        (write (.to-s mem))
-        (if (string-eq? t (.to-s mem)) (return (- i (-- (string-length t))))
-            (>= (.size mem) tlen) (.reset mem))
-        (<- i (++ i)))))
-  nil)
+      (while (read-char in)
+        (<- len (++ len))))
+    len))
 
 (function string-length (s)
   ; Returns the number of characters in string s.
@@ -891,9 +895,9 @@
   ;     (string->list "/a" "/") <=> '("" "a")
   ;     (string->list "/" "/") <=> '("" "")
   ;     (string->list "aaa" "") <=> Error
-  (let (acc nil i 0 pos nil slen (bytes-length s) dlen (bytes-length delim))
+  (let (acc nil i 0 pos nil slen (string-length s) dlen (string-length delim))
     (if (= dlen 0) (error "delimiter must not be the empty string"))
-    (while (&& (< i slen) (<- pos (bytes-index s delim i slen)))
+    (while (&& (< i slen) (<- pos (string-index s delim i slen)))
       (push! acc (string-slice s i pos))
       (<- i (+ pos dlen)))
     (push! acc (string-slice s i slen))
@@ -1125,6 +1129,9 @@
   ; Returns the length of the specified array x.
   (assert (= (array-length (array 3)) 3)))
 
+(builtin-function array-copy (src src-i dst dst-i size)
+  )
+
 ; Paren object system
 ;
 ; Paren object system is an object system implemented from a primitive paren.
@@ -1311,6 +1318,38 @@
 
 (class Error (Exception)
   )
+
+(class Array ()
+  size elm)
+
+(method Array .init ()
+  (&size! self 0)
+  (&elm! self (array 4)))
+
+(method Array .size ()
+  (&size self))
+
+(method Array .at (i)
+  (if (< (&size self) i) (array-at (&elm self) i)
+      (error "illegal argument " (list i (&size self)))))
+
+(method Array .at! (i val)
+  (if (< (&size self) i) (array-at! (&elm self) i val)
+      (error "illegal argument " (list i (&size self)))))
+
+(method Array .resize (new-size)
+  (let (elm (&elm self) elm-size (array-length elm))
+    (if (< elm-size new-size)
+        (begin (while (< elm-size new-size)
+                 (<- elm-size (* elm-size 2)))
+               (array-copy elm 0 (&elm! self (array elm-size)) (&size self))))
+    (&size! self new-size)))
+
+(method Array .add (val)
+  (let (i (&size self))
+    (&size! self (++ i))
+    (array-at! (&elm self) i))
+  self)
 
 (class Path ()
   ; A class that handles a file path.
@@ -1642,6 +1681,18 @@
     (&buf! self new-buf))
   self)
 
+(method MemoryStream .read-byte ()
+  (let (rdpos (&rdpos self))
+    (if (= rdpos (&wrpos self)) -1
+        (begin0 (bytes-at (&buf self) rdpos)
+                (&rdpos! self (++ rdpos))))))
+
+(method MemoryStream .read-bytes (buf from size)
+  (let (rest (- (&wrpos self) (&rdpos self)))
+    (if (< rest size) (<- size rest))
+    (bytes-copy (&buf self) (&rdpos self) buf (&wrpos self) size)
+    size))
+
 (method MemoryStream .write-byte (byte)
   (let (wrpos (&wrpos self))
     (if (! (< wrpos (&buf-size self))) (.extend self 1))
@@ -1653,12 +1704,6 @@
   (bytes-copy bytes (|| from 0) (&buf self) (&wrpos self) size)
   (&wrpos! self (+ (&wrpos self) size))
   size)
-
-(method MemoryStream .read-byte ()
-  (let (rdpos (&rdpos self))
-    (if (= rdpos (&wrpos self)) -1
-        (begin0 (bytes-at (&buf self) rdpos)
-                (&rdpos! self (++ rdpos))))))
 
 (method MemoryStream .seek (offset)
   (if (! (<= 0 offset (&wrpos self))) (error "index outof bound"))
@@ -1688,6 +1733,9 @@
 
 (method FileStream .read-byte ()
   (OS.fgetc (&fp self)))
+
+(method FileStream .read-bytes (buf from size)
+  (OS.fread buf from size (&fp self)))
 
 (method FileStream .read-line ()
   (OS.fgets (&fp self)))

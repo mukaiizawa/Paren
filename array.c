@@ -61,3 +61,26 @@ DEFUN(array_put)
   *result = object_nil;
   return TRUE;
 }
+
+DEFUN(array_copy)
+{
+  int oi, pi, size;
+  object o, p;
+  if (!bi_argc_range(argc, 5, 5)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, ARRAY, &o)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &oi)) return FALSE;
+  if (!bi_arg_type((argv = argv->cons.cdr)->cons.car, ARRAY, &p)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (size < 0) return FALSE;
+  if (oi < 0 || (oi + size) > o->bytes.size) return FALSE;
+  if (pi < 0 || (pi + size) > p->bytes.size) return FALSE;
+  while (size) {
+    o->array.elt[oi] = p->array.elt[pi];
+    oi++;
+    pi++;
+    size--;
+  }
+  *result = p;
+  return TRUE;
+}
