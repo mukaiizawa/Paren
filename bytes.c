@@ -81,6 +81,16 @@ DEFUN(bytes_to_string)
   return bytes_to(argc, argv, result, STRING);
 }
 
+DEFUN(xbytes_to_string)
+{
+  object o;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, BYTES, &o)) return FALSE;
+  set_type(o, STRING);
+  *result = o;
+  return TRUE;
+}
+
 DEFUN(bytes_at)
 {
   object o;

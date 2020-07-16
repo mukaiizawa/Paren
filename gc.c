@@ -21,10 +21,6 @@ static struct xarray *table, *work_table, table0, table1;
 static struct st symbol_table;
 static struct st keyword_table;
 
-#define alive_p(o) ((o)->header & ALIVE_BIT)
-#define set_alive(o) ((o)->header |= ALIVE_BIT)
-#define set_dead(o) ((o)->header &= ~ALIVE_BIT)
-#define set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= type;}
 #define regist(o) (xarray_add(table, o))
 
 static object gc_alloc(int size)

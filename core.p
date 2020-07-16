@@ -781,13 +781,6 @@
 
 ; ascii character code.
 
-(function code-point (s)
-  (let (b 0 val 0)
-    (with-memory-stream (in s)
-      (while (/= (<- b (read-byte in)) -1)
-        (<- val (| (<< val 8) b))))
-    val))
-
 (function ascii-space? (b)
   ; Returns whether byte b can be considered a space character.
   (find (lambda (x) (= b x)) '(0x09 0x0a 0x0d 0x20)))
@@ -841,14 +834,21 @@
   ; Same as (bytes-eq? x y).
   (bytes-eq? x y))
 
+(function string-codepoint (s)
+  (let (b 0 val 0)
+    (with-memory-stream (in s)
+      (while (/= (<- b (read-byte in)) -1)
+        (<- val (| (<< val 8) b))))
+    val))
+
 (function string-slice (s start :opt end)
   ; Returns a string that is a substring of the specified string s.
   ; The substring begins at the specified start and extends to the character at index end - 1.
   ; Thus the length of the substring is `end - start`.
   (let (len (string-length s))
-    (if (< start 0) (error "illegal start")
+    (if (< start 0) (error "illegal start" start)
         (nil? end) (<- end len)
-        (> end len) (error "illegal end"))
+        (> end len) (error "illegal end" (list end len)))
     (with-ahead-reader (ar s)
       (dotimes (i len)
         (if (>= i end) (break)
@@ -1443,46 +1443,62 @@
   ; Must be implemented in the inherited class.
   (assert nil))
 
-(method Stream .illegal-character (encoding :rest seq)
-  (error (list encoding seq)))
+(method Stream .illegal-character (:rest seq)
+  (error "illegal byte sequence -- " (list seq)))
+
+(method Stream .trail? (b)
+  (let (encoding (dynamic $external-encoding))
+    (if (eq? encoding :UTF-8)
+        (= (& b 0xc0) 0x80)
+        (eq? encoding :SJIS)
+        (|| (<= 0x81 b 0x9f) (<= 0xe0 b 0xfc)))))
 
 (method Stream .read-char ()
   ; Read 1 character from stream.
   ; Returns nil when the stream reaches the end.
-  (let (encoding (dynamic $external-encoding))
+  (let (encoding (dynamic $external-encoding) b1 (.read-byte self) b2 nil b3 nil b4 nil size 0)
     (if (eq? encoding :UTF-8)
-        (let (trail? (lambda (b)
-                       (= (& b 0xc0) 0x80))
-                     ms (.new MemoryStream) b1 (.read-byte self) b2 nil b3 nil b4 nil)
-          (if (< b1 0) (return nil)
-              (< b1 0x80) (.write-byte ms b1)
-              (< b1 0xc2) (.illegal-character self encoding b1)
-              (< b1 0xe0) (begin (if (|| (= (& b1 0x3e) 0)
-                                         (! (trail? (<- b2 (.read-byte self)))))
-                                     (.illegal-character self encoding b1 b2))
-                                 (.write-byte ms b1)
-                                 (.write-byte ms b2))
-              (< b1 0xf0) (begin (if (|| (! (trail? (<- b2 (.read-byte self))))
-                                         (&& (= b1 0xe0)
-                                             (= (& b2 0x20) 0))
-                                         (! (trail? (<- b3 (.read-byte self)))))
-                                     (.illegal-character self encoding b1 b2 b3))
-                                 (.write-byte ms b1)
-                                 (.write-byte ms b2)
-                                 (.write-byte ms b3))
-              (< b1 0xf8) (begin (if (|| (! (trail? (<- b2 (.read-byte self))))
-                                         (&& (= b1 0xf0)
-                                             (= (& b2 0x30) 0))
-                                         (! (trail? (<- b3 (.read-byte self))))
-                                         (! (trail? (<- b4 (.read-byte self)))))
-                                     (.illegal-character self encoding b1 b2 b3 b4))
-                                 (.write-byte ms b1)
-                                 (.write-byte ms b2)
-                                 (.write-byte ms b3)
-                                 (.write-byte ms b4))
-              ((.illegal-character self encoding b1)))
-          (.to-s ms))
-        (error "unsupport encoding"))))
+        (if (< b1 0) (return nil)
+            (< b1 0x80) (<- size 1)
+            (< b1 0xc2) (.illegal-character self b1)
+            (< b1 0xe0) (if (|| (= (& b1 0x3e) 0)
+                                (! (.trail self (<- b2 (.read-byte self)))))
+                            (.illegal-character self b1 b2)
+                            (<- size 2))
+            (< b1 0xf0) (if (|| (! (.trail self (<- b2 (.read-byte self))))
+                                (&& (= b1 0xe0)
+                                    (= (& b2 0x20) 0))
+                                (! (.trail self (<- b3 (.read-byte self)))))
+                            (.illegal-character self b1 b2 b3)
+                            (<- size 3))
+            (< b1 0xf8) (if (|| (! (.trail self (<- b2 (.read-byte self))))
+                                (&& (= b1 0xf0)
+                                    (= (& b2 0x30) 0))
+                                (! (.trail self (<- b3 (.read-byte self))))
+                                (! (.trail self (<- b4 (.read-byte self)))))
+                            (.illegal-character self b1 b2 b3 b4)
+                            (<- size 4))
+            (.illegal-character self b1))
+        (eq? encoding :SJIS)
+        (if (< b1 0) (return nil)
+            (< b1 0x80) (<- size 1)
+            (< 0x80 b1 0xa0) (<- b2 (.read-byte self) size 2)
+            (< 0xa0 b1 0xe0) (<- size 1)
+            (< b1 0xfd) (<- b2 (.read-byte self) size 2)
+            (.illegal-character self b1))
+        (error "unsupport encoding"))
+    (let (c (bytes size))
+      (if (= size 1) (bytes-at! c 0 b1)
+          (= size 2) (begin (bytes-at! c 0 b1)
+                            (bytes-at! c 1 b2))
+          (= size 3) (begin (bytes-at! c 0 b1)
+                            (bytes-at! c 1 b2)
+                            (bytes-at! c 2 b3))
+          (= size 4) (begin (bytes-at! c 0 b1)
+                            (bytes-at! c 1 b2)
+                            (bytes-at! c 2 b3)
+                            (bytes-at! c 3 b4)))
+      (bytes->string! c))))
 
 (method Stream .read ()
   ; Read expression from the specified stream.
@@ -1748,22 +1764,22 @@
 
 (method AheadReader .alpha? ()
   ; Returns true if next character is alphabetic.
-  (ascii-alpha? (code-point (&next self))))
+  (ascii-alpha? (string-codepoint (&next self))))
 
 (method AheadReader .digit? ()
   ; Returns true if next character is digit.
-  (ascii-digit? (code-point (&next self))))
+  (ascii-digit? (string-codepoint (&next self))))
 
 (method AheadReader .numeric-alpha? ()
   ; Returns true if next character is digit or alphabetic.
-  (let (b (code-point (&next self)))
+  (let (b (string-codepoint (&next self)))
     (|| (ascii-digit? b)
         (ascii-alpha? b))))
 
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
   ; Returns self.
-  (while (ascii-space? (code-point (&next self)))
+  (while (ascii-space? (string-codepoint (&next self)))
     (.skip self))
   self)
 
@@ -1774,7 +1790,7 @@
         nil)))
 
 (method AheadReader .skip-digit (:key radix)
-  (ascii->digit (code-point (.skip self)) :radix (|| radix 10)))
+  (ascii->digit (string-codepoint (.skip self)) :radix (|| radix 10)))
 
 (method AheadReader .skip-unsigned-integer ()
   (if (! (.digit? self)) (error "missing digits")
@@ -1822,11 +1838,11 @@
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (|| (bytes-index "!$%&*./<=>?^[]_{|}" (.next self) 0 18)
+  (|| (bytes-index "!$%&*./<=>?^[]_{|}" (.next self))
       (.alpha? self)))
 
 (method ParenLexer .identifier-sign? ()
-  (bytes-index "+-" (.next self) 0 2))
+  (bytes-index "+-" (.next self)))
 
 (method ParenLexer .identifier-trail? ()
   (|| (.identifier-symbol-alpha? self)
@@ -2069,7 +2085,7 @@
   ; File stream object holding the standard ouput.
   )
 
-(global-symbol $external-encoding :UTF-8
+(global-symbol $external-encoding (if (eq? OS.name :windows) :SJIS :UTF-8)
   ; Input / Output encoding.
   ; Currently supported encodings are as follows.
   ; - :UTF-8
