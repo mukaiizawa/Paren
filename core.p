@@ -874,28 +874,30 @@
 (function string-index (s pat :opt start)
   ; Returns the first occurrence of pat.
   ; Returns nil if no substring is included.
-  (let (sa (string->array s) slen (array-length sa)
-           pa (string->array pat) plen (array-length pa) p0 (array-at pa 0))
-    (if start (return (string-index (string-slice s start) pat))
-        (= plen 0) (return 0)
-        (= slen 0) (return nil))
-    (for (i 0 end (- slen plen)) (<= i end) (<- i (++ i))
-      (when (= p0 (array-at sa i))
+  ;     (string-index "012" "0") => 0
+  ;     (string-index "012" "0" 1) => nil
+  ;     (string-index "012" "2" 1) => 2
+  (let (start (|| start 0) sa (string->array s) slen (array-length sa)
+              pa (string->array pat) plen (array-length pa))
+    (if (< (- slen start) 0) (error "illegal start")
+        (= plen 0) (return 0))
+    (for (i start end (- slen plen) p0 (array-at pa 0)) (<= i end) (<- i (++ i))
+      (when (bytes-eq? (array-at sa i) p0)
         (if (= plen 1) (return i))
         (let (si (++ i) pi 1)
-          (while (= (array-at sa si) (array-at pa pi))
+          (while (bytes-eq? (array-at sa si) (array-at pa pi))
             (<- si (++ si) pi (++ pi))
-            (if (= pi plen) (return i))))))))    ; matche
+            (if (= pi plen) (return i))))))))
 
 (function string->list (s delim)
   ; Returns a list of strings s delimited by delimiter.
-  ;     (string->list "a/a" "/") <=> '("a" "a")
-  ;     (string->list "a/" "/") <=> '("a" "")
-  ;     (string->list "/a" "/") <=> '("" "a")
-  ;     (string->list "/" "/") <=> '("" "")
-  ;     (string->list "aaa" "") <=> Error
+  ;     (string->list "a/a" "/") => '("a" "a")
+  ;     (string->list "a/" "/") => '("a" "")
+  ;     (string->list "/a" "/") => '("" "a")
+  ;     (string->list "/" "/") => '("" "")
+  ;     (string->list "aaa" "") => Error
   (let (acc nil i 0 pos nil slen (string-length s) dlen (string-length delim))
-    (if (= dlen 0) (error "delimiter must not be the empty string"))
+    (if (= dlen 0) (error "illegal delimiter"))
     (while (&& (< i slen) (<- pos (string-index s delim i)))
       (push! acc (string-slice s i pos))
       (<- i (+ pos dlen)))
@@ -1933,15 +1935,15 @@
   (let (sign (.get self))
     (if (.digit? self)
         (let (val (.skip-number self))
-          (list :number (if (string-eq? sign "-") (- val) val)))
-        (list :symbol (bytes->symbol (.token (.get-identifier-sign self)))))))
+          (if (string-eq? sign "-") (- val) val))
+        (bytes->symbol (.token (.get-identifier-sign self))))))
 
 (method ParenLexer .lex-symbol ()
-  (list :symbol (bytes->symbol (.token (.get-identifier self)))))
+  (bytes->symbol (.token (.get-identifier self))))
 
 (method ParenLexer .lex-keyword ()
   (.skip self)
-  (list :keyword (bytes->keyword (.token (.get-identifier self)))))
+  (bytes->keyword (.token (.get-identifier self))))
 
 (method ParenLexer .lex-string ()
   (.skip self)
@@ -1962,45 +1964,46 @@
                                                       (.skip-digit self 16)))
                      (.put self c))))))
   (.skip self)
-  (list :string (.token self)))
+  (.token self))
 
 (method ParenLexer .lex ()
   (.skip-space (.reset self))
   (let (next (&next self))
     (if (.eof? self) '(:EOF)
-        (string-eq? next "\"") (.lex-string self)
-        (string-eq? next "'") (begin (.skip self) '(:quote))
         (string-eq? next "(") (begin (.skip self) '(:open-paren))
         (string-eq? next ")") (begin (.skip self) '(:close-paren))
-        (string-eq? next ":") (.lex-keyword self)
+        (string-eq? next "'") (begin (.skip self) '(:quote))
+        (string-eq? next "\"") (list :atom (.lex-string self))
+        (string-eq? next ":") (list :atom (.lex-keyword self))
         (string-eq? next ";") (.lex-comment self)
-        (|| (string-eq? next "+") (string-eq? next "-")) (.lex-sign self)
-        (.digit? self) (list :number (.skip-number self))
-        (.lex-symbol self))))
+        (|| (string-eq? next "+")
+            (string-eq? next "-")) (list :atom (.lex-sign self))
+        (.digit? self) (list :atom (.skip-number self))
+        (list :atom (.lex-symbol self)))))
 
 (class ParenParser ()
   lexer token token-type)
 
 (method ParenParser .init (stream)
-  (&lexer! self (.init (.new ParenLexer) stream))
-  self)
+  (&lexer! self (.init (.new ParenLexer) stream)))
 
 (method ParenParser .scan ()
   (let (x (.lex (&lexer self)))
-    (&token! (&token-type! self (car x)) (cadr x)))
-  self)
+    (&token-type! self (car x))
+    (&token! self (cadr x))))
 
 (method ParenParser .parse-s ()
   (switch (&token-type self)
-    :EOF :EOF
+    :EOF nil
     :quote (list quote (.parse self))
     :open-paren (.parse-list self)
-    (:symbol :keyword :string :number) (&token self)
+    :atom (&token self)
     :default (error "syntax error")))
 
 (method ParenParser .parse-list ()
   (.scan self)
   (if (eq? (&token-type self) :close-paren) nil
+      (eq? (&token-type self) :EOF) (error "missing close-paren")
       (cons (.parse-s self) (.parse-list self))))
 
 (method ParenParser .parse ()
@@ -2096,10 +2099,10 @@
   (let (expr nil)
     (while true
       (catch (SystemExit (lambda (e) (break))
-              Error (lambda (e) (.print-stack-trace e)))
+                         Error (lambda (e) (.print-stack-trace e)))
         (write-bytes ") ")
-        (if (eq? (<- expr (read)) :EOF) (break)
-            (write (eval (expand-macro-all expr))))))))
+        (if (<- expr (read)) (write (eval (expand-macro-all expr)))
+            (break))))))
 
 (function quit ()
   ; Quit the system.
@@ -2109,7 +2112,9 @@
   ; Load the specified file.
   ; Returns true if successfully loaded.
   (with-open-read (in path)
-    (while (neq? (eval (read in)) :EOF)))
+    (let (expr nil)
+      (while (<- expr (read in))
+        (eval expr))))
   true)
 
 (function import (key)
