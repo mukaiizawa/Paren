@@ -841,6 +841,14 @@
         (<- val (| (<< val 8) b))))
     val))
 
+(function string->array (s)
+  ; Returns a character array of string s.
+  (let (a (.new Array) c nil)
+    (with-memory-stream (in s)
+      (while (<- c (read-char in))
+        (.add a c)))
+    (.to-a a)))
+
 (function string-slice (s start :opt end)
   ; Returns a string that is a substring of the specified string s.
   ; The substring begins at the specified start and extends to the character at index end - 1.
@@ -853,40 +861,31 @@
       (dotimes (i len)
         (if (>= i end) (break)
             (>= i start) (.get ar)
-            (.skip ar)))
-      (.token ar))))
+            (.skip ar))))))
 
 (function string-at (s i)
   ; Returns the i-th character of string s.
-  (let (c nil)
-    (with-memory-stream (in s)
-      (dotimes (ci (++ i))
-        (if (nil? (<- c (read-char in))) (error "index outof bounds"))))
-    c))
+  (array-at (string->array s) i))
 
-(function string-index (s pat)
+(function string-length (s)
+  ; Returns the number of characters in string s.
+  (array-length (string->array s)))
+
+(function string-index (s pat :opt start)
   ; Returns the first occurrence of pat.
   ; Returns nil if no substring is included.
-  (let (slen (string-length s) sblen (bytes-length s) patlen (string-length) patblen (bytes-length patblen))
-    (if (= patlen 0) 0
-        (= patlen 1)
-
-
-(function string-length (s)
-  ; Returns the number of characters in string s.
-  (let (len 0)
-    (with-memory-stream (in s)
-      (while (read-char in)
-        (<- len (++ len))))
-    len))
-
-(function string-length (s)
-  ; Returns the number of characters in string s.
-  (let (len 0)
-    (with-memory-stream (in s)
-      (while (read-char in)
-        (<- len (++ len))))
-    len))
+  (let (sa (string->array s) slen (array-length sa)
+           pa (string->array pat) plen (array-length pa) p0 (array-at pa 0))
+    (if start (return (string-index (string-slice s start) pat))
+        (= plen 0) (return 0)
+        (= slen 0) (return nil))
+    (for (i 0 end (- slen plen)) (<= i end) (<- i (++ i))
+      (when (= p0 (array-at sa i))
+        (if (= plen 1) (return i))
+        (let (si (++ i) pi 1)
+          (while (= (array-at sa si) (array-at pa pi))
+            (<- si (++ si) pi (++ pi))
+            (if (= pi plen) (return i))))))))    ; matche
 
 (function string->list (s delim)
   ; Returns a list of strings s delimited by delimiter.
@@ -897,7 +896,7 @@
   ;     (string->list "aaa" "") <=> Error
   (let (acc nil i 0 pos nil slen (string-length s) dlen (string-length delim))
     (if (= dlen 0) (error "delimiter must not be the empty string"))
-    (while (&& (< i slen) (<- pos (string-index s delim i slen)))
+    (while (&& (< i slen) (<- pos (string-index s delim i)))
       (push! acc (string-slice s i pos))
       (<- i (+ pos dlen)))
     (push! acc (string-slice s i slen))
@@ -1074,11 +1073,13 @@
   (assert (= (bytes-length "") 0))
   (assert (= (bytes-length "012") 3)))
 
-(builtin-function bytes-index (x b :opt s e)
-  ; Returns the position of the specified byte b in the s-th to (e - 1)-th elements of the specified bytes ba.
+(builtin-function bytes-index (x b :opt start end)
+  ; Returns the position of the specified byte b in the s-th to (end - 1)-th elements of the specified bytes ba.
   ; You can also specify a bytes for b, in which case the location of the first occurrence of the partial bytes is returned.
-  ; If s is not specified, 0 is assumed.
-  ; If e is not specified, length of x is assumed.
+  ; If start is not specified, 0 is assumed.
+  ; If end is not specified, length of x is assumed.
+  (assert (= (bytes-index "012" 0x31 1) 1))
+  (assert (= (bytes-index "012" 0x31 0 3) 1))
   (assert (= (bytes-index "012" 0x31 0 3) 1))
   (assert (= (bytes-index "012" "12" 0 3) 1)))
 
@@ -1096,8 +1097,8 @@
     (if (< start 0) (error "illegal start")
         (nil? end) (<- end xlen)
         (> end xlen) (error "illegal end"))
-    (let (new-bytes-len (- end start) new-bytes (bytes (- end start)))
-      (bytes-copy x start new-bytes 0 new-bytes-len))))
+    (let (new-len (- end start) new-bytes (bytes new-len))
+      (bytes-copy x start new-bytes 0 new-len))))
 
 (builtin-function bytes-concat (x :rest args)
   ; Concatenate each argument to bytes x
@@ -1131,6 +1132,15 @@
 
 (builtin-function array-copy (src src-i dst dst-i size)
   )
+
+(function array-slice (x start :opt end)
+  ; Returns a new array object selected from start to end (end not included) where start and end represent the index of items in that array x.
+  (let (xlen (array-length x))
+    (if (< start 0) (error "illegal start")
+        (nil? end) (<- end xlen)
+        (> end xlen) (error "illegal end"))
+    (let (new-len (- end start) new-array (array new-len))
+      (array-copy x start new-array 0 new-len))))
 
 ; Paren object system
 ;
@@ -1320,36 +1330,43 @@
   )
 
 (class Array ()
-  size elm)
+  size elt)
 
 (method Array .init ()
   (&size! self 0)
-  (&elm! self (array 4)))
+  (&elt! self (array 4)))
 
 (method Array .size ()
   (&size self))
 
 (method Array .at (i)
-  (if (< (&size self) i) (array-at (&elm self) i)
+  (if (< (&size self) i) (array-at (&elt self) i)
       (error "illegal argument " (list i (&size self)))))
 
 (method Array .at! (i val)
-  (if (< (&size self) i) (array-at! (&elm self) i val)
+  (if (< (&size self) i) (array-at! (&elt self) i val)
       (error "illegal argument " (list i (&size self)))))
 
-(method Array .resize (new-size)
-  (let (elm (&elm self) elm-size (array-length elm))
-    (if (< elm-size new-size)
-        (begin (while (< elm-size new-size)
-                 (<- elm-size (* elm-size 2)))
-               (array-copy elm 0 (&elm! self (array elm-size)) (&size self))))
-    (&size! self new-size)))
+(method Array .reserve (size)
+  (let (req (+ (&size self) size) elt-size (array-length (&elt self)))
+    (when (< elt-size req)
+      (while (< (<- elt-size (* elt-size 2)) req))
+      (let (elt (array elt-size))
+        (array-copy (&elt self) 0 elt 0 (&size self))
+        (&elt! self elt)))
+    self))
 
 (method Array .add (val)
   (let (i (&size self))
+    (.reserve self 1)
     (&size! self (++ i))
-    (array-at! (&elm self) i))
+    (array-at! (&elt self) i val))
   self)
+
+(method Array .to-a ()
+  (let (size (&size self) a (array size))
+    (array-copy (&elt self) 0 a 0 size)
+    a))
 
 (class Path ()
   ; A class that handles a file path.
@@ -1548,10 +1565,9 @@
   ; Read line.
   (with-memory-stream (out)
     (let (c nil)
-      (while true
-        (if (= (<- c (.read-byte self)) -1) (return nil)
-            (= c 0x0a) (break)
-            (.write-byte out c))))))
+      (while (&& (/= (<- c (.read-byte self)) 0x0a)
+                 (/= c -1))
+        (.write-byte out c)))))
 
 (method Stream .write-line ()
   (.write-byte self 0x0a))
@@ -1658,28 +1674,25 @@
 
 (class MemoryStream (Stream)
   ; A stream whose contents are held in memory.
-  buf buf-size rdpos wrpos)
+  buf rdpos wrpos)
 
 (method MemoryStream .init ()
-  (let (buf-size 256)
-    (&buf-size! self buf-size)
-    (&buf! self (bytes buf-size))
-    (&rdpos! self 0)
-    (&wrpos! self 0))
-  self)
+  (&buf! self (bytes 256))
+  (&rdpos! self 0)
+  (&wrpos! self 0))
 
 (method MemoryStream .size ()
   ; Returns the number of bytes written to the stream.
   (&wrpos self))
 
-(method MemoryStream .extend (size)
-  (let (req (+ (&wrpos self) size) new-buf nil)
-    (while (< (&buf-size self) req)
-      (&buf-size! self (* (&buf-size self) 2)))
-    (<- new-buf (bytes (&buf-size self)))
-    (bytes-copy (&buf self) 0 new-buf 0 (&wrpos self))
-    (&buf! self new-buf))
-  self)
+(method MemoryStream .reserve (size)
+  (let (req (+ (&wrpos self) size) buf-size (bytes-length (&buf self)))
+    (when (< buf-size req)
+      (while (< (<- buf-size (* buf-size 2)) req))
+      (let (buf (bytes buf-size))
+        (bytes-copy (&buf self) 0 buf 0 (&wrpos self))
+        (&buf! self buf)))
+    self))
 
 (method MemoryStream .read-byte ()
   (let (rdpos (&rdpos self))
@@ -1695,12 +1708,12 @@
 
 (method MemoryStream .write-byte (byte)
   (let (wrpos (&wrpos self))
-    (if (! (< wrpos (&buf-size self))) (.extend self 1))
+    (.reserve self 1)
     (bytes-at! (&buf self) wrpos byte)
     (&wrpos! self (++ wrpos))))
 
 (method MemoryStream .write-bytes (bytes :opt from size)
-  (.extend self (|| size (<- size (bytes-length bytes))))
+  (.reserve self (|| size (<- size (bytes-length bytes))))
   (bytes-copy bytes (|| from 0) (&buf self) (&wrpos self) size)
   (&wrpos! self (+ (&wrpos self) size))
   size)
@@ -1879,7 +1892,8 @@
 
 (macro with-ahead-reader ((ar stream) :rest body)
   (list let (list ar (list '.init '(.new AheadReader) stream))
-        (cons begin body)))
+        (cons begin body)
+        (list '.token ar)))
 
 ; Paren reader
 
@@ -2025,18 +2039,21 @@
 
 (macro with-memory-stream ((ms :opt s) :rest body)
   ; Create memory stream context.
-  ; If the specified string s supplied, memory stream initialize with s.
-  ; (with-memory-stream (ms s)
-  ;    expr1 expr2 ...)
-  ; (let (ms (.new MemoryStream))
-  ;    (if s (.write-bytes ms s))
-  ;    expr1 expr2 ...
-  ;    (.to-s ms))
+  ; If the string s is specified, construct an input stream with s as the source.
+  ; Returns nil.
+  ; Otherwise, act as an output stream.
+  ; Returns the string written to the output stream.
+  ;     (with-memory-stream (ms s)
+  ;        expr1 expr2 ...)
+  ;     (let (ms (.new MemoryStream))
+  ;        (if s (.write-bytes ms s))
+  ;        expr1 expr2 ...
+  ;        (if s (.to-s ms)))
   (with-gensyms (g)
-    (list let (list ms (list '.new 'MemoryStream) g s)
+    (list let (list ms '(.new MemoryStream) g s)
           (list if g (list '.write-bytes ms g))
           (cons begin body)
-          (list '.to-s ms))))
+          (list if (list ! g) (list '.to-s ms)))))
 
 (function with-open-mode (sym path mode body)
   (with-gensyms (gsym gpath)

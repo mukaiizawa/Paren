@@ -73,14 +73,9 @@ DEFUN(array_copy)
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (size < 0) return FALSE;
-  if (oi < 0 || (oi + size) > o->bytes.size) return FALSE;
-  if (pi < 0 || (pi + size) > p->bytes.size) return FALSE;
-  while (size) {
-    o->array.elt[oi] = p->array.elt[pi];
-    oi++;
-    pi++;
-    size--;
-  }
+  if (oi < 0 || (oi + size) > o->array.size) return FALSE;
+  if (pi < 0 || (pi + size) > p->array.size) return FALSE;
+  memmove(p->array.elt + pi, o->array.elt + oi, sizeof(object) * size);
   *result = p;
   return TRUE;
 }

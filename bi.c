@@ -106,6 +106,7 @@ static char *symbol_name_map[] = {
   // array
   "array_at", "array-at",
   "array_p", "array?",
+  "array_copy", "array-copy",
   "array_new", "array",
   "array_length", "array-length",
   "array_put", "array-at!",
