@@ -54,7 +54,11 @@
 
 (special-operator lambda
   ; Special operator lambda creates an anonymous function.
-  ; Parameters include required parameters, optional parameters, keyword parameters and rest parameters.
+  ; There are the following types of parameters.
+  ; - required parameter
+  ; - optional parameter
+  ; - keyword parameter
+  ; - rest parameter
   ; Required parameters are a parameter that results in an error if not specified when calling the function.
   ; Optional parameters are parameters that need not be specified when calling the function.
   ; Keyword parameters are specified with names without regard to order when calling the function.
@@ -77,7 +81,7 @@
   ; Macro expands without evaluating its arguments.
   ; The macro-parameters that can be specified for macros differ in that macro-parameters can be specified recursively instead of required parameters.
   ; Returns the macro.
-  (macro name ([{ param | required_param } ...  ]
+  (macro name ([{ param | required_param } ...]
                [:opt optional_param ...]
                [{ :rest rest_param | :key keyword_param ... }])
     expr1
@@ -236,7 +240,7 @@
           candidates (list 'flatten (list 'map car (list quote branches)))
           parse-branch (lambda (branches)
                          (if (nil? branches)
-                             (list true (list 'error gexpr "not included in" candidates))
+                             (list true (list 'error gexpr " not included in " candidates))
                              (let (label (caar branches) then (cadar branches))
                                (cons (if (eq? label :default) (return (list true then))
                                          (cons '|| (map (lambda (label)
@@ -330,45 +334,42 @@
           (cons begin body))))
 
 (macro clock (:rest body)
-  ; clock the time it takes to evaluate the specified body.
-  ; Macro expansion image is as follows.
-  ;     (clock expr1 expr2 ...)
-  ;     (let (s (OS.clock))
-  ;       (begin0 (begin expr1 expr2 ...)
-  ;               (write (- (OS.clock) s))))
+  ; Clock the time it takes to evaluate the specified body.
+  ; Returns evaluation result of the last element of body.
   (with-gensyms (offset)
-    (list let (list offset (list OS.clock))
+    (list let (list offset '(OS.clock))
           (list 'begin0
                 (cons begin body)
-                (list 'write-bytes (list 'string "time=" (list '- (list OS.clock) offset)))))))
+                (list 'write-bytes (list 'string "time=" (list '- '(OS.clock) offset)))))))
 
 (builtin-function expand-macro (expr)
-  ; Expand macro the specified expression expr.
+  ; Returns the result of expanding the macro when expr is a list and car is a macro.
+  ; Otherwise returns expr.
   (assert (eq? (car (expand-macro '(begin0 1 2 3))) let)))
 
 (function! expand-macro-all (expr)
-  ; Expand macro the specified expression expr recursively.
-  (let (expand-each-element (lambda (expr)
-                              (if expr (cons (expand-expr (car expr))
-                                             (expand-each-element (cdr expr)))))
-        expand-expr (lambda (expr)
-                      (if (cons? expr) (expand-each-element (expand-macro expr))
-                          expr)))
-    (expand-expr expr)))
+  ; Same as expand-macro except that it executes recursively.
+  (let (expand1 (lambda (expr)
+                  (if (cons? expr) (each-expand (expand-macro expr))
+                      expr))
+                each-expand (lambda (expr)
+                              (if expr (cons (expand1 (car expr))
+                                             (each-expand (cdr expr))))))
+    (expand1 expr)))
 
 ; fundamental function
 
 (macro function (name args :rest body)
-  ; Create a lambda function which parameter list the specified args and lambda function body the specified body.
-  ; Then, bind a created lambda function with the specified name.
-  ; If the specified name is bound, throw error.
-  ; Expand the macro inline.
+  ; Returns a function which parameter list the specified args and lambda function body the specified body.
+  ; The macro in the function body is expanded.
+  ; The created function binds the name symbol.
+  ; Error if name is already bound.
   (if (bound? name) (error name " already bound")
       (list begin0 (list quote name)
             (list <- name (cons lambda (cons args (expand-macro-all body)))))))
 
 (builtin-function eq? (x y :rest args)
-  ; Returns true if the specified x and y is same object.
+  ; Returns whether all arguments are the same object.
   (assert (! (eq? 'x 'y 'z)))
   (assert (eq? 'x 'x 'x)))
 
@@ -384,56 +385,55 @@
   (assert (! (= (address 'x) (address 'y)))))
 
 (builtin-function ! (x)
-  ; Returns true if the specified x is nil.
+  ; Returns whether the x is nil.
+  (assert (! (eq? 'x 'y 'z)))
   (assert (! nil))
   (assert (eq? (! true) nil)))
 
 (function nil? (x)
-  ; Alias for `!`.
+  ; Same as (! x).
   (! x))
 
 (builtin-function cons? (x)
-  ; Returns true if the specified x is cons.
+  ; Returns whether the x is a cons.
   (assert (cons? '(1)))
   (assert (! (cons? nil)))
   (assert (! (cons? '()))))
 
 (function atom? (x)
-  ; Returns true if the specified x is of type atom.
+  ; Returns whether the x is an atom.
   ; It means x is cons or not.
   (! (cons? x)))
 
 (builtin-function bound? (sym)
-  ; Returns true if the specified symbol is bound.
+  ; Returns whether the x is bound.
   (assert (bound? 'bound?))
   (assert (bound? 'nil)))
 
 (builtin-function gensym ()
-  ; Returns a numbered symbol starting with '$G-'.
-  ; Unlike common lisp, the same symbol name as the symbol name generated by gensym is the same.
+  ; Returns a numbered symbol starting with `$G-`.
   ; gensim only guarantees that the symbols generated with each gensim call will not collide.
-  ; There is no inconvenience unless intentionally generating symbols starting with '$G-'.
+  ; There is no inconvenience unless intentionally generating symbols starting with `$G-`.
   (assert (neq? (gensym) (gensym))))
 
 ; list
 
 (builtin-function cons (x y)
-  ; Creates a cons such that the specified x is the car part and y is the cdr part.
-  ; Returns nil if x is nil.
-  ; If x is not cons treated as an error.
+  ; Returns a cons such that the specified x is the car part and y is the cdr part.
+  ; Error if y is not cons.
   (assert (eq? (car (cons 'x nil)) 'x))
   (assert (nil? (cdr (cons 'x nil)))))
 
 (builtin-function car (x)
   ; Returns car of the specified cons x.
-  ; Returns nil if x is nil.
-  ; If x is not cons treated as an error.
+  ; If x is nil, returns nil.
+  ; Error if x is not list.
   (assert (= (car '(1 2 3)) 1))
   (assert (nil? (car '()))))
 
 (builtin-function car! (x val)
-  ; Destructively change the car part of the specified cons x to the specified val.
-  ; Returns val
+  ; Destructively change the car of the specified cons x to the specified val.
+  ; Returns val.
   ; Error if x is not cons.
   (let (x '(1 2 3))
     (assert (eq? (car! x 'one) 'one))
@@ -441,18 +441,16 @@
 
 (builtin-function cdr (x)
   ; Returns cdr of the specified cons x.
-  ; Returns nil if x is nil.
-  ; If x is not cons treated as an error.
+  ; If x is nil, returns nil.
+  ; Error if x is not list.
   (assert (= (car (cdr '(1 2 3))) 2))
   (assert (nil? (cdr '()))))
 
 (builtin-function cdr! (x val)
-  ; Destructively change the car part of the specified cons x to the specified val.
-  ; Returns val
-  ; Error if x or val is not cons.
+  ; Destructively changes the cdr of the specified cons to the specified val.
+  ; Returns val.
+  ; Error if y or val is not cons.
   (let (x '(1 2 3))
-    (assert (nil? (cdr! x nil)))
-    (assert (nil? (cdr x)))
     (cdr! x '(two))
     (assert (eq? (car (cdr x)) 'two))))
 
@@ -570,27 +568,26 @@
 
 (builtin-function list (:rest args)
   ; Returns a list whose elements are the specified args.
-  ; Returns nil if args is nil.
-  ; This function is a built-in function for speeding up.
-  ; In paren you can define like this.
-  ;     (function list (:rest args)
-  ;       args)
+  ; If args is nil, returns nil.
+  ; This function is a built-in function for performance.
+  ; Same as (function list (:rest args) args).
   (assert (= (car '(1 2 3)) 1))
   (assert (nil? (car '()))))
 
 (function list? (x)
-  ; Returns true if the specified x is of type list.
+  ; Returns whether the x is a list.
   ; Same as (|| (nil? x) (cons? x)).
   (|| (nil? x) (cons? x)))
 
 (function ->list (x)
-  ; Returns the specified x if x is a list, otherwise returns x as a list.
+  ; Returns a list with x as the only element.
+  ; If x is a list, returns x.
   (if (list? x) x
       (list x)))
 
-(function list->string (l delimiter)
+(function list->string (l delim)
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
-  (reduce (lambda (x y) (string x delimiter y)) l))
+  (reduce (lambda (x y) (string x delim y)) l))
 
 (builtin-function length (l)
   ; Returns the length of the specified list l.
@@ -599,37 +596,38 @@
   (assert (= (length '(1)) 1)))
 
 (builtin-function last-cons (x)
-  ; Returns the last cons to follow from the specified cons x.
+  ; Returns the terminal cons.
+  ; If x is nil, returns nil.
   ; Error if x is not cons.
   (assert (= (car (last-cons '(1 2 3))) 3))
   (assert (nil? (last-cons nil))))
 
 (function nth (l n)
-  ; Get the the specified nth element of the specified list l.
+  ; Returns the nth element of the specified list l.
   ; If n is greater than the length of l, nil is returned.
   (car (nthcdr l n)))
 
 (function nthcdr (l n)
-  ; Get the the specified nth cons of the specified list l.
+  ; Returns the the specified nth cons of the specified list l.
   ; If n is greater than the length of l, nil is returned.
-  (for (i 0) (< i n) (<- i (++ i))
+  (for (i 0) (&& l (< i n)) (<- i (++ i))
     (<- l (cdr l)))
   l)
 
 (function first (x)
-  ; Same as (nth x 0)
+  ; Same as (nth x 0).
   (nth x 0))
 
 (function second (x)
-  ; Same as (nth x 1)
+  ; Same as (nth x 1).
   (nth x 1))
 
 (function third (x)
-  ; Same as (nth x 2)
+  ; Same as (nth x 2).
   (nth x 2))
 
 (function last (x)
-  ; Same as (nth x (-- (length x)))
+  ; Same as (nth x (-- (length x))).
   (nth x (-- (length x))))
 
 (function butlast (l)
@@ -648,20 +646,21 @@
     (reverse! acc)))
 
 (function group (l n)
-  ; Returns a new list in which the elements of l are grouped into sublists of length n.
+  ; Returns a list in which the elements of l are grouped into sublists of length n.
+  ; Error if the list length is not a multiple of n.
   (if (<= n 0) (error "illegal arguments")
       (let (lis nil)
         (while l
           (let (sublis nil)
             (dotimes (i n)
-              (if (nil? l) (error "list l of length indivisible by " n))
+              (if (nil? l) (error "indivisible by " n))
               (push! sublis (car l))
               (<- l (cdr l)))
             (push! lis (reverse! sublis))))
         (reverse! lis))))
 
 (function reverse (l)
-  ; Same as reverse except that it destructively modifies the argument list.
+  ; Returns a list with the elements of list l reversed.
   (let (acc nil)
     (dolist (x l)
       (<- acc (cons x acc)))
@@ -674,7 +673,7 @@
   (assert (= (car (reverse! '(0 1))) 1)))
 
 (function append-atom (l x)
-  ; Returns a new list with the specified x appended to the end of the specified list l.
+  ; Returns a list with the specified x appended to the end of the specified list l.
   (let (acc nil)
     (dolist (i l)
       (push! acc i))
@@ -695,8 +694,18 @@
         (list car sym)
         (list <- sym (list cdr sym))))
 
+(builtin-function assoc (al k)
+  ; Returns a value corresponding to the specified key k of the specified asoociate list al.
+  ; Error if there is no key.
+  (assert (= (assoc '(:one 1 :two 2 :three 3) :one) 1)))
+
+(builtin-function assoc! (al k v)
+  ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
+  ; Error if there is no key.
+  (assert (eq? (assoc! '(:one 1 :two 2 :three 3) :one 'one) 'one)))
+
 (function flatten (l)
-  ; Returns a new list in which the car parts of all cons that make up the specified list l are elements.
+  ; Returns a list in which the car parts of all cons that make up the specified list l are elements.
   (let (acc nil rec (lambda (x)
                       (if (atom? x) (push! acc x)
                           (dolist (i x) (rec i)))))
@@ -712,108 +721,215 @@
     (reverse! acc)))
 
 (function reduce (f l)
-  ; Reduce uses the specified binary operation f, to combine the elements of the specified list l.
-  ; The function must accept as arguments two elements of list or the results from combining those elements.
-  ; The function must also be able to accept no arguments.
+  ; Returns the value that apply function of two arguments cumulatively to the elements of the list l, from left to right.
   (let (rec (lambda (l)
               (if (nil? (cdr l)) (car l)
                   (rec (cons (f (car l) (cadr l)) (cddr l))))))
     (rec l)))
 
 (function find-cons (f l)
-  ; Returns the cons that make up the specified list l that are not nil when the car part is evaluated as an argument of the specified function f.
-  ; Evaluation is performed in order from left to right.
-  ; If there is no such cons, nil is returned.
-  ; If key is supplied, the element is evaluated with the key function at first and then compared.
+  ; Returns the first cons for which the result of applying the function f to the list elements in order from left to right is true.
+  ; If there is no such cons, returns nil.
   (while l
     (if (f (car l)) (return l)
         (<- l (cdr l)))))
 
 (function find (f l)
-  ; From the beginning of the specified list l, the specified function f returns the first element that does not evaluate to nil.
-  ; If no such element exists, nil is returned.
-  ; If key is supplied, the element is evaluated with the key function at first and then compared.
+  ; Returns the first element for which the result of applying the function f to the list elements in order from left to right is true.
+  ; If there is no such cons, returns nil.
   (car (find-cons f l)))
 
 (function remove (f l)
+  ; Returns a list with the elements for which the result of applying the function f is true removed.
   (let (acc nil)
     (dolist (x l)
-      (if (nil? (f x))
-          (push! acc x)))
+      (if (nil? (f x)) (push! acc x)))
     (reverse! acc)))
 
 (function all-satisfy? (f l)
-  ; Returns true if all element of the specified list l returns a not nil value which evaluates as an argument to the specified function f.
-  ; Otherwise returns nil.
-  ; As soon as any element evaluates to nil, and returns nil without evaluating the remaining elements
+  ; Returns whether the result of the function f applied to all the elements of the list is true.
+  ; If x is nil, returns true.
+  ; As soon as any element evaluates to nil, and returns nil without evaluating the remaining elements.
   (while l
     (if (f (car l)) (<- l (cdr l))
         (return nil)))
   true)
 
 (function any-satisfy? (f l)
-  ; Returns true if any element of the specified list l returns a not nil value which evaluated as an argument to the specified function f.
-  ; Otherwise returns nil.
-  ; It returns nil if l is empty.
+  ; Returns whether the function f applied to any element of the list is true.
+  ; If x is nil, returns nil.
   ; As soon as any element evaluates to not nil, and returns it without evaluating the remaining elements.
   (while l
     (if (f (car l)) (return true)
         (<- l (cdr l)))))
 
 (function each-adjacent-satisfy? (f l)
-  ; Returns true if each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
-  (while true
-    (if (nil? (cdr l)) (return true)
-        (f (car l) (cadr l)) (<- l (cdr l))
-        (return nil))))
+  ; Returns whether each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
+  (while (cdr l)
+    (if (f (car l) (cadr l)) (<- l (cdr l))
+        (return nil)))
+  true)
 
-; associated list
+; number
 
-(builtin-function assoc (al k)
-  ; Returns a value corresponding to the specified key k of the specified asoociate list al.
-  ; Raises an exception if there is no key.
-  (assert (= (assoc '(:one 1 :two 2 :three 3) :one) 1)))
+(builtin-function number? (x)
+  ; Returns whether the x is a number.
+  (assert (number? 1))
+  (assert (number? 3.14))
+  (assert (number? 0x20))
+  (assert (nil? (number? 'x))))
 
-(builtin-function assoc! (al k v)
-  ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
-  ; Raises an exception if there is no key.
-  (assert (eq? (assoc! '(:one 1 :two 2 :three 3) :one 'one) 'one)))
+(builtin-function integer? (x)
+  ; Returns whether the x is a integer.
+  (assert (integer? 1))
+  (assert (nil? (integer? 3.14)))
+  (assert (nil? (integer? 'x))))
 
-; ascii character code.
+(function byte? (x)
+  ; Returns whether the x is a integer and between 0 and 255.
+  (&& (integer? x) (<= 0 x 255)))
 
 (function ascii-space? (b)
-  ; Returns whether byte b can be considered a space character.
-  (find (lambda (x) (= b x)) '(0x09 0x0a 0x0d 0x20)))
+  ; Returns whether byte b is a space character.
+  (|| (= b 0x09)
+      (= b 0x0a)
+      (= b 0x0d)
+      (= b 0x20)))
 
 (function ascii-alpha? (b)
-  ; Returns whether byte b can be considered a alphabetic character.
+  ; Returns whether byte b is an alphabetic character.
   (|| (<= 0x41 b 0x5a) (<= 0x61 b 0x7a)))
 
 (function ascii-digit? (b)
-  ; Returns whether byte b can be considered a digit character.
+  ; Returns whether byte b is a digit character.
   (<= 0x30 b 0x39))
 
 (function ascii-lower (b)
-  ; Returns lowercase if byte b can be considered an alphabetic character, b otherwise.
+  ; Returns lowercase if byte b is an alphabetic character.
+  ; Otherwise returns b.
   (if (&& (ascii-alpha? b) (<= 0x41 b 0x5a)) (+ b 0x20)
       b))
 
 (function ascii-upper (b)
-  ; Returns uppercase if byte b can be considered an alphabetic character, b otherwise.
+  ; Returns uppercase if byte b is an alphabetic character.
+  ; Otherwise returns b.
   (if (&& (ascii-alpha? b) (<= 0x61 b 0x7a)) (- b 0x20)
       b))
 
-(function ascii->digit (b :key radix)
-  ; Returns the numeric value when the specified byte b is regarded as the specified radix base character.
-  ; Default radix is 10.
+(function ascii->digit (b :opt radix)
+  ; Returns byte b as a number.
+  ; If the radix is not specified, 10 is assumed to be specified.
   (let (n (if (ascii-digit? b) (- b 0x30)
               (ascii-alpha? b) (+ (- (ascii-lower b) 0x61) 10)))
     (if (|| (nil? n) (>= n (|| radix 10))) (error "not numeric char")
         n)))
 
 (function digit->ascii (n)
+  ; Returns the byte representation of a number.
   (if (< n 10) (+ n 0x30)
       (+ n 0x61 -10)))
+
+(builtin-function = (x y :rest args)
+  ; Returns whether all arguments are the same value.
+  ; However, the argument for which `eq?` returns true returns true.
+  (assert (= 3.14 3.140))
+  (assert (! (= 10 20)))
+  (assert (= 'x 'x))
+  (assert (! (= 'x 'y))))
+
+(builtin-function & (x y)
+  ; bitwise and.
+  (assert (= (& 0x333333333 0x555555555) 0x111111111)))
+
+(builtin-function | (x y)
+  ; bitwise or.
+  (assert (= (| 0x333333333 0x555555555) 0x777777777)))
+
+(builtin-function << (x y)
+  ; bitwise left shift.
+  (assert (= (<< 3 2) 12)))
+
+(function >> (x y)
+  ; bitwise right shift.
+  (<< x (- y)))
+
+(builtin-function ^ (x y)
+  ; bitwise xor.
+  (assert (= (^ 3 0x500000000) 0x500000003))
+  (assert (= (^ 0x500000000 0x500000003) 3)))
+
+(function /= (x y)
+  ; Same as (! (= x y))).
+  (! (= x y)))
+
+(builtin-function + (x :rest args)
+  ; Returns the sum of the args.
+  (assert (= (+ 1 2 3) 6)))
+
+(function - (x :rest args)
+  ; Returns the value of the specified x minus the sum of the specified args.
+  ; If args is nil, returns inverted value of the x.
+  (if (nil? args) (* x -1)
+      (+ x (- (apply + args)))))
+
+(builtin-function * (x :rest args)
+  ; Returns the product of the arguments.
+  (assert (= (* 1 2 3) 6)))
+
+(builtin-function / (x :rest args)
+  ; Returns the quotient of the x divided by the each args.
+  ; If args is nil, returns the reciprocal of x.
+  (assert (= (/ 12 2 3) 2))
+  (assert (= (/ 2) 0.5)))
+
+(function // (x y)
+  ; Returns the quotient of the x divided by the y.
+  ; Same as (Math.truncate (/ x y))).
+  (Math.truncate (/ x y)))
+
+(builtin-function mod (x y)
+  ; Returns the remainder of dividing x by y.
+  (assert (= (mod 4 5) 4))
+  (assert (= (mod 4 3) 1))
+  (assert (= (mod 4 2) 0)))
+
+(builtin-function < (:rest args)
+  ; Returns whether the each of the specified args are in monotonically decreasing order.
+  (assert (< 0 1 2))
+  (assert (nil? (< 0 0 1))))
+
+(function > (:rest args)
+  ; Returns whether the each of the specified args are in monotonically increasing order.
+  (each-adjacent-satisfy? (lambda (x y) (< y x)) args))
+
+(function <= (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
+  (each-adjacent-satisfy? (lambda (x y) (! (< y x))) args))
+
+(function >= (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
+  (each-adjacent-satisfy? (lambda (x y) (! (< x y))) args))
+
+(function ++ (x)
+  ; Same as (+ x 1).
+  (+ x 1))
+
+(function -- (x)
+  ; Same as (- x 1).
+  (- x 1))
+
+(function abs (x)
+  ; Returns the absolute value of the specified number x.
+  (if (< x 0) (- x)
+      x))
+
+(function exp (base power)
+  ; Returns base-number raised to the power power-number.
+  (let (val 1.0)
+    (dotimes (i (abs power))
+      (<- val (* val base)))
+    (if (> power 0) val
+        (/ val))))
 
 ; string
 
@@ -825,7 +941,7 @@
           arg (write arg ms :end "")))))
 
 (builtin-function string? (x)
-  ; Returns true if the specified x is a string
+  ; Returns whether the x is a string.
   (assert (string? ""))
   (assert (string? "aaa"))
   (assert (! (string? (bytes 1)))))
@@ -835,6 +951,7 @@
   (bytes-eq? x y))
 
 (function string-codepoint (s)
+  ; Returns the code point of string s.
   (let (b 0 val 0)
     (with-memory-stream (in s)
       (while (/= (<- b (read-byte in)) -1)
@@ -903,129 +1020,6 @@
       (<- i (+ pos dlen)))
     (push! acc (string-slice s i slen))
     (reverse! acc)))
-
-; number
-
-(builtin-function number? (x)
-  ; Returns true if the specified x is a number.
-  (assert (number? 1))
-  (assert (number? 3.14))
-  (assert (number? 0x20))
-  (assert (nil? (number? 'x))))
-
-(builtin-function integer? (x)
-  ; Returns true if the specified x is a integer.
-  (assert (integer? 1))
-  (assert (nil? (integer? 3.14)))
-  (assert (nil? (integer? 'x))))
-
-(function byte? (x)
-  ; Returns true if the specified x is integer and between 0 and 255.
-  (&& (integer? x) (<= 0 x 255)))
-
-(builtin-function = (x y :rest args)
-  ; Returns true if the specified number x and y are equal.
-  ; If the argument is not a number, compare addresses.
-  (assert (= 3.14 3.140))
-  (assert (! (= 10 20)))
-  (assert (= 'x 'x))
-  (assert (! (= 'x 'y))))
-
-(builtin-function & (x y)
-  ; bitwise and.
-  (assert (= (& 0x333333333 0x555555555) 0x111111111)))
-
-(builtin-function | (x y)
-  ; bitwise or.
-  (assert (= (| 0x333333333 0x555555555) 0x777777777)))
-
-(builtin-function << (x y)
-  ; bitwise left shift.
-  (assert (= (<< 3 2) 12)))
-
-(function >> (x y)
-  ; bitwise right shift.
-  (<< x (- y)))
-
-(builtin-function ^ (x y)
-  ; bitwise xor.
-  (assert (= (^ 3 0x500000000) 0x500000003))
-  (assert (= (^ 0x500000000 0x500000003) 3)))
-
-(function /= (x y)
-  ; Same as (! (= x y))).
-  (! (= x y)))
-
-(builtin-function + (x :rest args)
-  ; Returns the sum of the arguments.
-  (assert (= (+ 1 2 3) 6)))
-
-(function - (x :rest args)
-  ; Returns the value of the specified x minus the sum of the specified args.
-  ; If args is nil, return -x.
-  (if (nil? args) (* x -1)
-      (+ x (- (apply + args)))))
-
-(builtin-function * (x :rest args)
-  ; Returns the product of the arguments.
-  (assert (= (* 1 2 3) 6)))
-
-(builtin-function / (x :rest args)
-  ; Returns the dividing of the arguments.
-  (assert (= (/ 6 2 1) 3)))
-
-(function // (x y)
-  ; Returns the quotient of the x divided by the y.
-  ; Same as (Math.truncate (/ x y))).
-  (Math.truncate (/ x y)))
-
-(builtin-function mod (x y)
-  ; Returns the remainder of dividing x by y.
-  (assert (= (mod 4 5) 4))
-  (assert (= (mod 4 3) 1))
-  (assert (= (mod 4 2) 0)))
-
-(builtin-function < (:rest args)
-  ; Returns true if each of the specified args are in monotonically decreasing order.
-  ; Otherwise returns nil.
-  (assert (< 0 1 2))
-  (assert (nil? (< 0 0 1))))
-
-(function > (:rest args)
-  ; Returns true if each of the specified args are in monotonically decreasing order.
-  ; Otherwise returns nil.
-  (each-adjacent-satisfy? (lambda (x y) (< y x)) args))
-
-(function <= (:rest args)
-  ; Returns true if each of the specified args are in monotonically nondecreasing order.
-  ; Otherwise returns nil.
-  (each-adjacent-satisfy? (lambda (x y) (! (< y x))) args))
-
-(function >= (:rest args)
-  ; Returns true if each of the specified args are in monotonically nonincreasing order.
-  ; Otherwise returns nil.
-  (each-adjacent-satisfy? (lambda (x y) (! (< x y))) args))
-
-(function ++ (x)
-  ; Returns the value of the specified number x + 1.
-  (+ x 1))
-
-(function -- (x)
-  ; Returns the value of the specified number x - 1.
-  (- x 1))
-
-(function abs (x)
-  ; Returns the absolute value of the specified number x.
-  (if (< x 0) (- x)
-      x))
-
-(function exp (base power)
-  ; Returns base-number raised to the power power-number.
-  (let (val 1.0)
-    (dotimes (i (abs power))
-      (<- val (* val base)))
-    (if (> power 0) val
-        (/ val))))
 
 ; bytes
 
@@ -1852,8 +1846,8 @@
         (string-eq? next "-") (begin (.skip self) true)
         nil)))
 
-(method AheadReader .skip-digit (:key radix)
-  (ascii->digit (string-codepoint (.skip self)) :radix (|| radix 10)))
+(method AheadReader .skip-digit (:opt radix)
+  (ascii->digit (string-codepoint (.skip self)) (|| radix 10)))
 
 (method AheadReader .skip-unsigned-integer ()
   (if (! (.digit? self)) (error "missing digits")
@@ -1875,12 +1869,12 @@
           (.skip self)
           (if (! (.numeric-alpha? self)) (error "missing lower or digits")
               (while (.numeric-alpha? self)
-                (<- val (+ (* val radix) (.skip-digit self :radix 16))))))
+                (<- val (+ (* val radix) (.skip-digit self 16))))))
         (string-eq? (&next self) ".")
         (let (factor 0.1)
           (.skip self)
           (while (.digit? self)
-            (<- val (+ val (* factor (.skip-digit self :radix 16)))
+            (<- val (+ val (* factor (.skip-digit self 16)))
                 factor (/ factor 10)))
           (when (= (&next self) 0x65)
             (.skip self)
@@ -2044,7 +2038,7 @@
   ; Create memory stream context.
   ; If the string s is specified, construct an input stream with s as the source.
   ; Returns nil.
-  ; Otherwise, act as an output stream.
+  ; Otherwise act as an output stream.
   ; Returns the string written to the output stream.
   ;     (with-memory-stream (ms s)
   ;        expr1 expr2 ...)
