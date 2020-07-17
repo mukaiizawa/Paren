@@ -13,7 +13,7 @@
     (write reserved-word))
   (with-open-read (in (.resolve $paren-home core.p))
     (let (expr nil)
-      (while (neq? (<- expr (read in)) :EOF)
+      (while (<- expr (read in))
         (if (&& (cons? expr))
             (dolist (reserved-word $reserved-words)
               (when (eq? (car expr) reserved-word)
