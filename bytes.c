@@ -151,6 +151,7 @@ DEFUN(bytes_index)
   int b, s, e;
   if (!bi_argc_range(argc, 2, 4)) return FALSE;
   if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
+  b = 0;
   p = NULL;
   switch (object_type((argv = argv->cons.cdr)->cons.car)) {
     case SINT:
