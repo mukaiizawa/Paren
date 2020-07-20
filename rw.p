@@ -1,8 +1,7 @@
 ; reserved word
 
 (global-symbol $reserved-words
-  '(global-symbol
-     special-operator
+  '(special-operator
      macro
      function
      function!
