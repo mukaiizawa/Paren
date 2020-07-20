@@ -989,11 +989,9 @@
   (array-length (string->array s)))
 
 (function string-index (s pat :opt start)
-  ; Returns the first occurrence of pat.
-  ; Returns nil if no substring is included.
-  ;     (string-index "012" "0") => 0
-  ;     (string-index "012" "0" 1) => nil
-  ;     (string-index "012" "2" 1) => 2
+  ; Returns the position where the substring pat appears first in the string s.
+  ; If the string pat is not a substring of the string s, returns nil.
+  ; If start is specified, search for substring pat from start-th of the string s.
   (let (start (|| start 0) sa (string->array s) slen (array-length sa)
               pa (string->array pat) plen (array-length pa))
     (if (< (- slen start) 0) (error "illegal start")
@@ -1006,20 +1004,17 @@
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
-(function string->list (s delim)
-  ; Returns a list of strings s delimited by delimiter.
-  ;     (string->list "a/a" "/") => '("a" "a")
-  ;     (string->list "a/" "/") => '("a" "")
-  ;     (string->list "/a" "/") => '("" "a")
-  ;     (string->list "/" "/") => '("" "")
-  ;     (string->list "aaa" "") => Error
-  (let (acc nil i 0 pos nil slen (string-length s) dlen (string-length delim))
-    (if (= dlen 0) (error "illegal delimiter"))
-    (while (&& (< i slen) (<- pos (string-index s delim i)))
-      (push! acc (string-slice s i pos))
-      (<- i (+ pos dlen)))
-    (push! acc (string-slice s i slen))
-    (reverse! acc)))
+(function string->list (s :opt delim)
+  ; Returns a list of characters in string s.
+  ; If delim is specified, returns a list of strings s delimited by delimiter.
+  (if (nil? delim) (array->list (string->array s))
+      (let (acc nil i 0 pos nil slen (string-length s) dlen (string-length delim))
+        (assert (> dlen 0))
+        (while (&& (< i slen) (<- pos (string-index s delim i)))
+          (push! acc (string-slice s i pos))
+          (<- i (+ pos dlen)))
+        (push! acc (string-slice s i slen))
+        (reverse! acc))))
 
 ; bytes
 
@@ -1121,6 +1116,13 @@
   (assert (array? (array 3)))
   (assert (! (array? nil)))
   (assert (! (array? (bytes 3)))))
+
+(function array->list (x)
+  ; Returns list of array.
+  (let (acc nil)
+    (dotimes (i (array-length x))
+      (push! acc (array-at x i)))
+    (reverse! acc)))
 
 (builtin-function array-length (x)
   ; Returns the length of the specified array x.
