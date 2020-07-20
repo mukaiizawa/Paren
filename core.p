@@ -405,6 +405,20 @@
   ; It means x is cons or not.
   (! (cons? x)))
 
+; symbol & keyword
+
+(builtin-function symbol? (x)
+  ; Returns whether the x is symbol.
+  (assert (symbol? 'foo))
+  (assert (! (symbol? :foo)))
+  (assert (! (symbol? (bytes 3)))))
+
+(builtin-function keyword? (x)
+  ; Returns whether the x is keyword.
+  (assert (keyword? :foo))
+  (assert (! (keyword? 'foo)))
+  (assert (! (keyword? (bytes 3)))))
+
 (builtin-function bound? (sym)
   ; Returns whether the x is bound.
   (assert (bound? 'bound?))
@@ -431,9 +445,9 @@
   (assert (= (car '(1 2 3)) 1))
   (assert (nil? (car '()))))
 
-(builtin-function car! (x val)
-  ; Destructively change the car of the specified cons x to the specified val.
-  ; Returns val.
+(builtin-function car! (x v)
+  ; Destructively change the car of the specified cons x to the specified v.
+  ; Returns v.
   ; Error if x is not cons.
   (let (x '(1 2 3))
     (assert (eq? (car! x 'one) 'one))
@@ -446,10 +460,10 @@
   (assert (= (car (cdr '(1 2 3))) 2))
   (assert (nil? (cdr '()))))
 
-(builtin-function cdr! (x val)
-  ; Destructively changes the cdr of the specified cons to the specified val.
-  ; Returns val.
-  ; Error if y or val is not cons.
+(builtin-function cdr! (x v)
+  ; Destructively changes the cdr of the specified cons to the specified v.
+  ; Returns v.
+  ; Error if x is not cons or v is not list.
   (let (x '(1 2 3))
     (cdr! x '(two))
     (assert (eq? (car (cdr x)) 'two))))
@@ -569,8 +583,6 @@
 (builtin-function list (:rest args)
   ; Returns a list whose elements are the specified args.
   ; If args is nil, returns nil.
-  ; This function is a built-in function for performance.
-  ; Same as (function list (:rest args) args).
   (assert (= (car '(1 2 3)) 1))
   (assert (nil? (car '()))))
 
@@ -591,7 +603,6 @@
 
 (builtin-function length (l)
   ; Returns the length of the specified list l.
-  ; This function is a built-in function for performance.
   (assert (= (length nil) 0))
   (assert (= (length '(1)) 1)))
 
@@ -1019,45 +1030,38 @@
 ; bytes
 
 (builtin-function bytes (size)
-  ; Create a bytes of size the specified size.
+  ; Returns a bytes of size the specified size.
   ; The element is cleared to 0.
   )
 
-(builtin-function symbol? (x)
-  ; Returns true if the argument is a symbol.
-  (assert (symbol? 'foo))
-  (assert (! (symbol? :foo)))
-  (assert (! (symbol? (bytes 3)))))
-
-(builtin-function keyword? (x)
-  ; Returns true if the argument is a symbol.
-  (assert (keyword? :foo))
-  (assert (! (keyword? 'foo)))
-  (assert (! (keyword? (bytes 3)))))
-
 (builtin-function bytes? (x)
-  ; Returns true if the argument is a bytes.
+  ; Returns whether the x is bytes.
+  ; symbols, keywords, and strings are acceptable as arguments for some bytes api, but this function returns nil.
   (assert (bytes? (bytes 3)))
   (assert (! (bytes? 'foo)))
   (assert (! (bytes? :foo)))
+  (assert (! (bytes? "foo")))
   (assert (! (bytes? (array 3)))))
 
-(function bytes-eq? (x y)
-  ; Returns true if the specified x is same object.
-  (let (len (bytes-length x))
-    (&& (= len (bytes-length y))
-        (! (bytes-unmatch-index x 0 y 0 len)))))
+(builtin-function bytes-eq? (x y)
+  ; Returns whether x arguments are the same bytes.
+  ; This function also accepts symbols, keywords and strings.
+  (assert (bytes-eq? :foo :foo))
+  (assert (! (bytes-eq? "foo" "bar"))))
 
 (builtin-function bytes-at (x i)
-  ; Consider the argument as a byte string and get the i-th element.
+  ; Returns the i-th element of the bytes x.
+  ; This function also accepts symbols, keywords and strings.
   (assert (= (bytes-at "012" 0) 0x30))
-  (assert (= (bytes-at "012" 1) 0x31))
-  (assert (= (bytes-at "012" 2) 0x32)))
+  (assert (= (bytes-at "012" 1) 0x31)))
 
 (builtin-function bytes-at! (x i v)
-  ; Consider the argument x as a byte array, and substitute v at the i-th position.
-  ; Returns nil.
-  )
+  ; Update the i-th element of bytes x to v.
+  ; Returns v.
+  ; This function also accepts strings.
+  (assert (let (s "foo")
+            (assert (= (bytes-at! s 0 0x30) 0x30))
+            (bytes-eq? s "0oo"))))
 
 (builtin-function bytes-length (x)
   ; Returns the size of the specified bytes x.

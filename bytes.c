@@ -105,16 +105,22 @@ DEFUN(bytes_at)
 
 DEFUN(bytes_put)
 {
-  object o;
   int i, byte;
+  object o;
   if (!bi_argc_range(argc, 3, 3)) return FALSE;
-  if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
+  switch (object_type(argv->cons.car)) {
+    case BYTES:
+    case STRING:
+      o = argv->cons.car;
+      break;
+    default:
+      return FALSE;
+  }
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
   if (i < 0 || i >= o->bytes.size) return FALSE;
-  if (!bi_sint(argv->cons.cdr->cons.car, &byte)) return FALSE;
+  if (!bi_sint((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
   if (!byte_p(byte)) return FALSE;
   SC(o->bytes.elt + i, byte);
-  *result = object_nil;
   return TRUE;
 }
 
@@ -147,8 +153,8 @@ DEFUN(bytes_copy)
 
 DEFUN(bytes_index)
 {
-  object o, p;
   int b, s, e;
+  object o, p;
   if (!bi_argc_range(argc, 2, 4)) return FALSE;
   if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
   b = 0;
@@ -197,6 +203,17 @@ DEFUN(bytes_index)
     }
   }
   *result = object_nil;
+  return TRUE;
+}
+
+DEFUN(bytes_eq_p)
+{
+  object o, p;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
+  if (!bi_arg_bytes(argv->cons.cdr->cons.car, &p)) return FALSE;
+  *result = object_bool((o->bytes.size == p->bytes.size)
+      && memcmp(o->bytes.elt, p->bytes.elt, p->bytes.size) == 0);
   return TRUE;
 }
 
