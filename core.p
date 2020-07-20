@@ -1142,28 +1142,49 @@
 ; array
 
 (builtin-function array (size)
-  ; Create a array of size the specified size
-  )
+  ; Returns an array of length size.
+  (assert (array 1)))
 
 (builtin-function array? (x)
-  ; Returns true if the argument is a array.
+  ; Returns whether the x is an array.
+  ; However, bytes are not considered as arrays.
   (assert (array? (array 3)))
-  (assert (! (array? nil)))
   (assert (! (array? (bytes 3)))))
 
 (function array->list (x)
-  ; Returns list of array.
+  ; Returns array as a list.
   (let (acc nil)
     (dotimes (i (array-length x))
       (push! acc (array-at x i)))
     (reverse! acc)))
+
+(builtin-function array-at (x i)
+  ; Returns the i-th element of the array x.
+  (assert (nil? (array-at (array 1) 0))))
+
+(builtin-function array-at! (x i v)
+  ; Update the i-th element of array x to v.
+  ; Returns v.
+  (assert (let (a (array 1))
+            (&& (array-at! a 0 true)
+                (array-at a 0)))))
 
 (builtin-function array-length (x)
   ; Returns the length of the specified array x.
   (assert (= (array-length (array 3)) 3)))
 
 (builtin-function array-copy (src src-i dst dst-i size)
-  )
+  ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
+  ; Returns dst.
+  ; Even if the areas to be copied overlap, it operates correctly.
+  ; This function also accepts strings.
+  (assert (let (s (array 1) d (array 2))
+            (array-at! s 0 1)
+            (array-at! d 0 :zero)
+            (array-at! d 1 :one)
+            (&& (= (array-at (array-copy s 0 d 1 1) 1) 1)
+                (eq? (array-at d 0) :zero)
+                (= (array-at d 1) 1)))))
 
 (function array-slice (x start :opt end)
   ; Returns a new array object selected from start to end (end not included) where start and end represent the index of items in that array x.

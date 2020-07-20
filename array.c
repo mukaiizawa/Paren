@@ -57,8 +57,7 @@ DEFUN(array_put)
   if (!bi_arg_type(argv->cons.car, ARRAY, &o)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
   if (i < 0 || i >= o->array.size) return FALSE;
-  o->array.elt[i] = argv->cons.cdr->cons.car;
-  *result = object_nil;
+  *result = o->array.elt[i] = argv->cons.cdr->cons.car;
   return TRUE;
 }
 
