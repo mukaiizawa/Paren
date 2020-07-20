@@ -981,15 +981,18 @@
   ; Returns a string that is a substring of the specified string s.
   ; The substring begins at the specified start and extends to the character at index end - 1.
   ; Thus the length of the substring is `end - start`.
-  (let (len (string-length s))
-    (if (< start 0) (error "illegal start" start)
-        (nil? end) (<- end len)
-        (> end len) (error "illegal end" (list end len)))
-    (with-ahead-reader (ar s)
-      (dotimes (i len)
-        (if (>= i end) (break)
-            (>= i start) (.get ar)
-            (.skip ar))))))
+  (if (< start 0) (error "illegal start" start))
+  (let (i 0 c nil)
+    (with-memory-stream (out)
+      (with-memory-stream (in s)
+        (if end
+            (while (< i end)
+              (if (nil? (<- c (read-char in))) (error "illegal end " end)
+                  (>= i start) (write-bytes c out))
+              (<- i (++ i)))
+            (while (<- c (read-char in))
+              (if (>= i start) (write-bytes c out))
+              (<- i (++ i))))))))
 
 (function string-at (s i)
   ; Returns the i-th character of string s.
@@ -1929,11 +1932,6 @@
   (let (minus? (.skip-sign (.skip-space self)) val (.skip-unsigned-number self))
     (if minus? (- val)
         val)))
-
-(macro with-ahead-reader ((ar stream) :rest body)
-  (list let (list ar (list '.init '(.new AheadReader) stream))
-        (cons begin body)
-        (list '.token ar)))
 
 ; Paren reader
 
