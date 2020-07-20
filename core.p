@@ -1196,70 +1196,60 @@
       (array-copy x start new-array 0 new-len))))
 
 ; Paren object system
-;
-; Paren object system is an object system implemented from a primitive paren.
-; Some functions are built-in.
-; Although it is a built-in function, it is only built in considering speed.
 
 (builtin-function object? (x)
-  ; Returns true if the specified x is object.
-  )
+  ; Returns whether the x is an object.
+  (assert (object? '(:class Object))))
 
 (builtin-function is-a? (o cls)
-  ; Returns true if the specified object o regarded as the specified class cls's instance.
-  )
+  ; Returns whether the specified object o regarded as the specified class cls's instance.
+  (assert (is-a? '(:class Object)
+                 '(:class Class :symbol Object :super nil :features nil :fields (class)))))
 
 (builtin-function find-class (cls-sym)
   ; Returns the class corresponding to the specified symbol cls_sym.
   )
 
 (builtin-function find-method (cls-sym method-sym)
-  ; Returns the class corresponding to the specified symbol cls_sym.
+  ; Returns the method by which an instance of the class name cls-sym is dispatched.
   )
 
+(function error-if-not-object (o)
+  ; Returns the method by which an instance of the class name cls-sym is dispatched.
+  (if (! (object? o)) (error "expected object")))
+
 (macro make-accessor (field)
-  ; Create accessor for the specified field.
-  ; If field name is 'xxx', create accessor &xxx.
-  ; Works faster than method which defined with the method macro.
+  ; Returns an expression that binds getter and setter.
+  ; If field name is 'xxx', bind a getter named `&xxx` and setter named `&xxx!`.
+  ; Works faster than method which defined with the `method` macro.
   (with-gensyms (receiver val)
     (let (key (bytes->keyword field)
-          field (bytes->string field 0 (bytes-length field))
-          getter (bytes-concat '& field)
-          setter (bytes-concat '& field '!)
-          verifier (list if (list ! (list 'object? receiver))
-                         (list 'error "require object")))
+              field (bytes->string field)
+              getter (bytes-concat '& field)
+              setter (bytes-concat '& field '!))
       (list begin
             (list if (list ! (list 'bound? (list quote getter)))
                   (list 'function getter (list receiver)
-                        :method
-                        verifier
+                        (list 'error-if-not-object receiver)
                         (list 'assoc receiver key)))
             (list if (list ! (list 'bound? (list quote setter)))
                   (list 'function setter (list receiver val)
-                        :method
-                        verifier
+                        (list 'error-if-not-object receiver)
                         (list begin (list 'assoc! receiver key val) receiver)))))))
 
 (macro make-method-dispatcher (method-sym)
   (when (! (bound? method-sym))
     (with-gensyms (receiver args)
       (list 'function method-sym (list receiver :rest args)
-            :method
-            (list if (list ! (list 'object? receiver))
-                  (list 'error "require object"))
+            (list 'error-if-not-object receiver)
             (list 'apply
                   (list 'find-method
                         (list 'cadr receiver)    ; <=> (assoc cls :class)
                         (list quote method-sym))
                   (list 'cons receiver args))))))
 
-(function method? (o)
-  ; Returns true if the specified o is method.
-  (&& (function? o)
-      (eq? (car (lambda-body o)) :method)))
-
 (macro class (cls-sym (:opt super :rest features) :rest fields)
-  ; Create class the specified cls-sym.
+  ; Returns expression that create class named cls-sym.
   (if (! (all-satisfy? symbol? fields)) (error "fields must be symbol")
       (bound? cls-sym) (error cls-sym " already bound"))
   (list begin0
@@ -1273,18 +1263,12 @@
               (map (lambda (field) (list 'make-accessor field)) fields))))
 
 (macro method (cls-sym method-sym args :rest body)
-  (let (global-sym (bytes-concat cls-sym method-sym)
-        quoted-global-sym (list quote global-sym)
-        method-lambda (cons lambda (cons (cons 'self args) (expand-macro-all body))))
-    (if (! (find-class cls-sym)) (error "class not found")
+  (let (global-sym (bytes-concat cls-sym method-sym))
+    (if (! (find-class cls-sym)) (error "unbound class")
         (bound? global-sym) (error global-sym " already bound"))
-    (list begin0
-          quoted-global-sym
+    (list begin
           (list 'make-method-dispatcher method-sym)
-          (list <- global-sym method-lambda))))
-
-(function error (:rest args)
-  (throw (.message (.new Error) (apply string args))))
+          (cons 'function (cons global-sym (cons (cons 'self args) body))))))
 
 (class Object ()
   ; Object is a class that is the basis of all class hierarchies.
@@ -1381,6 +1365,9 @@
 
 (class Error (Exception)
   )
+
+(function error (:rest args)
+  (throw (.message (.new Error) (apply string args))))
 
 (class Array ()
   size elt)
@@ -1730,7 +1717,7 @@
   buf rdpos wrpos)
 
 (method MemoryStream .init ()
-  (&buf! self (bytes 256))
+  (&buf! self (bytes 64))
   (&rdpos! self 0)
   (&wrpos! self 0))
 
@@ -2111,9 +2098,8 @@
 
 (function with-open-mode (sym path mode body)
   (with-gensyms (gsym gpath)
-    (list let (list gpath
-                    (list if (list string? path) (list 'Path.of path)
-                          path))
+    (list let (list gpath (list if (list string? path) (list 'Path.of path)
+                                path))
           (list let (list gsym nil)
                 (list unwind-protect
                       (cons let (cons (list sym (list mode gpath))
