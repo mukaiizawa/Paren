@@ -56,6 +56,17 @@ int bi_arg_bytes(object o, object *result)
   }
 }
 
+int bi_arg_mutable_bytes(object o, object *result)
+{
+  switch (object_type(o)) {
+    case BYTES:
+    case STRING:
+      return arg_type(o, TRUE, result);
+    default:
+      return arg_type(o, FALSE, result);
+  }
+}
+
 int bi_arg_fp(object o, FILE **result)
 {
   return bi_intptr(o, (intptr_t *)result);

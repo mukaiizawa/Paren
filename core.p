@@ -1049,6 +1049,34 @@
   (assert (bytes-eq? :foo :foo))
   (assert (! (bytes-eq? "foo" "bar"))))
 
+(builtin-function ->bytes (x :opt i size)
+  ; Returns bytes corresponding to x.
+  ; If i is supplied, returns string of partial byte sequence from i of x.
+  ; If size is supplied, returns string of partial byte sequence from i to (size -1) of x.
+  (assert (eq? (bytes->symbol "foo") 'foo)))
+
+(builtin-function bytes->symbol (x :opt i size)
+  ; Same as (->bytes x) except returns symbol.
+  (assert (eq? (bytes->symbol "foo") 'foo)))
+
+(builtin-function bytes->keyword (x)
+  ; Same as (->bytes x) except returns keyword.
+  (assert (eq? (bytes->keyword "foo") :foo)))
+
+(builtin-function bytes->string (x :opt i size)
+  ; Same as (->bytes x) except returns string.
+  (assert (bytes-eq? (bytes->string 'foo) "foo"))
+  (assert (bytes-eq? (bytes->string 'foo 1) "oo"))
+  (assert (bytes-eq? (bytes->string 'foo 1 1) "o")))
+
+(builtin-function bytes->string! (x)
+  ; Same as (bytes->string x), except that it destructively modifies the x.
+  ; Generally faster than bytes->string.
+  ; This function only allows bytes.
+  (assert (let (x (bytes 1))
+            (bytes-at! x 0 0x01)
+            (bytes-eq? (bytes->string! x) "\x01"))))
+
 (builtin-function bytes-at (x i)
   ; Returns the i-th element of the bytes x.
   ; This function also accepts symbols, keywords and strings.
@@ -1064,50 +1092,52 @@
             (bytes-eq? s "0oo"))))
 
 (builtin-function bytes-length (x)
-  ; Returns the size of the specified bytes x.
+  ; Returns the size of the bytes x.
+  ; This function also accepts symbols, keywords and strings.
   (assert (= (bytes-length "") 0))
   (assert (= (bytes-length "012") 3)))
 
 (builtin-function bytes-index (x b :opt start end)
-  ; Returns the position of the specified byte b in the s-th to (end - 1)-th elements of the specified bytes ba.
-  ; You can also specify a bytes for b, in which case the location of the first occurrence of the partial bytes is returned.
-  ; If start is not specified, 0 is assumed.
-  ; If end is not specified, length of x is assumed.
+  ; Returns the position where the b appears first in the bytes x.
+  ; If the b is not appeared, returns nil.
+  ; If b is bytes, returns the position where the partial bytes appears first in the bytes x.
+  ; If start is specified, search from start-th of the bytes x.
+  ; If end is specified, search untile end-th of the bytes x.
+  ; This function also accepts symbols, keywords and strings.
   (assert (= (bytes-index "012" 0x31 1) 1))
   (assert (= (bytes-index "012" 0x31 0 3) 1))
   (assert (= (bytes-index "012" 0x31 0 3) 1))
   (assert (= (bytes-index "012" "12" 0 3) 1)))
 
-(builtin-function bytes-unmatch-index (x xi y yi)
-  )
+(builtin-function bytes-unmatch-index (x xi y yi size)
+  ; Returns the first different position of that partial bytes of x and partial bytes y which size from xi and size from yi.
+  ; If the results of size byte comparison are the same, returns nil.
+  ; This function also accepts symbols, keywords and strings.
+  (assert (= (bytes-unmatch-index "012" 0 "023" 0 3) 1))
+  (assert (nil? (bytes-unmatch-index "012" 0 "012" 0 3))))
 
 (builtin-function bytes-copy (src src-i dst dst-i size)
   ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
+  ; Returns dst.
   ; Even if the areas to be copied overlap, it operates correctly.
-  )
+  ; This function also accepts strings.
+  (assert (let (s "foo" d "bar")
+            (bytes-eq? (bytes-copy s 1 d 1 2) "boo"))))
 
 (function bytes-slice (x start :opt end)
-  ; Returns a new bytes object selected from start to end (end not included) where start and end represent the index of items in that bytes x.
+  ; Returns the partial byte sequence starting from start.
+  ; If end is specified, returns the partial byte sequence from the i th to (end-1) th.
   (let (xlen (bytes-length x))
     (if (< start 0) (error "illegal start")
         (nil? end) (<- end xlen)
         (> end xlen) (error "illegal end"))
-    (let (new-len (- end start) new-bytes (bytes new-len))
-      (bytes-copy x start new-bytes 0 new-len))))
+    (let (new-len (- end start))
+      (bytes-copy x start (bytes new-len) 0 new-len))))
 
 (builtin-function bytes-concat (x :rest args)
-  ; Concatenate each argument to bytes x
+  ; Returns the result of combining each args with x.
+  ; This function also accepts symbols, keywords and strings.
   (assert (bytes-eq? (bytes-concat "0" "1" "2") "012")))
-
-(builtin-function bytes->string (x i size)
-  ; Returns string of length size from the i'th element of bytes x.
-  )
-
-(builtin-function bytes->symbol (x)
-  )
-
-(builtin-function bytes->keyword (x)
-  )
 
 ; array
 

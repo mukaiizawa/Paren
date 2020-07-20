@@ -105,29 +105,29 @@ static int lex_number(void)
 
 static int lex_string(void)
 {
-  int quote, next;
+  int quote, val;
   quote = skip();
   while (next_ch != quote) {
     if (next_ch == EOF) lex_error("quote not closed");
     if (next_ch != '\\') get();
     else {
       skip();
-      next = skip();
-      switch (next) {
-        case 'a': add('\a'); break;
-        case 'b': add('\b'); break;
-        case 'e': add(0x1b); break;
-        case 'f': add('\f'); break;
-        case 'n': add('\n'); break;
-        case 'r': add('\r'); break;
-        case 't': add('\t'); break;
-        case 'v': add('\v'); break;
+      switch (next_ch) {
+        case 'a': skip(); add('\a'); break;
+        case 'b': skip(); add('\b'); break;
+        case 'e': skip(); add(0x1b); break;
+        case 'f': skip(); add('\f'); break;
+        case 'n': skip(); add('\n'); break;
+        case 'r': skip(); add('\r'); break;
+        case 't': skip(); add('\t'); break;
+        case 'v': skip(); add('\v'); break;
         case 'x':
-          next = digit_val(skip(), 16) * 16;
-          next += digit_val(skip(), 16);
-          add(next);
+          skip();
+          val = digit_val(skip(), 16) * 16;
+          val += digit_val(skip(), 16);
+          add(val);
           break;
-        default: add(next); break;
+        default: get(); break;
       }
     }
   }

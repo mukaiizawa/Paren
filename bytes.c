@@ -54,7 +54,7 @@ static int bytes_to(int argc, object argv, object *result, int type)
   if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
   if (argc < 2) i = 0;
   else if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
-  if (argc < 3) size = o->bytes.size;
+  if (argc < 3) size = o->bytes.size - i;
   else if (!bi_sint(argv->cons.cdr->cons.car, &size)) return FALSE;
   if (i < 0 || i + size > o->bytes.size) return FALSE;
   *result = gc_new_bytes_from(type, o->bytes.elt + i, size);
@@ -108,14 +108,7 @@ DEFUN(bytes_put)
   int i, byte;
   object o;
   if (!bi_argc_range(argc, 3, 3)) return FALSE;
-  switch (object_type(argv->cons.car)) {
-    case BYTES:
-    case STRING:
-      o = argv->cons.car;
-      break;
-    default:
-      return FALSE;
-  }
+  if (!bi_arg_mutable_bytes(argv->cons.car, &o)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
   if (i < 0 || i >= o->bytes.size) return FALSE;
   if (!bi_sint((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
@@ -140,7 +133,7 @@ DEFUN(bytes_copy)
   if (!bi_argc_range(argc, 5, 5)) return FALSE;
   if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &oi)) return FALSE;
-  if (!bi_arg_type((argv = argv->cons.cdr)->cons.car, BYTES, &p)) return FALSE;
+  if (!bi_arg_mutable_bytes((argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (size < 0) return FALSE;
