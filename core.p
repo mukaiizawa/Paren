@@ -1835,6 +1835,26 @@
   (begin0 (&next self)
           (&next! self (.read-char (&stream self)))))
 
+(method AheadReader .skip-escape ()
+  (if (string-eq? (&next self) "\\")
+      (begin (.skip self)
+             (let (c (.skip self))
+               (if (string-eq? c "a") 0x07
+                   (string-eq? c "b") 0x08
+                   (string-eq? c "e") 0x1b
+                   (string-eq? c "f") 0x0c
+                   (string-eq? c "n") 0x0a
+                   (string-eq? c "r") 0x0d
+                   (string-eq? c "t") 0x09
+                   (string-eq? c "v") 0x0b
+                   (string-eq? c "x") (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16))
+                   c)))
+      (.skip self)))
+
+(method AheadReader .ensured-skip (c)
+  (if (string-eq? (.skip self) c) c
+      (error "missing token")))
+
 (method AheadReader .skip-line ()
   (while (&& (! (.eof? self))
              (! (string-eq? (&next self) "\n")))
@@ -1844,6 +1864,11 @@
 (method AheadReader .get ()
   ; Append next character to token and returns it.
   (let (c (.skip self))
+    (.put self c)
+    c))
+
+(method AheadReader .get-escape ()
+  (let (c (.skip-escape self))
     (.put self c)
     c))
 
@@ -1984,22 +2009,8 @@
 (method ParenLexer .lex-string ()
   (.skip self)
   (while (! (string-eq? (&next self) "\""))
-    (if (.eof? self) (error "string not closed")
-        (! (string-eq? (&next self) "\\")) (.get self)
-        (begin (.skip self)
-               (let (c (.skip self))
-                 (if (string-eq? c "a") (.put self 0x07)
-                     (string-eq? c "b") (.put self 0x08)
-                     (string-eq? c "e") (.put self 0x1b)
-                     (string-eq? c "f") (.put self 0x0c)
-                     (string-eq? c "n") (.put self 0x0a)
-                     (string-eq? c "r") (.put self 0x0d)
-                     (string-eq? c "t") (.put self 0x09)
-                     (string-eq? c "v") (.put self 0x0b)
-                     (string-eq? c "x") (.put self (+ (* 16 (.skip-digit self 16))
-                                                      (.skip-digit self 16)))
-                     (.put self c))))))
-  (.skip self)
+    (.get-escape self))
+  (.ensured-skip self "\"")
   (.token self))
 
 (method ParenLexer .lex ()
