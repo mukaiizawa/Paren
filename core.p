@@ -165,9 +165,8 @@
   ;       ...)
   ;     (let (a (gensym) b (gensym) c (gensym))
   ;       ...)
-  (let (rec (lambda (syms :opt acc)
-              (if (! syms) acc
-                  (cons (car syms) (cons '(gensym) (rec (cdr syms) acc))))))
+  (let (rec (lambda (syms)
+              (if syms (cons (car syms) (cons '(gensym) (rec (cdr syms)))))))
     (cons let (cons (rec syms) body))))
 
 (macro begin0 (:rest body)
@@ -961,13 +960,20 @@
   ; Same as (bytes-eq? x y).
   (bytes-eq? x y))
 
-(function string-codepoint (s)
+(function string->code (s)
   ; Returns the code point of string s.
   (let (b 0 val 0)
     (with-memory-stream (in s)
       (while (/= (<- b (read-byte in)) -1)
         (<- val (| (<< val 8) b))))
     val))
+
+(function code->string (i)
+  ; Returns string of code point.
+  (with-memory-stream (out)
+    (while (/= i 0)
+      (write-byte (& i 0xff) out)
+      (<- i (>> i 8)))))
 
 (function string->array (s)
   ; Returns a character array of string s.
@@ -1561,20 +1567,20 @@
             (< b1 0x80) (<- size 1)
             (< b1 0xc2) (.illegal-character self b1)
             (< b1 0xe0) (if (|| (= (& b1 0x3e) 0)
-                                (! (.trail self (<- b2 (.read-byte self)))))
+                                (! (.trail? self (<- b2 (.read-byte self)))))
                             (.illegal-character self b1 b2)
                             (<- size 2))
-            (< b1 0xf0) (if (|| (! (.trail self (<- b2 (.read-byte self))))
+            (< b1 0xf0) (if (|| (! (.trail? self (<- b2 (.read-byte self))))
                                 (&& (= b1 0xe0)
                                     (= (& b2 0x20) 0))
-                                (! (.trail self (<- b3 (.read-byte self)))))
+                                (! (.trail? self (<- b3 (.read-byte self)))))
                             (.illegal-character self b1 b2 b3)
                             (<- size 3))
-            (< b1 0xf8) (if (|| (! (.trail self (<- b2 (.read-byte self))))
+            (< b1 0xf8) (if (|| (! (.trail? self (<- b2 (.read-byte self))))
                                 (&& (= b1 0xf0)
                                     (= (& b2 0x30) 0))
-                                (! (.trail self (<- b3 (.read-byte self))))
-                                (! (.trail self (<- b4 (.read-byte self)))))
+                                (! (.trail? self (<- b3 (.read-byte self))))
+                                (! (.trail? self (<- b4 (.read-byte self)))))
                             (.illegal-character self b1 b2 b3 b4)
                             (<- size 4))
             (.illegal-character self b1))
@@ -1893,22 +1899,22 @@
 
 (method AheadReader .alpha? ()
   ; Returns true if next character is alphabetic.
-  (ascii-alpha? (string-codepoint (&next self))))
+  (ascii-alpha? (string->code (&next self))))
 
 (method AheadReader .digit? ()
   ; Returns true if next character is digit.
-  (ascii-digit? (string-codepoint (&next self))))
+  (ascii-digit? (string->code (&next self))))
 
 (method AheadReader .numeric-alpha? ()
   ; Returns true if next character is digit or alphabetic.
-  (let (b (string-codepoint (&next self)))
+  (let (b (string->code (&next self)))
     (|| (ascii-digit? b)
         (ascii-alpha? b))))
 
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
   ; Returns self.
-  (while (ascii-space? (string-codepoint (&next self)))
+  (while (ascii-space? (string->code (&next self)))
     (.skip self))
   self)
 
@@ -1919,7 +1925,7 @@
         nil)))
 
 (method AheadReader .skip-digit (:opt radix)
-  (ascii->digit (string-codepoint (.skip self)) (|| radix 10)))
+  (ascii->digit (string->code (.skip self)) (|| radix 10)))
 
 (method AheadReader .skip-unsigned-integer ()
   (if (! (.digit? self)) (error "missing digits")
