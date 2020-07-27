@@ -39,13 +39,11 @@
 
 (builtin-function OS.fread (buf from size fp)
   ; Reads size bytes of data from the stream pointed to by fp, storing them at the location given by byte-array buf offset from.
-  ; Throw an exception if unsuccessful.
   ; Returns size;
   )
 
 (builtin-function OS.fwrite (buf from size fp)
   ; Writes size bytes of data to the stream pointed to by fp, obtaining them at the location given by byte-array buf offset from.
-  ; Throw an exception if unsuccessful.
   ; Returns size;
   )
 
@@ -75,7 +73,6 @@
   ;         32 writable
   ;     1 -- file size
   ;     2 -- modification timestamp
-  ; Throw an exception if unsuccessful.
   )
 
 (builtin-function OS.utime (filename unix-time)
@@ -89,18 +86,15 @@
 
 (builtin-function OS.chdir (filename)
   ; Change the current working directory to the directory specified in filename
-  ; Throw an exception if unsuccessful.
   ; Returns nil.
   )
 
 (builtin-function OS.readdir (filename)
   ; Return the contents of the directory indicated by filename as a character string delimited by a newline character.
-  ; Throw an exception if unsuccessful.
   )
 
 (builtin-function OS.remove (filename)
   ; Attempts to remove a file whose name is pathname.
-  ; Throw an exception if unsuccessful.
   ; Returns nil.
   )
 
@@ -137,6 +131,5 @@
   ; Add environment variables or change values.
   ; If name does not exist in the environment, name-value is added to the environment.
   ; If name exists in the environment, the value of name is changed to value.
-  ; Throw an exception if unsuccessful.
   ; Returns nil.
   )

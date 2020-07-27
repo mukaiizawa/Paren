@@ -190,7 +190,7 @@
   ; Evaluate each of the specified args, one at a time, from left to right.
   ; The evaluation of all args terminates when a args evaluates to true.
   ; Return last evaluated value.
-  ; If args is nil then return nil.
+  ; If args is nil, returns nil.
   (if (nil? args) nil
       (with-gensyms (g)
         (let (rec (lambda (l)
@@ -1481,10 +1481,22 @@
     (if i (string-slice name 0 i)
         name)))
 
+(method Path .suffix ()
+  ; Returns the suffix.
+  ; If the path has no extension, returns nil.
+  (let (name (.name self) i (string-index name "."))
+    (if i (string-slice name (++ i)))))
+
+(method Path .root? ()
+  ; Returns whether this object is a root directory.
+  (&& (.absolute? self) (nil? (.parent self))))
+
 (method Path .parent ()
-  ; Returns the parent path, or nil if this path does not have a parent.
-  ; When used for relative path, non-root directory may return nil.
-  (&path! (.new Path) (butlast (&path self))))
+  ; Returns the parent path
+  ; If this object is root directory, returns nil.
+  ; However, this object is relative path, non-root directory may return nil.
+  (let (path (butlast (&path self)))
+    (if path (&path! (.new Path) path))))
 
 (method Path .resolve (path)
   ; Resolve the given path against this path.
@@ -1535,6 +1547,61 @@
   ; The read/write position is at the beginning of the file.
   ; The file size cannot be reduced.
   (.open self 3))
+
+(method Path .stat ()
+  ; Returns stat of this object.
+  (let (stat (OS.stat (.to-s self)))
+    (if stat stat
+        (begin (<- stat (array 3))
+               (array-at! stat 0 1)
+               (array-at! stat 1 0)
+               stat))))
+
+(method Path .mode ()
+  ; Returns whether this object is a regular file.
+  (array-at (.stat self) 0))
+
+(method Path .none? ()
+  ; Returns whether this object is not exits.
+  (/= (& (.mode self) 1) 0))
+
+(method Path .file? ()
+  ; Returns whether this object is a regular file.
+  (/= (& (.mode self) 2) 0))
+
+(method Path .dir? ()
+  ; Returns whether this object is a directory.
+  (/= (& (.mode self) 4) 0))
+
+(method Path .other? ()
+  ; Returns whether this object is neither a regular file nor a directory.
+  (/= (& (.mode self) 8) 0))
+
+(method Path .readable? ()
+  ; Returns whether this object is readable.
+  (/= (& (.mode self) 16) 0))
+
+(method Path .writable? ()
+  ; Returns whether this object is writable.
+  (/= (& (.mode self) 32) 0))
+
+(method Path .size ()
+  ; Returns the size of this object.
+  (array-at (.stat self) 1))
+
+(method Path .mtime ()
+  ; Returns the last update time of this object.
+  (array-at (.stat self) 2))
+
+(method Path .mtime! (time)
+  ; Update the last update time of this object.
+  ; Returns this object.
+  (OS.utime (.to-s self) time))
+
+(method Path .children ()
+  (map (lambda (child)
+         (.resolve self child))
+       (string->list (OS.readdir (.to-s self)) "\n")))
 
 ;; stream I/O
 

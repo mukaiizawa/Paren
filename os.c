@@ -228,7 +228,7 @@ DEFUN(os_readdir)
   if ((path = bi_string(argv)) == NULL) return FALSE;
   xbarray_init(&dirs);
   if (!pf_readdir(path, &dirs)) return FALSE;
-  *result = gc_new_bytes_from(STRING, dirs.elt, dirs.size);
+  *result = gc_new_bytes_from(STRING, dirs.elt, dirs.size - 1);    // remove last \n
   xbarray_free(&dirs);
   return TRUE;
 }
