@@ -115,11 +115,9 @@ static object parse_list(void)
 
 static object parse_s_expr(void)
 {
-  object o;
   if (next_token == '\'') {
-    o = object_quote;
     parse_skip();
-    return gc_new_cons(o, gc_new_cons(parse_s_expr(), object_nil));
+    return gc_new_cons(object_quote, gc_new_cons(parse_s_expr(), object_nil));
   }
   if (next_token == '(') return parse_list();
   return parse_atom();
