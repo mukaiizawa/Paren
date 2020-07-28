@@ -964,6 +964,12 @@ DEFUN(find_method)
   return ip_mark_error("undeclared method");
 }
 
+DEFUN(cycle)
+{
+  reg[0] = gc_new_xint(cycle);
+  return TRUE;
+}
+
 DEFUN(stack_frame)
 {
   dump_fs();

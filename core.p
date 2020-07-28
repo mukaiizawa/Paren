@@ -332,14 +332,21 @@
     (list 'for (list i 0 gn n) (list < i gn) (list <- i (list '++ i))
           (cons begin body))))
 
+(builtin-function cycle ()
+  ; Returns the cycle of the internal virtual machine.
+  )
+
 (macro clock (:rest body)
   ; Clock the time it takes to evaluate the specified body.
   ; Returns evaluation result of the last element of body.
-  (with-gensyms (offset)
-    (list let (list offset '(OS.clock))
+  (with-gensyms (clock-offset cycle-offset)
+    (list let (list clock-offset '(OS.clock) cycle-offset '(cycle))
           (list 'begin0
                 (cons begin body)
-                (list 'write-bytes (list 'string "time=" (list '- '(OS.clock) offset)))))))
+                (list 'write-bytes (list 'string
+                                         "time=" (list '- '(OS.clock) clock-offset)
+                                         ",cycle=" (list '- '(cycle) cycle-offset)))
+                '(write-line)))))
 
 (builtin-function expand-macro (expr)
   ; Returns the result of expanding the macro when expr is a list and car is a macro.
