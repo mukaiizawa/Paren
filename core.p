@@ -323,19 +323,15 @@
     (list 'for (list i 0 gn n) (list < i gn) (list <- i (list '++ i))
           (cons begin body))))
 
-(builtin-function cycle ()
-  ; Returns the cycle of the internal virtual machine.
-  )
-
-(macro clock (:rest body)
+(macro timeit (:rest body)
   ; Clock the time it takes to evaluate the specified body.
   ; Returns evaluation result of the last element of body.
   (with-gensyms (clock-offset cycle-offset)
-    (list let (list clock-offset '(OS.clock) cycle-offset '(cycle))
+    (list let (list clock-offset '(clock) cycle-offset '(cycle))
           (list 'begin0
                 (cons begin body)
                 (list 'write-bytes (list 'string
-                                         "time=" (list '- '(OS.clock) clock-offset)
+                                         "time=" (list '- '(clock) clock-offset)
                                          ",cycle=" (list '- '(cycle) cycle-offset)))
                 '(write-line)))))
 
@@ -735,19 +731,19 @@
                   (rec (cons (f (car l) (cadr l)) (cddr l))))))
     (rec l)))
 
-(function find-cons (f l)
+(function find-cons-if (f l)
   ; Returns the first cons for which the result of applying the function f to the list elements in order from left to right is true.
   ; If there is no such cons, returns nil.
   (while l
     (if (f (car l)) (return l)
         (<- l (cdr l)))))
 
-(function find (f l)
+(function find-if (f l)
   ; Returns the first element for which the result of applying the function f to the list elements in order from left to right is true.
   ; If there is no such cons, returns nil.
-  (car (find-cons f l)))
+  (car (find-cons-if f l)))
 
-(function remove (f l)
+(function remove-if (f l)
   ; Returns a list with the elements for which the result of applying the function f is true removed.
   (let (acc nil)
     (dolist (x l)
@@ -1202,6 +1198,136 @@
     (let (new-len (- end start) new-array (array new-len))
       (array-copy x start new-array 0 new-len))))
 
+; os
+
+(builtin-function fp (fd)
+  )
+
+(builtin-function fopen (filename mode)
+  ; Opens the file whose name is the string pointed to by filename and associates a stream with it.
+  ; The argument mode can specify bellow value.
+  ;      0 -- Open file for reading.
+  ;      1 -- Open file for writing.
+  ;      3 -- Open file for appending
+  ;      4 -- Open file for reading and writing.
+  )
+
+(builtin-function fgetc (fp)
+  ; Reads the next character from stream and returns it.
+  ; Return  -1 if EOF.
+  )
+
+(builtin-function fputc (fp c)
+  ; Write the byte specified by c to the output stream pointed to by fp. 
+  )
+
+(builtin-function fgets (fp)
+  ; Read a line from the steream pointed to by fp and return it.
+  ; Do not include newline characters.
+  ; Returns nil if EOF.
+  )
+
+(builtin-function fread (buf from size fp)
+  ; Reads size bytes of data from the stream pointed to by fp, storing them at the location given by byte-array buf offset from.
+  ; Returns size;
+  )
+
+(builtin-function fwrite (buf from size fp)
+  ; Writes size bytes of data to the stream pointed to by fp, obtaining them at the location given by byte-array buf offset from.
+  ; Returns size;
+  )
+
+(builtin-function fseek (fp)
+  ; Sets the file position indicator for the stream pointed to by fp
+  ; Returns nil.
+  )
+
+(builtin-function ftell (fp)
+  ; Returns the current value of the file position indicator for the stream pointed to by fp.
+  )
+
+(builtin-function fclose (fp)
+  ; Flushes the stream pointed to by fp (writing any buffered output data) and closes the underlying file descriptor.
+  ; Returns nil.
+  )
+
+(builtin-function stat (filename)
+  ; Returns the file status indicated filename.
+  ; The return value is an array of length 3.
+  ;     0 -- file type and mode.
+  ;         1 none
+  ;         2 file
+  ;         4 dir
+  ;         8 other
+  ;         16 readable
+  ;         32 writable
+  ;     1 -- file size
+  ;     2 -- modification timestamp
+  )
+
+(builtin-function utime (filename unix-time)
+  ; Change the access time and modification time of the file indicated filename to the specified unix-time in times.
+  ; Returns nil.
+  )
+
+(builtin-function getcwd ()
+  ; Returns a string containing the absolute filename of the current working directory.
+  )
+
+(builtin-function chdir (filename)
+  ; Change the current working directory to the directory specified in filename
+  ; Returns nil.
+  )
+
+(builtin-function readdir (filename)
+  ; Return the contents of the directory indicated by filename as a character string delimited by a newline character.
+  )
+
+(builtin-function remove (filename)
+  ; Attempts to remove a file whose name is pathname.
+  ; Returns nil.
+  )
+
+(builtin-function mkdir (filename)
+  ; Attempts to create a directory whose name is pathname.
+  ; It is an error if filename already exists.
+  ; Returns nil.
+  )
+
+(builtin-function rename (src dst)
+  ; Rename the file and move between directories if necessary.
+  ; Returns nil.
+  )
+
+(builtin-function time ()
+  ; Returns the number of seconds relative to the unix epoch (January 1, 1970, 00:00:00 UTC).
+  )
+
+(builtin-function clock ()
+  ; Returns the approximate processor time[sec] used by the program.
+  )
+
+(builtin-function cycle ()
+  ; Returns the cycle of the internal virtual machine.
+  )
+
+(builtin-function sleep (sec)
+  ; Sleep for a specified number of seconds.
+  ; Returns nil.
+  )
+
+(builtin-function getenv (name)
+  ; Looks up the environment variable named name in the environment list and returns value string.
+  ; Returns nil if not found.
+  )
+
+(builtin-function putenv (name value)
+  ; Add environment variables or change values.
+  ; If name does not exist in the environment, name-value is added to the environment.
+  ; If name exists in the environment, the value of name is changed to value.
+  ; Returns nil.
+  )
+
 ; Paren object system
 
 (builtin-function object? (x)
@@ -1444,13 +1570,13 @@
   (let (c nil path nil first-letter (string-at path-name 0) root? nil)
     (if (string-eq? first-letter "~")
         (<- path-name (bytes-concat
-                        (if (eq? OS.name :windows)
-                            (bytes-concat (OS.getenv "HOMEDRIVE") (OS.getenv "HOMEPATH"))
-                            (OS.getenv "HOME"))
+                        (if (eq? $host-name :windows)
+                            (bytes-concat (getenv "HOMEDRIVE") (getenv "HOMEPATH"))
+                            (getenv "HOME"))
                         Path.separator path-name))
         (string-eq? first-letter Path.separator)
         (<- root? true))
-    (<- path (remove (lambda (file-name)
+    (<- path (remove-if (lambda (file-name)
                        (|| (string-eq? file-name "") (string-eq? file-name "~")))
                      (string->list
                        (with-memory-stream (out)
@@ -1464,7 +1590,7 @@
 
 (function Path.getcwd ()
   ; Returns the path corresponding to the current directory.
-  (Path.of (OS.getcwd)))
+  (Path.of (getcwd)))
 
 (method Path .name ()
   ; Returns file name.
@@ -1506,7 +1632,7 @@
 (method Path .absolute? ()
   ; Returns true if this path regarded as the absolute path.
   (let (first-file (car (&path self)))
-    (if (eq? OS.name :windows)
+    (if (eq? $host-name :windows)
         (&& (= (bytes-length first-file) 2)
             (bytes-index first-file ":" 1 2))
         (string-eq? first-file Path.separator))))
@@ -1523,7 +1649,7 @@
 (method Path .open (mode)
   (catch (Error (lambda (e)
                   (throw (.message e (bytes-concat "open failed -- " (.to-s self))))))
-    (.init (.new FileStream) (OS.fopen (.to-s self) mode))))
+    (.init (.new FileStream) (fopen (.to-s self) mode))))
 
 (method Path .open-read ()
   ; Returns a stream that reads the contents of the receiver.
@@ -1545,12 +1671,12 @@
 
 (method Path .stat ()
   ; Returns stat of this object.
-  (let (stat (OS.stat (.to-s self)))
-    (if stat stat
-        (begin (<- stat (array 3))
-               (array-at! stat 0 1)
-               (array-at! stat 1 0)
-               stat))))
+  (let (stat-array (stat (.to-s self)))
+    (if stat-array stat-array
+        (begin (<- stat-array (array 3))
+               (array-at! stat-array 0 1)
+               (array-at! stat-array 1 0)
+               stat-array))))
 
 (method Path .mode ()
   ; Returns whether this object is a regular file.
@@ -1591,12 +1717,12 @@
 (method Path .mtime! (time)
   ; Update the last update time of this object.
   ; Returns this object.
-  (OS.utime (.to-s self) time))
+  (utime (.to-s self) time))
 
 (method Path .children ()
   (map (lambda (child)
          (.resolve self child))
-       (string->list (OS.readdir (.to-s self)) "\n")))
+       (string->list (readdir (.to-s self)) "\n")))
 
 ;; stream I/O
 
@@ -1856,29 +1982,29 @@
   (&fp! self fp))
 
 (method FileStream .read-byte ()
-  (OS.fgetc (&fp self)))
+  (fgetc (&fp self)))
 
 (method FileStream .read-bytes (buf from size)
-  (OS.fread buf from size (&fp self)))
+  (fread buf from size (&fp self)))
 
 (method FileStream .read-line ()
-  (OS.fgets (&fp self)))
+  (fgets (&fp self)))
 
 (method FileStream .write-byte (byte)
-  (OS.fputc byte (&fp self))
+  (fputc byte (&fp self))
   self)
 
 (method FileStream .write-bytes (x :opt from size)
-  (OS.fwrite x (|| from 0) (|| size (bytes-length x)) (&fp self)))
+  (fwrite x (|| from 0) (|| size (bytes-length x)) (&fp self)))
 
 (method FileStream .seek (offset)
-  (OS.fseek (&fp self) offset))
+  (fseek (&fp self) offset))
 
 (method FileStream .tell ()
-  (OS.ftell (&fp self)))
+  (ftell (&fp self)))
 
 (method FileStream .close ()
-  (OS.fclose (&fp self)))
+  (fclose (&fp self)))
 
 (class AheadReader ()
   ; A one-character look-ahead reader.
@@ -2227,12 +2353,12 @@
   ; Enter repl(read eval print loop) mode.
   ; Executed when there is no command line argument when paren starts.
   (let (expr nil)
-    (while true
-      (catch (SystemExit (lambda (e) (break))
-                         Error (lambda (e) (.print-stack-trace e)))
-        (write-bytes ") ")
-        (if (<- expr (read)) (write (eval (expand-macro-all expr)))
-            (break))))))
+    (catch (SystemExit (lambda (e) (return true)))
+      (while true
+        (catch (Error (lambda (e) (.print-stack-trace e)))
+          (write-bytes ") ")
+          (if (<- expr (read)) (write (eval (expand-macro-all expr)))
+              (break)))))))
 
 (function quit ()
   ; Quit the system.
@@ -2251,7 +2377,7 @@
   ; Load the file corresponding to the specified keyword.
   ; Search the $paren-home directory.
   ; Returns true if successfully loaded.
-  (if (find (lambda (x) (eq? x key)) $import) true
+  (if (find-if (lambda (x) (eq? x key)) $import) true
       (begin0 (load (.resolve $paren-home (string (bytes->symbol key) ".p")))
               (push! $import key))))
 
@@ -2265,11 +2391,11 @@
         (load script)
         (if (bound? 'main) (main)))))
 
-(<- $import '(:core :os)
+(<- $import '(:core)
     $read-table nil
-    $stdin (.init (.new FileStream) (OS.fp 0))
-    $stdout (.init (.new FileStream) (OS.fp 1))
-    $external-encoding (if (eq? OS.name :windows) :SJIS :UTF-8)
+    $stdin (.init (.new FileStream) (fp 0))
+    $stdout (.init (.new FileStream) (fp 1))
+    $external-encoding (if (eq? $host-name :windows) :SJIS :UTF-8)
     $paren-home (.parent (.resolve (Path.getcwd) core.p)))
 
 (reader-macro [ (stream)

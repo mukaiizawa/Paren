@@ -16,7 +16,7 @@
 #include "pf.h"
 #include "ip.h"
 
-DEFUN(os_fp)
+DEFUN(fp)
 {
   int fd;
   FILE *fp;
@@ -39,7 +39,7 @@ static char *mode_table[] = {
   "rb+"
 };
 
-DEFUN(os_fopen)
+DEFUN(fopen)
 {
   char *fn;
   int mode;
@@ -53,7 +53,7 @@ DEFUN(os_fopen)
   return TRUE;
 }
 
-DEFUN(os_fgetc)
+DEFUN(fgetc)
 {
   int ch;
   FILE *fp;
@@ -68,7 +68,7 @@ DEFUN(os_fgetc)
   return TRUE;
 }
 
-DEFUN(os_fputc)
+DEFUN(fputc)
 {
   int byte;
   FILE *fp;
@@ -80,7 +80,7 @@ DEFUN(os_fputc)
   return TRUE;
 }
 
-DEFUN(os_fgets)
+DEFUN(fgets)
 {
   char *s;
   FILE *fp;
@@ -98,7 +98,7 @@ DEFUN(os_fgets)
   return TRUE;
 }
 
-DEFUN(os_fread)
+DEFUN(fread)
 {
   object o;
   int from, size;
@@ -118,7 +118,7 @@ DEFUN(os_fread)
   return TRUE;
 }
 
-DEFUN(os_fwrite)
+DEFUN(fwrite)
 {
   object o;
   int from, size;
@@ -138,7 +138,7 @@ DEFUN(os_fwrite)
   return TRUE;
 }
 
-DEFUN(os_fseek)
+DEFUN(fseek)
 {
   int off;
   FILE *fp;
@@ -150,7 +150,7 @@ DEFUN(os_fseek)
   return fseek(fp, off, SEEK_SET) == 0;
 }
 
-DEFUN(os_ftell)
+DEFUN(ftell)
 {
   int pos;
   FILE *fp;
@@ -161,7 +161,7 @@ DEFUN(os_ftell)
   return TRUE;
 }
 
-DEFUN(os_fclose)
+DEFUN(fclose)
 {
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -171,7 +171,7 @@ DEFUN(os_fclose)
   return TRUE;
 }
 
-DEFUN(os_stat)
+DEFUN(stat)
 {
   int type;
   char *fn;
@@ -191,7 +191,7 @@ DEFUN(os_stat)
   return TRUE;
 }
 
-DEFUN(os_utime)
+DEFUN(utime)
 {
   char *fn;
   int64_t tv;
@@ -202,7 +202,7 @@ DEFUN(os_utime)
   return pf_utime(fn, tv);
 }
 
-DEFUN(os_getcwd)
+DEFUN(getcwd)
 {
   char buf[MAX_STR_LEN];
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
@@ -211,7 +211,7 @@ DEFUN(os_getcwd)
   return TRUE;
 }
 
-DEFUN(os_chdir)
+DEFUN(chdir)
 {
   char *fn;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -220,7 +220,7 @@ DEFUN(os_chdir)
   return pf_chdir(fn);
 }
 
-DEFUN(os_readdir)
+DEFUN(readdir)
 {
   char *path;
   struct xbarray dirs;
@@ -233,7 +233,7 @@ DEFUN(os_readdir)
   return TRUE;
 }
 
-DEFUN(os_remove)
+DEFUN(remove)
 {
   char *fn;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -242,7 +242,7 @@ DEFUN(os_remove)
   return pf_remove(fn);
 }
 
-DEFUN(os_mkdir)
+DEFUN(mkdir)
 {
   char *path;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -251,7 +251,7 @@ DEFUN(os_mkdir)
   return pf_mkdir(path);
 }
 
-DEFUN(os_rename)
+DEFUN(rename)
 {
   char *src_dst[2];
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
@@ -260,21 +260,21 @@ DEFUN(os_rename)
   return rename(src_dst[0], src_dst[1]) == 0;
 }
 
-DEFUN(os_time)
+DEFUN(time)
 {
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   *result = gc_new_xint(time(NULL));
   return TRUE;
 }
 
-DEFUN(os_clock)
+DEFUN(clock)
 {
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   *result = gc_new_xfloat((double)clock() / CLOCKS_PER_SEC);
   return TRUE;
 }
 
-DEFUN(os_sleep)
+DEFUN(sleep)
 {
   double t;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -289,7 +289,7 @@ static int daysec(struct tm *t)
   return (t->tm_hour * 60 + t->tm_min) * 60 + t->tm_sec;
 }
 
-DEFUN(os_timediff)
+DEFUN(timediff)
 {
   int off;
   time_t now;
@@ -305,7 +305,7 @@ DEFUN(os_timediff)
   return TRUE;
 }
 
-DEFUN(os_system)
+DEFUN(system)
 {
   char *s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -314,7 +314,7 @@ DEFUN(os_system)
   return TRUE;
 }
 
-DEFUN(os_getenv)
+DEFUN(getenv)
 {
   char *s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -324,7 +324,7 @@ DEFUN(os_getenv)
   return TRUE;
 }
 
-DEFUN(os_putenv)
+DEFUN(putenv)
 {
   char *kv[2];
   if (!bi_argc_range(argc, 2, 2)) return FALSE;

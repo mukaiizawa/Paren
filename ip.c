@@ -513,8 +513,9 @@ static void pop_goto_frame(void)
         break;
     }
   }
+  ip_mark_error("expected labels context");
   set_fp(i);
-  exit1();
+  return;
 }
 
 static void pop_fetch_operator_frame(void)

@@ -191,7 +191,7 @@ static object parse_args(int argc, char *argv[])
 
 static void make_initial_objects(int argc, char *argv[])
 {
-  char *os_name;
+  char *host_name;
   object_nil = symbol_new("nil");
   object_true = symbol_new("true");
   object_toplevel = gc_new_env(object_nil);
@@ -214,17 +214,17 @@ static void make_initial_objects(int argc, char *argv[])
   bind_symbol(symbol_new("$args"), parse_args(argc, argv));
   bind_symbol(symbol_new("core.p"), string_new(core_fn));
 #if WINDOWS_P
-  os_name = "windows";
+  host_name = "windows";
 #elif OS_CODE == OS_LINUX
-  os_name = "linux";
+  host_name = "linux";
 #elif OS_CODE == OS_ANDROID
-  os_name = "android";
+  host_name = "android";
 #elif OS_CODE == OS_MACOSX
-  os_name = "mac";
+  host_name = "mac";
 #else
   xassert(FALSE);
 #endif
-  bind_symbol(symbol_new("OS.name"), keyword_new(os_name));
+  bind_symbol(symbol_new("$host-name"), keyword_new(host_name));
   make_builtin();
 }
 
