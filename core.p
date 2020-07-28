@@ -892,8 +892,8 @@
 
 (function // (x y)
   ; Returns the quotient of the x divided by the y.
-  ; Same as (Math.truncate (/ x y))).
-  (Math.truncate (/ x y)))
+  ; Same as (truncate (/ x y))).
+  (truncate (/ x y)))
 
 (builtin-function mod (x y)
   ; Returns the remainder of dividing x by y.
@@ -1699,7 +1699,7 @@
       (let (mant n exp 8)
         (let (write-mant1
                (lambda ()
-                 (let (upper (// (Math.truncate mant) 100000000))
+                 (let (upper (// (truncate mant) 100000000))
                    (.write-integer self upper)
                    (<- mant (* (- mant (* upper 100000000)) 10))))
                write-fraction

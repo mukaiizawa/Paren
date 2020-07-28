@@ -244,7 +244,7 @@ DEFUN(number_lt)
   return TRUE;
 }
 
-DEFUN(number_floor)
+DEFUN(floor)
 {
   double x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -253,7 +253,7 @@ DEFUN(number_floor)
   return TRUE;
 }
 
-DEFUN(number_ceiling)
+DEFUN(ceiling)
 {
   double x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -262,28 +262,12 @@ DEFUN(number_ceiling)
   return TRUE;
 }
 
-DEFUN(number_truncate)
+DEFUN(truncate)
 {
   double x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_double(argv->cons.car, &x)) return FALSE;
   *result = gc_new_xint(trunc(x));
-  return TRUE;
-}
-
-DEFUN(number_to_integer)
-{
-  double x;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_double(argv->cons.car, &x)) {
-    mark_required_number();
-    return FALSE;
-  }
-  if(!(INT64_MIN <= x && x <= INT64_MAX)) {
-    mark_numeric_over_flow();
-    return FALSE;
-  }
-  *result = gc_new_xint((int64_t)x);
   return TRUE;
 }
 
