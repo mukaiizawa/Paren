@@ -139,6 +139,7 @@ static int identifier_symbol_alpha_p(void)
 {
   switch (next_ch) {
     case '!':
+    case '#':
     case '$':
     case '%':
     case '&':

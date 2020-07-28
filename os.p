@@ -1,15 +1,5 @@
 ; OS module.
 
-(global-symbol OS.name
-  ; Host os.
-  ; Determined by compile-time arguments.
-  ; The values to be set are as follows.
-  ; - :windows
-  ; - :linux
-  ; - :android
-  ; - :mac
-  )
-
 (builtin-function OS.fp (fd)
   (assert (= (&fp $stdin) (OS.fp 0))))
 

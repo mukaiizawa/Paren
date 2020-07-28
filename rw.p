@@ -1,11 +1,11 @@
 ; reserved word
 
-(global-symbol $reserved-words
-  '(special-operator
-     macro
-     function
-     function!
-     builtin-function))
+(<- $reserved-words
+    '(special-operator
+       macro
+       function
+       function!
+       builtin-function))
 
 (function! main ()
   (dolist (reserved-word $reserved-words)

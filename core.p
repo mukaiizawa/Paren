@@ -137,15 +137,6 @@
 
 ; fundamental macro
 
-(macro global-symbol (s :opt v)
-  ; In Paren, explicitly binding symbols to the global environment is rare and bad practice.
-  ; It is the programmer's responsibility to call it in the global environment because it is only macro-expanded into a special operator '<-'.
-  ; By convention, the binding symbol name starts with '$'.
-  ; Macro expansion image is as follows.
-  ;     (global-symbol s v)
-  ;     (<- s v)
-  (if v (list <- s v)))
-
 (macro function! (name args :rest body)
   ; Bind a lambda to a specified symbol name.
   ; Same as function macro except for the following points.
@@ -1432,10 +1423,7 @@
   ; You can read and write files to the corresponding path as needed.
   path)
 
-(global-symbol Path.separator "/"
-  ; Separator of path.
-  ; Always use `/` for the string representation of the path regardless of the host OS.
-  )
+(<- Path.separator "/")
 
 (function Path.of (path-name)
   ; Constructs and returns the path object corresponding to path-name.
@@ -1905,6 +1893,10 @@
   (&next! self (.read-char stream))
   (&token! self (.new MemoryStream)))
 
+(method AheadReader .stream ()
+  ; Returns the stream held by this object.
+  (&stream self))
+
 (method AheadReader .next ()
   ; Returns a pre-read character.
   (&next self))
@@ -2043,7 +2035,7 @@
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (|| (bytes-index "!$%&*./<=>?^[]_{|}" (.next self))
+  (|| (bytes-index "!#$%&*./<=>?^[]_{|}" (.next self))
       (.alpha? self)))
 
 (method ParenLexer .identifier-sign? ()
@@ -2103,6 +2095,7 @@
         (string-eq? next "\"") (list :atom (.lex-string self))
         (string-eq? next ":") (list :atom (.lex-keyword self))
         (string-eq? next ";") (.lex-comment self)
+        (string-eq? next "#") (begin (.skip self) (list :read-macro (bytes->symbol (.skip self))))
         (|| (string-eq? next "+")
             (string-eq? next "-")) (list :atom (.lex-sign self))
         (.digit? self) (list :atom (.skip-number self))
@@ -2125,6 +2118,7 @@
     :quote (list quote (.parse self))
     :open-paren (.parse-list self)
     :atom (&token self)
+    :read-macro ((assoc $read-table (&token self)) (.stream (&lexer self)))
     :default (error "syntax error")))
 
 (method ParenParser .parse-list ()
@@ -2135,6 +2129,16 @@
 
 (method ParenParser .parse ()
   (.parse-s (.scan self)))
+
+(macro reader-macro (next params :rest body)
+  ; Define a read macro start with `# + next`.
+  ; next must be a one-character ascii string.
+  ; When the reserved character string is read, the processing moves to the specified function f and the evaluation result is expanded.
+  ; Returns nil.
+  (with-gensyms (f)
+    (list let (list f (cons lambda (cons params body)))
+          (list 'push! '$read-table f)
+          (list 'push! '$read-table (list quote next)))))
 
 (function read-byte (:opt stream)
   ; Read 1byte from the specified stream.
@@ -2261,37 +2265,18 @@
         (load script)
         (if (bound? 'main) (main)))))
 
-; global symbol
+(<- $import '(:core :os)
+    $read-table nil
+    $stdin (.init (.new FileStream) (OS.fp 0))
+    $stdout (.init (.new FileStream) (OS.fp 1))
+    $external-encoding (if (eq? OS.name :windows) :SJIS :UTF-8)
+    $paren-home (.parent (.resolve (Path.getcwd) core.p)))
 
-(global-symbol $import '(:core :os)
-  ; List of imported modules.
-  ; Referenced and updated when calling the import function.
-  ; Do not update directly.
-  )
-
-(global-symbol $args
-  ; List of command line arguments.
-  )
-
-(global-symbol $stdin (.init (.new FileStream) (OS.fp 0))
-  ; File stream object holding the standard input.
-  )
-
-(global-symbol $stdout (.init (.new FileStream) (OS.fp 1))
-  ; File stream object holding the standard ouput.
-  )
-
-(global-symbol $external-encoding (if (eq? OS.name :windows) :SJIS :UTF-8)
-  ; Input / Output encoding.
-  ; Currently supported encodings are as follows.
-  ; - :UTF-8
-  ; Currently dummy encodings are as follows.
-  ; - :CP932
-  ; A dummy encoding is an encoding for which character handling is not properly implemented.
-  )
-
-(global-symbol $paren-home (.parent (.resolve (Path.getcwd) core.p))
-  ; Paren directory. Holds system files.
-  )
+(reader-macro [ (stream)
+  (let (a (.new Array) expr nil)
+    (while (neq? (<- expr (read stream)) '])
+        (.add a expr))
+  (write (read stream))
+    (.to-a a)))
 
 (boot)

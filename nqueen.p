@@ -3,7 +3,7 @@
 (import :point)
 (import :matrix)
 
-(global-symbol $board-size 8)
+(<- $board-size 8)
 
 (function show (board)
   (domatrix (p board)
