@@ -123,7 +123,7 @@ static char *symbol_name_map[] = {
   "array_put", "array-at!",
   // bytes
   "bytes_at", "bytes-at",
-  "bytes_eq_p", "bytes-eq?",
+  "bytes_eq_p", "bytes=",
   "bytes_concat", "bytes-concat",
   "bytes_copy", "bytes-copy",
   "bytes_index", "bytes-index",

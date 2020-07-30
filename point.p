@@ -32,4 +32,4 @@
     (assert (! (.eq p (Point.of 2 4))))
     (assert (! (.eq p (Point.of 3 5))))
     (assert (! (.eq p (Point.of 2 5))))
-    (assert (string-eq? (.to-s p) "(3, 4)"))))
+    (assert (string= (.to-s p) "(3, 4)"))))

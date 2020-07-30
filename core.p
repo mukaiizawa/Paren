@@ -374,8 +374,7 @@
 (builtin-function address (x)
   ; Returns address of the specified x.
   ; The addresses of symbols or keywords with the same name are always equal.
-  (assert (= (address 'x) (address 'x)))
-  (assert (! (= (address 'x) (address 'y)))))
+  (assert (= (address 'x) (address 'x))))
 
 (builtin-function ! (x)
   ; Returns whether the x is nil.
@@ -397,6 +396,16 @@
   ; Returns whether the x is an atom.
   ; It means x is cons or not.
   (! (cons? x)))
+
+(builtin-function function? (x)
+  ; Returns whether the x is a lambda.
+  (assert (function? (lambda (x) x)))
+  (assert (! (function? begin0))))
+
+(builtin-function macro? (x)
+  ; Returns whether the x is a macro.
+  (assert (macro? begin0))
+  (assert (! (macro? begin))))
 
 ; symbol & keyword
 
@@ -950,9 +959,13 @@
   (assert (string? "aaa"))
   (assert (! (string? (bytes 1)))))
 
-(function string-eq? (x y)
-  ; Same as (bytes-eq? x y).
-  (bytes-eq? x y))
+(function string= (x y)
+  ; Same as (bytes= x y).
+  (bytes= x y))
+
+(function string/= (x y)
+  ; Same as (bytes/= x y).
+  (bytes/= x y))
 
 (function string->code (s)
   ; Returns the code point of string s.
@@ -1011,10 +1024,10 @@
     (if (< (- slen start) 0) (error "illegal start")
         (= plen 0) (return 0))
     (for (i start end (- slen plen) p0 (array-at pa 0)) (<= i end) (<- i (++ i))
-      (when (bytes-eq? (array-at sa i) p0)
+      (when (bytes= (array-at sa i) p0)
         (if (= plen 1) (return i))
         (let (si (++ i) pi 1)
-          (while (bytes-eq? (array-at sa si) (array-at pa pi))
+          (while (bytes= (array-at sa si) (array-at pa pi))
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
@@ -1046,11 +1059,15 @@
   (assert (! (bytes? "foo")))
   (assert (! (bytes? (array 3)))))
 
-(builtin-function bytes-eq? (x y)
+(builtin-function bytes= (x y)
   ; Returns whether x arguments are the same bytes.
   ; This function also accepts symbols, keywords and strings.
-  (assert (bytes-eq? :foo :foo))
-  (assert (! (bytes-eq? "foo" "bar"))))
+  (assert (bytes= :foo :foo))
+  (assert (! (bytes= "foo" "bar"))))
+
+(function bytes/= (x y)
+  ; Same as (! (bytes= x y)).
+  (! (bytes= x y)))
 
 (builtin-function ->bytes (x :opt i size)
   ; Returns bytes corresponding to x.
@@ -1068,9 +1085,9 @@
 
 (builtin-function bytes->string (x :opt i size)
   ; Same as (->bytes x) except returns string.
-  (assert (bytes-eq? (bytes->string 'foo) "foo"))
-  (assert (bytes-eq? (bytes->string 'foo 1) "oo"))
-  (assert (bytes-eq? (bytes->string 'foo 1 1) "o")))
+  (assert (bytes= (bytes->string 'foo) "foo"))
+  (assert (bytes= (bytes->string 'foo 1) "oo"))
+  (assert (bytes= (bytes->string 'foo 1 1) "o")))
 
 (builtin-function bytes->string! (x)
   ; Same as (bytes->string x), except that it destructively modifies the x.
@@ -1078,7 +1095,7 @@
   ; This function only allows bytes.
   (assert (let (x (bytes 1))
             (bytes-at! x 0 0x01)
-            (bytes-eq? (bytes->string! x) "\x01"))))
+            (bytes= (bytes->string! x) "\x01"))))
 
 (builtin-function bytes-at (x i)
   ; Returns the i-th element of the bytes x.
@@ -1092,7 +1109,7 @@
   ; This function also accepts strings.
   (assert (let (s "foo")
             (assert (= (bytes-at! s 0 0x30) 0x30))
-            (bytes-eq? s "0oo"))))
+            (bytes= s "0oo"))))
 
 (builtin-function bytes-length (x)
   ; Returns the size of the bytes x.
@@ -1125,7 +1142,7 @@
   ; Even if the areas to be copied overlap, it operates correctly.
   ; This function also accepts strings.
   (assert (let (s "foo" d "bar")
-            (bytes-eq? (bytes-copy s 1 d 1 2) "boo"))))
+            (bytes= (bytes-copy s 1 d 1 2) "boo"))))
 
 (function bytes-slice (x start :opt end)
   ; Returns the partial byte sequence starting from start.
@@ -1140,7 +1157,7 @@
 (builtin-function bytes-concat (x :rest args)
   ; Returns the result of combining each args with x.
   ; This function also accepts symbols, keywords and strings.
-  (assert (bytes-eq? (bytes-concat "0" "1" "2") "012")))
+  (assert (bytes= (bytes-concat "0" "1" "2") "012")))
 
 ; array
 
@@ -1568,21 +1585,21 @@
   ; Two or more consecutive `/`s or trailing `/`s are ignored.
   ;     (Path.of "foo//bar/") <=> ("foo" "bar")
   (let (c nil path nil first-letter (string-at path-name 0) root? nil)
-    (if (string-eq? first-letter "~")
+    (if (string= first-letter "~")
         (<- path-name (bytes-concat
                         (if (eq? $host-name :windows)
                             (bytes-concat (getenv "HOMEDRIVE") (getenv "HOMEPATH"))
                             (getenv "HOME"))
                         Path.separator path-name))
-        (string-eq? first-letter Path.separator)
+        (string= first-letter Path.separator)
         (<- root? true))
     (<- path (remove-if (lambda (file-name)
-                       (|| (string-eq? file-name "") (string-eq? file-name "~")))
+                       (|| (string= file-name "") (string= file-name "~")))
                      (string->list
                        (with-memory-stream (out)
                          (with-memory-stream (in path-name)
                            (while (<- c (read-char in))
-                             (if (string-eq? c "\\") (write-bytes Path.separator out)
+                             (if (string= c "\\") (write-bytes Path.separator out)
                                  (write-bytes c out)))))
                        Path.separator)))
     (if root? (<- path (cons Path.separator path)))
@@ -1635,7 +1652,7 @@
     (if (eq? $host-name :windows)
         (&& (= (bytes-length first-file) 2)
             (bytes-index first-file ":" 1 2))
-        (string-eq? first-file Path.separator))))
+        (string= first-file Path.separator))))
 
 (method Path .relative? ()
   ; Same as (! (.absolute? self))
@@ -1643,7 +1660,7 @@
 
 (method Path .to-s ()
   (reduce (lambda (acc rest)
-            (bytes-concat (if (string-eq? acc Path.separator) "" acc) Path.separator rest))
+            (bytes-concat (if (string= acc Path.separator) "" acc) Path.separator rest))
           (&path self)))
 
 (method Path .open (mode)
@@ -2032,28 +2049,27 @@
           (&next! self (.read-char (&stream self)))))
 
 (method AheadReader .skip-escape ()
-  (if (string-eq? (&next self) "\\")
+  (if (string= (&next self) "\\")
       (begin (.skip self)
              (let (c (.skip self))
-               (if (string-eq? c "a") 0x07
-                   (string-eq? c "b") 0x08
-                   (string-eq? c "e") 0x1b
-                   (string-eq? c "f") 0x0c
-                   (string-eq? c "n") 0x0a
-                   (string-eq? c "r") 0x0d
-                   (string-eq? c "t") 0x09
-                   (string-eq? c "v") 0x0b
-                   (string-eq? c "x") (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16))
+               (if (string= c "a") 0x07
+                   (string= c "b") 0x08
+                   (string= c "e") 0x1b
+                   (string= c "f") 0x0c
+                   (string= c "n") 0x0a
+                   (string= c "r") 0x0d
+                   (string= c "t") 0x09
+                   (string= c "v") 0x0b
+                   (string= c "x") (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16))
                    c)))
       (.skip self)))
 
 (method AheadReader .ensured-skip (c)
-  (if (string-eq? (.skip self) c) c
+  (if (string= (.skip self) c) c
       (error "missing token")))
 
 (method AheadReader .skip-line ()
-  (while (&& (! (.eof? self))
-             (! (string-eq? (&next self) "\n")))
+  (while (&& (! (.eof? self)) (string/= (&next self) "\n"))
     (.skip self))
   self)
 
@@ -2110,8 +2126,8 @@
 
 (method AheadReader .skip-sign ()
   (let (next (&next self))
-    (if (string-eq? next "+") (begin (.skip self) nil)
-        (string-eq? next "-") (begin (.skip self) true)
+    (if (string= next "+") (begin (.skip self) nil)
+        (string= next "-") (begin (.skip self) true)
         nil)))
 
 (method AheadReader .skip-digit (:opt radix)
@@ -2131,14 +2147,14 @@
 
 (method AheadReader .skip-unsigned-number ()
   (let (val (.skip-unsigned-integer self))
-    (if (string-eq? (&next self) "x")
+    (if (string= (&next self) "x")
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
           (.skip self)
           (if (! (.numeric-alpha? self)) (error "missing lower or digits")
               (while (.numeric-alpha? self)
                 (<- val (+ (* val radix) (.skip-digit self 16))))))
-        (string-eq? (&next self) ".")
+        (string= (&next self) ".")
         (let (factor 0.1)
           (.skip self)
           (while (.digit? self)
@@ -2192,7 +2208,7 @@
   (let (sign (.get self))
     (if (.digit? self)
         (let (val (.skip-number self))
-          (if (string-eq? sign "-") (- val) val))
+          (if (string= sign "-") (- val) val))
         (bytes->symbol (.token (.get-identifier-sign self))))))
 
 (method ParenLexer .lex-symbol ()
@@ -2204,7 +2220,7 @@
 
 (method ParenLexer .lex-string ()
   (.skip self)
-  (while (! (string-eq? (&next self) "\""))
+  (while (string/= (&next self) "\"")
     (.get-escape self))
   (.ensured-skip self "\"")
   (.token self))
@@ -2213,15 +2229,15 @@
   (.skip-space (.reset self))
   (let (next (&next self))
     (if (.eof? self) '(:EOF)
-        (string-eq? next "(") (begin (.skip self) '(:open-paren))
-        (string-eq? next ")") (begin (.skip self) '(:close-paren))
-        (string-eq? next "'") (begin (.skip self) '(:quote))
-        (string-eq? next "\"") (list :atom (.lex-string self))
-        (string-eq? next ":") (list :atom (.lex-keyword self))
-        (string-eq? next ";") (.lex-comment self)
-        (string-eq? next "#") (begin (.skip self) (list :read-macro (bytes->symbol (.next self))))
-        (|| (string-eq? next "+")
-            (string-eq? next "-")) (list :atom (.lex-sign self))
+        (string= next "(") (begin (.skip self) '(:open-paren))
+        (string= next ")") (begin (.skip self) '(:close-paren))
+        (string= next "'") (begin (.skip self) '(:quote))
+        (string= next "\"") (list :atom (.lex-string self))
+        (string= next ":") (list :atom (.lex-keyword self))
+        (string= next ";") (.lex-comment self)
+        (string= next "#") (begin (.skip self) (list :read-macro (bytes->symbol (.next self))))
+        (|| (string= next "+")
+            (string= next "-")) (list :atom (.lex-sign self))
         (.digit? self) (list :atom (.skip-number self))
         (list :atom (.lex-symbol self)))))
 
@@ -2401,7 +2417,7 @@
   ; Array elements are not evaluated.
   (let (lexer (&lexer reader) a (.new Array) expr nil)
     (.skip lexer)
-    (while (! (string-eq? (.next lexer) "]")) (.get lexer))
+    (while (string/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (with-memory-stream (in (.token lexer))
       (while (<- expr (read in))
@@ -2413,7 +2429,7 @@
   (let (lexer (&lexer reader) expr nil)
     (.skip lexer)
     (.ensured-skip lexer "[")
-    (while (! (string-eq? (.next lexer) "]")) (.get lexer))
+    (while (string/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (->bytes
       (with-memory-stream (out)
