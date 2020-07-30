@@ -1009,7 +1009,7 @@
 
 (function string-at (s i)
   ; Returns the i-th character of string s.
-  (array-at (string->array s) i))
+  ([] (string->array s) i))
 
 (function string-length (s)
   ; Returns the number of characters in string s.
@@ -1023,11 +1023,11 @@
               pa (string->array pat) plen (array-length pa))
     (if (< (- slen start) 0) (error "illegal start")
         (= plen 0) (return 0))
-    (for (i start end (- slen plen) p0 (array-at pa 0)) (<= i end) (<- i (++ i))
-      (when (bytes= (array-at sa i) p0)
+    (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (<- i (++ i))
+      (when (bytes= ([] sa i) p0)
         (if (= plen 1) (return i))
         (let (si (++ i) pi 1)
-          (while (bytes= (array-at sa si) (array-at pa pi))
+          (while (bytes= ([] sa si) ([] pa pi))
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
@@ -1094,22 +1094,8 @@
   ; Generally faster than bytes->string.
   ; This function only allows bytes.
   (assert (let (x (bytes 1))
-            (bytes-at! x 0 0x01)
+            ([]<- x 0 0x01)
             (bytes= (bytes->string! x) "\x01"))))
-
-(builtin-function bytes-at (x i)
-  ; Returns the i-th element of the bytes x.
-  ; This function also accepts symbols, keywords and strings.
-  (assert (= (bytes-at "012" 0) 0x30))
-  (assert (= (bytes-at "012" 1) 0x31)))
-
-(builtin-function bytes-at! (x i v)
-  ; Update the i-th element of bytes x to v.
-  ; Returns v.
-  ; This function also accepts strings.
-  (assert (let (s "foo")
-            (assert (= (bytes-at! s 0 0x30) 0x30))
-            (bytes= s "0oo"))))
 
 (builtin-function bytes-length (x)
   ; Returns the size of the bytes x.
@@ -1168,19 +1154,24 @@
   ; Returns array as a list.
   (let (acc nil)
     (dotimes (i (array-length x))
-      (push! acc (array-at x i)))
+      (push! acc ([] x i)))
     (reverse! acc)))
 
-(builtin-function array-at (x i)
+(builtin-function [] (x i)
   ; Returns the i-th element of the array x.
-  (assert (nil? (array-at (array 1) 0))))
+  ; This function can also be applied to bytes.
+  (assert (nil? ([] (array 1) 0)))
+  (assert (= ([] (bytes 1) 0) 0)))
 
-(builtin-function array-at! (x i v)
+(builtin-function []<- (x i v)
   ; Update the i-th element of array x to v.
   ; Returns v.
-  (assert (let (a (array 1))
-            (&& (array-at! a 0 true)
-                (array-at a 0)))))
+  ; This function can also be applied to bytes.
+  (assert (let (a (array 1) b (bytes 1))
+            (&& ([]<- a 0 true)
+                ([] a 0)
+                ([]<- b 0 0xff)
+                (= ([] b 0) 0xff)))))
 
 (builtin-function array-length (x)
   ; Returns the length of the specified array x.
@@ -1192,12 +1183,12 @@
   ; Even if the areas to be copied overlap, it operates correctly.
   ; This function also accepts strings.
   (assert (let (s (array 1) d (array 2))
-            (array-at! s 0 1)
-            (array-at! d 0 :zero)
-            (array-at! d 1 :one)
-            (&& (= (array-at (array-copy s 0 d 1 1) 1) 1)
-                (eq? (array-at d 0) :zero)
-                (= (array-at d 1) 1)))))
+            ([]<- s 0 1)
+            ([]<- d 0 :zero)
+            ([]<- d 1 :one)
+            (&& (= ([] (array-copy s 0 d 1 1) 1) 1)
+                (eq? ([] d 0) :zero)
+                (= ([] d 1) 1)))))
 
 (function array-slice (x start :opt end)
   ; Returns a new array object selected from start to end (end not included) where start and end represent the index of items in that array x.
@@ -1523,11 +1514,11 @@
   (&size self))
 
 (method Array .at (i)
-  (if (< (&size self) i) (array-at (&elt self) i)
+  (if (< (&size self) i) ([] (&elt self) i)
       (error "illegal argument " (list i (&size self)))))
 
 (method Array .at! (i val)
-  (if (< (&size self) i) (array-at! (&elt self) i val)
+  (if (< (&size self) i) ([]<- (&elt self) i val)
       (error "illegal argument " (list i (&size self)))))
 
 (method Array .reserve (size)
@@ -1543,7 +1534,7 @@
   (let (i (&size self))
     (.reserve self 1)
     (&size! self (++ i))
-    (array-at! (&elt self) i val))
+    ([]<- (&elt self) i val))
   self)
 
 (method Array .to-a ()
@@ -1684,13 +1675,13 @@
   (let (stat-array (stat (.to-s self)))
     (if stat-array stat-array
         (begin (<- stat-array (array 3))
-               (array-at! stat-array 0 1)
-               (array-at! stat-array 1 0)
+               ([]<- stat-array 0 1)
+               ([]<- stat-array 1 0)
                stat-array))))
 
 (method Path .mode ()
   ; Returns whether this object is a regular file.
-  (array-at (.stat self) 0))
+  ([] (.stat self) 0))
 
 (method Path .none? ()
   ; Returns whether this object is not exits.
@@ -1718,11 +1709,11 @@
 
 (method Path .size ()
   ; Returns the size of this object.
-  (array-at (.stat self) 1))
+  ([] (.stat self) 1))
 
 (method Path .mtime ()
   ; Returns the last update time of this object.
-  (array-at (.stat self) 2))
+  ([] (.stat self) 2))
 
 (method Path .mtime! (time)
   ; Update the last update time of this object.
@@ -1788,16 +1779,16 @@
                 (< b1 0xfd) (<- b2 (.read-byte self) size 2)
                 (.illegal-character self b1)))
     (let (c (bytes size))
-      (if (= size 1) (bytes-at! c 0 b1)
-          (= size 2) (begin (bytes-at! c 0 b1)
-                            (bytes-at! c 1 b2))
-          (= size 3) (begin (bytes-at! c 0 b1)
-                            (bytes-at! c 1 b2)
-                            (bytes-at! c 2 b3))
-          (= size 4) (begin (bytes-at! c 0 b1)
-                            (bytes-at! c 1 b2)
-                            (bytes-at! c 2 b3)
-                            (bytes-at! c 3 b4)))
+      (if (= size 1) ([]<- c 0 b1)
+          (= size 2) (begin ([]<- c 0 b1)
+                            ([]<- c 1 b2))
+          (= size 3) (begin ([]<- c 0 b1)
+                            ([]<- c 1 b2)
+                            ([]<- c 2 b3))
+          (= size 4) (begin ([]<- c 0 b1)
+                            ([]<- c 1 b2)
+                            ([]<- c 2 b3)
+                            ([]<- c 3 b4)))
       (bytes->string! c))))
 
 (method Stream .read ()
@@ -1896,12 +1887,12 @@
              (dotimes (i (bytes-length x))
                (if (/= i 0) (.write-byte self 0x20))
                (.write-bytes self "0x")
-               (.write-integer self (bytes-at x i) :radix 16))
+               (.write-integer self ([] x i) :radix 16))
              (.write-byte self 0x5d))
       (array? x)
       (begin (.write-bytes self "#[")
              (dotimes (i (array-length x))
-               (.write self (array-at x i) :start (&& (/= i 0) " ") :end ""))
+               (.write self ([] x i) :start (&& (/= i 0) " ") :end ""))
              (.write-byte self 0x5d))
       (|| (macro? x)
           (function? x))
@@ -1941,7 +1932,7 @@
 (method MemoryStream .read-byte ()
   (let (rdpos (&rdpos self))
     (if (= rdpos (&wrpos self)) -1
-        (begin0 (bytes-at (&buf self) rdpos)
+        (begin0 ([] (&buf self) rdpos)
                 (&rdpos! self (++ rdpos))))))
 
 (method MemoryStream .read-bytes (buf from size)
@@ -1953,7 +1944,7 @@
 (method MemoryStream .write-byte (byte)
   (let (wrpos (&wrpos self))
     (.reserve self 1)
-    (bytes-at! (&buf self) wrpos byte)
+    ([]<- (&buf self) wrpos byte)
     (&wrpos! self (++ wrpos))))
 
 (method MemoryStream .write-bytes (bytes :opt from size)

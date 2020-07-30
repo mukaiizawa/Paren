@@ -19,6 +19,81 @@ DEFUN(array_p)
   return TRUE;
 }
 
+static int bytes_at(object o, object argv, object *result)
+{
+  int i;
+  if (!bi_sint(argv->cons.cdr->cons.car, &i)) return FALSE;
+  if (i < 0 || i >= o->bytes.size) return FALSE;
+  *result = sint(LC(o->bytes.elt + i));
+  return TRUE;
+}
+
+static int array_at(object o, object argv, object *result)
+{
+  int i;
+  if (!bi_sint(argv->cons.cdr->cons.car, &i)) return FALSE;
+  if (i < 0 || i >= o->array.size) return FALSE;
+  *result = o->array.elt[i];
+  return TRUE;
+}
+
+DEFUN(array_at)
+{
+  object o;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  o = argv->cons.car;
+  switch (object_type(o)) {
+    case BYTES:
+    case STRING:
+    case SYMBOL:
+    case KEYWORD:
+      return bytes_at(o, argv, result);
+    case ARRAY:
+      return array_at(o, argv, result);
+    default:
+      return FALSE;
+  }
+}
+
+static int bytes_put(object o, object argv, object *result)
+{
+  int i, byte;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
+  if (i < 0 || i >= o->bytes.size) return FALSE;
+  if (!bi_sint((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
+  if (!byte_p(byte)) return FALSE;
+  SC(o->bytes.elt + i, byte);
+  return TRUE;
+}
+
+static int array_put(object o, object argv, object *result)
+{
+  int i;
+  if (!bi_arg_type(argv->cons.car, ARRAY, &o)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
+  if (i < 0 || i >= o->array.size) return FALSE;
+  *result = o->array.elt[i] = argv->cons.cdr->cons.car;
+  return TRUE;
+}
+
+DEFUN(array_put)
+{
+  object o;
+  if (!bi_argc_range(argc, 3, 3)) return FALSE;
+  o = argv->cons.car;
+  switch (object_type(o)) {
+    case BYTES:
+    case STRING:
+    case SYMBOL:
+    case KEYWORD:
+      return bytes_put(o, argv, result);
+    case ARRAY:
+      return array_put(o, argv, result);
+    default:
+      return FALSE;
+  }
+}
+
 DEFUN(array_new)
 {
   int size;
@@ -34,30 +109,6 @@ DEFUN(array_length)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_arg_type(argv->cons.car, ARRAY, &o)) return FALSE;
   *result = gc_new_xint(o->array.size);
-  return TRUE;
-}
-
-DEFUN(array_at)
-{
-  object o;
-  int i;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, ARRAY, &o)) return FALSE;
-  if (!bi_sint(argv->cons.cdr->cons.car, &i)) return FALSE;
-  if (i < 0 || i >= o->array.size) return FALSE;
-  *result = o->array.elt[i];
-  return TRUE;
-}
-
-DEFUN(array_put)
-{
-  object o;
-  int i;
-  if (!bi_argc_range(argc, 3, 3)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, ARRAY, &o)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
-  if (i < 0 || i >= o->array.size) return FALSE;
-  *result = o->array.elt[i] = argv->cons.cdr->cons.car;
   return TRUE;
 }
 

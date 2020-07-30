@@ -95,10 +95,10 @@
 
 (function Regex.compile (expr)
   (let (r (.new Regex) s 0 e (bytes-length expr) anchored? nil)
-    (when (= (bytes-at expr 0) 0x5e)
+    (when (= ([] expr 0) 0x5e)
       (&anchored-start?! r true)
       (<- s (++ s) anchored? true))
-    (when (= (bytes-at expr (-- e)) 0x24)
+    (when (= ([] expr (-- e)) 0x24)
       (&anchored-end?! r true)
       (<- e (-- e) anchored? true))
     (if anchored? (<- expr (bytes->string! (bytes-slice expr s e))))
@@ -137,7 +137,7 @@
           (<- n (++ n))))))
 
 (method Regex .text-at (i)
-  (array-at (&text self) i))
+  ([] (&text self) i))
 
 (method Regex .text-length ()
   (array-length (&text self)))

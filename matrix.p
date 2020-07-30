@@ -25,10 +25,10 @@
       (+ (.x p) (* (.y p) (&width self)))))
 
 (method Matrix .at (p)
-  (array-at (&contents self) (.index self p)))
+  ([] (&contents self) (.index self p)))
 
 (method Matrix .at! (p v)
-  (array-at! (&contents self) (.index self p) v)
+  ([]<- (&contents self) (.index self p) v)
   self)
 
 (macro domatrix ((p m) :rest body)

@@ -91,32 +91,6 @@ DEFUN(xbytes_to_string)
   return TRUE;
 }
 
-DEFUN(bytes_at)
-{
-  object o;
-  int i;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
-  if (!bi_sint(argv->cons.cdr->cons.car, &i)) return FALSE;
-  if (i < 0 || i >= o->bytes.size) return FALSE;
-  *result = sint(LC(o->bytes.elt + i));
-  return TRUE;
-}
-
-DEFUN(bytes_put)
-{
-  int i, byte;
-  object o;
-  if (!bi_argc_range(argc, 3, 3)) return FALSE;
-  if (!bi_arg_mutable_bytes(argv->cons.car, &o)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
-  if (i < 0 || i >= o->bytes.size) return FALSE;
-  if (!bi_sint((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
-  if (!byte_p(byte)) return FALSE;
-  SC(o->bytes.elt + i, byte);
-  return TRUE;
-}
-
 DEFUN(bytes_length)
 {
   object o;
