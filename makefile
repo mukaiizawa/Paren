@@ -53,6 +53,9 @@ $(paren): paren.o xc.a
 prof:
 	gprof $(paren) > prof.wk
 
+rw.vim:
+	paren rw.p | sed 's/|/\\|/g' | sed 's/^/syn keyword ParenBuiltin /' > rw.wk
+
 clean:
 	rm -f *.o *.out *.a *.wk $(paren)
 
