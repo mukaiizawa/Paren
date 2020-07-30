@@ -136,7 +136,6 @@ static char *symbol_name_map[] = {
   "bytes_to_string", "bytes->string",
   "xbytes_to_string", "bytes->string!",
   "bytes_to_symbol", "bytes->symbol",
-  "bytes_unmatch_index", "bytes-unmatch-index",
   "keyword_p", "keyword?",
   "string_p", "string?",
   "symbol_p", "symbol?",

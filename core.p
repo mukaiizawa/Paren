@@ -1129,13 +1129,6 @@
   (assert (= (bytes-index "012" 0x31 0 3) 1))
   (assert (= (bytes-index "012" "12" 0 3) 1)))
 
-(builtin-function bytes-unmatch-index (x xi y yi size)
-  ; Returns the first different position of that partial bytes of x and partial bytes y which size from xi and size from yi.
-  ; If the results of size byte comparison are the same, returns nil.
-  ; This function also accepts symbols, keywords and strings.
-  (assert (= (bytes-unmatch-index "012" 0 "023" 0 3) 1))
-  (assert (nil? (bytes-unmatch-index "012" 0 "012" 0 3))))
-
 (builtin-function bytes-copy (src src-i dst dst-i size)
   ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
   ; Returns dst.
