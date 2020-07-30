@@ -1793,7 +1793,7 @@
 (method Stream .read ()
   ; Read expression from the specified stream.
   ; Returns nil if eof reached.
-  (.parse (.init (.new ParenParser) self)))
+  (.read (.init (.new ParenReader) self)))
 
 (method Stream .read-line ()
   ; Read line.
@@ -1960,6 +1960,7 @@
   (&rdpos self))
 
 (method MemoryStream .to-s ()
+  ; Returns the contents written to the stream as a string.
   (let (size (&wrpos self))
     (if (= size 0) ""
         (bytes->string (&buf self) 0 size))))
@@ -2218,50 +2219,50 @@
         (string-eq? next "\"") (list :atom (.lex-string self))
         (string-eq? next ":") (list :atom (.lex-keyword self))
         (string-eq? next ";") (.lex-comment self)
-        (string-eq? next "#") (begin (.skip self) (list :read-macro (bytes->symbol (.skip self))))
+        (string-eq? next "#") (begin (.skip self) (list :read-macro (bytes->symbol (.next self))))
         (|| (string-eq? next "+")
             (string-eq? next "-")) (list :atom (.lex-sign self))
         (.digit? self) (list :atom (.skip-number self))
         (list :atom (.lex-symbol self)))))
 
-(class ParenParser ()
+(class ParenReader ()
   lexer token token-type)
 
-(method ParenParser .init (stream)
+(method ParenReader .init (stream)
   (&lexer! self (.init (.new ParenLexer) stream)))
 
-(method ParenParser .scan ()
+(method ParenReader .scan ()
   (let (x (.lex (&lexer self)))
     (&token-type! self (car x))
     (&token! self (cadr x))))
 
-(method ParenParser .parse-s ()
+(method ParenReader .parse ()
   (switch (&token-type self)
     :EOF nil
-    :quote (list quote (.parse self))
+    :quote (list quote (.read self))
     :open-paren (.parse-list self)
     :atom (&token self)
-    :read-macro ((assoc $read-table (&token self)) (.stream (&lexer self)))
+    :read-macro ((assoc $read-table (string->code (&token self))) self)
     :default (error "syntax error")))
 
-(method ParenParser .parse-list ()
+(method ParenReader .parse-list ()
   (.scan self)
   (if (eq? (&token-type self) :close-paren) nil
       (eq? (&token-type self) :EOF) (error "missing close-paren")
-      (cons (.parse-s self) (.parse-list self))))
+      (cons (.parse self) (.parse-list self))))
 
-(method ParenParser .parse ()
-  (.parse-s (.scan self)))
+(method ParenReader .read ()
+  (.parse (.scan self)))
 
 (macro reader-macro (next params :rest body)
-  ; Define a read macro start with `# + next`.
-  ; next must be a one-character ascii string.
+  ; Define a reader macro starting with `# + next`.
+  ; next must be a single character string.
   ; When the reserved character string is read, the processing moves to the specified function f and the evaluation result is expanded.
   ; Returns nil.
   (with-gensyms (f)
     (list let (list f (cons lambda (cons params body)))
           (list 'push! '$read-table f)
-          (list 'push! '$read-table (list quote next)))))
+          (list 'push! '$read-table (list string->code next)))))
 
 (function read-byte (:opt stream)
   ; Read 1byte from the specified stream.
@@ -2395,11 +2396,30 @@
     $external-encoding (if (eq? $host-name :windows) :SJIS :UTF-8)
     $paren-home (.parent (.resolve (Path.getcwd) core.p)))
 
-(reader-macro [ (stream)
-  (let (a (.new Array) expr nil)
-    (while (neq? (<- expr (read stream)) '])
-        (.add a expr))
-  (write (read stream))
+(reader-macro "[" (reader)
+  ; Define an array literal.
+  ; Array elements are not evaluated.
+  (let (lexer (&lexer reader) a (.new Array) expr nil)
+    (.skip lexer)
+    (while (! (string-eq? (.next lexer) "]")) (.get lexer))
+    (.skip lexer)
+    (with-memory-stream (in (.token lexer))
+      (while (<- expr (read in))
+        (.add a expr)))
     (.to-a a)))
+
+(reader-macro "b" (reader)
+  ; Define an bytes literal.
+  (let (lexer (&lexer reader) expr nil)
+    (.skip lexer)
+    (.ensured-skip lexer "[")
+    (while (! (string-eq? (.next lexer) "]")) (.get lexer))
+    (.skip lexer)
+    (->bytes
+      (with-memory-stream (out)
+        (with-memory-stream (in (.token lexer))
+          (let (expr nil)
+            (while (<- expr (read in))
+              (.write-byte out expr))))))))
 
 (boot)

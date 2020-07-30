@@ -121,6 +121,11 @@ Parenの文法を以下のEBNF表記で定義する。
 
 コメントは`;`から行末までである。
 
+## ソースコード（source code）
+ソースコードは空白で区切られた任意個のS式からなる。
+
+    source_code ::= s_expr ( space s_expr )*
+
 ## S式（s_expr）
 
     s_expr ::= list | atom
