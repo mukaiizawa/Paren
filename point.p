@@ -6,7 +6,7 @@
   x y)
 
 (function Point.of (x y)
-  (&y! (&x! (.new Point) x) y))
+  (&y<- (&x<- (.new Point) x) y))
 
 (method Point .x ()
   ; Returns x coordinate.

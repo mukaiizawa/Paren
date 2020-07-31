@@ -6,9 +6,9 @@
   width height contents)
 
 (method Matrix .init (:key point)
-  (&width! self (.x point))
-  (&height! self (.y point))
-  (&contents! self (array (* (&width self) (&height self)))))
+  (&width<- self (.x point))
+  (&height<- self (.y point))
+  (&contents<- self (array (* (&width self) (&height self)))))
 
 (method Matrix .width ()
   (&width self))

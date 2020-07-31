@@ -32,8 +32,8 @@
   key val n m greedy?)
 
 (method Regex.Elt .init (key :opt val)
-  (&key! self key)
-  (&val! self val))
+  (&key<- self key)
+  (&val<- self val))
 
 (function Regex.parse-any (ar)
   (.skip ar)
@@ -81,7 +81,7 @@
     (when (string= (&next ar) "?")
       (.skip ar)
       (<- greedy? nil))
-    (&greedy?! (&m! (&n! expr n) m) greedy?)))
+    (&greedy?<- (&m<- (&n<- expr n) m) greedy?)))
 
 (function Regex.parse (ar)
   (let (elements nil expr nil c nil)
@@ -96,13 +96,13 @@
 (function Regex.compile (expr)
   (let (r (.new Regex) s 0 e (bytes-length expr) anchored? nil)
     (when (= ([] expr 0) 0x5e)
-      (&anchored-start?! r true)
+      (&anchored-start?<- r true)
       (<- s (++ s) anchored? true))
     (when (= ([] expr (-- e)) 0x24)
-      (&anchored-end?! r true)
+      (&anchored-end?<- r true)
       (<- e (-- e) anchored? true))
     (if anchored? (<- expr (bytes->string! (bytes-slice expr s e))))
-    (&elements! r (Regex.parse (.init (.new AheadReader) expr)))))
+    (&elements<- r (Regex.parse (.init (.new AheadReader) expr)))))
 
 (method Regex .test (elt i)
   (if (< i (.text-length self))
@@ -121,7 +121,7 @@
 
 (method Regex .try (elements i)
   (if (nil? elements)
-      (if (&anchored-end? (&end! self i)) (return (&& (= i (.text-length self))))
+      (if (&anchored-end? (&end<- self i)) (return (&& (= i (.text-length self))))
           (return true)))
   (let (elt (car elements) n (&n elt) m (|| (&m elt) (- (.text-length self) i)) next-i nil)
     (if (&greedy? elt)
@@ -149,11 +149,11 @@
   (&end self))
 
 (method Regex .match? (s :opt start)
-  (&start! self (|| start (<- start 0)))
-  (&text! self (string->array s))
+  (&start<- self (|| start (<- start 0)))
+  (&text<- self (string->array s))
   (if (&anchored-start? self)
       (return (&& (= start 0) (.try self (&elements self) 0))))
-  (for (i start e (.text-length self)) (<= i e) (&start! self (<- i (++ i)))
+  (for (i start e (.text-length self)) (<= i e) (&start<- self (<- i (++ i)))
     (if (.try self (&elements self) i) (return true))))
 
 (function! main ()
