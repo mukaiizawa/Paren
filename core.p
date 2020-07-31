@@ -1802,12 +1802,15 @@
   (.read (.init (.new ParenReader) self)))
 
 (method Stream .read-line ()
-  ; Read line.
-  (with-memory-stream (out)
-    (let (c nil)
-      (while (&& (/= (<- c (.read-byte self)) 0x0a)
-                 (/= c -1))
-        (.write-byte out c)))))
+  ; Input one line from this object.
+  ; Returns read line.
+  ; If stream reached eof, returns nil.
+  (let (c nil)
+    (with-memory-stream (out)
+      (while true
+        (if (= (<- c (.read-byte self)) -1) (return nil)
+            (= c 0x0a) (break)
+            (.write-byte out c))))))
 
 (method Stream .write-line ()
   (.write-byte self 0x0a))
@@ -2019,23 +2022,37 @@
 (method AheadReader .init (stream)
   (if (string? stream) (let (s stream) (.write-bytes (<- stream (.new MemoryStream)) s))
       (nil? stream) (<- stream (dynamic $stdin)))
-  (&stream<- self stream)
-  (&next<- self (.read-char stream))
-  (&token<- self (.new MemoryStream)))
-
-(method AheadReader .stream ()
-  ; Returns the stream held by this object.
-  (&stream self))
+  (&<- self
+       :stream stream
+       :next (.read-char stream)
+       :token (.new MemoryStream)))
 
 (method AheadReader .next ()
   ; Returns a pre-read character.
   (&next self))
 
-(method AheadReader .skip ()
+(method AheadReader .alpha? ()
+  ; Returns true if next character is alphabetic.
+  (ascii-alpha? (string->code (&next self))))
+
+(method AheadReader .digit? ()
+  ; Returns true if next character is digit.
+  (ascii-digit? (string->code (&next self))))
+
+(method AheadReader .numeric-alpha? ()
+  ; Returns true if next character is digit or alphabetic.
+  (let (b (string->code (&next self)))
+    (|| (ascii-digit? b)
+        (ascii-alpha? b))))
+
+(method AheadReader .skip (:opt expected)
   ; Skip next character and returns it.
-  (if (.eof? self) (error "EOF reached"))
-  (begin0 (&next self)
-          (&next<- self (.read-char (&stream self)))))
+  ; Error if expected is specified and the next character is not the same as the expected.
+  (let (next (&next self))
+    (if (nil? next) (error "EOF reached")
+        (&& expected (string/= next expected)) (error "unexpected token")
+        (&next<- self (.read-char (&stream self))))
+    next))
 
 (method AheadReader .skip-escape ()
   (if (string= (&next self) "\\")
@@ -2053,58 +2070,10 @@
                    c)))
       (.skip self)))
 
-(method AheadReader .ensured-skip (c)
-  (if (string= (.skip self) c) c
-      (error "missing token")))
-
 (method AheadReader .skip-line ()
-  (while (&& (! (.eof? self)) (string/= (&next self) "\n"))
-    (.skip self))
+  (while (&next self)
+    (if (string= (.skip self) "\n") (break)))
   self)
-
-(method AheadReader .get ()
-  ; Append next character to token and returns it.
-  (let (c (.skip self))
-    (.put self c)
-    c))
-
-(method AheadReader .get-escape ()
-  (let (c (.skip-escape self))
-    (.put self c)
-    c))
-
-(method AheadReader .put (o)
-  ; Put the o to the end of the token regardless of the stream.
-  (if (byte? o) (.write-byte (&token self) o)
-      (begin0 o
-              (.write-bytes (&token self) o))))
-
-(method AheadReader .token ()
-  ; Returns the token string currently cut out.
-  (.to-s (&token self)))
-
-(method AheadReader .reset ()
-  ; Reset token and returns self.
-  (.reset (&token self))
-  self)
-
-(method AheadReader .eof? ()
-  ; Returns true if eof reached.
-  (nil? (&next self)))
-
-(method AheadReader .alpha? ()
-  ; Returns true if next character is alphabetic.
-  (ascii-alpha? (string->code (&next self))))
-
-(method AheadReader .digit? ()
-  ; Returns true if next character is digit.
-  (ascii-digit? (string->code (&next self))))
-
-(method AheadReader .numeric-alpha? ()
-  ; Returns true if next character is digit or alphabetic.
-  (let (b (string->code (&next self)))
-    (|| (ascii-digit? b)
-        (ascii-alpha? b))))
 
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
@@ -2159,6 +2128,36 @@
     (if minus? (- val)
         val)))
 
+(method AheadReader .get ()
+  ; Append next character to token and returns it.
+  (let (c (.skip self))
+    (.put self c)
+    c))
+
+(method AheadReader .get-escape ()
+  (let (c (.skip-escape self))
+    (.put self c)
+    c))
+
+(method AheadReader .put (o)
+  ; Put the o to the end of the token regardless of the stream.
+  (if (byte? o) (.write-byte (&token self) o)
+      (begin0 o
+              (.write-bytes (&token self) o))))
+
+(method AheadReader .token ()
+  ; Returns the token string currently cut out.
+  (.to-s (&token self)))
+
+(method AheadReader .reset ()
+  ; Reset token and returns self.
+  (.reset (&token self))
+  self)
+
+(method AheadReader .stream ()
+  ; Returns the stream held by this object.
+  (&stream self))
+
 ; Paren reader
 
 (class ParenLexer (AheadReader))
@@ -2211,7 +2210,7 @@
   (.skip self)
   (while (string/= (&next self) "\"")
     (.get-escape self))
-  (.ensured-skip self "\"")
+  (.skip self "\"")
   (.token self))
 
 (method ParenLexer .lex-unquote ()
@@ -2222,7 +2221,7 @@
 (method ParenLexer .lex ()
   (.skip-space (.reset self))
   (let (next (&next self))
-    (if (.eof? self) '(:EOF)
+    (if (nil? next) '(:EOF)
         (string= next "(") (begin (.skip self) '(:open-paren))
         (string= next ")") (begin (.skip self) '(:close-paren))
         (string= next "'") (begin (.skip self) '(:quote))
@@ -2413,7 +2412,7 @@
   ; Array elements are not evaluated.
   (let (lexer (&lexer reader) a (.new Array) expr nil)
     (.skip lexer)
-    (.ensured-skip lexer "[")
+    (.skip lexer "[")
     (while (string/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (with-memory-stream (in (.token lexer))
@@ -2425,7 +2424,7 @@
   ; Define an bytes literal.
   (let (lexer (&lexer reader) expr nil)
     (.skip lexer)
-    (.ensured-skip lexer "[")
+    (.skip lexer "[")
     (while (string/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (->bytes
