@@ -2209,6 +2209,11 @@
   (.ensured-skip self "\"")
   (.token self))
 
+(method ParenLexer .lex-unquote ()
+  (.skip self)
+  (if (string= (&next self) "@") (begin (.skip self) '(:spread))
+      '(:unquote)))
+
 (method ParenLexer .lex ()
   (.skip-space (.reset self))
   (let (next (&next self))
@@ -2216,6 +2221,8 @@
         (string= next "(") (begin (.skip self) '(:open-paren))
         (string= next ")") (begin (.skip self) '(:close-paren))
         (string= next "'") (begin (.skip self) '(:quote))
+        (string= next "`") (begin (.skip self) '(:backquote))
+        (string= next ",") (.lex-unquote self)
         (string= next "\"") (list :atom (.lex-string self))
         (string= next ":") (list :atom (.lex-keyword self))
         (string= next ";") (.lex-comment self)
