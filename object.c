@@ -129,7 +129,7 @@ static void describe_bytes(object o, struct xbarray *x)
 static void describe_array(object o, struct xbarray *x)
 {
   int i;
-  xbarray_adds(x, "#[");
+  xbarray_adds(x, "#a[");
   for (i = 0; i < o->array.size; i++) {
     if (i != 0) xbarray_add(x, ' ');
     describe_s_expr(o->array.elt[i], x);

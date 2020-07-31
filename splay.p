@@ -4,7 +4,11 @@
   key val left right)
 
 (method SplayNode .init (:key key val left right)
-  (&right<- (&left<- (&val<- (&key<- self key) val) left) right))
+  (&<- self
+       :key key
+       :val val
+       :left left
+       :right right))
 
 (method SplayNode .rotl ()
   (let (p (&left self))
@@ -55,9 +59,12 @@
     (&sentinel<- self node)
     (&comparator<- self (|| comparator (lambda (k1 k2) (- (address k1) (address k2)))))))
 
-(method Splay -barance (key)
+(method Splay .barance (key)
   (let (top (&top self) sentinel (&sentinel self) cmp (&comparator self) p top q nil d nil)
-    (&right<- (&left<- (&key<- sentinel key) sentinel) sentinel)
+    (&<- sentinel
+         :key key
+         :left sentinel
+         :right sentinel)
     (while (/= (<- d (cmp (&key p) key)) 0)
       (if (< d 0)
           (begin (<- q (&left p))
@@ -71,7 +78,7 @@
     (&top<- self p)
     p))
 
-(method Splay -resume ()
+(method Splay .resume ()
   (let (top (&top self) left (&left top) right (&right top) sentinel (&sentinel self))
     (if (eq? left sentinel) (&top<- self right)
         (eq? right sentinel) (&top<- self left)
@@ -83,18 +90,18 @@
   nil)
 
 (method Splay .get (key)
-  (let (top (-barance self key) sentinel (&sentinel self))
-    (if (eq? top sentinel) (-resume self)
+  (let (top (.barance self key) sentinel (&sentinel self))
+    (if (eq? top sentinel) (.resume self)
         (&val top))))
 
 (method Splay .put (key val)
-  (let (top (-barance self key) sentinel (&sentinel self))
+  (let (top (.barance self key) sentinel (&sentinel self))
     (if (eq? top sentinel)
         (&top<- self (.init (.new SplayNode)
-                           :key key
-                           :val val
-                           :left (&left sentinel)
-                           :right (&right sentinel)))
+                            :key key
+                            :val val
+                            :left (&left sentinel)
+                            :right (&right sentinel)))
         (&val<- top val))
     self))
 

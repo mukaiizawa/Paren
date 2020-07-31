@@ -1371,6 +1371,13 @@
                         (list 'error-if-not-object receiver)
                         (list begin (list 'assoc! receiver key val) receiver)))))))
 
+(macro &<- (object :rest pairs)
+  (with-gensyms (go)
+    (cons let (cons (list go object)
+                    (map (lambda (pair)
+                           (list (bytes->symbol (bytes-concat '& (car pair) '<-)) go (cadr pair)))
+                         (group pairs 2))))))
+
 (macro make-method-dispatcher (method-sym)
   (when (! (bound? method-sym))
     (with-gensyms (receiver args)
@@ -1888,7 +1895,7 @@
                (.write-integer self ([] x i) :radix 16))
              (.write-byte self 0x5d))
       (array? x)
-      (begin (.write-bytes self "#[")
+      (begin (.write-bytes self "#a[")
              (dotimes (i (array-length x))
                (.write self ([] x i) :start (&& (/= i 0) " ") :end ""))
              (.write-byte self 0x5d))
@@ -2401,11 +2408,12 @@
     $external-encoding (if (eq? $host-name :windows) :SJIS :UTF-8)
     $paren-home (.parent (.resolve (Path.getcwd) core.p)))
 
-(reader-macro "[" (reader)
+(reader-macro "a" (reader)
   ; Define an array literal.
   ; Array elements are not evaluated.
   (let (lexer (&lexer reader) a (.new Array) expr nil)
     (.skip lexer)
+    (.ensured-skip lexer "[")
     (while (string/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (with-memory-stream (in (.token lexer))
