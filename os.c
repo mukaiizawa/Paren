@@ -73,10 +73,11 @@ DEFUN(fputc)
   int byte;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  *result = argv->cons.car;
   if (!bi_sint(argv->cons.car, &byte)) return FALSE;
   if (!byte_p(byte)) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
-  if (fputc((int)byte, fp) == EOF) return FALSE;
+  if (fputc(byte, fp) == EOF) return FALSE;
   return TRUE;
 }
 

@@ -92,13 +92,13 @@ char *xbarray_fgets(struct xbarray *x, FILE *fp)
 {
   int ch;
   xbarray_reset(x);
-  while(TRUE) {
+  while (TRUE) {
     ch = fgetc(fp);
-    if(ch == EOF) return NULL;
-    if(ch == '\n') break;
-    if(ch == '\r') {
+    if (ch == EOF) return NULL;
+    if (ch == '\n') break;
+    if (ch == '\r') {
       ch = fgetc(fp);
-      if(ch != '\n') ungetc(ch, fp);
+      if (ch != '\n') ungetc(ch, fp);
       break;
     }
     xbarray_add(x, ch);

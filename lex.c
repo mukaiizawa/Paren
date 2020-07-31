@@ -115,18 +115,22 @@ static int lex_string(void)
       switch (next_ch) {
         case 'a': skip(); add('\a'); break;
         case 'b': skip(); add('\b'); break;
+        case 'c': skip();
+                  val = toupper(skip());
+                  if (val < 0x40 || val > 0x5f) lex_error("illegal ctrl char");
+                  add(val&0x1f);
+                  break;
         case 'e': skip(); add(0x1b); break;
         case 'f': skip(); add('\f'); break;
         case 'n': skip(); add('\n'); break;
         case 'r': skip(); add('\r'); break;
         case 't': skip(); add('\t'); break;
         case 'v': skip(); add('\v'); break;
-        case 'x':
-          skip();
-          val = digit_val(skip(), 16) * 16;
-          val += digit_val(skip(), 16);
-          add(val);
-          break;
+        case 'x': skip();
+                  val = digit_val(skip(), 16) * 16;
+                  val += digit_val(skip(), 16);
+                  add(val);
+                  break;
         default: get(); break;
       }
     }

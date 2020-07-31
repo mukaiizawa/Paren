@@ -844,7 +844,7 @@
 
 (builtin-function = (x y :rest args)
   ; Returns whether all arguments are the same value.
-  ; However, the argument for which `eq?` returns true returns true.
+  ; However, arguments for which the function `eq?` returns true will always return true.
   (assert (= 3.14 3.140))
   (assert (! (= 10 20)))
   (assert (= 'x 'x))
@@ -966,6 +966,22 @@
 (function string/= (x y)
   ; Same as (bytes/= x y).
   (bytes/= x y))
+
+(function string< (:rest args)
+  ; Returns whether the each of the specified args are in monotonically decreasing order.
+  (apply < (map string->code args)))
+
+(function string> (:rest args)
+  ; Returns whether the each of the specified args are in monotonically increasing order.
+  (each-adjacent-satisfy? (lambda (x y) (string< y x)) args))
+
+(function string<= (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
+  (each-adjacent-satisfy? (lambda (x y) (! (string< y x))) args))
+
+(function string>= (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
+  (each-adjacent-satisfy? (lambda (x y) (! (string< x y))) args))
 
 (function string->code (s)
   ; Returns the code point of string s.
@@ -1202,24 +1218,32 @@
 ; os
 
 (builtin-function fp (fd)
+  ; Returns the file pointer associated with the file descriptor.
+  ; The argument fd can specify bellow value.
+  ;      0 -- stdin
+  ;      1 -- stdout
+  ;      2 -- stderr
   )
 
 (builtin-function fopen (filename mode)
   ; Opens the file whose name is the string pointed to by filename and associates a stream with it.
+  ; Returns file poiner for the opened file.
   ; The argument mode can specify bellow value.
   ;      0 -- Open file for reading.
   ;      1 -- Open file for writing.
-  ;      3 -- Open file for appending
-  ;      4 -- Open file for reading and writing.
+  ;      2 -- Open file for appending
+  ;      3 -- Open file for reading and writing.
   )
 
 (builtin-function fgetc (fp)
-  ; Reads the next character from stream and returns it.
-  ; Return  -1 if EOF.
+  ; Read byte from the stream associated with the file pointer fp.
+  ; Returns read byte.
+  ; If stream reached EOF, returns -1.
   )
 
-(builtin-function fputc (fp c)
+(builtin-function fputc (c fp)
   ; Write the byte specified by c to the output stream pointed to by fp. 
+  ; Returns written byte.
   )
 
 (builtin-function fgets (fp)
@@ -1785,15 +1809,9 @@
                 (.illegal-character self b1)))
     (let (c (bytes size))
       (if (= size 1) ([]<- c 0 b1)
-          (= size 2) (begin ([]<- c 0 b1)
-                            ([]<- c 1 b2))
-          (= size 3) (begin ([]<- c 0 b1)
-                            ([]<- c 1 b2)
-                            ([]<- c 2 b3))
-          (= size 4) (begin ([]<- c 0 b1)
-                            ([]<- c 1 b2)
-                            ([]<- c 2 b3)
-                            ([]<- c 3 b4)))
+          (= size 2) (begin ([]<- c 0 b1) ([]<- c 1 b2))
+          (= size 3) (begin ([]<- c 0 b1) ([]<- c 1 b2) ([]<- c 2 b3))
+          (= size 4) (begin ([]<- c 0 b1) ([]<- c 1 b2) ([]<- c 2 b3) ([]<- c 3 b4)))
       (bytes->string! c))))
 
 (method Stream .read ()
@@ -1998,8 +2016,7 @@
   (fgets (&fp self)))
 
 (method FileStream .write-byte (byte)
-  (fputc byte (&fp self))
-  self)
+  (fputc byte (&fp self)))
 
 (method FileStream .write-bytes (x :opt from size)
   (fwrite x (|| from 0) (|| size (bytes-length x)) (&fp self)))
@@ -2055,20 +2072,21 @@
     next))
 
 (method AheadReader .skip-escape ()
-  (if (string= (&next self) "\\")
-      (begin (.skip self)
-             (let (c (.skip self))
-               (if (string= c "a") 0x07
-                   (string= c "b") 0x08
-                   (string= c "e") 0x1b
-                   (string= c "f") 0x0c
-                   (string= c "n") 0x0a
-                   (string= c "r") 0x0d
-                   (string= c "t") 0x09
-                   (string= c "v") 0x0b
-                   (string= c "x") (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16))
-                   c)))
-      (.skip self)))
+  (let (c (.skip self))
+    (if (string/= c "\\") c
+        (string= (<- c (.skip self)) "a") 0x07
+        (string= c "b") 0x08
+        (string= c "c") (if (<= 0x40 (<- c (ascii-upper (string->code (.skip self)))) 0x5f)
+                            (& c 0x1f)
+                            (error "illegal ctrl char"))
+        (string= c "e") 0x1b
+        (string= c "f") 0x0c
+        (string= c "n") 0x0a
+        (string= c "r") 0x0d
+        (string= c "t") 0x09
+        (string= c "v") 0x0b
+        (string= c "x") (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16))
+        c)))
 
 (method AheadReader .skip-line ()
   (while (&next self)
