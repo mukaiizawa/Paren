@@ -1514,12 +1514,10 @@
   (&size self))
 
 (method Array .at (i)
-  (if (< (&size self) i) ([] (&elt self) i)
-      (error "illegal argument " (list i (&size self)))))
+  ([] (&elt self) i))
 
-(method Array .at! (i val)
-  (if (< (&size self) i) ([]<- (&elt self) i val)
-      (error "illegal argument " (list i (&size self)))))
+(method Array .put (i val)
+  ([]<- (&elt self) i val))
 
 (method Array .reserve (size)
   (let (req (+ (&size self) size) elt-size (array-length (&elt self)))
@@ -1715,7 +1713,7 @@
   ; Returns the last update time of this object.
   ([] (.stat self) 2))
 
-(method Path .mtime! (time)
+(method Path .utime (time)
   ; Update the last update time of this object.
   ; Returns this object.
   (utime (.to-s self) time))

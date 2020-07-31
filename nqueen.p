@@ -27,9 +27,9 @@
       (dotimes (x $board-size)
         (let (p (Point.of x y))
           (when (putable? board p)
-            (.at! board p true)
+            (.put board p true)
             (put-queen board (++ y))
-            (.at! board p nil))))))
+            (.put board p nil))))))
 
 (function! main ()
   (let (board (.init (.new Matrix) :point (Point.of $board-size $board-size)))

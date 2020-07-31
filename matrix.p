@@ -27,7 +27,7 @@
 (method Matrix .at (p)
   ([] (&contents self) (.index self p)))
 
-(method Matrix .at! (p v)
+(method Matrix .put (p v)
   ([]<- (&contents self) (.index self p) v)
   self)
 
@@ -43,6 +43,6 @@
     (assert (= (&width m) 2))
     (assert (= (&height m) 3))
     (domatrix (p m)
-      (.at! m p (.x p)))
+      (.put m p (.x p)))
     (domatrix (p m)
       (assert (= (.at m p) (.x p))))))
