@@ -2192,9 +2192,6 @@
       (.identifier-sign? self)
       (.digit? self)))
 
-(method ParenLexer .lex-comment ()
-  (.lex (.skip-line self)))
-
 (method ParenLexer .get-identifier-sign ()
   (when (|| (.identifier-sign? self) (.identifier-symbol-alpha? self))
     (while (.identifier-trail? self) (.get self)))
@@ -2247,7 +2244,7 @@
         (string= next ",") (.lex-unquote self)
         (string= next "\"") (list :atom (.lex-string self))
         (string= next ":") (list :atom (.lex-keyword self))
-        (string= next ";") (.lex-comment self)
+        (string= next ";") (.lex (.skip-line self))
         (string= next "#") (begin (.skip self) (list :read-macro (bytes->symbol (.next self))))
         (|| (string= next "+")
             (string= next "-")) (list :atom (.lex-sign self))
