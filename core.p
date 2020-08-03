@@ -2066,7 +2066,7 @@
   ; Skip next character and returns it.
   ; Error if expected is specified and the next character is not the same as the expected.
   (let (next (&next self))
-    (if (nil? next) (error "EOF reached")
+    (if (nil? next) (error "unexpected EOF")
         (&& expected (string/= next expected)) (error "unexpected token")
         (&next<- self (.read-char (&stream self))))
     next))
@@ -2228,11 +2228,6 @@
   (.skip self "\"")
   (.token self))
 
-(method ParenLexer .lex-unquote ()
-  (.skip self)
-  (if (string= (&next self) "@") (begin (.skip self) '(:spread))
-      '(:unquote)))
-
 (method ParenLexer .lex ()
   (.skip-space (.reset self))
   (let (next (&next self))
@@ -2241,7 +2236,7 @@
         (string= next ")") (begin (.skip self) '(:close-paren))
         (string= next "'") (begin (.skip self) '(:quote))
         (string= next "`") (begin (.skip self) '(:backquote))
-        (string= next ",") (.lex-unquote self)
+        (string= next ",") (begin (.skip self) '(:unquote))
         (string= next "\"") (list :atom (.lex-string self))
         (string= next ":") (list :atom (.lex-keyword self))
         (string= next ";") (.lex (.skip-line self))
@@ -2262,20 +2257,45 @@
     (&token-type<- self (car x))
     (&token<- self (cadr x))))
 
-(method ParenReader .parse ()
-  (switch (&token-type self)
-    :EOF nil
-    :quote (list quote (.read self))
-    :open-paren (.parse-list self)
-    :atom (&token self)
-    :read-macro ((assoc $read-table (string->code (&token self))) self)
-    :default (error "syntax error")))
+(method ParenReader .parse-backquote ()
+  (let (times-quote (lambda (n expr)
+                      (if (= n 0) expr
+                          (times-quote (-- n) (list quote expr))))
+                    parse (lambda (level)
+                            (switch (&token-type self)
+                              :atom (times-quote level (&token self))
+                              :open-paren (parse-list level)
+                              :quote (begin (.scan self) (list 'list (times-quote level quote) (parse level)))
+                              :unquote (begin (.scan self)
+                                              (if (= level 0) (error "unexpected comma")
+                                                  (parse (-- level))))
+                              :backquote (begin (.scan self) (parse (++ level)))
+                              :read-macro ((assoc $read-table (string->code (&token self))) self)
+                              :EOF (error "unexpected EOF")
+                              :default (error "syntax error")))
+                    parse-list (lambda (level)
+                                 (.scan self)
+                                 (if (eq? (&token-type self) :close-paren) nil
+                                     (eq? (&token-type self) :EOF) (error "missing close-paren")
+                                     (cons (parse level) (parse-list level)))))
+    (.scan self)
+    (parse 1)))
 
 (method ParenReader .parse-list ()
   (.scan self)
   (if (eq? (&token-type self) :close-paren) nil
       (eq? (&token-type self) :EOF) (error "missing close-paren")
       (cons (.parse self) (.parse-list self))))
+
+(method ParenReader .parse ()
+  (switch (&token-type self)
+    :EOF nil
+    :atom (&token self)
+    :open-paren (.parse-list self)
+    :quote (list quote (.read self))
+    :backquote (.parse-backquote self)
+    :read-macro ((assoc $read-table (string->code (&token self))) self)
+    :default (error "syntax error")))
 
 (method ParenReader .read ()
   (.parse (.scan self)))
