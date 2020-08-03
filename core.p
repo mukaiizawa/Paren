@@ -768,6 +768,13 @@
         (return nil)))
   true)
 
+(function all-adjacent-satisfy? (f l)
+  ; Returns whether each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
+  (while (cdr l)
+    (if (f (car l) (cadr l)) (<- l (cdr l))
+        (return nil)))
+  true)
+
 (function any-satisfy? (f l)
   ; Returns whether the function f applied to any element of the list is true.
   ; If x is nil, returns nil.
@@ -775,13 +782,6 @@
   (while l
     (if (f (car l)) (return true)
         (<- l (cdr l)))))
-
-(function each-adjacent-satisfy? (f l)
-  ; Returns whether each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
-  (while (cdr l)
-    (if (f (car l) (cadr l)) (<- l (cdr l))
-        (return nil)))
-  true)
 
 ; number
 
@@ -913,15 +913,15 @@
 
 (function > (:rest args)
   ; Returns whether the each of the specified args are in monotonically increasing order.
-  (each-adjacent-satisfy? (lambda (x y) (< y x)) args))
+  (all-adjacent-satisfy? (lambda (x y) (< y x)) args))
 
 (function <= (:rest args)
   ; Returns whether the each of the specified args are in monotonically nondecreasing order.
-  (each-adjacent-satisfy? (lambda (x y) (! (< y x))) args))
+  (all-adjacent-satisfy? (lambda (x y) (! (< y x))) args))
 
 (function >= (:rest args)
   ; Returns whether the each of the specified args are in monotonically nonincreasing order.
-  (each-adjacent-satisfy? (lambda (x y) (! (< x y))) args))
+  (all-adjacent-satisfy? (lambda (x y) (! (< x y))) args))
 
 (function ++ (x)
   ; Same as (+ x 1).
@@ -973,15 +973,15 @@
 
 (function string> (:rest args)
   ; Returns whether the each of the specified args are in monotonically increasing order.
-  (each-adjacent-satisfy? (lambda (x y) (string< y x)) args))
+  (all-adjacent-satisfy? (lambda (x y) (string< y x)) args))
 
 (function string<= (:rest args)
   ; Returns whether the each of the specified args are in monotonically nondecreasing order.
-  (each-adjacent-satisfy? (lambda (x y) (! (string< y x))) args))
+  (all-adjacent-satisfy? (lambda (x y) (! (string< y x))) args))
 
 (function string>= (:rest args)
   ; Returns whether the each of the specified args are in monotonically nonincreasing order.
-  (each-adjacent-satisfy? (lambda (x y) (! (string< x y))) args))
+  (all-adjacent-satisfy? (lambda (x y) (! (string< x y))) args))
 
 (function string->code (s)
   ; Returns the code point of string s.
