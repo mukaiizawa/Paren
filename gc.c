@@ -114,15 +114,36 @@ object gc_new_xfloat(double val)
   return o;
 }
 
-object gc_new_cons(object car, object cdr)
+static object new_cons(void)
 {
   object o;
   o = gc_alloc(sizeof(struct cons));
   set_type(o, CONS);
-  o->cons.car = car;
-  o->cons.cdr = cdr;
   regist(o);
   return o;
+}
+
+object gc_new_cons(object car, object cdr)
+{
+  object o;
+  o = new_cons();
+  o->cons.car = car;
+  o->cons.cdr = cdr;
+  return o;
+}
+
+object gc_copy_cons(object o, object *tail)
+{
+  object head;
+  if (o == object_nil) return object_nil;
+  head = *tail = new_cons();
+  (*tail)->cons.car = o->cons.car;
+  while ((o = o->cons.cdr) != object_nil) {
+    *tail = (*tail)->cons.cdr = new_cons();
+    (*tail)->cons.car = o->cons.car;
+  }
+  (*tail)->cons.cdr = object_nil;
+  return head;
 }
 
 static object new_bytes(int type, int size)

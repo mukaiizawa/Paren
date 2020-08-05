@@ -73,6 +73,33 @@ DEFUN(set_cdr)
   return TRUE;
 }
 
+DEFUN(copy)
+{
+  object o, p;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
+  *result = gc_copy_cons(o, &p);
+  return TRUE;
+}
+
+DEFUN(append)
+{
+  object o, p, head, tail;
+  head = tail = NULL;
+  while (argv != object_nil) {
+    if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
+    argv = argv->cons.cdr;
+    if (o == object_nil) continue;
+    o = gc_copy_cons(o, &p);
+    if (head == NULL) head = o;
+    if (tail != NULL) tail->cons.cdr = o;
+    tail = p;
+  }
+  if (head == NULL) *result = object_nil;
+  else *result = head;
+  return TRUE;
+}
+
 DEFUN(length)
 {
   object o;

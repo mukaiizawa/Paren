@@ -227,17 +227,17 @@
   ;         "others")
   (with-gensyms (gexpr branches)
     (let (branches (group body 2)
-          candidates (list 'flatten (list 'map car (list quote branches)))
-          parse-branch (lambda (branches)
-                         (if (nil? branches)
-                             (list true (list 'error gexpr " not included in " candidates))
-                             (let (label (caar branches) then (cadar branches))
-                               (cons (if (eq? label :default) (return (list true then))
-                                         (cons '|| (map (lambda (label)
-                                                          (list eq? label gexpr))
-                                                        (->list label))))
-                                     (cons then
-                                           (parse-branch (cdr branches))))))))
+                   candidates (list 'flatten (list 'map car (list quote branches)))
+                   parse-branch (lambda (branches)
+                                  (if (nil? branches)
+                                      (list true (list 'error gexpr " not included in " candidates))
+                                      (let (label (caar branches) then (cadar branches))
+                                        (cons (if (eq? label :default) (return (list true then))
+                                                  (cons '|| (map (lambda (label)
+                                                                   (list eq? label gexpr))
+                                                                 (->list label))))
+                                              (cons then
+                                                    (parse-branch (cdr branches))))))))
       (list let (list gexpr expr)
             (cons if (parse-branch branches))))))
 
@@ -650,6 +650,11 @@
                   nil)))
     (rec l)))
 
+(builtin-function copy (l)
+  ; Returns a list that is a copy of the argument list l.
+  ; The copy target is only cons, the element is not copied.
+  )
+
 (function .. (s e :opt step)
   ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
   (let (acc nil step (|| step 1))
@@ -685,13 +690,16 @@
   (assert (nil? (reverse! nil)))
   (assert (= (car (reverse! '(0 1))) 1)))
 
-(function append-atom (l x)
-  ; Returns a list with the specified x appended to the end of the specified list l.
-  (let (acc nil)
-    (dolist (i l)
-      (push! acc i))
-    (push! acc x)
-    (reverse! acc)))
+(builtin-function append (:rest args)
+  ; Returns a new list with each argument element as an element.
+  ; If args is nil, returns nil.
+  ; Error if all arguments are not list.
+  (assert (nil? (append)))
+  (assert (nil? (append nil)))
+  (assert (nil? (append nil nil)))
+  (assert (= (length (append '(1 2) '(3))) 3))
+  (assert (= (length (append '(1) '(2))) 2))
+  (assert (= (length (append nil '(1) '(2))) 2)))
 
 (macro push! (sym x)
   ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
@@ -2236,7 +2244,10 @@
         (string= next ")") (begin (.skip self) '(:close-paren))
         (string= next "'") (begin (.skip self) '(:quote))
         (string= next "`") (begin (.skip self) '(:backquote))
-        (string= next ",") (begin (.skip self) '(:unquote))
+        (string= next ",") (begin (.skip self)
+                                  (if (string= (&next self) "@") (begin (.skip self)
+                                                                        '(:unquote-splice))
+                                      '(:unquote)))
         (string= next "\"") (list :atom (.lex-string self))
         (string= next ":") (list :atom (.lex-keyword self))
         (string= next ";") (.lex (.skip-line self))
@@ -2257,43 +2268,27 @@
     (&token-type<- self (car x))
     (&token<- self (cadr x))))
 
-(method ParenReader .parse-backquote ()
-  (let (times-quote (lambda (n expr)
-                      (if (= n 0) expr
-                          (times-quote (-- n) (list quote expr))))
-                    parse (lambda (level)
-                            (switch (&token-type self)
-                              :atom (times-quote level (&token self))
-                              :open-paren (parse-list level)
-                              :quote (begin (.scan self) (list 'list (times-quote level quote) (parse level)))
-                              :unquote (begin (.scan self)
-                                              (if (= level 0) (error "unexpected comma")
-                                                  (parse (-- level))))
-                              :backquote (begin (.scan self) (parse (++ level)))
-                              :read-macro ((assoc $read-table (string->code (&token self))) self)
-                              :EOF (error "unexpected EOF")
-                              :default (error "syntax error")))
-                    parse-list (lambda (level)
-                                 (.scan self)
-                                 (if (eq? (&token-type self) :close-paren) nil
-                                     (eq? (&token-type self) :EOF) (error "missing close-paren")
-                                     (cons (parse level) (parse-list level)))))
-    (.scan self)
-    (parse 1)))
-
 (method ParenReader .parse-list ()
   (.scan self)
   (if (eq? (&token-type self) :close-paren) nil
       (eq? (&token-type self) :EOF) (error "missing close-paren")
       (cons (.parse self) (.parse-list self))))
 
+(macro unquote (expr)
+  (list 'error "unexpected ," expr))
+
+(macro unquote-splice (expr)
+  (list 'error "unexpected ,@" expr))
+
 (method ParenReader .parse ()
   (switch (&token-type self)
     :EOF nil
     :atom (&token self)
     :open-paren (.parse-list self)
-    :quote (list quote (.read self))
-    :backquote (.parse-backquote self)
+    :quote (list quote (.parse (.scan self)))
+    :backquote (list backquote (.parse (.scan self)))
+    :unquote (list unquote (.parse (.scan self)))
+    :unquote-splice (list unquote-splice (.parse (.scan self)))
     :read-macro ((assoc $read-table (string->code (&token self))) self)
     :default (error "syntax error")))
 

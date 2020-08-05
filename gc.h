@@ -10,6 +10,7 @@ extern object gc_new_builtin(int type, object name, void *p);
 extern object gc_new_xint(int64_t val);
 extern object gc_new_xfloat(double val);
 extern object gc_new_cons(object car, object cdr);
+extern object gc_copy_cons(object o, object *tail);
 extern object gc_new_bytes(int type, int size);
 extern object gc_new_bytes_from(int type, char *val, int size);
 extern object gc_intern_symbol(object o);
