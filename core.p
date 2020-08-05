@@ -2515,4 +2515,10 @@
             (while (<- expr (read in))
               (.write-byte out expr))))))))
 
+(reader-macro "m" (reader)
+  ; Define expand-macro-all reader.
+  (let (lexer (&lexer reader))
+    (.skip lexer)
+    (list 'write (list 'expand-macro-all (list quote (.read reader))))))
+
 (boot)
