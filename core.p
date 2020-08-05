@@ -234,7 +234,7 @@
                                       (let (label (caar branches) then (cadar branches))
                                         (cons (if (eq? label :default) (return (list true then))
                                                   (cons '|| (map (lambda (label)
-                                                                   (list eq? label gexpr))
+                                                                   (list eq? (list quote label) gexpr))
                                                                  (->list label))))
                                               (cons then
                                                     (parse-branch (cdr branches))))))))
@@ -1898,11 +1898,25 @@
   ; Returns x.
   (if start (.write-bytes self start))
   (if (cons? x)
-      (begin (.write-byte self 0x28)
-             (.write self (car x) :end "")
-             (while (<- x (cdr x))
-               (.write self (car x) :start " " :end ""))
-             (.write-byte self 0x29))
+      (let (ope (car x))
+        (if (&& (eq? ope 'quote) (nil? (cddr x)))
+            (begin
+              (.write-byte self 0x27) (.write self (cadr x) :end ""))
+            (&& (eq? ope 'quasiquote) (nil? (cddr x)))
+            (begin
+              (.write-byte self 0x60) (.write self (cadr x) :end ""))
+            (&& (eq? ope 'unquote) (nil? (cddr x)))
+            (begin
+              (.write-byte self 0x2c) (.write self (cadr x) :end ""))
+            (&& (eq? ope 'unquote-splicing) (nil? (cddr x)))
+            (begin
+              (.write-bytes self ",@") (.write self (cadr x) :end ""))
+            (begin
+              (.write-byte self 0x28)
+              (.write self (car x) :end "")
+              (while (<- x (cdr x))
+                (.write self (car x) :start " " :end ""))
+              (.write-byte self 0x29))))
       (builtin? x)
       (.write-bytes self (builtin-name x))
       (string? x)
@@ -2246,7 +2260,7 @@
         (string= next "`") (begin (.skip self) '(:backquote))
         (string= next ",") (begin (.skip self)
                                   (if (string= (&next self) "@") (begin (.skip self)
-                                                                        '(:unquote-splice))
+                                                                        '(:unquote-splicing))
                                       '(:unquote)))
         (string= next "\"") (list :atom (.lex-string self))
         (string= next ":") (list :atom (.lex-keyword self))
@@ -2274,23 +2288,60 @@
       (eq? (&token-type self) :EOF) (error "missing close-paren")
       (cons (.parse self) (.parse-list self))))
 
-(macro unquote (expr)
-  (list 'error "unexpected ," expr))
-
-(macro unquote-splice (expr)
-  (list 'error "unexpected ,@" expr))
-
 (method ParenReader .parse ()
   (switch (&token-type self)
     :EOF nil
     :atom (&token self)
     :open-paren (.parse-list self)
     :quote (list quote (.parse (.scan self)))
-    :backquote (list backquote (.parse (.scan self)))
-    :unquote (list unquote (.parse (.scan self)))
-    :unquote-splice (list unquote-splice (.parse (.scan self)))
+    :backquote (list 'quasiquote (.parse (.scan self)))
+    :unquote (list 'unquote (.parse (.scan self)))
+    :unquote-splicing (list 'unquote-splicing (.parse (.scan self)))
     :read-macro ((assoc $read-table (string->code (&token self))) self)
     :default (error "syntax error")))
+
+(macro unquote (expr)
+  (list 'error "unexpected unquote -- ," expr))
+
+(macro unquote-splicing (expr)
+  (list 'error "unexpected unquote-splicing -- ,@" expr))
+
+(macro quasiquote (expr)
+  (let (descend (lambda (x level)
+                  (if (atom? x) (list quote x)
+                      (switch (car x)
+                        quasiquote (list cons
+                                         (list quote 'quasiquote)
+                                         (descend (cdr x) (++ level)))
+                        unquote (if (= level 0) (cadr x)
+                                    (list cons
+                                          (list quote 'unquote)
+                                          (descend (cdr x) (-- level))))
+                        unquote-splicing (if (= level 0) (cadr x)
+                                             (list cons
+                                                   (list quote 'unquote-splicing)
+                                                   (descend (cdr x) (-- level))))
+                        :default (list append
+                                       (expand-list (car x) level)
+                                       (descend (cdr x) level)))))
+                expand-list (lambda (x level)
+                              (if (atom? x) (list quote (list x))
+                                  (switch (car x)
+                                    quasiquote (list list (list cons
+                                                                (list quote 'quasiquote)
+                                                                (descend (cdr x) (++ level))))
+                                    unquote (if (= level 0) (cons list (cdr x))
+                                                (list list (list cons
+                                                                 (list quote (car x))
+                                                                 (descend (cdr x) (-- level)))))
+                                    unquote-splicing (if (= level 0) (cons append (cdr x))
+                                                         (list list (list cons
+                                                                          (list quote (car x))
+                                                                          (descend (cdr x) (-- level)))))
+                                    :default (list list (list append
+                                                              (expand-list (car x) level)
+                                                              (descend (cdr x) level)))))))
+    (descend expr 0)))
 
 (method ParenReader .read ()
   (.parse (.scan self)))

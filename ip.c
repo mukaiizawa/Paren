@@ -1119,7 +1119,8 @@ DEFSP(macro)
   if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
   gen1(BIND_PROPAGATION_FRAME, o);
   argv = argv->cons.cdr;
-  if (!parse_required_params(params = argv->cons.car, TRUE))
+  if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
+  if (!parse_required_params(params, TRUE))
     return ip_mark_error("illegal macro parameter list");
   reg[0] = gc_new_macro(reg[1], params, argv->cons.cdr);
   return TRUE;
@@ -1129,7 +1130,7 @@ DEFSP(lambda)
 {
   object params;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  params = argv->cons.car;
+  if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
   if (!parse_required_params(params, FALSE))
     return ip_mark_error("illegal lambda parameter list");
   reg[0] = gc_new_lambda(reg[1], params, argv->cons.cdr);
