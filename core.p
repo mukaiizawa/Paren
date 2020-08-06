@@ -1024,10 +1024,10 @@
     (dotimes (i start)
       (if (nil? (.read-char ms)) (error "illegal start " start)))
     (if (nil? end) (bytes-slice s (.tell ms))
-        (let (bs (.tell ms))
+        (let (pos (.tell ms))
           (dotimes (i (- end start))
             (if (nil? (.read-char ms)) (error "illegal end " end)))
-          (bytes-slice s bs (.tell ms))))))
+          (bytes-slice s pos (.tell ms))))))
 
 (function string-at (s i)
   ; Returns the i-th character of string s.
