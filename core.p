@@ -1579,6 +1579,26 @@
     (array-copy (&elt self) 0 a 0 size)
     a))
 
+(class Comparable ()
+  ; A feature that provides comparison operators.
+  )
+
+(method Comparable .lt? (:rest args)
+  ; Returns whether the each of the specified args are in monotonically decreasing order.
+  (assert nil))
+
+(method Comparable .gt? (:rest args)
+  ; Returns whether the each of the specified args are in monotonically increasing order.
+  (all-adjacent-satisfy? (lambda (x y) (.lt? y x)) (cons self args)))
+
+(method Comparable .le? (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
+  (all-adjacent-satisfy? (lambda (x y) (! (.lt? y x))) (cons self args)))
+
+(method Comparable .ge? (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
+  (all-adjacent-satisfy? (lambda (x y) (! (.lt? x y))) (cons self args)))
+
 (class Path ()
   ; A class that handles a file path.
   ; Construct with Path.of function.
