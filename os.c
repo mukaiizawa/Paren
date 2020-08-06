@@ -299,7 +299,6 @@ DEFUN(timediff)
   gtm = *gmtime(&now);
   ltm = *localtime(&now);
   if (gtm.tm_yday == ltm.tm_yday) off = 0;
-  else if (gtm.tm_year == ltm.tm_year + 1) off = -1;
   else if (gtm.tm_yday == ltm.tm_yday + 1) off = -1;
   else off = 1;
   *result = gc_new_xint(daysec(&ltm) + off * 24 * 60 * 60 - daysec(&gtm));
