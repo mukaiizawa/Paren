@@ -290,7 +290,7 @@ static int daysec(struct tm *t)
   return (t->tm_hour * 60 + t->tm_min) * 60 + t->tm_sec;
 }
 
-DEFUN(timediff)
+DEFUN(utcoffset)
 {
   int off;
   time_t now;

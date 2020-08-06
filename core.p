@@ -1340,6 +1340,10 @@
   ; Returns the cycle of the internal virtual machine.
   )
 
+(builtin-function utcoffset ()
+  ; Returns the difference in hours and minutes from Coordinated Universal Time (UTC) for time zone set in the host system.
+  )
+
 (builtin-function sleep (sec)
   ; Sleep for a specified number of seconds.
   ; Returns nil.
@@ -1457,7 +1461,7 @@
   (find-class (&class self)))
 
 (method Object .eq? (o)
-  ; Returns true if the receiver and the specified object o are the same object.
+  ; Returns whether the o is equals of this object.
   ; Overwrite this method if there is class-specific comparisons.
   (eq? self o))
 
@@ -1664,7 +1668,7 @@
       (Path.of (bytes-concat (.to-s self) Path.separator (.to-s path)))))
 
 (method Path .absolute? ()
-  ; Returns true if this path regarded as the absolute path.
+  ; Returns whether this path regarded as the absolute path.
   (let (first-file (car (&path self)))
     (if (eq? $host-name :windows)
         (&& (= (bytes-length first-file) 2)
