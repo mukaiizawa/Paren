@@ -1018,18 +1018,16 @@
   ; Returns a string that is a substring of the specified string s.
   ; The substring begins at the specified start and extends to the character at index end - 1.
   ; Thus the length of the substring is `end - start`.
-  (if (< start 0) (error "illegal start" start))
-  (let (i 0 c nil)
-    (with-memory-stream (out)
-      (with-memory-stream (in s)
-        (if end
-            (while (< i end)
-              (if (nil? (<- c (read-char in))) (error "illegal end " end)
-                  (>= i start) (write-bytes c out))
-              (<- i (++ i)))
-            (while (<- c (read-char in))
-              (if (>= i start) (write-bytes c out))
-              (<- i (++ i))))))))
+  (let (ms (.new MemoryStream))
+    (if (< start 0) (error "illegal start " start))
+    (.write-bytes ms s)
+    (dotimes (i start)
+      (if (nil? (.read-char ms)) (error "illegal start " start)))
+    (if (nil? end) (bytes-slice s (.tell ms))
+        (let (bs (.tell ms))
+          (dotimes (i (- end start))
+            (if (nil? (.read-char ms)) (error "illegal end " end)))
+          (bytes-slice s bs (.tell ms))))))
 
 (function string-at (s i)
   ; Returns the i-th character of string s.
@@ -1147,15 +1145,13 @@
   (assert (let (s "foo" d "bar")
             (bytes= (bytes-copy s 1 d 1 2) "boo"))))
 
-(function bytes-slice (x start :opt end)
+(builtin-function bytes-slice (x start :opt end)
   ; Returns the partial byte sequence starting from start.
   ; If end is specified, returns the partial byte sequence from the i th to (end-1) th.
-  (let (xlen (bytes-length x))
-    (if (< start 0) (error "illegal start")
-        (nil? end) (<- end xlen)
-        (> end xlen) (error "illegal end"))
-    (let (new-len (- end start))
-      (bytes-copy x start (bytes new-len) 0 new-len))))
+  ; This function also accepts strings.
+  (assert (bytes= (bytes-slice "012" 0) "012"))
+  (assert (bytes= (bytes-slice "012" 1) "12"))
+  (assert (bytes= (bytes-slice "012" 1 2) "1")))
 
 (builtin-function bytes-concat (x :rest args)
   ; Returns the result of combining each args with x.
@@ -2010,7 +2006,7 @@
   (if (! (<= 0 offset (&wrpos self))) (error "index outof bound"))
   (&rdpos<- self offset))
 
-(method MemoryStream .tell (offset)
+(method MemoryStream .tell ()
   (&rdpos self))
 
 (method MemoryStream .to-s ()

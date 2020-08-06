@@ -118,6 +118,21 @@ DEFUN(bytes_copy)
   return TRUE;
 }
 
+DEFUN(bytes_slice)
+{
+  int s, e;
+  object o;
+  if (!bi_argc_range(argc, 2, 3)) return FALSE;
+  if (!bi_arg_mutable_bytes(argv->cons.car, &o)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
+  if (argc < 3) e = o->bytes.size;
+  else if (!bi_sint((argv = argv->cons.cdr)->cons.car, &e)) return FALSE;
+  if (s < 0 || s > e || e > o->bytes.size) return FALSE;
+  *result = gc_new_bytes(object_type(o), e - s);
+  memcpy((*result)->bytes.elt, o->bytes.elt + s, e - s);
+  return TRUE;
+}
+
 DEFUN(bytes_index)
 {
   int b, s, e;
@@ -181,26 +196,6 @@ DEFUN(bytes_eq_p)
   if (!bi_arg_bytes(argv->cons.cdr->cons.car, &p)) return FALSE;
   *result = object_bool((o->bytes.size == p->bytes.size)
       && memcmp(o->bytes.elt, p->bytes.elt, p->bytes.size) == 0);
-  return TRUE;
-}
-
-DEFUN(bytes_unmatch_index)
-{
-  int i, oi, pi, size;
-  object o, p;
-  if (!bi_argc_range(argc, 5, 5)) return FALSE;
-  if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &oi)) return FALSE;
-  if (!bi_arg_bytes((argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (oi + size > o->bytes.size) return FALSE;
-  if (pi + size > p->bytes.size) return FALSE;
-  for(i = 0; i < size; i++) {
-    if (LC(o->bytes.elt + oi + i) != LC(p->bytes.elt + pi + i)) break;
-  }
-  if (i == size) *result = object_nil;
-  else *result = gc_new_xint(oi + i);
   return TRUE;
 }
 
