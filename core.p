@@ -2491,20 +2491,22 @@
 (function import (key)
   ; Load the file corresponding to the specified keyword.
   ; Search the $paren-home directory.
+  ; Bind main to nil after processing.
   ; Returns true if successfully loaded.
   (if (find-if (lambda (x) (eq? x key)) $import) true
-      (begin0 (load (.resolve $paren-home (string (bytes->symbol key) ".p")))
-              (push! $import key))))
+      (let (p (Path.of (string (bytes->symbol key) ".p")))
+        (if (|| (.readable? p) (.readable? (<- p (.resolve $paren-home p))))
+            (begin0 (load p)
+                    (<- main nil)
+                    (push! $import key))
+            (error "unreadable module " key)))))
 
 (function boot ()
   ; Executed when paren is executed.
   ; Invoke repl if there are no command line arguments that bound to the symbol $args.
-  ; If command line arguments are specified, read the first argument as the script file name and bind the remaining arguments to $args and execute.
+  ; If command line arguments are specified, read the first argument as the script file name and execute main.
   (if (nil? $args) (repl)
-      (let (script (car $args) args (cdr $args))
-        (<- $args args)
-        (load script)
-        (if (bound? 'main) (main)))))
+      (&& (load (car $args)) (bound? 'main) main) (main)))
 
 (<- $import '(:core)
     $read-table nil
