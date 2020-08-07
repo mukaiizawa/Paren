@@ -28,7 +28,7 @@
 (method Point .add (p)
   (Point.of (+ (&x self) (&x p)) (+ (&y self) (&y p))))
 
-(function! main ()
+(function! main (args)
   (let (p (Point.of 3 4))
     (assert (.eq p (Point.of 3 4)))
     (assert (! (.eq p (Point.of 2 4))))

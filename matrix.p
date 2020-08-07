@@ -5,9 +5,9 @@
 (class Matrix ()
   width height contents)
 
-(method Matrix .init (:key point)
-  (&width<- self (.x point))
-  (&height<- self (.y point))
+(method Matrix .init (p)
+  (&width<- self (.x p))
+  (&height<- self (.y p))
   (&contents<- self (array (* (&width self) (&height self)))))
 
 (method Matrix .width ()
@@ -38,11 +38,11 @@
                 (list let (list p (list 'Point.of gx gy))
                       (cons begin body))))))
 
-(function! main ()
-  (let (m (.init (.new Matrix) :point (Point.of 2 3)))
+(function! main (args)
+  (let (m (.init (.new Matrix) (Point.of 2 3)))
     (assert (= (&width m) 2))
     (assert (= (&height m) 3))
     (domatrix (p m)
-      (.put m p (.x p)))
+       (.put m p (.x p)))
     (domatrix (p m)
-      (assert (= (.at m p) (.x p))))))
+       (assert (= (.at m p) (.x p))))))

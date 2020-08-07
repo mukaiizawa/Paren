@@ -3,8 +3,6 @@
 (import :point)
 (import :matrix)
 
-(<- $board-size 8)
-
 (function show (board)
   (domatrix (p board)
     (if (= (.y p) 0) (write-line))
@@ -14,7 +12,7 @@
 
 (function putable? (board p)
   (let (x (.x p) y (.y p))
-    (dotimes (y $board-size)
+    (dotimes (y (.width board))
       (if (.at board (Point.of x y)) (return nil)))
     (for (q p) (.inside? board q) (<- q (Point.of (-- (.x q)) (-- (.y q))))
       (if (.at board q) (return nil)))
@@ -23,14 +21,15 @@
     true))
 
 (function put-queen (board y)
-  (if (= y $board-size) (show board)
-      (dotimes (x $board-size)
+  (if (= y (.width board)) (show board)
+      (dotimes (x (.width board))
         (let (p (Point.of x y))
           (when (putable? board p)
             (.put board p true)
             (put-queen board (++ y))
             (.put board p nil))))))
 
-(function! main ()
-  (let (board (.init (.new Matrix) :point (Point.of $board-size $board-size)))
+(function! main (args)
+  (let (size (if (cdr args) (string->number (cadr args)) 8)
+             board (.init (.new Matrix) (Point.of size size)))
     (put-queen board 0)))

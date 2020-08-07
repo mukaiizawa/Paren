@@ -101,7 +101,7 @@
     (when (= ([] expr (-- e)) 0x24)
       (&anchored-end?<- r true)
       (<- e (-- e) anchored? true))
-    (if anchored? (<- expr (bytes->string! (bytes-slice expr s e))))
+    (if anchored? (<- expr (bytes-slice expr s e)))
     (&elements<- r (Regex.parse (.init (.new AheadReader) expr)))))
 
 (method Regex .test (elt i)
@@ -156,7 +156,7 @@
   (for (i start e (.text-length self)) (<= i e) (&start<- self (<- i (++ i)))
     (if (.try self (&elements self) i) (return true))))
 
-(function! main ()
+(function! main (args)
   ; anchore start
   (assert (.match? (Regex.compile "^") ""))
   (assert (nil? (.match? (Regex.compile "^a") "ba")))

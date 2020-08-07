@@ -19,9 +19,11 @@
         result)))
 
 (function max (:rest args)
+  ; Returns maximum value from argument.
   (reduce (lambda (x y) (if (> x y) x y)) args))
 
 (function min (:rest args)
+  ; Returns minimum value from argument.
   (reduce (lambda (x y) (if (< x y) x y)) args))
 
 (builtin-function ceiling (x)
@@ -42,7 +44,7 @@
   (assert (= (truncate 0) 0))
   (assert (= (truncate -1.1) -1)))
 
-(function! main ()
+(function! main (args)
   (assert (= (max 1 2 3) 3))
   (assert (= (min 1 2 3) 1))
   (assert (= (sqr 2) 4))

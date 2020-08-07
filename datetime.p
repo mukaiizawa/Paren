@@ -138,7 +138,7 @@
 (method DateTime .to-s ()
   (list->string (list (.date.to-s self) (.day-week.to-s self) (.time.to-s self)) " "))
 
-(function! main ()
+(function! main (args)
   (let (dt (.init (.new DateTime) (- 1407737889 (utcoffset))))    ; 2014-08-11 Mon 06:18:09
     (assert (= (.year dt) 2014))
     (assert (= (.month dt) 8))

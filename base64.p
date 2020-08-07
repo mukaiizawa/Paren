@@ -60,7 +60,7 @@
           (if (>= size 2) (write-byte (& (>> val 8) 0xff) out))
           (if (= size 3) (write-byte (& val 0xff) out)))))))
 
-(function! main ()
+(function! main (args)
   (assert (string= (Base64.encode "") ""))
   (assert (string= (Base64.encode "A") "QQ=="))
   (assert (string= (Base64.encode "AB") "QUI="))

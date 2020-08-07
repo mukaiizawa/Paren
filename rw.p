@@ -7,7 +7,7 @@
        function!
        builtin-function))
 
-(function! main ()
+(function! main (args)
   (with-open-read (in (.resolve $paren-home core.p))
     (let (expr nil)
       (while (<- expr (read in))

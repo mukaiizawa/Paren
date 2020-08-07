@@ -967,29 +967,9 @@
   (assert (string? "aaa"))
   (assert (! (string? (bytes 1)))))
 
-(function string= (x y)
-  ; Same as (bytes= x y).
-  (bytes= x y))
-
-(function string/= (x y)
-  ; Same as (bytes/= x y).
-  (bytes/= x y))
-
-(function string< (:rest args)
-  ; Returns whether the each of the specified args are in monotonically decreasing order.
-  (apply < (map string->code args)))
-
-(function string> (:rest args)
-  ; Returns whether the each of the specified args are in monotonically increasing order.
-  (all-adjacent-satisfy? (lambda (x y) (string< y x)) args))
-
-(function string<= (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
-  (all-adjacent-satisfy? (lambda (x y) (! (string< y x))) args))
-
-(function string>= (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
-  (all-adjacent-satisfy? (lambda (x y) (! (string< x y))) args))
+(function string->number (s)
+  ; Returns a string as a number.
+  (.skip-number (.init (.new AheadReader) s)))
 
 (function string->code (s)
   ; Returns the code point of string s.
@@ -1013,6 +993,30 @@
       (while (<- c (read-char in))
         (.add a c)))
     (.to-a a)))
+
+(function string= (x y)
+  ; Same as (bytes= x y).
+  (bytes= x y))
+
+(function string/= (x y)
+  ; Same as (bytes/= x y).
+  (bytes/= x y))
+
+(function string< (:rest args)
+  ; Returns whether the each of the specified args are in monotonically decreasing order.
+  (apply < (map string->code args)))
+
+(function string> (:rest args)
+  ; Returns whether the each of the specified args are in monotonically increasing order.
+  (all-adjacent-satisfy? (lambda (x y) (string< y x)) args))
+
+(function string<= (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
+  (all-adjacent-satisfy? (lambda (x y) (! (string< y x))) args))
+
+(function string>= (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
+  (all-adjacent-satisfy? (lambda (x y) (! (string< x y))) args))
 
 (function string-slice (s start :opt end)
   ; Returns a string that is a substring of the specified string s.
@@ -2506,7 +2510,7 @@
   ; Invoke repl if there are no command line arguments that bound to the symbol $args.
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
   (if (nil? $args) (repl)
-      (&& (load (car $args)) (bound? 'main) main) (main)))
+      (&& (load (car $args)) (bound? 'main) main) (main $args)))
 
 (<- $import '(:core)
     $read-table nil
