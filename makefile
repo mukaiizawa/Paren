@@ -57,6 +57,7 @@ rw.vim:
 	paren rw.p | \
 		sed 's/|/\\|/g' | \
 		sed '/^\[/d' | \
+		sed '/^[A-Z]/d' | \
 		sed 's/^/syn keyword ParenBuiltin /' > rw.wk
 
 clean:

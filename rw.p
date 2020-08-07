@@ -8,7 +8,7 @@
        builtin-function))
 
 (function! main (args)
-  (with-open-read (in (.resolve $paren-home core.p))
+  (with-open (in (.resolve $paren-home core.p) :read)
     (let (expr nil)
       (while (<- expr (read in))
         (if (&& (cons? expr))

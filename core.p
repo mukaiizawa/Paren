@@ -1629,26 +1629,27 @@
   ;     (Path.of "foo/bar/../buzz") <=> ("foo" "bar" ".." "buzz")
   ; Two or more consecutive `/`s or trailing `/`s are ignored.
   ;     (Path.of "foo//bar/") <=> ("foo" "bar")
-  (let (c nil path nil first-letter (string-at path-name 0) root? nil)
-    (if (string= first-letter "~")
-        (<- path-name (bytes-concat
-                        (if (eq? $host-name :windows)
-                            (bytes-concat (getenv "HOMEDRIVE") (getenv "HOMEPATH"))
-                            (getenv "HOME"))
-                        Path.separator path-name))
-        (string= first-letter Path.separator)
-        (<- root? true))
-    (<- path (remove-if (lambda (file-name)
-                       (|| (string= file-name "") (string= file-name "~")))
-                     (string->list
-                       (with-memory-stream (out)
-                         (with-memory-stream (in path-name)
-                           (while (<- c (read-char in))
-                             (if (string= c "\\") (write-bytes Path.separator out)
-                                 (write-bytes c out)))))
-                       Path.separator)))
-    (if root? (<- path (cons Path.separator path)))
-    (&path<- (.new Path) path)))
+  (if (is-a? path-name Path) path-name
+      (let (c nil path nil first-letter (string-at path-name 0) root? nil)
+        (if (string= first-letter "~")
+            (<- path-name (bytes-concat
+                            (if (eq? $host-name :windows)
+                                (bytes-concat (getenv "HOMEDRIVE") (getenv "HOMEPATH"))
+                                (getenv "HOME"))
+                            Path.separator path-name))
+            (string= first-letter Path.separator)
+            (<- root? true))
+        (<- path (remove-if (lambda (file-name)
+                              (|| (string= file-name "") (string= file-name "~")))
+                            (string->list
+                              (with-memory-stream (out)
+                                (with-memory-stream (in path-name)
+                                  (while (<- c (read-char in))
+                                    (if (string= c "\\") (write-bytes Path.separator out)
+                                        (write-bytes c out)))))
+                              Path.separator)))
+        (if root? (<- path (cons Path.separator path)))
+        (&path<- (.new Path) path))))
 
 (function Path.getcwd ()
   ; Returns the path corresponding to the current directory.
@@ -1709,27 +1710,13 @@
           (&path self)))
 
 (method Path .open (mode)
-  (catch (Error (lambda (e)
-                  (throw (.message e (bytes-concat "open failed -- " (.to-s self))))))
-    (.init (.new FileStream) (fopen (.to-s self) mode))))
-
-(method Path .open-read ()
   ; Returns a stream that reads the contents of the receiver.
-  (.open self 0))
-
-(method Path .open-write ()
-  ; Returns a stream to write to the contents of the receiver.
-  (.open self 1))
-
-(method Path .open-append ()
-  ; Returns a stream to append to the receiver's content.
-  (.open self 2))
-
-(method Path .open-update ()
-  ; Returns a stream that updates the contents of the receiver.
-  ; The read/write position is at the beginning of the file.
-  ; The file size cannot be reduced.
-  (.open self 3))
+  (.init (.new FileStream) (fopen (.to-s self)
+                                  (switch mode
+                                    :read 0
+                                    :write 1
+                                    :append 2
+                                    :update 3))))
 
 (method Path .stat ()
   ; Returns stat of this object.
@@ -2434,28 +2421,13 @@
           (cons begin body)
           (list if (list ! g) (list '.to-s ms)))))
 
-(function with-open-mode (sym path mode body)
-  (with-gensyms (gsym gpath)
-    (list let (list gpath (list if (list string? path) (list 'Path.of path)
-                                path))
-          (list let (list gsym nil)
-                (list unwind-protect
-                      (cons let (cons (list sym (list mode gpath))
-                                      (cons (list <- gsym sym)
-                                            body)))
-                      (list if gsym (list '.close gsym)))))))
-
-(macro with-open-read ((in path) :rest body)
-  (with-open-mode in path '.open-read body))
-
-(macro with-open-write ((out path) :rest body)
-  (with-open-mode in path '.open-write body))
-
-(macro with-open-append ((out path) :rest body)
-  (with-open-mode in path '.open-append body))
-
-(macro with-open-update ((out path) :rest body)
-  (with-open-mode in path '.open-update body))
+(macro with-open ((sym path mode) :rest body)
+  (with-gensyms (gsym)
+    (list let (list gsym nil)
+          (list unwind-protect
+                (cons let (cons (list sym (list <- gsym (list '.open (list 'Path.of path) mode)))
+                                body))
+                (list if gsym (list '.close gsym))))))
 
 ; execution
 
@@ -2486,7 +2458,7 @@
 (function load (path)
   ; Load the specified file.
   ; Returns true if successfully loaded.
-  (with-open-read (in path)
+  (with-open (in path :read)
     (let (expr nil)
       (while (<- expr (read in))
         (eval expr))))
