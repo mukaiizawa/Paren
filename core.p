@@ -599,9 +599,11 @@
   (if (list? x) x
       (list x)))
 
-(function list->string (l delim)
+(function list->string (l :opt delim)
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
-  (reduce (lambda (x y) (string x delim y)) l))
+  ; If delim is not specified, consider an empty string to be specified.
+  (if delim (reduce (lambda (x y) (string x delim y)) l)
+      (apply bytes-concat (cons "" l))))
 
 (builtin-function length (l)
   ; Returns the length of the specified list l.
@@ -1061,13 +1063,24 @@
   ; Returns a list of characters in string s.
   ; If delim is specified, returns a list of strings s delimited by delimiter.
   (if (nil? delim) (array->list (string->array s))
-      (let (acc nil i 0 pos nil slen (string-length s) dlen (string-length delim))
-        (assert (> dlen 0))
-        (while (&& (< i slen) (<- pos (string-index s delim i)))
-          (push! acc (string-slice s i pos))
-          (<- i (+ pos dlen)))
-        (push! acc (string-slice s i slen))
-        (reverse! acc))))
+      (let (i 0 lis nil chars nil
+              sa (string->array s) salen (array-length sa)
+              da (string->array delim) dalen (array-length da) end (- salen dalen)
+              match? (lambda ()
+                       (dotimes (j dalen)
+                         (if (! (bytes= ([] sa (+ i j)) ([] da j))) (return nil)))
+                       true)
+              join-chars (lambda () (apply bytes-concat (reverse! chars))))
+        (while (< i end)
+          (if (match?) (<- lis (cons (join-chars) lis)
+                           chars nil
+                           i (+ i dalen))
+              (<- chars (cons ([] sa i) chars)
+                  i (++ i))))
+        (while (< i salen)
+          (<- chars (cons ([] sa i) chars)
+              i (++ i)))
+        (reverse! (cons (join-chars) lis)))))
 
 ; bytes
 
@@ -1122,6 +1135,18 @@
   (assert (let (x (bytes 1))
             ([]<- x 0 0x01)
             (bytes= (bytes->string! x) "\x01"))))
+
+(function bytes->list (s :opt delim)
+  ; Returns a list of bytes delimited by bytes s.
+  ; If delim is specified, returns a list of strings s delimited by delimiter.
+  (if (nil? delim) (string->list s)
+      (let (acc nil i 0 pos nil slen (bytes-length s) dlen (bytes-length delim))
+        (assert (> dlen 0))
+        (while (&& (< i slen) (<- pos (bytes-index s delim i)))
+          (push! acc (bytes-slice s i pos))
+          (<- i (+ pos dlen)))
+        (push! acc (bytes-slice s i slen))
+        (reverse! acc))))
 
 (builtin-function bytes-length (x)
   ; Returns the size of the bytes x.
