@@ -1718,6 +1718,12 @@
                                     :append 2
                                     :update 3))))
 
+(method Path .remove ()
+  ; Deletes the file corresponding to this object.
+  ; Returns this object.
+  (remove (.to-s self))
+  self)
+
 (method Path .stat ()
   ; Returns stat of this object.
   (let (stat-array (stat (.to-s self)))
@@ -1849,8 +1855,20 @@
             (= c 0x0a) (break)
             (.write-byte out c))))))
 
-(method Stream .write-line ()
+(method Stream .read-lines ()
+  ; Return the rest of the stream as a list whose elements are rows.
+  (let (line nil lines nil)
+    (while (<- line (.read-line self))
+      (push! lines line))
+    (reverse! lines)))
+
+(method Stream .write-line (:opt bytes)
+  (if bytes (.write-bytes self bytes))
   (.write-byte self 0x0a))
+
+(method Stream .write-lines (lines)
+  (dolist (line lines)
+    (.write-line self line)))
 
 (method Stream .write-integer (n :key radix)
   ; Write integer to stream.
@@ -2385,6 +2403,10 @@
   ; Read line from the specified stream.
   (.read-line (|| stream (dynamic $stdin))))
 
+(function read-lines (:opt stream)
+  ; Return the rest of the stream as a list whose elements are rows.
+  (.read-lines (|| stream (dynamic $stdin))))
+
 (function read (:opt stream)
   (.read (|| stream (dynamic $stdin))))
 
@@ -2396,8 +2418,11 @@
   ; Write the specified stirng bytes to the specified stream.
   (.write-bytes (|| stream (dynamic $stdout)) bytes))
 
-(function write-line (:opt stream)
-  (.write-line (|| stream (dynamic $stdout))))
+(function write-line (:opt bytes stream)
+  (.write-line (|| stream (dynamic $stdout)) bytes))
+
+(function write-lines (lines :opt stream)
+  (.write-lines (|| stream (dynamic $stdout)) lines))
 
 (function write (x :opt stream :key start end)
   ; Write the specified x as a readable format.
