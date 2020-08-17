@@ -1020,6 +1020,16 @@
   ; Returns whether the each of the specified args are in monotonically nonincreasing order.
   (all-adjacent-satisfy? (lambda (x y) (! (string< x y))) args))
 
+(function string-prefix? (s prefix)
+  ; Returns whether the string x with the specified prefix.
+  (&& (>= (bytes-length s) (bytes-length prefix))
+      (bytes-index s prefix 0 (bytes-length prefix))))
+
+(function string-suffix? (s suffix)
+  ; Returns whether the string x with the specified suffix.
+    (&& (>= (bytes-length s) (bytes-length suffix))
+        (bytes-index s suffix (- (bytes-length s) (bytes-length suffix)))))
+
 (function string-slice (s start :opt end)
   ; Returns a string that is a substring of the specified string s.
   ; The substring begins at the specified start and extends to the character at index end - 1.
@@ -1059,6 +1069,20 @@
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
+(function string-last-index (s pat)
+  ; Returns the position where the substring pat appears last in the string s.
+  ; If the string pat is not a substring of the string s, returns nil.
+  (let (sa (string->array s) slen (array-length sa)
+           pa (string->array pat) plen (array-length pa))
+    (if (= plen 0) (return (-- slen)))
+    (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (<- i (-- i))
+      (when (bytes= ([] sa i) p0)
+        (if (= plen 1) (return i))
+        (let (si (++ i) pi 1)
+          (while (bytes= ([] sa si) ([] pa pi))
+            (<- si (++ si) pi (++ pi))
+            (if (= pi plen) (return i))))))))
+
 (function string->list (s :opt delim)
   ; Returns a list of characters in string s.
   ; If delim is specified, returns a list of strings s delimited by delimiter.
@@ -1070,8 +1094,8 @@
                        (dotimes (j dalen)
                          (if (! (bytes= ([] sa (+ i j)) ([] da j))) (return nil)))
                        true)
-              join-chars (lambda () (apply bytes-concat (reverse! chars))))
-        (while (< i end)
+              join-chars (lambda () (if chars (apply bytes-concat (reverse! chars)) "")))
+        (while (<= i end)
           (if (match?) (<- lis (cons (join-chars) lis)
                            chars nil
                            i (+ i dalen))
@@ -1685,15 +1709,16 @@
   (last (&path self)))
 
 (method Path .base-name ()
-  ; Returns base name.
+  ; Returns base name (the string up to the first dot).
+  ; If not including dot, returns the entire name.
   (let (name (.name self) i (string-index name "."))
     (if i (string-slice name 0 i)
         name)))
 
 (method Path .suffix ()
-  ; Returns the suffix.
-  ; If the path has no extension, returns nil.
-  (let (name (.name self) i (string-index name "."))
+  ; Returns the suffix (the string after the last dot).
+  ; If not including dot, returns nil.
+  (let (name (.name self) i (string-last-index name "."))
     (if i (string-slice name (++ i)))))
 
 (method Path .root? ()
@@ -1728,6 +1753,10 @@
 (method Path .relative? ()
   ; Same as (! (.absolute? self))
   (! (.absolute? self)))
+
+(method Path .to-l ()
+  (with-open (in self :read)
+    (return (.read-lines in))))
 
 (method Path .to-s ()
   (reduce (lambda (acc rest)
