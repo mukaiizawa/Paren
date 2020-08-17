@@ -24,6 +24,6 @@
                            (.children (Path.getcwd))))
     (write-bytes
       (list->string 
-        `(,(string (.base-name file) ".o:") ,(.name file) ,@(parse-file file))
+        `(,(string (.but-suffix file) ".o:") ,(.name file) ,@(parse-file file))
         " "))
     (write-line)))

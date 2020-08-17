@@ -1721,6 +1721,12 @@
   (let (name (.name self) i (string-last-index name "."))
     (if i (string-slice name (++ i)))))
 
+(method Path .but-suffix ()
+  ; Returns the name without the suffix.
+  (let (name (.name self) i (string-last-index name "."))
+    (if i (string-slice name 0 i)
+        name)))
+
 (method Path .root? ()
   ; Returns whether this object is a root directory.
   (&& (.absolute? self) (nil? (.parent self))))
