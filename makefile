@@ -9,8 +9,10 @@ ifeq ($(filter $(supportos),$(os)),)
 $(error Unsupport os)
 endif
 ifeq ($(os), linux)
+extobj+=pf.u.o xsleep.u.o
 endif
 ifeq ($(os), windows)
+extobj+=pf.w.o xsleep.w.o
 exe=.exe
 endif
 
@@ -44,7 +46,8 @@ defun.wk: $(defun)
 
 xc.a: std.o xsleep.o xarray.o xbarray.o xgetopt.o heap.o pf.o object.o gc.o lex.o splay.o st.o \
 	$(defsp:%.c=%.o) \
-	$(defun:%.c=%.o) 
+	$(defun:%.c=%.o) \
+	$(extobj)
 	ar -ru xc.a $+
 
 $(paren): paren.o xc.a

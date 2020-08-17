@@ -13,15 +13,15 @@
 #define PF_READABLEFILE (PF_FILE|PF_READABLE)
 
 struct pf_stat {
-	int64_t mtime;
-	int64_t size;
+  int64_t mtime;
+  int64_t size;
 };
 
-extern int pf_stat(char *fn,struct pf_stat *statbuf);
-extern char *pf_exepath(char *argv0,char *path);
-extern int pf_utime(char *fn,int64_t mtime);
+extern int pf_stat(char *fn, struct pf_stat *statbuf);
+extern char *pf_exepath(char *argv0, char *path);
+extern int pf_utime(char *fn, int64_t mtime);
 extern char *pf_getcwd(char *buf);
-extern int pf_readdir(char *path,struct xbarray *xba);
+extern int pf_readdir(char *path, struct xbarray *xba);
 extern int pf_mkdir(char *pn);
 extern int pf_remove(char *fn);
 extern int pf_chdir(char *pn);

@@ -32,7 +32,7 @@ typedef union s_expr *object;
 #define byte_p(i) (0 <= i && i < 256)
 #define sint_p(o) ((((intptr_t)o) & 1) == 1)
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
-#define sint(i) ((object)((((uintptr_t)i) << 1) | 1))
+#define sint(i) ((object)((((intptr_t)i) << 1) | 1))
 
 #define XINT_BITS 63
 
@@ -65,7 +65,7 @@ union s_expr {
   } cons;
   struct xint {
     int header;
-    int64_t val; 
+    int64_t val;
   } xint;
   struct xfloat {
     int header;
