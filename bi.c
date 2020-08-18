@@ -159,7 +159,7 @@ static char *symbol_name_map[] = {
   "bit_or", "|",
   "bit_shift", "<<",
   "bit_xor", "^",
-  "integer_p", "integer?",
+  "int_p", "int?",
   "number_add", "+",
   "number_divide", "/",
   "number_equal_p", "=",

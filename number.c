@@ -42,7 +42,7 @@ DEFUN(number_p)
   }
 }
 
-DEFUN(integer_p)
+DEFUN(int_p)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (object_type(argv->cons.car)) {

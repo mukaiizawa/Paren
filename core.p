@@ -802,15 +802,15 @@
   (assert (number? 0x20))
   (assert (nil? (number? 'x))))
 
-(builtin-function integer? (x)
+(builtin-function int? (x)
   ; Returns whether the x is a integer.
-  (assert (integer? 1))
-  (assert (nil? (integer? 3.14)))
-  (assert (nil? (integer? 'x))))
+  (assert (int? 1))
+  (assert (nil? (int? 3.14)))
+  (assert (nil? (int? 'x))))
 
 (function byte? (x)
   ; Returns whether the x is a integer and between 0 and 255.
-  (&& (integer? x) (<= 0 x 255)))
+  (&& (int? x) (<= 0 x 255)))
 
 (function ascii-space? (b)
   ; Returns whether byte b is a space character.
@@ -827,11 +827,20 @@
   ; Returns whether byte b is a digit character.
   (<= 0x30 b 0x39))
 
+(function int->string (i :key radix padding)
+  ; Returns string of i.
+  (with-memory-stream (out)
+    (.write-int out i :radix radix :padding padding)))
+
 (function ascii-lower (b)
   ; Returns lowercase if byte b is an alphabetic character.
   ; Otherwise returns b.
   (if (&& (ascii-alpha? b) (<= 0x41 b 0x5a)) (+ b 0x20)
       b))
+
+(function ascii-graphic? (b)
+  ; Returns whether b is printable.
+  (&& (byte? b) (<= 0x20 b 0x7e)))
 
 (function ascii-upper (b)
   ; Returns uppercase if byte b is an alphabetic character.
@@ -1930,24 +1939,30 @@
   (dolist (line lines)
     (.write-line self line)))
 
-(method Stream .write-integer (n :key radix)
+(method Stream .write-int (n :key radix padding)
   ; Write integer to stream.
-  (if (< n 0) (begin
-                (.write-byte self 0x2d)
-                (.write-integer self (- n)))
-      (= n 0) (.write-byte self 0x30)
-      (let (radix (|| radix 10) upper (// n radix))
-        (if (/= upper 0) (.write-integer self upper :radix radix))
-        (.write-byte self (digit->ascii (mod n radix))))))
+  (let (write1 (lambda (n depth)
+                 (if (< n 0) (begin
+                               (.write-byte self 0x2d)
+                               (write1 (- n) (++ depth)))
+                     ; (= n 0) (.write-byte self 0x30)
+                     (let (upper (// n radix))
+                       (if (/= upper 0) (write1 upper (++ depth))
+                           (dotimes (i (- padding depth 1))
+                             (.write-byte self 0x30)))
+                       (.write-byte self (digit->ascii (mod n radix)))))))
+    (<- radix (|| radix 16)
+        padding (|| padding 0))
+    (write1 n 0)))
 
 (method Stream .write-number (n)
-  (if (integer? n) (.write-integer self n)
+  (if (int? n) (.write-int self n)
       (= n 0.0) (.write-byte self 0x30)
       (let (mant n exp 8)
         (let (write-mant1
                (lambda ()
                  (let (upper (// (truncate mant) 100000000))
-                   (.write-integer self upper)
+                   (.write-int self upper)
                    (<- mant (* (- mant (* upper 100000000)) 10))))
                write-fraction
                (lambda (n)
@@ -1980,7 +1995,7 @@
                 (.write-byte self 0x2e)
                 (write-fraction 15)
                 (.write-byte self 0x65)
-                (.write-integer self exp)))))))
+                (.write-int self exp)))))))
 
 (method Stream .write (x :key start end)
   ; Write the specified x as a readable format.
@@ -2027,7 +2042,7 @@
         (dotimes (i (bytes-length x))
           (if (/= i 0) (.write-byte self 0x20))
           (.write-bytes self "0x")
-          (.write-integer self ([] x i) :radix 16))
+          (.write-int self ([] x i) :radix 16 :padding 2))
         (.write-byte self 0x5d))
       (array? x)
       (begin
@@ -2225,20 +2240,20 @@
 (method AheadReader .skip-digit (:opt radix)
   (ascii->digit (string->code (.skip self)) (|| radix 10)))
 
-(method AheadReader .skip-unsigned-integer ()
+(method AheadReader .skip-uint ()
   (if (! (.digit? self)) (error "missing digits")
       (let (val 0)
         (while (.digit? self)
           (<- val (+ (* val 10) (.skip-digit self))))
         val)))
 
-(method AheadReader .skip-integer ()
-  (let (minus? (.skip-sign self) val (.skip-unsigned-integer self))
+(method AheadReader .skip-int ()
+  (let (minus? (.skip-sign self) val (.skip-uint self))
     (if minus? (- val)
         val)))
 
-(method AheadReader .skip-unsigned-number ()
-  (let (val (.skip-unsigned-integer self))
+(method AheadReader .skip-unumber ()
+  (let (val (.skip-uint self))
     (if (string= (&next self) "x")
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
@@ -2254,11 +2269,11 @@
                 factor (/ factor 10)))
           (when (= (&next self) 0x65)
             (.skip self)
-            (<- val (* val (exp 10 (.skip-integer self)))))))
+            (<- val (* val (exp 10 (.skip-int self)))))))
     val))
 
 (method AheadReader .skip-number ()
-  (let (minus? (.skip-sign (.skip-space self)) val (.skip-unsigned-number self))
+  (let (minus? (.skip-sign (.skip-space self)) val (.skip-unumber self))
     (if minus? (- val)
         val)))
 
