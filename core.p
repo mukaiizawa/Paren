@@ -812,18 +812,18 @@
   ; Returns whether the x is a integer and between 0 and 255.
   (&& (int? x) (<= 0 x 255)))
 
-(function ascii-space? (b)
+(function byte-space? (b)
   ; Returns whether byte b is a space character.
   (|| (= b 0x09)
       (= b 0x0a)
       (= b 0x0d)
       (= b 0x20)))
 
-(function ascii-alpha? (b)
+(function byte-alpha? (b)
   ; Returns whether byte b is an alphabetic character.
   (|| (<= 0x41 b 0x5a) (<= 0x61 b 0x7a)))
 
-(function ascii-digit? (b)
+(function byte-digit? (b)
   ; Returns whether byte b is a digit character.
   (<= 0x30 b 0x39))
 
@@ -832,31 +832,31 @@
   (with-memory-stream (out)
     (.write-int out i :radix radix :padding padding)))
 
-(function ascii-lower (b)
+(function byte-lower (b)
   ; Returns lowercase if byte b is an alphabetic character.
   ; Otherwise returns b.
-  (if (&& (ascii-alpha? b) (<= 0x41 b 0x5a)) (+ b 0x20)
+  (if (&& (byte-alpha? b) (<= 0x41 b 0x5a)) (+ b 0x20)
       b))
 
-(function ascii-print? (b)
+(function byte-print? (b)
   ; Returns whether b is printable.
   (&& (byte? b) (<= 0x20 b 0x7e)))
 
-(function ascii-upper (b)
+(function byte-upper (b)
   ; Returns uppercase if byte b is an alphabetic character.
   ; Otherwise returns b.
-  (if (&& (ascii-alpha? b) (<= 0x61 b 0x7a)) (- b 0x20)
+  (if (&& (byte-alpha? b) (<= 0x61 b 0x7a)) (- b 0x20)
       b))
 
-(function ascii->digit (b :opt radix)
+(function byte->digit (b :opt radix)
   ; Returns byte b as a number.
   ; If the radix is not specified, 10 is assumed to be specified.
-  (let (n (if (ascii-digit? b) (- b 0x30)
-              (ascii-alpha? b) (+ (- (ascii-lower b) 0x61) 10)))
+  (let (n (if (byte-digit? b) (- b 0x30)
+              (byte-alpha? b) (+ (- (byte-lower b) 0x61) 10)))
     (if (|| (nil? n) (>= n (|| radix 10))) (error "not numeric char")
         n)))
 
-(function digit->ascii (n)
+(function digit->byte (n)
   ; Returns the byte representation of a number.
   (if (< n 10) (+ n 0x30)
       (+ n 0x61 -10)))
@@ -1950,7 +1950,7 @@
                        (if (/= upper 0) (write1 upper (++ depth))
                            (dotimes (i (- padding depth 1))
                              (.write-byte self 0x30)))
-                       (.write-byte self (digit->ascii (mod n radix)))))))
+                       (.write-byte self (digit->byte (mod n radix)))))))
     (<- radix (|| radix 16)
         padding (|| padding 0))
     (write1 n 0)))
@@ -2181,17 +2181,17 @@
 
 (method AheadReader .alpha? ()
   ; Returns true if next character is alphabetic.
-  (ascii-alpha? (string->code (&next self))))
+  (byte-alpha? (string->code (&next self))))
 
 (method AheadReader .digit? ()
   ; Returns true if next character is digit.
-  (ascii-digit? (string->code (&next self))))
+  (byte-digit? (string->code (&next self))))
 
 (method AheadReader .numeric-alpha? ()
   ; Returns true if next character is digit or alphabetic.
   (let (b (string->code (&next self)))
-    (|| (ascii-digit? b)
-        (ascii-alpha? b))))
+    (|| (byte-digit? b)
+        (byte-alpha? b))))
 
 (method AheadReader .skip (:opt expected)
   ; Skip next character and returns it.
@@ -2207,7 +2207,7 @@
     (if (string/= c "\\") c
         (string= (<- c (.skip self)) "a") 0x07
         (string= c "b") 0x08
-        (string= c "c") (if (<= 0x40 (<- c (ascii-upper (string->code (.skip self)))) 0x5f)
+        (string= c "c") (if (<= 0x40 (<- c (byte-upper (string->code (.skip self)))) 0x5f)
                             (& c 0x1f)
                             (error "illegal ctrl char"))
         (string= c "e") 0x1b
@@ -2227,7 +2227,7 @@
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
   ; Returns self.
-  (while (ascii-space? (string->code (&next self)))
+  (while (byte-space? (string->code (&next self)))
     (.skip self))
   self)
 
@@ -2238,7 +2238,7 @@
         nil)))
 
 (method AheadReader .skip-digit (:opt radix)
-  (ascii->digit (string->code (.skip self)) (|| radix 10)))
+  (byte->digit (string->code (.skip self)) (|| radix 10)))
 
 (method AheadReader .skip-uint ()
   (if (! (.digit? self)) (error "missing digits")

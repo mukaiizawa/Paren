@@ -5,5 +5,5 @@
   (for (i 0) (<= i 0x7f) (<- i (++ i))
     (when (= (mod i 0x10) 0)
       (write-bytes (int->string i :radix 16 :padding 2)) (write-bytes " "))
-    (write-byte (if (ascii-print? i) i 0x2e))
+    (write-byte (if (byte-print? i) i 0x2e))
     (write-bytes (if (= (mod i 0x10) 0x0f) "\n" " "))))
