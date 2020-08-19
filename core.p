@@ -838,7 +838,7 @@
   (if (&& (ascii-alpha? b) (<= 0x41 b 0x5a)) (+ b 0x20)
       b))
 
-(function ascii-graphic? (b)
+(function ascii-print? (b)
   ; Returns whether b is printable.
   (&& (byte? b) (<= 0x20 b 0x7e)))
 
