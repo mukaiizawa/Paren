@@ -1,0 +1,21 @@
+; calendar
+
+(import :datetime)
+
+(function! main (args)
+  (let (argc (length (<- args (cdr args))) dt (DateTime.now) dw nil y nil m nil)
+    (if (= argc 0) (<- y (.year dt) m (.month dt))
+        (= argc 1) (<- y (.year dt) m (string->number (car args)))
+        (= argc 2) (<- y (string->number (car args)) m (string->number (cadr args)))
+        (error "illegal arguments"))
+    (<- dt (DateTime.of y m 1) dw (.day-week dt))
+    (write-line (string y "-" m))
+    (write-line  "Su Mo Tu We Th Fr Sa")
+    (dotimes (i (-- (* dw 3)))
+      (write-bytes " "))
+    (dotimes (i (.monthlen dt))
+      (if (/= dw 0) (write-bytes " "))
+      (write-bytes (int->string (++ i) :padding 2)) 
+      (when (= 7 (<- dw (++ dw)))
+        (<- dw 0)
+        (write-line)))))

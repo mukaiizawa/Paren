@@ -1951,7 +1951,7 @@
                            (dotimes (i (- padding depth 1))
                              (.write-byte self 0x30)))
                        (.write-byte self (digit->byte (mod n radix)))))))
-    (<- radix (|| radix 16)
+    (<- radix (|| radix 10)
         padding (|| padding 0))
     (write1 n 0)))
 
