@@ -175,7 +175,7 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_addf(x, "%d", sint_val(o));
       break;
     case XINT:
-      xbarray_addf(x, "%d", o->xint.val);
+      xbarray_addf(x, "%" PRId64, o->xint.val);
       break;
     case XFLOAT:
       xbarray_addf(x, "%g", o->xfloat.val);

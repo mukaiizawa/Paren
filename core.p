@@ -1945,7 +1945,6 @@
                  (if (< n 0) (begin
                                (.write-byte self 0x2d)
                                (write1 (- n) (++ depth)))
-                     ; (= n 0) (.write-byte self 0x30)
                      (let (upper (// n radix))
                        (if (/= upper 0) (write1 upper (++ depth))
                            (dotimes (i (- padding depth 1))
