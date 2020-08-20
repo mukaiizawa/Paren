@@ -2583,7 +2583,7 @@
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
   (if (nil? args) (repl)
       (let (script (Path.of (car args)))
-        (if (&& (! (.readable? script) )
+        (if (&& (! (.readable? script))
                 (! (.readable? (<- script (.resolve $paren-home script)))))
             (error "unreadable file " (car args))
             (&& (load script) (bound? 'main)) (main args)))))
