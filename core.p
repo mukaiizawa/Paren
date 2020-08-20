@@ -2463,7 +2463,7 @@
   (with-gensyms (f)
     (list let (list f (cons lambda (cons params body)))
           (list 'push! '$read-table f)
-          (list 'push! '$read-table (list string->code next)))))
+          (list 'push! '$read-table (list 'string->code (list quote next))))))
 
 (function read-byte (:opt stream)
   ; Read 1byte from the specified stream.
@@ -2577,12 +2577,16 @@
                     (push! $import key))
             (error "unreadable module " key)))))
 
-(function boot ()
+(function boot (args)
   ; Executed when paren is executed.
   ; Invoke repl if there are no command line arguments that bound to the symbol $args.
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
-  (if (nil? $args) (repl)
-      (&& (load (car $args)) (bound? 'main) main) (main $args)))
+  (if (nil? args) (repl)
+      (let (script (Path.of (car args)))
+        (if (&& (! (.readable? script) )
+                (! (.readable? (<- script (.resolve $paren-home script)))))
+            (error "unreadable file " (car args))
+            (&& (load script) (bound? 'main)) (main args)))))
 
 (<- $import '(:core)
     $read-table nil
@@ -2591,7 +2595,7 @@
     $external-encoding (if (eq? $host-name :windows) :SJIS :UTF-8)
     $paren-home (.parent (.resolve (Path.getcwd) core.p)))
 
-(reader-macro "a" (reader)
+(reader-macro a (reader)
   ; Define an array literal.
   ; Array elements are not evaluated.
   (let (lexer (&lexer reader) a (.new Array) expr nil)
@@ -2604,7 +2608,7 @@
         (.add a expr)))
     (.to-a a)))
 
-(reader-macro "b" (reader)
+(reader-macro b (reader)
   ; Define an bytes literal.
   (let (lexer (&lexer reader) expr nil)
     (.skip lexer)
@@ -2618,10 +2622,10 @@
             (while (<- expr (read in))
               (.write-byte out expr))))))))
 
-(reader-macro "m" (reader)
+(reader-macro m (reader)
   ; Define expand-macro-all reader.
   (let (lexer (&lexer reader))
     (.skip lexer)
     (list 'write (list 'expand-macro-all (list quote (.read reader))))))
 
-(boot)
+(boot $args)
