@@ -1,12 +1,12 @@
 # makefile
-# Usage: make os={linux|windows} [cc=gcc] [debug=on]
+# Usage: make os={linux|windows} [cc=gcc] [debug={off|on}]
 
 supportos=linux windows
 cc?=gcc
 debug?=off
 
 ifeq ($(filter $(supportos),$(os)),)
-$(error Unsupport os)
+$(error illegal os)
 endif
 ifeq ($(os), linux)
 extobj+=pf.u.o xsleep.u.o
@@ -40,7 +40,7 @@ defsp=ip.c
 defsp.wk: $(defsp)
 	cat $+ | grep ^DEFSP>$@
 
-defun=ip.c bi.c array.c bytes.c cons.c lambda.c number.c os.c dl.o
+defun=ip.c bi.c array.c bytes.c cons.c lambda.c number.c os.c dl.c
 defun.wk: $(defun)
 	cat $+ | grep ^DEFUN>$@
 
