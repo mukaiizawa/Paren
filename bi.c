@@ -3,6 +3,7 @@
 #include "std.h"
 
 #include <math.h>
+#include <float.h>
 
 #include "xarray.h"
 #include "xbarray.h"
@@ -235,13 +236,25 @@ int bi_intptr(object o, intptr_t *p)
   return FALSE;
 }
 
+#define DBL_MAX_INT ((int64_t)1<<DBL_MANT_DIG)
+#define DBL_MIN_INT (-DBL_MAX_INT-1)
+
 int bi_double(object o, double *p)
 {
   int64_t i;
-  if (bi_int64(o, &i)) *p = (double)i;
-  else if (object_type_p(o, XFLOAT)) *p = o->xfloat.val;
-  else return FALSE;
-  return TRUE;
+  if (bi_int64(o, &i)) {
+    if (DBL_MIN_INT <= i && i <= DBL_MAX_INT) { 
+      *p = (double)i;
+      return TRUE;
+    }
+    printf("%"PRId64"\n", i);
+    return FALSE;
+  }
+  if (object_type_p(o, XFLOAT)) {
+    *p = o->xfloat.val;
+    return TRUE;
+  }
+  return FALSE;
 }
 
 int bi_strings(int n, object argv, char **ss)
