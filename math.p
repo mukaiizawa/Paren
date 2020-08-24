@@ -1,7 +1,7 @@
 ; Math module.
 
-(<- $pi 3.14159265358979323846
-    $e 2.71828182845904523536)
+(<- $math.pi 3.14159265358979323846
+    $math.e 2.71828182845904523536)
 
 (function sqr (x)
   ; Returns the square of x.
