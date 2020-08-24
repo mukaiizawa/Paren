@@ -864,7 +864,9 @@
 (builtin-function = (x y :rest args)
   ; Returns whether all arguments are the same value.
   ; However, arguments for which the function `eq?` returns true will always return true.
-  (assert (= 3.14 3.140))
+  (assert (= 1 1 1))
+  (assert (= 1.0 1.0 1.0))
+  (assert (= 1 1.00 1))
   (assert (! (= 10 20)))
   (assert (= 'x 'x))
   (assert (! (= 'x 'y))))

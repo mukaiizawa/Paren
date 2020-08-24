@@ -60,7 +60,8 @@ DEFUN(int_p)
 DEFUN(number_equal_p)
 {
   object o, p;
-  double x, y;
+  int64_t i0, i1;
+  double d0, d1;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   o = argv;
   p = o->cons.car;
@@ -72,10 +73,28 @@ DEFUN(number_equal_p)
     }
   }
   if (*result == object_true) return TRUE;
-  if (!bi_double(argv->cons.car, &x)) return TRUE;
-  while ((argv = argv->cons.cdr) != object_nil) {
-    if (!bi_double(argv->cons.car, &y)) return TRUE;
-    if (x != y) return TRUE;
+  while (argv->cons.cdr != object_nil) {
+    if (bi_int64(argv->cons.car, &i0)) {
+      argv = argv->cons.cdr;
+      if (bi_int64(argv->cons.car, &i1)) {
+        if (i0 != i1) return TRUE;
+      } else if (bi_double(argv->cons.car, &d1)) {
+        if (i0 != d1) return TRUE;
+      } else {
+        return TRUE;
+      }
+    } else if (bi_double(argv->cons.car, &d0)) {
+      argv = argv->cons.cdr;
+      if (bi_int64(argv->cons.car, &i1)) {
+        if (d0 != i1) return TRUE;
+      } else if (bi_double(argv->cons.car, &d1)) {
+        if (d0 != d1) return TRUE;
+      } else {
+        return TRUE;
+      }
+    } else {
+      return TRUE;
+    }
   }
   *result = object_true;
   return TRUE;
