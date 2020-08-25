@@ -3,6 +3,7 @@
 #include "std.h"
 
 #include <math.h>
+#include <float.h>
 
 #include "xarray.h"
 #include "xbarray.h"
@@ -12,19 +13,29 @@
 #include "bi.h"
 #include "ip.h"
 
-static void mark_required_number(void)
+static int mark_required_integer(void)
 {
-  ip_mark_error("expected number");
+  return ip_mark_error("expected integer");
 }
 
-static void mark_numeric_over_flow(void)
+static int mark_required_positive_int(void)
 {
-  ip_mark_error("numeric overflow");
+  return ip_mark_error("expected positive integer");
 }
 
-static void mark_division_by_zero(void)
+static int mark_required_number(void)
 {
-  ip_mark_error("division by zero");
+  return ip_mark_error("expected number");
+}
+
+static int mark_numeric_over_flow(void)
+{
+  return ip_mark_error("numeric overflow");
+}
+
+static int mark_division_by_zero(void)
+{
+  return ip_mark_error("division by zero");
 }
 
 DEFUN(number_p)
@@ -57,11 +68,65 @@ DEFUN(int_p)
   return TRUE;
 }
 
+#define DBL_MAX_INT ((int64_t)1<<DBL_MANT_DIG)
+#define DBL_MIN_INT (-DBL_MAX_INT-1)
+
+DEFUN(number_to_int)
+{
+  double d;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (sint_p(argv->cons.car) || object_type_p(argv->cons.car, XINT)) {
+    *result = argv->cons.car;
+    return TRUE;
+  }
+  if (bi_double(argv->cons.car, &d)) {
+    if ((double)DBL_MIN_INT <= d && d <= (double)DBL_MAX_INT) {
+      *result = gc_new_xint((int64_t)d);
+      return TRUE;
+    }
+    return mark_numeric_over_flow();
+  }
+  return mark_required_number();
+}
+
+static int double_equal_p(double x, object argv, object *result)
+{
+  int64_t i;
+  double d;
+  if (argv == object_nil) {
+    *result = object_true;
+    return TRUE;
+  }
+  if (bi_int64(argv->cons.car, &i)) {
+    if (fabs(x - (double)i) > DBL_EPSILON) return TRUE;
+    return double_equal_p(x, argv->cons.cdr, result);
+  }
+  if (bi_double(argv->cons.car, &d)) {
+    if (fabs(x - d) > DBL_EPSILON) return TRUE;
+    return double_equal_p(x, argv->cons.cdr, result);
+  }
+  return TRUE;
+}
+
+static int int64_equal_p(int64_t x, object argv, object *result)
+{
+  int64_t y;
+  if (argv == object_nil) {
+    *result = object_true;
+    return TRUE;
+  }
+  if (bi_int64(argv->cons.car, &y)) {
+    if (x != y) return TRUE;
+    return int64_equal_p(x, argv->cons.cdr, result);
+  }
+  return double_equal_p((double)x, argv, result);
+}
+
 DEFUN(number_equal_p)
 {
   object o, p;
-  int64_t i0, i1;
-  double d0, d1;
+  int64_t i;
+  double d;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   o = argv;
   p = o->cons.car;
@@ -73,167 +138,149 @@ DEFUN(number_equal_p)
     }
   }
   if (*result == object_true) return TRUE;
-  while (argv->cons.cdr != object_nil) {
-    if (bi_int64(argv->cons.car, &i0)) {
-      argv = argv->cons.cdr;
-      if (bi_int64(argv->cons.car, &i1)) {
-        if (i0 != i1) return TRUE;
-      } else if (bi_double(argv->cons.car, &d1)) {
-        if (i0 != d1) return TRUE;
-      } else {
-        return TRUE;
-      }
-    } else if (bi_double(argv->cons.car, &d0)) {
-      argv = argv->cons.cdr;
-      if (bi_int64(argv->cons.car, &i1)) {
-        if (d0 != i1) return TRUE;
-      } else if (bi_double(argv->cons.car, &d1)) {
-        if (d0 != d1) return TRUE;
-      } else {
-        return TRUE;
-      }
-    } else {
-      return TRUE;
-    }
-  }
-  *result = object_true;
+  if (bi_int64(p, &i)) return int64_equal_p(i, argv->cons.cdr, result);
+  if (bi_double(p, &d)) return double_equal_p(d, argv->cons.cdr, result);
   return TRUE;
 }
 
-static int double_add(object argv, object *result)
+static int double_add(double x, object argv, object *result)
 {
-  double x, y, z;
-  if (argv == object_nil) return TRUE;
-  if (!bi_double(*result, &x) || !bi_double(argv->cons.car, &y)) {
-    mark_required_number();
-    return FALSE;
+  int64_t i;
+  double d;
+  if (!isfinite(x)) return mark_numeric_over_flow();
+  if (argv == object_nil) {
+    *result = gc_new_xfloat(x);
+    return TRUE;
   }
-  if (!isfinite(z = x + y)) {
-    mark_numeric_over_flow();
-    return FALSE;
-  }
-  *result = gc_new_xfloat(z);
-  return double_add(argv->cons.cdr, result);
+  if (bi_int64(argv->cons.car, &i))
+    return double_add(x + (double)i, argv->cons.cdr, result);
+  if (bi_double(argv->cons.car, &d))
+    return double_add(x + d, argv->cons.cdr, result);
+  return mark_required_number();
 }
 
-static int int64_add(object argv, object *result)
+static int int64_add(int64_t x, object argv, object *result)
 {
-  int64_t x, y;
-  if (argv == object_nil) return TRUE;
-  if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y)) {
-    if ((y > 0 && x > INT64_MAX - y) || (y < 0 && x < INT64_MIN - y)) {
-      mark_numeric_over_flow();
-      return FALSE;
-    }
-    *result = gc_new_xint(x + y);
-    return int64_add(argv->cons.cdr, result);
+  int64_t y;
+  if (argv == object_nil) {
+    *result = gc_new_xint(x);
+    return TRUE;
   }
-  return double_add(argv, result);
+  if (bi_int64(argv->cons.car, &y)) {
+    if (y > 0 && x > INT64_MAX - y) return mark_numeric_over_flow();
+    if (y < 0 && x < INT64_MIN - y) return mark_numeric_over_flow();
+    return int64_add(x + y, argv->cons.cdr, result);
+  }
+  return double_add((double)x, argv, result);
 }
 
 DEFUN(number_add)
 {
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
-  *result = argv->cons.car;
-  return int64_add(argv->cons.cdr, result);
+  return int64_add(0, argv, result);
 }
 
-static int double_multiply(object argv, object *result)
+static int double_multiply(double dx, object argv, object *result)
 {
-  double x, y, z;
-  if (argv == object_nil) return TRUE;
-  if (!bi_double(*result, &x) || !bi_double(argv->cons.car, &y)) {
-    mark_required_number();
-    return FALSE;
+  int64_t iy;
+  double dy;
+  if (!isfinite(dx)) return mark_numeric_over_flow();
+  if (argv == object_nil) {
+    *result = gc_new_xfloat(dx);
+    return TRUE;
   }
-  if (!isfinite(z = x * y)) {
-    mark_numeric_over_flow();
-    return FALSE;
-  }
-  *result = gc_new_xfloat(z);
-  return double_multiply(argv->cons.cdr, result);
+  if (bi_int64(argv->cons.car, &iy))
+    return double_multiply(dx * iy, argv->cons.cdr, result);
+  if (bi_double(argv->cons.car, &dy))
+    return double_multiply(dx * dy, argv->cons.cdr, result);
+  return mark_required_number();
 }
 
-static int int64_multiply(object argv, object *result)
+static int int64_multiply(int64_t ix, object argv, object *result)
 {
-  int64_t x, y;
-  if (argv == object_nil) return TRUE;
-  if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y)) {
-    if (x > 0) {
-      if (y > 0) {
-        if (x > INT64_MAX / y) return FALSE;
+  int64_t iy;
+  if (argv == object_nil) {
+    *result = gc_new_xint(ix);
+    return TRUE;
+  }
+  if (bi_int64(argv->cons.car, &iy)) {
+    if (ix > 0) {
+      if (iy > 0) {
+        if (ix > INT64_MAX / iy) return mark_numeric_over_flow();
       } else {
-        if (y < INT64_MIN / x) return FALSE;
+        if (iy < INT64_MIN / ix) return mark_numeric_over_flow();
       }
     } else {
-      if (y > 0) {
-        if (x < INT64_MIN / y) return FALSE;
+      if (iy > 0) {
+        if (ix < INT64_MIN / iy) return mark_numeric_over_flow();
       } else {
-        if (x != 0 && y < INT64_MAX / x) return FALSE;
+        if (ix != 0 && iy < INT64_MAX / ix) return mark_numeric_over_flow();
       }
     }
-    *result = gc_new_xint(x * y);
-    return int64_multiply(argv->cons.cdr, result);
+    return int64_multiply(ix * iy, argv->cons.cdr, result);
   }
-  return double_multiply(argv, result);
+  return double_multiply((double)ix, argv, result);
 }
 
 DEFUN(number_multiply)
 {
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
-  *result = argv->cons.car;
-  return int64_multiply(argv->cons.cdr, result);
+  return int64_multiply(1, argv, result);
 }
 
-static int double_divide(object argv, object *result)
+static int double_divide(double dx, object argv, object *result)
 {
-  double x, y, z;
-  if (argv == object_nil) return TRUE;
-  if (!bi_double(*result, &x) || !bi_double(argv->cons.car, &y)) {
-    mark_required_number();
-    return FALSE;
+  int64_t iy;
+  double dy;
+  if (!isfinite(dx)) return mark_numeric_over_flow();
+  if (argv == object_nil) {
+    *result = gc_new_xfloat(dx);
+    return TRUE;
   }
-  if (y == 0) {
-    mark_division_by_zero();
-    return FALSE;
-  }
-  if (!isfinite(z = x / y)) {
-    mark_numeric_over_flow();
-    return FALSE;
-  }
-  *result = gc_new_xfloat(z);
-  return double_divide(argv->cons.cdr, result);
+  if (bi_int64(argv->cons.car, &iy)) dy = (double)iy;
+  else if (!bi_double(argv->cons.car, &dy)) return mark_required_number();
+  if (dy == 0) return mark_division_by_zero();
+  return double_divide(dx / dy, argv->cons.cdr, result);
 }
 
-static int int64_divide(object argv, object *result)
+static int int64_divide(int64_t ix, object argv, object *result)
 {
-  int64_t x, y;
-  if (argv == object_nil) return TRUE;
-  if (bi_int64(*result, &x) && bi_int64(argv->cons.car, &y)) {
-    if (y == 0) {
-      mark_division_by_zero();
-      return FALSE;
-    } else if (x % y == 0) {
-      if(x == INT64_MIN && y == -1) {
-        mark_numeric_over_flow();
-        return FALSE;
-      }
-      *result = gc_new_xint(x / y);
-      return int64_divide(argv->cons.cdr, result);
-    }
+  int64_t iy;
+  if (argv == object_nil) {
+    *result = gc_new_xint(ix);
+    return TRUE;
   }
-  return double_divide(argv, result);
+  if (bi_int64(argv->cons.car, &iy)) {
+    if (iy == 0) return mark_division_by_zero();
+    if (ix == INT64_MIN && iy == -1) return mark_numeric_over_flow();
+    if (ix % iy == 0) return int64_divide(ix / iy, argv->cons.cdr, result);
+    return double_divide((double)ix/iy, argv->cons.cdr, result);
+  }
+  return double_divide((double)ix, argv, result);
 }
 
 DEFUN(number_divide)
 {
+  int64_t ix;
+  double dx;
+  object o;
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
-  if (argc == 1) {
-    *result = gc_new_xint(1);
-    return int64_divide(argv, result);
-  }
-  *result = argv->cons.car;
-  return int64_divide(argv->cons.cdr, result);
+  if (argc == 1) return int64_divide(1, argv, result);
+  o = argv->cons.car;
+  if (bi_int64(o, &ix)) return int64_divide(ix, argv->cons.cdr, result);
+  if (bi_double(o, &dx)) return double_divide(dx, argv->cons.cdr, result);
+  return mark_required_number();
+}
+
+DEFUN(int_divide)
+{
+  int64_t ix, iy;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_int64(argv->cons.car, &ix)) return mark_required_integer();
+  if (!bi_int64(argv->cons.cdr->cons.car, &iy)) return mark_required_integer();
+  if (iy == 0) return mark_division_by_zero();
+  *result = gc_new_xint(ix / iy);
+  return TRUE;
 }
 
 DEFUN(number_modulo)
@@ -248,45 +295,21 @@ DEFUN(number_modulo)
 
 DEFUN(number_lt)
 {
-  double x, y;
+  int64_t ix;
+  double dx, dy;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_double(argv->cons.car, &x)) return FALSE;
+  if (bi_int64(argv->cons.car, &ix)) dx = (double)ix;
+  else if (!bi_double(argv->cons.car, &dx)) return mark_required_number();
   while ((argv = argv->cons.cdr) != object_nil) {
-    if (!bi_double(argv->cons.car, &y)) return FALSE;
-    if (x >= y) {
+    if (bi_int64(argv->cons.car, &ix)) dy = (double)ix;
+    else if (!bi_double(argv->cons.car, &dx)) return mark_required_number();
+    if (dx >= dy) {
       *result = object_nil;
       return TRUE;
     }
-    x = y;
+    dx = dy;
   }
   *result = object_true;
-  return TRUE;
-}
-
-DEFUN(floor)
-{
-  double x;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_double(argv->cons.car, &x)) return FALSE;
-  *result = gc_new_xint(floor(x));
-  return TRUE;
-}
-
-DEFUN(ceiling)
-{
-  double x;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_double(argv->cons.car, &x)) return FALSE;
-  *result = gc_new_xint(ceil(x));
-  return TRUE;
-}
-
-DEFUN(truncate)
-{
-  double x;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_double(argv->cons.car, &x)) return FALSE;
-  *result = gc_new_xint(trunc(x));
   return TRUE;
 }
 
@@ -294,10 +317,11 @@ DEFUN(bit_and)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_int64(argv->cons.car, &x)) return FALSE;
+  if (!bi_int64(argv->cons.car, &x) || x < 0)
+    return mark_required_positive_int();
   while ((argv = argv->cons.cdr) != object_nil) {
-    if (!bi_int64(argv->cons.car, &y)) return FALSE;
-    if (x < 0 || y < 0) return FALSE;
+    if (!bi_int64(argv->cons.car, &y) || y < 0)
+      return mark_required_positive_int();
     x &= y;
   }
   *result = gc_new_xint(x);
@@ -308,10 +332,11 @@ DEFUN(bit_or)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_int64(argv->cons.car, &x)) return FALSE;
+  if (!bi_int64(argv->cons.car, &x) || x < 0)
+    return mark_required_positive_int();
   while ((argv = argv->cons.cdr) != object_nil) {
-    if (!bi_int64(argv->cons.car, &y)) return FALSE;
-    if (x < 0 || y < 0) return FALSE;
+    if (!bi_int64(argv->cons.car, &y) || y < 0)
+      return mark_required_positive_int();
     x |= y;
   }
   *result = gc_new_xint(x);
@@ -322,10 +347,11 @@ DEFUN(bit_xor)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_int64(argv->cons.car, &x)) return FALSE;
+  if (!bi_int64(argv->cons.car, &x) || x < 0)
+    return mark_required_positive_int();
   while ((argv = argv->cons.cdr) != object_nil) {
-    if (!bi_int64(argv->cons.car, &y)) return FALSE;
-    if (x < 0 || y < 0) return FALSE;
+    if (!bi_int64(argv->cons.car, &y) || y < 0)
+      return mark_required_positive_int();
     x ^= y;
   }
   *result = gc_new_xint(x);
@@ -344,12 +370,12 @@ DEFUN(bit_shift)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_int64(argv->cons.car, &x)) return FALSE;
-  if (x < 0) return FALSE;
-  if (!bi_int64(argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (!bi_int64(argv->cons.car, &x) || x < 0)
+    return mark_required_positive_int();
+  if (!bi_int64(argv->cons.cdr->cons.car, &y)) return mark_required_integer();
   if (x != 0) {
     if (y > 0) {
-      if ((bits(x) + y) > XINT_BITS) return FALSE;
+      if ((bits(x) + y) > XINT_BITS) return mark_numeric_over_flow();
       x <<= y;
     } else x >>= -y;
   }

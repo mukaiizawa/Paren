@@ -898,7 +898,9 @@
 
 (builtin-function + (x :rest args)
   ; Returns the sum of the args.
-  (assert (= (+ 1 2 3) 6)))
+  (assert (= (+ 1) 1))
+  (assert (= (+ 1 2 3) 6))
+  (assert (= (+ 1 2.0 3.0) 6)))
 
 (function - (x :rest args)
   ; Returns the value of the specified x minus the sum of the specified args.
@@ -908,18 +910,22 @@
 
 (builtin-function * (x :rest args)
   ; Returns the product of the arguments.
-  (assert (= (* 1 2 3) 6)))
+  (assert (= (* 1 2 3) 6))
+  (assert (= (* 1.0 2.0 3.0) 6))
+  (assert (= (* 1 2.0 3.0) 6)))
 
 (builtin-function / (x :rest args)
   ; Returns the quotient of the x divided by the each args.
   ; If args is nil, returns the reciprocal of x.
+  (assert (= (/ 2) 0.5))
   (assert (= (/ 12 2 3) 2))
-  (assert (= (/ 2) 0.5)))
+  (assert (= (/ 3 2 5) 0.3)))
 
-(function // (x y)
+(builtin-function // (x y)
   ; Returns the quotient of the x divided by the y.
-  ; Same as (truncate (/ x y))).
-  (truncate (/ x y)))
+  (assert (= (// 2 1) 2))
+  (assert (= (// 2 2) 1))
+  (assert (= (// 2 3) 0)))
 
 (builtin-function mod (x y)
   ; Returns the remainder of dividing x by y.
@@ -1962,7 +1968,7 @@
       (let (mant n exp 8)
         (let (write-mant1
                (lambda ()
-                 (let (upper (// (truncate mant) 100000000))
+                 (let (upper (// (number->int mant) 100000000))
                    (.write-int self upper)
                    (<- mant (* (- mant (* upper 100000000)) 10))))
                write-fraction
@@ -1975,9 +1981,9 @@
             (.write-byte self 0x2d)
             (<- mant (- mant)))
           (while (>= mant 1000000000)
-            (<- mant (/ mant 10.0) exp (++ exp)))
+            (<- mant (/ mant 10) exp (++ exp)))
           (while (< mant 100000000)
-            (<- mant (* mant 10.0) exp (-- exp)))
+            (<- mant (* mant 10) exp (-- exp)))
           (if (<= 0 exp 6)
               (begin
                 (dotimes (i (++ exp))
@@ -1986,8 +1992,7 @@
                 (write-fraction (- 16 exp 1)))
               (<= -3 exp -1)
               (begin
-                (.write-byte self 0x30)
-                (.write-byte self 0x2e)
+                (.write-bytes self "0.")
                 (dotimes (i (- (- exp) 1))
                   (.write-byte self 0x30))
                 (write-fraction 16))

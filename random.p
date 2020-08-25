@@ -1,4 +1,4 @@
-; ramdom module.
+; random module.
 
 (<- $random.seed 2463534242)
 
@@ -7,7 +7,7 @@
 
 (function randint (n)
   ; Returns a random integer N such that (<= 0 N (-- n)).
-  (Math.truncate (* (random) n)))
+  (number->int (* (random) n)))
 
 (function randbool ()
   (= (randint 2) 0))

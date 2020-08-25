@@ -113,7 +113,7 @@ static object fs[FRAME_STACK_SIZE];
 #define FRAME_SIZE_MASK          0x0000000f
 #define   APPLY_FRAME            0x00000003
 #define   APPLY_BUILTIN_FRAME    0x00000013
-#define   ASSERT_FRAME           0x00000022
+#define   ASSERT_FRAME           0x00000023
 #define   BIND_HANDLER_FRAME     0x00000033
 #define   BIND_FRAME             0x00000043
 #define   BIND_PROPAGATION_FRAME 0x00000053
@@ -391,8 +391,8 @@ static void pop_apply_builtin_frame(void)
 
 static void pop_assert_frame(void)
 {
-  pop_frame();
-  if (reg[0] == object_nil) ip_mark_error("assert failed");
+  if (reg[0] != object_nil) pop_frame();
+  else ip_mark_error("assert failed");
 }
 
 static void pop_bind_frame(void)
@@ -636,6 +636,10 @@ static object call_stack(void)
   o = object_nil;
   for (i = 0; i <= fp; i = next_fp(i)) {
     switch (fs_nth(i)) {
+      case ASSERT_FRAME:
+        p = get_frame_var(i, 0);
+        o = gc_new_cons(p, o);
+        break;
       case LAMBDA_FRAME:
         p = get_frame_var(i, 1);
         if (!object_type_p(p, CONS)) o = gc_new_cons(p, o);
@@ -1206,7 +1210,7 @@ DEFSP(assert)
 {
 #ifndef NDEBUG
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  gen0(ASSERT_FRAME);
+  gen1(ASSERT_FRAME, argv->cons.car);
   gen_eval_frame(argv->cons.car);
 #endif
   return TRUE;

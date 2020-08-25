@@ -161,6 +161,7 @@ static char *symbol_name_map[] = {
   "bit_shift", "<<",
   "bit_xor", "^",
   "int_p", "int?",
+  "int_divide", "//",
   "number_add", "+",
   "number_divide", "/",
   "number_equal_p", "=",
@@ -168,6 +169,7 @@ static char *symbol_name_map[] = {
   "number_modulo", "mod",
   "number_multiply", "*",
   "number_p", "number?",
+  "number_to_int", "number->int",
   NULL
 };
 
@@ -236,19 +238,12 @@ int bi_intptr(object o, intptr_t *p)
   return FALSE;
 }
 
-#define DBL_MAX_INT ((int64_t)1<<DBL_MANT_DIG)
-#define DBL_MIN_INT (-DBL_MAX_INT-1)
-
 int bi_double(object o, double *p)
 {
   int64_t i;
   if (bi_int64(o, &i)) {
-    if (DBL_MIN_INT <= i && i <= DBL_MAX_INT) { 
-      *p = (double)i;
-      return TRUE;
-    }
-    printf("%"PRId64"\n", i);
-    return FALSE;
+    *p = (double)i;
+    return TRUE;
   }
   if (object_type_p(o, XFLOAT)) {
     *p = o->xfloat.val;
