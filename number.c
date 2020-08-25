@@ -287,30 +287,57 @@ DEFUN(number_modulo)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_int64(argv->cons.car, &x)) return FALSE;
-  if (!bi_int64(argv->cons.cdr->cons.car, &y) || y == 0) return FALSE;
+  if (!bi_int64(argv->cons.car, &x)) return mark_required_integer();
+  if (!bi_int64(argv->cons.cdr->cons.car, &y)) return mark_required_integer();
+  if (y == 0) return mark_division_by_zero();
   *result = gc_new_xint(x % y);
   return TRUE;
 }
 
+static int double_lt(double x, object argv, object *result)
+{
+  int64_t i;
+  double d;
+  if (argv == object_nil) {
+    *result = object_true;
+    return TRUE;
+  }
+  if (bi_int64(argv->cons.car, &i)) {
+    if (x >= (double)i) return TRUE;
+    return double_lt((double)i, argv->cons.cdr, result);
+  }
+  if (bi_double(argv->cons.car, &d)) {
+    if (x >= d) return TRUE;
+    return double_lt(d, argv->cons.cdr, result);
+  }
+  return mark_required_number();
+}
+
+static int int64_lt(int64_t x, object argv, object *result)
+{
+  int64_t y;
+  if (argv == object_nil) {
+    *result = object_true;
+    return TRUE;
+  }
+  if (bi_int64(argv->cons.car, &y)) {
+    if (x >= y) return TRUE;
+    return int64_lt(y, argv->cons.cdr, result);
+  }
+  return double_lt((double)x, argv, result);
+}
+
 DEFUN(number_lt)
 {
-  int64_t ix;
-  double dx, dy;
+  int64_t i;
+  double d;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (bi_int64(argv->cons.car, &ix)) dx = (double)ix;
-  else if (!bi_double(argv->cons.car, &dx)) return mark_required_number();
-  while ((argv = argv->cons.cdr) != object_nil) {
-    if (bi_int64(argv->cons.car, &ix)) dy = (double)ix;
-    else if (!bi_double(argv->cons.car, &dx)) return mark_required_number();
-    if (dx >= dy) {
-      *result = object_nil;
-      return TRUE;
-    }
-    dx = dy;
-  }
-  *result = object_true;
-  return TRUE;
+  *result = object_nil;
+  if (bi_int64(argv->cons.car, &i))
+    return int64_lt(i, argv->cons.cdr, result);
+  if (bi_double(argv->cons.car, &d))
+    return double_lt(d, argv->cons.cdr, result);
+  return mark_required_number();
 }
 
 DEFUN(bit_and)

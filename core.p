@@ -936,6 +936,7 @@
 (builtin-function < (:rest args)
   ; Returns whether the each of the specified args are in monotonically decreasing order.
   (assert (< 0 1 2))
+  (assert (< 0 1.0 2))
   (assert (nil? (< 0 0 1))))
 
 (function > (:rest args)
