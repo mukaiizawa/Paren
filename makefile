@@ -13,6 +13,7 @@ extobj+=pf.u.o xsleep.u.o
 endif
 ifeq ($(os), windows)
 extobj+=pf.w.o xsleep.w.o
+lib+=-lws2_32
 exe=.exe
 endif
 
@@ -20,7 +21,7 @@ uflags=-Wall -Werror
 cflags=$(uflags) -c
 lflags=$(uflags)
 sflags=-s
-link=$(cc) $(lflags) -o $@ $+ $(libs)
+link=$(cc) $(lflags) -o $@ $+ $(lib)
 
 ifeq ($(debug),on)
 uflags+=-g
@@ -40,7 +41,7 @@ defsp=ip.c
 defsp.wk: $(defsp)
 	cat $+ | grep ^DEFSP>$@
 
-defun=ip.c bi.c array.c bytes.c cons.c lambda.c number.c os.c dl.c
+defun=ip.c bi.c array.c bytes.c cons.c lambda.c number.c os.c dl.c sock.c
 defun.wk: $(defun)
 	cat $+ | grep ^DEFUN>$@
 

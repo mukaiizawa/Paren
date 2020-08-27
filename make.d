@@ -15,6 +15,7 @@ os.o: os.c ip.h pf.h bi.h gc.h object.h splay.h xarray.h xbarray.h xsleep.h conf
 paren.o: paren.c bi.h ip.h gc.h lex.h object.h splay.h xarray.h xbarray.h pf.h xgetopt.h config.h std.h
 pf.u.o: pf.u.c xbarray.h pf.h config.h std.h
 pf.w.o: pf.w.c xbarray.h pf.h config.h std.h
+sock.o: sock.c
 splay.o: splay.c splay.h heap.h config.h std.h
 st.o: st.c st.h mem.h object.h splay.h config.h std.h
 std.o: std.c config.h std.h
