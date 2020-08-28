@@ -3,29 +3,43 @@
 (function usage ()
   (error "Usage: curl url"))
 
-(function ->port (proto)
+(function default-port (proto)
   (if (string= proto "http") "80"
       (string= proto "https") "443"
       (error "unexpected protocol " proto)))
 
+(function http-request (host port method uri version)
+  ; RFC 2616
+  ; Request-Line = Method SP Request-URI SP HTTP-Version CRLF
+  (let (fd nil in nil out nil line nil)
+    (unwind-protect
+      (begin
+        (<- fd (client_socket host port)
+            in (.init (.new FileStream) (fdopen fd 0))
+            out (.init (.new FileStream) (fdopen fd 1)))
+        (write-bytes (string method " " uri " " version "\r\n") out)
+        (write-bytes "\r\n" out)
+        (flush out)
+        (while (<- line (read-line in))
+          (write-line line)))
+      (begin
+        (if fd (closesocket fd))
+        (if in (.close in))
+        (if out (.close out))))))
+
 (function! main (args)
   (if (nil? (cdr args)) (usage)
-      (let (url (cadr args) pos// nil pos/ nil proto nil host nil port nil
-                fd nil out nil in nil line nil)
-        (unwind-protect
-          (begin
-            (<- pos// (bytes-index url "//")
-                proto (bytes-slice url 0 (-- pos//))
-                pos/ (bytes-index url "/" (+ pos// 2))
-                host (bytes-slice url (+ pos// 2) pos/)
-                fd (client_socket host (->port proto))
-                out (.init (.new FileStream) (fdopen fd 1))
-                in (.init (.new FileStream) (fdopen fd 0)))
-            (write-line (string "GET " (bytes-slice url pos/) " HTTP/1.0\n") out)
-            (flush out)
-            (while (<- line (read-line in))
-              (write-line line)))
-          (begin
-            (closesocket fd)
-            (.close in)
-            (.close out))))))
+      (let (url (cadr args) ar (.init (.new AheadReader) url) proto nil host nil port nil)
+        (while (string/= (.next ar) ":") (.get ar))
+        (<- proto (.token ar))
+        (.skip ar) (.skip ar "/") (.skip ar "/")    ; skip ://
+        (while (&& (.next ar) (string/= (.next ar) "/") (string/= (.next ar) ":")) (.get ar))
+        (<- host (.token ar))
+        (when (string= (.next ar) ":")
+          (.skip ar)
+          (while (&& (.next ar) (string/= (.next ar) "/")) (.get ar))
+          (<- port (.token ar)))
+        (if (string= (.next ar) "/") (.get ar)
+            (.put ar "/"))
+        (while (.next ar) (.get ar))
+        (http-request host (|| port (default-port proto)) "GET" (.token ar) "HTTP/1.0"))))

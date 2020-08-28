@@ -51,7 +51,6 @@
 
 (function Regex.parse-charset (ar)
   (.skip ar)
-  (.reset ar)
   (let (key (if (string= (&next ar) "^") (begin (.skip ar) :exclude-char-class) :char-class))
     (while (! (string= (&next ar) "]"))
       (<- c (.skip-escape ar))

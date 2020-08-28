@@ -2311,12 +2311,9 @@
 
 (method AheadReader .token ()
   ; Returns the token string currently cut out.
-  (.to-s (&token self)))
-
-(method AheadReader .reset ()
-  ; Reset token and returns self.
-  (.reset (&token self))
-  self)
+  ; In the process of processing, token is initialized.
+  (begin0 (.to-s (&token self))
+          (.reset (&token self))))
 
 (method AheadReader .stream ()
   ; Returns the stream held by this object.
@@ -2375,7 +2372,7 @@
   (.token self))
 
 (method ParenLexer .lex ()
-  (.skip-space (.reset self))
+  (.skip-space self)
   (let (next (&next self))
     (if (nil? next) '(:EOF)
         (string= next "(") (begin (.skip self) '(:open-paren))
