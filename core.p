@@ -1346,6 +1346,11 @@
   ; Returns the current value of the file position indicator for the stream pointed to by fp.
   )
 
+(builtin-function fflush (fp)
+  ; Flushes the stream pointed to by fp (writing any buffered output data).
+  ; Returns nil.
+  )
+
 (builtin-function fclose (fp)
   ; Flushes the stream pointed to by fp (writing any buffered output data) and closes the underlying file descriptor.
   ; Returns nil.
@@ -2165,6 +2170,9 @@
 (method FileStream .tell ()
   (ftell (&fp self)))
 
+(method FileStream .flush ()
+  (fflush (&fp self)))
+
 (method FileStream .close ()
   (fclose (&fp self)))
 
@@ -2505,6 +2513,9 @@
 
 (function write-lines (lines :opt stream)
   (.write-lines (|| stream (dynamic $stdout)) lines))
+
+(function flush (:opt stream)
+  (.flush (|| stream (dynamic $stdout))))
 
 (function write (x :opt stream :key start end)
   ; Write the specified x as a readable format.

@@ -10,14 +10,17 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#define xsocket(x, y, z) socket(x, y, z)
 #define xclose(x) close(x)
 #define xstart_up() {}
 #define xclean_up() {}
 #endif
 
 #if WINDOWS_P
+#include <fcntl.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#define xsocket(x, y, z) WSASocket(x, y, z, NULL, 0, 0)
 #define xclose(x) closesocket(x)
 #define start_up() \
 { \
@@ -52,7 +55,7 @@ DEFUN(server_socket)
   addr.sin_family = AF_UNSPEC;
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
   start_up();
-  fd = socket(AF_UNSPEC, SOCK_STREAM, 0);
+  fd = xsocket(AF_UNSPEC, SOCK_STREAM, 0);
   bind(fd, (struct sockaddr *)&addr, sizeof(addr));
   listen(fd, 1);
   return TRUE;
@@ -73,13 +76,16 @@ DEFUN(client_socket)
   start_up();
   if (getaddrinfo(addr[0], addr[1], &hints, &p) != 0) return FALSE;
   for (q = p; q != NULL; q = q->ai_next) {
-    fd = socket(q->ai_family, q->ai_socktype, q->ai_protocol);
+    fd = xsocket(q->ai_family, q->ai_socktype, q->ai_protocol);
     if (fd == -1) continue;
     if (connect(fd, q->ai_addr, q->ai_addrlen) != -1) break;
     xclose(fd);
   }
   freeaddrinfo(p);
   if (q == NULL) return FALSE;
+#if WINDOWS_P
+  fd = _open_osfhandle(fd, _O_RDONLY);
+#endif
   *result = gc_new_xint(fd);
   return TRUE;
 }
