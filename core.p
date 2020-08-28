@@ -2575,11 +2575,20 @@
                                 body))
                 (list if gsym (list '.close gsym))))))
 
-(macro with-socket ((in out fd) :rest body)
-  (with-gensyms (gfd gin gout)
-    (list let (list gfd fd gin nil gout nil)
+(macro with-server-socket ((sym fd) :rest body)
+  (with-gensyms (gsym)
+    (list let (list gsym nil)
           (list unwind-protect
-                (list let (list in (list <- gin (list '.init '(.new FileStream) (list fdopen gfd 0)))
+                (list let (list sym (list <- gsym fd))
+                      (cons begin body))
+                (list if gsym (list 'closesocket gsym))))))
+
+(macro with-client-socket ((in out fd) :rest body)
+  (with-gensyms (gfd gin gout)
+    (list let (list gfd nil gin nil gout nil)
+          (list unwind-protect
+                (list let (list gfd fd
+                                in (list <- gin (list '.init '(.new FileStream) (list fdopen gfd 0)))
                                 out (list <- gout (list '.init '(.new FileStream) (list fdopen gfd 1))))
                       (cons begin body))
                 (list begin

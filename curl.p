@@ -12,7 +12,7 @@
   ; RFC 2616
   ; Request-Line = Method SP Request-URI SP HTTP-Version CRLF
   (let (line nil)
-    (with-socket (in out (client-socket host port))
+    (with-client-socket (in out (client-socket host port))
       (write-bytes (string method " " uri " " version "\r\n") out)
       (write-bytes "\r\n" out)
       (flush out)
