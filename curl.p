@@ -11,21 +11,13 @@
 (function http-request (host port method uri version)
   ; RFC 2616
   ; Request-Line = Method SP Request-URI SP HTTP-Version CRLF
-  (let (fd nil in nil out nil line nil)
-    (unwind-protect
-      (begin
-        (<- fd (client_socket host port)
-            in (.init (.new FileStream) (fdopen fd 0))
-            out (.init (.new FileStream) (fdopen fd 1)))
-        (write-bytes (string method " " uri " " version "\r\n") out)
-        (write-bytes "\r\n" out)
-        (flush out)
-        (while (<- line (read-line in))
-          (write-line line)))
-      (begin
-        (if fd (closesocket fd))
-        (if in (.close in))
-        (if out (.close out))))))
+  (let (line nil)
+    (with-socket (in out (client-socket host port))
+      (write-bytes (string method " " uri " " version "\r\n") out)
+      (write-bytes "\r\n" out)
+      (flush out)
+      (while (<- line (read-line in))
+        (write-line line)))))
 
 (function! main (args)
   (if (nil? (cdr args)) (usage)

@@ -44,23 +44,6 @@
 #include "pf.h"
 #include "ip.h"
 
-DEFUN(server_socket)
-{
-  int port, fd;
-  struct sockaddr_in addr;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_sint(argv->cons.car, &port)) return FALSE;
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_port = htons(port);
-  addr.sin_family = AF_UNSPEC;
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  start_up();
-  fd = xsocket(AF_UNSPEC, SOCK_STREAM, 0);
-  bind(fd, (struct sockaddr *)&addr, sizeof(addr));
-  listen(fd, 1);
-  return TRUE;
-}
-
 DEFUN(client_socket)
 {
   int fd;
@@ -87,6 +70,39 @@ DEFUN(client_socket)
   fd = _open_osfhandle(fd, _O_RDONLY);
 #endif
   *result = gc_new_xint(fd);
+  return TRUE;
+}
+
+DEFUN(server_socket)
+{
+  int port, fd;
+  struct sockaddr_in addr;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_sint(argv->cons.car, &port)) return FALSE;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_port = htons(port);
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  start_up();
+  if ((fd = xsocket(AF_INET, SOCK_STREAM, 0)) == -1) return FALSE;
+  if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) return FALSE;
+  if (listen(fd, 1) == -1) return FALSE;
+  *result = gc_new_xint(fd);
+  return TRUE;
+}
+
+DEFUN(accept)
+{
+  int sfd, cfd, size;
+  struct sockaddr_in addr;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_sint(argv->cons.car, &sfd)) return FALSE;
+  size = sizeof(addr);
+  if ((cfd = accept(sfd, (struct sockaddr *) &addr, &size)) == -1) return FALSE;
+#if WINDOWS_P
+  cfd = _open_osfhandle(cfd, _O_RDONLY);
+#endif
+  *result = gc_new_xint(cfd);
   return TRUE;
 }
 
