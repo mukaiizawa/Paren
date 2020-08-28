@@ -125,8 +125,9 @@ DEFUN(bytes_slice)
   if (!bi_argc_range(argc, 2, 3)) return FALSE;
   if (!bi_arg_mutable_bytes(argv->cons.car, &o)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
-  if (argc < 3) e = o->bytes.size;
-  else if (!bi_sint((argv = argv->cons.cdr)->cons.car, &e)) return FALSE;
+  argv = argv->cons.cdr;
+  if (argc < 3 || argv->cons.car == object_nil) e = o->bytes.size;
+  else if (!bi_sint(argv->cons.car, &e)) return FALSE;
   if (s < 0 || s > e || e > o->bytes.size) return FALSE;
   *result = gc_new_bytes(object_type(o), e - s);
   memcpy((*result)->bytes.elt, o->bytes.elt + s, e - s);
