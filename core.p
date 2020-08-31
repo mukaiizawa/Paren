@@ -2575,13 +2575,15 @@
                                 body))
                 (list if gsym (list '.close gsym))))))
 
-(macro with-server-socket ((sym fd) :rest body)
-  (with-gensyms (gsym)
-    (list let (list gsym nil)
+(macro with-server-socket ((in out fd) :rest body)
+  (with-gensyms (gfd)
+    (list let (list gfd nil)
           (list unwind-protect
-                (list let (list sym (list <- gsym fd))
-                      (cons begin body))
-                (list if gsym (list 'closesocket gsym))))))
+                (list begin (list <- gfd fd)
+                      (list 'while true
+                            (list 'with-client-socket (list in out (list accept gfd))
+                                  (cons begin body))))
+                (list if gfd (list 'closesocket gfd))))))
 
 (macro with-client-socket ((in out fd) :rest body)
   (with-gensyms (gfd gin gout)

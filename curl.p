@@ -4,8 +4,8 @@
   (error "Usage: curl url"))
 
 (function default-port (proto)
-  (if (string= proto "http") "80"
-      (string= proto "https") "443"
+  (if (string= proto "http") 80
+      (string= proto "https") 443
       (error "unexpected protocol " proto)))
 
 (function http-request (host port method uri version)

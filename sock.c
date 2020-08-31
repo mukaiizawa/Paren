@@ -46,18 +46,20 @@
 
 DEFUN(client_socket)
 {
-  int fd;
-  char *addr[2];
+  int port, fd;
+  char *host, sport[MAX_STR_LEN];
   struct addrinfo hints, *p, *q;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_strings(2, argv, addr)) return FALSE;
+  if ((host = bi_string(argv)) == NULL) return FALSE;
+  if (!bi_sint(argv->cons.cdr->cons.car, &port)) return FALSE;
+  xsprintf(sport, "%d", port);
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags = 0;
   hints.ai_protocol = 0;
   start_up();
-  if (getaddrinfo(addr[0], addr[1], &hints, &p) != 0) return FALSE;
+  if (getaddrinfo(host, sport, &hints, &p) != 0) return FALSE;
   for (q = p; q != NULL; q = q->ai_next) {
     fd = xsocket(q->ai_family, q->ai_socktype, q->ai_protocol);
     if (fd == -1) continue;
