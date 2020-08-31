@@ -2266,9 +2266,12 @@
         c)))
 
 (method AheadReader .skip-line ()
-  (while (&next self)
-    (if (string= (.skip self) "\n") (break)))
-  self)
+  ; Skip line.
+  ; Returns line.
+  (let (c nil)
+    (with-memory-stream (out)
+      (while (&& (&next self) (string/= (<- c (.skip self)) "\n"))
+        (write-bytes c out)))))
 
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
@@ -2402,6 +2405,10 @@
   (.skip self "\"")
   (.token self))
 
+(method ParenLexer .skip-comment ()
+  (while (&next self)
+    (if (string= (.skip self) "\n") (break))))
+
 (method ParenLexer .lex ()
   (.skip-space self)
   (let (next (&next self))
@@ -2416,7 +2423,7 @@
                                       '(:unquote)))
         (string= next "\"") (list :atom (.lex-string self))
         (string= next ":") (list :atom (.lex-keyword self))
-        (string= next ";") (.lex (.skip-line self))
+        (string= next ";") (begin (.skip-comment self) (.lex self))
         (string= next "#") (begin (.skip self) (list :read-macro (bytes->symbol (.next self))))
         (|| (string= next "+")
             (string= next "-")) (list :atom (.lex-sign self))
@@ -2696,5 +2703,11 @@
   (let (lexer (&lexer reader))
     (.skip lexer)
     (list 'write (list 'expand-macro-all (list quote (.read reader))))))
+
+(reader-macro . (reader)
+  ; Define eval reader.
+  (let (lexer (&lexer reader))
+    (.skip lexer)
+    (eval (.read reader))))
 
 (boot $args)
