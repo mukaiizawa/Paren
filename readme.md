@@ -135,14 +135,14 @@ Parenのビルド例を示す。
     $ cd your/favorite/dir
     $ make os=windows
     $ paren
-    ) (print "hello world")
+    ) (write "hello world")
     "hello world"
 
 コマンドライン引数なしで実行すると、インタープリタが起動する。コマンドライン引数がある場合、第一引数をスクリプトファイルとして読み込み、引数無しのmain関数が存在すればそれを実行する。
 
     $ cat scrypt.p
     (function main ()
-      (print "hello world"))
+      (write "hello world"))
     $ paren scrypt.p
     "hello world"
 
