@@ -2233,6 +2233,10 @@
   ; Returns true if next character is digit.
   (byte-digit? (string->code (&next self))))
 
+(method AheadReader .space? ()
+  ; Returns true if next character is space.
+  (byte-space? (string->code (&next self))))
+
 (method AheadReader .numeric-alpha? ()
   ; Returns true if next character is digit or alphabetic.
   (let (b (string->code (&next self)))
@@ -2339,6 +2343,7 @@
 
 (method AheadReader .put (o)
   ; Put the o to the end of the token regardless of the stream.
+  ; Returns o;
   (if (byte? o) (.write-byte (&token self) o)
       (begin0 o
               (.write-bytes (&token self) o))))
