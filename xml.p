@@ -53,7 +53,7 @@
       (.skip self "=")
       (if (&& (string/= (<- q (.skip (.skip-space self))) "\"")
               (string/= q "'"))
-          (error "missing open quote"))
+          (.raise self "missing open quote"))
       (while (string/= (.next self) q)
         (.get-escape self))
       (.skip self q)
@@ -120,7 +120,7 @@
       (while (string/= (.next self) ">")
         (.get self))
       (.skip self)
-      (return (list stag? (bytes->symbol (.token self)))))
+      (return (list stag? (bytes->symbol (.token self)))))    ; return etag symbol.
     (if (string= (.next self) "!") (list stag? (.parse-!tag self))
         (string= (.next self) "?") (list stag? (.parse-?tag self))
         (let (name (.parse-name self) attrs (.parse-attrs self))
@@ -135,9 +135,9 @@
       (begin (.token self)    ; cleanup spaces
              (let (stag?.val (.parse-tag self) stag? (car stag?.val) val (cadr stag?.val))
                (if (! stag?) val    ; make sense
-                   (let (stag val child nil children nil)
-                     (while (neq? (&name stag) (<- child (.parse-node self)))
-                       (if (symbol? child) (error "missing open tag " child)
+                   (let (stag val name (&name stag) child nil children nil)
+                     (while (neq? name (<- child (.parse-node self)))
+                       (if (symbol? child) (.raise self "unexpected close tag " child " expected " name)
                            (push! children child)))
                      (&children<- stag (reverse! children))))))))
 

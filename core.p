@@ -2220,7 +2220,7 @@
     :stream stream
     :next (.read-char stream)
     :token (.new MemoryStream)
-    :lineno 0))
+    :lineno 1))
 
 (method AheadReader .next ()
   ; Returns a pre-read character.
@@ -2244,9 +2244,9 @@
     (|| (byte-digit? b)
         (byte-alpha? b))))
 
-(method AheadReader .raise (msg)
+(method AheadReader .raise (:rest msg)
   ; Raise the exception with message msg.
-  (error msg ". line:" (&lineno self) " next-char:" (&next self) " token:" (.token self)))
+  (error (apply string msg) ". line:" (&lineno self) " next-char:" (&next self) " token:" (.token self)))
 
 (method AheadReader .skip (:opt expected)
   ; Skip next character and returns it.
