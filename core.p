@@ -2211,15 +2211,16 @@
   ; A one-character look-ahead reader.
   ; While prefetching one character at a time from a character string or Reader, if necessary, cut out a part as a token.
   ; Can be used as a syllable reader or lexical analyzer.
-  stream next token)
+  stream next token lineno)
 
 (method AheadReader .init (stream)
   (if (string? stream) (let (s stream) (.write-bytes (<- stream (.new MemoryStream)) s))
       (nil? stream) (<- stream (dynamic $stdin)))
   (&<- self
-       :stream stream
-       :next (.read-char stream)
-       :token (.new MemoryStream)))
+    :stream stream
+    :next (.read-char stream)
+    :token (.new MemoryStream)
+    :lineno 0))
 
 (method AheadReader .next ()
   ; Returns a pre-read character.
@@ -2243,13 +2244,18 @@
     (|| (byte-digit? b)
         (byte-alpha? b))))
 
+(method AheadReader .raise (msg)
+  ; Raise the exception with message msg.
+  (error msg ". line:" (&lineno self) " next-char:" (&next self) " token:" (.token self)))
+
 (method AheadReader .skip (:opt expected)
   ; Skip next character and returns it.
   ; Error if expected is specified and the next character is not the same as the expected.
   (let (next (&next self))
-    (if (nil? next) (error "unexpected EOF")
-        (&& expected (string/= next expected)) (error "unexpected token")
-        (&next<- self (.read-char (&stream self))))
+    (if (nil? next) (.raise self "unexpected EOF")
+        (&& expected (string/= next expected)) (.raise self "unexpected token")
+        (string= next "\n") (&lineno<- self (++ (&lineno self))))
+    (&next<- self (.read-char (&stream self)))
     next))
 
 (method AheadReader .skip-escape ()
@@ -2259,7 +2265,7 @@
         (string= c "b") 0x08
         (string= c "c") (if (<= 0x40 (<- c (byte-upper (string->code (.skip self)))) 0x5f)
                             (& c 0x1f)
-                            (error "illegal ctrl char"))
+                            (.raise self "illegal ctrl char"))
         (string= c "e") 0x1b
         (string= c "f") 0x0c
         (string= c "n") 0x0a
@@ -2294,7 +2300,7 @@
   (byte->digit (string->code (.skip self)) (|| radix 10)))
 
 (method AheadReader .skip-uint ()
-  (if (! (.digit? self)) (error "missing digits")
+  (if (! (.digit? self)) (.raise self "missing digits")
       (let (val 0)
         (while (.digit? self)
           (<- val (+ (* val 10) (.skip-digit self))))
@@ -2311,7 +2317,7 @@
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
           (.skip self)
-          (if (! (.numeric-alpha? self)) (error "missing lower or digits")
+          (if (! (.numeric-alpha? self)) (.raise self "missing lower or digits")
               (while (.numeric-alpha? self)
                 (<- val (+ (* val radix) (.skip-digit self 16))))))
         (string= (&next self) ".")
@@ -2387,14 +2393,15 @@
       (begin (while (.identifier-trail? self)
                (.get self))
              self)
-      (error "illegal identifier '" (.token self) "'")))
+      (.raise self "illegal identifier")))
 
 (method ParenLexer .lex-sign ()
-  (let (sign (.get self))
+  (let (sign (.skip self))
     (if (.digit? self)
         (let (val (.skip-number self))
           (if (string= sign "-") (- val) val))
-        (bytes->symbol (.token (.get-identifier-sign self))))))
+        (begin (.put self sign)
+               (bytes->symbol (.token (.get-identifier-sign self)))))))
 
 (method ParenLexer .lex-symbol ()
   (bytes->symbol (.token (.get-identifier self))))
@@ -2449,7 +2456,7 @@
 (method ParenReader .parse-list ()
   (.scan self)
   (if (eq? (&token-type self) :close-paren) nil
-      (eq? (&token-type self) :EOF) (error "missing close-paren")
+      (eq? (&token-type self) :EOF) (.raise self "missing close-paren")
       (cons (.parse self) (.parse-list self))))
 
 (method ParenReader .parse ()
@@ -2462,7 +2469,7 @@
     :unquote (list 'unquote (.parse (.scan self)))
     :unquote-splicing (list 'unquote-splicing (.parse (.scan self)))
     :read-macro ((assoc $read-table (string->code (&token self))) self)
-    :default (error "syntax error")))
+    :default (.raise self "syntax error")))
 
 (macro unquote (expr)
   (list 'error "unexpected unquote -- ," expr))
