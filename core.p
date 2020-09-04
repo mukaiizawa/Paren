@@ -323,6 +323,24 @@
     (list 'for (list i 0 gn n) (list < i gn) (list <- i (list '++ i))
           (cons begin body))))
 
+(macro dostring ((c s) :rest body)
+  ; Iterates over the characters of the string s.
+  ; Supports break, continue macro.
+  ; Returns nil.
+  (with-gensyms (ga)
+    (list let (list ga (list 'string->array s))
+          (list 'doarray (list c ga)
+                (cons begin body)))))
+
+(macro doarray ((i a) :rest body)
+  ; Iterates over the elements of the specified array a, with index the specified i.
+  ; Supports break, continue macro.
+  ; Returns nil.
+  (with-gensyms (ga gi glen)
+    (list 'for (list gi 0 ga a glen (list 'array-length ga)) (list < gi glen) (list <- gi (list '++ gi))
+          (list let (list i (list [] ga gi))
+                (cons begin body)))))
+
 (macro timeit (:rest body)
   ; Clock the time it takes to evaluate the specified body.
   ; Returns evaluation result of the last element of body.
