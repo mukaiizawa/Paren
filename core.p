@@ -1592,7 +1592,10 @@
 
 (method Object .to-s ()
   ; Returns a String representing the receiver.
-  (string "<" (&symbol (.class self)) ":" (address self)  ">"))
+  (string "<" (&symbol (.class self)) ":0x" (address self)  ">"))
+
+(method Object .raise (:rest args)
+  (apply error (cons (.to-s self) (cons " " args))))
 
 (class Class ()
   ; Class of class object.
@@ -1661,8 +1664,7 @@
   ; Dispatched when the user presses the interrupt key (usually Ctrl-c).
   )
 
-(class Error (Exception)
-  )
+(class Error (Exception))
 
 (function error (:rest args)
   (throw (.message (.new Error) (apply string args))))
@@ -2262,16 +2264,14 @@
     (|| (byte-digit? b)
         (byte-alpha? b))))
 
-(method AheadReader .raise (:rest msg)
-  ; Raise the exception with message msg.
-  (error (apply string msg) ". line:" (&lineno self) " next-char:" (&next self) " token:" (.token self)))
-
 (method AheadReader .skip (:opt expected)
   ; Skip next character and returns it.
   ; Error if expected is specified and the next character is not the same as the expected.
   (let (next (&next self))
     (if (nil? next) (.raise self "unexpected EOF")
-        (&& expected (string/= next expected)) (.raise self "unexpected token")
+        (&& expected (string/= next expected)) (.raise self
+                                                       "unexpected character '" next "'. "
+                                                       "expected '" expected "'")
         (string= next "\n") (&lineno<- self (++ (&lineno self))))
     (&next<- self (.read-char (&stream self)))
     next))
@@ -2360,6 +2360,13 @@
     (.put self c)
     c))
 
+(method AheadReader .get-line ()
+  ; Get line.
+  ; Returns line.
+  (let (line (.skip-line self))
+    (.put self line)
+    line))
+
 (method AheadReader .get-escape ()
   (let (c (.skip-escape self))
     (.put self c)
@@ -2381,6 +2388,12 @@
 (method AheadReader .stream ()
   ; Returns the stream held by this object.
   (&stream self))
+
+(method AheadReader .to-s ()
+  (string "<AheadReader:0x" (address self) " "
+          (list :next (&next self)
+                :token (.to-s (&token self))
+                :lineno (&lineno self)) ">"))
 
 ; Paren reader
 
@@ -2675,13 +2688,15 @@
   ; Search the $paren-home directory.
   ; Bind main to nil after processing.
   ; Returns true if successfully loaded.
-  (if (find-if (lambda (x) (eq? x key)) $import) true
-      (let (p (Path.of (string (bytes->symbol key) ".p")))
-        (if (|| (.readable? p) (.readable? (<- p (.resolve $paren-home p))))
-            (begin0 (load p)
-                    (<- main nil)
-                    (push! $import key))
-            (error "unreadable module " key)))))
+  ; Module file to read must be UTF-8.
+  (let ($external-encoding :UTF-8)
+    (if (find-if (lambda (x) (eq? x key)) $import) true
+        (let (p (Path.of (string (bytes->symbol key) ".p")))
+          (if (|| (.readable? p) (.readable? (<- p (.resolve $paren-home p))))
+              (begin0 (load p)
+                      (<- main nil)
+                      (push! $import key))
+              (error "unreadable module " key))))))
 
 (function boot (args)
   ; Executed when paren is executed.
