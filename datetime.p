@@ -1,4 +1,4 @@
-; date and time
+; date and time module.
 
 ; Process the date and time of the time zone set in the host system.
 ; The UTC to local time difference is always calculated to the current value, even during daylight savings times.
