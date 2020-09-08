@@ -4,32 +4,102 @@
 
 (class MarkdownReader (AheadReader))
 
-(method MarkdownReader .stmt? ()
-  (&& (.next self) (string/= (.next self) "\n")))
+(method MarkdownReader .none-match? (:rest args)
+  (let (next (.next self))
+    (&& next (all-satisfy? (lambda (x)
+                             (string/= next x))
+                           (cons "\n" args)))))
 
-(method MarkdownReader .parse-tr (:opt tx)
-  (let (txlist nil)
-    (.skip self "|")
-    (while (string/= (.next self) "\n")
-      (while (string/= (.next self) "|")
-        (.get self))
+(method MarkdownReader .not-eol? ()
+  (.none-match? self))
+
+(method MarkdownReader .parse-header ()
+  (let (level 0)
+    (while (string= (.next self) "#")
       (.skip self)
-      (push! txlist (list tx (.token self))))
-    (.skip self)
-    `(tr () ,@(reverse! txlist))))
+      (<- level (++ level)))
+    (if (<= 1 level  6) (list (bytes->symbol (string 'h level)) (.skip-line (.skip-space self)))
+        (.raise self "illegal header level " level))))
 
-(method MarkdownReader .parse-table ()
-  (let (thlist (.parse-tr self 'th) sep (.parse-tr self) tdlist nil)
-    (while (.stmt? self)
-      (push! tdlist (.parse-tr self 'td)))
-    `(table
-       (thead () ,thlist)
-       (tbody () ,@(reverse! tdlist)))))
+(method MarkdownReader .parse-code ()
+  (.skip self)
+  (while (.none-match? self "`") (.get self))
+  (.skip self "`")
+  `(code ,(.token self)))
+
+(method MarkdownReader .parse-em ()
+  (.skip self)
+  (while (.none-match? self "*") (.get self))
+  (.skip self "*")
+  `(em ,(.token self)))
+
+(method MarkdownReader .parse-footnote-referrer ()
+  (.skip self)    ; ^
+  (while (.none-match? self "]") (.get self))
+  (.skip self "]")
+  (let (i (.token self))
+    `(sup (:id (string "fnrefere" i))
+          (a (:href ,(string "#fnreferr" i)) ,i))))
+
+(method MarkdownReader .parse-link ()
+  (while (.none-match? self "]") (.get self))
+  (.skip self "]")
+  (let (text (.token self))
+    (.skip self "(")
+    (while (.none-match? self ")") (.get self))
+    (.skip self ")")
+    `(a (:href ,(.token self)) ,text)))
+
+(method MarkdownReader .parse-ref ()
+  (.skip self)
+  (if (string= (.next self) "^") (.parse-footnote-referrer self)
+      (.parse-link self)))
+
+(method MarkdownReader .parse-paragraph ()
+  (let (children nil text nil)
+    (while (.not-eol? self)
+      (if (string= (.next self) "`") (push! children (.parse-code self))
+          (string= (.next self) "*") (push! children (.parse-em self))
+          (string= (.next self) "[") (push! children (.parse-ref self))
+          (begin
+            (while (.none-match? selfe "`" "*" "[") (.get self))
+            (if (string/= (<- text (.token self)) "") (push! children text)))))
+    `(p ,@(reverse! children))))
+
+(method MarkdownReader .parse-pre ()
+  (let (lines nil get-line (lambda ()
+                             (dotimes (i 4) (.skip self " "))
+                             (.skip-line self)))
+    (push! lines (get-line))
+    (when (.not-eol? self)
+      (push! lines (get-line)))
+    `(pre ,(list->string (reverse! lines) "\n"))))
+
+(method MarkdownReader .parse-quote ()
+  (let (next-depth nil node-stack nil
+                   fetch (lambda ()
+                           (when (.not-eol? self)
+                             (<- next-depth 0)
+                             (while (string= (.next self) ">")
+                               (.skip self)
+                               (<- next-depth (++ next-depth)))
+                             (if (= next-depth 0) (.raise self "missing >"))
+                             (.skip-space self)
+                             (push! node-stack (.skip-line (.skip-space self)))))
+                   rec (lambda (depth nodes)
+                         (while (fetch)
+                           (if (< next-depth depth) (break)
+                               (= next-depth depth) (push! nodes (pop! node-stack))
+                               (begin
+                                 (push! nodes (rec next-depth (list (pop! node-stack))))
+                                 (if node-stack (push! nodes (pop! node-stack))))))
+                         (cons 'blockquote (reverse! nodes))))
+    (rec 1 nil)))
 
 (method MarkdownReader .parse-list ()
   (let (next-root nil next-depth nil node-stack nil
                   fetch (lambda ()
-                          (when (.stmt? self)
+                          (when (.not-eol? self)
                             (<- next-depth 1)
                             (while (string= (.next self) " ")
                               (dotimes (i 4) (.skip self " "))
@@ -58,49 +128,42 @@
                         (cons root (reverse! nodes))))
     (rec (if (string= (.next self) "-") 'ul 'ol) 1 nil)))
 
-(method MarkdownReader .parse-quote ()
-  (let (next-depth nil node-stack nil
-                   fetch (lambda ()
-                           (when (.stmt? self)
-                             (<- next-depth 0)
-                             (while (string= (.next self) ">")
-                               (.skip self)
-                               (<- next-depth (++ next-depth)))
-                             (if (= next-depth 0) (.raise self "missing >"))
-                             (.skip-space self)
-                             (push! node-stack (.skip-line (.skip-space self)))))
-                   rec (lambda (depth nodes)
-                         (while (fetch)
-                           (if (< next-depth depth) (break)
-                               (= next-depth depth) (push! nodes (pop! node-stack))
-                               (begin
-                                 (push! nodes (rec next-depth (list (pop! node-stack))))
-                                 (if node-stack (push! nodes (pop! node-stack))))))
-                         (cons 'blockquote (reverse! nodes))))
-    (rec 1 nil)))
+(method MarkdownReader .parse-tr (:opt tx)
+  (let (txlist nil)
+    (.skip self "|")
+    (while (.not-eol? self)
+      (while (.none-match? self "|") (.get self))
+      (.skip self "|")
+      (push! txlist (list tx (.token self))))
+    (.skip self)
+    `(tr ,@(reverse! txlist))))
 
-(method MarkdownReader .parse-pre ()
-  (let (lines nil get-line (lambda ()
-                             (dotimes (i 4)
-                               (.skip self " "))
-                             (.skip-line self)))
-    (push! lines (get-line))
-    (when (.stmt? self)
-      (push! lines (get-line)))
-    (list 'pre (list->string (reverse! lines) "\n"))))
+(method MarkdownReader .parse-table ()
+  (let (thlist (.parse-tr self 'th) sep (.parse-tr self) tdlist nil)
+    (while (.not-eol? self)
+      (push! tdlist (.parse-tr self 'td)))
+    `(table
+       (thead () ,thlist)
+       (tbody () ,@(reverse! tdlist)))))
 
-(method MarkdownReader .parse-header ()
-  (let (level 0)
-    (while (string= (.next self) "#")
-      (.skip self)
-      (<- level (++ level)))
-    (.skip-space self)
-    (if (<= 1 level  6) (list (bytes->symbol (string 'h level)) (.skip-line self))
-        (.raise self "illegal header level " level))))
+(method MarkdownReader .parse-footnote-reference ()
+  (.skip self)
+  (.skip self "^")
+  (while (string/= (.next self) "]") (.get self))
+  (.skip self)
+  (.skip self ":")
+  (let (i (.token self))
+    `(small (:id ,(string "fnreferr" i))
+            (a (:href (string "#fnrefere" i)) ,(.skip-line (.skip-space self))))))
+
+(method MarkdownReader .parse-xml ()
+  (let (xmlrd (.inherit (.new XMLReader) self))
+    (begin0 (.read xmlrd)
+            (.inherit self xmlrd))))
 
 (method MarkdownReader .read ()
   ; Read markdown.
-  ; Returns the XML.Node object corresponding to the read markdown tree.
+  ; Returns a list representation of read xml.
   ; Readable markdown is follows.
   ;     <markdown> ::= <stmt> [<eol> <stmt> ...]
   ;     <stmt> ::= <header>
@@ -119,7 +182,7 @@
   ;     <ul> ::= '-'  ... <char> ... <eol> [<ul> ...]
   ;     <ol> ::= '1.'  ... <char> ... <eol> [<ol> ...]
   ;     <table> ::= <tr> [<tr> ...]
-  ;     <tr> ::= '|' <char> ... ['|' <string>] ... '|' <eol>
+  ;     <tr> ::= '|' <char> ... ['|' <char> ...] ... '|' <eol>
   ;     <string> ::= {
   ;             <code>
   ;             | <em>
@@ -137,15 +200,13 @@
   ;     <char> -- characters that have no special meaning.
   ; <stmt> other than <header> are considered to be the same <stmt> up to the blank line.
   ; If the same <stmt> line starts with 4 spaces, it is considered as a nested expression.
-  (while (string= (.next self) "\n")
-    (.skip self))
+  (while (string= (.next self) "\n") (.skip self))
   (let (next (.next self))
     (if (nil? next) nil
         (string= next "#") (.parse-header self)
         (string= next " ") (.parse-pre self)
         (string= next ">") (.parse-quote self)
-        (|| (string= next "-")
-            (string= next "1")) (.parse-list self)
+        (|| (string= next "-") (string= next "1")) (.parse-list self)
         (string= next "|") (.parse-table self)
         (string= next "[") (.parse-footnote-reference self)
         (string= next "<") (.parse-xml self)

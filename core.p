@@ -620,8 +620,13 @@
 (function list->string (l :opt delim)
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
   ; If delim is not specified, consider an empty string to be specified.
-  (if delim (reduce (lambda (x y) (string x delim y)) l)
-      (apply bytes-concat (cons "" l))))
+  (if (nil? (cdr l)) (string (car l))
+      (nil? delim) (apply bytes-concat (map string l))
+      (with-memory-stream (out)
+        (write-bytes (car l) out)
+        (dolist (x (cdr l))
+          (write-bytes delim out)
+          (write-bytes x out)))))
 
 (builtin-function length (l)
   ; Returns the length of the specified list l.
@@ -2233,14 +2238,24 @@
   ; Can be used as a syllable reader or lexical analyzer.
   stream next token lineno)
 
-(method AheadReader .init (stream)
-  (if (string? stream) (let (s stream) (.write-bytes (<- stream (.new MemoryStream)) s))
-      (nil? stream) (<- stream (dynamic $stdin)))
+(method AheadReader .init (:opt stream)
+  (if (nil? stream) (<- stream (dynamic $stdin))
+      (string? stream) (let (s stream) (.write-bytes (<- stream (.new MemoryStream)) s)))
   (&<- self
     :stream stream
     :next (.read-char stream)
     :token (.new MemoryStream)
     :lineno 1))
+
+(method AheadReader .inherit (ar)
+  ; Inherite AheadReader ar.
+  ; Used when initializing another aheadreader instance from a stream that has already been read ahead.
+  (assert (is-a? ar AheadReader))
+  (&<- self
+    :stream (&stream ar)
+    :next (&next ar)
+    :token (&token ar)
+    :lineno (&lineno ar)))
 
 (method AheadReader .next ()
   ; Returns a pre-read character.
