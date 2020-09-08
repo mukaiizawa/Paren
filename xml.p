@@ -2,29 +2,29 @@
 
 ; class
 
-(class XML.Node ())
-(class XML.DOCTYPE (XML.Node) value)
-(class XML.Decl (XML.Node) value)
-(class XML.Comment (XML.Node) value)
-(class XML.Text (XML.Node) value)
-(class XML.Element (XML.Node) name attrs children)
+(class XMLNode ())
+(class XMLNode.DOCTYPE (XMLNode) value)
+(class XMLNode.Decl (XMLNode) value)
+(class XMLNode.Comment (XMLNode) value)
+(class XMLNode.Text (XMLNode) value)
+(class XMLNode.Element (XMLNode) name attrs children)
 
-(method XML.Node .to-s ()
+(method XMLNode .to-s ()
   (assert nil))
 
-(method XML.DOCTYPE .to-s ()
+(method XMLNode.DOCTYPE .to-s ()
   (string "<!DOCTYPE " (&value self) ">"))
 
-(method XML.Decl .to-s ()
+(method XMLNode.Decl .to-s ()
   (string "<? " (&value self) " ?>"))
 
-(method XML.Comment .to-s ()
+(method XMLNode.Comment .to-s ()
   (string "<!--" (&value self) "-->"))
 
-(method XML.Text .to-s ()
+(method XMLNode.Text .to-s ()
   (&value self))
 
-(method XML.Element .to-s ()
+(method XMLNode.Element .to-s ()
   (string "<" (&name self) (list->string (map (lambda (attr)
                                                 (let (key (bytes->string (car attr)) val (cadr attr))
                                                   (if val (string " " key "='" val "'")
@@ -35,14 +35,14 @@
 
 ; reader
 
-(class XML.Reader (AheadReader))
+(class XMLReader (AheadReader))
 
-(method XML.Reader .parse-text ()
+(method XMLReader .parse-text ()
   (while (string/= (.next self) "<")
     (.get self))
-  (&value<- (.new XML.Text) (.token self)))
+  (&value<- (.new XMLNode.Text) (.token self)))
 
-(method XML.Reader .parse-attrs ()
+(method XMLReader .parse-attrs ()
   (let (attrs nil key nil q nil val nil)
     (while (&& (string/= (.next self) "/")
                (string/= (.next self) ">"))
@@ -62,7 +62,7 @@
       (push! attrs val))
     (reverse! attrs)))
 
-(method XML.Reader .parse-name ()
+(method XMLReader .parse-name ()
   (.skip-space self)
   (while (&& (! (.space? self))
              (string/= (.next self) "/")
@@ -70,21 +70,21 @@
     (.get self))
   (bytes->symbol (.token self)))
 
-(method XML.Reader .parse-?tag ()
+(method XMLReader .parse-?tag ()
   (while (string/= (.next self) "?")
     (.get self))
   (.skip self "?")
   (.skip self ">")
-  (&value<- (.new XML.Decl) (.token self)))
+  (&value<- (.new XMLNode.Decl) (.token self)))
 
-(method XML.Reader .parse-doctype ()
+(method XMLReader .parse-doctype ()
   (dostring (c "DOCTYPE") (.skip self c))
   (.skip-space self)
   (while (string/= (.next self) ">") (.get self))
   (.skip self)
-  (&value<- (.new XML.DOCTYPE) (.token self)))
+  (&value<- (.new XMLNode.DOCTYPE) (.token self)))
 
-(method XML.Reader .parse-comment ()
+(method XMLReader .parse-comment ()
   (.skip self "-")
   (.skip self "-")
   (while true
@@ -99,14 +99,14 @@
       (.put self "--")
       (continue))
     (.skip self)
-    (return (&value<- (.new XML.Comment) (.token self)))))
+    (return (&value<- (.new XMLNode.Comment) (.token self)))))
 
-(method XML.Reader .parse-!tag ()
+(method XMLReader .parse-!tag ()
   (.skip self "!")
   (if (string= (.next self) "-") (.parse-comment self)
       (.parse-doctype self)))
 
-(method XML.Reader .parse-tag ()
+(method XMLReader .parse-tag ()
   (let (stag? nil)
     (.skip self "<")
     (when (string= (.next self) "/")
@@ -121,23 +121,11 @@
           (if (string= (.next (.skip-space self)) "/") (.skip self)
               (<- stag? true))
           (.skip self ">")
-          (list stag? (&<- (.new XML.Element) :name name :attrs attrs))))))
+          (list stag? (&<- (.new XMLNode.Element) :name name :attrs attrs))))))
 
-(method XML.Reader .parse-node ()
-  (while (.space? self) (.get self))
-  (if (string/= (.next self) "<") (.parse-text self)
-      (begin (.token self)    ; cleanup spaces
-             (let (stag?.val (.parse-tag self) stag? (car stag?.val) val (cadr stag?.val))
-               (if (! stag?) val    ; make sense
-                   (let (stag val name (&name stag) child nil children nil)
-                     (while (neq? name (<- child (.parse-node self)))
-                       (if (symbol? child) (.raise self "unexpected close tag " child " expected " name)
-                           (push! children child)))
-                     (&children<- stag (reverse! children))))))))
-
-(method XML.Reader .read ()
+(method XMLReader .read ()
   ; Read xml.
-  ; Returns the XML.Node object corresponding to the read xml.
+  ; Returns the XMLNode object corresponding to the read xml.
   ; Readable xml is as follows.
   ;     <xml> ::= <node> ...
   ;     <node> ::= <tag>
@@ -158,7 +146,16 @@
   ;     <etag> ::= '</' <name>   '>'
   ;     <attr> ::= <key> ['=' '"' <value> '"']
   ;     <text> -- a text node.
-  (.parse-node self))
+  (while (.space? self) (.get self))
+  (if (string/= (.next self) "<") (.parse-text self)
+      (begin (.token self)    ; cleanup spaces
+             (let (stag?.val (.parse-tag self) stag? (car stag?.val) val (cadr stag?.val))
+               (if (! stag?) val    ; make sense
+                   (let (stag val name (&name stag) child nil children nil)
+                     (while (neq? name (<- child (.read self)))
+                       (if (symbol? child) (.raise self "unexpected close tag " child " expected " name)
+                           (push! children child)))
+                     (&children<- stag (reverse! children))))))))
 
 (function! main (args)
   (let (xml (string 
@@ -178,6 +175,6 @@
               "         <hr/>"
               "    </body>"
               "</html>")
-            rd (.init (.new XML.Reader) xml))
+            rd (.init (.new XMLReader) xml))
     (write (.read rd))
     (write (.read rd))))
