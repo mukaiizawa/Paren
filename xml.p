@@ -9,20 +9,48 @@
 (class XMLNode.Text (XMLNode) value)
 (class XMLNode.Element (XMLNode) name attrs children)
 
+(function XMLNode.of (l)
+  (if (string? l) (&value<- (.new XMLNode.Text) l)
+      (let (name (car l))
+        (if (eq? name 'DOCTYPE) (&value<- (.new XMLNode.DOCTYPE) (cadr l))
+            (eq? name '?xml) (&value<- (.new XMLNode.Decl) (cadr l))
+            (eq? name '!--) (&value<- (.new XMLNode.Comment) (cadr l))
+            (let (attrs (cadr l) children (cddr l))
+              (if (&& (! (nil? attrs))
+                      (! (keyword? (car attrs))))
+                  (<- attrs nil
+                      children (cons attrs children)))
+              (&<- (.new XMLNode.Element)
+                :name name
+                :attrs attrs
+                :children (map XMLNode.of children)))))))
+
 (method XMLNode .to-s ()
   (assert nil))
 
 (method XMLNode.DOCTYPE .to-s ()
   (string "<!DOCTYPE " (&value self) ">"))
 
+(method XMLNode.DOCTYPE .to-l ()
+  `(DOCTYPE ,(&value self)))
+
 (method XMLNode.Decl .to-s ()
   (string "<? " (&value self) " ?>"))
+
+(method XMLNode.Decl .to-l ()
+  `(?xml ,(&value self)))
 
 (method XMLNode.Comment .to-s ()
   (string "<!--" (&value self) "-->"))
 
+(method XMLNode.Comment .to-l ()
+  `(!-- ,(&value self)))
+
 (method XMLNode.Text .to-s ()
   (&value self))
+
+(method XMLNode.Text .to-l ()
+  (.to-s self))
 
 (method XMLNode.Element .to-s ()
   (string "<" (&name self) (list->string (map (lambda (attr)
@@ -32,6 +60,9 @@
                                               (group (&attrs self) 2))) ">"
           (list->string (map .to-s (&children self)))
           "</" (&name self) ">"))
+
+(method XMLNode.Element .to-l ()
+  `(,(&name self) ,(&attrs self) ,@(map .to-l (&children self))))
 
 ; reader
 
