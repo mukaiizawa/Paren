@@ -62,7 +62,7 @@
           (string= (.next self) "*") (push! children (.parse-em self))
           (string= (.next self) "[") (push! children (.parse-ref self))
           (begin
-            (while (.none-match? selfe "`" "*" "[") (.get self))
+            (while (.none-match? self "`" "*" "[") (.get self))
             (if (string/= (<- text (.token self)) "") (push! children text)))))
     `(p ,@(reverse! children))))
 
@@ -214,7 +214,7 @@
 
 (function! main (args)
   (let ($external-encoding :UTF-8)
-    (with-open (in "readme.wk" :read)
+    (with-open (in "readme.md" :read)
       (let (node nil rd (.init (.new MarkdownReader) in))
         (while (<- node (.read rd))
           (write node))))))
