@@ -38,7 +38,7 @@
   (while (.none-match? self "]") (.get self))
   (.skip self "]")
   (let (i (.token self))
-    `(sup (:id (string "fnrefere" i))
+    `(sup (:id ,(string "fnrefere" i))
           (a (:href ,(string "#fnreferr" i)) ,i))))
 
 (method MarkdownReader .parse-link ()
@@ -93,7 +93,7 @@
                                (begin
                                  (push! nodes (rec next-depth (list (pop! node-stack))))
                                  (if node-stack (push! nodes (pop! node-stack))))))
-                         (cons 'blockquote (reverse! nodes))))
+                         `(blockquote ,@(reverse! nodes))))
     (rec 1 nil)))
 
 (method MarkdownReader .parse-list ()
@@ -154,7 +154,8 @@
   (.skip self ":")
   (let (i (.token self))
     `(small (:id ,(string "fnreferr" i))
-            (a (:href (string "#fnrefere" i)) ,(.skip-line (.skip-space self))))))
+            (a (:href ,(string "#fnrefere" i)) ,(string "[" i "]"))
+            ,(.skip-line (.skip-space self)))))
 
 (method MarkdownReader .parse-xml ()
   (let (xmlrd (.inherit (.new XMLReader) self))
@@ -212,9 +213,13 @@
         (string= next "<") (.parse-xml self)
         (.parse-paragraph self))))
 
+(method MarkdownReader .read-all ()
+  (let (node nil nodes nil)
+    (while (<- node (.read self))
+      (push! nodes node))
+    (reverse! nodes)))
+
 (function! main (args)
   (let ($external-encoding :UTF-8)
     (with-open (in "readme.md" :read)
-      (let (node nil rd (.init (.new MarkdownReader) in))
-        (while (<- node (.read rd))
-          (write node))))))
+      (write (.read-all (.init (.new MarkdownReader) in))))))

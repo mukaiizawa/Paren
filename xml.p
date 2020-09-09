@@ -1,96 +1,54 @@
 ; xml module.
 
-; class
+(function xml-attrs->string (l)
+  (with-memory-stream (out)
+    (while l
+      (assert (keyword? (car l)))
+      (write-bytes " " out)
+      (write-bytes (car l) out)
+      (if (keyword? (car (<- l (cdr l)))) (continue)
+          (assert (string? (car l)))
+          (begin
+            (write-bytes "='" out)
+            (write-bytes (car l) out)
+            (write-bytes "'" out)
+            (<- l (cdr l)))))))
 
-(class XMLNode ())
-(class XMLNode.DOCTYPE (XMLNode) value)
-(class XMLNode.Decl (XMLNode) value)
-(class XMLNode.Comment (XMLNode) value)
-(class XMLNode.Text (XMLNode) value)
-(class XMLNode.Element (XMLNode) name attrs children)
-
-(function XMLNode.of (l)
-  (if (string? l) (&value<- (.new XMLNode.Text) l)
+(function xml->string (l)
+  (if (atom? l) l
       (let (name (car l))
-        (if (eq? name 'DOCTYPE) (&value<- (.new XMLNode.DOCTYPE) (cadr l))
-            (eq? name '?xml) (&value<- (.new XMLNode.Decl) (cadr l))
-            (eq? name '!--) (&value<- (.new XMLNode.Comment) (cadr l))
+        (if (eq? name '?xml) (string "<? " (cadr l) " ?>")
+            (eq? name '!DOCTYPE) (string "<!DOCTYPE " (cadr l) ">")
+            (eq? name '!--) (string "<!--" (cadr l) "-->")
             (let (attrs (cadr l) children (cddr l))
-              (if (&& (! (nil? attrs))
-                      (! (keyword? (car attrs))))
-                  (<- attrs nil
-                      children (cons attrs children)))
-              (&<- (.new XMLNode.Element)
-                :name name
-                :attrs attrs
-                :children (map XMLNode.of children)))))))
-
-(method XMLNode .to-s ()
-  (assert nil))
-
-(method XMLNode.DOCTYPE .to-s ()
-  (string "<!DOCTYPE " (&value self) ">"))
-
-(method XMLNode.DOCTYPE .to-l ()
-  `(DOCTYPE ,(&value self)))
-
-(method XMLNode.Decl .to-s ()
-  (string "<? " (&value self) " ?>"))
-
-(method XMLNode.Decl .to-l ()
-  `(?xml ,(&value self)))
-
-(method XMLNode.Comment .to-s ()
-  (string "<!--" (&value self) "-->"))
-
-(method XMLNode.Comment .to-l ()
-  `(!-- ,(&value self)))
-
-(method XMLNode.Text .to-s ()
-  (&value self))
-
-(method XMLNode.Text .to-l ()
-  (.to-s self))
-
-(method XMLNode.Element .to-s ()
-  (string "<" (&name self) (list->string (map (lambda (attr)
-                                                (let (key (bytes->string (car attr)) val (cadr attr))
-                                                  (if val (string " " key "='" val "'")
-                                                      (string " " key))))
-                                              (group (&attrs self) 2))) ">"
-          (list->string (map .to-s (&children self)))
-          "</" (&name self) ">"))
-
-(method XMLNode.Element .to-l ()
-  `(,(&name self) ,(&attrs self) ,@(map .to-l (&children self))))
+              (if (! (&& (cons? attrs) (keyword? (car attrs))))
+                  (<- children (cons attrs children) attrs nil))
+              (string "<" name (xml-attrs->string attrs) ">"
+                      (list->string (map xml->string children))
+                      "</" name ">"))))))
 
 ; reader
 
 (class XMLReader (AheadReader))
 
 (method XMLReader .parse-text ()
-  (while (string/= (.next self) "<")
-    (.get self))
-  (&value<- (.new XMLNode.Text) (.token self)))
+  (while (string/= (.next self) "<") (.get self))
+  (.token self))
 
 (method XMLReader .parse-attrs ()
-  (let (attrs nil key nil q nil val nil)
+  (let (attrs nil q nil)
     (while (&& (string/= (.next self) "/")
                (string/= (.next self) ">"))
       (.skip-space self)
       (while (string/= (.next self) "=")
         (.get self))
-      (<- key (.token self))
+      (push! attrs (bytes->keyword (.token self)))
       (.skip self "=")
-      (if (&& (string/= (<- q (.skip (.skip-space self))) "\"")
-              (string/= q "'"))
-          (.raise self "missing open quote"))
+      (if (! (bytes-index "'\"" (<- q (.skip (.skip-space self))))) (continue))    ; single attribute
       (while (string/= (.next self) q)
         (.get-escape self))
-      (.skip self q)
-      (<- val (.token self))
-      (push! attrs (bytes->keyword key))
-      (push! attrs val))
+      (.skip self)
+      (push! attrs (.token self)))
     (reverse! attrs)))
 
 (method XMLReader .parse-name ()
@@ -102,18 +60,17 @@
   (bytes->symbol (.token self)))
 
 (method XMLReader .parse-?tag ()
-  (while (string/= (.next self) "?")
-    (.get self))
-  (.skip self "?")
-  (.skip self ">")
-  (&value<- (.new XMLNode.Decl) (.token self)))
+  (dostring (c "?xml") (.skip self c))
+  (let (attrs (.parse-attrs self))
+    (.skip (.skip-space self) "?") (.skip self ">")
+    (list '?xml attrs)))
 
 (method XMLReader .parse-doctype ()
   (dostring (c "DOCTYPE") (.skip self c))
   (.skip-space self)
   (while (string/= (.next self) ">") (.get self))
   (.skip self)
-  (&value<- (.new XMLNode.DOCTYPE) (.token self)))
+  (list '!DOCTYPE (.token self)))
 
 (method XMLReader .parse-comment ()
   (.skip self "-")
@@ -130,7 +87,7 @@
       (.put self "--")
       (continue))
     (.skip self)
-    (return (&value<- (.new XMLNode.Comment) (.token self)))))
+    (return (list '!-- (.token self)))))
 
 (method XMLReader .parse-!tag ()
   (.skip self "!")
@@ -152,7 +109,7 @@
           (if (string= (.next (.skip-space self)) "/") (.skip self)
               (<- stag? true))
           (.skip self ">")
-          (list stag? (&<- (.new XMLNode.Element) :name name :attrs attrs))))))
+          (list stag? (list name attrs))))))
 
 (method XMLReader .read ()
   ; Read xml.
@@ -177,35 +134,42 @@
   ;     <etag> ::= '</' <name>   '>'
   ;     <attr> ::= <key> ['=' '"' <value> '"']
   ;     <text> -- a text node.
+  (if (nil? (.next self)) (return nil))
   (while (.space? self) (.get self))
   (if (string/= (.next self) "<") (.parse-text self)
       (begin (.token self)    ; cleanup spaces
-             (let (stag?.val (.parse-tag self) stag? (car stag?.val) val (cadr stag?.val))
-               (if (! stag?) val    ; make sense
-                   (let (stag val name (&name stag) child nil children nil)
+             (let (pair (.parse-tag self) stag? (car pair) tag (cadr pair))
+               (if (! stag?) tag    ; make sense
+                   (let (name (car tag) child nil children nil)
                      (while (neq? name (<- child (.read self)))
                        (if (symbol? child) (.raise self "unexpected close tag " child " expected " name)
                            (push! children child)))
-                     (&children<- stag (reverse! children))))))))
+                     (cons (car tag)
+                           (cons (cadr tag)
+                                 (reverse! children)))))))))
+
+(method XMLReader .read-all ()
+  (let (node nil nodes nil)
+    (while (<- node (.read self))
+      (push! nodes node))
+    (reverse! nodes)))
 
 (function! main (args)
-  (let (xml (string 
-              "<!DOCTYPE html>"
-              "<html lang='ja'>"
-              "    <head>"
-              "        <title>foo</title>"
-              "    </head>"
-              "<!-- -- comment -- -->"
-              "    <body>"
-              "         <hr/>"
-              "         <div style='bar'"
-              "              class='buzz'>"
-              "           text node"
-              "           text node"
-              "         </div>"
-              "         <hr/>"
-              "    </body>"
-              "</html>")
-            rd (.init (.new XMLReader) xml))
-    (write (.read rd))
-    (write (.read rd))))
+  (with-memory-stream
+    (in (string "<!DOCTYPE html>"
+                "<html lang='ja'>"
+                "    <head>"
+                "        <title>foo</title>"
+                "    </head>"
+                "<!-- -- comment -- -->"
+                "    <body>"
+                "         <hr/>"
+                "         <div style='bar'"
+                "              class='buzz'>"
+                "           text node"
+                "           text node"
+                "         </div>"
+                "         <hr/>"
+                "    </body>"
+                "</html>"))
+    (write (.read-all (.init (.new XMLReader) in)))))
