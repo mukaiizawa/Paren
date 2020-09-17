@@ -284,7 +284,8 @@ static int valid_keyword_args(object params, object args)
   return TRUE;
 }
 
-static int parse_args(object params, object args)
+static int parse_args(void (*f)(object, object, object), object params
+    , object args)
 {
   object o, k, v;
   // parse required args
@@ -295,10 +296,10 @@ static int parse_args(object params, object args)
       return FALSE;
     }
     if (object_type_p(params->cons.car, SYMBOL))
-      symbol_bind(reg[1], params->cons.car, args->cons.car);
+      (*f)(reg[1], params->cons.car, args->cons.car);
     else {
       if (!object_list_p(args->cons.car)) return FALSE;
-      if (!parse_args(params->cons.car, args->cons.car)) return FALSE;
+      if (!parse_args(f, params->cons.car, args->cons.car)) return FALSE;
     }
     params = params->cons.cdr;
     args = args->cons.cdr;
@@ -309,9 +310,9 @@ static int parse_args(object params, object args)
     while (params != object_nil) {
       if (object_type_p(params->cons.car, KEYWORD)) break;
       k = params->cons.car;
-      if (args == object_nil) symbol_bind(reg[1], k, object_nil);
+      if (args == object_nil) (*f)(reg[1], k, object_nil);
       else {
-        symbol_bind(reg[1], k, args->cons.car);
+        (*f)(reg[1], k, args->cons.car);
         args = args->cons.cdr;
       }
       params = params->cons.cdr;
@@ -319,7 +320,7 @@ static int parse_args(object params, object args)
   }
   // parse rest args
   if (params->cons.car == object_rest) {
-    symbol_bind(reg[1], params->cons.cdr->cons.car, args);
+    (*f)(reg[1], params->cons.cdr->cons.car, args);
     return TRUE;
   }
   // parse keyword args
@@ -338,7 +339,7 @@ static int parse_args(object params, object args)
         }
         args = args->cons.cdr->cons.cdr;
       }
-      symbol_bind(reg[1], k, v);
+      (*f)(reg[1], k, v);
       params = params->cons.cdr;
     }
     return TRUE;
@@ -373,7 +374,7 @@ static void pop_apply_frame(void)
   else gen2(LAMBDA_FRAME, reg[1], fvar);
   reg[1] = gc_new_env(operator->lambda.env);
   gen1(EVAL_SEQUENTIAL_FRAME, operator->lambda.body);
-  parse_args(operator->lambda.params, reg[0]);
+  parse_args(&symbol_bind, operator->lambda.params, reg[0]);
 }
 
 static void pop_apply_builtin_frame(void)
@@ -397,7 +398,10 @@ static void pop_assert_frame(void)
 
 static void pop_bind_frame(void)
 {
-  symbol_bind(reg[1], get_frame_var(fp, 0), reg[0]);
+  object o;
+  o = get_frame_var(fp, 0);
+  if (object_type_p(o, SYMBOL)) symbol_bind(reg[1], o, reg[0]);
+  else parse_args(&symbol_bind, o, reg[0]);
   pop_frame();
 }
 
@@ -424,7 +428,10 @@ static void pop_bind_handler_frame(void)
 
 static void pop_bind_propagation_frame(void)
 {
-  symbol_bind_propagation(reg[1], get_frame_var(fp, 0), reg[0]);
+  object o;
+  o = get_frame_var(fp, 0);
+  if (object_type_p(o, SYMBOL)) symbol_bind_propagation(reg[1], o, reg[0]);
+  else parse_args(&symbol_bind_propagation, o, reg[0]);
   pop_frame();
 }
 
@@ -1058,8 +1065,18 @@ static int gen_symbol_binding(object args, int frame_type)
 {
   object o;
   if (args == object_nil) return TRUE;
-  if (!object_type_p((o = args)->cons.car, SYMBOL))
-    return ip_mark_error("expected symbol");
+  if (!object_type_p((o = args)->cons.car, SYMBOL)) {
+    switch (frame_type) {
+      case BIND_FRAME:
+      case BIND_PROPAGATION_FRAME:
+        if (!object_type_p(o->cons.car, CONS)
+            || !parse_required_params(o->cons.car, TRUE))
+          return ip_mark_error("unexpected binding expression");
+        break;
+      default:
+        return ip_mark_error("expected symbol");
+    }
+  }
   if ((args = args->cons.cdr) == object_nil)
     return ip_mark_error("expected symbol-value pairs");
   if (!gen_symbol_binding(args->cons.cdr, frame_type)) return FALSE;
