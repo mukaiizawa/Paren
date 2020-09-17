@@ -2405,7 +2405,7 @@
   (&stream self))
 
 (method AheadReader .to-s ()
-  (string "<AheadReader:0x" (address self) " "
+  (string "<" (&symbol (.class self)) ":0x" (address self) " "
           (list :next (&next self)
                 :token (.to-s (&token self))
                 :lineno (&lineno self)) ">"))
