@@ -138,7 +138,7 @@
   (while (.space? self) (.get self))
   (if (string/= (.next self) "<") (.parse-text self)
       (begin (.token self)    ; cleanup spaces
-             (let (pair (.parse-tag self) stag? (car pair) tag (cadr pair))
+             (let ((stag? tag) (.parse-tag self))
                (if (! stag?) tag    ; make sense
                    (let (name (car tag) child nil children nil)
                      (while (neq? name (<- child (.read self)))
