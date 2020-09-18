@@ -54,9 +54,6 @@ xc.a: std.o xarray.o xbarray.o xgetopt.o heap.o object.o gc.o lex.o splay.o st.o
 $(paren): paren.o xc.a
 	$(link)
 
-prof:
-	gprof $(paren) > prof.wk
-
 cdep:
 	paren cdep.p > make.d
 
