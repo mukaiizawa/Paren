@@ -4,6 +4,9 @@
   table)
 
 (method OptionParser .init (option)
+  ; Specifies a character string listing option characters to be interpreted as optionsArg.
+  ; Options with ':' immediately after the specified character have option arguments.
+  ; Returns this object.
   (<- option (string->array option))
   (let (table nil i 0 len (array-length option))
     (while (< i len)
@@ -41,6 +44,7 @@
   (list self args))
 
 (method OptionParser .get (opt)
+  ; Returns option value specified opt.
   (caddr (.find-record self opt)))
 
 (function! main (args)
