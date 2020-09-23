@@ -674,7 +674,8 @@ static void push_call_stack(object o)
 {
   while (object_type_p(o, CONS)) {
     if (o->cons.car == object_stack_trace) {
-      if (object_type_p((o = o->cons.cdr), CONS)) {
+      o = o->cons.cdr;
+      if (object_type_p(o, CONS)) {
         if (o->cons.car == object_nil) o->cons.car = call_stack();
       }
       return;
@@ -849,23 +850,23 @@ static void trap(void)
 
 static int object_class_p(object o)
 {
-  if (!object_type_p(o, CONS)) return FALSE;
-  if (o->cons.car != object_class) return FALSE;
-  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
-  if (o->cons.car != object_Class) return FALSE;
-  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
-  if (o->cons.car != object_symbol) return FALSE;
-  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
-  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
-  if (o->cons.car != object_super) return FALSE;
-  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
-  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
-  if (o->cons.car != object_features) return FALSE;
-  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
-  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
-  if (o->cons.car != object_fields) return FALSE;
-  if (!object_type_p(o = o->cons.cdr, CONS)) return FALSE;
-  return o->cons.cdr == object_nil;
+  return object_type_p(o, CONS)
+    && o->cons.car == object_class
+    && (o = o->cons.cdr) != object_nil
+    && o->cons.car == object_Class
+    && (o = o->cons.cdr) != object_nil
+    && o->cons.car == object_symbol
+    && (o = o->cons.cdr) != object_nil
+    && (o = o->cons.cdr) != object_nil
+    && o->cons.car == object_super
+    && (o = o->cons.cdr) != object_nil
+    && (o = o->cons.cdr) != object_nil
+    && o->cons.car == object_features
+    && (o = o->cons.cdr) != object_nil
+    && (o = o->cons.cdr) != object_nil
+    && o->cons.car == object_fields
+    && (o = o->cons.cdr) != object_nil
+    && (o = o->cons.cdr) == object_nil;
 }
 
 static int find_class(object cls_sym, object *result)
@@ -1064,8 +1065,8 @@ static int parse_required_params(object params, int nest_p)
 static int gen_symbol_binding(object args, int frame_type)
 {
   object o;
-  if (args == object_nil) return TRUE;
-  if (!object_type_p((o = args)->cons.car, SYMBOL)) {
+  if ((o = args) == object_nil) return TRUE;
+  if (!object_type_p(args->cons.car, SYMBOL)) {
     switch (frame_type) {
       case BIND_FRAME:
       case BIND_PROPAGATION_FRAME:

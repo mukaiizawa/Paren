@@ -54,17 +54,6 @@ object object_reverse(object o)
   return acc;
 }
 
-int object_type(object o)
-{
-  if (sint_p(o)) return SINT;
-  return o->header & TYPE_MASK;
-}
-
-int object_type_p(object o, int type)
-{
-  return object_type(o) == type;
-}
-
 int object_list_p(object o)
 {
   if (o == object_nil) return TRUE;

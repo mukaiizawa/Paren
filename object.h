@@ -24,17 +24,19 @@ typedef union s_expr *object;
 #define   BYTES        0x0000000d
 #define   ARRAY        0x0000000e
 
-
 #define SINT_BITS 30
 #define SINT_MAX 0x3fffffff
 #define SINT_MIN (-SINT_MAX-1)
+
+#define XINT_BITS 63
+
+#define object_type(o) (sint_p(o)? SINT: o->header & TYPE_MASK)
+#define object_type_p(o, type) (object_type(o) == type)
 
 #define byte_p(i) (0 <= i && i < 256)
 #define sint_p(o) ((((intptr_t)o) & 1) == 1)
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
 #define sint(i) ((object)((((intptr_t)i) << 1) | 1))
-
-#define XINT_BITS 63
 
 union s_expr {
   int header;
@@ -106,8 +108,6 @@ extern object object_features;
 extern object object_fields;
 extern object object_message;
 
-extern int object_type(object o);
-extern int object_type_p(object o, int type);
 extern int object_list_p(object o);
 extern int object_byte_size(object o);
 extern char *object_describe(object o, char *buf);

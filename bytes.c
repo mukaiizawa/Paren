@@ -142,7 +142,8 @@ DEFUN(bytes_index)
   if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
   b = 0;
   p = NULL;
-  switch (object_type((argv = argv->cons.cdr)->cons.car)) {
+  argv = argv->cons.cdr;
+  switch (object_type(argv->cons.car)) {
     case SINT:
       b = sint_val(argv->cons.car);
       if (!byte_p(b)) return FALSE;
