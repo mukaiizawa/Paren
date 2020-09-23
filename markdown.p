@@ -10,7 +10,7 @@
                              (string/= next x))
                            (cons "\n" args)))))
 
-(method MarkdownReader .not-eol? ()
+(method MarkdownReader .continue? ()
   (.none-match? self))
 
 (method MarkdownReader .parse-header ()
@@ -57,7 +57,7 @@
 
 (method MarkdownReader .parse-paragraph ()
   (let (children nil text nil)
-    (while (.not-eol? self)
+    (while (.continue? self)
       (if (string= (.next self) "`") (push! children (.parse-code self))
           (string= (.next self) "*") (push! children (.parse-em self))
           (string= (.next self) "[") (push! children (.parse-ref self))
@@ -71,14 +71,14 @@
                              (dotimes (i 4) (.skip self " "))
                              (.skip-line self)))
     (push! lines (get-line))
-    (when (.not-eol? self)
+    (while (.continue? self)
       (push! lines (get-line)))
     `(pre ,(list->string (reverse! lines) "\n"))))
 
 (method MarkdownReader .parse-quote ()
   (let (next-depth nil node-stack nil
                    fetch (lambda ()
-                           (when (.not-eol? self)
+                           (when (.continue? self)
                              (<- next-depth 0)
                              (while (string= (.next self) ">")
                                (.skip self)
@@ -89,7 +89,9 @@
                    rec (lambda (depth nodes)
                          (while (fetch)
                            (if (< next-depth depth) (break)
-                               (= next-depth depth) (push! nodes (pop! node-stack))
+                               (= next-depth depth) (begin
+                                                      (if (&& nodes (string? (car nodes))) (push! nodes '(br)))
+                                                      (push! nodes (pop! node-stack)))
                                (begin
                                  (push! nodes (rec next-depth (list (pop! node-stack))))
                                  (if node-stack (push! nodes (pop! node-stack))))))
@@ -99,7 +101,7 @@
 (method MarkdownReader .parse-list ()
   (let (next-root nil next-depth nil node-stack nil
                   fetch (lambda ()
-                          (when (.not-eol? self)
+                          (when (.continue? self)
                             (<- next-depth 1)
                             (while (string= (.next self) " ")
                               (dotimes (i 4) (.skip self " "))
@@ -131,7 +133,7 @@
 (method MarkdownReader .parse-tr (:opt tx)
   (let (txlist nil)
     (.skip self "|")
-    (while (.not-eol? self)
+    (while (.continue? self)
       (while (.none-match? self "|") (.get self))
       (.skip self "|")
       (push! txlist (list tx (.token self))))
@@ -140,7 +142,7 @@
 
 (method MarkdownReader .parse-table ()
   (let (thlist (.parse-tr self 'th) sep (.parse-tr self) tdlist nil)
-    (while (.not-eol? self)
+    (while (.continue? self)
       (push! tdlist (.parse-tr self 'td)))
     `(table
        (thead () ,thlist)
@@ -220,6 +222,6 @@
     (reverse! nodes)))
 
 (function! main (args)
-  (let ($external-encoding :UTF-8)
+  (timeit (let ($external-encoding :UTF-8)
     (with-open (in "readme.md" :read)
-      (write (.read-all (.init (.new MarkdownReader) in))))))
+      (write (.read-all (.init (.new MarkdownReader) in)))))))
