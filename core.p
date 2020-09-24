@@ -2619,7 +2619,7 @@
 (macro with-memory-stream ((ms :opt s) :rest body)
   ; Create memory stream context.
   ; If the string s is specified, construct an input stream with s as the source.
-  ; Returns nil.
+  ; Returns last evaluated value.
   ; Otherwise act as an output stream.
   ; Returns the string written to the output stream.
   ;     (with-memory-stream (ms s)
@@ -2630,9 +2630,13 @@
   ;        (if s (.to-s ms)))
   (with-gensyms (g)
     (list let (list ms '(.new MemoryStream) g s)
-          (list if g (list '.write-bytes ms g))
-          (cons begin body)
-          (list if (list ! g) (list '.to-s ms)))))
+          (list if g
+                (list begin
+                      (list if g (list '.write-bytes ms g))
+                      (cons begin body))
+                (list begin
+                      (cons begin body)
+                      (list '.to-s ms))))))
 
 (macro with-open ((sym path mode) :rest body)
   (with-gensyms (gsym)
@@ -2680,12 +2684,11 @@
   ; Enter repl(read eval print loop) mode.
   ; Executed when there is no command line argument when paren starts.
   (let (expr nil)
-    (catch (SystemExit (lambda (e) (return true)))
-      (while true
-        (catch (Error (lambda (e) (.print-stack-trace e)))
-          (write-bytes ") ")
-          (if (<- expr (read)) (write (eval (expand-macro-all expr)))
-              (break)))))))
+    (while true
+      (catch (Error (lambda (e) (.print-stack-trace e)))
+        (write-bytes ") ")
+        (if (<- expr (read)) (write (eval (expand-macro-all expr)))
+            (break))))))
 
 (function quit ()
   ; Quit the system.
@@ -2719,17 +2722,20 @@
   ; Executed when paren is executed.
   ; Invoke repl if there are no command line arguments that bound to the symbol $args.
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
-  (if (nil? args) (repl)
-      (let (script (Path.of (car args)))
-        (if (&& (! (.readable? script))
-                (! (.readable? (<- script (.resolve $paren-home script)))))
-            (error "unreadable file " (car args))
-            (&& (load script) (bound? 'main)) (main args)))))
+  (catch (SystemExit (lambda (e) (return true)))
+    (if (nil? args) (repl)
+        (let (script (Path.of (car args)))
+          (if (&& (! (.readable? script))
+                  (! (.readable? (<- script (.resolve $paren-home script)))))
+              (error "unreadable file " (car args))
+              (&& (load script) (bound? 'main)) (main args))))))
 
 (<- $import '(:core)
     $read-table nil
     $stdin (.init (.new FileStream) (fp 0))
     $stdout (.init (.new FileStream) (fp 1))
+    $in $stdin
+    $out $stdout
     $external-encoding (if (eq? $host-name :windows) :SJIS :UTF-8)
     $paren-home (.parent (.resolve (Path.getcwd) core.p)))
 
