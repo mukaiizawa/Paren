@@ -958,7 +958,7 @@ DEFUN(find_method)
   argv = argv->cons.cdr;
   if (!bi_arg_type(argv->cons.car, SYMBOL, &mtd_sym)) return FALSE;
   while (TRUE) {
-    // find class mtehod
+    // find class method
     if (!find_class_method(cls_sym, mtd_sym, result)) return FALSE;
     if (*result != NULL) return TRUE;
     // find feature method
