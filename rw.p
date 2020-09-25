@@ -1,4 +1,4 @@
-; reserved word
+; reserved word.
 
 (<- $reserved-words
     '(special-operator

@@ -686,7 +686,7 @@
 (function group (l n)
   ; Returns a list in which the elements of l are grouped into sublists of length n.
   ; Error if the list length is not a multiple of n.
-  (if (<= n 0) (error "illegal arguments")
+  (if (<= n 0) (error "expected positive number")
       (let (lis nil)
         (while l
           (let (sublis nil)
