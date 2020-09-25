@@ -1,20 +1,28 @@
 # makefile
 # Usage: make os={linux|windows} [cc=gcc] [debug={off|on}]
+# 	[sock=off|on]
 
 supportos=linux windows
 cc?=gcc
 debug?=off
+sock?=off
 
 ifeq ($(filter $(supportos),$(os)),)
 $(error illegal os)
 endif
 ifeq ($(os), linux)
 extobj+=pf.u.o xsleep.u.o
+ifeq ($(sock),on)
+extobj+=sock.o
+endif
 endif
 ifeq ($(os), windows)
 extobj+=pf.w.o xsleep.w.o
-lib+=-lws2_32
 exe=.exe
+ifeq ($(sock),on)
+lib+=-lws2_32
+extobj+=sock.o
+endif
 endif
 
 uflags=-Wall -Werror
@@ -41,7 +49,7 @@ defsp=ip.c
 defsp.wk: $(defsp)
 	cat $+ | grep ^DEFSP>$@
 
-defun=ip.c bi.c array.c bytes.c cons.c lambda.c number.c os.c dl.c sock.c
+defun=ip.c bi.c array.c bytes.c cons.c lambda.c number.c os.c dl.c
 defun.wk: $(defun)
 	cat $+ | grep ^DEFUN>$@
 
