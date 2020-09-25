@@ -1985,6 +1985,12 @@
   ; Returns nil if eof reached.
   (.read (.init (.new ParenReader) self)))
 
+(method Stream .read-all ()
+  (let (exprs nil expr nil rd (.init (.new ParenReader) self))
+    (while (<- expr (.read rd))
+      (push! exprs expr))
+    (reverse! exprs)))
+
 (method Stream .read-line ()
   ; Input one line from this object.
   ; Returns read line.
@@ -2133,6 +2139,10 @@
       (assert nil))
   (.write-bytes self (|| end "\n"))
   x)
+
+(method Stream .write-all (exprs :key start end)
+  (dolist (expr exprs)
+    (.write expr :key start end)))
 
 (class MemoryStream (Stream)
   ; A stream whose contents are held in memory.
@@ -2595,6 +2605,9 @@
 (function read (:opt stream)
   (.read (|| stream (dynamic $stdin))))
 
+(function read-all (:opt stream)
+  (.read-all (|| stream (dynamic $stdin))))
+
 (function write-byte (byte :opt stream)
   ; Write 1byte to the specified stream.
   (.write-byte (|| stream (dynamic $stdout)) byte))
@@ -2615,6 +2628,9 @@
 (function write (x :opt stream :key start end)
   ; Write the specified x as a readable format.
   (.write (|| stream (dynamic $stdout)) x :start start :end end))
+
+(function write-all (exprs :opt stream :key start end)
+  (.write-all (|| stream (dynamic $stdout)) x :start start :end end))
 
 (macro with-memory-stream ((ms :opt s) :rest body)
   ; Create memory stream context.
