@@ -675,11 +675,6 @@
                   nil)))
     (rec l)))
 
-(builtin-function copy (l)
-  ; Returns a list that is a copy of the argument list l.
-  ; The copy target is only cons, the element is not copied.
-  )
-
 (function .. (s e :opt step)
   ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
   (let (acc nil step (|| step 1))

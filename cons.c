@@ -73,15 +73,6 @@ DEFUN(set_cdr)
   return TRUE;
 }
 
-DEFUN(copy)
-{
-  object o, p;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
-  *result = gc_copy_cons(o, &p);
-  return TRUE;
-}
-
 DEFUN(append)
 {
   object o, p, head, tail;
