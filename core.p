@@ -2714,9 +2714,8 @@
   ; Load the specified file.
   ; Returns true if successfully loaded.
   (with-open (in path :read)
-    (let (expr nil)
-      (while (<- expr (read in))
-        (eval expr))))
+    (dolist (expr (read-all in))
+      (eval expr)))
   true)
 
 (function import (key)
@@ -2756,19 +2755,19 @@
 (reader-macro a (reader)
   ; Define an array literal.
   ; Array elements are not evaluated.
-  (let (lexer (&lexer reader) a (.new Array) expr nil)
+  (let (lexer (&lexer reader) a (.new Array))
     (.skip lexer)
     (.skip lexer "[")
     (while (string/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (with-memory-stream (in (.token lexer))
-      (while (<- expr (read in))
+      (dolist (expr (read-all in))
         (.add a expr)))
     (.to-a a)))
 
 (reader-macro b (reader)
   ; Define an bytes literal.
-  (let (lexer (&lexer reader) expr nil)
+  (let (lexer (&lexer reader))
     (.skip lexer)
     (.skip lexer "[")
     (while (string/= (.next lexer) "]") (.get lexer))
@@ -2776,9 +2775,8 @@
     (->bytes
       (with-memory-stream (out)
         (with-memory-stream (in (.token lexer))
-          (let (expr nil)
-            (while (<- expr (read in))
-              (.write-byte out expr))))))))
+          (dolist (expr (read-all in))
+            (write-byte expr out)))))))
 
 (reader-macro m (reader)
   ; Define expand-macro-all reader.
