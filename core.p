@@ -1499,6 +1499,7 @@
 
 (builtin-function find-class (cls-sym)
   ; Returns the class corresponding to the specified symbol cls_sym.
+  ; If cls-sym is not bound or cls-sym is not a class instance, returns nil.
   )
 
 (builtin-function find-method (cls-sym method-sym)
@@ -1562,7 +1563,7 @@
 
 (macro method (cls-sym method-sym args :rest body)
   (let (global-sym (bytes-concat cls-sym method-sym))
-    (if (! (find-class cls-sym)) (error "unbound class")
+    (if (nil? (find-class cls-sym)) (error "unbound class")
         (bound? global-sym) (error global-sym " already bound"))
     (list begin
           (list 'make-method-dispatcher method-sym)
@@ -1582,11 +1583,11 @@
   self)
 
 (method Object .class ()
-  ; Returns the class of receiver.
+  ; Returns the class of the receiver.
   (find-class (&class self)))
 
 (method Object .eq? (o)
-  ; Returns whether the o is equals of this object.
+  ; Returns whether the o is equals of the receiver.
   ; Overwrite this method if there is class-specific comparisons.
   (eq? self o))
 
@@ -1607,13 +1608,12 @@
   ; If .init method has argument, must invoke after create an instance.
   ; Otherwise automatically invoke .init method.
   (let (o nil)
-    (for (cls self) cls (<- cls (&& (assoc cls :super) (find-class (assoc cls :super))))
+    (for (cls self) cls (<- cls (find-class (assoc cls :super)))
       (dolist (field (reverse! (map bytes->keyword (assoc cls :fields))))
         (push! o nil)
         (push! o field)))
     (car! (cdr o) (assoc self :symbol))
-    (if (= (length (lambda-parameter (find-method (assoc o :class) '.init))) 1)
-        (.init o)
+    (if (= (length (lambda-parameter (find-method (assoc o :class) '.init))) 1) (.init o)
         o)))
 
 (method Class .super ()
@@ -1623,10 +1623,6 @@
 (method Class .features ()
   ; Returns the feature list representing the feature of the receiver.
   (map find-class (&features self)))
-
-(method Class .methods ()
-  ; Returns method list of this class, but excluding inherited methods.
-  (&methods self))
 
 ;; exception
 
@@ -1802,13 +1798,13 @@
         name)))
 
 (method Path .root? ()
-  ; Returns whether this object is a root directory.
+  ; Returns whether the receiver is a root directory.
   (&& (.absolute? self) (nil? (.parent self))))
 
 (method Path .parent ()
   ; Returns the parent path
-  ; If this object is root directory, returns nil.
-  ; However, this object is relative path, non-root directory may return nil.
+  ; If the receiver is root directory, returns nil.
+  ; However, the receiver is relative path, non-root directory may return nil.
   (let (path (butlast (&path self)))
     (if path (&path<- (.new Path) path))))
 
@@ -1853,13 +1849,13 @@
                                     :update 3))))
 
 (method Path .remove ()
-  ; Deletes the file corresponding to this object.
-  ; Returns this object.
+  ; Deletes the file corresponding to the receiver.
+  ; Returns the receiver.
   (remove (.to-s self))
   self)
 
 (method Path .stat ()
-  ; Returns stat of this object.
+  ; Returns stat of the receiver.
   (let (stat-array (stat (.to-s self)))
     (if stat-array stat-array
         (begin (<- stat-array (array 3))
@@ -1868,44 +1864,44 @@
                stat-array))))
 
 (method Path .mode ()
-  ; Returns whether this object is a regular file.
+  ; Returns whether the receiver is a regular file.
   ([] (.stat self) 0))
 
 (method Path .none? ()
-  ; Returns whether this object is not exits.
+  ; Returns whether the receiver is not exits.
   (/= (& (.mode self) 1) 0))
 
 (method Path .file? ()
-  ; Returns whether this object is a regular file.
+  ; Returns whether the receiver is a regular file.
   (/= (& (.mode self) 2) 0))
 
 (method Path .dir? ()
-  ; Returns whether this object is a directory.
+  ; Returns whether the receiver is a directory.
   (/= (& (.mode self) 4) 0))
 
 (method Path .other? ()
-  ; Returns whether this object is neither a regular file nor a directory.
+  ; Returns whether the receiver is neither a regular file nor a directory.
   (/= (& (.mode self) 8) 0))
 
 (method Path .readable? ()
-  ; Returns whether this object is readable.
+  ; Returns whether the receiver is readable.
   (/= (& (.mode self) 16) 0))
 
 (method Path .writable? ()
-  ; Returns whether this object is writable.
+  ; Returns whether the receiver is writable.
   (/= (& (.mode self) 32) 0))
 
 (method Path .size ()
-  ; Returns the size of this object.
+  ; Returns the size of the receiver.
   ([] (.stat self) 1))
 
 (method Path .mtime ()
-  ; Returns the last update time of this object.
+  ; Returns the last update time of the receiver.
   ([] (.stat self) 2))
 
 (method Path .utime (time)
-  ; Update the last update time of this object.
-  ; Returns this object.
+  ; Update the last update time of the receiver.
+  ; Returns the receiver.
   (utime (.to-s self) time))
 
 (method Path .children ()
@@ -1987,7 +1983,7 @@
     (reverse! exprs)))
 
 (method Stream .read-line ()
-  ; Input one line from this object.
+  ; Input one line from the receiver.
   ; Returns read line.
   ; If stream reached eof, returns nil.
   (let (c nil)
@@ -2408,7 +2404,7 @@
           (.reset (&token self))))
 
 (method AheadReader .stream ()
-  ; Returns the stream held by this object.
+  ; Returns the stream held by the receiver.
   (&stream self))
 
 (method AheadReader .to-s ()

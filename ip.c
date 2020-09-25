@@ -946,8 +946,9 @@ DEFUN(is_a_p)
 DEFUN(find_class)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (find_class(argv->cons.car, result)) return TRUE;
-  return ip_mark_error("undeclared class");
+  if (!object_type_p(argv->cons.car, SYMBOL)) return FALSE;
+  if (!find_class(argv->cons.car, result)) *result = object_nil;
+  return TRUE;
 }
 
 DEFUN(find_method)
