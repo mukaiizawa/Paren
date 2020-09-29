@@ -3,7 +3,7 @@
 #include "std.h"
 #include "xarray.h"
 #include "xbarray.h"
-#include "splay.h"
+#include "at.h"
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
@@ -36,7 +36,7 @@ int ip_mark_error(char *msg)
 static object symbol_find(object e, object s)
 {
   xassert(object_type_p(e, ENV));
-  return splay_find(&e->env.binding, s);
+  return at_get(&e->env.binding, s);
 }
 
 static object symbol_find_propagation(object e, object s)
@@ -52,7 +52,7 @@ static object symbol_find_propagation(object e, object s)
 static void symbol_bind(object e, object s, object v)
 {
   xassert(object_type_p(e, ENV) && object_type_p(s, SYMBOL));
-  splay_replace(&e->env.binding, s, v);
+  at_put(&e->env.binding, s, v);
 }
 
 static void symbol_bind_propagation(object e, object s, object v)
@@ -211,6 +211,7 @@ static void exit1(void)
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
+  dump_fs();
   exit(1);
 }
 
@@ -629,7 +630,7 @@ static int resolve_anonimous_lambda(void)
   xassert(named_lambda == NULL);
   e = reg[1];
   while (e != object_nil) {
-    splay_foreach(&e->env.binding, find_named_lambda);
+    at_foreach(&e->env.binding, find_named_lambda);
     if (named_lambda != NULL) return TRUE;
     e = e->env.top;
   }

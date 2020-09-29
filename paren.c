@@ -4,7 +4,7 @@
 #include "xgetopt.h"
 #include "pf.h"
 #include "xarray.h"
-#include "splay.h"
+#include "at.h"
 #include "object.h"
 #include "lex.h"
 #include "gc.h"
@@ -148,7 +148,7 @@ static object load(void)
 
 static void bind_symbol(object k, object v)
 {
-  splay_add(&object_toplevel->env.binding, k, v);
+  at_put(&object_toplevel->env.binding, k, v);
 }
 
 static object symbol_new(char *name)
