@@ -13,7 +13,7 @@ endif
 ifeq ($(os), linux)
 extobj+=pf.u.o xsleep.u.o
 ifeq ($(sock),on)
-extobj+=sock.o
+defun+=sock.c
 endif
 endif
 ifeq ($(os), windows)
@@ -21,7 +21,7 @@ extobj+=pf.w.o xsleep.w.o
 exe=.exe
 ifeq ($(sock),on)
 lib+=-lws2_32
-extobj+=sock.o
+defun+=sock.c
 endif
 endif
 
@@ -49,7 +49,7 @@ defsp=ip.c
 defsp.wk: $(defsp)
 	cat $+ | grep ^DEFSP>$@
 
-defun=ip.c bi.c array.c bytes.c cons.c lambda.c number.c os.c dl.c
+defun+=ip.c bi.c array.c bytes.c cons.c lambda.c number.c os.c dl.c
 defun.wk: $(defun)
 	cat $+ | grep ^DEFUN>$@
 
