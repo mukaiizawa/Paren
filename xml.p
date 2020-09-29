@@ -172,4 +172,4 @@
                 "         <hr/>"
                 "    </body>"
                 "</html>"))
-    (write (.read-all (.init (.new XMLReader) in)))))
+    (write (map xml->string (write (.read-all (.init (.new XMLReader) in)))))))
