@@ -2085,8 +2085,7 @@
             (begin
               (.write-byte self 0x28)
               (.write self (car x) :end "")
-              (while (<- x (cdr x))
-                (.write self (car x) :start " " :end ""))
+              (dolist (x (cdr x)) (.write self x :start " " :end ""))
               (.write-byte self 0x29))))
       (builtin? x)
       (.write-bytes self (builtin-name x))
