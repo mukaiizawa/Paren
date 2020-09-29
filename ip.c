@@ -211,7 +211,6 @@ static void exit1(void)
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
-  dump_fs();
   exit(1);
 }
 
