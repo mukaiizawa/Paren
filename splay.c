@@ -8,11 +8,6 @@ static struct splay_node *free_list = NULL;
 static struct splay_node splay_null_node;
 #define null (&splay_null_node)
 
-static int cmp(void *o, void *p)
-{
-  return (intptr_t)o - (intptr_t)p;
-}
-
 static struct splay_node *alloc(void)
 {
   struct splay_node *n;
@@ -35,6 +30,8 @@ void splay_init(struct splay *s)
 {
   s->top = null;
 }
+
+#define cmp(o, p) ((intptr_t)(o) - (intptr_t)(p))
 
 static struct splay_node *balance(struct splay *s, void *key)
 {

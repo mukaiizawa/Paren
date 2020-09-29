@@ -675,11 +675,6 @@
                   nil)))
     (rec l)))
 
-(builtin-function copy (l)
-  ; Returns a list that is a copy of the argument list l.
-  ; The copy target is only cons, the element is not copied.
-  )
-
 (function .. (s e :opt step)
   ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
   (let (acc nil step (|| step 1))
@@ -691,7 +686,7 @@
 (function group (l n)
   ; Returns a list in which the elements of l are grouped into sublists of length n.
   ; Error if the list length is not a multiple of n.
-  (if (<= n 0) (error "illegal arguments")
+  (if (<= n 0) (error "expected positive number")
       (let (lis nil)
         (while l
           (let (sublis nil)
@@ -1504,6 +1499,7 @@
 
 (builtin-function find-class (cls-sym)
   ; Returns the class corresponding to the specified symbol cls_sym.
+  ; If cls-sym is not bound or cls-sym is not a class instance, returns nil.
   )
 
 (builtin-function find-method (cls-sym method-sym)
@@ -1567,7 +1563,7 @@
 
 (macro method (cls-sym method-sym args :rest body)
   (let (global-sym (bytes-concat cls-sym method-sym))
-    (if (! (find-class cls-sym)) (error "unbound class")
+    (if (nil? (find-class cls-sym)) (error "unbound class")
         (bound? global-sym) (error global-sym " already bound"))
     (list begin
           (list 'make-method-dispatcher method-sym)
@@ -1587,11 +1583,11 @@
   self)
 
 (method Object .class ()
-  ; Returns the class of receiver.
+  ; Returns the class of the receiver.
   (find-class (&class self)))
 
 (method Object .eq? (o)
-  ; Returns whether the o is equals of this object.
+  ; Returns whether the o is equals of the receiver.
   ; Overwrite this method if there is class-specific comparisons.
   (eq? self o))
 
@@ -1612,13 +1608,12 @@
   ; If .init method has argument, must invoke after create an instance.
   ; Otherwise automatically invoke .init method.
   (let (o nil)
-    (for (cls self) cls (<- cls (&& (assoc cls :super) (find-class (assoc cls :super))))
+    (for (cls self) cls (<- cls (find-class (assoc cls :super)))
       (dolist (field (reverse! (map bytes->keyword (assoc cls :fields))))
         (push! o nil)
         (push! o field)))
     (car! (cdr o) (assoc self :symbol))
-    (if (= (length (lambda-parameter (find-method (assoc o :class) '.init))) 1)
-        (.init o)
+    (if (= (length (lambda-parameter (find-method (assoc o :class) '.init))) 1) (.init o)
         o)))
 
 (method Class .super ()
@@ -1628,10 +1623,6 @@
 (method Class .features ()
   ; Returns the feature list representing the feature of the receiver.
   (map find-class (&features self)))
-
-(method Class .methods ()
-  ; Returns method list of this class, but excluding inherited methods.
-  (&methods self))
 
 ;; exception
 
@@ -1807,13 +1798,13 @@
         name)))
 
 (method Path .root? ()
-  ; Returns whether this object is a root directory.
+  ; Returns whether the receiver is a root directory.
   (&& (.absolute? self) (nil? (.parent self))))
 
 (method Path .parent ()
   ; Returns the parent path
-  ; If this object is root directory, returns nil.
-  ; However, this object is relative path, non-root directory may return nil.
+  ; If the receiver is root directory, returns nil.
+  ; However, the receiver is relative path, non-root directory may return nil.
   (let (path (butlast (&path self)))
     (if path (&path<- (.new Path) path))))
 
@@ -1858,13 +1849,13 @@
                                     :update 3))))
 
 (method Path .remove ()
-  ; Deletes the file corresponding to this object.
-  ; Returns this object.
+  ; Deletes the file corresponding to the receiver.
+  ; Returns the receiver.
   (remove (.to-s self))
   self)
 
 (method Path .stat ()
-  ; Returns stat of this object.
+  ; Returns stat of the receiver.
   (let (stat-array (stat (.to-s self)))
     (if stat-array stat-array
         (begin (<- stat-array (array 3))
@@ -1873,44 +1864,44 @@
                stat-array))))
 
 (method Path .mode ()
-  ; Returns whether this object is a regular file.
+  ; Returns whether the receiver is a regular file.
   ([] (.stat self) 0))
 
 (method Path .none? ()
-  ; Returns whether this object is not exits.
+  ; Returns whether the receiver is not exits.
   (/= (& (.mode self) 1) 0))
 
 (method Path .file? ()
-  ; Returns whether this object is a regular file.
+  ; Returns whether the receiver is a regular file.
   (/= (& (.mode self) 2) 0))
 
 (method Path .dir? ()
-  ; Returns whether this object is a directory.
+  ; Returns whether the receiver is a directory.
   (/= (& (.mode self) 4) 0))
 
 (method Path .other? ()
-  ; Returns whether this object is neither a regular file nor a directory.
+  ; Returns whether the receiver is neither a regular file nor a directory.
   (/= (& (.mode self) 8) 0))
 
 (method Path .readable? ()
-  ; Returns whether this object is readable.
+  ; Returns whether the receiver is readable.
   (/= (& (.mode self) 16) 0))
 
 (method Path .writable? ()
-  ; Returns whether this object is writable.
+  ; Returns whether the receiver is writable.
   (/= (& (.mode self) 32) 0))
 
 (method Path .size ()
-  ; Returns the size of this object.
+  ; Returns the size of the receiver.
   ([] (.stat self) 1))
 
 (method Path .mtime ()
-  ; Returns the last update time of this object.
+  ; Returns the last update time of the receiver.
   ([] (.stat self) 2))
 
 (method Path .utime (time)
-  ; Update the last update time of this object.
-  ; Returns this object.
+  ; Update the last update time of the receiver.
+  ; Returns the receiver.
   (utime (.to-s self) time))
 
 (method Path .children ()
@@ -1985,8 +1976,14 @@
   ; Returns nil if eof reached.
   (.read (.init (.new ParenReader) self)))
 
+(method Stream .read-all ()
+  (let (exprs nil expr nil rd (.init (.new ParenReader) self))
+    (while (<- expr (.read rd))
+      (push! exprs expr))
+    (reverse! exprs)))
+
 (method Stream .read-line ()
-  ; Input one line from this object.
+  ; Input one line from the receiver.
   ; Returns read line.
   ; If stream reached eof, returns nil.
   (let (c nil)
@@ -2133,6 +2130,10 @@
       (assert nil))
   (.write-bytes self (|| end "\n"))
   x)
+
+(method Stream .write-all (exprs :key start end)
+  (dolist (expr exprs)
+    (.write expr :key start end)))
 
 (class MemoryStream (Stream)
   ; A stream whose contents are held in memory.
@@ -2403,7 +2404,7 @@
           (.reset (&token self))))
 
 (method AheadReader .stream ()
-  ; Returns the stream held by this object.
+  ; Returns the stream held by the receiver.
   (&stream self))
 
 (method AheadReader .to-s ()
@@ -2595,6 +2596,9 @@
 (function read (:opt stream)
   (.read (|| stream (dynamic $stdin))))
 
+(function read-all (:opt stream)
+  (.read-all (|| stream (dynamic $stdin))))
+
 (function write-byte (byte :opt stream)
   ; Write 1byte to the specified stream.
   (.write-byte (|| stream (dynamic $stdout)) byte))
@@ -2615,6 +2619,9 @@
 (function write (x :opt stream :key start end)
   ; Write the specified x as a readable format.
   (.write (|| stream (dynamic $stdout)) x :start start :end end))
+
+(function write-all (exprs :opt stream :key start end)
+  (.write-all (|| stream (dynamic $stdout)) x :start start :end end))
 
 (macro with-memory-stream ((ms :opt s) :rest body)
   ; Create memory stream context.
@@ -2698,9 +2705,8 @@
   ; Load the specified file.
   ; Returns true if successfully loaded.
   (with-open (in path :read)
-    (let (expr nil)
-      (while (<- expr (read in))
-        (eval expr))))
+    (dolist (expr (read-all in))
+      (eval expr)))
   true)
 
 (function import (key)
@@ -2734,27 +2740,25 @@
     $read-table nil
     $stdin (.init (.new FileStream) (fp 0))
     $stdout (.init (.new FileStream) (fp 1))
-    $in $stdin
-    $out $stdout
     $external-encoding (if (eq? $host-name :windows) :SJIS :UTF-8)
     $paren-home (.parent (.resolve (Path.getcwd) core.p)))
 
 (reader-macro a (reader)
   ; Define an array literal.
   ; Array elements are not evaluated.
-  (let (lexer (&lexer reader) a (.new Array) expr nil)
+  (let (lexer (&lexer reader) a (.new Array))
     (.skip lexer)
     (.skip lexer "[")
     (while (string/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (with-memory-stream (in (.token lexer))
-      (while (<- expr (read in))
+      (dolist (expr (read-all in))
         (.add a expr)))
     (.to-a a)))
 
 (reader-macro b (reader)
   ; Define an bytes literal.
-  (let (lexer (&lexer reader) expr nil)
+  (let (lexer (&lexer reader))
     (.skip lexer)
     (.skip lexer "[")
     (while (string/= (.next lexer) "]") (.get lexer))
@@ -2762,9 +2766,8 @@
     (->bytes
       (with-memory-stream (out)
         (with-memory-stream (in (.token lexer))
-          (let (expr nil)
-            (while (<- expr (read in))
-              (.write-byte out expr))))))))
+          (dolist (expr (read-all in))
+            (write-byte expr out)))))))
 
 (reader-macro m (reader)
   ; Define expand-macro-all reader.

@@ -3,7 +3,7 @@
 #include "std.h"
 #include "xarray.h"
 #include "xbarray.h"
-#include "splay.h"
+#include "at.h"
 #include "object.h"
 #include "gc.h"
 #include "ip.h"
@@ -70,15 +70,6 @@ DEFUN(set_cdr)
   if (!bi_arg_list(argv->cons.cdr->cons.car, &p)) return FALSE;
   o->cons.cdr = p;
   *result = p;
-  return TRUE;
-}
-
-DEFUN(copy)
-{
-  object o, p;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
-  *result = gc_copy_cons(o, &p);
   return TRUE;
 }
 

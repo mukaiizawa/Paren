@@ -1,7 +1,7 @@
 // symbol table.
 
 #include "std.h"
-#include "splay.h"
+#include "at.h"
 #include "object.h"
 #include "mem.h"
 #include "st.h"

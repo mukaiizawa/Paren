@@ -3,7 +3,7 @@
 #include "std.h"
 #include "xarray.h"
 #include "heap.h"
-#include "splay.h"
+#include "at.h"
 #include "object.h"
 #include "st.h"
 #include "ip.h"
@@ -54,7 +54,7 @@ object gc_new_env(object top)
   o = gc_alloc(sizeof(struct env));
   set_type(o, ENV);
   o->env.top = top;
-  splay_init(&o->env.binding);
+  at_init(&o->env.binding);
   regist(o);
   return o;
 }
@@ -246,7 +246,7 @@ void gc_mark(object o)
   set_alive(o);
   switch (object_type(o)) {
     case ENV:
-      splay_foreach(&o->env.binding, mark_binding);
+      at_foreach(&o->env.binding, mark_binding);
       gc_mark(o->env.top);
       break;
     case SPECIAL:
@@ -282,7 +282,7 @@ static void gc_free(object o)
 {
   int size;
   size = object_byte_size(o);
-  if (object_type_p(o, ENV)) splay_free(&o->env.binding);
+  if (object_type_p(o, ENV)) at_free(&o->env.binding);
   if (size <= LINK0_SIZE) {
     size = LINK0_SIZE;
     o->next = link0;

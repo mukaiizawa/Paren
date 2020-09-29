@@ -15,7 +15,7 @@
 #endif
 
 #include "xbarray.h"
-#include "splay.h"
+#include "at.h"
 #include "mem.h"
 #include "object.h"
 #include "gc.h"

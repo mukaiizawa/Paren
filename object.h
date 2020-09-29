@@ -43,7 +43,7 @@ union s_expr {
   struct env {
     int header;
     object top;
-    struct splay binding;
+    struct at binding;
   } env;
   struct lambda {
     int header;
