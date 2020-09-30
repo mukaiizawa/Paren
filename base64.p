@@ -11,6 +11,7 @@
 
 (function base64.encode (src :opt url-safe?)
   ; base64 encoding as specified by RFC 4648.
+  ; Returns a base64 encoded string.
   (let (val 0 b1 0 b2 0 b3 0 size 3)
     (with-memory-stream (out)
       (with-memory-stream (in src)
@@ -28,6 +29,7 @@
 (function base64.url-safe-encode (src)
   ; base64.url-safe-encode is the alternate base64 encoding defined in RFC 4648.
   ; It is typically used in URLs and file names.
+  ; Returns a base64 encoded string.
   (base64.encode src true))
 
 (function base64.decode-byte (b :opt accept-padding?)
@@ -42,6 +44,7 @@
 (function base64.decode (src)
   ; base64 decoding as specified by RFC 4648.
   ; Processing after the padding character `=` is not performed.
+  ; Returns a decoded string.
   (let (val 0 x 0 b1 0 b2 0 b3 0 b4 0 size 3)
     (with-memory-stream (out)
       (with-memory-stream (in src)
