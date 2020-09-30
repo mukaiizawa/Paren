@@ -3,6 +3,7 @@
 (<- $random.seed 2463534242)
 
 (function randomize (seed)
+  ; Initialize the random number generator with seed.
   (<- $random.seed seed))
 
 (function randint (n)
@@ -10,6 +11,7 @@
   (number->int (* (random) n)))
 
 (function randbool ()
+  ; Randomly returns a boolean value.
   (= (randint 2) 0))
 
 (function random ()
