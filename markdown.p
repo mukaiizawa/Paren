@@ -166,7 +166,7 @@
 
 (method MarkdownReader .read ()
   ; Read markdown.
-  ; Returns a list representation of read xml.
+  ; Returns a list representation of read markdown.
   ; Readable markdown is follows.
   ;     <markdown> ::= <stmt> [<eol> <stmt> ...]
   ;     <stmt> ::= <header>
@@ -216,12 +216,13 @@
         (.parse-paragraph self))))
 
 (method MarkdownReader .read-all ()
+  ; Return the result of .read to the EOF as a list.
   (let (node nil nodes nil)
     (while (<- node (.read self))
       (push! nodes node))
     (reverse! nodes)))
 
 (function! main (args)
-  (timeit (let ($external-encoding :UTF-8)
+  (let ($external-encoding :UTF-8)
     (with-open (in "readme.md" :read)
-      (write (.read-all (.init (.new MarkdownReader) in)))))))
+      (write (.read-all (.init (.new MarkdownReader) in))))))
