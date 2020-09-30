@@ -15,6 +15,7 @@
             (<- l (cdr l)))))))
 
 (function xml->string (l)
+  ; Returns a list representation of xml as a string.
   (if (atom? l) l
       (let (name (car l))
         (if (eq? name '?xml) (string "<? " (cadr l) " ?>")
@@ -149,6 +150,7 @@
                                  (reverse! children)))))))))
 
 (method XMLReader .read-all ()
+  ; Return the result of .read to the EOF as a list.
   (let (node nil nodes nil)
     (while (<- node (.read self))
       (push! nodes node))
