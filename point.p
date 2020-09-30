@@ -6,16 +6,19 @@
   x y)
 
 (function Point.of (x y)
-  (&<- (.new Point)
-       :x x
-       :y y))
+  ; Returns a point instance corresponding to the coordinates (x, y).
+  (if (&& (number? x) (number? y))
+      (&<- (.new Point)
+        :x x
+        :y y)
+      (.raise self "illegal arguments.")))
 
 (method Point .x ()
-  ; Returns x coordinate.
+  ; Returns x coordinate of the receiver.
   (&x self))
 
 (method Point .y ()
-  ; Returns y coordinate.
+  ; Returns y coordinate of the receiver.
   (&y self))
 
 (method Point .to-s ()
@@ -26,7 +29,9 @@
       (= (&x self) (&x p)) (= (&y self) (&y p))))
 
 (method Point .add (p)
-  (Point.of (+ (&x self) (&x p)) (+ (&y self) (&y p))))
+  ; Returns the instance of Point corresponds to the sum of receiver and p.
+  (if (is-a? p Point) (Point.of (+ (&x self) (&x p)) (+ (&y self) (&y p)))
+      (.raise self "illegal arguments." p)))
 
 (function! main (args)
   (let (p (Point.of 3 4))
@@ -34,4 +39,5 @@
     (assert (! (.eq p (Point.of 2 4))))
     (assert (! (.eq p (Point.of 3 5))))
     (assert (! (.eq p (Point.of 2 5))))
+    (assert (.eq p (.add (Point.of 1 1) (Point.of 2 3))))
     (assert (string= (.to-s p) "(3, 4)"))))
