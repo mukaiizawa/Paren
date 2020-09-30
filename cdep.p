@@ -9,21 +9,21 @@
             (! (find-if (lambda (dependency)
                           (string= file-name dependency))
                         dependencies)))
-        (parse-file (Path.of file-name) (cons file-name dependencies))
+        (parse-cfile (Path.of file-name) (cons file-name dependencies))
         dependencies)))
 
-(function parse-file (file :opt dependencies)
+(function parse-cfile (file :opt dependencies)
   (dolist (line (.to-l file))
     (<- dependencies (parse-line line dependencies)))
   dependencies)
 
 (function! main (args)
-  (write-bytes "# following rules are generated automatically.\n")
-  (dolist (file (remove-if (lambda (file)
-                             (string/= (.suffix file) "c"))
-                           (.children (Path.getcwd))))
-    (write-bytes
+  ; Get C source file names from current directory and output dependency rule for makefile.
+  (write-line "# following rules are generated automatically.")
+  (dolist (cfile (remove-if (lambda (file)
+                              (string/= (.suffix file) "c"))
+                            (.children (Path.getcwd))))
+    (write-line
       (list->string 
-        `(,(string (.but-suffix file) ".o:") ,(.name file) ,@(parse-file file))
-        " "))
-    (write-line)))
+        `(,(string (.but-suffix cfile) ".o:") ,(.name cfile) ,@(parse-cfile cfile))
+        " "))))
