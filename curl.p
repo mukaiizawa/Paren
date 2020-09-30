@@ -1,7 +1,10 @@
 ; curl
 
 (function usage ()
-  (error "Usage: curl url"))
+  (write-line "
+Usage: paren curl.p URL
+Get http request in URL.")
+    (quit))
 
 (function default-port (proto)
   (if (string= proto "http") 80
@@ -16,21 +19,23 @@
       (write-bytes (string method " " uri " " version "\r\n") out)
       (write-bytes "\r\n" out)
       (flush out)
-      (while (<- line (read-line in))
-        (write-line line)))))
+      (write-lines (read-lines in)))))
 
 (function! main (args)
-  (if (nil? (cdr args)) (usage)
-      (let (url (cadr args) ar (.init (.new AheadReader) url) proto nil host nil port nil)
-        (while (string/= (.next ar) ":") (.get ar))
-        (<- proto (.token ar))
-        (.skip ar) (.skip ar "/") (.skip ar "/")    ; skip ://
-        (while (&& (.next ar) (string/= (.next ar) "/") (string/= (.next ar) ":")) (.get ar))
-        (<- host (.token ar))
-        (when (string= (.next ar) ":")
-          (.skip ar)
-          (<- port (.skip-uint ar)))
-        (if (string= (.next ar) "/") (.get ar)
-            (.put ar "/"))
-        (while (.next ar) (.get ar))
-        (http-request host (|| port (default-port proto)) "GET" (.token ar) "HTTP/1.0"))))
+  (catch (Error (lambda (e)
+                  (write-line (.to-s e))
+                  (usage)))
+    (if (nil? (cdr args)) (error "too few arguments.")
+        (let (url (cadr args) ar (.init (.new AheadReader) url) proto nil host nil port nil)
+          (while (string/= (.next ar) ":") (.get ar))
+          (<- proto (.token ar))
+          (.skip ar) (.skip ar "/") (.skip ar "/")    ; skip ://
+          (while (&& (.next ar) (string/= (.next ar) "/") (string/= (.next ar) ":")) (.get ar))
+          (<- host (.token ar))
+          (when (string= (.next ar) ":")
+            (.skip ar)
+            (<- port (.skip-uint ar)))
+          (if (string= (.next ar) "/") (.get ar)
+              (.put ar "/"))
+          (while (.next ar) (.get ar))
+          (http-request host (|| port (default-port proto)) "GET" (.token ar) "HTTP/1.0")))))
