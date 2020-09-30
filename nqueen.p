@@ -32,4 +32,4 @@
 (function! main (args)
   (let (size (if (cdr args) (string->number (cadr args)) 8)
              board (.init (.new Matrix) (Point.of size size)))
-    (put-queen board 0)))
+    (timeit (put-queen board 0))))
