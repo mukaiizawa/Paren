@@ -1,6 +1,7 @@
 ; ASCII code table.
 
 (function! main (args)
+  ; Print ASCII code table.
   (write-line "   0 1 2 3 4 5 6 7 8 9 a b c d e f")
   (for (i 0) (<= i 0x7f) (<- i (++ i))
     (when (= (mod i 0x10) 0)
