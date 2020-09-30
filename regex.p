@@ -1,25 +1,5 @@
 ; regex module.
 
-; # regular expression
-;
-;     ^ -- start of string
-;     $ -- end of string
-;     . -- any single character
-;     [...] -- any character in set
-;     [^...]  -- not any character in the set
-;     (x | y ...)   match any expression, y, y... in order
-;
-; # quantifiers
-;
-;     greedy  lazy
-;     ----------------------------------------------------------------------------------
-;     *       *?       match zero or more times.
-;     ?       ??       match one or more times.
-;     +       +?       match zero or one time.
-;     {n}     {n}?     match exactly n times.
-;     {n,}    {n,}?    match at least n times.
-;     {n,m}   {n,m}?   match from n to m times.
-
 (class Regex ()
   text
   elements
@@ -93,6 +73,24 @@
     (reverse! elements)))
 
 (function Regex.compile (expr)
+  ; Returns the instance on Regex corresponds to the specified regular expression expr.
+  ; The supported regular expressions is follows.
+  ;     # regular expression
+  ;         ^ -- start of string
+  ;         $ -- end of string
+  ;         . -- any single character
+  ;         [...] -- any character in set
+  ;         [^...]  -- not any character in the set
+  ;         (x | y ...)   match any expression, y, y... in order
+  ;     # quantifiers
+  ;         greedy  lazy
+  ;         ----------------------------------------------------------------------------------
+  ;         *       *?       match zero or more times.
+  ;         ?       ??       match one or more times.
+  ;         +       +?       match zero or one time.
+  ;         {n}     {n}?     match exactly n times.
+  ;         {n,}    {n,}?    match at least n times.
+  ;         {n,m}   {n,m}?   match from n to m times.
   (let (r (.new Regex) s 0 e (bytes-length expr) anchored? nil)
     (when (= ([] expr 0) 0x5e)
       (&anchored-start?<- r true)
@@ -142,12 +140,17 @@
   (array-length (&text self)))
 
 (method Regex .match-start ()
+  ; Returns the matched start position.
+  ; The previous .match must return true when calling.
   (&start self))
 
 (method Regex .match-end ()
+  ; Returns the matched end position.
+  ; The previous .match must return true when calling.
   (&end self))
 
 (method Regex .match? (s :opt start)
+  ; Returns whether the string s matched this instance.
   (&start<- self (|| start (<- start 0)))
   (&text<- self (string->array s))
   (if (&anchored-start? self)
@@ -166,12 +169,12 @@
   (assert (nil? (.match? (Regex.compile "a$") "ab")))
   ; char
   (assert (let (re (Regex.compile "a"))
-            (&& (.match? re "a") (= (&start re) 0) (= (&end re) 1)
-                (.match? re "za") (= (&start re) 1) (= (&end re) 2)
+            (&& (.match? re "a") (= (.match-start re) 0) (= (.match-end re) 1)
+                (.match? re "za") (= (.match-start re) 1) (= (.match-end re) 2)
                 (! (.match? re "")))))
   ; any
   (assert (let (re (Regex.compile "a.c"))
-            (&& (.match? re "abc") (= (&start re) 0) (= (&end re) 3)
+            (&& (.match? re "abc") (= (.match-start re) 0) (= (.match-end re) 3)
                 (! (.match? re "ac")))))
   ; character class
   (assert (let (re (Regex.compile "[a-c]"))
@@ -188,10 +191,10 @@
                 (! (.match? re "bc"))
                 (.match? re "cd"))))
   (assert (let (re (Regex.compile "(ab*|cd*)"))
-            (&& (.match? re "a") (= (&end re) 1)
-                (.match? re "abb") (= (&end re) 3)
-                (.match? re "c") (= (&end re) 1)
-                (.match? re "cdd") (= (&end re) 3))))
+            (&& (.match? re "a") (= (.match-end re) 1)
+                (.match? re "abb") (= (.match-end re) 3)
+                (.match? re "c") (= (.match-end re) 1)
+                (.match? re "cdd") (= (.match-end re) 3))))
   ; quantifiers
   (assert (let (re (Regex.compile "^a*$"))
             (&& (.match? re "")
