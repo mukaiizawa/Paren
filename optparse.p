@@ -15,7 +15,7 @@
         (push! table (list opt optarg? nil))))
     (&table<- self table)))
 
-(method OptionParser .find-record (opt)
+(method OptionParser .lookup (opt)
   (let (record (find-if (lambda (record)
                           (string= opt (car record)))
                         (&table self)))
@@ -29,23 +29,22 @@
     (let (arg (car args))
       (if (string= arg "--") (return (list self (cdr args))))
       (let (argarr (string->array arg) arglen (array-length argarr))
-        (if (string/= ([] argarr 0) "-") (break))
+        (if (string/= ([] argarr 0) "-") (break))    ; end of option.
         (for (i 1) (< i arglen) (<- i (++ i))
-          (let (opt ([] argarr i) record (.find-record self opt))
-            (if (caddr record) (.raise self "duplicate option " opt)
-                (nil? (cadr record)) (car! (cddr record) true)
-                (< (++ i) arglen) (begin
-                                    (car! (cddr record) (string-slice arg (++ i)))
-                                    (break))
-                (nil? (<- args (cdr args))) (.raise self "required option argument of " opt)
-                (begin (car! (cddr record) (car args))
-                       (break)))))
+          (let (record (.lookup self ([] argarr i))
+                       (opt optarg? optval) record
+                       put (lambda (record val) (car! (cddr record) val)))
+            (if optval (.raise self "duplicate option " opt)
+                (nil? optarg?) (begin (put record true) (continue))
+                (< (++ i) arglen) (begin (put record (string-slice arg (++ i))) (break))
+                (<- args (cdr args)) (begin (put record (car args)) (break))
+                (.raise self "required option argument of " opt))))
         (<- args (cdr args)))))
   (list self args))
 
 (method OptionParser .get (opt)
   ; Returns option value specified opt.
-  (caddr (.find-record self opt)))
+  (caddr (.lookup self opt)))
 
 (function! main (args)
   (let (option "abc:d:")
