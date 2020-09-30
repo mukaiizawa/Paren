@@ -40,6 +40,8 @@
            hour (|| hour 0) minute (|| minute 0) second (|| second 0)
            y4 (// (- year 1904) 4) t (* y4 1461))
     (assert (<= 1904 year 2099))
+    (assert (<= 1 month 12))
+    (assert (<= 1 year 31))
     (&year<- dt (+ 1904 (* y4 4)))
     (<- t (* y4 1461))
     (while (< (&year dt) year)
