@@ -149,6 +149,13 @@
   ; The previous .match must return true when calling.
   (&end self))
 
+(method Regex .match-string ()
+  ; Returns whether the string s matched this instance.
+  (with-memory-stream (out)
+    (dotimes (i (.text-length self))
+      (if (< i (&start self)) (continue)
+          (< i (&end self)) (.write-bytes out ([] (&text self) i))))))
+
 (method Regex .match? (s :opt start)
   ; Returns whether the string s matched this instance.
   (&start<- self (|| start (<- start 0)))
