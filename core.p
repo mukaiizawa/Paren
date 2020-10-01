@@ -1056,6 +1056,11 @@
   ; Returns whether the each of the specified args are in monotonically nonincreasing order.
   (all-adjacent-satisfy? (lambda (x y) (! (string< x y))) args))
 
+(function string-empty? (s)
+  ; Returns whether the string is "".
+  ; If s is nil, returns true.
+  (|| (nil? s) (string= s "")))
+
 (function string-prefix? (s prefix)
   ; Returns whether the string x with the specified prefix.
   (&& (>= (bytes-length s) (bytes-length prefix))
