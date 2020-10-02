@@ -2318,10 +2318,12 @@
 (method AheadReader .skip-line ()
   ; Skip line.
   ; Returns line.
-  (let (c nil)
-    (with-memory-stream (out)
-      (while (&& (&next self) (string/= (<- c (.skip self)) "\n"))
-        (write-bytes c out)))))
+  ; If stream reached eof, returns nil.
+  (with-memory-stream (out)
+    (while (string/= (&next self) "\n")
+      (if (&next self) (write-bytes (.skip self) out)
+          (return nil)))
+    (.skip self)))
 
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
