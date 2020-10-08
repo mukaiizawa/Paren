@@ -11,9 +11,9 @@ typedef union s_expr *object;
 #define set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= type;}
 #define   ENV          0x00000001
 #define   MACRO        0x00000002
-#define   LAMBDA       0x00000003
+#define   FUNC         0x00000003
 #define   SPECIAL      0x00000004
-#define   FUNCITON     0x00000005
+#define   BUILTINFUNC  0x00000005
 #define   CONS         0x00000006
 #define   SINT         0x00000007
 #define   XINT         0x00000008
@@ -48,12 +48,12 @@ union s_expr {
     object top;
     struct at binding;
   } env;
-  struct lambda {
+  struct proc {
     int header;
     object env;
     object params;
     object body;
-  } lambda;
+  } proc;
   struct builtin {
     int header;
     object name;

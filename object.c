@@ -66,8 +66,8 @@ int object_byte_size(object o)
     case ENV:
       return sizeof(struct env);
     case MACRO:
-    case LAMBDA:
-      return sizeof(struct lambda);
+    case FUNC:
+      return sizeof(struct proc);
     case CONS:
       return sizeof(struct cons);
     case XINT:
@@ -136,14 +136,14 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_addf(x, "#(:environment 0x%p :top 0x%p)", o, o->env.top);
       break;
     case MACRO:
-    case LAMBDA:
+    case FUNC:
       if (object_type_p(o, MACRO)) xbarray_adds(x, "(macro ");
-      else xbarray_adds(x, "(lambda ");
-      if (o->lambda.params == object_nil) xbarray_adds(x, "()");
-      else describe_s_expr(o->lambda.params, x);
-      if (o->lambda.body != object_nil) {
+      else xbarray_adds(x, "(f ");
+      if (o->proc.params == object_nil) xbarray_adds(x, "()");
+      else describe_s_expr(o->proc.params, x);
+      if (o->proc.body != object_nil) {
         xbarray_add(x, ' ');
-        describe_cons(o->lambda.body, x);
+        describe_cons(o->proc.body, x);
       }
       xbarray_add(x, ')');
       break;
@@ -178,7 +178,7 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_add(x, ':');
       xbarray_add_bytes(x, o);
       break;
-    case FUNCITON:
+    case BUILTINFUNC:
     case SPECIAL:
       o = o->builtin.name;
     case SYMBOL:

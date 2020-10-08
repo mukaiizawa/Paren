@@ -176,7 +176,7 @@ static void make_builtin(void)
     bind_symbol(o->builtin.name, o);
   }
   for (i = 0; (s = bi_as_symbol_name(function_name_table[i])) != NULL; i++) {
-    o = gc_new_builtin(FUNCITON, symbol_new(s), function_table[i]);
+    o = gc_new_builtin(BUILTINFUNC, symbol_new(s), function_table[i]);
     bind_symbol(o->builtin.name, o);
   }
 }

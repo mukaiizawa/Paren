@@ -52,8 +52,8 @@
       stmt-n expr-n
       [default-phrase]))
 
-(special-operator lambda
-  ; Special operator lambda creates an anonymous function.
+(special-operator f
+  ; Special operator f creates an anonymous function.
   ; There are the following types of parameters.
   ; - required parameter
   ; - optional parameter
@@ -64,15 +64,15 @@
   ; Keyword parameters are specified with names without regard to order when calling the function.
   ; Rest parameters implement variable length arguments.
   ; Returns the anonymous function.
-  (lambda ([required_param] ...
-           [:opt optional_param ...]
-           [{ :rest rest_param | :key keyword_param ... }] )
+  (f ([required_param] ...
+      [:opt optional_param ...]
+      [{ :rest rest_param | :key keyword_param ... }] )
     expr1
     expr2
     ...))
 
 (special-operator return
-  ; Special operator return escapes from current lambda context.
+  ; Special operator return escapes from current procedure(function/macro) context.
   ; Returns the result of evaluating the argument val.
   (return val))
 
@@ -138,11 +138,12 @@
 ; fundamental macro
 
 (macro function! (name args :rest body)
-  ; Bind a lambda to a specified symbol name.
+  ; Bind an anonimous function to a specified symbol name.
   ; Same as function macro except for the following points.
   ; - No error even if the symbol is already bound.
   ; - Do not inline macros
-  (list <- name (cons lambda (cons args body))))
+  ; Returns name.
+  (list <- name (cons f (cons args body))))
 
 (macro builtin-function (name args :rest body)
   ; Describes the specification of a built-in function and is used to describe unit tests.
@@ -156,7 +157,7 @@
   ;       ...)
   ;     (let (a (gensym) b (gensym) c (gensym))
   ;       ...)
-  (let (rec (lambda (syms)
+  (let (rec (f (syms)
               (if syms (cons (car syms) (cons '(gensym) (rec (cdr syms)))))))
     (cons let (cons (rec syms) body))))
 
@@ -184,7 +185,7 @@
   ; If args is nil, returns nil.
   (if (nil? args) nil
       (with-gensyms (g)
-        (let (rec (lambda (l)
+        (let (rec (f (l)
                     (if (nil? l) nil
                         (cons (list <- g (car l)) (cons g (rec (cdr l)))))))
           (list let (list g nil)
@@ -196,7 +197,7 @@
   ; If all args but the last evaluate to true values, and returns the results produced by evaluating the last args.
   ; If no args are supplied, returns true.
   (if (nil? args) true
-      (let (rec (lambda (l)
+      (let (rec (f (l)
                   (if (cdr l) (list if (car l) (rec (cdr l)))
                       (car l))))
         (rec args))))
@@ -228,12 +229,12 @@
   (with-gensyms (gexpr branches)
     (let (branches (group body 2)
                    candidates (list 'flatten (list 'map car (list quote branches)))
-                   parse-branch (lambda (branches)
+                   parse-branch (f (branches)
                                   (if (nil? branches)
                                       (list true (list 'error gexpr " not included in " candidates))
                                       (let (label (caar branches) then (cadar branches))
                                         (cons (if (eq? label :default) (return (list true then))
-                                                  (cons '|| (map (lambda (label)
+                                                  (cons '|| (map (f (label)
                                                                    (list eq? (list quote label) gexpr))
                                                                  (->list label))))
                                               (cons then
@@ -360,10 +361,10 @@
 
 (function! expand-macro-all (expr)
   ; Same as expand-macro except that it executes recursively.
-  (let (expand1 (lambda (expr)
+  (let (expand1 (f (expr)
                   (if (cons? expr) (each-expand (expand-macro expr))
                       expr))
-                each-expand (lambda (expr)
+                each-expand (f (expr)
                               (if expr (cons (expand1 (car expr))
                                              (each-expand (cdr expr))))))
     (expand1 expr)))
@@ -371,13 +372,13 @@
 ; fundamental function
 
 (macro function (name args :rest body)
-  ; Returns a function which parameter list the specified args and lambda function body the specified body.
-  ; The macro in the function body is expanded.
-  ; The created function binds the name symbol.
+  ; Bind a symbol the specified name on an anonimous function whose parametes are args and whose body is body.
+  ; The macro in the body is expanded.
   ; Error if name is already bound.
+  ; Returns name.
   (if (bound? name) (error name " already bound")
       (list begin0 (list quote name)
-            (list <- name (cons lambda (cons args (expand-macro-all body)))))))
+            (list <- name (cons f (cons args (expand-macro-all body)))))))
 
 (builtin-function eq? (x y :rest args)
   ; Returns whether all arguments are the same object.
@@ -416,8 +417,8 @@
   (! (cons? x)))
 
 (builtin-function function? (x)
-  ; Returns whether the x is a lambda.
-  (assert (function? (lambda (x) x)))
+  ; Returns whether the x is a function.
+  (assert (function? (f (x) x)))
   (assert (! (function? begin0))))
 
 (builtin-function macro? (x)
@@ -675,7 +676,7 @@
 
 (function butlast (l)
   ; Returns a list excluding the last element of the specified list l.
-  (let (rec (lambda (rest)
+  (let (rec (f (rest)
               (if (cdr rest) (cons (car rest) (rec (cdr rest)))
                   nil)))
     (rec l)))
@@ -752,68 +753,68 @@
 
 (function flatten (l)
   ; Returns a list in which the car parts of all cons that make up the specified list l are elements.
-  (let (acc nil rec (lambda (x)
+  (let (acc nil rec (f (x)
                       (if (atom? x) (push! acc x)
                           (dolist (i x) (rec i)))))
     (rec l)
     (reverse! acc)))
 
-(function map (f args)
+(function map (fn args)
   ; Returns a list of the results of mapping each element of the specified list args with the specified function f.
   (let (acc nil)
     (while args
-      (push! acc (f (car args)))
+      (push! acc (fn (car args)))
       (<- args (cdr args)))
     (reverse! acc)))
 
-(function reduce (f l)
+(function reduce (fn l)
   ; Returns the value that apply function of two arguments cumulatively to the elements of the list l, from left to right.
-  (let (rec (lambda (l)
+  (let (rec (f (l)
               (if (nil? (cdr l)) (car l)
-                  (rec (cons (f (car l) (cadr l)) (cddr l))))))
+                  (rec (cons (fn (car l) (cadr l)) (cddr l))))))
     (rec l)))
 
-(function find-cons-if (f l)
-  ; Returns the first cons for which the result of applying the function f to the list elements in order from left to right is true.
+(function find-cons-if (fn l)
+  ; Returns the first cons for which the result of applying the function fn to the list elements in order from left to right is true.
   ; If there is no such cons, returns nil.
   (while l
-    (if (f (car l)) (return l)
+    (if (fn (car l)) (return l)
         (<- l (cdr l)))))
 
-(function find-if (f l)
-  ; Returns the first element for which the result of applying the function f to the list elements in order from left to right is true.
+(function find-if (fn l)
+  ; Returns the first element for which the result of applying the function fn to the list elements in order from left to right is true.
   ; If there is no such cons, returns nil.
-  (car (find-cons-if f l)))
+  (car (find-cons-if fn l)))
 
-(function remove-if (f l)
-  ; Returns a list with the elements for which the result of applying the function f is true removed.
+(function remove-if (fn l)
+  ; Returns a list with the elements for which the result of applying the function fn is true removed.
   (let (acc nil)
     (dolist (x l)
-      (if (nil? (f x)) (push! acc x)))
+      (if (nil? (fn x)) (push! acc x)))
     (reverse! acc)))
 
-(function all-satisfy? (f l)
-  ; Returns whether the result of the function f applied to all the elements of the list is true.
+(function all-satisfy? (fn l)
+  ; Returns whether the result of the function fn applied to all the elements of the list is true.
   ; If x is nil, returns true.
   ; As soon as any element evaluates to nil, and returns nil without evaluating the remaining elements.
   (while l
-    (if (f (car l)) (<- l (cdr l))
+    (if (fn (car l)) (<- l (cdr l))
         (return nil)))
   true)
 
-(function all-adjacent-satisfy? (f l)
-  ; Returns whether each adjacent element of the specified list l returns true when evaluated as an argument to the specified function f
+(function all-adjacent-satisfy? (fn l)
+  ; Returns whether each adjacent element of the specified list l returns true when evaluated as an argument to the specified function fn.
   (while (cdr l)
-    (if (f (car l) (cadr l)) (<- l (cdr l))
+    (if (fn (car l) (cadr l)) (<- l (cdr l))
         (return nil)))
   true)
 
-(function any-satisfy? (f l)
-  ; Returns whether the function f applied to any element of the list is true.
+(function any-satisfy? (fn l)
+  ; Returns whether the function fn applied to any element of the list is true.
   ; If x is nil, returns nil.
   ; As soon as any element evaluates to not nil, and returns it without evaluating the remaining elements.
   (while l
-    (if (f (car l)) (return true)
+    (if (fn (car l)) (return true)
         (<- l (cdr l)))))
 
 ; number
@@ -951,15 +952,15 @@
 
 (function > (:rest args)
   ; Returns whether the each of the specified args are in monotonically increasing order.
-  (all-adjacent-satisfy? (lambda (x y) (< y x)) args))
+  (all-adjacent-satisfy? (f (x y) (< y x)) args))
 
 (function <= (:rest args)
   ; Returns whether the each of the specified args are in monotonically nondecreasing order.
-  (all-adjacent-satisfy? (lambda (x y) (! (< y x))) args))
+  (all-adjacent-satisfy? (f (x y) (! (< y x))) args))
 
 (function >= (:rest args)
   ; Returns whether the each of the specified args are in monotonically nonincreasing order.
-  (all-adjacent-satisfy? (lambda (x y) (! (< x y))) args))
+  (all-adjacent-satisfy? (f (x y) (! (< x y))) args))
 
 (function ++ (x)
   ; Same as (+ x 1).
@@ -1038,15 +1039,15 @@
 
 (function string> (:rest args)
   ; Returns whether the each of the specified args are in monotonically increasing order.
-  (all-adjacent-satisfy? (lambda (x y) (string< y x)) args))
+  (all-adjacent-satisfy? (f (x y) (string< y x)) args))
 
 (function string<= (:rest args)
   ; Returns whether the each of the specified args are in monotonically nondecreasing order.
-  (all-adjacent-satisfy? (lambda (x y) (! (string< y x))) args))
+  (all-adjacent-satisfy? (f (x y) (! (string< y x))) args))
 
 (function string>= (:rest args)
   ; Returns whether the each of the specified args are in monotonically nonincreasing order.
-  (all-adjacent-satisfy? (lambda (x y) (! (string< x y))) args))
+  (all-adjacent-satisfy? (f (x y) (! (string< x y))) args))
 
 (function string-empty? (s)
   ; Returns whether the string is "".
@@ -1123,11 +1124,11 @@
       (let (i 0 lis nil chars nil
               sa (str->arr s) salen (arrlen sa)
               da (str->arr delim) dalen (arrlen da) end (- salen dalen)
-              match? (lambda ()
+              match? (f ()
                        (dotimes (j dalen)
                          (if (! (bytes= ([] sa (+ i j)) ([] da j))) (return nil)))
                        true)
-              join-chars (lambda () (if chars (apply bytes-concat (reverse! chars)) "")))
+              join-chars (f () (if chars (apply bytes-concat (reverse! chars)) "")))
         (while (<= i end)
           (if (match?) (<- lis (cons (join-chars) lis)
                            chars nil
@@ -1519,7 +1520,7 @@
 (macro &<- (object :rest pairs)
   (with-gensyms (go)
     (cons let (cons (list go object)
-                    (map (lambda (pair)
+                    (map (f (pair)
                            (list (bytes->symbol (bytes-concat '& (car pair) '<-)) go (cadr pair)))
                          (group pairs 2))))))
 
@@ -1546,7 +1547,7 @@
                                            :features features
                                            :fields fields)))
         (cons begin
-              (map (lambda (field) (list 'make-accessor field)) fields))))
+              (map (f (field) (list 'make-accessor field)) fields))))
 
 (macro method (cls-sym method-sym args :rest body)
   (let (global-sym (bytes-concat cls-sym method-sym))
@@ -1600,7 +1601,7 @@
         (push! o nil)
         (push! o field)))
     (car! (cdr o) (assoc self :symbol))
-    (if (= (length (lambda-parameter (find-method (assoc o :class) '.init))) 1) (.init o)
+    (if (= (length (procparams (find-method (assoc o :class) '.init))) 1) (.init o)
         o)))
 
 (method Class .super ()
@@ -1699,15 +1700,15 @@
 
 (method Comparable .gt? (:rest args)
   ; Returns whether the each of the specified args are in monotonically increasing order.
-  (all-adjacent-satisfy? (lambda (x y) (.lt? y x)) (cons self args)))
+  (all-adjacent-satisfy? (f (x y) (.lt? y x)) (cons self args)))
 
 (method Comparable .le? (:rest args)
   ; Returns whether the each of the specified args are in monotonically nondecreasing order.
-  (all-adjacent-satisfy? (lambda (x y) (! (.lt? y x))) (cons self args)))
+  (all-adjacent-satisfy? (f (x y) (! (.lt? y x))) (cons self args)))
 
 (method Comparable .ge? (:rest args)
   ; Returns whether the each of the specified args are in monotonically nonincreasing order.
-  (all-adjacent-satisfy? (lambda (x y) (! (.lt? x y))) (cons self args)))
+  (all-adjacent-satisfy? (f (x y) (! (.lt? x y))) (cons self args)))
 
 (class Path ()
   ; A class that handles a file path.
@@ -1745,8 +1746,7 @@
                             Path.separator path-name))
             (string= first-letter Path.separator)
             (<- root? true))
-        (<- path (remove-if (lambda (file-name)
-                              (|| (string= file-name "") (string= file-name "~")))
+        (<- path (remove-if (f (x) (|| (string= x "") (string= x "~")))
                             (split
                               (with-memory-stream ($out)
                                 (with-memory-stream ($in path-name)
@@ -1822,7 +1822,7 @@
     (return (read-lines))))
 
 (method Path .to-s ()
-  (reduce (lambda (acc rest)
+  (reduce (f (acc rest)
             (bytes-concat (if (string= acc Path.separator) "" acc) Path.separator rest))
           (&path self)))
 
@@ -1892,8 +1892,7 @@
   (utime (.to-s self) time))
 
 (method Path .children ()
-  (map (lambda (child)
-         (.resolve self child))
+  (map (f (x) (.resolve self x))
        (split (readdir (.to-s self)) "\n")))
 
 ;; stream I/O
@@ -1999,10 +1998,10 @@
   ; Write integer to stream.
   ; Returns n.
   (let (radix (|| radix 10) padding (|| padding 0)
-              ->byte (lambda (x)
+              ->byte (f (x)
                        (if (< x 10) (+ x 0x30)
                            (+ x 0x61 -10)))
-              write1 (lambda (n padding)
+              write1 (f (n padding)
                        (let (upper (// n radix))
                          (if (/= upper 0) (write1 upper (-- padding))
                              (dotimes (i padding) (.write-byte self 0x30)))
@@ -2018,12 +2017,12 @@
       (= n 0.0) (.write-byte self 0x30)
       (let (mant n exp 8)
         (let (write-mant1
-               (lambda ()
+               (f ()
                  (let (upper (// (number->int mant) 100000000))
                    (.write-int self upper)
                    (<- mant (* (- mant (* upper 100000000)) 10))))
                write-fraction
-               (lambda (n)
+               (f (n)
                  (write-mant1)
                  (dotimes (i (-- n))
                    (if (= mant 0) (break)
@@ -2110,10 +2109,10 @@
           (function? x))
       (begin
         (if (macro? x) (.write-bytes self "(macro")
-            (.write-bytes self "(lambda"))
+            (.write-bytes self "(f"))
         (.write-byte self 0x20)
-        (.write self (lambda-parameter x) :end "")
-        (dolist (body (lambda-body x))
+        (.write self (procparams x) :end "")
+        (dolist (body (procbody x))
           (.write self body :start " " :end ""))
         (.write-byte self 0x29))
       (assert nil))
@@ -2522,7 +2521,7 @@
   (list 'error "unexpected unquote-splicing -- ,@" expr))
 
 (macro quasiquote (expr)
-  (let (descend (lambda (x level)
+  (let (descend (f (x level)
                   (if (atom? x) (list quote x)
                       (switch (car x)
                         quasiquote (list cons
@@ -2539,7 +2538,7 @@
                         :default (list append
                                        (descend-car (car x) level)
                                        (descend (cdr x) level)))))
-                descend-car (lambda (x level)
+                descend-car (f (x level)
                               (if (atom? x) (list quote (list x))
                                   (switch (car x)
                                     quasiquote (list list (list cons
@@ -2566,9 +2565,9 @@
   ; next must be a single character string.
   ; When the reserved character string is read, the processing moves to the specified function f and the evaluation result is expanded.
   ; Returns nil.
-  (with-gensyms (f)
-    (list let (list f (cons lambda (cons params body)))
-          (list 'push! '$read-table f)
+  (with-gensyms (g)
+    (list let (list g (cons f (cons params body)))
+          (list 'push! '$read-table g)
           (list 'push! '$read-table (list 'str->code (list quote next))))))
 
 (function read-byte ()
@@ -2691,7 +2690,7 @@
   ; Executed when there is no command line argument when paren starts.
   (let (expr nil)
     (while true
-      (catch (Error (lambda (e) (.print-stack-trace e)))
+      (catch (Error (f (e) (.print-stack-trace e)))
         (write-bytes ") ")
         (if (<- expr (read)) (write (eval (expand-macro-all expr)))
             (break))))))
@@ -2714,7 +2713,7 @@
   ; Returns true if successfully loaded.
   ; Module file to read must be UTF-8.
   (let ($external-encoding :UTF-8)
-    (if (find-if (lambda (x) (eq? x key)) $import) true
+    (if (find-if (f (x) (eq? x key)) $import) true
         (let (p (Path.of (string (bytes->symbol key) ".p")))
           (if (|| (.readable? p) (.readable? (<- p (.resolve $paren-home p))))
               (begin0 (load p)
@@ -2726,7 +2725,7 @@
   ; Executed when paren is executed.
   ; Invoke repl if there are no command line arguments that bound to the symbol $args.
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
-  (catch (SystemExit (lambda (e) (return true)))
+  (catch (SystemExit (f (e) (return true)))
     (if (nil? args) (repl)
         (let (script (Path.of (car args)))
           (if (&& (! (.readable? script))

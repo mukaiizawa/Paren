@@ -73,10 +73,10 @@ int bi_arg_fp(object o, FILE **result)
   return bi_intptr(o, (intptr_t *)result);
 }
 
-int bi_arg_lambda(object o, object *result)
+int bi_arg_proc(object o, object *result)
 {
   switch (object_type(o)) {
-    case LAMBDA:
+    case FUNC:
     case MACRO:
       return arg_type(o, TRUE, result);
     default:
@@ -146,12 +146,10 @@ static char *symbol_name_map[] = {
   "set_car", "car!",
   "set_cdr", "cdr!",
   "xreverse", "reverse!",
-  // lambda
+  // proc
   "builtin_name", "builtin-name",
   "builtin_p", "builtin?",
-  "lambda_body", "lambda-body",
   "function_p", "function?",
-  "lambda_parameter", "lambda-parameter",
   "macro_p", "macro?",
   "special_operator_p", "special-operator?",
   // number

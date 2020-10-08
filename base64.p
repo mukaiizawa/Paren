@@ -4,7 +4,7 @@
   ; base64 encoding as specified by RFC 4648.
   ; Returns a base64 encoded string.
   (let (val 0 b1 0 b2 0 b3 0 size 3
-            encode (lambda (bits)
+            encode (f (bits)
                      (if (nil? bits) 0x3d    ; padding
                          (< bits 26) (+ 0x41 bits)
                          (< bits 52) (+ 0x61 bits -26)

@@ -125,7 +125,7 @@ static object fs[FRAME_STACK_SIZE];
 #define   HANDLERS_FRAME         0x00000113
 #define   IF_FRAME               0x00000123
 #define   LABELS_FRAME           0x00000133
-#define   LAMBDA_FRAME           0x00000144
+#define   FUNC_FRAME             0x00000144
 #define   LET_FRAME              0x00000153
 #define   QUOTE_FRAME            0x00000163
 #define   RETURN_FRAME           0x00000172
@@ -149,7 +149,7 @@ char *frame_name(int frame_type)
     case HANDLERS_FRAME: return "HANDLERS_FRAME";
     case IF_FRAME: return "IF_FRAME";
     case LABELS_FRAME: return "LABELS_FRAME";
-    case LAMBDA_FRAME: return "LAMBDA_FRAME";
+    case FUNC_FRAME: return "FUNC_FRAME";
     case LET_FRAME: return "LET_FRAME";
     case QUOTE_FRAME: return "QUOTE_FRAME";
     case RETURN_FRAME: return "RETURN_FRAME";
@@ -351,7 +351,7 @@ static int parse_args(void (*f)(object, object, object), object params
   return TRUE;
 }
 
-static void pop_lambda_frame(void)
+static void pop_proc_frame(void)
 {
   reg[1] = get_frame_var(fp, 0);
   pop_frame();
@@ -370,11 +370,11 @@ static void pop_apply_frame(void)
   pop_frame();
   fvar = gc_new_cons(operator, reg[0]);
   // optimize tail recursion
-  if (fs_top() == LAMBDA_FRAME) set_frame_var(fp, 1, fvar);
-  else gen2(LAMBDA_FRAME, reg[1], fvar);
-  reg[1] = gc_new_env(operator->lambda.env);
-  gen1(EVAL_SEQUENTIAL_FRAME, operator->lambda.body);
-  parse_args(&symbol_bind, operator->lambda.params, reg[0]);
+  if (fs_top() == FUNC_FRAME) set_frame_var(fp, 1, fvar);
+  else gen2(FUNC_FRAME, reg[1], fvar);
+  reg[1] = gc_new_env(operator->proc.env);
+  gen1(EVAL_SEQUENTIAL_FRAME, operator->proc.body);
+  parse_args(&symbol_bind, operator->proc.params, reg[0]);
 }
 
 static void pop_apply_builtin_frame(void)
@@ -386,7 +386,7 @@ static void pop_apply_builtin_frame(void)
   function = f->builtin.u.function;
   pop_frame();
   if ((*function)(object_list_len(args), args, &(reg[0]))) return;
-  gen2(LAMBDA_FRAME, reg[1], gc_new_cons(f->builtin.name, args));    // for stack trace
+  gen2(FUNC_FRAME, reg[1], gc_new_cons(f->builtin.name, args));    // for stack trace
   if (error_msg == NULL) ip_mark_error("built-in function failed");
 }
 
@@ -411,7 +411,7 @@ static void pop_bind_handler_frame(void)
   object cls_sym, handler, handlers;
   cls_sym = get_frame_var(fp, 0);
   pop_frame();
-  if (!bi_arg_type(reg[0], LAMBDA, &handler)) return;
+  if (!bi_arg_type(reg[0], FUNC, &handler)) return;
   for (i = fp; i > -1; i = prev_fp(i)) {
     if (sint_val(fs[i]) != HANDLERS_FRAME) continue;
     handlers = get_frame_var(i, 0);
@@ -442,7 +442,7 @@ static void pop_eval_frame(void)
   switch (object_type(reg[0])) {
     case SYMBOL:
       if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
-        gen2(LAMBDA_FRAME, reg[1], reg[0]);    // for stack trace
+        gen2(FUNC_FRAME, reg[1], reg[0]);    // for stack trace
         ip_mark_error("unbound symbol");
         return;
       }
@@ -453,8 +453,8 @@ static void pop_eval_frame(void)
       gen_eval_frame(reg[0]->cons.car);
       return;
     case MACRO:
-    case LAMBDA:
-    case FUNCITON:
+    case FUNC:
+    case BUILTINFUNC:
     case SPECIAL:
     case SINT:
     case XINT:
@@ -473,7 +473,7 @@ static void pop_eval_frame(void)
 static void pop_rewinding(void)
 {
   switch (fs_top()) {
-    case LAMBDA_FRAME: pop_lambda_frame(); break;
+    case FUNC_FRAME: pop_proc_frame(); break;
     case LET_FRAME: pop_let_frame(); break;
     case UNWIND_PROTECT_FRAME: xassert(FALSE); break;    // must be protected.
     default: pop_frame(); break;
@@ -535,9 +535,9 @@ static void pop_fetch_operator_frame(void)
     case SPECIAL:
       special = reg[0]->builtin.u.special;
       if ((*special)(object_list_len(args), args)) return;
-      gen2(LAMBDA_FRAME, reg[1], gc_new_cons(reg[0]->builtin.name, args));    // for stack trace
+      gen2(FUNC_FRAME, reg[1], gc_new_cons(reg[0]->builtin.name, args));    // for stack trace
       return;
-    case FUNCITON:
+    case BUILTINFUNC:
       gen1(APPLY_BUILTIN_FRAME, reg[0]);
       gen_eval_args_frame(args);
       return;
@@ -546,7 +546,7 @@ static void pop_fetch_operator_frame(void)
       gen1(APPLY_FRAME, reg[0]);
       reg[0] = args;
       return;
-    case LAMBDA:
+    case FUNC:
       gen1(APPLY_FRAME, reg[0]);
       gen_eval_args_frame(args);
       return;
@@ -598,8 +598,8 @@ static void pop_return_frame(void)
   object args;
   while (fp != -1) {
     switch (fs_top()) {
-      case LAMBDA_FRAME:
-        pop_lambda_frame();
+      case FUNC_FRAME:
+        pop_proc_frame();
         return;
       case UNWIND_PROTECT_FRAME: 
         args = get_frame_var(fp, 0);
@@ -615,22 +615,22 @@ static void pop_return_frame(void)
   }
 }
 
-static object anonimous_lambda;
-static object named_lambda;
+static object anonimous_proc;
+static object named_proc;
 
-static void find_named_lambda(void *key, void *data)
+static void find_named_proc(void *key, void *data)
 {
-  if (anonimous_lambda == data) named_lambda = key;
+  if (anonimous_proc == data) named_proc = key;
 }
 
-static int resolve_anonimous_lambda(void)
+static int resolve_anonimous_proc(void)
 {
   object e;
-  xassert(named_lambda == NULL);
+  xassert(named_proc == NULL);
   e = reg[1];
   while (e != object_nil) {
-    at_foreach(&e->env.binding, find_named_lambda);
-    if (named_lambda != NULL) return TRUE;
+    at_foreach(&e->env.binding, find_named_proc);
+    if (named_proc != NULL) return TRUE;
     e = e->env.top;
   }
   return FALSE;
@@ -647,16 +647,16 @@ static object call_stack(void)
         p = get_frame_var(i, 0);
         o = gc_new_cons(p, o);
         break;
-      case LAMBDA_FRAME:
+      case FUNC_FRAME:
         p = get_frame_var(i, 1);
         if (!object_type_p(p, CONS)) o = gc_new_cons(p, o);
         else {
           f = p->cons.car;
           args = p->cons.cdr;
-          named_lambda = NULL;
-          anonimous_lambda = f;
-          if (resolve_anonimous_lambda()) f = named_lambda;
-          else f = anonimous_lambda;
+          named_proc = NULL;
+          anonimous_proc = f;
+          if (resolve_anonimous_proc()) f = named_proc;
+          else f = anonimous_proc;
           o = gc_new_cons(gc_new_cons(f, args), o);
         }
         break;
@@ -786,11 +786,11 @@ DEFUN(apply)
 {
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   switch (object_type(argv->cons.car)) {
-    case FUNCITON:
+    case BUILTINFUNC:
       gen1(APPLY_BUILTIN_FRAME, argv->cons.car);
       reg[0] = argv->cons.cdr->cons.car;
       return TRUE;
-    case LAMBDA:
+    case FUNC:
       gen1(APPLY_FRAME, argv->cons.car);
       reg[0] = argv->cons.cdr->cons.car;
       return TRUE;
@@ -1113,7 +1113,7 @@ DEFSP(dynamic)
       case LET_FRAME:
         e = e->env.top;
         break;
-      case LAMBDA_FRAME:
+      case FUNC_FRAME:
         e = get_frame_var(i, 0);
         break;
       default:
@@ -1149,14 +1149,14 @@ DEFSP(macro)
   return TRUE;
 }
 
-DEFSP(lambda)
+DEFSP(f)
 {
   object params;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
   if (!parse_required_params(params, FALSE))
-    return ip_mark_error("illegal lambda parameter list");
-  reg[0] = gc_new_lambda(reg[1], params, argv->cons.cdr);
+    return ip_mark_error("illegal function parameter list");
+  reg[0] = gc_new_proc(reg[1], params, argv->cons.cdr);
   return TRUE;
 }
 
@@ -1263,7 +1263,7 @@ static void ip_main(object args)
       case HANDLERS_FRAME: pop_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
       case LABELS_FRAME: pop_frame(); break;
-      case LAMBDA_FRAME: pop_lambda_frame(); break;
+      case FUNC_FRAME: pop_proc_frame(); break;
       case LET_FRAME: pop_let_frame(); break;
       case QUOTE_FRAME: reg[0] = get_frame_var(fp, 0); pop_frame(); break;
       case RETURN_FRAME: pop_return_frame(); break;

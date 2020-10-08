@@ -10,9 +10,7 @@ If the year and month are omitted, it is considered that the current year and mo
     (quit))
 
 (function! main (args)
-  (catch (Error (lambda (e)
-                  (write-line (.to-s e))
-                  (usage)))
+  (catch (Error (f (e) (write-line (.to-s e)) (usage)))
     (let (argc (length (<- args (cdr args))) dt (DateTime.now) dw nil y nil m nil)
       (if (= argc 0) (<- y (.year dt) m (.month dt))
           (= argc 1) (<- y (.year dt) m (str->num (car args)))

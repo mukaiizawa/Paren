@@ -5,7 +5,7 @@ extern int gc_max_used_memory;
 
 extern object gc_new_env(object top);
 extern object gc_new_macro(object env, object params, object body);
-extern object gc_new_lambda(object env, object params, object body);
+extern object gc_new_proc(object env, object params, object body);
 extern object gc_new_builtin(int type, object name, void *p);
 extern object gc_new_xint(int64_t val);
 extern object gc_new_xfloat(double val);

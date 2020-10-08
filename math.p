@@ -20,11 +20,11 @@
 
 (function max (:rest args)
   ; Returns maximum value from argument.
-  (reduce (lambda (x y) (if (> x y) x y)) args))
+  (reduce (f (x y) (if (> x y) x y)) args))
 
 (function min (:rest args)
   ; Returns minimum value from argument.
-  (reduce (lambda (x y) (if (< x y) x y)) args))
+  (reduce (f (x y) (if (< x y) x y)) args))
 
 (function! main (args)
   (assert (= (max 1 2 3) 3))

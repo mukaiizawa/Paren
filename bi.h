@@ -16,7 +16,7 @@ extern int bi_arg_type(object o, int type, object *result);
 extern int bi_arg_bytes(object o, object *result);
 extern int bi_arg_mutable_bytes(object o, object *result);
 extern int bi_arg_fp(object o, FILE **result);
-extern int bi_arg_lambda(object o, object *result);
+extern int bi_arg_proc(object o, object *result);
 extern int bi_arg_list(object o, object *result);
 
 extern int bi_sint(object o, int *p);

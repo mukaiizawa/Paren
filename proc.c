@@ -1,4 +1,4 @@
-// lambda/macro
+// procedure.
 
 #include "std.h"
 #include "xarray.h"
@@ -20,7 +20,7 @@ DEFUN(builtin_p)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (object_type(argv->cons.car)) {
-    case FUNCITON:
+    case BUILTINFUNC:
     case SPECIAL:
       *result = object_true;
       return TRUE;
@@ -34,7 +34,7 @@ DEFUN(builtin_name)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (object_type(argv->cons.car)) {
-    case FUNCITON:
+    case BUILTINFUNC:
     case SPECIAL:
       *result = argv->cons.car->builtin.name;
       return TRUE;
@@ -47,8 +47,8 @@ DEFUN(function_p)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (object_type(argv->cons.car)) {
-    case FUNCITON:
-    case LAMBDA:
+    case BUILTINFUNC:
+    case FUNC:
       *result = object_bool(TRUE);
       break;
     default:
@@ -65,20 +65,20 @@ DEFUN(macro_p)
   return TRUE;
 }
 
-DEFUN(lambda_parameter)
+DEFUN(procparams)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_lambda(argv->cons.car, &o)) return FALSE;
-  *result = o->lambda.params;
+  if (!bi_arg_proc(argv->cons.car, &o)) return FALSE;
+  *result = o->proc.params;
   return TRUE;
 }
 
-DEFUN(lambda_body)
+DEFUN(procbody)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_lambda(argv->cons.car, &o)) return FALSE;
-  *result = o->lambda.body;
+  if (!bi_arg_proc(argv->cons.car, &o)) return FALSE;
+  *result = o->proc.body;
   return TRUE;
 }

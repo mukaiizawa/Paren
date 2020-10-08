@@ -1,4 +1,4 @@
-; option parser module
+; option parser module.
 
 (class OptionParser ()
   table)
@@ -16,9 +16,7 @@
     (&table<- self table)))
 
 (method OptionParser .lookup (opt)
-  (let (record (find-if (lambda (record)
-                          (string= opt (car record)))
-                        (&table self)))
+  (let (record (find-if (f (record) (string= opt (car record))) (&table self)))
     (if (nil? record) (.raise self "unknown option " opt)
         record)))
 
@@ -33,7 +31,7 @@
         (for (i 1) (< i arglen) (<- i (++ i))
           (let (record (.lookup self ([] argarr i))
                        (opt optarg? optval) record
-                       put (lambda (record val) (car! (cddr record) val)))
+                       put (f (record val) (car! (cddr record) val)))
             (if optval (.raise self "duplicate option " opt)
                 (nil? optarg?) (begin (put record true) (continue))
                 (< (++ i) arglen) (begin (put record (string-slice arg (++ i))) (break))

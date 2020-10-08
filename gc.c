@@ -59,14 +59,14 @@ object gc_new_env(object top)
   return o;
 }
 
-static object new_lambda(int type, object env, object params, object body)
+static object new_proc(int type, object env, object params, object body)
 {
   object o;
   xassert(object_type_p(env, ENV));
-  o = gc_alloc(sizeof(struct lambda));
-  o->lambda.env = env;
-  o->lambda.params = params;
-  o->lambda.body = body;
+  o = gc_alloc(sizeof(struct proc));
+  o->proc.env = env;
+  o->proc.params = params;
+  o->proc.body = body;
   set_type(o, type);
   regist(o);
   return o;
@@ -74,12 +74,12 @@ static object new_lambda(int type, object env, object params, object body)
 
 object gc_new_macro(object env, object params, object body)
 {
-  return new_lambda(MACRO, env, params, body);
+  return new_proc(MACRO, env, params, body);
 }
 
-object gc_new_lambda(object env, object params, object body)
+object gc_new_proc(object env, object params, object body)
 {
-  return new_lambda(LAMBDA, env, params, body);
+  return new_proc(FUNC, env, params, body);
 }
 
 object gc_new_builtin(int type, object name, void *p)
@@ -250,14 +250,14 @@ void gc_mark(object o)
       gc_mark(o->env.top);
       break;
     case SPECIAL:
-    case FUNCITON:
+    case BUILTINFUNC:
       gc_mark(o->builtin.name);
       break;
     case MACRO:
-    case LAMBDA:
-      gc_mark(o->lambda.env);
-      gc_mark(o->lambda.params);
-      gc_mark(o->lambda.body);
+    case FUNC:
+      gc_mark(o->proc.env);
+      gc_mark(o->proc.params);
+      gc_mark(o->proc.body);
       break;
     case CONS:
       p = o;

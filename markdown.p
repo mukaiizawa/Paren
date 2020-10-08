@@ -6,9 +6,7 @@
 
 (method MarkdownReader .none-match? (:rest args)
   (let (next (.next self))
-    (&& next (all-satisfy? (lambda (x)
-                             (string/= next x))
-                           (cons "\n" args)))))
+    (&& next (all-satisfy? (f (x) (string/= next x)) (cons "\n" args)))))
 
 (method MarkdownReader .continue? ()
   (.none-match? self))
@@ -67,7 +65,7 @@
     `(p ,@(reverse! children))))
 
 (method MarkdownReader .parse-pre ()
-  (let (lines nil get-line (lambda ()
+  (let (lines nil get-line (f ()
                              (dotimes (i 4) (.skip self " "))
                              (.skip-line self)))
     (push! lines (get-line))
@@ -77,7 +75,7 @@
 
 (method MarkdownReader .parse-quote ()
   (let (next-depth nil node-stack nil
-                   fetch (lambda ()
+                   fetch (f ()
                            (when (.continue? self)
                              (<- next-depth 0)
                              (while (string= (.next self) ">")
@@ -86,7 +84,7 @@
                              (if (= next-depth 0) (.raise self "missing >"))
                              (.skip-space self)
                              (push! node-stack (.skip-line (.skip-space self)))))
-                   rec (lambda (depth nodes)
+                   rec (f (depth nodes)
                          (while (fetch)
                            (if (< next-depth depth) (break)
                                (= next-depth depth) (begin
@@ -100,7 +98,7 @@
 
 (method MarkdownReader .parse-list ()
   (let (next-root nil next-depth nil node-stack nil
-                  fetch (lambda ()
+                  fetch (f ()
                           (when (.continue? self)
                             (<- next-depth 1)
                             (while (string= (.next self) " ")
@@ -117,7 +115,7 @@
                                 (.raise self "missing list"))
                             (.skip-space self)
                             (push! node-stack (list 'li (.skip-line (.skip-space self))))))
-                  rec (lambda (root depth nodes)
+                  rec (f (root depth nodes)
                         (while (fetch)
                           (if (< next-depth depth) (break)
                               (= next-depth depth) (if (neq? root (pop! next-root)) (.raise self "mixed list type")

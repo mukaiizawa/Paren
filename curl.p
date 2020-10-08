@@ -22,7 +22,7 @@ Get http request in URL.")
       (.write-lines $stdout (.read-lines in)))))
 
 (function! main (args)
-  (catch (Error (lambda (e)
+  (catch (Error (f (e)
                   (write-line (.to-s e))
                   (write (.stack-trace e))
                   (usage)))

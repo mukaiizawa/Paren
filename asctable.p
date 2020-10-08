@@ -38,8 +38,7 @@
 
 (function! main (args)
   ; Print ASCII code table.
-  (write-lines (remove-if (lambda (line)
-                            (! (string-prefix? line ";")))
+  (write-lines (remove-if (f (x) (! (string-prefix? x ";")))
                           (.to-l (Path.of "asctable.p"))))
   (write-line)
   (write-line "   0 1 2 3 4 5 6 7 8 9 a b c d e f")

@@ -1,14 +1,12 @@
 ; output dependency for makefile
 
 (function parse-line (line dependencies)
-  (let (open nil close nil file-name nil)
+  (let (open-quote nil close-quote nil file-name nil)
     (if (&& (string-prefix? line "#include")
-            (<- open (string-index line "\""))
-            (<- close (string-last-index line "\""))
-            (<- file-name (string-slice line (++ open) close))
-            (! (find-if (lambda (dependency)
-                          (string= file-name dependency))
-                        dependencies)))
+            (<- open-quote (string-index line "\""))
+            (<- close-quote (string-last-index line "\""))
+            (<- file-name (string-slice line (++ open-quote) close-quote))
+            (! (find-if (f (x) (string= file-name x)) dependencies)))
         (parse-cfile (Path.of file-name) (cons file-name dependencies))
         dependencies)))
 
@@ -20,9 +18,7 @@
 (function! main (args)
   ; Get C source file names from current directory and output dependency rule for makefile.
   (write-line "# following rules are generated automatically.")
-  (dolist (cfile (remove-if (lambda (file)
-                              (string/= (.suffix file) "c"))
-                            (.children (Path.getcwd))))
+  (dolist (cfile (remove-if (f (x) (string/= (.suffix x) "c")) (.children (Path.getcwd))))
     (write-line
       (join
         (flatten
