@@ -36,24 +36,6 @@ static int array_at(object o, object argv, object *result)
   return TRUE;
 }
 
-DEFUN(array_at)
-{
-  object o;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  o = argv->cons.car;
-  switch (object_type(o)) {
-    case BYTES:
-    case STRING:
-    case SYMBOL:
-    case KEYWORD:
-      return bytes_at(o, argv, result);
-    case ARRAY:
-      return array_at(o, argv, result);
-    default:
-      return FALSE;
-  }
-}
-
 static int bytes_put(object o, object argv, object *result)
 {
   int i, byte;
@@ -75,18 +57,20 @@ static int array_put(object o, object argv, object *result)
   return TRUE;
 }
 
-DEFUN(array_put)
+DEFUN(array_access)
 {
   object o;
-  if (!bi_argc_range(argc, 3, 3)) return FALSE;
+  if (!bi_argc_range(argc, 2, 3)) return FALSE;
   o = argv->cons.car;
   switch (object_type(o)) {
     case BYTES:
     case STRING:
     case SYMBOL:
     case KEYWORD:
+      if (argc == 2) return bytes_at(o, argv, result);
       return bytes_put(o, argv, result);
     case ARRAY:
+      if (argc == 2) return array_at(o, argv, result);
       return array_put(o, argv, result);
     default:
       return FALSE;

@@ -328,7 +328,7 @@
   ; Supports break, continue macro.
   ; Returns nil.
   (with-gensyms (ga)
-    (list let (list ga (list 'string->array s))
+    (list let (list ga (list 'str->arr s))
           (list 'doarray (list c ga)
                 (cons begin body)))))
 
@@ -337,7 +337,7 @@
   ; Supports break, continue macro.
   ; Returns nil.
   (with-gensyms (ga gi glen)
-    (list 'for (list gi 0 ga a glen (list 'array-length ga)) (list < gi glen) (list <- gi (list '++ gi))
+    (list 'for (list gi 0 ga a glen (list 'arrlen ga)) (list < gi glen) (list <- gi (list '++ gi))
           (list let (list i (list [] ga gi))
                 (cons begin body)))))
 
@@ -612,9 +612,14 @@
   (|| (nil? x) (cons? x)))
 
 (function ->list (x)
-  ; Returns a list with x as the only element.
+  ; Returns a list representation of x.
   ; If x is a list, returns x.
+  ; If x is an array, returns a list containing all of the elements in x.
+  ; Otherwise, returns a list with x as the only element.
   (if (list? x) x
+      (array? x) (let (acc nil)
+                 (doarray (e x) (push! acc e))
+                 (reverse! acc))
       (list x)))
 
 (function join (l :opt delim)
@@ -1012,7 +1017,7 @@
       (write-byte (& i 0xff))
       (<- i (>> i 8)))))
 
-(function string->array (s)
+(function str->arr (s)
   ; Returns a character array of string s.
   (let (a (.new Array) c nil)
     (with-memory-stream ($in s)
@@ -1075,18 +1080,18 @@
 
 (function string-at (s i)
   ; Returns the i-th character of string s.
-  ([] (string->array s) i))
+  ([] (str->arr s) i))
 
 (function string-length (s)
   ; Returns the number of characters in string s.
-  (array-length (string->array s)))
+  (arrlen (str->arr s)))
 
 (function string-index (s pat :opt start)
   ; Returns the position where the substring pat appears first in the string s.
   ; If the string pat is not a substring of the string s, returns nil.
   ; If start is specified, search for substring pat from start-th of the string s.
-  (let (start (|| start 0) sa (string->array s) slen (array-length sa)
-              pa (string->array pat) plen (array-length pa))
+  (let (start (|| start 0) sa (str->arr s) slen (arrlen sa)
+              pa (str->arr pat) plen (arrlen pa))
     (if (< (- slen start) 0) (error "illegal start")
         (= plen 0) (return 0))
     (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (<- i (++ i))
@@ -1100,8 +1105,8 @@
 (function string-last-index (s pat)
   ; Returns the position where the substring pat appears last in the string s.
   ; If the string pat is not a substring of the string s, returns nil.
-  (let (sa (string->array s) slen (array-length sa)
-           pa (string->array pat) plen (array-length pa))
+  (let (sa (str->arr s) slen (arrlen sa)
+           pa (str->arr pat) plen (arrlen pa))
     (if (= plen 0) (return (-- slen)))
     (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (<- i (-- i))
       (when (bytes= ([] sa i) p0)
@@ -1114,10 +1119,10 @@
 (function split (s :opt delim)
   ; Returns a list of characters in string s.
   ; If delim is specified, returns a list of strings s delimited by delimiter.
-  (if (nil? delim) (array->list (string->array s))
+  (if (nil? delim) (->list (str->arr s))
       (let (i 0 lis nil chars nil
-              sa (string->array s) salen (array-length sa)
-              da (string->array delim) dalen (array-length da) end (- salen dalen)
+              sa (str->arr s) salen (arrlen sa)
+              da (str->arr delim) dalen (arrlen da) end (- salen dalen)
               match? (lambda ()
                        (dotimes (j dalen)
                          (if (! (bytes= ([] sa (+ i j)) ([] da j))) (return nil)))
@@ -1185,7 +1190,7 @@
   ; Generally faster than bytes->string.
   ; This function only allows bytes.
   (assert (let (x (bytes 1))
-            ([]<- x 0 0x01)
+            ([] x 0 0x01)
             (bytes= (bytes->string! x) "\x01"))))
 
 (function bytes->list (s :opt delim)
@@ -1251,54 +1256,44 @@
   (assert (array? (array 3)))
   (assert (! (array? (bytes 3)))))
 
-(function array->list (x)
-  ; Returns array as a list.
-  (let (acc nil)
-    (dotimes (i (array-length x))
-      (push! acc ([] x i)))
-    (reverse! acc)))
-
-(builtin-function [] (x i)
+(builtin-function [] (x i :opt v)
   ; Returns the i-th element of the array x.
-  ; This function can also be applied to bytes.
-  (assert (nil? ([] (array 1) 0)))
-  (assert (= ([] (bytes 1) 0) 0)))
-
-(builtin-function []<- (x i v)
-  ; Update the i-th element of array x to v.
+  ; If v is specified, update the i-th element of array x to v.
   ; Returns v.
   ; This function can also be applied to bytes.
+  (assert (nil? ([] (array 1) 0)))
+  (assert (= ([] (bytes 1) 0) 0))
   (assert (let (a (array 1) b (bytes 1))
-            (&& ([]<- a 0 true)
+            (&& ([] a 0 true)
                 ([] a 0)
-                ([]<- b 0 0xff)
+                ([] b 0 0xff)
                 (= ([] b 0) 0xff)))))
 
-(builtin-function array-length (x)
+(builtin-function arrlen (x)
   ; Returns the length of the specified array x.
-  (assert (= (array-length (array 3)) 3)))
+  (assert (= (arrlen (array 3)) 3)))
 
-(builtin-function array-copy (src src-i dst dst-i size)
+(builtin-function arrcpy (src src-i dst dst-i size)
   ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
   ; Returns dst.
   ; Even if the areas to be copied overlap, it operates correctly.
   ; This function also accepts strings.
   (assert (let (s (array 1) d (array 2))
-            ([]<- s 0 1)
-            ([]<- d 0 :zero)
-            ([]<- d 1 :one)
-            (&& (= ([] (array-copy s 0 d 1 1) 1) 1)
+            ([] s 0 1)
+            ([] d 0 :zero)
+            ([] d 1 :one)
+            (&& (= ([] (arrcpy s 0 d 1 1) 1) 1)
                 (eq? ([] d 0) :zero)
                 (= ([] d 1) 1)))))
 
-(function array-slice (x start :opt end)
+(function subarr (x start :opt end)
   ; Returns a new array object selected from start to end (end not included) where start and end represent the index of items in that array x.
-  (let (xlen (array-length x))
+  (let (xlen (arrlen x))
     (if (< start 0) (error "illegal start")
         (nil? end) (<- end xlen)
         (> end xlen) (error "illegal end"))
     (let (new-len (- end start) new-array (array new-len))
-      (array-copy x start new-array 0 new-len))))
+      (arrcpy x start new-array 0 new-len))))
 
 ; os
 
@@ -1671,14 +1666,14 @@
   ([] (&elt self) i))
 
 (method Array .put (i val)
-  ([]<- (&elt self) i val))
+  ([] (&elt self) i val))
 
 (method Array .reserve (size)
-  (let (req (+ (&size self) size) elt-size (array-length (&elt self)))
+  (let (req (+ (&size self) size) elt-size (arrlen (&elt self)))
     (when (< elt-size req)
       (while (< (<- elt-size (* elt-size 2)) req))
       (let (elt (array elt-size))
-        (array-copy (&elt self) 0 elt 0 (&size self))
+        (arrcpy (&elt self) 0 elt 0 (&size self))
         (&elt<- self elt)))
     self))
 
@@ -1686,12 +1681,12 @@
   (let (i (&size self))
     (.reserve self 1)
     (&size<- self (++ i))
-    ([]<- (&elt self) i val))
+    ([] (&elt self) i val))
   self)
 
 (method Array .to-a ()
   (let (size (&size self) a (array size))
-    (array-copy (&elt self) 0 a 0 size)
+    (arrcpy (&elt self) 0 a 0 size)
     a))
 
 (class Comparable ()
@@ -1851,8 +1846,8 @@
   (let (stat-array (stat (.to-s self)))
     (if stat-array stat-array
         (begin (<- stat-array (array 3))
-               ([]<- stat-array 0 1)
-               ([]<- stat-array 1 0)
+               ([] stat-array 0 1)
+               ([] stat-array 1 0)
                stat-array))))
 
 (method Path .mode ()
@@ -1957,10 +1952,10 @@
           (< b1 0xfd) (<- b2 (.read-byte self) size 2)
           (.illegal-character self b1)))
     (let (c (bytes size))
-      (if (= size 1) ([]<- c 0 b1)
-          (= size 2) (begin ([]<- c 0 b1) ([]<- c 1 b2))
-          (= size 3) (begin ([]<- c 0 b1) ([]<- c 1 b2) ([]<- c 2 b3))
-          (= size 4) (begin ([]<- c 0 b1) ([]<- c 1 b2) ([]<- c 2 b3) ([]<- c 3 b4)))
+      (if (= size 1) ([] c 0 b1)
+          (= size 2) (begin ([] c 0 b1) ([] c 1 b2))
+          (= size 3) (begin ([] c 0 b1) ([] c 1 b2) ([] c 2 b3))
+          (= size 4) (begin ([] c 0 b1) ([] c 1 b2) ([] c 2 b3) ([] c 3 b4)))
       (bytes->string! c))))
 
 (method Stream .read ()
@@ -2108,7 +2103,7 @@
       (array? x)
       (begin
         (.write-bytes self "#a[")
-        (dotimes (i (array-length x))
+        (dotimes (i (arrlen x))
           (.write self ([] x i) :start (&& (/= i 0) " ") :end ""))
         (.write-byte self 0x5d))
       (|| (macro? x)
@@ -2166,7 +2161,7 @@
 (method MemoryStream .write-byte (byte)
   (let (wrpos (&wrpos self))
     (.reserve self 1)
-    ([]<- (&buf self) wrpos byte)
+    ([] (&buf self) wrpos byte)
     (&wrpos<- self (++ wrpos))))
 
 (method MemoryStream .write-bytes (bytes :opt from size)

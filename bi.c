@@ -116,12 +116,11 @@ static char *symbol_name_map[] = {
   "eq_p", "eq?",
   "neq_p", "neq?",
   // array
-  "array_at", "[]",
-  "array_put", "[]<-",
+  "array_access", "[]",
   "array_p", "array?",
-  "array_copy", "array-copy",
+  "array_copy", "arrcpy",
   "array_new", "array",
-  "array_length", "array-length",
+  "array_length", "arrlen",
   // bytes
   "bytes_concat", "bytes-concat",
   "bytes_copy", "bytes-copy",

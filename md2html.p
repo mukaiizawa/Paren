@@ -56,8 +56,8 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 (function parse-header (contents-table node)
   (let (hx (car node) x (byte->digit ([] hx 1)))
     (dotimes (i 6)
-      (if (= i (-- x)) ([]<- contents-table i (++ ([] contents-table i)))
-          (> i (-- x)) ([]<- contents-table i 0)))
+      (if (= i (-- x)) ([] contents-table i (++ ([] contents-table i)))
+          (> i (-- x)) ([] contents-table i 0)))
     (let (id (next-id contents-table))
       (push! $contents `(,hx (:id ,id) ,@(cons id (cdr node)))))))
 
@@ -66,7 +66,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 
 (function parse-nodes (nodes)
   (let (contents-table (array 6))
-    (dotimes (i 6) ([]<- contents-table i 0))
+    (dotimes (i 6) ([] contents-table i 0))
     (map (lambda (node)
            (if (header? node) (parse-header contents-table node)
                node))

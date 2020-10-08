@@ -7,11 +7,12 @@
 
 (method Matrix .init (p)
   ; Initialize the receiver to a matrix object with width x height y based on a point object that has coordinates (x, y).
-  (assert (is-a? p Point))
-  (&<- self
-    :width (.x p)
-    :height (.y p)
-    :contents (array (* (&width self) (&height self)))))
+  (if (is-a? p Point)
+      (&<- self
+        :width (.x p)
+        :height (.y p)
+        :contents (array (* (&width self) (&height self))))
+      (.raise self "expected instance of Point." p)))
 
 (method Matrix .width ()
   ; Returns width of the receiver.
@@ -38,7 +39,7 @@
 (method Matrix .put (p v)
   ; Update the value of the receiver at the position corresponding to the point object to v.
   ; Returns the receiver.
-  ([]<- (&contents self) (.index self p) v)
+  ([] (&contents self) (.index self p) v)
   self)
 
 (macro domatrix ((p m) :rest body)

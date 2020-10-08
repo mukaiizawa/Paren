@@ -138,7 +138,7 @@
   ([] (&text self) i))
 
 (method Regex .text-length ()
-  (array-length (&text self)))
+  (arrlen (&text self)))
 
 (method Regex .match-start ()
   ; Returns the matched start position.
@@ -160,7 +160,7 @@
 (method Regex .match? (s :opt start)
   ; Returns whether the string s matched this instance.
   (&start<- self (|| start (<- start 0)))
-  (&text<- self (string->array s))
+  (&text<- self (str->arr s))
   (if (&anchored-start? self)
       (return (&& (= start 0) (.try self (&elements self) 0))))
   (for (i start e (.text-length self)) (<= i e) (&start<- self (<- i (++ i)))
