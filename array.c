@@ -5,7 +5,6 @@
 #include "xbarray.h"
 #include "at.h"
 #include "object.h"
-#include "mem.h"
 #include "gc.h"
 #include "ip.h"
 #include "bi.h"

@@ -1,18 +1,16 @@
 ; xml module.
 
 (function xml-attrs->string (l)
-  (with-memory-stream (out)
+  (with-memory-stream ($out)
     (while l
       (assert (keyword? (car l)))
-      (write-bytes " " out)
-      (write-bytes (car l) out)
+      (write-bytes " ")
+      (write-bytes (car l))
       (if (keyword? (car (<- l (cdr l)))) (continue)
-          (assert (string? (car l)))
-          (begin
-            (write-bytes "='" out)
-            (write-bytes (car l) out)
-            (write-bytes "'" out)
-            (<- l (cdr l)))))))
+          (string? (car l)) (begin
+                              (write-bytes (string "='" (car l) "'"))
+                              (<- l (cdr l)))
+          (assert nil)))))
 
 (function xml->string (l)
   ; Returns a list representation of xml as a string.
@@ -25,7 +23,7 @@
               (if (! (&& (cons? attrs) (keyword? (car attrs))))
                   (<- children (cons attrs children) attrs nil))
               (string "<" name (xml-attrs->string attrs) ">"
-                      (list->string (map xml->string children))
+                      (join (map xml->string children))
                       "</" name ">"))))))
 
 ; reader
@@ -149,7 +147,7 @@
                            (cons (cadr tag)
                                  (reverse! children)))))))))
 
-(method XMLReader .read-all ()
+(method XMLReader .reads ()
   ; Return the result of .read to the EOF as a list.
   (let (node nil nodes nil)
     (while (<- node (.read self))
@@ -158,20 +156,20 @@
 
 (function! main (args)
   (with-memory-stream
-    (in (string "<!DOCTYPE html>"
-                "<html lang='ja'>"
-                "    <head>"
-                "        <title>foo</title>"
-                "    </head>"
-                "<!-- -- comment -- -->"
-                "    <body>"
-                "         <hr/>"
-                "         <div style='bar'"
-                "              class='buzz'>"
-                "           text node"
-                "           text node"
-                "         </div>"
-                "         <hr/>"
-                "    </body>"
-                "</html>"))
-    (write (map xml->string (write (.read-all (.init (.new XMLReader) in)))))))
+    ($in (string "<!DOCTYPE html>"
+                 "<html lang='ja'>"
+                 "    <head>"
+                 "        <title>foo</title>"
+                 "    </head>"
+                 "<!-- -- comment -- -->"
+                 "    <body>"
+                 "         <hr/>"
+                 "         <div style='bar'"
+                 "              class='buzz'>"
+                 "           text node"
+                 "           text node"
+                 "         </div>"
+                 "         <hr/>"
+                 "    </body>"
+                 "</html>"))
+    (write (map xml->string (write (.reads (.new XMLReader)))))))

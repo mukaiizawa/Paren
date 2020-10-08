@@ -1,27 +1,27 @@
 ; json module.
 
 (function json-object->string (lis)
-  (with-memory-stream (out)
-    (write-bytes "{" out)
+  (with-memory-stream ($out)
+    (write-bytes "{")
     (let (i 0)
       (while lis
-        (if (> i 0) (write-bytes "," out)
+        (if (> i 0) (write-bytes ",")
             (<- i (++ i)))
-        (write-bytes (json->string (car lis)) out)
-        (write-bytes ":" out)
+        (write-bytes (json->string (car lis)))
+        (write-bytes ":")
         (<- lis (cdr lis))
         (assert lis)    ; must be pair
-        (write-bytes (json->string (car lis)) out)
+        (write-bytes (json->string (car lis)))
         (<- lis (cdr lis))))
-    (write-bytes "}" out)))
+    (write-bytes "}")))
 
 (function json-array->string (arr)
-  (with-memory-stream (out)
-    (write-bytes "[" out)
+  (with-memory-stream ($out)
+    (write-bytes "[")
     (for (i 0) (< i (array-length arr)) (<- i (++ i))
-      (if (> i 0) (write-bytes "," out))
-      (write-bytes (json->string ([] arr i)) out))
-    (write-bytes "]" out)))
+      (if (> i 0) (write-bytes ","))
+      (write-bytes (json->string ([] arr i))))
+    (write-bytes "]")))
 
 (function json->string (x)
   ; Returns a list representation of json as a string.
@@ -91,7 +91,7 @@
 
 (function! main (args)
   (with-memory-stream
-    (in "{
+    ($in "{
         \"nodes\": [
                     {\"id\":49,\"name\":\"object_p\", \"time\":0.73},
                     {\"id\":36,\"name\":\"object_list_p\", \"time\":1.58},
@@ -106,4 +106,4 @@
                     ],
         \"literal\": [true, false, null, 3.14, \"string\"]
         }")
-        (write-line (json->string (write (.read (.init (.new JSONReader) in)))))))
+        (write (json->string (write (.read (.init (.new JSONReader))))))))

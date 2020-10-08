@@ -24,6 +24,7 @@
                               (string/= (.suffix file) "c"))
                             (.children (Path.getcwd))))
     (write-line
-      (list->string 
-        `(,(string (.but-suffix cfile) ".o:") ,(.name cfile) ,@(parse-cfile cfile))
+      (join
+        (flatten
+          (list (string (.but-suffix cfile) ".o:") (.name cfile) (parse-cfile cfile)))
         " "))))

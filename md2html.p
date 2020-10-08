@@ -48,10 +48,10 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
                contentss))))
 
 (function next-id (contents-table)
-  (with-memory-stream (out)
+  (with-memory-stream ($out)
     (doarray (x contents-table)
       (if (= x 0) (break))
-      (write-bytes (string x ".") out))))
+      (write-bytes (string x ".")))))
 
 (function parse-header (contents-table node)
   (let (hx (car node) x (byte->digit ([] hx 1)))
@@ -76,7 +76,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
   `((!DOCTYPE "html")
     (html (:lang "ja")
           (head
-            (meta (:charset ,(bytes->string $external-encoding)))
+            (meta (:charset "UTF-8"))
             (style ,$default-css))
           (body
             ,@(parse-contents (reverse! $contents))
@@ -85,7 +85,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 (function! main (args)
   (if (nil? (cadr args)) (error "require markdown file path"))
   (let (p (Path.of (cadr args)) nodes nil)
-    (with-open (in p :read)
-      (<- nodes (parse-nodes (.read-all (.init (.new MarkdownReader) in)))))
-    (with-open (out (string (.but-suffix p) ".html") :write)
-      (write-bytes (list->string (map xml->string (make-html nodes))) out))))
+    (with-open ($in p :read)
+      (<- nodes (parse-nodes (.reads (.new MarkdownReader)))))
+    (with-open ($out (string (.but-suffix p) ".html") :write)
+      (write-lines (map xml->string (make-html nodes))))))

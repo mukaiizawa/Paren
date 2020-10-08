@@ -73,7 +73,7 @@
     (push! lines (get-line))
     (while (.continue? self)
       (push! lines (get-line)))
-    `(pre ,(list->string (reverse! lines) "\n"))))
+    `(pre ,(join (reverse! lines) "\n"))))
 
 (method MarkdownReader .parse-quote ()
   (let (next-depth nil node-stack nil
@@ -215,7 +215,7 @@
         (string= next "<") (.parse-xml self)
         (.parse-paragraph self))))
 
-(method MarkdownReader .read-all ()
+(method MarkdownReader .reads ()
   ; Return the result of .read to the EOF as a list.
   (let (node nil nodes nil)
     (while (<- node (.read self))
@@ -223,6 +223,5 @@
     (reverse! nodes)))
 
 (function! main (args)
-  (let ($external-encoding :UTF-8)
-    (with-open (in "readme.md" :read)
-      (write (.read-all (.init (.new MarkdownReader) in))))))
+  (with-open ($in "readme.md" :read)
+    (write (.reads (.new MarkdownReader)))))

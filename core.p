@@ -617,16 +617,16 @@
   (if (list? x) x
       (list x)))
 
-(function list->string (l :opt delim)
+(function join (l :opt delim)
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
   ; If delim is not specified, consider an empty string to be specified.
-  (if (nil? (cdr l)) (string (car l))
-      (nil? delim) (apply bytes-concat (map string l))
-      (with-memory-stream (out)
-        (write-bytes (car l) out)
+  (if (nil? (cdr l)) (car l)
+      (nil? delim) (apply bytes-concat l)
+      (with-memory-stream ($out)
+        (write-bytes (car l))
         (dolist (x (cdr l))
-          (write-bytes delim out)
-          (write-bytes x out)))))
+          (write-bytes delim)
+          (write-bytes x)))))
 
 (builtin-function length (l)
   ; Returns the length of the specified list l.
@@ -994,10 +994,10 @@
 
 (function string (:rest args)
   ; Returns concatenated string which each of the specified args as string.
-  (with-memory-stream (ms)
+  (with-memory-stream ($out)
     (dolist (arg args)
-      (if (string? arg) (write-bytes arg ms)
-          arg (write arg ms :end "")))))
+      (if (string? arg) (write-bytes arg)
+          arg (write arg :end "")))))
 
 (builtin-function string? (x)
   ; Returns whether the x is a string.
@@ -1012,24 +1012,23 @@
 (function string->code (s)
   ; Returns the code point of string s.
   (let (b 0 val 0)
-    (with-memory-stream (in s)
-      (while (/= (<- b (read-byte in)) -1)
+    (with-memory-stream ($in s)
+      (while (/= (<- b (read-byte)) -1)
         (<- val (| (<< val 8) b))))
     val))
 
 (function code->string (i)
   ; Returns string of code point.
-  (with-memory-stream (out)
+  (with-memory-stream ($out)
     (while (/= i 0)
-      (write-byte (& i 0xff) out)
+      (write-byte (& i 0xff))
       (<- i (>> i 8)))))
 
 (function string->array (s)
   ; Returns a character array of string s.
   (let (a (.new Array) c nil)
-    (with-memory-stream (in s)
-      (while (<- c (read-char in))
-        (.add a c)))
+    (with-memory-stream ($in s)
+      (while (<- c (read-char)) (.add a c)))
     (.to-a a)))
 
 (function string= (x y)
@@ -1124,7 +1123,7 @@
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
-(function string->list (s :opt delim)
+(function split (s :opt delim)
   ; Returns a list of characters in string s.
   ; If delim is specified, returns a list of strings s delimited by delimiter.
   (if (nil? delim) (array->list (string->array s))
@@ -1204,7 +1203,7 @@
 (function bytes->list (s :opt delim)
   ; Returns a list of bytes delimited by bytes s.
   ; If delim is specified, returns a list of strings s delimited by delimiter.
-  (if (nil? delim) (string->list s)
+  (if (nil? delim) (split s)
       (let (acc nil i 0 pos nil slen (bytes-length s) dlen (bytes-length delim))
         (assert (> dlen 0))
         (while (&& (< i slen) (<- pos (bytes-index s delim i)))
@@ -1765,12 +1764,12 @@
             (<- root? true))
         (<- path (remove-if (lambda (file-name)
                               (|| (string= file-name "") (string= file-name "~")))
-                            (string->list
-                              (with-memory-stream (out)
-                                (with-memory-stream (in path-name)
-                                  (while (<- c (read-char in))
-                                    (if (string= c "\\") (write-bytes Path.separator out)
-                                        (write-bytes c out)))))
+                            (split
+                              (with-memory-stream ($out)
+                                (with-memory-stream ($in path-name)
+                                  (while (<- c (read-char))
+                                    (if (string= c "\\") (write-bytes Path.separator)
+                                        (write-bytes c)))))
                               Path.separator)))
         (if root? (<- path (cons Path.separator path)))
         (&path<- (.new Path) path))))
@@ -1836,8 +1835,8 @@
   (! (.absolute? self)))
 
 (method Path .to-l ()
-  (with-open (in self :read)
-    (return (.read-lines in))))
+  (with-open ($in self :read)
+    (return (read-lines))))
 
 (method Path .to-s ()
   (reduce (lambda (acc rest)
@@ -1912,7 +1911,7 @@
 (method Path .children ()
   (map (lambda (child)
          (.resolve self child))
-       (string->list (readdir (.to-s self)) "\n")))
+       (split (readdir (.to-s self)) "\n")))
 
 ;; stream I/O
 
@@ -1979,12 +1978,12 @@
 (method Stream .read ()
   ; Read expression from the specified stream.
   ; Returns nil if eof reached.
-  (.read (.init (.new ParenReader) self)))
+  (let ($in self)
+    (.read (.new ParenReader))))
 
-(method Stream .read-all ()
-  (let (exprs nil expr nil rd (.init (.new ParenReader) self))
-    (while (<- expr (.read rd))
-      (push! exprs expr))
+(method Stream .reads ()
+  (let ($in self exprs nil expr nil rd (.new ParenReader))
+    (while (<- expr (.read rd)) (push! exprs expr))
     (reverse! exprs)))
 
 (method Stream .read-line ()
@@ -2135,7 +2134,7 @@
   (.write-bytes self (|| end "\n"))
   x)
 
-(method Stream .write-all (exprs :key start end)
+(method Stream .writes (exprs :key start end)
   (dolist (expr exprs)
     (.write expr :key start end)))
 
@@ -2245,12 +2244,12 @@
   ; Can be used as a syllable reader or lexical analyzer.
   stream next token lineno)
 
-(method AheadReader .init (:opt stream)
-  (if (nil? stream) (<- stream (dynamic $stdin))
-      (string? stream) (let (s stream) (.write-bytes (<- stream (.new MemoryStream)) s)))
+(method AheadReader .init ()
+  ; initializing AheadReader with (dynamic $in).
+  ; Returns the receiver.
   (&<- self
-    :stream stream
-    :next (.read-char stream)
+    :stream (dynamic $in)
+    :next (.read-char (&stream self))
     :token (.new MemoryStream)
     :lineno 1))
 
@@ -2319,9 +2318,9 @@
   ; Skip line.
   ; Returns line.
   ; If stream reached eof, returns nil.
-  (with-memory-stream (out)
+  (with-memory-stream ($out)
     (while (string/= (&next self) "\n")
-      (if (&next self) (write-bytes (.skip self) out)
+      (if (&next self) (write-bytes (.skip self))
           (return nil)))
     (.skip self)))
 
@@ -2500,8 +2499,8 @@
 (class ParenReader ()
   lexer token token-type)
 
-(method ParenReader .init (stream)
-  (&lexer<- self (.init (.new ParenLexer) stream)))
+(method ParenReader .init ()
+  (&lexer<- self (.new ParenLexer)))
 
 (method ParenReader .scan ()
   (let ((token-type :opt token) (.lex (&lexer self)))
@@ -2582,52 +2581,56 @@
           (list 'push! '$read-table f)
           (list 'push! '$read-table (list 'string->code (list quote next))))))
 
-(function read-byte (:opt stream)
-  ; Read 1byte from the specified stream.
-  ; Returns -1 when the stream reaches the end.
-  (.read-byte (|| stream (dynamic $stdin))))
+(function read-byte ()
+  ; Same as (.read-byte (dynamic $in)).
+  (.read-byte (dynamic $in)))
 
-(function read-char (:opt stream)
-  ; Read 1character from the specified stream.
-  (.read-char (|| stream (dynamic $stdin))))
+(function read-char ()
+  ; Same as (.read-char (dynamic $in)).
+  (.read-char (dynamic $in)))
 
-(function read-line (:opt stream)
-  ; Read line from the specified stream.
-  (.read-line (|| stream (dynamic $stdin))))
+(function read-line ()
+  ; Same as (.read-line (dynamic $in)).
+  (.read-line (dynamic $in)))
 
-(function read-lines (:opt stream)
-  ; Return the rest of the stream as a list whose elements are rows.
-  (.read-lines (|| stream (dynamic $stdin))))
+(function read-lines ()
+  ; Same as (.read-lines (dynamic $in)).
+  (.read-lines (dynamic $in)))
 
-(function read (:opt stream)
-  (.read (|| stream (dynamic $stdin))))
+(function read ()
+  ; Same as (.read (dynamic $in)).
+  (.read (dynamic $in)))
 
-(function read-all (:opt stream)
-  (.read-all (|| stream (dynamic $stdin))))
+(function reads ()
+  ; Same as (.reads (dynamic $in)).
+  (.reads (dynamic $in)))
 
-(function write-byte (byte :opt stream)
-  ; Write 1byte to the specified stream.
-  (.write-byte (|| stream (dynamic $stdout)) byte))
+(function write-byte (x)
+  ; Same as (.write-byte (dynamic $out) x).
+  (.write-byte (dynamic $out) x))
 
-(function write-bytes (bytes :opt stream)
-  ; Write the specified stirng bytes to the specified stream.
-  (.write-bytes (|| stream (dynamic $stdout)) bytes))
+(function write-bytes (x)
+  ; Same as (.write-bytes (dynamic $out) x).
+  (.write-bytes (dynamic $out) x))
 
-(function write-line (:opt bytes stream)
-  (.write-line (|| stream (dynamic $stdout)) bytes))
+(function write-line (:opt x)
+  ; Same as (.write-line (dynamic $out) x).
+  (.write-line (dynamic $out) x))
 
-(function write-lines (lines :opt stream)
-  (.write-lines (|| stream (dynamic $stdout)) lines))
+(function write-lines (x)
+  ; Same as (.write-lines (dynamic $out) x).
+  (.write-lines (dynamic $out) x))
 
-(function flush (:opt stream)
-  (.flush (|| stream (dynamic $stdout))))
+(function write (x :key start end)
+  ; Same as (.write (dynamic $out) x :start start :end end)).
+  (.write (dynamic $out) x :start start :end end))
 
-(function write (x :opt stream :key start end)
-  ; Write the specified x as a readable format.
-  (.write (|| stream (dynamic $stdout)) x :start start :end end))
+(function writes (x :key start end)
+  ; Same as (.writes (dynamic $out) x :start start :end end)).
+  (.writes (dynamic $out) x :start start :end end))
 
-(function write-all (exprs :opt stream :key start end)
-  (.write-all (|| stream (dynamic $stdout)) x :start start :end end))
+(function flush ()
+  (.flush (dynamic $out)))
 
 (macro with-memory-stream ((ms :opt s) :rest body)
   ; Create memory stream context.
@@ -2710,9 +2713,8 @@
 (function load (path)
   ; Load the specified file.
   ; Returns true if successfully loaded.
-  (with-open (in path :read)
-    (dolist (expr (read-all in))
-      (eval expr)))
+  (with-open ($in path :read)
+    (dolist (expr (reads)) (eval expr)))
   true)
 
 (function import (key)
@@ -2746,6 +2748,8 @@
     $read-table nil
     $stdin (.init (.new FileStream) (fp 0))
     $stdout (.init (.new FileStream) (fp 1))
+    $in $stdin
+    $out $stdout
     $external-encoding (if (eq? $host-name :windows) :SJIS :UTF-8)
     $paren-home (.parent (.resolve (Path.getcwd) core.p)))
 
@@ -2757,9 +2761,8 @@
     (.skip lexer "[")
     (while (string/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
-    (with-memory-stream (in (.token lexer))
-      (dolist (expr (read-all in))
-        (.add a expr)))
+    (with-memory-stream ($in (.token lexer))
+      (dolist (expr (reads)) (.add a expr)))
     (.to-a a)))
 
 (reader-macro b (reader)
@@ -2770,10 +2773,9 @@
     (while (string/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (->bytes
-      (with-memory-stream (out)
-        (with-memory-stream (in (.token lexer))
-          (dolist (expr (read-all in))
-            (write-byte expr out)))))))
+      (with-memory-stream ($out)
+        (with-memory-stream ($in (.token lexer))
+          (dolist (expr (reads)) (write-byte expr)))))))
 
 (reader-macro m (reader)
   ; Define expand-macro-all reader.

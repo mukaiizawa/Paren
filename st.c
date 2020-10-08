@@ -3,7 +3,6 @@
 #include "std.h"
 #include "at.h"
 #include "object.h"
-#include "mem.h"
 #include "st.h"
 
 #define INITIAL_ALLOC_SIZE 255

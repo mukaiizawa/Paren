@@ -30,6 +30,9 @@ typedef union s_expr *object;
 
 #define XINT_BITS 63
 
+#define LC(p) (*(unsigned char*)(p))
+#define SC(p,v) (*(unsigned char*)(p)=(unsigned char)(v))
+
 #define object_type(o) (sint_p(o)? SINT: o->header & TYPE_MASK)
 #define object_type_p(o, type) (object_type(o) == type)
 

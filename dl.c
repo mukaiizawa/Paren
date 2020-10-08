@@ -16,7 +16,6 @@
 
 #include "xbarray.h"
 #include "at.h"
-#include "mem.h"
 #include "object.h"
 #include "gc.h"
 #include "bi.h"

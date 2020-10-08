@@ -1,4 +1,4 @@
-; set module
+; set module.
 
 (class Set ()
   cmp elements)

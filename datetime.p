@@ -122,12 +122,12 @@
       (string i)))
 
 (method DateTime .date.to-s ()
-  (list->string (map DateTime.pad2
+  (join (map DateTime.pad2
                      (list (&year self) (&month self) (&day self)))
                 "-"))
 
 (method DateTime .time.to-s ()
-  (list->string (map DateTime.pad2
+  (join (map DateTime.pad2
                      (list (&hour self) (&minute self) (&second self)))
                 ":"))
 
@@ -138,7 +138,7 @@
   (nth '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat") (.day-week self)))
 
 (method DateTime .to-s ()
-  (list->string (list (.date.to-s self) (.day-week.to-s self) (.time.to-s self)) " "))
+  (join (list (.date.to-s self) (.day-week.to-s self) (.time.to-s self)) " "))
 
 (function! main (args)
   (let (dt (.init (.new DateTime) (- 1407737889 (utcoffset))))    ; 2014-08-11 Mon 06:18:09
