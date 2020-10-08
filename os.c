@@ -105,8 +105,8 @@ DEFUN(fgets)
   s = xbarray_fgets(&x, fp);
   if (s == NULL) *result = object_nil;
   else {
-    *result = gc_new_bytes(STRING, --x.size);    // remove last NUL
-    memcpy((*result)->bytes.elt, x.elt, x.size);
+    *result = gc_new_mem(STRING, --x.size);    // remove last NUL
+    memcpy((*result)->mem.elt, x.elt, x.size);
   }
   xbarray_free(&x);
   return TRUE;
@@ -121,9 +121,9 @@ DEFUN(fread)
   if (!bi_arg_type(argv->cons.car, BYTES, &o)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (!(0 <= from && from + size <= o->bytes.size)) return FALSE;
+  if (!(0 <= from && from + size <= o->mem.size)) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
-  size = fread(o->bytes.elt + from, 1, size, fp);
+  size = fread(o->mem.elt + from, 1, size, fp);
   if (size == 0 && ferror(fp)) {
     clearerr(fp);
     return FALSE;
@@ -138,12 +138,12 @@ DEFUN(fwrite)
   int from, size;
   FILE *fp;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
-  if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
+  if (!bi_arg_mem(argv->cons.car, &o)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (!(0 <= from && from + size <= o->bytes.size)) return FALSE;
+  if (!(0 <= from && from + size <= o->mem.size)) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
-  size = fwrite(o->bytes.elt + from, 1, size, fp);
+  size = fwrite(o->mem.elt + from, 1, size, fp);
   if (size == 0 && ferror(fp)) {
     clearerr(fp);
     return FALSE;
@@ -231,7 +231,7 @@ DEFUN(getcwd)
   char buf[MAX_STR_LEN];
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   pf_getcwd(buf);
-  *result = gc_new_bytes_from(STRING, buf, strlen(buf));
+  *result = gc_new_mem_from(STRING, buf, strlen(buf));
   return TRUE;
 }
 
@@ -252,7 +252,7 @@ DEFUN(readdir)
   if ((path = bi_string(argv)) == NULL) return FALSE;
   xbarray_init(&dirs);
   if (!pf_readdir(path, &dirs)) return FALSE;
-  *result = gc_new_bytes_from(STRING, dirs.elt, dirs.size - 1);    // remove last \n
+  *result = gc_new_mem_from(STRING, dirs.elt, dirs.size - 1);    // remove last \n
   xbarray_free(&dirs);
   return TRUE;
 }
@@ -343,7 +343,7 @@ DEFUN(getenv)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if ((s = bi_string(argv)) == NULL) return FALSE;
   if ((s = getenv(s)) == NULL) *result = object_nil;
-  else *result = gc_new_bytes_from(STRING, s, strlen(s));
+  else *result = gc_new_mem_from(STRING, s, strlen(s));
   return TRUE;
 }
 

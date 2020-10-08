@@ -109,11 +109,11 @@ DEFUN(dl_store_byte)
   return TRUE;
 }
 
-DEFUN(bytes_address)
+DEFUN(mem_address)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_mutable_bytes(argv->cons.car, &o)) return FALSE;
-  *result = gc_new_xint((intptr_t)o->bytes.elt);
+  if (!bi_arg_mutable_mem(argv->cons.car, &o)) return FALSE;
+  *result = gc_new_xint((intptr_t)o->mem.elt);
   return TRUE;
 }

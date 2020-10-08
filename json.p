@@ -31,7 +31,7 @@
       (eq? x 'true) "true"
       (eq? x 'false) "false"
       (number? x) (string x)
-      (string "\"" (bytes->string x) "\"")))
+      (string "\"" (mem->str x) "\"")))
 
 (class JSONReader (AheadReader))
 
@@ -39,12 +39,12 @@
   (let (object nil)
     (.skip self "{")
     (when (string/= (.next (.skip-space self)) "}")
-      (push! object (bytes->keyword (.parse-string (.skip-space self))))
+      (push! object (mem->key (.parse-string (.skip-space self))))
       (.skip (.skip-space self) ":")
       (push! object (.read self)))
     (while (string/= (.next (.skip-space self)) "}")
       (.skip self ",")
-      (push! object (bytes->keyword (.parse-string (.skip-space self))))
+      (push! object (mem->key (.parse-string (.skip-space self))))
       (.skip (.skip-space self) ":")
       (push! object (.read self)))
     (.skip self)

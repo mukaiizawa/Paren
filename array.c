@@ -18,12 +18,12 @@ DEFUN(array_p)
   return TRUE;
 }
 
-static int bytes_at(object o, object argv, object *result)
+static int mem_at(object o, object argv, object *result)
 {
   int i;
   if (!bi_sint(argv->cons.cdr->cons.car, &i)) return FALSE;
-  if (i < 0 || i >= o->bytes.size) return FALSE;
-  *result = sint(LC(o->bytes.elt + i));
+  if (i < 0 || i >= o->mem.size) return FALSE;
+  *result = sint(LC(o->mem.elt + i));
   return TRUE;
 }
 
@@ -36,14 +36,14 @@ static int array_at(object o, object argv, object *result)
   return TRUE;
 }
 
-static int bytes_put(object o, object argv, object *result)
+static int mem_put(object o, object argv, object *result)
 {
   int i, byte;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
-  if (i < 0 || i >= o->bytes.size) return FALSE;
+  if (i < 0 || i >= o->mem.size) return FALSE;
   if (!bi_sint((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
   if (!byte_p(byte)) return FALSE;
-  SC(o->bytes.elt + i, byte);
+  SC(o->mem.elt + i, byte);
   return TRUE;
 }
 
@@ -67,8 +67,8 @@ DEFUN(array_access)
     case STRING:
     case SYMBOL:
     case KEYWORD:
-      if (argc == 2) return bytes_at(o, argv, result);
-      return bytes_put(o, argv, result);
+      if (argc == 2) return mem_at(o, argv, result);
+      return mem_put(o, argv, result);
     case ARRAY:
       if (argc == 2) return array_at(o, argv, result);
       return array_put(o, argv, result);

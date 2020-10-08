@@ -41,9 +41,9 @@
       (.skip-space self)
       (while (string/= (.next self) "=")
         (.get self))
-      (push! attrs (bytes->keyword (.token self)))
+      (push! attrs (mem->key (.token self)))
       (.skip self "=")
-      (if (! (bytes-index "'\"" (<- q (.skip (.skip-space self))))) (continue))    ; single attribute
+      (if (! (memstr "'\"" (<- q (.skip (.skip-space self))))) (continue))    ; single attribute
       (while (string/= (.next self) q)
         (.get-escape self))
       (.skip self)
@@ -56,7 +56,7 @@
              (string/= (.next self) "/")
              (string/= (.next self) ">"))
     (.get self))
-  (bytes->symbol (.token self)))
+  (mem->sym (.token self)))
 
 (method XMLReader .parse-?tag ()
   (dostring (c "?xml") (.skip self c))
@@ -101,7 +101,7 @@
       (while (string/= (.next self) ">")
         (.get self))
       (.skip self)
-      (return (list stag? (bytes->symbol (.token self)))))    ; return etag symbol.
+      (return (list stag? (mem->sym (.token self)))))    ; return etag symbol.
     (if (string= (.next self) "!") (list stag? (.parse-!tag self))
         (string= (.next self) "?") (list stag? (.parse-?tag self))
         (let (name (.parse-name self) attrs (.parse-attrs self))

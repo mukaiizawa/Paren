@@ -76,11 +76,11 @@ union s_expr {
     int header;
     double val; 
   } xfloat;
-  struct bytes {
+  struct mem {
     int header;
     int size;
     char elt[1];
-  } bytes;
+  } mem;
   struct array {
     int header;
     int size;

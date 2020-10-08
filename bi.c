@@ -44,7 +44,7 @@ int bi_arg_type(object o, int type, object *result)
   return arg_type(o, object_type_p(o, type), result);
 }
 
-int bi_arg_bytes(object o, object *result)
+int bi_arg_mem(object o, object *result)
 {
   switch (object_type(o)) {
     case BYTES:
@@ -57,7 +57,7 @@ int bi_arg_bytes(object o, object *result)
   }
 }
 
-int bi_arg_mutable_bytes(object o, object *result)
+int bi_arg_mutable_mem(object o, object *result)
 {
   switch (object_type(o)) {
     case BYTES:
@@ -121,23 +121,18 @@ static char *symbol_name_map[] = {
   "array_copy", "arrcpy",
   "array_new", "array",
   "array_length", "arrlen",
-  // bytes
-  "bytes_concat", "bytes-concat",
-  "bytes_copy", "bytes-copy",
-  "bytes_eq_p", "bytes=",
-  "bytes_index", "bytes-index",
-  "bytes_length", "bytes-length",
+  // mem
   "bytes_new", "bytes",
   "bytes_p", "bytes?",
-  "bytes_slice", "bytes-slice",
-  "bytes_to_keyword", "bytes->keyword",
-  "bytes_to_string", "bytes->string",
-  "bytes_to_symbol", "bytes->symbol",
   "keyword_p", "keyword?",
+  "mem_eq_p", "memeq?",
+  "mem_to_mem", "mem->mem",
+  "mem_to_key", "mem->key",
+  "mem_to_str", "mem->str",
+  "mem_to_sym", "mem->sym",
   "string_p", "string?",
   "symbol_p", "symbol?",
-  "to_bytes", "->bytes",
-  "xbytes_to_string", "bytes->string!",
+  "xmem_to_str", "mem->str!",
   // cons
   "cons_p", "cons?",
   "set_assoc", "assoc!",
@@ -264,8 +259,8 @@ int bi_strings(int n, object argv, char **ss)
       mark_type_error();
       return FALSE;
     }
-    ss[i] = xbarray_reserve(&bi_buf, o->bytes.size);
-    memcpy(ss[i], o->bytes.elt, o->bytes.size);
+    ss[i] = xbarray_reserve(&bi_buf, o->mem.size);
+    memcpy(ss[i], o->mem.elt, o->mem.size);
     xbarray_add(&bi_buf, '\0');
     argv = argv->cons.cdr;
   }

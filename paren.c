@@ -40,27 +40,27 @@ static int parse_token(int token)
   return parse_skip();
 }
 
-static object new_bytes(int type)
+static object new_mem(int type)
 {
-  return gc_new_bytes_from(type, token_str, strlen(token_str));
+  return gc_new_mem_from(type, token_str, strlen(token_str));
 }
 
 static object parse_symbol(void)
 {
   parse_token(LEX_SYMBOL);
-  return new_bytes(SYMBOL);
+  return new_mem(SYMBOL);
 }
 
 static object parse_keyword(void)
 {
   parse_token(LEX_KEYWORD);
-  return new_bytes(KEYWORD);
+  return new_mem(KEYWORD);
 }
 
 static object parse_string(void)
 {
   parse_token(LEX_STRING);
-  return new_bytes(STRING);
+  return new_mem(STRING);
 }
 
 static object parse_integer(void)
@@ -153,17 +153,17 @@ static void bind_symbol(object k, object v)
 
 static object symbol_new(char *name)
 {
-  return gc_new_bytes_from(SYMBOL, name, strlen(name));
+  return gc_new_mem_from(SYMBOL, name, strlen(name));
 }
 
 static object keyword_new(char *name)
 {
-  return gc_new_bytes_from(KEYWORD, name, strlen(name));
+  return gc_new_mem_from(KEYWORD, name, strlen(name));
 }
 
 static object string_new(char *name)
 {
-  return gc_new_bytes_from(STRING, name, strlen(name));
+  return gc_new_mem_from(STRING, name, strlen(name));
 }
 
 static void make_builtin(void)

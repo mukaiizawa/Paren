@@ -34,7 +34,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 
 (function contents-padding (id)
   (let (i -1 pad nil)
-    (while (<- i (bytes-index id "." (++ i)))
+    (while (<- i (memstr id "." (++ i)))
       (push! pad '(span)))
     pad))
 

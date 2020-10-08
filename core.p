@@ -627,7 +627,7 @@
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
   ; If delim is not specified, consider an empty string to be specified.
   (if (nil? (cdr l)) (car l)
-      (nil? delim) (apply bytes-concat l)
+      (nil? delim) (apply memcat l)
       (with-memory-stream ($out)
         (write-bytes (car l))
         (dolist (x (cdr l))
@@ -1026,8 +1026,8 @@
     (.to-a a)))
 
 (function string= (x y)
-  ; Same as (bytes= x y).
-  (bytes= x y))
+  ; Same as (memeq? x y).
+  (memeq? x y))
 
 (function string/= (x y)
   ; Same as (bytes/= x y).
@@ -1056,13 +1056,13 @@
 
 (function string-prefix? (s prefix)
   ; Returns whether the string x with the specified prefix.
-  (&& (>= (bytes-length s) (bytes-length prefix))
-      (bytes-index s prefix 0 (bytes-length prefix))))
+  (&& (>= (memlen s) (memlen prefix))
+      (memstr s prefix 0 (memlen prefix))))
 
 (function string-suffix? (s suffix)
   ; Returns whether the string x with the specified suffix.
-    (&& (>= (bytes-length s) (bytes-length suffix))
-        (bytes-index s suffix (- (bytes-length s) (bytes-length suffix)))))
+    (&& (>= (memlen s) (memlen suffix))
+        (memstr s suffix (- (memlen s) (memlen suffix)))))
 
 (function string-slice (s start :opt end)
   ; Returns a string that is a substring of the specified string s.
@@ -1073,11 +1073,11 @@
     (.write-bytes ms s)
     (dotimes (i start)
       (if (nil? (.read-char ms)) (error "illegal start " start)))
-    (if (nil? end) (bytes-slice s (.tell ms))
+    (if (nil? end) (submem s (.tell ms))
         (let (pos (.tell ms))
           (dotimes (i (- end start))
             (if (nil? (.read-char ms)) (error "illegal end " end)))
-          (bytes-slice s pos (.tell ms))))))
+          (submem s pos (.tell ms))))))
 
 (function string-at (s i)
   ; Returns the i-th character of string s.
@@ -1096,10 +1096,10 @@
     (if (< (- slen start) 0) (error "illegal start")
         (= plen 0) (return 0))
     (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (<- i (++ i))
-      (when (bytes= ([] sa i) p0)
+      (when (memeq? ([] sa i) p0)
         (if (= plen 1) (return i))
         (let (si (++ i) pi 1)
-          (while (bytes= ([] sa si) ([] pa pi))
+          (while (memeq? ([] sa si) ([] pa pi))
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
@@ -1110,10 +1110,10 @@
            pa (str->arr pat) plen (arrlen pa))
     (if (= plen 0) (return (-- slen)))
     (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (<- i (-- i))
-      (when (bytes= ([] sa i) p0)
+      (when (memeq? ([] sa i) p0)
         (if (= plen 1) (return i))
         (let (si (++ i) pi 1)
-          (while (bytes= ([] sa si) ([] pa pi))
+          (while (memeq? ([] sa si) ([] pa pi))
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
@@ -1126,9 +1126,9 @@
               da (str->arr delim) dalen (arrlen da) end (- salen dalen)
               match? (f ()
                        (dotimes (j dalen)
-                         (if (! (bytes= ([] sa (+ i j)) ([] da j))) (return nil)))
+                         (if (! (memeq? ([] sa (+ i j)) ([] da j))) (return nil)))
                        true)
-              join-chars (f () (if chars (apply bytes-concat (reverse! chars)) "")))
+              join-chars (f () (if chars (apply memcat (reverse! chars)) "")))
         (while (<= i end)
           (if (match?) (<- lis (cons (join-chars) lis)
                            chars nil
@@ -1156,94 +1156,94 @@
   (assert (! (bytes? "foo")))
   (assert (! (bytes? (array 3)))))
 
-(builtin-function bytes= (x y)
+(builtin-function memeq? (x y)
   ; Returns whether x arguments are the same bytes.
   ; This function also accepts symbols, keywords and strings.
-  (assert (bytes= :foo :foo))
-  (assert (! (bytes= "foo" "bar"))))
+  (assert (memeq? :foo :foo))
+  (assert (! (memeq? "foo" "bar"))))
 
 (function bytes/= (x y)
-  ; Same as (! (bytes= x y)).
-  (! (bytes= x y)))
+  ; Same as (! (memeq? x y)).
+  (! (memeq? x y)))
 
-(builtin-function ->bytes (x :opt i size)
+(builtin-function mem->bytes (x :opt i size)
   ; Returns bytes corresponding to x.
   ; If i is supplied, returns string of partial byte sequence from i of x.
   ; If size is supplied, returns string of partial byte sequence from i to (size -1) of x.
-  (assert (eq? (bytes->symbol "foo") 'foo)))
+  (assert (eq? (mem->sym "foo") 'foo)))
 
-(builtin-function bytes->symbol (x :opt i size)
-  ; Same as (->bytes x) except returns symbol.
-  (assert (eq? (bytes->symbol "foo") 'foo)))
+(builtin-function mem->sym (x :opt i size)
+  ; Same as (mem->bytes x) except returns symbol.
+  (assert (eq? (mem->sym "foo") 'foo)))
 
-(builtin-function bytes->keyword (x)
-  ; Same as (->bytes x) except returns keyword.
-  (assert (eq? (bytes->keyword "foo") :foo)))
+(builtin-function mem->key (x)
+  ; Same as (mem->bytes x) except returns keyword.
+  (assert (eq? (mem->key "foo") :foo)))
 
-(builtin-function bytes->string (x :opt i size)
-  ; Same as (->bytes x) except returns string.
-  (assert (bytes= (bytes->string 'foo) "foo"))
-  (assert (bytes= (bytes->string 'foo 1) "oo"))
-  (assert (bytes= (bytes->string 'foo 1 1) "o")))
+(builtin-function mem->str (x :opt i size)
+  ; Same as (mem->bytes x) except returns string.
+  (assert (memeq? (mem->str 'foo) "foo"))
+  (assert (memeq? (mem->str 'foo 1) "oo"))
+  (assert (memeq? (mem->str 'foo 1 1) "o")))
 
-(builtin-function bytes->string! (x)
-  ; Same as (bytes->string x), except that it destructively modifies the x.
-  ; Generally faster than bytes->string.
+(builtin-function mem->str! (x)
+  ; Same as (mem->str x), except that it destructively modifies the x.
+  ; Generally faster than mem->str.
   ; This function only allows bytes.
   (assert (let (x (bytes 1))
             ([] x 0 0x01)
-            (bytes= (bytes->string! x) "\x01"))))
+            (memeq? (mem->str! x) "\x01"))))
 
 (function bytes->list (s :opt delim)
   ; Returns a list of bytes delimited by bytes s.
   ; If delim is specified, returns a list of strings s delimited by delimiter.
   (if (nil? delim) (split s)
-      (let (acc nil i 0 pos nil slen (bytes-length s) dlen (bytes-length delim))
+      (let (acc nil i 0 pos nil slen (memlen s) dlen (memlen delim))
         (assert (> dlen 0))
-        (while (&& (< i slen) (<- pos (bytes-index s delim i)))
-          (push! acc (bytes-slice s i pos))
+        (while (&& (< i slen) (<- pos (memstr s delim i)))
+          (push! acc (submem s i pos))
           (<- i (+ pos dlen)))
-        (push! acc (bytes-slice s i slen))
+        (push! acc (submem s i slen))
         (reverse! acc))))
 
-(builtin-function bytes-length (x)
+(builtin-function memlen (x)
   ; Returns the size of the bytes x.
   ; This function also accepts symbols, keywords and strings.
-  (assert (= (bytes-length "") 0))
-  (assert (= (bytes-length "012") 3)))
+  (assert (= (memlen "") 0))
+  (assert (= (memlen "012") 3)))
 
-(builtin-function bytes-index (x b :opt start end)
+(builtin-function memstr (x b :opt start end)
   ; Returns the position where the b appears first in the bytes x.
   ; If the b is not appeared, returns nil.
   ; If b is bytes, returns the position where the partial bytes appears first in the bytes x.
   ; If start is specified, search from start-th of the bytes x.
   ; If end is specified, search untile end-th of the bytes x.
   ; This function also accepts symbols, keywords and strings.
-  (assert (= (bytes-index "012" 0x31 1) 1))
-  (assert (= (bytes-index "012" 0x31 0 3) 1))
-  (assert (= (bytes-index "012" 0x31 0 3) 1))
-  (assert (= (bytes-index "012" "12" 0 3) 1)))
+  (assert (= (memstr "012" 0x31 1) 1))
+  (assert (= (memstr "012" 0x31 0 3) 1))
+  (assert (= (memstr "012" 0x31 0 3) 1))
+  (assert (= (memstr "012" "12" 0 3) 1)))
 
-(builtin-function bytes-copy (src src-i dst dst-i size)
+(builtin-function memcpy (src src-i dst dst-i size)
   ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
   ; Returns dst.
   ; Even if the areas to be copied overlap, it operates correctly.
   ; This function also accepts strings.
   (assert (let (s "foo" d "bar")
-            (bytes= (bytes-copy s 1 d 1 2) "boo"))))
+            (memeq? (memcpy s 1 d 1 2) "boo"))))
 
-(builtin-function bytes-slice (x start :opt end)
+(builtin-function submem (x start :opt end)
   ; Returns the partial byte sequence starting from start.
   ; If end is specified, returns the partial byte sequence from the i th to (end-1) th.
   ; This function also accepts strings.
-  (assert (bytes= (bytes-slice "012" 0) "012"))
-  (assert (bytes= (bytes-slice "012" 1) "12"))
-  (assert (bytes= (bytes-slice "012" 1 2) "1")))
+  (assert (memeq? (submem "012" 0) "012"))
+  (assert (memeq? (submem "012" 1) "12"))
+  (assert (memeq? (submem "012" 1 2) "1")))
 
-(builtin-function bytes-concat (x :rest args)
+(builtin-function memcat (x :rest args)
   ; Returns the result of combining each args with x.
   ; This function also accepts symbols, keywords and strings.
-  (assert (bytes= (bytes-concat "0" "1" "2") "012")))
+  (assert (memeq? (memcat "0" "1" "2") "012")))
 
 ; array
 
@@ -1503,10 +1503,10 @@
   ; If field name is 'xxx', bind a getter named `&xxx` and setter named `&xxx<-`.
   ; Works faster than method which defined with the `method` macro.
   (with-gensyms (receiver val)
-    (let (key (bytes->keyword field)
-              field (bytes->string field)
-              getter (bytes-concat '& field)
-              setter (bytes-concat '& field '<-))
+    (let (key (mem->key field)
+              field (mem->str field)
+              getter (memcat '& field)
+              setter (memcat '& field '<-))
       (list begin
             (list if (list ! (list 'bound? (list quote getter)))
                   (list 'function getter (list receiver)
@@ -1521,7 +1521,7 @@
   (with-gensyms (go)
     (cons let (cons (list go object)
                     (map (f (pair)
-                           (list (bytes->symbol (bytes-concat '& (car pair) '<-)) go (cadr pair)))
+                           (list (mem->sym (memcat '& (car pair) '<-)) go (cadr pair)))
                          (group pairs 2))))))
 
 (macro make-method-dispatcher (method-sym)
@@ -1550,7 +1550,7 @@
               (map (f (field) (list 'make-accessor field)) fields))))
 
 (macro method (cls-sym method-sym args :rest body)
-  (let (global-sym (bytes-concat cls-sym method-sym))
+  (let (global-sym (memcat cls-sym method-sym))
     (if (nil? (find-class cls-sym)) (error "unbound class")
         (bound? global-sym) (error global-sym " already bound"))
     (list begin
@@ -1597,7 +1597,7 @@
   ; Otherwise automatically invoke .init method.
   (let (o nil)
     (for (cls self) cls (<- cls (find-class (assoc cls :super)))
-      (dolist (field (reverse! (map bytes->keyword (assoc cls :fields))))
+      (dolist (field (reverse! (map mem->key (assoc cls :fields))))
         (push! o nil)
         (push! o field)))
     (car! (cdr o) (assoc self :symbol))
@@ -1626,8 +1626,8 @@
 
 (method Exception .to-s ()
   ; Returns a String representing the receiver.
-  (let (class-name (bytes->string (&class self)) msg (&message self))
-    (if msg (bytes-concat class-name " -- " msg)
+  (let (class-name (mem->str (&class self)) msg (&message self))
+    (if msg (memcat class-name " -- " msg)
         class-name)))
 
 (method Exception .stack-trace ()
@@ -1739,9 +1739,9 @@
   (if (is-a? path-name Path) path-name
       (let (c nil path nil first-letter (string-at path-name 0) root? nil)
         (if (string= first-letter "~")
-            (<- path-name (bytes-concat
+            (<- path-name (memcat
                             (if (eq? $host-name :windows)
-                                (bytes-concat (getenv "HOMEDRIVE") (getenv "HOMEPATH"))
+                                (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH"))
                                 (getenv "HOME"))
                             Path.separator path-name))
             (string= first-letter Path.separator)
@@ -1803,14 +1803,14 @@
   ; `.` and `..` included in path-name are not treated specially.
   (if (string? path) (<- path (Path.of path)))
   (if (.absolute? path) path
-      (Path.of (bytes-concat (.to-s self) Path.separator (.to-s path)))))
+      (Path.of (memcat (.to-s self) Path.separator (.to-s path)))))
 
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
   (let (first-file (car (&path self)))
     (if (eq? $host-name :windows)
-        (&& (= (bytes-length first-file) 2)
-            (bytes-index first-file ":" 1 2))
+        (&& (= (memlen first-file) 2)
+            (memstr first-file ":" 1 2))
         (string= first-file Path.separator))))
 
 (method Path .relative? ()
@@ -1823,7 +1823,7 @@
 
 (method Path .to-s ()
   (reduce (f (acc rest)
-            (bytes-concat (if (string= acc Path.separator) "" acc) Path.separator rest))
+            (memcat (if (string= acc Path.separator) "" acc) Path.separator rest))
           (&path self)))
 
 (method Path .open (mode)
@@ -1955,7 +1955,7 @@
           (= size 2) (begin ([] c 0 b1) ([] c 1 b2))
           (= size 3) (begin ([] c 0 b1) ([] c 1 b2) ([] c 2 b3))
           (= size 4) (begin ([] c 0 b1) ([] c 1 b2) ([] c 2 b3) ([] c 3 b4)))
-      (bytes->string! c))))
+      (mem->str! c))))
 
 (method Stream .read ()
   ; Read expression from the specified stream.
@@ -2094,7 +2094,7 @@
       (bytes? x)
       (begin
         (.write-bytes self "#b[")
-        (dotimes (i (bytes-length x))
+        (dotimes (i (memlen x))
           (if (/= i 0) (.write-byte self 0x20))
           (.write-bytes self "0x")
           (.write-int self ([] x i) :radix 16 :padding 2))
@@ -2137,11 +2137,11 @@
   (&wrpos self))
 
 (method MemoryStream .reserve (size)
-  (let (req (+ (&wrpos self) size) buf-size (bytes-length (&buf self)))
+  (let (req (+ (&wrpos self) size) buf-size (memlen (&buf self)))
     (when (< buf-size req)
       (while (< (<- buf-size (* buf-size 2)) req))
       (let (buf (bytes buf-size))
-        (bytes-copy (&buf self) 0 buf 0 (&wrpos self))
+        (memcpy (&buf self) 0 buf 0 (&wrpos self))
         (&buf<- self buf)))
     self))
 
@@ -2154,7 +2154,7 @@
 (method MemoryStream .read-bytes (buf from size)
   (let (rest (- (&wrpos self) (&rdpos self)))
     (if (< rest size) (<- size rest))
-    (bytes-copy (&buf self) (&rdpos self) buf (&wrpos self) size)
+    (memcpy (&buf self) (&rdpos self) buf (&wrpos self) size)
     size))
 
 (method MemoryStream .write-byte (byte)
@@ -2164,8 +2164,8 @@
     (&wrpos<- self (++ wrpos))))
 
 (method MemoryStream .write-bytes (bytes :opt from size)
-  (.reserve self (|| size (<- size (bytes-length bytes))))
-  (bytes-copy bytes (|| from 0) (&buf self) (&wrpos self) size)
+  (.reserve self (|| size (<- size (memlen bytes))))
+  (memcpy bytes (|| from 0) (&buf self) (&wrpos self) size)
   (&wrpos<- self (+ (&wrpos self) size))
   size)
 
@@ -2180,7 +2180,7 @@
   ; Returns the contents written to the stream as a string.
   (let (size (&wrpos self))
     (if (= size 0) ""
-        (bytes->string (&buf self) 0 size))))
+        (mem->str (&buf self) 0 size))))
 
 (method MemoryStream .reset ()
   ; Empty the contents of the stream.
@@ -2209,7 +2209,7 @@
   (fputc byte (&fp self)))
 
 (method FileStream .write-bytes (x :opt from size)
-  (fwrite x (|| from 0) (|| size (bytes-length x)) (&fp self)))
+  (fwrite x (|| from 0) (|| size (memlen x)) (&fp self)))
 
 (method FileStream .seek (offset)
   (fseek (&fp self) offset))
@@ -2412,11 +2412,11 @@
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (|| (bytes-index "!#$%&*./<=>?^[]_{|}" (.next self))
+  (|| (memstr "!#$%&*./<=>?^[]_{|}" (.next self))
       (.alpha? self)))
 
 (method ParenLexer .identifier-sign? ()
-  (bytes-index "+-" (.next self)))
+  (memstr "+-" (.next self)))
 
 (method ParenLexer .identifier-trail? ()
   (|| (.identifier-symbol-alpha? self)
@@ -2444,14 +2444,14 @@
         (let (val (.skip-number self))
           (if (string= sign "-") (- val) val))
         (begin (.put self sign)
-               (bytes->symbol (.token (.get-identifier-sign self)))))))
+               (mem->sym (.token (.get-identifier-sign self)))))))
 
 (method ParenLexer .lex-symbol ()
-  (bytes->symbol (.token (.get-identifier self))))
+  (mem->sym (.token (.get-identifier self))))
 
 (method ParenLexer .lex-keyword ()
   (.skip self)
-  (bytes->keyword (.token (.get-identifier self))))
+  (mem->key (.token (.get-identifier self))))
 
 (method ParenLexer .lex-string ()
   (.skip self)
@@ -2479,7 +2479,7 @@
         (string= next "\"") (list :atom (.lex-string self))
         (string= next ":") (list :atom (.lex-keyword self))
         (string= next ";") (begin (.skip-comment self) (.lex self))
-        (string= next "#") (begin (.skip self) (list :read-macro (bytes->symbol (.next self))))
+        (string= next "#") (begin (.skip self) (list :read-macro (mem->sym (.next self))))
         (|| (string= next "+")
             (string= next "-")) (list :atom (.lex-sign self))
         (.digit? self) (list :atom (.skip-number self))
@@ -2714,7 +2714,7 @@
   ; Module file to read must be UTF-8.
   (let ($external-encoding :UTF-8)
     (if (find-if (f (x) (eq? x key)) $import) true
-        (let (p (Path.of (string (bytes->symbol key) ".p")))
+        (let (p (Path.of (string (mem->sym key) ".p")))
           (if (|| (.readable? p) (.readable? (<- p (.resolve $paren-home p))))
               (begin0 (load p)
                       (<- main nil)
@@ -2761,7 +2761,7 @@
     (.skip lexer "[")
     (while (string/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
-    (->bytes
+    (mem->bytes
       (with-memory-stream ($out)
         (with-memory-stream ($in (.token lexer))
           (dolist (expr (reads)) (write-byte expr)))))))

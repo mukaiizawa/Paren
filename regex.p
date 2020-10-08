@@ -91,14 +91,14 @@
   ;         {n}     {n}?     match exactly n times.
   ;         {n,}    {n,}?    match at least n times.
   ;         {n,m}   {n,m}?   match from n to m times.
-  (let (r (.new Regex) s 0 e (bytes-length expr) anchored? nil)
+  (let (r (.new Regex) s 0 e (memlen expr) anchored? nil)
     (when (= ([] expr 0) 0x5e)
       (&anchored-start?<- r true)
       (<- s (++ s) anchored? true))
     (when (= ([] expr (-- e)) 0x24)
       (&anchored-end?<- r true)
       (<- e (-- e) anchored? true))
-    (if anchored? (<- expr (bytes-slice expr s e)))
+    (if anchored? (<- expr (submem expr s e)))
     (with-memory-stream ($in expr)
       (&elements<- r (Regex.parse (.new AheadReader))))))
 

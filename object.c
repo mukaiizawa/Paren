@@ -78,7 +78,7 @@ int object_byte_size(object o)
     case KEYWORD:
     case STRING:
     case BYTES:
-      return sizeof(struct bytes) + o->bytes.size - 1;
+      return sizeof(struct mem) + o->mem.size - 1;
     case ARRAY:
       return sizeof(struct array) + (o->array.size - 1) * sizeof(object);
     default:
@@ -87,9 +87,9 @@ int object_byte_size(object o)
   }
 }
 
-static void xbarray_add_bytes(struct xbarray *x, object o)
+static void xbarray_add_mem(struct xbarray *x, object o)
 {
-  memcpy(xbarray_reserve(x, o->bytes.size), o->bytes.elt, o->bytes.size);
+  memcpy(xbarray_reserve(x, o->mem.size), o->mem.elt, o->mem.size);
 }
 
 static void describe_s_expr(object o, struct xbarray *x);
@@ -103,13 +103,13 @@ static void describe_cons(object o, struct xbarray *x)
   }
 }
 
-static void describe_bytes(object o, struct xbarray *x)
+static void describe_mem(object o, struct xbarray *x)
 {
   int i;
   xbarray_adds(x, "#b[");
-  for (i = 0; i < o->bytes.size; i++) {
+  for (i = 0; i < o->mem.size; i++) {
     if (i != 0) xbarray_add(x, ' ');
-    xbarray_addf(x, "0x%x", o->bytes.elt[i]);
+    xbarray_addf(x, "0x%x", o->mem.elt[i]);
     if (x->size > MAX_STR_LEN) return;
   }
   xbarray_add(x, ']');
@@ -171,21 +171,21 @@ static void describe_s_expr(object o, struct xbarray *x)
       break;
     case STRING:
       xbarray_add(x, '"');
-      xbarray_add_bytes(x, o);
+      xbarray_add_mem(x, o);
       xbarray_add(x, '"');
       break;
     case KEYWORD:
       xbarray_add(x, ':');
-      xbarray_add_bytes(x, o);
+      xbarray_add_mem(x, o);
       break;
     case BUILTINFUNC:
     case SPECIAL:
       o = o->builtin.name;
     case SYMBOL:
-      xbarray_add_bytes(x, o);
+      xbarray_add_mem(x, o);
       break;
     case BYTES:
-      describe_bytes(o, x);
+      describe_mem(o, x);
       break;
     case ARRAY:
       describe_array(o, x);

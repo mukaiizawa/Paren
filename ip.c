@@ -260,8 +260,8 @@ static void gen_if_frame(object args)
 static int same_symbol_keyword_p(object sym, object key)
 {
   xassert(object_type_p(sym, SYMBOL) && object_type_p(key, KEYWORD));
-  if (sym->bytes.size != key->bytes.size) return FALSE;
-  return memcmp(sym->bytes.elt, key->bytes.elt, sym->bytes.size) == 0;
+  if (sym->mem.size != key->mem.size) return FALSE;
+  return memcmp(sym->mem.elt, key->mem.elt, sym->mem.size) == 0;
 }
 
 static int valid_keyword_args(object params, object args)
@@ -771,7 +771,7 @@ DEFUN(gensym)
   static int c = 0;
   xbarray_reset(&bi_buf);
   xbarray_addf(&bi_buf, "$G-%d", ++c);
-  reg[0] = gc_new_bytes_from(SYMBOL, bi_buf.elt, bi_buf.size);
+  reg[0] = gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size);
   return TRUE;
 }
 
@@ -889,9 +889,9 @@ static int find_class_method(object cls_sym, object mtd_sym, object *result)
   xassert(object_type_p(cls_sym, SYMBOL));
   xassert(object_type_p(mtd_sym, SYMBOL));
   xbarray_reset(&bi_buf);
-  xbarray_copy(&bi_buf, cls_sym->bytes.elt, cls_sym->bytes.size);
-  xbarray_copy(&bi_buf, mtd_sym->bytes.elt, mtd_sym->bytes.size);
-  s = gc_new_bytes_from(SYMBOL, bi_buf.elt, bi_buf.size);
+  xbarray_copy(&bi_buf, cls_sym->mem.elt, cls_sym->mem.size);
+  xbarray_copy(&bi_buf, mtd_sym->mem.elt, mtd_sym->mem.size);
+  s = gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size);
   if (((*result) = symbol_find_propagation(reg[1], s)) == NULL) return TRUE;
   return TRUE;
 }
