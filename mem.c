@@ -60,7 +60,7 @@ static int mem_to(int argc, object argv, object *result, int type)
   return TRUE;
 }
 
-DEFUN(mem_to_mem)
+DEFUN(mem_to_bytes)
 {
   return mem_to(argc, argv, result, BYTES);
 }

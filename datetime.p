@@ -5,7 +5,7 @@
 ; After creating with new, you need to clear and initialize it using the method starting with init.
 ; Valid from 1904 to 2099.
 
-(class DateTime (Object Comparable)
+(class DateTime (Object)
   unix-time year month day day-week hour minute second)
 
 (method DateTime .init (unix-time)
@@ -96,11 +96,11 @@
   ; Returns the number of seconds relative to the receiver's unix epoch (January 1, 1970, 00:00:00 UTC).
   (&unix-time self))
 
-(method DateTime .eq? (o)
-  (&& (is-a? o DateTime) (= (&unix-time self) (.unix-time o))))
-
-(method DateTime .lt? (:rest args)
-  (apply < (map .unix-time (cons self args))))
+(method DateTime .cmp (o)
+  (let (x (&unix-time self) y (&unix-time o)) 
+    (if (= x y) 0
+        (< x y) -1
+        1)))
 
 (method DateTime .leap-year? ()
   (= (mod (&year self) 4) 0))
@@ -151,14 +151,10 @@
     (assert (= (.second dt) 9))
     (assert (= (.unix-time dt) (- 1407737889 (utcoffset))))
     (assert (.eq? dt dt))
-    (assert (! (.eq? dt nil)))
-    (assert (.lt? dt (DateTime.now) (DateTime.of 2022 2 2)))
-    (assert (.le? dt dt dt))
-    (assert (.ge? (DateTime.now) dt dt))
-    (assert (.gt? (DateTime.of 2022 2 2) (DateTime.now) dt)))
+    (assert (! (.eq? dt nil))))
   (let (dt (DateTime.of 2020 08 06 12 10 30))
-    (assert (string= (.date.to-s dt) "2020-08-06"))
-    (assert (string= (.time.to-s dt) "12:10:30"))
-    (assert (string= (.datetime.to-s dt) "2020-08-06 12:10:30"))
-    (assert (string= (.day-week.to-s dt) "Thu"))
-    (assert (string= (.to-s dt) "2020-08-06 Thu 12:10:30"))))
+    (assert (memeq? (.date.to-s dt) "2020-08-06"))
+    (assert (memeq? (.time.to-s dt) "12:10:30"))
+    (assert (memeq? (.datetime.to-s dt) "2020-08-06 12:10:30"))
+    (assert (memeq? (.day-week.to-s dt) "Thu"))
+    (assert (memeq? (.to-s dt) "2020-08-06 Thu 12:10:30"))))

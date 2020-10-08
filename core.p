@@ -349,10 +349,9 @@
     (list let (list clock-offset '(clock) cycle-offset '(cycle))
           (list 'begin0
                 (cons begin body)
-                (list 'write-bytes (list 'string
-                                         "time=" (list '- '(clock) clock-offset)
-                                         ",cycle=" (list '- '(cycle) cycle-offset)))
-                '(write-line)))))
+                (list 'write-line (list 'string
+                                       "time=" (list '- '(clock) clock-offset)
+                                       ",cycle=" (list '- '(cycle) cycle-offset)))))))
 
 (builtin-function expand-macro (expr)
   ; Returns the result of expanding the macro when expr is a list and car is a macro.
@@ -629,10 +628,33 @@
   (if (nil? (cdr l)) (car l)
       (nil? delim) (apply memcat l)
       (with-memory-stream ($out)
-        (write-bytes (car l))
+        (write-mem (car l))
         (dolist (x (cdr l))
-          (write-bytes delim)
-          (write-bytes x)))))
+          (write-mem delim)
+          (write-mem x)))))
+
+(function split (s :opt delim)
+  ; Returns a list of characters in string s.
+  ; If delim is specified, returns a list of strings s delimited by delimiter.
+  (if (nil? delim) (->list (str->arr s))
+      (let (i 0 lis nil chars nil
+              sa (str->arr s) salen (arrlen sa)
+              da (str->arr delim) dalen (arrlen da) end (- salen dalen)
+              match? (f ()
+                       (dotimes (j dalen)
+                         (if (! (memeq? ([] sa (+ i j)) ([] da j))) (return nil)))
+                       true)
+              join-chars (f () (if chars (apply memcat (reverse! chars)) "")))
+        (while (<= i end)
+          (if (match?) (<- lis (cons (join-chars) lis)
+                           chars nil
+                           i (+ i dalen))
+              (<- chars (cons ([] sa i) chars)
+                  i (++ i))))
+        (while (< i salen)
+          (<- chars (cons ([] sa i) chars)
+              i (++ i)))
+        (reverse! (cons (join-chars) lis)))))
 
 (builtin-function length (l)
   ; Returns the length of the specified list l.
@@ -989,7 +1011,7 @@
   ; Returns concatenated string which each of the specified args as string.
   (with-memory-stream ($out)
     (dolist (arg args)
-      (if (string? arg) (write-bytes arg)
+      (if (string? arg) (write-mem arg)
           arg (write arg :end "")))))
 
 (builtin-function string? (x)
@@ -1011,7 +1033,7 @@
         (<- val (| (<< val 8) b))))
     val))
 
-(function code->string (i)
+(function code->str (i)
   ; Returns string of code point.
   (with-memory-stream ($out)
     (while (/= i 0)
@@ -1025,52 +1047,13 @@
       (while (<- c (read-char)) (.add a c)))
     (.to-a a)))
 
-(function string= (x y)
-  ; Same as (memeq? x y).
-  (memeq? x y))
-
-(function string/= (x y)
-  ; Same as (bytes/= x y).
-  (bytes/= x y))
-
-(function string< (:rest args)
-  ; Returns whether the each of the specified args are in monotonically decreasing order.
-  (apply < (map str->code args)))
-
-(function string> (:rest args)
-  ; Returns whether the each of the specified args are in monotonically increasing order.
-  (all-adjacent-satisfy? (f (x y) (string< y x)) args))
-
-(function string<= (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
-  (all-adjacent-satisfy? (f (x y) (! (string< y x))) args))
-
-(function string>= (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
-  (all-adjacent-satisfy? (f (x y) (! (string< x y))) args))
-
-(function string-empty? (s)
-  ; Returns whether the string is "".
-  ; If s is nil, returns true.
-  (|| (nil? s) (string= s "")))
-
-(function string-prefix? (s prefix)
-  ; Returns whether the string x with the specified prefix.
-  (&& (>= (memlen s) (memlen prefix))
-      (memstr s prefix 0 (memlen prefix))))
-
-(function string-suffix? (s suffix)
-  ; Returns whether the string x with the specified suffix.
-    (&& (>= (memlen s) (memlen suffix))
-        (memstr s suffix (- (memlen s) (memlen suffix)))))
-
-(function string-slice (s start :opt end)
+(function substr (s start :opt end)
   ; Returns a string that is a substring of the specified string s.
   ; The substring begins at the specified start and extends to the character at index end - 1.
   ; Thus the length of the substring is `end - start`.
   (let (ms (.new MemoryStream))
     (if (< start 0) (error "illegal start " start))
-    (.write-bytes ms s)
+    (.write-mem ms s)
     (dotimes (i start)
       (if (nil? (.read-char ms)) (error "illegal start " start)))
     (if (nil? end) (submem s (.tell ms))
@@ -1079,15 +1062,15 @@
             (if (nil? (.read-char ms)) (error "illegal end " end)))
           (submem s pos (.tell ms))))))
 
-(function string-at (s i)
+(function strnth (s i)
   ; Returns the i-th character of string s.
   ([] (str->arr s) i))
 
-(function string-length (s)
+(function strlen (s)
   ; Returns the number of characters in string s.
   (arrlen (str->arr s)))
 
-(function string-index (s pat :opt start)
+(function strstr (s pat :opt start)
   ; Returns the position where the substring pat appears first in the string s.
   ; If the string pat is not a substring of the string s, returns nil.
   ; If start is specified, search for substring pat from start-th of the string s.
@@ -1103,7 +1086,7 @@
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
-(function string-last-index (s pat)
+(function strlstr (s pat)
   ; Returns the position where the substring pat appears last in the string s.
   ; If the string pat is not a substring of the string s, returns nil.
   (let (sa (str->arr s) slen (arrlen sa)
@@ -1116,29 +1099,6 @@
           (while (memeq? ([] sa si) ([] pa pi))
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
-
-(function split (s :opt delim)
-  ; Returns a list of characters in string s.
-  ; If delim is specified, returns a list of strings s delimited by delimiter.
-  (if (nil? delim) (->list (str->arr s))
-      (let (i 0 lis nil chars nil
-              sa (str->arr s) salen (arrlen sa)
-              da (str->arr delim) dalen (arrlen da) end (- salen dalen)
-              match? (f ()
-                       (dotimes (j dalen)
-                         (if (! (memeq? ([] sa (+ i j)) ([] da j))) (return nil)))
-                       true)
-              join-chars (f () (if chars (apply memcat (reverse! chars)) "")))
-        (while (<= i end)
-          (if (match?) (<- lis (cons (join-chars) lis)
-                           chars nil
-                           i (+ i dalen))
-              (<- chars (cons ([] sa i) chars)
-                  i (++ i))))
-        (while (< i salen)
-          (<- chars (cons ([] sa i) chars)
-              i (++ i)))
-        (reverse! (cons (join-chars) lis)))))
 
 ; bytes
 
@@ -1156,15 +1116,22 @@
   (assert (! (bytes? "foo")))
   (assert (! (bytes? (array 3)))))
 
+; mem
+
 (builtin-function memeq? (x y)
   ; Returns whether x arguments are the same bytes.
   ; This function also accepts symbols, keywords and strings.
   (assert (memeq? :foo :foo))
   (assert (! (memeq? "foo" "bar"))))
 
-(function bytes/= (x y)
+(function memneq? (x y)
   ; Same as (! (memeq? x y)).
   (! (memeq? x y)))
+
+(function memempty? (s)
+  ; Returns whether the s is "".
+  ; If s is nil, returns true.
+  (|| (nil? s) (= (memlen s) 0)))
 
 (builtin-function mem->bytes (x :opt i size)
   ; Returns bytes corresponding to x.
@@ -1194,17 +1161,15 @@
             ([] x 0 0x01)
             (memeq? (mem->str! x) "\x01"))))
 
-(function bytes->list (s :opt delim)
-  ; Returns a list of bytes delimited by bytes s.
-  ; If delim is specified, returns a list of strings s delimited by delimiter.
-  (if (nil? delim) (split s)
-      (let (acc nil i 0 pos nil slen (memlen s) dlen (memlen delim))
-        (assert (> dlen 0))
-        (while (&& (< i slen) (<- pos (memstr s delim i)))
-          (push! acc (submem s i pos))
-          (<- i (+ pos dlen)))
-        (push! acc (submem s i slen))
-        (reverse! acc))))
+(function memprefix? (s prefix)
+  ; Returns whether the string x with the specified prefix.
+  (&& (>= (memlen s) (memlen prefix))
+      (memstr s prefix 0 (memlen prefix))))
+
+(function memsuffix? (s suffix)
+  ; Returns whether the string x with the specified suffix.
+    (&& (>= (memlen s) (memlen suffix))
+        (memstr s suffix (- (memlen s) (memlen suffix)))))
 
 (builtin-function memlen (x)
   ; Returns the size of the bytes x.
@@ -1634,10 +1599,10 @@
   (&stack-trace self))
 
 (method Exception .print-stack-trace ()
-  (write-bytes (.to-s self))
+  (write-mem (.to-s self))
   (write-line)
   (dolist (x (.stack-trace self))
-    (write-bytes "\tat: ") (write x)))
+    (write-mem "\tat: ") (write x)))
 
 (class SystemExit (Exception)
   ; Dispatched to shut down the Paren system.
@@ -1651,7 +1616,21 @@
 (class Error (Exception))
 
 (function error (:rest args)
+  ; Throw a instance of the Error, which message is args.
   (throw (.message (.new Error) (apply string args))))
+
+(class Comparable ()
+  ; A feature that provides comparison operators.
+  )
+
+(method Comparable .cmp (:rest args)
+  ; Compares the receiver with the specified object.
+  ; Returns a negative integer, zero, or a positive integer as this object is less than, equal to, or greater than the specified object.
+  (assert nil))
+
+(method Comparable .eq? (o)
+  ; Returns whether the receiver and o is equal.
+  (= (.cmp self o) 0))
 
 (class Array ()
   size elt)
@@ -1690,26 +1669,6 @@
     (arrcpy (&elt self) 0 a 0 size)
     a))
 
-(class Comparable ()
-  ; A feature that provides comparison operators.
-  )
-
-(method Comparable .lt? (:rest args)
-  ; Returns whether the each of the specified args are in monotonically decreasing order.
-  (assert nil))
-
-(method Comparable .gt? (:rest args)
-  ; Returns whether the each of the specified args are in monotonically increasing order.
-  (all-adjacent-satisfy? (f (x y) (.lt? y x)) (cons self args)))
-
-(method Comparable .le? (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
-  (all-adjacent-satisfy? (f (x y) (! (.lt? y x))) (cons self args)))
-
-(method Comparable .ge? (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
-  (all-adjacent-satisfy? (f (x y) (! (.lt? x y))) (cons self args)))
-
 (class Path ()
   ; A class that handles a file path.
   ; Construct with Path.of function.
@@ -1737,22 +1696,22 @@
   ; Two or more consecutive `/`s or trailing `/`s are ignored.
   ;     (Path.of "foo//bar/") <=> ("foo" "bar")
   (if (is-a? path-name Path) path-name
-      (let (c nil path nil first-letter (string-at path-name 0) root? nil)
-        (if (string= first-letter "~")
+      (let (c nil path nil first-letter (strnth path-name 0) root? nil)
+        (if (memeq? first-letter "~")
             (<- path-name (memcat
                             (if (eq? $host-name :windows)
                                 (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH"))
                                 (getenv "HOME"))
                             Path.separator path-name))
-            (string= first-letter Path.separator)
+            (memeq? first-letter Path.separator)
             (<- root? true))
-        (<- path (remove-if (f (x) (|| (string= x "") (string= x "~")))
+        (<- path (remove-if (f (x) (|| (memeq? x "") (memeq? x "~")))
                             (split
                               (with-memory-stream ($out)
                                 (with-memory-stream ($in path-name)
                                   (while (<- c (read-char))
-                                    (if (string= c "\\") (write-bytes Path.separator)
-                                        (write-bytes c)))))
+                                    (if (memeq? c "\\") (write-mem Path.separator)
+                                        (write-mem c)))))
                               Path.separator)))
         (if root? (<- path (cons Path.separator path)))
         (&path<- (.new Path) path))))
@@ -1768,20 +1727,20 @@
 (method Path .base-name ()
   ; Returns base name (the string up to the first dot).
   ; If not including dot, returns the entire name.
-  (let (name (.name self) i (string-index name "."))
-    (if i (string-slice name 0 i)
+  (let (name (.name self) i (strstr name "."))
+    (if i (substr name 0 i)
         name)))
 
 (method Path .suffix ()
   ; Returns the suffix (the string after the last dot).
   ; If not including dot, returns nil.
-  (let (name (.name self) i (string-last-index name "."))
-    (if i (string-slice name (++ i)))))
+  (let (name (.name self) i (strlstr name "."))
+    (if i (substr name (++ i)))))
 
 (method Path .but-suffix ()
   ; Returns the name without the suffix.
-  (let (name (.name self) i (string-last-index name "."))
-    (if i (string-slice name 0 i)
+  (let (name (.name self) i (strlstr name "."))
+    (if i (substr name 0 i)
         name)))
 
 (method Path .root? ()
@@ -1811,7 +1770,7 @@
     (if (eq? $host-name :windows)
         (&& (= (memlen first-file) 2)
             (memstr first-file ":" 1 2))
-        (string= first-file Path.separator))))
+        (memeq? first-file Path.separator))))
 
 (method Path .relative? ()
   ; Same as (! (.absolute? self))
@@ -1823,7 +1782,7 @@
 
 (method Path .to-s ()
   (reduce (f (acc rest)
-            (memcat (if (string= acc Path.separator) "" acc) Path.separator rest))
+            (memcat (if (memeq? acc Path.separator) "" acc) Path.separator rest))
           (&path self)))
 
 (method Path .open (mode)
@@ -1987,7 +1946,7 @@
     (reverse! lines)))
 
 (method Stream .write-line (:opt bytes)
-  (if bytes (.write-bytes self bytes))
+  (if bytes (.write-mem self bytes))
   (.write-byte self 0x0a))
 
 (method Stream .write-lines (lines)
@@ -2042,7 +2001,7 @@
                 (write-fraction (- 16 exp 1)))
               (<= -3 exp -1)
               (begin
-                (.write-bytes self "0.")
+                (.write-mem self "0.")
                 (dotimes (i (- (- exp) 1))
                   (.write-byte self 0x30))
                 (write-fraction 16))
@@ -2056,7 +2015,7 @@
 (method Stream .write (x :key start end)
   ; Write the specified x as a readable format.
   ; Returns x.
-  (if start (.write-bytes self start))
+  (if start (.write-mem self start))
   (if (cons? x)
       (let (ope (car x))
         (if (&& (eq? ope 'quote) (nil? (cddr x)))
@@ -2070,53 +2029,53 @@
               (.write-byte self 0x2c) (.write self (cadr x) :end ""))
             (&& (eq? ope 'unquote-splicing) (nil? (cddr x)))
             (begin
-              (.write-bytes self ",@") (.write self (cadr x) :end ""))
+              (.write-mem self ",@") (.write self (cadr x) :end ""))
             (begin
               (.write-byte self 0x28)
               (.write self (car x) :end "")
               (dolist (x (cdr x)) (.write self x :start " " :end ""))
               (.write-byte self 0x29))))
       (builtin? x)
-      (.write-bytes self (builtin-name x))
+      (.write-mem self (builtin-name x))
       (string? x)
       (begin
         (.write-byte self 0x22)
-        (.write-bytes self x)
+        (.write-mem self x)
         (.write-byte self 0x22))
       (symbol? x)
-      (.write-bytes self x)
+      (.write-mem self x)
       (keyword? x)
       (begin
         (.write-byte self 0x3a)
-        (.write-bytes self x))
+        (.write-mem self x))
       (number? x)
       (.write-number self x)
       (bytes? x)
       (begin
-        (.write-bytes self "#b[")
+        (.write-mem self "#b[")
         (dotimes (i (memlen x))
           (if (/= i 0) (.write-byte self 0x20))
-          (.write-bytes self "0x")
+          (.write-mem self "0x")
           (.write-int self ([] x i) :radix 16 :padding 2))
         (.write-byte self 0x5d))
       (array? x)
       (begin
-        (.write-bytes self "#a[")
+        (.write-mem self "#a[")
         (dotimes (i (arrlen x))
           (.write self ([] x i) :start (&& (/= i 0) " ") :end ""))
         (.write-byte self 0x5d))
       (|| (macro? x)
           (function? x))
       (begin
-        (if (macro? x) (.write-bytes self "(macro")
-            (.write-bytes self "(f"))
+        (if (macro? x) (.write-mem self "(macro")
+            (.write-mem self "(f"))
         (.write-byte self 0x20)
         (.write self (procparams x) :end "")
         (dolist (body (procbody x))
           (.write self body :start " " :end ""))
         (.write-byte self 0x29))
       (assert nil))
-  (.write-bytes self (|| end "\n"))
+  (.write-mem self (|| end "\n"))
   x)
 
 (method Stream .writes (exprs :key start end)
@@ -2163,7 +2122,7 @@
     ([] (&buf self) wrpos byte)
     (&wrpos<- self (++ wrpos))))
 
-(method MemoryStream .write-bytes (bytes :opt from size)
+(method MemoryStream .write-mem (bytes :opt from size)
   (.reserve self (|| size (<- size (memlen bytes))))
   (memcpy bytes (|| from 0) (&buf self) (&wrpos self) size)
   (&wrpos<- self (+ (&wrpos self) size))
@@ -2208,7 +2167,7 @@
 (method FileStream .write-byte (byte)
   (fputc byte (&fp self)))
 
-(method FileStream .write-bytes (x :opt from size)
+(method FileStream .write-mem (x :opt from size)
   (fwrite x (|| from 0) (|| size (memlen x)) (&fp self)))
 
 (method FileStream .seek (offset)
@@ -2275,28 +2234,28 @@
   ; Error if expected is specified and the next character is not the same as the expected.
   (let (next (&next self))
     (if (nil? next) (.raise self "unexpected EOF")
-        (&& expected (string/= next expected)) (.raise self
+        (&& expected (memneq? next expected)) (.raise self
                                                        "unexpected character '" next "'. "
                                                        "expected '" expected "'")
-        (string= next "\n") (&lineno<- self (++ (&lineno self))))
+        (memeq? next "\n") (&lineno<- self (++ (&lineno self))))
     (&next<- self (.read-char (&stream self)))
     next))
 
 (method AheadReader .skip-escape ()
   (let (c (.skip self))
-    (if (string/= c "\\") c
-        (string= (<- c (.skip self)) "a") 0x07
-        (string= c "b") 0x08
-        (string= c "c") (if (<= 0x40 (<- c (toupper (str->code (.skip self)))) 0x5f)
+    (if (memneq? c "\\") c
+        (memeq? (<- c (.skip self)) "a") 0x07
+        (memeq? c "b") 0x08
+        (memeq? c "c") (if (<= 0x40 (<- c (toupper (str->code (.skip self)))) 0x5f)
                             (& c 0x1f)
                             (.raise self "illegal ctrl char"))
-        (string= c "e") 0x1b
-        (string= c "f") 0x0c
-        (string= c "n") 0x0a
-        (string= c "r") 0x0d
-        (string= c "t") 0x09
-        (string= c "v") 0x0b
-        (string= c "x") (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16))
+        (memeq? c "e") 0x1b
+        (memeq? c "f") 0x0c
+        (memeq? c "n") 0x0a
+        (memeq? c "r") 0x0d
+        (memeq? c "t") 0x09
+        (memeq? c "v") 0x0b
+        (memeq? c "x") (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16))
         c)))
 
 (method AheadReader .skip-line ()
@@ -2304,8 +2263,8 @@
   ; Returns line.
   ; If stream reached eof, returns nil.
   (with-memory-stream ($out)
-    (while (string/= (&next self) "\n")
-      (if (&next self) (write-bytes (.skip self))
+    (while (memneq? (&next self) "\n")
+      (if (&next self) (write-mem (.skip self))
           (return nil)))
     (.skip self)))
 
@@ -2318,8 +2277,8 @@
 
 (method AheadReader .skip-sign ()
   (let (next (&next self))
-    (if (string= next "+") (begin (.skip self) nil)
-        (string= next "-") (begin (.skip self) true)
+    (if (memeq? next "+") (begin (.skip self) nil)
+        (memeq? next "-") (begin (.skip self) true)
         nil)))
 
 (method AheadReader .skip-digit (:opt radix)
@@ -2343,14 +2302,14 @@
 
 (method AheadReader .skip-unumber ()
   (let (val (.skip-uint self))
-    (if (string= (&next self) "x")
+    (if (memeq? (&next self) "x")
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
           (.skip self)
           (if (! (.alnum? self)) (.raise self "missing lower or digits")
               (while (.alnum? self)
                 (<- val (+ (* val radix) (.skip-digit self 16))))))
-        (string= (&next self) ".")
+        (memeq? (&next self) ".")
         (let (factor 0.1)
           (.skip self)
           (while (.digit? self)
@@ -2389,7 +2348,7 @@
   ; Returns o;
   (if (byte? o) (.write-byte (&token self) o)
       (begin0 o
-              (.write-bytes (&token self) o))))
+              (.write-mem (&token self) o))))
 
 (method AheadReader .token ()
   ; Returns the token string currently cut out.
@@ -2442,7 +2401,7 @@
   (let (sign (.skip self))
     (if (.digit? self)
         (let (val (.skip-number self))
-          (if (string= sign "-") (- val) val))
+          (if (memeq? sign "-") (- val) val))
         (begin (.put self sign)
                (mem->sym (.token (.get-identifier-sign self)))))))
 
@@ -2455,33 +2414,33 @@
 
 (method ParenLexer .lex-string ()
   (.skip self)
-  (while (string/= (&next self) "\"")
+  (while (memneq? (&next self) "\"")
     (.get-escape self))
   (.skip self "\"")
   (.token self))
 
 (method ParenLexer .skip-comment ()
   (while (&next self)
-    (if (string= (.skip self) "\n") (break))))
+    (if (memeq? (.skip self) "\n") (break))))
 
 (method ParenLexer .lex ()
   (.skip-space self)
   (let (next (&next self))
     (if (nil? next) '(:EOF)
-        (string= next "(") (begin (.skip self) '(:open-paren))
-        (string= next ")") (begin (.skip self) '(:close-paren))
-        (string= next "'") (begin (.skip self) '(:quote))
-        (string= next "`") (begin (.skip self) '(:backquote))
-        (string= next ",") (begin (.skip self)
-                                  (if (string= (&next self) "@") (begin (.skip self)
+        (memeq? next "(") (begin (.skip self) '(:open-paren))
+        (memeq? next ")") (begin (.skip self) '(:close-paren))
+        (memeq? next "'") (begin (.skip self) '(:quote))
+        (memeq? next "`") (begin (.skip self) '(:backquote))
+        (memeq? next ",") (begin (.skip self)
+                                  (if (memeq? (&next self) "@") (begin (.skip self)
                                                                         '(:unquote-splicing))
                                       '(:unquote)))
-        (string= next "\"") (list :atom (.lex-string self))
-        (string= next ":") (list :atom (.lex-keyword self))
-        (string= next ";") (begin (.skip-comment self) (.lex self))
-        (string= next "#") (begin (.skip self) (list :read-macro (mem->sym (.next self))))
-        (|| (string= next "+")
-            (string= next "-")) (list :atom (.lex-sign self))
+        (memeq? next "\"") (list :atom (.lex-string self))
+        (memeq? next ":") (list :atom (.lex-keyword self))
+        (memeq? next ";") (begin (.skip-comment self) (.lex self))
+        (memeq? next "#") (begin (.skip self) (list :read-macro (mem->sym (.next self))))
+        (|| (memeq? next "+")
+            (memeq? next "-")) (list :atom (.lex-sign self))
         (.digit? self) (list :atom (.skip-number self))
         (list :atom (.lex-symbol self)))))
 
@@ -2598,9 +2557,9 @@
   ; Same as (.write-byte (dynamic $out) x).
   (.write-byte (dynamic $out) x))
 
-(function write-bytes (x)
-  ; Same as (.write-bytes (dynamic $out) x).
-  (.write-bytes (dynamic $out) x))
+(function write-mem (x)
+  ; Same as (.write-mem (dynamic $out) x).
+  (.write-mem (dynamic $out) x))
 
 (function write-line (:opt x)
   ; Same as (.write-line (dynamic $out) x).
@@ -2630,14 +2589,14 @@
   ;     (with-memory-stream (ms s)
   ;        expr1 expr2 ...)
   ;     (let (ms (.new MemoryStream))
-  ;        (if s (.write-bytes ms s))
+  ;        (if s (.write-mem ms s))
   ;        expr1 expr2 ...
   ;        (if s (.to-s ms)))
   (with-gensyms (g)
     (list let (list ms '(.new MemoryStream) g s)
           (list if g
                 (list begin
-                      (list if g (list '.write-bytes ms g))
+                      (list if g (list '.write-mem ms g))
                       (cons begin body))
                 (list begin
                       (cons begin body)
@@ -2691,7 +2650,7 @@
   (let (expr nil)
     (while true
       (catch (Error (f (e) (.print-stack-trace e)))
-        (write-bytes ") ")
+        (write-mem ") ")
         (if (<- expr (read)) (write (eval (expand-macro-all expr)))
             (break))))))
 
@@ -2748,7 +2707,7 @@
   (let (lexer (&lexer reader) a (.new Array))
     (.skip lexer)
     (.skip lexer "[")
-    (while (string/= (.next lexer) "]") (.get lexer))
+    (while (memneq? (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (with-memory-stream ($in (.token lexer))
       (dolist (expr (reads)) (.add a expr)))
@@ -2759,7 +2718,7 @@
   (let (lexer (&lexer reader))
     (.skip lexer)
     (.skip lexer "[")
-    (while (string/= (.next lexer) "]") (.get lexer))
+    (while (memneq? (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (mem->bytes
       (with-memory-stream ($out)

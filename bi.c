@@ -126,7 +126,7 @@ static char *symbol_name_map[] = {
   "bytes_p", "bytes?",
   "keyword_p", "keyword?",
   "mem_eq_p", "memeq?",
-  "mem_to_mem", "mem->mem",
+  "mem_to_bytes", "mem->bytes",
   "mem_to_key", "mem->key",
   "mem_to_str", "mem->str",
   "mem_to_sym", "mem->sym",

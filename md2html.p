@@ -51,7 +51,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
   (with-memory-stream ($out)
     (doarray (x contents-index)
       (if (= x 0) (break))
-      (write-bytes (string x ".")))))
+      (write-mem (string x ".")))))
 
 (function parse-header (contents-index node)
   (let (hx (car node) x (- ([] hx 1) 0x30))

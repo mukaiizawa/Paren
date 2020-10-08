@@ -6,14 +6,14 @@
 
 (method MarkdownReader .none-match? (:rest args)
   (let (next (.next self))
-    (&& next (all-satisfy? (f (x) (string/= next x)) (cons "\n" args)))))
+    (&& next (all-satisfy? (f (x) (memneq? next x)) (cons "\n" args)))))
 
 (method MarkdownReader .continue? ()
   (.none-match? self))
 
 (method MarkdownReader .parse-header ()
   (let (level 0)
-    (while (string= (.next self) "#")
+    (while (memeq? (.next self) "#")
       (.skip self)
       (<- level (++ level)))
     (if (<= 1 level  6) (list (mem->sym (string 'h level)) (.skip-line (.skip-space self)))
@@ -50,18 +50,18 @@
 
 (method MarkdownReader .parse-ref ()
   (.skip self)
-  (if (string= (.next self) "^") (.parse-footnote-referrer self)
+  (if (memeq? (.next self) "^") (.parse-footnote-referrer self)
       (.parse-link self)))
 
 (method MarkdownReader .parse-paragraph ()
   (let (children nil text nil)
     (while (.continue? self)
-      (if (string= (.next self) "`") (push! children (.parse-code self))
-          (string= (.next self) "*") (push! children (.parse-em self))
-          (string= (.next self) "[") (push! children (.parse-ref self))
+      (if (memeq? (.next self) "`") (push! children (.parse-code self))
+          (memeq? (.next self) "*") (push! children (.parse-em self))
+          (memeq? (.next self) "[") (push! children (.parse-ref self))
           (begin
             (while (.none-match? self "`" "*" "[") (.get self))
-            (if (string/= (<- text (.token self)) "") (push! children text)))))
+            (if (memneq? (<- text (.token self)) "") (push! children text)))))
     `(p ,@(reverse! children))))
 
 (method MarkdownReader .parse-pre ()
@@ -78,7 +78,7 @@
                    fetch (f ()
                            (when (.continue? self)
                              (<- next-depth 0)
-                             (while (string= (.next self) ">")
+                             (while (memeq? (.next self) ">")
                                (.skip self)
                                (<- next-depth (++ next-depth)))
                              (if (= next-depth 0) (.raise self "missing >"))
@@ -101,14 +101,14 @@
                   fetch (f ()
                           (when (.continue? self)
                             (<- next-depth 1)
-                            (while (string= (.next self) " ")
+                            (while (memeq? (.next self) " ")
                               (dotimes (i 4) (.skip self " "))
                               (<- next-depth (++ next-depth)))
-                            (if (string= (.next self) "-")
+                            (if (memeq? (.next self) "-")
                                 (begin
                                   (.skip self)    ; - xxx
                                   (push! next-root 'ul))
-                                (string= (.next self) "1")
+                                (memeq? (.next self) "1")
                                 (begin
                                   (.skip self) (.skip self ".")    ; 1. xxx
                                   (push! next-root 'ol))
@@ -126,7 +126,7 @@
                                   (if (neq? (pop! next-root) root) (.raise self "mixed list type")
                                       (push! nodes (pop! node-stack)))))))
                         (cons root (reverse! nodes))))
-    (rec (if (string= (.next self) "-") 'ul 'ol) 1 nil)))
+    (rec (if (memeq? (.next self) "-") 'ul 'ol) 1 nil)))
 
 (method MarkdownReader .parse-tr (:opt tx)
   (let (txlist nil)
@@ -149,7 +149,7 @@
 (method MarkdownReader .parse-footnote-reference ()
   (.skip self)
   (.skip self "^")
-  (while (string/= (.next self) "]") (.get self))
+  (while (memneq? (.next self) "]") (.get self))
   (.skip self)
   (.skip self ":")
   (let (i (.token self))
@@ -201,16 +201,16 @@
   ;     <char> -- characters that have no special meaning.
   ; <stmt> other than <header> are considered to be the same <stmt> up to the blank line.
   ; If the same <stmt> line starts with 4 spaces, it is considered as a nested expression.
-  (while (string= (.next self) "\n") (.skip self))
+  (while (memeq? (.next self) "\n") (.skip self))
   (let (next (.next self))
     (if (nil? next) nil
-        (string= next "#") (.parse-header self)
-        (string= next " ") (.parse-pre self)
-        (string= next ">") (.parse-quote self)
-        (|| (string= next "-") (string= next "1")) (.parse-list self)
-        (string= next "|") (.parse-table self)
-        (string= next "[") (.parse-footnote-reference self)
-        (string= next "<") (.parse-xml self)
+        (memeq? next "#") (.parse-header self)
+        (memeq? next " ") (.parse-pre self)
+        (memeq? next ">") (.parse-quote self)
+        (|| (memeq? next "-") (memeq? next "1")) (.parse-list self)
+        (memeq? next "|") (.parse-table self)
+        (memeq? next "[") (.parse-footnote-reference self)
+        (memeq? next "<") (.parse-xml self)
         (.parse-paragraph self))))
 
 (method MarkdownReader .reads ()
