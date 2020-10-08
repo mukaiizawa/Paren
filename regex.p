@@ -36,7 +36,7 @@
       (<- c (.skip-escape ar))
       (if (string= (&next ar) "-")
           (begin (.skip ar)
-                 (for (s (string->code c) e (string->code (.skip ar))) (<= s e) (<- s (++ s))
+                 (for (s (str->code c) e (str->code (.skip ar))) (<= s e) (<- s (++ s))
                    (.put ar (code->string s))))
           (.put ar c)))
     (.skip ar)
@@ -99,7 +99,8 @@
       (&anchored-end?<- r true)
       (<- e (-- e) anchored? true))
     (if anchored? (<- expr (bytes-slice expr s e)))
-    (&elements<- r (Regex.parse (.init (.new AheadReader) expr)))))
+    (with-memory-stream ($in expr)
+      (&elements<- r (Regex.parse (.new AheadReader))))))
 
 (method Regex .test (elt i)
   (if (< i (.text-length self))

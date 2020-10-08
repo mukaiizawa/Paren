@@ -830,54 +830,41 @@
   ; Returns whether the x is a integer and between 0 and 255.
   (&& (int? x) (<= 0 x 255)))
 
-(function byte-space? (b)
+(function space? (b)
   ; Returns whether byte b is a space character.
   (|| (= b 0x09)
       (= b 0x0a)
       (= b 0x0d)
       (= b 0x20)))
 
-(function byte-alpha? (b)
+(function print? (b)
+  ; Returns whether b is printable.
+  (<= 0x20 b 0x7e))
+
+(function alpha? (b)
   ; Returns whether byte b is an alphabetic character.
   (|| (<= 0x41 b 0x5a) (<= 0x61 b 0x7a)))
 
-(function byte-digit? (b)
+(function digit? (b)
   ; Returns whether byte b is a digit character.
   (<= 0x30 b 0x39))
 
-(function int->string (i :key radix padding)
+(function int->str (i :key radix padding)
   ; Returns string of i.
   (with-memory-stream (out)
     (.write-int out i :radix radix :padding padding)))
 
-(function byte-lower (b)
+(function tolower (b)
   ; Returns lowercase if byte b is an alphabetic character.
   ; Otherwise returns b.
-  (if (&& (byte-alpha? b) (<= 0x41 b 0x5a)) (+ b 0x20)
+  (if (&& (alpha? b) (<= 0x41 b 0x5a)) (+ b 0x20)
       b))
 
-(function byte-print? (b)
-  ; Returns whether b is printable.
-  (&& (byte? b) (<= 0x20 b 0x7e)))
-
-(function byte-upper (b)
+(function toupper (b)
   ; Returns uppercase if byte b is an alphabetic character.
   ; Otherwise returns b.
-  (if (&& (byte-alpha? b) (<= 0x61 b 0x7a)) (- b 0x20)
+  (if (&& (alpha? b) (<= 0x61 b 0x7a)) (- b 0x20)
       b))
-
-(function byte->digit (b :opt radix)
-  ; Returns byte b as a number.
-  ; If the radix is not specified, 10 is assumed to be specified.
-  (let (n (if (byte-digit? b) (- b 0x30)
-              (byte-alpha? b) (+ (- (byte-lower b) 0x61) 10)))
-    (if (|| (nil? n) (>= n (|| radix 10))) (error "not numeric char")
-        n)))
-
-(function digit->byte (n)
-  ; Returns the byte representation of a number.
-  (if (< n 10) (+ n 0x30)
-      (+ n 0x61 -10)))
 
 (builtin-function = (x y :rest args)
   ; Returns whether all arguments are the same value.
@@ -1005,11 +992,12 @@
   (assert (string? "aaa"))
   (assert (! (string? (bytes 1)))))
 
-(function string->number (s)
+(function str->num (s)
   ; Returns a string as a number.
-  (.skip-number (.init (.new AheadReader) s)))
+  (with-memory-stream ($in s)
+    (.skip-number (.new AheadReader))))
 
-(function string->code (s)
+(function str->code (s)
   ; Returns the code point of string s.
   (let (b 0 val 0)
     (with-memory-stream ($in s)
@@ -1041,7 +1029,7 @@
 
 (function string< (:rest args)
   ; Returns whether the each of the specified args are in monotonically decreasing order.
-  (apply < (map string->code args)))
+  (apply < (map str->code args)))
 
 (function string> (:rest args)
   ; Returns whether the each of the specified args are in monotonically increasing order.
@@ -2014,18 +2002,21 @@
 
 (method Stream .write-int (n :key radix padding)
   ; Write integer to stream.
-  (let (write1 (lambda (n depth)
-                 (if (< n 0) (begin
-                               (.write-byte self 0x2d)
-                               (write1 (- n) (++ depth)))
-                     (let (upper (// n radix))
-                       (if (/= upper 0) (write1 upper (++ depth))
-                           (dotimes (i (- padding depth 1))
-                             (.write-byte self 0x30)))
-                       (.write-byte self (digit->byte (mod n radix)))))))
-    (<- radix (|| radix 10)
-        padding (|| padding 0))
-    (write1 n 0)))
+  ; Returns n.
+  (let (radix (|| radix 10) padding (|| padding 0)
+              ->byte (lambda (x)
+                       (if (< x 10) (+ x 0x30)
+                           (+ x 0x61 -10)))
+              write1 (lambda (n padding)
+                       (let (upper (// n radix))
+                         (if (/= upper 0) (write1 upper (-- padding))
+                             (dotimes (i padding) (.write-byte self 0x30)))
+                         (.write-byte self (->byte (mod n radix))))))
+    (when (< n 0)
+      (.write-byte self 0x2d)
+      (<- n (- n) padding (-- padding)))
+    (write1 n (-- padding)))
+  n)
 
 (method Stream .write-number (n)
   (if (int? n) (.write-int self n)
@@ -2136,7 +2127,7 @@
 
 (method Stream .writes (exprs :key start end)
   (dolist (expr exprs)
-    (.write expr :key start end)))
+    (.write self expr :start start :end end)))
 
 (class MemoryStream (Stream)
   ; A stream whose contents are held in memory.
@@ -2269,21 +2260,21 @@
 
 (method AheadReader .alpha? ()
   ; Returns true if next character is alphabetic.
-  (byte-alpha? (string->code (&next self))))
+  (alpha? (str->code (&next self))))
 
 (method AheadReader .digit? ()
   ; Returns true if next character is digit.
-  (byte-digit? (string->code (&next self))))
+  (digit? (str->code (&next self))))
 
 (method AheadReader .space? ()
   ; Returns true if next character is space.
-  (byte-space? (string->code (&next self))))
+  (space? (str->code (&next self))))
 
-(method AheadReader .numeric-alpha? ()
+(method AheadReader .alnum? ()
   ; Returns true if next character is digit or alphabetic.
-  (let (b (string->code (&next self)))
-    (|| (byte-digit? b)
-        (byte-alpha? b))))
+  (let (b (str->code (&next self)))
+    (|| (digit? b)
+        (alpha? b))))
 
 (method AheadReader .skip (:opt expected)
   ; Skip next character and returns it.
@@ -2302,7 +2293,7 @@
     (if (string/= c "\\") c
         (string= (<- c (.skip self)) "a") 0x07
         (string= c "b") 0x08
-        (string= c "c") (if (<= 0x40 (<- c (byte-upper (string->code (.skip self)))) 0x5f)
+        (string= c "c") (if (<= 0x40 (<- c (toupper (str->code (.skip self)))) 0x5f)
                             (& c 0x1f)
                             (.raise self "illegal ctrl char"))
         (string= c "e") 0x1b
@@ -2327,7 +2318,7 @@
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
   ; Returns self.
-  (while (byte-space? (string->code (&next self)))
+  (while (space? (str->code (&next self)))
     (.skip self))
   self)
 
@@ -2338,7 +2329,11 @@
         nil)))
 
 (method AheadReader .skip-digit (:opt radix)
-  (byte->digit (string->code (.skip self)) (|| radix 10)))
+  (let (byte (str->code (.skip self))
+             val (if (digit? byte) (- byte 0x30)
+                     (alpha? byte) (+ (- (tolower byte) 0x61) 10)))
+    (if (|| (nil? val) (>= val (|| radix 10))) (.raise self "illegal digit.")
+        val)))
 
 (method AheadReader .skip-uint ()
   (if (! (.digit? self)) (.raise self "missing digits")
@@ -2358,8 +2353,8 @@
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
           (.skip self)
-          (if (! (.numeric-alpha? self)) (.raise self "missing lower or digits")
-              (while (.numeric-alpha? self)
+          (if (! (.alnum? self)) (.raise self "missing lower or digits")
+              (while (.alnum? self)
                 (<- val (+ (* val radix) (.skip-digit self 16))))))
         (string= (&next self) ".")
         (let (factor 0.1)
@@ -2522,7 +2517,7 @@
     :backquote (list 'quasiquote (.parse (.scan self)))
     :unquote (list 'unquote (.parse (.scan self)))
     :unquote-splicing (list 'unquote-splicing (.parse (.scan self)))
-    :read-macro ((assoc $read-table (string->code (&token self))) self)
+    :read-macro ((assoc $read-table (str->code (&token self))) self)
     :default (.raise self "syntax error")))
 
 (macro unquote (expr)
@@ -2579,7 +2574,7 @@
   (with-gensyms (f)
     (list let (list f (cons lambda (cons params body)))
           (list 'push! '$read-table f)
-          (list 'push! '$read-table (list 'string->code (list quote next))))))
+          (list 'push! '$read-table (list 'str->code (list quote next))))))
 
 (function read-byte ()
   ; Same as (.read-byte (dynamic $in)).

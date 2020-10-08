@@ -106,4 +106,4 @@
                     ],
         \"literal\": [true, false, null, 3.14, \"string\"]
         }")
-        (write (json->string (write (.read (.init (.new JSONReader))))))))
+        (write (json->string (write (.read (.new JSONReader)))))))
