@@ -6,7 +6,7 @@
 
 (method MarkdownReader .none-match? (:rest args)
   (let (next (.next self))
-    (&& next (all-satisfy? (f (x) (memneq? next x)) (cons "\n" args)))))
+    (&& next (none? (f (x) (memeq? next x)) (cons "\n" args)))))
 
 (method MarkdownReader .continue? ()
   (.none-match? self))
@@ -213,13 +213,7 @@
         (memeq? next "<") (.parse-xml self)
         (.parse-paragraph self))))
 
-(method MarkdownReader .reads ()
-  ; Return the result of .read to the EOF as a list.
-  (let (node nil nodes nil)
-    (while (<- node (.read self))
-      (push! nodes node))
-    (reverse! nodes)))
-
 (function! main (args)
   (with-open ($in "readme.md" :read)
-    (write (.reads (.new MarkdownReader)))))
+    (let (rd (.new MarkdownReader))
+      (foreach write (collect (f () (.read rd)))))))

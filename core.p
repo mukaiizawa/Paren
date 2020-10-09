@@ -389,31 +389,16 @@
   (assert (neq? 'x 'y 'z))
   (assert (! (neq? 'x 'x 'x))))
 
-(builtin-function address (x)
-  ; Returns address of the specified x.
-  ; The addresses of symbols or keywords with the same name are always equal.
-  (assert (= (address 'x) (address 'x))))
-
 (builtin-function ! (x)
   ; Returns whether the x is nil.
   (assert (! (eq? 'x 'y 'z)))
   (assert (! nil))
   (assert (eq? (! true) nil)))
 
-(function nil? (x)
-  ; Same as (! x).
-  (! x))
-
-(builtin-function cons? (x)
-  ; Returns whether the x is a cons.
-  (assert (cons? '(1)))
-  (assert (! (cons? nil)))
-  (assert (! (cons? '()))))
-
-(function atom? (x)
-  ; Returns whether the x is an atom.
-  ; It means x is cons or not.
-  (! (cons? x)))
+(builtin-function address (x)
+  ; Returns address of the specified x.
+  ; The addresses of symbols or keywords with the same name are always equal.
+  (assert (= (address 'x) (address 'x))))
 
 (builtin-function function? (x)
   ; Returns whether the x is a function.
@@ -451,6 +436,21 @@
   (assert (neq? (gensym) (gensym))))
 
 ; list
+
+(function nil? (x)
+  ; Same as (! x).
+  (! x))
+
+(builtin-function cons? (x)
+  ; Returns whether the x is a cons.
+  (assert (cons? '(1)))
+  (assert (! (cons? nil)))
+  (assert (! (cons? '()))))
+
+(function atom? (x)
+  ; Returns whether the x is an atom.
+  ; It means x is cons or not.
+  (! (cons? x)))
 
 (builtin-function cons (x y)
   ; Returns a cons such that the specified x is the car part and y is the cdr part.
@@ -618,8 +618,8 @@
   ; Otherwise, returns a list with x as the only element.
   (if (list? x) x
       (array? x) (let (acc nil)
-                 (doarray (e x) (push! acc e))
-                 (reverse! acc))
+                   (doarray (e x) (push! acc e))
+                   (reverse! acc))
       (list x)))
 
 (function join (l :opt delim)
@@ -680,21 +680,9 @@
     (<- l (cdr l)))
   l)
 
-(function first (x)
-  ; Same as (nth x 0).
-  (nth x 0))
-
-(function second (x)
-  ; Same as (nth x 1).
-  (nth x 1))
-
-(function third (x)
-  ; Same as (nth x 2).
-  (nth x 2))
-
 (function last (x)
-  ; Same as (nth x (-- (length x))).
-  (nth x (-- (length x))))
+  ; Same as (car (last-cons x)).
+  (car (last-cons x)))
 
 (function butlast (l)
   ; Returns a list excluding the last element of the specified list l.
@@ -781,63 +769,85 @@
     (rec l)
     (reverse! acc)))
 
-(function map (fn args)
+(function collect (f)
+  ; Returns a list of the applied results until the function f returns nil.
+  (let (x nil acc nil)
+    (while (<- x (f)) (push! acc x))
+    (reverse! acc)))
+
+(function map (f args)
   ; Returns a list of the results of mapping each element of the specified list args with the specified function f.
   (let (acc nil)
     (while args
-      (push! acc (fn (car args)))
-      (<- args (cdr args)))
+      (<- acc (cons (f (car args)) acc)
+          args (cdr args)))
     (reverse! acc)))
 
-(function reduce (fn l)
-  ; Returns the value that apply function of two arguments cumulatively to the elements of the list l, from left to right.
-  (let (rec (f (l)
-              (if (nil? (cdr l)) (car l)
-                  (rec (cons (fn (car l) (cadr l)) (cddr l))))))
-    (rec l)))
+(function foreach (f args)
+  ; Apply a function to each argument.
+  ; Returns nil.
+  (while args
+    (f (car args))
+    (<- args (cdr args))))
 
-(function find-cons-if (fn l)
-  ; Returns the first cons for which the result of applying the function fn to the list elements in order from left to right is true.
+(function reduce (f args)
+  ; Returns the value that apply function of two arguments cumulatively to the elements of the list args, from left to right.
+  (if (cdr args) (reduce f (cons (f (car args) (cadr args)) (cddr args)))
+      (car args)))
+
+(function find-cons (f l)
+  ; Returns the first cons for which the result of applying the function f to the list elements in order from left to right is true.
   ; If there is no such cons, returns nil.
   (while l
-    (if (fn (car l)) (return l)
+    (if (f (car l)) (return l)
         (<- l (cdr l)))))
 
-(function find-if (fn l)
-  ; Returns the first element for which the result of applying the function fn to the list elements in order from left to right is true.
+(function find (f l)
+  ; Returns the first element for which the result of applying the function f to the list elements in order from left to right is true.
   ; If there is no such cons, returns nil.
-  (car (find-cons-if fn l)))
+  (car (find-cons f l)))
 
-(function remove-if (fn l)
-  ; Returns a list with the elements for which the result of applying the function fn is true removed.
+(function select (f l)
+  ; Returns a list with the elements for which the result of applying the function f is true.
   (let (acc nil)
-    (dolist (x l)
-      (if (nil? (fn x)) (push! acc x)))
+    (dolist (x l) (if (f x) (push! acc x)))
     (reverse! acc)))
 
-(function all-satisfy? (fn l)
-  ; Returns whether the result of the function fn applied to all the elements of the list is true.
+(function except (f l)
+  ; Returns a list with the elements for which the result of applying the function f is true removed.
+  (let (acc nil)
+    (dolist (x l) (if (nil? (f x)) (push! acc x)))
+    (reverse! acc)))
+
+(function every? (f l)
+  ; Returns whether the result of the function f applied to all the elements of the list is true.
   ; If x is nil, returns true.
-  ; As soon as any element evaluates to nil, and returns nil without evaluating the remaining elements.
   (while l
-    (if (fn (car l)) (<- l (cdr l))
+    (if (f (car l)) (<- l (cdr l))
         (return nil)))
   true)
 
-(function all-adjacent-satisfy? (fn l)
+(function some? (f l)
+  ; Returns whether the function f applied to any element of the list is true.
+  ; If x is nil, returns nil.
+  (while l
+    (if (f (car l)) (return true)
+        (<- l (cdr l)))))
+
+(function none? (f l)
+  ; Returns whether the result of the function f applied to all the elements of the list is nil.
+  ; If x is nil, returns true.
+  (while l
+    (if (f (car l)) (return nil)
+        (<- l (cdr l))))
+  true)
+
+(function every-adjacent? (f l)
   ; Returns whether each adjacent element of the specified list l returns true when evaluated as an argument to the specified function fn.
   (while (cdr l)
-    (if (fn (car l) (cadr l)) (<- l (cdr l))
+    (if (f (car l) (cadr l)) (<- l (cdr l))
         (return nil)))
   true)
-
-(function any-satisfy? (fn l)
-  ; Returns whether the function fn applied to any element of the list is true.
-  ; If x is nil, returns nil.
-  ; As soon as any element evaluates to not nil, and returns it without evaluating the remaining elements.
-  (while l
-    (if (fn (car l)) (return true)
-        (<- l (cdr l)))))
 
 ; number
 
@@ -974,15 +984,15 @@
 
 (function > (:rest args)
   ; Returns whether the each of the specified args are in monotonically increasing order.
-  (all-adjacent-satisfy? (f (x y) (< y x)) args))
+  (every-adjacent? (f (x y) (< y x)) args))
 
 (function <= (:rest args)
   ; Returns whether the each of the specified args are in monotonically nondecreasing order.
-  (all-adjacent-satisfy? (f (x y) (! (< y x))) args))
+  (every-adjacent? (f (x y) (! (< y x))) args))
 
 (function >= (:rest args)
   ; Returns whether the each of the specified args are in monotonically nonincreasing order.
-  (all-adjacent-satisfy? (f (x y) (! (< x y))) args))
+  (every-adjacent? (f (x y) (! (< x y))) args))
 
 (function ++ (x)
   ; Same as (+ x 1).
@@ -999,7 +1009,7 @@
 
 (function exp (base power)
   ; Returns base-number raised to the power power-number.
-  (let (val 1.0)
+  (let (val 1)
     (dotimes (i (abs power))
       (<- val (* val base)))
     (if (> power 0) val
@@ -1116,12 +1126,12 @@
   (assert (! (bytes? "foo")))
   (assert (! (bytes? (array 3)))))
 
-; mem
+; memory
 
 (builtin-function memeq? (x y)
-  ; Returns whether x arguments are the same bytes.
-  ; This function also accepts symbols, keywords and strings.
-  (assert (memeq? :foo :foo))
+  ; Returns whether x arguments are the same byte sequence.
+  (assert (memeq? :foo "foo"))
+  (assert (memeq? :foo 'foo))
   (assert (! (memeq? "foo" "bar"))))
 
 (function memneq? (x y)
@@ -1134,16 +1144,16 @@
   (|| (nil? s) (= (memlen s) 0)))
 
 (builtin-function mem->bytes (x :opt i size)
-  ; Returns bytes corresponding to x.
-  ; If i is supplied, returns string of partial byte sequence from i of x.
+  ; Returns bytes corresponding to byte sequence x.
+  ; If i is supplied, returns bytes of partial byte sequence from i of x.
   ; If size is supplied, returns string of partial byte sequence from i to (size -1) of x.
-  (assert (eq? (mem->sym "foo") 'foo)))
+  (assert (memeq? (mem->bytes "a") "a")))
 
 (builtin-function mem->sym (x :opt i size)
   ; Same as (mem->bytes x) except returns symbol.
   (assert (eq? (mem->sym "foo") 'foo)))
 
-(builtin-function mem->key (x)
+(builtin-function mem->key (x :opt i size)
   ; Same as (mem->bytes x) except returns keyword.
   (assert (eq? (mem->key "foo") :foo)))
 
@@ -1154,60 +1164,54 @@
   (assert (memeq? (mem->str 'foo 1 1) "o")))
 
 (builtin-function mem->str! (x)
-  ; Same as (mem->str x), except that it destructively modifies the x.
+  ; Same as (mem->str x), except that it destructively modifies the specified bytes x.
   ; Generally faster than mem->str.
-  ; This function only allows bytes.
   (assert (let (x (bytes 1))
             ([] x 0 0x01)
             (memeq? (mem->str! x) "\x01"))))
 
-(function memprefix? (s prefix)
-  ; Returns whether the string x with the specified prefix.
-  (&& (>= (memlen s) (memlen prefix))
-      (memstr s prefix 0 (memlen prefix))))
+(function memprefix? (x prefix)
+  ; Returns whether the byte sequence x with the specified prefix.
+  (&& (>= (memlen x) (memlen prefix))
+      (memmem x prefix 0 (memlen prefix))))
 
-(function memsuffix? (s suffix)
-  ; Returns whether the string x with the specified suffix.
-    (&& (>= (memlen s) (memlen suffix))
-        (memstr s suffix (- (memlen s) (memlen suffix)))))
+(function memsuffix? (x suffix)
+  ; Returns whether the byte sequence x with the specified suffix.
+  (&& (>= (memlen x) (memlen suffix))
+      (memmem x suffix (- (memlen x) (memlen suffix)))))
 
 (builtin-function memlen (x)
-  ; Returns the size of the bytes x.
-  ; This function also accepts symbols, keywords and strings.
+  ; Returns the size of the byte sequence x.
   (assert (= (memlen "") 0))
   (assert (= (memlen "012") 3)))
 
-(builtin-function memstr (x b :opt start end)
-  ; Returns the position where the b appears first in the bytes x.
+(builtin-function memmem (x b :opt start end)
+  ; Returns the position where the byte b appears first in the byte sequence x.
   ; If the b is not appeared, returns nil.
-  ; If b is bytes, returns the position where the partial bytes appears first in the bytes x.
-  ; If start is specified, search from start-th of the bytes x.
-  ; If end is specified, search untile end-th of the bytes x.
-  ; This function also accepts symbols, keywords and strings.
-  (assert (= (memstr "012" 0x31 1) 1))
-  (assert (= (memstr "012" 0x31 0 3) 1))
-  (assert (= (memstr "012" 0x31 0 3) 1))
-  (assert (= (memstr "012" "12" 0 3) 1)))
+  ; If b is byte sequence, returns the position where the partial byte sequence appears first in the byte sequence x.
+  ; If start is specified, search from start-th of the byte sequence x.
+  ; If end is specified, search untile end-th of the byte sequence x.
+  (assert (= (memmem "012" 0x31 1) 1))
+  (assert (= (memmem "012" 0x31 0 3) 1))
+  (assert (= (memmem "012" 0x31 0 3) 1))
+  (assert (= (memmem "012" "12" 0 3) 1)))
 
 (builtin-function memcpy (src src-i dst dst-i size)
-  ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
+  ; Copy size elements from the `src-i`th element of the src byte sequence to the dst byte sequence `dst-i`th element and beyond.
   ; Returns dst.
   ; Even if the areas to be copied overlap, it operates correctly.
-  ; This function also accepts strings.
   (assert (let (s "foo" d "bar")
             (memeq? (memcpy s 1 d 1 2) "boo"))))
 
 (builtin-function submem (x start :opt end)
   ; Returns the partial byte sequence starting from start.
   ; If end is specified, returns the partial byte sequence from the i th to (end-1) th.
-  ; This function also accepts strings.
   (assert (memeq? (submem "012" 0) "012"))
   (assert (memeq? (submem "012" 1) "12"))
   (assert (memeq? (submem "012" 1 2) "1")))
 
 (builtin-function memcat (x :rest args)
   ; Returns the result of combining each args with x.
-  ; This function also accepts symbols, keywords and strings.
   (assert (memeq? (memcat "0" "1" "2") "012")))
 
 ; array
@@ -1502,7 +1506,7 @@
 
 (macro class (cls-sym (:opt super :rest features) :rest fields)
   ; Returns expression that create class named cls-sym.
-  (if (! (all-satisfy? symbol? fields)) (error "fields must be symbol")
+  (if (! (every? symbol? fields)) (error "fields must be symbol")
       (bound? cls-sym) (error cls-sym " already bound"))
   (list begin0
         (list quote cls-sym)
@@ -1633,6 +1637,7 @@
   (= (.cmp self o) 0))
 
 (class Array ()
+  ; Extensible array class.
   size elt)
 
 (method Array .init ()
@@ -1640,13 +1645,18 @@
   (&elt<- self (array 4)))
 
 (method Array .size ()
+  ; Returns size of the receiver.
   (&size self))
 
 (method Array .at (i)
+  ; Returns i-th element of the receiver.
   ([] (&elt self) i))
 
 (method Array .put (i val)
-  ([] (&elt self) i val))
+  ; Update the i-th element of the receiver to val.
+  ; Returns the receiver.
+  ([] (&elt self) i val)
+  self)
 
 (method Array .reserve (size)
   (let (req (+ (&size self) size) elt-size (arrlen (&elt self)))
@@ -1658,6 +1668,8 @@
     self))
 
 (method Array .add (val)
+  ; Add an element to the end of the array.
+  ; Returns the receiver.
   (let (i (&size self))
     (.reserve self 1)
     (&size<- self (++ i))
@@ -1665,6 +1677,7 @@
   self)
 
 (method Array .to-a ()
+  ; Returns an array representation of the receiver.
   (let (size (&size self) a (array size))
     (arrcpy (&elt self) 0 a 0 size)
     a))
@@ -1705,14 +1718,14 @@
                             Path.separator path-name))
             (memeq? first-letter Path.separator)
             (<- root? true))
-        (<- path (remove-if (f (x) (|| (memeq? x "") (memeq? x "~")))
-                            (split
-                              (with-memory-stream ($out)
-                                (with-memory-stream ($in path-name)
-                                  (while (<- c (read-char))
-                                    (if (memeq? c "\\") (write-mem Path.separator)
-                                        (write-mem c)))))
-                              Path.separator)))
+        (<- path (except (f (x) (|| (memeq? x "") (memeq? x "~")))
+                         (split
+                           (with-memory-stream ($out)
+                             (with-memory-stream ($in path-name)
+                               (while (<- c (read-char))
+                                 (if (memeq? c "\\") (write-mem Path.separator)
+                                     (write-mem c)))))
+                           Path.separator)))
         (if root? (<- path (cons Path.separator path)))
         (&path<- (.new Path) path))))
 
@@ -1769,7 +1782,7 @@
   (let (first-file (car (&path self)))
     (if (eq? $host-name :windows)
         (&& (= (memlen first-file) 2)
-            (memstr first-file ":" 1 2))
+            (memmem first-file ":" 1 2))
         (memeq? first-file Path.separator))))
 
 (method Path .relative? ()
@@ -1777,10 +1790,13 @@
   (! (.absolute? self)))
 
 (method Path .to-l ()
+  ; Reads the contents of the file corresponding to the receiver.
+  ; Returns it as a list.
   (with-open ($in self :read)
-    (return (read-lines))))
+    (return (collect read-line))))
 
 (method Path .to-s ()
+  ; Returns a string representation of the receiver.
   (reduce (f (acc rest)
             (memcat (if (memeq? acc Path.separator) "" acc) Path.separator rest))
           (&path self)))
@@ -1851,6 +1867,7 @@
   (utime (.to-s self) time))
 
 (method Path .children ()
+  ; Returns a list of the contents of the directory corresponding to the receiver.
   (map (f (x) (.resolve self x))
        (split (readdir (.to-s self)) "\n")))
 
@@ -1922,36 +1939,20 @@
   (let ($in self)
     (.read (.new ParenReader))))
 
-(method Stream .reads ()
-  (let ($in self exprs nil expr nil rd (.new ParenReader))
-    (while (<- expr (.read rd)) (push! exprs expr))
-    (reverse! exprs)))
-
 (method Stream .read-line ()
   ; Input one line from the receiver.
   ; Returns read line.
   ; If stream reached eof, returns nil.
-  (let (c nil)
-    (with-memory-stream (out)
+  (with-memory-stream (out)
+    (let (c nil)
       (while true
         (if (= (<- c (.read-byte self)) -1) (return nil)
             (= c 0x0a) (break)
             (.write-byte out c))))))
 
-(method Stream .read-lines ()
-  ; Return the rest of the stream as a list whose elements are rows.
-  (let (line nil lines nil)
-    (while (<- line (.read-line self))
-      (push! lines line))
-    (reverse! lines)))
-
 (method Stream .write-line (:opt bytes)
   (if bytes (.write-mem self bytes))
   (.write-byte self 0x0a))
-
-(method Stream .write-lines (lines)
-  (dolist (line lines)
-    (.write-line self line)))
 
 (method Stream .write-int (n :key radix padding)
   ; Write integer to stream.
@@ -2077,10 +2078,6 @@
       (assert nil))
   (.write-mem self (|| end "\n"))
   x)
-
-(method Stream .writes (exprs :key start end)
-  (dolist (expr exprs)
-    (.write self expr :start start :end end)))
 
 (class MemoryStream (Stream)
   ; A stream whose contents are held in memory.
@@ -2371,11 +2368,11 @@
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (|| (memstr "!#$%&*./<=>?^[]_{|}" (.next self))
+  (|| (memmem "!#$%&*./<=>?^[]_{|}" (.next self))
       (.alpha? self)))
 
 (method ParenLexer .identifier-sign? ()
-  (memstr "+-" (.next self)))
+  (memmem "+-" (.next self)))
 
 (method ParenLexer .identifier-trail? ()
   (|| (.identifier-symbol-alpha? self)
@@ -2541,17 +2538,9 @@
   ; Same as (.read-line (dynamic $in)).
   (.read-line (dynamic $in)))
 
-(function read-lines ()
-  ; Same as (.read-lines (dynamic $in)).
-  (.read-lines (dynamic $in)))
-
 (function read ()
   ; Same as (.read (dynamic $in)).
   (.read (dynamic $in)))
-
-(function reads ()
-  ; Same as (.reads (dynamic $in)).
-  (.reads (dynamic $in)))
 
 (function write-byte (x)
   ; Same as (.write-byte (dynamic $out) x).
@@ -2565,17 +2554,9 @@
   ; Same as (.write-line (dynamic $out) x).
   (.write-line (dynamic $out) x))
 
-(function write-lines (x)
-  ; Same as (.write-lines (dynamic $out) x).
-  (.write-lines (dynamic $out) x))
-
 (function write (x :key start end)
   ; Same as (.write (dynamic $out) x :start start :end end)).
   (.write (dynamic $out) x :start start :end end))
-
-(function writes (x :key start end)
-  ; Same as (.writes (dynamic $out) x :start start :end end)).
-  (.writes (dynamic $out) x :start start :end end))
 
 (function flush ()
   (.flush (dynamic $out)))
@@ -2662,7 +2643,8 @@
   ; Load the specified file.
   ; Returns true if successfully loaded.
   (with-open ($in path :read)
-    (dolist (expr (reads)) (eval expr)))
+    (foreach (f (x) (eval x))
+             (collect read)))
   true)
 
 (function import (key)
@@ -2672,7 +2654,7 @@
   ; Returns true if successfully loaded.
   ; Module file to read must be UTF-8.
   (let ($external-encoding :UTF-8)
-    (if (find-if (f (x) (eq? x key)) $import) true
+    (if (some? (f (x) (eq? x key)) $import) true
         (let (p (Path.of (string (mem->sym key) ".p")))
           (if (|| (.readable? p) (.readable? (<- p (.resolve $paren-home p))))
               (begin0 (load p)
@@ -2710,7 +2692,8 @@
     (while (memneq? (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (with-memory-stream ($in (.token lexer))
-      (dolist (expr (reads)) (.add a expr)))
+      (foreach (f (x) (.add a x))
+               (collect read)))
     (.to-a a)))
 
 (reader-macro b (reader)
@@ -2723,7 +2706,7 @@
     (mem->bytes
       (with-memory-stream ($out)
         (with-memory-stream ($in (.token lexer))
-          (dolist (expr (reads)) (write-byte expr)))))))
+          (foreach write-byte (collect read)))))))
 
 (reader-macro m (reader)
   ; Define expand-macro-all reader.

@@ -7,9 +7,11 @@
        function!
        builtin-function))
 
+(function reserved-word? (x)
+  (find (f (y) (eq? x y)) $reserved-words))
+
 (function! main (args)
   (with-open ($in (.resolve $paren-home core.p) :read)
-    (dolist (expr (reads))
-      (if (&& (cons? expr)
-              (find-if (f (x) (eq? x (car expr))) $reserved-words))
-          (write (cadr expr))))))
+    (foreach (f (x) (write (cadr x)))
+             (select (f (x) (&& (cons? x) (reserved-word? (car x))))
+                     (collect read)))))

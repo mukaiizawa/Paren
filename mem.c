@@ -133,7 +133,7 @@ DEFUN(submem)
   return TRUE;
 }
 
-DEFUN(memstr)
+DEFUN(memmem)
 {
   int b, s, e;
   object o, p;

@@ -43,7 +43,7 @@
         (.get self))
       (push! attrs (mem->key (.token self)))
       (.skip self "=")
-      (if (! (memstr "'\"" (<- q (.skip (.skip-space self))))) (continue))    ; single attribute
+      (if (! (memmem "'\"" (<- q (.skip (.skip-space self))))) (continue))    ; single attribute
       (while (memneq? (.next self) q)
         (.get-escape self))
       (.skip self)
@@ -147,13 +147,6 @@
                            (cons (cadr tag)
                                  (reverse! children)))))))))
 
-(method XMLReader .reads ()
-  ; Return the result of .read to the EOF as a list.
-  (let (node nil nodes nil)
-    (while (<- node (.read self))
-      (push! nodes node))
-    (reverse! nodes)))
-
 (function! main (args)
   (with-memory-stream
     ($in (string "<!DOCTYPE html>"
@@ -172,4 +165,6 @@
                  "         <hr/>"
                  "    </body>"
                  "</html>"))
-    (write (map xml->string (write (.reads (.new XMLReader)))))))
+    (let (rd (.new XMLReader))
+      (write (map (f (x) (xml->string x))
+                  (write (collect (f () (.read rd)))))))))

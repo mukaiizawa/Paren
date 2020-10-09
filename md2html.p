@@ -34,7 +34,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 
 (function contents-padding (id)
   (let (i -1 pad nil)
-    (while (<- i (memstr id "." (++ i)))
+    (while (<- i (memmem id "." (++ i)))
       (push! pad '(span)))
     pad))
 
@@ -62,7 +62,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
       (push! $contents `(,hx (:id ,id) ,@(cons id (cdr node)))))))
 
 (function header? (node)
-  (find-if (f (hx) (eq? hx (car node))) $headers))
+  (find (f (hx) (eq? hx (car node))) $headers))
 
 (function parse-nodes (nodes)
   (let (contents-index (array 6))
@@ -86,6 +86,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
   (if (nil? (cadr args)) (error "require markdown file path"))
   (let (p (Path.of (cadr args)) nodes nil)
     (with-open ($in p :read)
-      (<- nodes (parse-nodes (.reads (.new MarkdownReader)))))
-    (with-open ($out (string (.but-suffix p) ".html") :write)
-      (write-lines (map xml->string (make-html nodes))))))
+      (with-open ($out (string (.but-suffix p) ".html") :write)
+        (let (rd (.new MarkdownReader))
+          (foreach (f (x) (write-line (xml->string x)))
+                   (make-html (parse-nodes (collect (f () (.read rd)))))))))))

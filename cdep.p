@@ -6,7 +6,7 @@
             (<- open-quote (strstr line "\""))
             (<- close-quote (strlstr line "\""))
             (<- file-name (substr line (++ open-quote) close-quote))
-            (! (find-if (f (x) (memeq? file-name x)) dependencies)))
+            (none? (f (x) (memeq? file-name x)) dependencies))
         (parse-cfile (Path.of file-name) (cons file-name dependencies))
         dependencies)))
 
@@ -18,9 +18,8 @@
 (function! main (args)
   ; Get C source file names from current directory and output dependency rule for makefile.
   (write-line "# following rules are generated automatically.")
-  (dolist (cfile (remove-if (f (x) (memneq? (.suffix x) "c")) (.children (Path.getcwd))))
+  (dolist (cfile (except (f (x) (memneq? (.suffix x) "c")) (.children (Path.getcwd))))
     (write-line
       (join
-        (flatten
-          (list (string (.but-suffix cfile) ".o:") (.name cfile) (parse-cfile cfile)))
+        (append (list (string (.but-suffix cfile) ".o:") (.name cfile)) (parse-cfile cfile))
         " "))))
