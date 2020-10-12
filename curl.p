@@ -1,10 +1,10 @@
 ; curl
 
-(function usage ()
-  (write-line "
+(<- $usage
+"
 Usage: paren curl.p URL
-Get http request in URL.")
-    (quit))
+	Get http request in URL.
+")
 
 (function default-port (proto)
   (if (memeq? proto "http") 80
@@ -23,10 +23,7 @@ Get http request in URL.")
                (collect (f () (.read-line in)))))))
 
 (function! main (args)
-  (catch (Error (f (e)
-                  (write-line (.to-s e))
-                  (write (.stack-trace e))
-                  (usage)))
+  (catch (Error (f (e) (write-line $usage) (throw e)))
     (if (nil? (cdr args)) (error "too few arguments.")
         (with-memory-stream ($in (cadr args))
           (let (ar (.new AheadReader) proto nil host nil port nil)

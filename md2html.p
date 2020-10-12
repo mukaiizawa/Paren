@@ -1,9 +1,17 @@
 ; markdown to html.
 
-(import :xml)
+(import :optparse)
 (import :markdown)
 
-(<- $default-css
+(<- $usage
+"
+Usage: paren md2html [OPTION] FILE
+	Convert markdown file FILE to html file.
+OPTION:
+	c -- Specify charset. If omitted, it is considered that 'UTF-8' is specified.
+	C -- Do not output table of contents.
+"
+    $default-css
 "
 body {
   width:780px;
@@ -29,6 +37,7 @@ thead { border-bottom:1.2px solid #ccc; }
 th, td { padding:3px; }
 th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 "
+    $default-charset "UTF-8"
     $headers '(h1 h2 h3 h4 h5 h6)
     $contents nil)
 
@@ -72,21 +81,25 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
                node))
          nodes)))
 
-(function make-html (nodes)
+(function make-html (nodes :key charset output-contents?)
   `((!DOCTYPE "html")
     (html (:lang "ja")
           (head
-            (meta (:charset "UTF-8"))
+            (meta (:charset ,(|| charset $default-charset)))
             (style ,$default-css))
           (body
-            ,@(parse-contents (reverse! $contents))
+            ,@(if output-contents? (parse-contents (reverse! $contents)))
             ,@nodes))))
 
 (function! main (args)
-  (if (nil? (cadr args)) (error "require markdown file path"))
-  (let (p (Path.of (cadr args)) nodes nil)
-    (with-open ($in p :read)
-      (with-open ($out (string (.but-suffix p) ".html") :write)
-        (let (rd (.new MarkdownReader))
-          (foreach (f (x) (write-line (xml->string x)))
-                   (make-html (parse-nodes (collect (f () (.read rd)))))))))))
+  (catch (Error (f (e) (write-line $usage) (throw e)))
+    (let ((op args) (.parse (.init (.new OptionParser) "Cc:") (cdr args)))
+      (if (nil? (car args)) (error "require markdown file path")
+          (let (p (Path.of (car args)) nodes nil)
+            (with-open ($in p :read)
+              (with-open ($out (string (.but-suffix p) ".html") :write)
+                (let (rd (.new MarkdownReader))
+                  (foreach (f (x) (write-line (xml->string x)))
+                           (make-html (parse-nodes (collect (f () (.read rd))))
+                                      :charset (.get op "c")
+                                      :output-contents? (! (.get op "C"))))))))))))

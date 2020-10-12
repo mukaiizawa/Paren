@@ -2196,7 +2196,7 @@
 
 (method AheadReader .inherit (ar)
   ; Inherite AheadReader ar.
-  ; Used when initializing another aheadreader instance from a stream that has already been read ahead.
+  ; Used when initializing another AheadReader instance from a stream that has already been read ahead.
   (assert (is-a? ar AheadReader))
   (&<- self
     :stream (&stream ar)
