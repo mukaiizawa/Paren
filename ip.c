@@ -288,6 +288,8 @@ static int parse_args(void (*f)(object, object, object), object params
     , object args)
 {
   object o, k, v;
+  if (!object_list_p(params)) return ip_mark_error("illegal parameters");
+  if (!object_list_p(args)) return ip_mark_error("illegal arguments");
   // parse required args
   while (params != object_nil) {
     if (object_type_p(params->cons.car, KEYWORD)) break;
@@ -297,10 +299,7 @@ static int parse_args(void (*f)(object, object, object), object params
     }
     if (object_type_p(params->cons.car, SYMBOL))
       (*f)(reg[1], params->cons.car, args->cons.car);
-    else {
-      if (!object_list_p(args->cons.car)) return FALSE;
-      if (!parse_args(f, params->cons.car, args->cons.car)) return FALSE;
-    }
+    else if (!parse_args(f, params->cons.car, args->cons.car)) return FALSE;
     params = params->cons.cdr;
     args = args->cons.cdr;
   }
