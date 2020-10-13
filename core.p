@@ -1922,9 +1922,7 @@
       :SJIS
       (if (< b1 0) (return nil)
           (< b1 0x80) (<- size 1)
-          (< 0x80 b1 0xa0) (<- b2 (.read-byte self) size 2)
-          (< 0xa0 b1 0xe0) (<- size 1)
-          (< b1 0xfd) (<- b2 (.read-byte self) size 2)
+          (|| (< 0x80 b1 0xa0) (< 0xdf b1)) (<- b2 (.read-byte self) size 2)
           (.illegal-character self b1)))
     (let (c (bytes size))
       (if (= size 1) ([] c 0 b1)
