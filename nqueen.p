@@ -1,4 +1,4 @@
-; n queen problem
+; n queen problem.
 
 (import :point)
 (import :matrix)

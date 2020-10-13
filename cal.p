@@ -1,4 +1,4 @@
-; calendar
+; calendar.
 
 (import :datetime)
 

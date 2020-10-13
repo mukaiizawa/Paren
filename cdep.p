@@ -1,4 +1,4 @@
-; output dependency for makefile
+; output dependency for makefile.
 
 (function parse-line (line dependencies)
   (let (open-quote nil close-quote nil file-name nil)
