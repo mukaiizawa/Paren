@@ -2193,16 +2193,6 @@
     :token (.new MemoryStream)
     :lineno 1))
 
-(method AheadReader .inherit (ar)
-  ; Inherite AheadReader ar.
-  ; Used when initializing another AheadReader instance from a stream that has already been read ahead.
-  (assert (is-a? ar AheadReader))
-  (&<- self
-    :stream (&stream ar)
-    :next (&next ar)
-    :token (&token ar)
-    :lineno (&lineno ar)))
-
 (method AheadReader .next ()
   ; Returns a pre-read character.
   (&next self))

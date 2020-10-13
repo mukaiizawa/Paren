@@ -2,7 +2,7 @@
 
 (import :xml)
 
-(class MarkdownReader (AheadReader))
+(class MarkdownReader (XMLReader))
 
 (method MarkdownReader .none-match? (:rest args)
   (let (next (.next self))
@@ -157,11 +157,6 @@
             (a (:href ,(string "#fnrefere" i)) ,(string "[" i "]"))
             ,(.skip-line (.skip-space self)))))
 
-(method MarkdownReader .parse-xml ()
-  (let (xmlrd (.inherit (.new XMLReader) self))
-    (begin0 (.read xmlrd)
-            (.inherit self xmlrd))))
-
 (method MarkdownReader .read ()
   ; Read markdown.
   ; Returns a list representation of read markdown.
@@ -210,7 +205,7 @@
         (|| (memeq? next "-") (memeq? next "1")) (.parse-list self)
         (memeq? next "|") (.parse-table self)
         (memeq? next "[") (.parse-footnote-reference self)
-        (memeq? next "<") (.parse-xml self)
+        (memeq? next "<") (XMLReader.read self)
         (.parse-paragraph self))))
 
 (function! main (args)
