@@ -7,11 +7,25 @@
 #define PATH_SEPR '\\'
 #define PATHS_SEPR ';'
 
+static int xwctomb(LPWSTR lp, char *p)
+{
+  return WideCharToMultiByte(CP_UTF8, 0, lp, -1, p, MAX_STR_LEN, NULL, NULL);
+}
+
+static int xmbtowc(char *p, LPWSTR lp)
+{
+#define dwFlags (MB_PRECOMPOSED | MB_ERR_INVALID_CHARS)
+  return MultiByteToWideChar(CP_UTF8, dwFlags, p, -1, lp, MAX_STR_LEN);
+#undef dwFlags
+}
+
 int pf_stat(char *fn, struct pf_stat *statbuf)
 {
   int mode;
+  WCHAR wcbuf[MAX_STR_LEN];
   WIN32_FILE_ATTRIBUTE_DATA attr;
-  if (!GetFileAttributesEx(fn, GetFileExInfoStandard, &attr)) {
+  if (xmbtowc(fn, wcbuf) == 0) return FALSE;
+  if (!GetFileAttributesExW(wcbuf, GetFileExInfoStandard, &attr)) {
     switch (GetLastError()) {
       case ERROR_FILE_NOT_FOUND:
       case ERROR_PATH_NOT_FOUND:
@@ -41,8 +55,10 @@ static int mode_p(char *fn, int mode)
 char *pf_exepath(char *argv0, char *path)
 {
   int st;
-  st = GetModuleFileName(NULL, path, MAX_STR_LEN);
+  WCHAR wcbuf[MAX_STR_LEN];
+  st = GetModuleFileNameW(NULL, wcbuf, MAX_STR_LEN);
   if (st >= MAX_STR_LEN) st = 0;
+  else st = xwctomb(wcbuf, path);
   if (st == 0) xerror("pf_exepath failed");
   return path;
 }
@@ -65,53 +81,57 @@ int pf_utime(char *fn, int64_t mtime)
 char *pf_getcwd(char *buf)
 {
   int st;
-  st = GetCurrentDirectory(MAX_STR_LEN, buf);
+  WCHAR wcbuf[MAX_STR_LEN];
+  st = GetCurrentDirectoryW(MAX_STR_LEN, wcbuf);
   if (st > MAX_STR_LEN) st = 0;
+  if (st != 0) st = xwctomb(wcbuf, buf);
   if (!st) xerror("pf_getcwd failed");
   return buf;
 }
 
 int pf_readdir(char *path, struct xbarray *dirs)
 {
-  char *fn, buf[MAX_STR_LEN];
-  WIN32_FIND_DATA data;
+  char buf[MAX_STR_LEN];
+  WCHAR *wcfn, wcbuf[MAX_STR_LEN];
+  WIN32_FIND_DATAW data;
   HANDLE h;
-  DWORD err;
   xsprintf(buf, "%s\\*", path);
-  if ((h = FindFirstFile(buf, &data)) == INVALID_HANDLE_VALUE) return FALSE;
+  if (xmbtowc(buf, wcbuf) == 0) return FALSE;
+  if ((h = FindFirstFileW(wcbuf, &data)) == INVALID_HANDLE_VALUE) return FALSE;
   while (TRUE) {
-    fn = data.cFileName;
-    if (!(strcmp(fn,".") == 0 || strcmp(fn,"..") == 0)) {
-      xbarray_adds(dirs, fn);
-      xbarray_add(dirs, '\n');
+    wcfn = data.cFileName;
+    if (xwctomb(wcfn, buf) == 0) return FALSE;
+    if (!(strcmp(buf, ".") == 0 || strcmp(buf, "..") == 0)) {
+      if (dirs->size != 0) xbarray_add(dirs, '\n');
+      xbarray_adds(dirs, buf);
     }
-    if (FindNextFile(h, &data) == 0) {
-      err = GetLastError();
-      if (err == ERROR_NO_MORE_FILES) break;
-      else {
-        FindClose(h);
-        return FALSE;
+    if (FindNextFileW(h, &data) == 0) {
+      switch (GetLastError()) {
+        case ERROR_NO_MORE_FILES: FindClose(h); return TRUE;
+        default: FindClose(h); return FALSE;
       }
     }
   }
-  FindClose(h);
-  return TRUE;
 }
 
 int pf_mkdir(char *path)
 {
-  return CreateDirectory(path, NULL);
+  WCHAR wcbuf[MAX_STR_LEN];
+  if (xmbtowc(path, wcbuf) == 0) return FALSE;
+  return CreateDirectoryW(wcbuf, NULL);
 }
 
 int pf_remove(char *fn)
 {
-  int st;
-  if (mode_p(fn, PF_DIR)) st = RemoveDirectory(fn);
-  else st = DeleteFile(fn);
-  return st;
+  WCHAR wcbuf[MAX_STR_LEN];
+  if (xmbtowc(fn, wcbuf) == 0) return FALSE;
+  if (mode_p(fn, PF_DIR)) return RemoveDirectoryW(wcbuf);
+  return DeleteFileW(wcbuf);
 }
 
 int pf_chdir(char *dir)
 {
-  return SetCurrentDirectory(dir);
+  WCHAR wcbuf[MAX_STR_LEN];
+  if (xmbtowc(dir, wcbuf) == 0) return FALSE;
+  return SetCurrentDirectoryW(wcbuf);
 }

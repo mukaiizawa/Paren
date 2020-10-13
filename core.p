@@ -636,7 +636,8 @@
 (function split (s :opt delim)
   ; Returns a list of characters in string s.
   ; If delim is specified, returns a list of strings s delimited by delimiter.
-  (if (nil? delim) (->list (str->arr s))
+  (if (memempty? s) nil
+      (nil? delim) (->list (str->arr s))
       (let (i 0 lis nil chars nil
               sa (str->arr s) salen (arrlen sa)
               da (str->arr delim) dalen (arrlen da) end (- salen dalen)
@@ -1884,19 +1885,19 @@
   (assert nil))
 
 (method Stream .illegal-character (:rest seq)
-  (error "illegal byte sequence -- " seq))
+  (error "illegal byte sequence -- "
+         (map (f (x) (string "0x" (int->str x :radix 16))) seq)))
 
 (method Stream .trail? (b)
-  (let (encoding (dynamic $external-encoding))
-    (switch encoding
-      :UTF-8 (= (& b 0xc0) 0x80)
-      :SJIS (|| (<= 0x81 b 0x9f) (<= 0xe0 b 0xfc)))))
+  (switch (dynamic $encoding)
+    :UTF-8 (= (& b 0xc0) 0x80)
+    :SJIS (|| (<= 0x81 b 0x9f) (<= 0xe0 b 0xfc))))
 
 (method Stream .read-char ()
   ; Read 1 character from stream.
   ; Returns nil when the stream reaches the end.
-  (let (encoding (dynamic $external-encoding) b1 (.read-byte self) b2 nil b3 nil b4 nil size 0)
-    (switch encoding
+  (let (b1 (.read-byte self) b2 nil b3 nil b4 nil size 0)
+    (switch (dynamic $encoding)
       :UTF-8
       (if (< b1 0) (return nil)
           (< b1 0x80) (<- size 1)
@@ -2241,9 +2242,8 @@
     (if (memneq? c "\\") c
         (memeq? (<- c (.skip self)) "a") 0x07
         (memeq? c "b") 0x08
-        (memeq? c "c") (if (<= 0x40 (<- c (toupper (str->code (.skip self)))) 0x5f)
-                            (& c 0x1f)
-                            (.raise self "illegal ctrl char"))
+        (memeq? c "c") (if (<= 0x40 (<- c (toupper (str->code (.skip self)))) 0x5f) (& c 0x1f)
+                           (.raise self "illegal ctrl char"))
         (memeq? c "e") 0x1b
         (memeq? c "f") 0x0c
         (memeq? c "n") 0x0a
@@ -2651,7 +2651,7 @@
   ; Bind main to nil after processing.
   ; Returns true if successfully loaded.
   ; Module file to read must be UTF-8.
-  (let ($external-encoding :UTF-8)
+  (let ($encoding :UTF-8)
     (if (some? (f (x) (eq? x key)) $import) true
         (let (p (Path.of (string (mem->sym key) ".p")))
           (if (|| (.readable? p) (.readable? (<- p (.resolve $paren-home p))))
@@ -2678,7 +2678,7 @@
     $stdout (.init (.new FileStream) (fp 1))
     $in $stdin
     $out $stdout
-    $external-encoding (if (eq? $host-name :windows) :SJIS :UTF-8)
+    $encoding :UTF-8
     $paren-home (.parent (.resolve (Path.getcwd) core.p)))
 
 (reader-macro a (reader)

@@ -1,6 +1,13 @@
 // paren main routine.
 
 #include "std.h"
+
+#if WINDOWS_P
+#include <io.h>
+#include <fcntl.h>
+#include <mbctype.h>
+#endif
+
 #include "xgetopt.h"
 #include "pf.h"
 #include "xarray.h"
@@ -232,6 +239,10 @@ int main(int argc, char *argv[])
 {
   char buf[MAX_STR_LEN];
   setbuf(stdout, NULL);
+#if WINDOWS_P
+  _setmode(_fileno(stdin), _O_BINARY);
+  _setmode(_fileno(stdout), _O_BINARY);
+#endif
   pf_exepath(argv[0], buf);
 #if !UNIX_P
   *strrchr(buf, '.') = '\0';

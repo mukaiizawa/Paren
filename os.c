@@ -252,7 +252,7 @@ DEFUN(readdir)
   if ((path = bi_string(argv)) == NULL) return FALSE;
   xbarray_init(&dirs);
   if (!pf_readdir(path, &dirs)) return FALSE;
-  *result = gc_new_mem_from(STRING, dirs.elt, dirs.size - 1);    // remove last \n
+  *result = gc_new_mem_from(STRING, dirs.elt, dirs.size);
   xbarray_free(&dirs);
   return TRUE;
 }

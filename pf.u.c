@@ -125,8 +125,8 @@ int pf_readdir(char *path, struct xbarray *dirs)
   while ((de = readdir(d)) != NULL) {
     fn = de->d_name;
     if (strcmp(fn,".") == 0 || strcmp(fn,"..") == 0) continue;
+    if (dirs->size != 0) xbarray_add(dirs, '\n');
     xbarray_adds(dirs, fn);
-    xbarray_add(dirs, '\n');
   }
   closedir(d);
   return TRUE;
