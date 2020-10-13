@@ -9,7 +9,7 @@
 
 int pf_stat(char *fn, struct pf_stat *statbuf)
 {
-  int result;
+  int mode;
   WIN32_FILE_ATTRIBUTE_DATA attr;
   if (!GetFileAttributesEx(fn, GetFileExInfoStandard, &attr)) {
     switch (GetLastError()) {
@@ -21,57 +21,30 @@ int pf_stat(char *fn, struct pf_stat *statbuf)
         return PF_ERROR;
     }
   }
-  result = PF_READABLE;
-  if (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) result |= PF_DIR;
-  else result |= PF_FILE;
-  if ((attr.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0)
-    result |= PF_WRITABLE;
+  mode = PF_READABLE;
+  if (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) mode |= PF_DIR;
+  else mode |= PF_FILE;
+  if (!(attr.dwFileAttributes & FILE_ATTRIBUTE_READONLY)) mode |= PF_WRITABLE;
   if (statbuf != NULL) {
     statbuf->size = ((int64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow;
     statbuf->mtime = (((int64_t)attr.ftLastWriteTime.dwHighDateTime << 32)
         | attr.ftLastWriteTime.dwLowDateTime) / 10000000 - 11644473600;
   }
-  return result;
+  return mode;
 }
 
-static int check(char *fn, int mode)
+static int mode_p(char *fn, int mode)
 {
   return (pf_stat(fn, NULL) & mode) == mode;
 }
 
-static char *find_paths(char *paths, char *name, char *buf)
-{
-  char *p, *sepr;
-  p = paths;
-  while ((sepr = strchr(p, PATHS_SEPR)) != NULL) {
-    *sepr = '\0';
-    xsprintf(buf, "%s/%s", p, name);
-    if (check(buf, PF_READABLEFILE)) return buf;
-    p = sepr + 1;
-  }
-  xsprintf(buf, "%s/%s", p, name);
-  if (check(buf, PF_READABLEFILE)) return buf;
-  return NULL;
-}
-
 char *pf_exepath(char *argv0, char *path)
 {
-  char *p, *q, fn[MAX_STR_LEN], *result;
-  struct xbarray paths;
-  strcpy(path, argv0);
-  p = strrchr(path, PATH_SEPR);
-  q = strrchr(path, '.');
-  if (q == NULL || (p != NULL && q < p)) strcat(path,".exe");
-  if (p != NULL) return path;
-  if (check(path, PF_READABLEFILE)) return path;
-  strcpy(fn, path);
-  xbarray_init(&paths);
-  xbarray_adds(&paths,getenv("PATH"));
-  xbarray_add(&paths, '\0');
-  result = find_paths(paths.elt, fn, path);
-  xbarray_free(&paths);
-  if (result == NULL) xerror("pf_exepath: can not find");
-  return result;
+  int st;
+  st = GetModuleFileName(NULL, path, MAX_STR_LEN);
+  if (st >= MAX_STR_LEN) st = 0;
+  if (st == 0) xerror("pf_exepath failed");
+  return path;
 }
 
 int pf_utime(char *fn, int64_t mtime)
@@ -133,7 +106,7 @@ int pf_mkdir(char *path)
 int pf_remove(char *fn)
 {
   int st;
-  if (check(fn, PF_DIR)) st = RemoveDirectory(fn);
+  if (mode_p(fn, PF_DIR)) st = RemoveDirectory(fn);
   else st = DeleteFile(fn);
   return st;
 }

@@ -197,19 +197,19 @@ DEFUN(fclose)
 
 DEFUN(stat)
 {
-  int type;
+  int mode;
   char *fn;
   struct pf_stat statbuf;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if ((fn = bi_string(argv)) == NULL) return FALSE;
-  type = pf_stat(fn, &statbuf);
-  if (type == PF_ERROR) return FALSE;
-  if (type == PF_NONE) {
+  mode = pf_stat(fn, &statbuf);
+  if (mode == PF_ERROR) return FALSE;
+  if (mode == PF_NONE) {
     *result = object_nil;
     return TRUE;
   }
   *result = gc_new_array(3);
-  (*result)->array.elt[0] = gc_new_xint(type);
+  (*result)->array.elt[0] = gc_new_xint(mode);
   (*result)->array.elt[1] = gc_new_xint(statbuf.size);
   (*result)->array.elt[2] = gc_new_xint(statbuf.mtime);
   return TRUE;
