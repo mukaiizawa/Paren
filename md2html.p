@@ -10,6 +10,7 @@ Usage: paren md2html [OPTION] FILE
 OPTION:
 	c -- Specify charset. If omitted, it is considered that 'UTF-8' is specified.
 	C -- Do not output table of contents.
+	t -- Consider the first line as the title.
 "
     $default-css
 "
@@ -81,19 +82,22 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
                node))
          nodes)))
 
-(function make-html (nodes :key charset output-contents?)
-  `((!DOCTYPE "html")
-    (html (:lang "ja")
-          (head
-            (meta (:charset ,(|| charset $default-charset)))
-            (style ,$default-css))
-          (body
-            ,@(if output-contents? (parse-contents (reverse! $contents)))
-            ,@nodes))))
+(function make-html (nodes :key title? charset output-contents?)
+  (let (title nil contents (if output-contents? (parse-contents (reverse! $contents))))
+    (if title? (<- title (car nodes) nodes (cdr nodes)))
+    `((!DOCTYPE "html")
+      (html (:lang "ja")
+            (head
+              (meta (:charset ,(|| charset $default-charset)))
+              (title ,(caddr title))
+              (style ,$default-css))
+            (body
+              ,@contents
+              ,@nodes)))))
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))
-    (let ((op args) (.parse (.init (.new OptionParser) "Cc:") (cdr args)))
+    (let ((op args) (.parse (.init (.new OptionParser) "tCc:") (cdr args)))
       (if (nil? (car args)) (error "require markdown file path")
           (let (p (Path.of (car args)) nodes nil)
             (with-open ($in p :read)
@@ -101,5 +105,6 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
                 (let (rd (.new MarkdownReader))
                   (foreach (f (x) (write-line (xml->string x)))
                            (make-html (parse-nodes (collect (f () (.read rd))))
+                                      :title? (.get op "t")
                                       :charset (.get op "c")
                                       :output-contents? (! (.get op "C"))))))))))))
