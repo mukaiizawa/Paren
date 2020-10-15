@@ -8,8 +8,7 @@ Usage: paren curl.p URL
 
 (function default-port (proto)
   (if (memeq? proto "http") 80
-      (memeq? proto "https") 443
-      (error "unexpected protocol " proto)))
+      (error "unsupported protocol. " proto)))
 
 (function http-request (host port method uri version)
   ; RFC 2616
