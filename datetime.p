@@ -3,66 +3,49 @@
 ; Process the date and time of the time zone set in the host system.
 ; The UTC to local time difference is always calculated to the current value, even during daylight savings times.
 ; After creating with new, you need to clear and initialize it using the method starting with init.
-; Valid from 1904 to 2099.
 
 (class DateTime (Object)
   unix-time year month day day-week hour minute second)
 
+(function DateTime.offset (y m d)
+  ; Returns the difference date from 0001-01-01 for yyyy-mm-dd.
+  (+ (* 365 (-- y))
+     (// y 4) (- (// y 100)) (// y 400)
+     (// (- (* 306 m) 324) 10)
+     d -1))
+
 (method DateTime .init (unix-time)
-  (let (t nil)
+  (let (t nil y nil offset nil)
     (&unix-time<- self unix-time)
-    (<- t (+ unix-time (utcoffset))    ; to localtime.
-        t (+ t (* 24107 3600 24)))    ; to 1970-01-01.
-    (&second<- self (mod t 60))
-    (<- t (// t 60))
-    (&minute<- self (mod t 60))
-    (<- t (// t 60))
-    (&hour<- self (mod t 24))
-    (<- t (// t 24))
-    (&day-week<- self (mod (+ t 5) 7))    ; 1904-01-01 is friday
-    (&year<- self (+ (* (// t 1461) 4) 1904))    ; (+ (* 365 3) 366)
-    (<- t (mod t 1461))
-    (while (>= t (.yearlen self))
-      (<- t (- t (.yearlen self)))
-      (&year<- self (++ (&year self))))
-    (&month<- self 1)
-    (while (>= t (.monthlen self))
-      (<- t (- t (.monthlen self)))
-      (&month<- self (++ (&month self))))
-    (&day<- self (++ t))
+    ;; utc to localtime and offset from 0001-01-01
+    (<- t (+ unix-time (utcoffset) 62135596800))
+    (&second<- self (mod t 60)) (<- t (// t 60))
+    (&minute<- self (mod t 60)) (<- t (// t 60))
+    (&hour<- self (mod t 24)) (<- t (// t 24))
+    (&day-week<- self (mod (+ t 1) 7))    ; 0001-01-01 is Mon
+    (<- y (++ (// t 365)))
+    (while (> (<- offset (DateTime.offset y 1 1)) t)
+      (<- y (-- y)))
+    (&year<- self y)
+    (&month<- self (++ (// (- t offset) 31)))
+    (<- offset (DateTime.offset y (&month self) 1))
+    (let (mlen (.monthlen self))
+      (when (<= (+ offset mlen) t) 
+        (&month<- self (++ (&month self)))
+        (<- offset (+ offset mlen)))
+      (&day<- self (+ t (- offset) 1)))
     self))
 
 (function DateTime.now ()
   (.init (.new DateTime) (time)))
 
 (function DateTime.of (year month day :opt hour minute second)
-  (let (dt (.new DateTime)
-           hour (|| hour 0) minute (|| minute 0) second (|| second 0)
-           y4 (// (- year 1904) 4) t (* y4 1461))
-    (assert (<= 1904 year 2099))
-    (assert (<= 1 month 12))
-    (assert (<= 1 day 31))
-    (&year<- dt (+ 1904 (* y4 4)))
-    (<- t (* y4 1461))
-    (while (< (&year dt) year)
-      (<- t (+ t (.yearlen dt)))
-      (&year<- dt (++ (&year dt))))
-    (&month<- dt 1)
-    (while (< (&month dt) month)
-      (<- t (+ t (.monthlen dt)))
-      (&month<- dt (++ (&month dt))))
-    (&day<- dt day)
-    (<- t (-- (+ t day)))
-    (&day-week<- dt (mod (+ t 5) 7))    ; 1904-01-01 is friday
-    (&hour<- dt hour)
-    (<- t (+ (* t 24) hour))
-    (&minute<- dt minute)
-    (<- t (+ (* t 60) minute))
-    (&second<- dt second)
-    (<- t (+ (* t 60) second)
-        t (- t (* 24107 3600 24)))
-    (&unix-time<- dt (- t (utcoffset)))))
-
+  (.init (.new DateTime)
+         ;; day count 1970-01-01
+         (+ (* (+ (DateTime.offset year month day) -719162) 24 60 60)
+            (if hour (* hour 60 60) 0)
+            (if minute (* minute 60) 0)
+            (- (|| second 0) (utcoffset)))))
 
 (method DateTime .year ()
   ; Returns the year.
@@ -102,34 +85,21 @@
         (< x y) -1
         1)))
 
-(method DateTime .leap-year? ()
-  (= (mod (&year self) 4) 0))
-
-(method DateTime .yearlen ()
-  ; Returns the number of days in the year
-  (if (.leap-year? self) 366
-      365))
-
 (method DateTime .monthlen ()
   ; Returns the number of days in the year
   (switch (&month self)
-    2 (if (.leap-year? self) 29 28)
+    2 (- (DateTime.offset (&year self) 3 1)
+         (DateTime.offset (&year self) 2 1))
     (4 6 9 11) 30
     :default 31))
 
-(function DateTime.pad2 (i)
-  (if (< i 10) (string "0" i)
-      (string i)))
-
 (method DateTime .date.to-s ()
-  (join (map DateTime.pad2
-                     (list (&year self) (&month self) (&day self)))
-                "-"))
+  (join (map (f (x) (int->str x :padding 2))
+             (list (&year self) (&month self) (&day self))) "-"))
 
 (method DateTime .time.to-s ()
-  (join (map DateTime.pad2
-                     (list (&hour self) (&minute self) (&second self)))
-                ":"))
+  (join (map (f (x) (int->str x :padding 2))
+             (list (&hour self) (&minute self) (&second self))) ":"))
 
 (method DateTime .datetime.to-s ()
   (string (.date.to-s self) " " (.time.to-s self)))
