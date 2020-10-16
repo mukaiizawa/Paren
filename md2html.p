@@ -5,7 +5,7 @@
 
 (<- $usage
 "
-Usage: paren md2html [OPTION] FILE
+Usage: paren md2html.p [OPTION] FILE
 	Convert markdown file FILE to html file.
 OPTION:
 	c -- Specify charset. If omitted, it is considered that 'UTF-8' is specified.
