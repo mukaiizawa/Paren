@@ -405,6 +405,12 @@
   (assert (function? (f (x) x)))
   (assert (! (function? begin0))))
 
+(builtin-function builtin? (x)
+  ; Returns whether the x is a builtin-operator.
+  (assert (builtin? f))
+  (assert (builtin? +))
+  (assert (! (builtin? builtin-function))))
+
 (builtin-function macro? (x)
   ; Returns whether the x is a macro.
   (assert (macro? begin0))
