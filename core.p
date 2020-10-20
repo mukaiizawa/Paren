@@ -1820,6 +1820,14 @@
                                     :append 2
                                     :update 3))))
 
+(method Path .mkdir ()
+  ; Create a directory corresponding to this receiver, including any necessary but nonexistent parent directories.
+  ; Returns self.
+  (if (.dir? self) (return self)
+      (.parent self) (.mkdir (.parent self)))
+  (mkdir (.to-s self))
+  self)
+
 (method Path .remove ()
   ; Deletes the file corresponding to the receiver.
   ; Returns the receiver.
