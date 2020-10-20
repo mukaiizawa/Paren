@@ -161,7 +161,6 @@ static char *symbol_name_map[] = {
   "number_modulo", "mod",
   "number_multiply", "*",
   "number_p", "number?",
-  "number_to_int", "number->int",
   // sock
   "server_socket", "server-socket",
   "client_socket", "client-socket",

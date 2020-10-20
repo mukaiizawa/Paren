@@ -8,11 +8,30 @@
 
 (function randint (n)
   ; Returns a random integer N such that (<= 0 N (-- n)).
-  (number->int (* (random) n)))
+  (// (* (random) n)))
 
 (function randbool ()
   ; Randomly returns a boolean value.
   (= (randint 2) 0))
+
+(function randbytes (bytes)
+  ; Returns the specified bytes with a random value.
+  (for (i 0) (< i (memlen bytes)) (<- i (++ i))
+    ([] bytes i (randint 0xff)))
+  bytes)
+
+(function randstr (size :key alnum? alpha? numeric? lower? upper?)
+  ; Returns alphanumeric string.
+  (let (numeric (if (|| alnum? numeric?) "0123456789")
+                lower (if (|| alnum? alpha? lower?) "abcdefghijklmnopqrstuvwxyz")
+                upper (if (|| alnum? alpha? upper?) "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+                table (string numeric lower upper)
+                table-size (memlen table)
+                val (bytes size))
+    (assert (> table-size 0))
+    (for (i 0) (< i size) (<- i (++ i))
+      ([] val i ([] table (randint table-size))))
+    (mem->str! val)))
 
 (function random ()
   ; Returns the next random floating point number in the range [0.0, 1.0).

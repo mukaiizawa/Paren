@@ -971,8 +971,11 @@
   (assert (= (/ 12 2 3) 2))
   (assert (= (/ 3 2 5) 0.3)))
 
-(builtin-function // (x y)
-  ; Returns the quotient of the x divided by the y.
+(builtin-function // (x :opt y)
+  ; Returns an integer value of the number x.
+  ; If y is specified, returns the quotient of the x divided by the y.
+  (assert (= (// 3) 3))
+  (assert (= (// 3.14) 3))
   (assert (= (// 2 1) 2))
   (assert (= (// 2 2) 1))
   (assert (= (// 2 3) 0)))
@@ -1983,7 +1986,7 @@
       (let (mant n exp 8)
         (let (write-mant1
                (f ()
-                 (let (upper (// (number->int mant) 100000000))
+                 (let (upper (// (// mant) 100000000))
                    (.write-int self upper)
                    (<- mant (* (- mant (* upper 100000000)) 10))))
                write-fraction

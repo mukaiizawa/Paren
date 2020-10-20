@@ -68,27 +68,6 @@ DEFUN(int_p)
   return TRUE;
 }
 
-#define DBL_MAX_INT ((int64_t)1<<DBL_MANT_DIG)
-#define DBL_MIN_INT (-DBL_MAX_INT-1)
-
-DEFUN(number_to_int)
-{
-  double d;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (sint_p(argv->cons.car) || object_type_p(argv->cons.car, XINT)) {
-    *result = argv->cons.car;
-    return TRUE;
-  }
-  if (bi_double(argv->cons.car, &d)) {
-    if ((double)DBL_MIN_INT <= d && d <= (double)DBL_MAX_INT) {
-      *result = gc_new_xint((int64_t)d);
-      return TRUE;
-    }
-    return mark_numeric_over_flow();
-  }
-  return mark_required_number();
-}
-
 static int double_equal_p(double x, object argv, object *result)
 {
   int64_t i;
@@ -272,15 +251,33 @@ DEFUN(number_divide)
   return mark_required_number();
 }
 
+#define DBL_MAX_INT ((int64_t)1<<DBL_MANT_DIG)
+#define DBL_MIN_INT (-DBL_MAX_INT-1)
+
 DEFUN(int_divide)
 {
   int64_t ix, iy;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_int64(argv->cons.car, &ix)) return mark_required_integer();
-  if (!bi_int64(argv->cons.cdr->cons.car, &iy)) return mark_required_integer();
-  if (iy == 0) return mark_division_by_zero();
-  *result = gc_new_xint(ix / iy);
-  return TRUE;
+  double dx;
+  if (!bi_argc_range(argc, 1, 2)) return FALSE;
+  if (argc == 1) {
+    if (bi_int64(argv->cons.car, &ix)) {
+      *result = argv->cons.car;
+      return TRUE;
+    }
+    if (bi_double(argv->cons.car, &dx)) {
+      if ((double)DBL_MIN_INT <= dx && dx <= (double)DBL_MAX_INT) {
+        *result = gc_new_xint((int64_t)dx);
+        return TRUE;
+      }
+    }
+    return mark_numeric_over_flow();
+  } else {
+    if (!bi_int64(argv->cons.car, &ix)) return mark_required_integer();
+    if (!bi_int64(argv->cons.cdr->cons.car, &iy)) return mark_required_integer();
+    if (iy == 0) return mark_division_by_zero();
+    *result = gc_new_xint(ix / iy);
+    return TRUE;
+  }
 }
 
 DEFUN(number_modulo)
