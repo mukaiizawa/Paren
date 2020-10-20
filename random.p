@@ -16,7 +16,7 @@
 
 (function randbytes (bytes)
   ; Returns the specified bytes with a random value.
-  (for (i 0) (< i (memlen bytes)) (<- i (++ i))
+  (dotimes (i (memlen bytes))
     ([] bytes i (randint 0xff)))
   bytes)
 
@@ -29,7 +29,7 @@
                 table-size (memlen table)
                 val (bytes size))
     (assert (> table-size 0))
-    (for (i 0) (< i size) (<- i (++ i))
+    (dotimes (i size)
       ([] val i ([] table (randint table-size))))
     (mem->str! val)))
 

@@ -28,7 +28,7 @@
       (if (memeq? arg "--") (return (list self (cdr args))))
       (let (argarr (str->arr arg) arglen (arrlen argarr))
         (if (memneq? ([] argarr 0) "-") (break))    ; end of option.
-        (for (i 1) (< i arglen) (<- i (++ i))
+        (for (i 1) (< i arglen) (i (++ i))
           (let (record (.lookup self ([] argarr i))
                        (opt optarg? optval) record
                        put (f (record val) (car! (cddr record) val)))

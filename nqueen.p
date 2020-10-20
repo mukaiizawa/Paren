@@ -14,9 +14,9 @@
   (let (x (.x p) y (.y p))
     (dotimes (y (.width board))
       (if (.at board (Point.of x y)) (return nil)))
-    (for (q p) (.inside? board q) (<- q (Point.of (-- (.x q)) (-- (.y q))))
+    (for (q p) (.inside? board q) (q (Point.of (-- (.x q)) (-- (.y q))))
       (if (.at board q) (return nil)))
-    (for (q p) (.inside? board q) (<- q (Point.of (++ (.x q)) (-- (.y q))))
+    (for (q p) (.inside? board q) (q (Point.of (++ (.x q)) (-- (.y q))))
       (if (.at board q) (return nil)))
     true))
 

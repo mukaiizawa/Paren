@@ -36,7 +36,7 @@
       (<- c (.skip-escape ar))
       (if (memeq? (&next ar) "-")
           (begin (.skip ar)
-                 (for (s (str->code c) e (str->code (.skip ar))) (<= s e) (<- s (++ s))
+                 (for (s (str->code c) e (str->code (.skip ar))) (<= s e) (s (++ s))
                    (.put ar (code->str s))))
           (.put ar c)))
     (.skip ar)
@@ -163,7 +163,8 @@
   (&text<- self (str->arr s))
   (if (&anchored-start? self)
       (return (&& (= start 0) (.try self (&elements self) 0))))
-  (for (i start e (.text-length self)) (<= i e) (&start<- self (<- i (++ i)))
+  (for (i start e (.text-length self)) (<= i e) (i (++ i))
+    (&start<- self i)
     (if (.try self (&elements self) i) (return true))))
 
 (function! main (args)

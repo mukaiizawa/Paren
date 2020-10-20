@@ -258,7 +258,7 @@
   ; The for macro creates a general-purpose iteration context and evaluates the specified body.
   ; Returns nil.
   ; Macro expansion image is as follows.
-  ;     (for (i 0) (< i 10) (<- i (++ i))
+  ;     (for (i 0) (< i 10) (i (++ i))
   ;         expr1
   ;         expr2
   ;         ...)
@@ -279,7 +279,7 @@
               (list if (list ! test) '(goto :break))
               (cons begin body)
               :continue
-              update
+              (cons <- update)
               '(goto :start)
               :break)
         nil))
@@ -312,7 +312,7 @@
   ; Supports break, continue macro.
   ; Returns nil.
   (with-gensyms (gl)
-    (list 'for (list gl l i (list car gl)) gl (list <- gl (list cdr gl) i (list car gl))
+    (list 'for (list gl l i (list car gl)) gl (list gl (list cdr gl) i (list car gl))
           (cons begin body))))
 
 (macro dotimes ((i n) :rest body)
@@ -321,7 +321,7 @@
   ; Supports break, continue macro.
   ; Returns nil.
   (with-gensyms (gn)
-    (list 'for (list i 0 gn n) (list < i gn) (list <- i (list '++ i))
+    (list 'for (list i 0 gn n) (list < i gn) (list i (list '++ i))
           (cons begin body))))
 
 (macro dostring ((c s) :rest body)
@@ -338,7 +338,7 @@
   ; Supports break, continue macro.
   ; Returns nil.
   (with-gensyms (ga gi glen)
-    (list 'for (list gi 0 ga a glen (list 'arrlen ga)) (list < gi glen) (list <- gi (list '++ gi))
+    (list 'for (list gi 0 ga a glen (list 'arrlen ga)) (list < gi glen) (list gi (list '++ gi))
           (list let (list i (list [] ga gi))
                 (cons begin body)))))
 
@@ -683,7 +683,7 @@
 (function nthcdr (l n)
   ; Returns the the specified nth cons of the specified list l.
   ; If n is greater than the length of l, nil is returned.
-  (for (i 0) (&& l (< i n)) (<- i (++ i))
+  (for (i 0) (&& l (< i n)) (i (++ i))
     (<- l (cdr l)))
   l)
 
@@ -1098,7 +1098,7 @@
               pa (str->arr pat) plen (arrlen pa))
     (if (< (- slen start) 0) (error "illegal start")
         (= plen 0) (return 0))
-    (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (<- i (++ i))
+    (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (i (++ i))
       (when (memeq? ([] sa i) p0)
         (if (= plen 1) (return i))
         (let (si (++ i) pi 1)
@@ -1112,7 +1112,7 @@
   (let (sa (str->arr s) slen (arrlen sa)
            pa (str->arr pat) plen (arrlen pa))
     (if (= plen 0) (return (-- slen)))
-    (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (<- i (-- i))
+    (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (i (-- i))
       (when (memeq? ([] sa i) p0)
         (if (= plen 1) (return i))
         (let (si (++ i) pi 1)
@@ -1575,7 +1575,7 @@
   ; If .init method has argument, must invoke after create an instance.
   ; Otherwise automatically invoke .init method.
   (let (o nil)
-    (for (cls self) cls (<- cls (find-class (assoc cls :super)))
+    (for (cls self) cls (cls (find-class (assoc cls :super)))
       (dolist (field (reverse! (map mem->key (assoc cls :fields))))
         (push! o nil)
         (push! o field)))

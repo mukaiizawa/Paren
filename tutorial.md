@@ -47,7 +47,7 @@ Parenのプログラムは演算子を前置し、被演算子と共に括弧で
 
 文字列を印字するにはprintを使用する。
 
-    ) (print "hello world")
+    ) (write "hello world")
     hello world
     "hello world"
 
@@ -682,7 +682,7 @@ removeは引数のリストの要素のち、関数が真を返す要素を取�
     (function factorial (n)
       (if (= n 1) 1 (* n (factorial (- n 1)))))
 
-これはfor文を用いるより、直感的である。
+これはwhile文を用いるより、直感的である。
 
     (function factorial (n)
       (let (result n)
@@ -816,7 +816,7 @@ forはwhileよりも細かく反復条件を指定することができるマク
     binding-form ::= (sym-val ...)
     sym-val ::= sym val
     end-test-form -- 反復判定式
-    step-form -- 反復する度に評価される式
+    step-form -- 再束縛式
     body-form -- 反復処理
 
 forは次の手順で評価される。
@@ -828,8 +828,8 @@ forは次の手順で評価される。
 
 単純なforの使用例として1から10までの和を順次出力するプログラムを示す。
 
-    ) (for (i 0 sum 0) (<= i 10) (<- i (++ i))
-        (print (<- i (++ i))))
+    ) (for (i 0 sum 0) (<= i 10) (i (++ i))
+        (write (<- i (++ i))))
     0
     1
     3
@@ -1004,7 +1004,7 @@ Parenのマクロが他の言語と大きく異なるのは、マクロが言語
 ここではいくつかの組み込みマクロの定義を述べる。
 
     ) (for (i 0) (< i 5) (<- i (++ i))
-        (print i))
+        (write i))
     0
     1
     2
@@ -1019,7 +1019,7 @@ Parenのマクロが他の言語と大きく異なるのは、マクロが言語
 
     ) (let (i 0)
         (while (< i 5)
-           (print i)
+           (write i)
            (<- i (++ i))))
     0
     1

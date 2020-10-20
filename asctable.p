@@ -43,7 +43,7 @@
                    (.to-l (Path.of "asctable.p"))))
   (write-line)
   (write-line "   0 1 2 3 4 5 6 7 8 9 a b c d e f")
-  (for (i 0) (<= i 0x7f) (<- i (++ i))
+  (for (i 0) (<= i 0x7f) (i (++ i))
     (when (= (mod i 0x10) 0)
       (write-mem (int->str i :radix 16 :padding 2)) (write-mem " "))
     (write-byte (if (print? i) i 0x2e))
