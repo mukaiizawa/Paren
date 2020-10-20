@@ -72,7 +72,8 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
       (push! $contents `(,hx (:id ,id) ,@(cons id (cdr node)))))))
 
 (function header? (node)
-  (find (f (hx) (eq? hx (car node))) $headers))
+  (let (elt (car node))
+    (some? (f (hx) (eq? hx elt)) $headers)))
 
 (function parse-nodes (nodes)
   (let (contents-index (array 6))

@@ -802,17 +802,15 @@
   (if (cdr args) (reduce f (cons (f (car args) (cadr args)) (cddr args)))
       (car args)))
 
-(function find-cons (f l)
-  ; Returns the first cons for which the result of applying the function f to the list elements in order from left to right is true.
-  ; If there is no such cons, returns nil.
-  (while l
-    (if (f (car l)) (return l)
-        (<- l (cdr l)))))
-
 (function find (f l)
-  ; Returns the first element for which the result of applying the function f to the list elements in order from left to right is true.
-  ; If there is no such cons, returns nil.
-  (car (find-cons f l)))
+  ; Find the element in the list l where the function f first returns not nil.
+  ; Returns a following list (such-element return-value).
+  ; If there is no such element, returns '(nil nil).
+  (let (e nil v nil)
+    (while l
+      (if (<- e (car l) v (f e)) (return (list e v))
+          (<- l (cdr l))))
+    '(nil nil)))
 
 (function select (f l)
   ; Returns a list with the elements for which the result of applying the function f is true.
