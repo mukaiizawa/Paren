@@ -2236,8 +2236,8 @@
   (let (next (&next self))
     (if (nil? next) (.raise self "unexpected EOF")
         (&& expected (memneq? next expected)) (.raise self
-                                                       "unexpected character '" next "'. "
-                                                       "expected '" expected "'")
+                                                      "unexpected character '" next "'. "
+                                                      "expected '" expected "'")
         (memeq? next "\n") (&lineno<- self (++ (&lineno self))))
     (&next<- self (.read-char (&stream self)))
     next))
@@ -2262,12 +2262,15 @@
   ; Skip line.
   ; Returns line.
   ; If stream reached eof, returns nil.
-  (let (line (.read-line (&stream self)))
-    (if line (begin
-               (&lineno<- self (++ (&lineno self)))
-               (.skip self))
-        (&next<- self nil))
-    line))
+  (let (next (&next self))
+    (if (nil? next) (.skip self)    ; raise error.
+        (let (line (.read-line (&stream self)))
+          (if line (begin
+                     (<- line (memcat next line))
+                     (&lineno<- self (++ (&lineno self)))
+                     (&next<- self (.read-char (&stream self))))
+              (&next<- self nil))
+          line))))
 
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
