@@ -2264,6 +2264,7 @@
   ; If stream reached eof, returns nil.
   (let (next (&next self))
     (if (nil? next) (.skip self)    ; raise error.
+        (memeq? next "\n") (begin (.skip self) "")
         (let (line (.read-line (&stream self)))
           (if line (begin
                      (<- line (memcat next line))

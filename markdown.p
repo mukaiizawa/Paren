@@ -139,7 +139,8 @@
     `(tr ,@(reverse! txlist))))
 
 (method MarkdownReader .parse-table ()
-  (let (thlist (.parse-tr self 'th) sep (.parse-tr self) tdlist nil)
+  (let (thlist (.parse-tr self 'th) tdlist nil)
+    (.skip-line self)    ; skip separator.
     (while (.continue? self)
       (push! tdlist (.parse-tr self 'td)))
     `(table

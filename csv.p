@@ -33,8 +33,8 @@
 
 (function! main (args)
   (with-memory-stream ($in
-"foo,bar,buzz
-\"foo\",\"bar\",\"buzz\"
+"foo,\"bar\",buzz
+\"foo\",bar,\"buzz\"
 ")
     (let (rd (.new CSVReader)
              (r1 r2) (collect (f () (.read rd)))

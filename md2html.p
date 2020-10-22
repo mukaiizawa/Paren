@@ -104,7 +104,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
             (with-open ($in p :read)
               (with-open ($out (string (.but-suffix p) ".html") :write)
                 (let (rd (.new MarkdownReader))
-                  (foreach (f (x) (write-line (xml->string x)))
+                  (foreach (f (x) (write-line (xml->str x)))
                            (make-html (parse-nodes (collect (f () (.read rd))))
                                       :title? (.get op "t")
                                       :charset (.get op "c")

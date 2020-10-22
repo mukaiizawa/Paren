@@ -1,30 +1,32 @@
 ; xml module.
 
-(function xml-attrs->string (l)
-  (with-memory-stream ($out)
-    (while l
-      (assert (keyword? (car l)))
-      (write-mem " ")
-      (write-mem (car l))
-      (if (keyword? (car (<- l (cdr l)))) (continue)
-          (string? (car l)) (begin
-                              (write-mem (string "='" (car l) "'"))
-                              (<- l (cdr l)))
-          (assert nil)))))
+(function xml-attrs->str (l)
+  (if l
+      (with-memory-stream ($out)
+        (while l
+          (assert (keyword? (car l)))
+          (write-mem " ")
+          (write-mem (car l))
+          (if (keyword? (car (<- l (cdr l)))) (continue)
+              (string? (car l)) (begin
+                                  (write-mem (string "='" (car l) "'"))
+                                  (<- l (cdr l)))
+              (assert nil))))))
 
-(function xml->string (l)
+(function xml->str (l)
   ; Returns a list representation of xml as a string.
   (if (atom? l) l
-      (let (name (car l))
-        (if (eq? name '?xml) (string "<? " (cadr l) " ?>")
+      (let ((name :opt attrs :rest children) l)
+        (if (eq? name '?xml) (string "<? " attrs " ?>")
             (eq? name '!DOCTYPE) (string "<!DOCTYPE " (cadr l) ">")
-            (eq? name '!--) (string "<!--" (cadr l) "-->")
-            (let (attrs (cadr l) children (cddr l))
-              (if (! (&& (cons? attrs) (keyword? (car attrs))))
-                  (<- children (cons attrs children) attrs nil))
-              (string "<" name (xml-attrs->string attrs) ">"
-                      (join (map xml->string children))
-                      "</" name ">"))))))
+            (eq? name '!--) (string "<!--" attrs "-->")
+            (&& attrs (|| (atom? attrs) (! (keyword? (car attrs)))))
+            (string "<" name  ">"
+                    (join (map xml->str (cons attrs children)))
+                    "</" name ">")
+            (string "<" name (xml-attrs->str attrs) ">"
+                    (join (map xml->str children))
+                    "</" name ">")))))
 
 ; reader
 
@@ -166,5 +168,5 @@
                  "    </body>"
                  "</html>"))
     (let (rd (.new XMLReader))
-      (write (map (f (x) (xml->string x))
+      (write (map (f (x) (xml->str x))
                   (write (collect (f () (.read rd)))))))))
