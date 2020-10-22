@@ -2262,11 +2262,12 @@
   ; Skip line.
   ; Returns line.
   ; If stream reached eof, returns nil.
-  (with-memory-stream ($out)
-    (while (memneq? (&next self) "\n")
-      (if (&next self) (write-mem (.skip self))
-          (return nil)))
-    (.skip self)))
+  (let (line (.read-line (&stream self)))
+    (if line (begin
+               (&lineno<- self (++ (&lineno self)))
+               (.skip self))
+        (&next<- self nil))
+    line))
 
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
@@ -2327,28 +2328,24 @@
 
 (method AheadReader .get ()
   ; Append next character to token and returns it.
-  (let (c (.skip self))
-    (.put self c)
-    c))
+  (.put self (.skip self)))
 
 (method AheadReader .get-line ()
   ; Get line.
   ; Returns line.
+  ; If stream reached eof, returns nil.
   (let (line (.skip-line self))
-    (.put self line)
-    line))
+    (if line (.put self line))))
 
 (method AheadReader .get-escape ()
-  (let (c (.skip-escape self))
-    (.put self c)
-    c))
+  (.put self (.skip-escape self)))
 
 (method AheadReader .put (o)
   ; Put the o to the end of the token regardless of the stream.
   ; Returns o;
   (if (byte? o) (.write-byte (&token self) o)
-      (begin0 o
-              (.write-mem (&token self) o))))
+      (.write-mem (&token self) o))
+  o)
 
 (method AheadReader .token ()
   ; Returns the token string currently cut out.
@@ -2419,10 +2416,6 @@
   (.skip self "\"")
   (.token self))
 
-(method ParenLexer .skip-comment ()
-  (while (&next self)
-    (if (memeq? (.skip self) "\n") (break))))
-
 (method ParenLexer .lex ()
   (.skip-space self)
   (let (next (&next self))
@@ -2437,7 +2430,7 @@
                                       '(:unquote)))
         (memeq? next "\"") (list :atom (.lex-string self))
         (memeq? next ":") (list :atom (.lex-keyword self))
-        (memeq? next ";") (begin (.skip-comment self) (.lex self))
+        (memeq? next ";") (begin (.skip-line self) (.lex self))
         (memeq? next "#") (begin (.skip self) (list :read-macro (mem->sym (.next self))))
         (|| (memeq? next "+")
             (memeq? next "-")) (list :atom (.lex-sign self))
