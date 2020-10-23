@@ -12,8 +12,8 @@
   key val n m greedy?)
 
 (method Regex.Elt .init (key :opt val)
-  (&key<- self key)
-  (&val<- self val))
+  (&key! self key)
+  (&val! self val))
 
 (function Regex.parse-any (ar)
   (.skip ar)
@@ -60,7 +60,7 @@
     (when (memeq? (&next ar) "?")
       (.skip ar)
       (<- greedy? nil))
-    (&greedy?<- (&m<- (&n<- expr n) m) greedy?)))
+    (&greedy?! (&m! (&n! expr n) m) greedy?)))
 
 (function Regex.parse (ar)
   (let (elements nil expr nil c nil)
@@ -93,14 +93,14 @@
   ;         {n,m}   {n,m}?   match from n to m times.
   (let (r (.new Regex) s 0 e (memlen expr) anchored? nil)
     (when (= ([] expr 0) 0x5e)
-      (&anchored-start?<- r true)
+      (&anchored-start?! r true)
       (<- s (++ s) anchored? true))
     (when (= ([] expr (-- e)) 0x24)
-      (&anchored-end?<- r true)
+      (&anchored-end?! r true)
       (<- e (-- e) anchored? true))
     (if anchored? (<- expr (submem expr s e)))
     (with-memory-stream ($in expr)
-      (&elements<- r (Regex.parse (.new AheadReader))))))
+      (&elements! r (Regex.parse (.new AheadReader))))))
 
 (method Regex .test (elt i)
   (if (< i (.text-length self))
@@ -119,7 +119,7 @@
 
 (method Regex .try (elements i)
   (if (nil? elements)
-      (if (&anchored-end? (&end<- self i)) (return (&& (= i (.text-length self))))
+      (if (&anchored-end? (&end! self i)) (return (&& (= i (.text-length self))))
           (return true)))
   (let (elt (car elements) n (&n elt) m (|| (&m elt) (- (.text-length self) i)) next-i nil)
     (if (&greedy? elt)
@@ -159,12 +159,12 @@
 
 (method Regex .match? (s :opt start)
   ; Returns whether the string s matched this instance.
-  (&start<- self (|| start (<- start 0)))
-  (&text<- self (str->arr s))
+  (&start! self (|| start (<- start 0)))
+  (&text! self (str->arr s))
   (if (&anchored-start? self)
       (return (&& (= start 0) (.try self (&elements self) 0))))
   (for (i start e (.text-length self)) (<= i e) (i (++ i))
-    (&start<- self i)
+    (&start! self i)
     (if (.try self (&elements self) i) (return true))))
 
 (function! main (args)

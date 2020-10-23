@@ -7,11 +7,10 @@
 
 (function Point.of (x y)
   ; Returns a point instance corresponding to the coordinates (x, y).
-  (if (&& (number? x) (number? y))
-      (&<- (.new Point)
-        :x x
-        :y y)
-      (.raise self "illegal arguments.")))
+  (if (! (every? number? (list x y))) (.raise self "illegal arguments."))
+  (let (p (.new Point))
+    (&x! p x)
+    (&y! p y)))
 
 (method Point .x ()
   ; Returns x coordinate of the receiver.

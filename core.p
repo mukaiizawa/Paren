@@ -1477,13 +1477,13 @@
 
 (macro make-accessor (field)
   ; Returns an expression that binds getter and setter.
-  ; If field name is 'xxx', bind a getter named `&xxx` and setter named `&xxx<-`.
+  ; If field name is 'xxx', bind a getter named `&xxx` and setter named `&xxx!`.
   ; Works faster than method which defined with the `method` macro.
   (with-gensyms (receiver val)
     (let (key (mem->key field)
               field (mem->str field)
               getter (memcat '& field)
-              setter (memcat '& field '<-))
+              setter (memcat '& field '!))
       (list begin
             (list if (list ! (list 'bound? (list quote getter)))
                   (list 'function getter (list receiver)
@@ -1493,13 +1493,6 @@
                   (list 'function setter (list receiver val)
                         (list 'error-if-not-object receiver)
                         (list begin (list 'assoc! receiver key val) receiver)))))))
-
-(macro &<- (object :rest pairs)
-  (with-gensyms (go)
-    (cons let (cons (list go object)
-                    (map (f (pair)
-                           (list (mem->sym (memcat '& (car pair) '<-)) go (cadr pair)))
-                         (group pairs 2))))))
 
 (macro make-method-dispatcher (method-sym)
   (when (! (bound? method-sym))
@@ -1599,7 +1592,7 @@
 
 (method Exception .message (message)
   ; Message accessors.
-  (&message<- self message))
+  (&message! self message))
 
 (method Exception .to-s ()
   ; Returns a String representing the receiver.
@@ -1649,8 +1642,8 @@
   size elt)
 
 (method Array .init ()
-  (&size<- self 0)
-  (&elt<- self (array 4)))
+  (&size! self 0)
+  (&elt! self (array 4)))
 
 (method Array .size ()
   ; Returns size of the receiver.
@@ -1672,7 +1665,7 @@
       (while (< (<- elt-size (* elt-size 2)) req))
       (let (elt (array elt-size))
         (arrcpy (&elt self) 0 elt 0 (&size self))
-        (&elt<- self elt)))
+        (&elt! self elt)))
     self))
 
 (method Array .add (val)
@@ -1680,7 +1673,7 @@
   ; Returns the receiver.
   (let (i (&size self))
     (.reserve self 1)
-    (&size<- self (++ i))
+    (&size! self (++ i))
     ([] (&elt self) i val))
   self)
 
@@ -1735,7 +1728,7 @@
                                      (write-mem c)))))
                            Path.separator)))
         (if root? (<- path (cons Path.separator path)))
-        (&path<- (.new Path) path))))
+        (&path! (.new Path) path))))
 
 (function Path.getcwd ()
   ; Returns the path corresponding to the current directory.
@@ -1773,7 +1766,7 @@
   ; If the receiver is root directory, returns nil.
   ; However, the receiver is relative path, non-root directory may return nil.
   (let (path (butlast (&path self)))
-    (if path (&path<- (.new Path) path))))
+    (if path (&path! (.new Path) path))))
 
 (method Path .resolve (path)
   ; Resolve the given path against this path.
@@ -2098,9 +2091,9 @@
   buf rdpos wrpos)
 
 (method MemoryStream .init ()
-  (&buf<- self (bytes 64))
-  (&rdpos<- self 0)
-  (&wrpos<- self 0))
+  (&buf! self (bytes 64))
+  (&rdpos! self 0)
+  (&wrpos! self 0))
 
 (method MemoryStream .size ()
   ; Returns the number of bytes written to the stream.
@@ -2112,14 +2105,14 @@
       (while (< (<- buf-size (* buf-size 2)) req))
       (let (buf (bytes buf-size))
         (memcpy (&buf self) 0 buf 0 (&wrpos self))
-        (&buf<- self buf)))
+        (&buf! self buf)))
     self))
 
 (method MemoryStream .read-byte ()
   (let (rdpos (&rdpos self))
     (if (= rdpos (&wrpos self)) -1
         (begin0 ([] (&buf self) rdpos)
-                (&rdpos<- self (++ rdpos))))))
+                (&rdpos! self (++ rdpos))))))
 
 (method MemoryStream .read-bytes (buf from size)
   (let (rest (- (&wrpos self) (&rdpos self)))
@@ -2131,17 +2124,17 @@
   (let (wrpos (&wrpos self))
     (.reserve self 1)
     ([] (&buf self) wrpos byte)
-    (&wrpos<- self (++ wrpos))))
+    (&wrpos! self (++ wrpos))))
 
 (method MemoryStream .write-mem (bytes :opt from size)
   (.reserve self (|| size (<- size (memlen bytes))))
   (memcpy bytes (|| from 0) (&buf self) (&wrpos self) size)
-  (&wrpos<- self (+ (&wrpos self) size))
+  (&wrpos! self (+ (&wrpos self) size))
   size)
 
 (method MemoryStream .seek (offset)
   (if (! (<= 0 offset (&wrpos self))) (error "index outof bound"))
-  (&rdpos<- self offset))
+  (&rdpos! self offset))
 
 (method MemoryStream .tell ()
   (&rdpos self))
@@ -2154,8 +2147,8 @@
 
 (method MemoryStream .reset ()
   ; Empty the contents of the stream.
-  (&rdpos<- self 0)
-  (&wrpos<- self 0))
+  (&rdpos! self 0)
+  (&wrpos! self 0))
 
 (class FileStream (Stream)
   ; Provides I/O functions for files.
@@ -2164,7 +2157,7 @@
   fp)
 
 (method FileStream .init (fp)
-  (&fp<- self fp))
+  (&fp! self fp))
 
 (method FileStream .read-byte ()
   (fgetc (&fp self)))
@@ -2202,11 +2195,10 @@
 (method AheadReader .init ()
   ; initializing AheadReader with (dynamic $in).
   ; Returns the receiver.
-  (&<- self
-    :stream (dynamic $in)
-    :next (.read-char (&stream self))
-    :token (.new MemoryStream)
-    :lineno 1))
+  (&stream! self (dynamic $in))
+  (&next! self (.read-char (&stream self)))
+  (&token! self (.new MemoryStream))
+  (&lineno! self 1))
 
 (method AheadReader .next ()
   ; Returns a pre-read character.
@@ -2238,8 +2230,8 @@
         (&& expected (memneq? next expected)) (.raise self
                                                       "unexpected character '" next "'. "
                                                       "expected '" expected "'")
-        (memeq? next "\n") (&lineno<- self (++ (&lineno self))))
-    (&next<- self (.read-char (&stream self)))
+        (memeq? next "\n") (&lineno! self (++ (&lineno self))))
+    (&next! self (.read-char (&stream self)))
     next))
 
 (method AheadReader .skip-escape ()
@@ -2268,9 +2260,9 @@
         (let (line (.read-line (&stream self)))
           (if line (begin
                      (<- line (memcat next line))
-                     (&lineno<- self (++ (&lineno self)))
-                     (&next<- self (.read-char (&stream self))))
-              (&next<- self nil))
+                     (&lineno! self (++ (&lineno self)))
+                     (&next! self (.read-char (&stream self))))
+              (&next! self nil))
           line))))
 
 (method AheadReader .skip-space ()
@@ -2443,12 +2435,12 @@
   lexer token token-type)
 
 (method ParenReader .init ()
-  (&lexer<- self (.new ParenLexer)))
+  (&lexer! self (.new ParenLexer)))
 
 (method ParenReader .scan ()
   (let ((token-type :opt token) (.lex (&lexer self)))
-    (&token-type<- self token-type)
-    (&token<- self token)))
+    (&token-type! self token-type)
+    (&token! self token)))
 
 (method ParenReader .parse-list ()
   (.scan self)

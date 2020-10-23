@@ -7,12 +7,10 @@
 
 (method Matrix .init (p)
   ; Initialize the receiver to a matrix object with width x height y based on a point object that has coordinates (x, y).
-  (if (is-a? p Point)
-      (&<- self
-        :width (.x p)
-        :height (.y p)
-        :contents (array (* (&width self) (&height self))))
-      (.raise self "expected instance of Point." p)))
+  (if (! (is-a? p Point)) (.raise self "expected instance of Point." p))
+  (&width! self (.x p))
+  (&height! self (.y p))
+  (&contents! self (array (* (&width self) (&height self)))))
 
 (method Matrix .width ()
   ; Returns width of the receiver.

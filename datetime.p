@@ -16,24 +16,24 @@
 
 (method DateTime .init (unix-time)
   (let (t nil y nil offset nil)
-    (&unix-time<- self unix-time)
+    (&unix-time! self unix-time)
     ;; utc to localtime and offset from 0001-01-01
     (<- t (+ unix-time (utcoffset) 62135596800))
-    (&second<- self (mod t 60)) (<- t (// t 60))
-    (&minute<- self (mod t 60)) (<- t (// t 60))
-    (&hour<- self (mod t 24)) (<- t (// t 24))
-    (&day-week<- self (mod (+ t 1) 7))    ; 0001-01-01 is Mon
+    (&second! self (mod t 60)) (<- t (// t 60))
+    (&minute! self (mod t 60)) (<- t (// t 60))
+    (&hour! self (mod t 24)) (<- t (// t 24))
+    (&day-week! self (mod (+ t 1) 7))    ; 0001-01-01 is Mon
     (<- y (++ (// t 365)))
     (while (> (<- offset (DateTime.offset y 1 1)) t)
       (<- y (-- y)))
-    (&year<- self y)
-    (&month<- self (++ (// (- t offset) 31)))
+    (&year! self y)
+    (&month! self (++ (// (- t offset) 31)))
     (<- offset (DateTime.offset y (&month self) 1))
     (let (mlen (.monthlen self))
       (when (<= (+ offset mlen) t) 
-        (&month<- self (++ (&month self)))
+        (&month! self (++ (&month self)))
         (<- offset (+ offset mlen)))
-      (&day<- self (+ t (- offset) 1)))
+      (&day! self (+ t (- offset) 1)))
     self))
 
 (function DateTime.now ()

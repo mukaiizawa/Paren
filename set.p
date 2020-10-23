@@ -4,7 +4,7 @@
   cmp elements)
 
 (method Set .init (:opt cmp)
-  (&cmp<- self (|| cmp eq?)))
+  (&cmp! self (|| cmp eq?)))
 
 (method Set .include? (val)
   (let (cmp (&cmp self))
@@ -14,7 +14,7 @@
 
 (method Set .add (val)
   (if (! (.include? self val))
-      (&elements<- self (cons val (&elements self))))
+      (&elements! self (cons val (&elements self))))
   val)
 
 (method Set .elements ()

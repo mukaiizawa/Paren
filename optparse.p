@@ -13,7 +13,7 @@
       (let (opt ([] option i) optarg? (&& (< (<- i (++ i)) len) (memeq? ([] option i) ":")))
         (if optarg? (<- i (++ i))) 
         (push! table (list opt optarg? nil))))
-    (&table<- self table)))
+    (&table! self table)))
 
 (method OptionParser .lookup (opt)
   (let ((record v) (find (f (x) (memeq? opt (car x))) (&table self)))
