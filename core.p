@@ -349,9 +349,9 @@
     (list let (list clock-offset '(clock) cycle-offset '(cycle))
           (list 'begin0
                 (cons begin body)
-                (list 'write-line (list 'string
-                                       "time=" (list '- '(clock) clock-offset)
-                                       ",cycle=" (list '- '(cycle) cycle-offset)))))))
+                (list 'write (list 'list
+                                   :time (list '- '(clock) clock-offset)
+                                   :cycle (list '- '(cycle) cycle-offset)))))))
 
 (builtin-function expand-macro (expr)
   ; Returns the result of expanding the macro when expr is a list and car is a macro.
