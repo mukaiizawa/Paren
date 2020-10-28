@@ -236,11 +236,11 @@ char *lex_token_name(char *buf, int token)
 {
   char *name;
   switch(token) {
-    case LEX_SYMBOL: name="symbol"; break;
+    case LEX_SYMBOL: name = "symbol"; break;
     case EOF: name = "EOF"; break;
     default: name = NULL; break;
   }
-  if(name != NULL) strcpy(buf, name);
+  if (name != NULL) strcpy(buf, name);
   else xsprintf(buf, "%c", token);
   return buf;
 }
