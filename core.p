@@ -2124,7 +2124,8 @@
   (let (wrpos (&wrpos self))
     (.reserve self 1)
     ([] (&buf self) wrpos byte)
-    (&wrpos! self (++ wrpos))))
+    (&wrpos! self (++ wrpos))
+    byte))
 
 (method MemoryStream .write-mem (bytes :opt from size)
   (.reserve self (|| size (<- size (memlen bytes))))
