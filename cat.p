@@ -1,4 +1,4 @@
-; cat
+; concatenate files and output.
 
 (function cat ()
   (let (c nil)
