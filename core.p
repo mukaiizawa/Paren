@@ -2429,7 +2429,7 @@
         (memeq? next ";") (begin (.skip-line self) (.lex self))
         (memeq? next "#") (begin (.skip self) (list :read-macro (mem->sym (.next self))))
         (memmem "+-" next) (list :atom (.lex-sign self))
-        (.digit? self) (list :atom (.skip-number self))
+        (memmem "0123456789" next) (list :atom (.skip-number self))
         (list :atom (.lex-symbol self)))))
 
 (class ParenReader ()
