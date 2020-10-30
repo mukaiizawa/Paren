@@ -1691,8 +1691,6 @@
   ; You can read and write files to the corresponding path as needed.
   path)
 
-(<- Path.separator "/")
-
 (function Path.of (path-name)
   ; Constructs and returns the path object corresponding to path-name.
   ; Internally it just holds the string path-name as a list of filenames.
@@ -1710,24 +1708,23 @@
   ; Two or more consecutive `/`s or trailing `/`s are ignored.
   ;     (Path.of "foo//bar/") <=> ("foo" "bar")
   (if (is-a? path-name Path) path-name
-      (let (c nil path nil first-letter (strnth path-name 0) root? nil)
-        (if (memeq? first-letter "~")
-            (<- path-name (memcat
-                            (if (eq? $host-name :windows)
-                                (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH"))
-                                (getenv "HOME"))
-                            Path.separator path-name))
-            (memeq? first-letter Path.separator)
-            (<- root? true))
-        (<- path (except (f (x) (|| (memeq? x "") (memeq? x "~")))
+      (let (c nil path nil root? nil)
+        (if (memprefix? path-name "/") (<- root? true)
+            (memprefix? path-name "~") (<- path-name
+                                           (memcat
+                                             (if (eq? $host-name :windows)
+                                                 (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH"))
+                                                 (getenv "HOME"))
+                                             "/" (submem path-name 1))))
+        (<- path (except memempty?
                          (split
                            (with-memory-stream ($out)
                              (with-memory-stream ($in path-name)
                                (while (<- c (read-char))
-                                 (if (memeq? c "\\") (write-mem Path.separator)
+                                 (if (memeq? c "\\") (write-mem "/")
                                      (write-mem c)))))
-                           Path.separator)))
-        (if root? (<- path (cons Path.separator path)))
+                           "/")))
+        (if root? (<- path (cons "/"path)))
         (&path! (.new Path) path))))
 
 (function Path.getcwd ()
@@ -1776,15 +1773,14 @@
   ; `.` and `..` included in path-name are not treated specially.
   (if (string? path) (<- path (Path.of path)))
   (if (.absolute? path) path
-      (Path.of (memcat (.to-s self) Path.separator (.to-s path)))))
+      (Path.of (memcat (.to-s self) "/" (.to-s path)))))
 
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
   (let (first-file (car (&path self)))
-    (if (eq? $host-name :windows)
-        (&& (= (memlen first-file) 2)
-            (memmem first-file ":" 1 2))
-        (memeq? first-file Path.separator))))
+    (if (eq? $host-name :windows) (&& (= (memlen first-file) 2)
+                                      (= ([] first-file 1) 0x3a))
+        (memeq? first-file "/"))))
 
 (method Path .relative? ()
   ; Same as (! (.absolute? self))
@@ -1799,7 +1795,7 @@
 (method Path .to-s ()
   ; Returns a string representation of the receiver.
   (reduce (f (acc rest)
-            (memcat (if (memeq? acc Path.separator) "" acc) Path.separator rest))
+            (memcat (if (memeq? acc "/") "" acc) "/" rest))
           (&path self)))
 
 (method Path .open (mode)

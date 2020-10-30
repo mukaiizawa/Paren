@@ -23,7 +23,6 @@ static char *core_fn;
 // parser
 
 static int next_token;
-static char token_str[MAX_STR_LEN];
 
 static int parse_skip(void)
 {
@@ -32,79 +31,18 @@ static int parse_skip(void)
 
 static int parse_token(int token)
 {
-  if (next_token != token)
-    lex_error("missing %s", lex_token_name(token_str, token));
-  switch (token) {
-    case LEX_SYMBOL:
-    case LEX_KEYWORD:
-    case LEX_STRING:
-      memcpy(token_str, lex_str.elt, lex_str.size);
-      token_str[lex_str.size] = '\0';
-      break;
-    default:
-      break;
-  }
+  char buf[MAX_STR_LEN];
+  if (next_token != token) lex_error("missing %s", lex_token_name(buf, token));
   return parse_skip();
 }
 
-static object new_mem(int type)
-{
-  return gc_new_mem_from(type, token_str, strlen(token_str));
-}
-
-static object parse_symbol(void)
-{
-  parse_token(LEX_SYMBOL);
-  return new_mem(SYMBOL);
-}
-
-static object parse_keyword(void)
-{
-  parse_token(LEX_KEYWORD);
-  return new_mem(KEYWORD);
-}
-
-static object parse_string(void)
-{
-  parse_token(LEX_STRING);
-  return new_mem(STRING);
-}
-
-static object parse_integer(void)
-{
-  int val;
-  val = lex_ival;
-  parse_skip();
-  return gc_new_xint(val);
-}
-
-static object parse_float(void)
-{
-  double val;
-  val = lex_fval;
-  parse_skip();
-  return gc_new_xfloat(val);
-}
-
-static object parse_atom(void)
-{
-  switch (next_token) {
-    case LEX_SYMBOL: return parse_symbol();
-    case LEX_KEYWORD: return parse_keyword();
-    case LEX_STRING: return parse_string();
-    case LEX_INT: return parse_integer();
-    case LEX_FLOAT: return parse_float();
-    default: lex_error("illegal token '%c'.", (char)next_token); return NULL;
-  }
-}
-
-static object parse_s_expr(void);
+static object parse_expr(void);
 
 static object parse_cdr(void)
 {
   object o;
   if (next_token == ')') return object_nil;
-  o = parse_s_expr();
+  o = parse_expr();
   return gc_new_cons(o, parse_cdr());
 }
 
@@ -113,30 +51,55 @@ static object parse_list(void)
   object o;
   if (parse_skip() == ')') o = object_nil;
   else {
-    o = parse_s_expr();
+    o = parse_expr();
     o = gc_new_cons(o, parse_cdr());
   }
   parse_token(')');
   return o;
 }
 
-static object parse_s_expr(void)
+static object parse_expr(void)
 {
-  if (next_token == '\'') {
-    parse_skip();
-    return gc_new_cons(object_quote, gc_new_cons(parse_s_expr(), object_nil));
+  object o;
+  switch (next_token) {
+    case '(':
+      return parse_list();
+    case '\'':
+      parse_skip();
+      return gc_new_cons(object_quote, gc_new_cons(parse_expr(), object_nil));
+    case LEX_SYMBOL:
+      o = gc_new_mem_from(SYMBOL, lex_str.elt, lex_str.size);
+      parse_skip();
+      return o;
+    case LEX_KEYWORD:
+      o = gc_new_mem_from(KEYWORD, lex_str.elt, lex_str.size);
+      parse_skip();
+      return o;
+    case LEX_STRING:
+      o = gc_new_mem_from(STRING, lex_str.elt, lex_str.size);
+      parse_skip();
+      return o;
+    case LEX_INT:
+      o = gc_new_xint(lex_ival);
+      parse_skip();
+      return o;
+    case LEX_FLOAT:
+      o = gc_new_xfloat(lex_fval);
+      parse_skip();
+      return o;
+    default:
+      lex_error("illegal token '%c'.", (char)next_token);
+      return NULL;
   }
-  if (next_token == '(') return parse_list();
-  return parse_atom();
 }
 
 // loader
 
 static object load_rec(void)
 {
-  object o;    // function parameters are not evaluated in a defined order in C!
+  object o;
   if (next_token == EOF) return object_nil;
-  o = parse_s_expr();
+  o = parse_expr();
   return gc_new_cons(o, load_rec());
 }
 
@@ -153,24 +116,24 @@ static object load(void)
   return o;
 }
 
-static void bind_symbol(object k, object v)
-{
-  at_put(&object_toplevel->env.binding, k, v);
-}
-
-static object symbol_new(char *name)
+static object new_symbol(char *name)
 {
   return gc_new_mem_from(SYMBOL, name, strlen(name));
 }
 
-static object keyword_new(char *name)
+static object new_keyword(char *name)
 {
   return gc_new_mem_from(KEYWORD, name, strlen(name));
 }
 
-static object string_new(char *name)
+static object new_string(char *name)
 {
   return gc_new_mem_from(STRING, name, strlen(name));
+}
+
+static void bind_symbol(object k, object v)
+{
+  at_put(&object_toplevel->env.binding, k, v);
 }
 
 static void make_builtin(void)
@@ -179,11 +142,11 @@ static void make_builtin(void)
   char *s;
   object o;
   for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++) {
-    o = gc_new_builtin(SPECIAL, symbol_new(s), special_table[i]);
+    o = gc_new_builtin(SPECIAL, new_symbol(s), special_table[i]);
     bind_symbol(o->builtin.name, o);
   }
   for (i = 0; (s = bi_as_symbol_name(function_name_table[i])) != NULL; i++) {
-    o = gc_new_builtin(BUILTINFUNC, symbol_new(s), function_table[i]);
+    o = gc_new_builtin(BUILTINFUNC, new_symbol(s), function_table[i]);
     bind_symbol(o->builtin.name, o);
   }
 }
@@ -192,34 +155,34 @@ static object parse_args(int argc, char *argv[])
 {
   object o;
   o = object_nil;
-  while (argc-- > 1) o = gc_new_cons(string_new(argv[argc]), o);
+  while (argc-- > 1) o = gc_new_cons(new_string(argv[argc]), o);
   return o;
 }
 
 static void make_initial_objects(int argc, char *argv[])
 {
   char *host_name;
-  object_nil = symbol_new("nil");
-  object_true = symbol_new("true");
+  object_nil = new_symbol("nil");
+  object_true = new_symbol("true");
   object_toplevel = gc_new_env(object_nil);
   bind_symbol(object_nil, object_nil);
   bind_symbol(object_true, object_true);
-  object_key = keyword_new("key");
-  object_opt = keyword_new("opt");
-  object_rest = keyword_new("rest");
-  object_quote = symbol_new("quote");
-  object_class = keyword_new("class");
-  object_symbol = keyword_new("symbol");
-  object_super = keyword_new("super");
-  object_features = keyword_new("features");
-  object_fields = keyword_new("fields");
-  object_message = keyword_new("message");
-  object_stack_trace = keyword_new("stack-trace");
-  object_Class = symbol_new("Class");
-  object_Exception = symbol_new("Exception");
-  object_Error = symbol_new("Error");
-  bind_symbol(symbol_new("$args"), parse_args(argc, argv));
-  bind_symbol(symbol_new("core.p"), string_new(core_fn));
+  object_key = new_keyword("key");
+  object_opt = new_keyword("opt");
+  object_rest = new_keyword("rest");
+  object_quote = new_symbol("quote");
+  object_class = new_keyword("class");
+  object_symbol = new_keyword("symbol");
+  object_super = new_keyword("super");
+  object_features = new_keyword("features");
+  object_fields = new_keyword("fields");
+  object_message = new_keyword("message");
+  object_stack_trace = new_keyword("stack-trace");
+  object_Class = new_symbol("Class");
+  object_Exception = new_symbol("Exception");
+  object_Error = new_symbol("Error");
+  bind_symbol(new_symbol("$args"), parse_args(argc, argv));
+  bind_symbol(new_symbol("core.p"), new_string(core_fn));
 #if WINDOWS_P
   host_name = "windows";
 #elif OS_CODE == OS_LINUX
@@ -231,7 +194,7 @@ static void make_initial_objects(int argc, char *argv[])
 #else
   xassert(FALSE);
 #endif
-  bind_symbol(symbol_new("$host-name"), keyword_new(host_name));
+  bind_symbol(new_symbol("$host-name"), new_keyword(host_name));
   make_builtin();
 }
 
