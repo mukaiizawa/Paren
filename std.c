@@ -86,6 +86,20 @@ char *xstrdup(char *s)
   return result;
 }
 
+#if WINDOWS_P
+int xwctomb(LPWSTR lp, char *p)
+{
+  return WideCharToMultiByte(CP_UTF8, 0, lp, -1, p, MAX_STR_LEN, NULL, NULL);
+}
+
+int xmbtowc(char *p, LPWSTR lp)
+{
+  DWORD dwFlags;
+  dwFlags = MB_PRECOMPOSED | MB_ERR_INVALID_CHARS;
+  return MultiByteToWideChar(CP_UTF8, dwFlags, p, -1, lp, MAX_STR_LEN);
+}
+#endif
+
 #ifndef NDEBUG
 void xassert_failed(char *fn, int line)
 {

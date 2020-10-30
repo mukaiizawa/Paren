@@ -2,22 +2,9 @@
 
 #include "std.h"
 #include "pf.h"
-#include <windows.h>
 
 #define PATH_SEPR '\\'
 #define PATHS_SEPR ';'
-
-static int xwctomb(LPWSTR lp, char *p)
-{
-  return WideCharToMultiByte(CP_UTF8, 0, lp, -1, p, MAX_STR_LEN, NULL, NULL);
-}
-
-static int xmbtowc(char *p, LPWSTR lp)
-{
-  DWORD dwFlags;
-  dwFlags = MB_PRECOMPOSED | MB_ERR_INVALID_CHARS;
-  return MultiByteToWideChar(CP_UTF8, dwFlags, p, -1, lp, MAX_STR_LEN);
-}
 
 int pf_stat(char *fn, struct pf_stat *statbuf)
 {
@@ -85,7 +72,7 @@ char *pf_getcwd(char *buf)
   st = GetCurrentDirectoryW(MAX_STR_LEN, wcbuf);
   if (st > MAX_STR_LEN) st = 0;
   if (st != 0) st = xwctomb(wcbuf, buf);
-  if (!st) xerror("pf_getcwd failed");
+  if (st == 0) xerror("pf_getcwd failed");
   return buf;
 }
 

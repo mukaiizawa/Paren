@@ -8,7 +8,6 @@
 #include <mbctype.h>
 #endif
 
-#include "xgetopt.h"
 #include "pf.h"
 #include "xarray.h"
 #include "at.h"
@@ -154,8 +153,24 @@ static void make_builtin(void)
 static object parse_args(int argc, char *argv[])
 {
   object o;
+#if WINDOWS_P
+  int st;
+  LPWSTR *wcp;
+  char buf[MAX_STR_LEN];
+  if ((wcp = CommandLineToArgvW(GetCommandLineW(), &argc)) == NULL) st = 0;
+  else {
+    o = object_nil;
+    while (argc-- > 1) {
+      if ((st = xwctomb(wcp[argc], buf)) == 0) break;
+      o = gc_new_cons(new_string(buf), o);
+    }
+  }
+  if (st == 0) xerror("parse_args/failed.");
+  LocalFree(wcp);
+#else
   o = object_nil;
   while (argc-- > 1) o = gc_new_cons(new_string(argv[argc]), o);
+#endif
   return o;
 }
 

@@ -9,7 +9,6 @@
 #endif
 
 #if WINDOWS_P
-#include <windows.h>
 #define DLOPEN(n) ((intptr_t)LoadLibrary(n))
 #define DLSYM(h, n) ((intptr_t)GetProcAddress((HMODULE)h, n))
 #endif
