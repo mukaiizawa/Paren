@@ -2,13 +2,9 @@
 
 typedef union s_expr *object;
 
-#define HASH_MASK      0x00ffffff
-#define ALIVE_BIT      0x00001000
-#define set_alive(o) ((o)->header |= ALIVE_BIT)
-#define set_dead(o) ((o)->header &= ~ALIVE_BIT)
-#define alive_p(o) ((o)->header & ALIVE_BIT)
-#define TYPE_MASK      0x00000fff
-#define set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= type;}
+#define HASH_MASK      0x000fffff
+#define ALIVE_BIT      0x01000000
+#define TYPE_MASK      0x00f00000
 #define   ENV          0x00000001
 #define   MACRO        0x00000002
 #define   FUNC         0x00000003
@@ -24,6 +20,8 @@ typedef union s_expr *object;
 #define   BYTES        0x0000000d
 #define   ARRAY        0x0000000e
 
+#define TYPE_POS 20
+
 #define SINT_BITS 30
 #define SINT_MAX 0x3fffffff
 #define SINT_MIN (-SINT_MAX-1)
@@ -33,7 +31,15 @@ typedef union s_expr *object;
 #define LC(p) (*(unsigned char*)(p))
 #define SC(p,v) (*(unsigned char*)(p)=(unsigned char)(v))
 
-#define object_type(o) (sint_p(o)? SINT: o->header & TYPE_MASK)
+#define hash(o) ((o)->header & HASH_MASK)
+#define set_hash(o, v) {(o)->header &= ~HASH_MASK; (o)->header |= v;}
+
+#define set_alive(o) ((o)->header |= ALIVE_BIT)
+#define set_dead(o) ((o)->header &= ~ALIVE_BIT)
+#define alive_p(o) ((o)->header & ALIVE_BIT)
+
+#define set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= (type << TYPE_POS);}
+#define object_type(o) (sint_p(o)? SINT: (o->header & TYPE_MASK)>> TYPE_POS)
 #define object_type_p(o, type) (object_type(o) == type)
 
 #define byte_p(i) (0 <= i && i < 256)

@@ -23,6 +23,13 @@ static struct st keyword_table;
 
 #define regist(o) (xarray_add(table, o))
 
+static int mem_hash(char *val, int size)
+{
+  int i, hval;
+  for (i = hval = 0; i < size; i++) hval = hval * 137 + LC(val + i);
+  return hval & HASH_MASK;
+}
+
 static object gc_alloc(int size)
 {
   object o;
@@ -175,6 +182,7 @@ static object new_mem_from(int type, char *val, int size)
 
 object gc_new_mem_from(int type, char *val, int size)
 {
+  int hval;
   object o;
   struct st *s;
   switch (type) {
@@ -182,8 +190,11 @@ object gc_new_mem_from(int type, char *val, int size)
     case KEYWORD:
       if (type == SYMBOL) s = &symbol_table;
       else s = &keyword_table;
-      if ((o = st_get(s, val, size)) != NULL) return o;
-      return st_put(s, new_mem_from(type, val, size));
+      hval = mem_hash(val, size);
+      if ((o = st_get(s, val, size, hval)) != NULL) return o;
+      o = new_mem_from(type, val, size);
+      set_hash(o, hval);
+      return st_put(s, o);
     case STRING:
     case BYTES:
       return new_mem_from(type, val, size);
