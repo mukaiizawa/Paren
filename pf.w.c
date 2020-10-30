@@ -14,9 +14,9 @@ static int xwctomb(LPWSTR lp, char *p)
 
 static int xmbtowc(char *p, LPWSTR lp)
 {
-#define dwFlags (MB_PRECOMPOSED | MB_ERR_INVALID_CHARS)
+  DWORD dwFlags;
+  dwFlags = MB_PRECOMPOSED | MB_ERR_INVALID_CHARS;
   return MultiByteToWideChar(CP_UTF8, dwFlags, p, -1, lp, MAX_STR_LEN);
-#undef dwFlags
 }
 
 int pf_stat(char *fn, struct pf_stat *statbuf)
