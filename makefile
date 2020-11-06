@@ -53,7 +53,7 @@ defun+=ip.c bi.c array.c mem.c cons.c proc.c number.c os.c dl.c
 defun.wk: $(defun)
 	cat $+ | grep ^DEFUN>$@
 
-xc.a: std.o xarray.o xbarray.o heap.o object.o gc.o lex.o at.o st.o \
+xc.a: std.o xarray.o xbarray.o heap.o object.o gc.o lex.o st.o hashmap.o \
 	$(defsp:%.c=%.o) \
 	$(defun:%.c=%.o) \
 	$(extobj)

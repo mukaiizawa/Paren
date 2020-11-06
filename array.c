@@ -1,15 +1,10 @@
 // array
 
 #include "std.h"
-#include "xarray.h"
-#include "xbarray.h"
-#include "at.h"
 #include "object.h"
 #include "gc.h"
 #include "ip.h"
 #include "bi.h"
-
-// array
 
 DEFUN(array_p)
 {

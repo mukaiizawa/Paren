@@ -1,9 +1,9 @@
 // symbol table.
 
 struct st {
-  object *table;
   int size;
   int alloc_size;
+  object *table;
 };
 
 extern void st_init(struct st *s);

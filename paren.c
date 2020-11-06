@@ -9,8 +9,6 @@
 #endif
 
 #include "pf.h"
-#include "xarray.h"
-#include "at.h"
 #include "object.h"
 #include "lex.h"
 #include "gc.h"
@@ -132,7 +130,7 @@ static object new_string(char *name)
 
 static void bind_symbol(object k, object v)
 {
-  at_put(&object_toplevel->env.binding, k, v);
+  hashmap_put(&object_toplevel->env.binding, k, v);
 }
 
 static void make_builtin(void)
@@ -157,9 +155,9 @@ static object parse_args(int argc, char *argv[])
   int st;
   LPWSTR *wcp;
   char buf[MAX_STR_LEN];
+  o = object_nil;
   if ((wcp = CommandLineToArgvW(GetCommandLineW(), &argc)) == NULL) st = 0;
   else {
-    o = object_nil;
     while (argc-- > 1) {
       if ((st = xwctomb(wcp[argc], buf)) == 0) break;
       o = gc_new_cons(new_string(buf), o);

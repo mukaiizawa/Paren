@@ -1,5 +1,7 @@
 // paren object
 
+#include "hashmap.h"
+
 typedef union s_expr *object;
 
 #define HASH_MASK      0x000fffff
@@ -52,7 +54,7 @@ union s_expr {
   struct env {
     int header;
     object top;
-    struct at binding;
+    struct hashmap binding;
   } env;
   struct proc {
     int header;

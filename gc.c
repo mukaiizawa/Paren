@@ -1,9 +1,8 @@
 // garbage collector
 
 #include "std.h"
-#include "xarray.h"
 #include "heap.h"
-#include "at.h"
+#include "xarray.h"
 #include "object.h"
 #include "st.h"
 #include "ip.h"
@@ -55,13 +54,18 @@ static object gc_alloc(int size)
   return o;
 }
 
+int object_hash(void *p)
+{
+  return hash((object)p);
+}
+
 object gc_new_env(object top)
 {
   object o;
   o = gc_alloc(sizeof(struct env));
   set_type(o, ENV);
   o->env.top = top;
-  at_init(&o->env.binding);
+  hashmap_init(&o->env.binding, object_hash);
   regist(o);
   return o;
 }
@@ -242,10 +246,10 @@ object gc_new_Error(char *msg)
               , gc_new_cons(object_nil , object_nil))))));
 }
 
-static void mark_binding(void *key, void *data)
+static void mark_binding(void *key, void *val)
 {
   gc_mark(key);
-  gc_mark(data);
+  gc_mark(val);
 }
 
 void gc_mark(object o)
@@ -257,7 +261,7 @@ void gc_mark(object o)
   set_alive(o);
   switch (object_type(o)) {
     case ENV:
-      at_foreach(&o->env.binding, mark_binding);
+      hashmap_foreach(&o->env.binding, mark_binding);
       gc_mark(o->env.top);
       break;
     case SPECIAL:
@@ -293,7 +297,10 @@ static void gc_free(object o)
 {
   int size;
   size = object_byte_size(o);
-  if (object_type_p(o, ENV)) at_free(&o->env.binding);
+  if (object_type_p(o, ENV)) {
+    xassert(o != object_toplevel);
+    hashmap_free(&o->env.binding);
+  }
   if (size <= LINK0_SIZE) {
     size = LINK0_SIZE;
     o->next = link0;
@@ -306,29 +313,35 @@ static void gc_free(object o)
   gc_used_memory -= size;
 }
 
+static void switch_table(void)
+{
+  struct xarray *p;
+  p = work_table;
+  work_table = table;
+  table = p;
+}
+
 static void sweep_s_expr(void)
 {
   int i;
   object o;
-  struct xarray *p;
-  xarray_reset(work_table);
+  switch_table();
+  xarray_reset(table);
   st_reset(&symbol_table);
   st_reset(&keyword_table);
-  for (i = 0; i < (*table).size; i++) {
-    o = (*table).elt[i];
-    if (alive_p(o)) {
+  for (i = 0; i < work_table->size; i++) {
+    o = work_table->elt[i];
+    if (!alive_p(o)) gc_free(o);
+    else {
+      set_dead(o);
       switch (object_type(o)) {
         case SYMBOL: st_put(&symbol_table, o); break;
         case KEYWORD: st_put(&keyword_table, o); break;
         default: break;
       }
-      set_dead(o);
-      xarray_add(work_table, o);
-    } else gc_free(o);
+      regist(o);
+    }
   }
-  p = work_table;
-  work_table = table;
-  table = p;
 }
 
 void gc_chance(void)

@@ -1,9 +1,6 @@
 // interpreter
 
 #include "std.h"
-#include "xarray.h"
-#include "xbarray.h"
-#include "at.h"
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
@@ -36,7 +33,7 @@ int ip_mark_error(char *msg)
 static object symbol_find(object e, object s)
 {
   xassert(object_type_p(e, ENV));
-  return at_get(&e->env.binding, s);
+  return hashmap_get(&e->env.binding, s);
 }
 
 static object symbol_find_propagation(object e, object s)
@@ -52,7 +49,7 @@ static object symbol_find_propagation(object e, object s)
 static void symbol_bind(object e, object s, object v)
 {
   xassert(object_type_p(e, ENV) && object_type_p(s, SYMBOL));
-  at_put(&e->env.binding, s, v);
+  hashmap_put(&e->env.binding, s, v);
 }
 
 static void symbol_bind_propagation(object e, object s, object v)
@@ -628,7 +625,7 @@ static int resolve_anonimous_proc(void)
   xassert(named_proc == NULL);
   e = reg[1];
   while (e != object_nil) {
-    at_foreach(&e->env.binding, find_named_proc);
+    hashmap_foreach(&e->env.binding, find_named_proc);
     if (named_proc != NULL) return TRUE;
     e = e->env.top;
   }
@@ -1279,6 +1276,23 @@ void ip_mark_object(void)
   int i;
   for (i = 0; i < REG_SIZE; i++) gc_mark(reg[i]);
   for (i = 0; i < sp; i++) gc_mark(fs[i]);
+  gc_mark(object_toplevel);
+  gc_mark(object_nil);
+  gc_mark(object_true);
+  gc_mark(object_key);
+  gc_mark(object_opt);
+  gc_mark(object_rest);
+  gc_mark(object_quote);
+  gc_mark(object_stack_trace);
+  gc_mark(object_Class);
+  gc_mark(object_Exception);
+  gc_mark(object_Error);
+  gc_mark(object_class);
+  gc_mark(object_symbol);
+  gc_mark(object_super);
+  gc_mark(object_features);
+  gc_mark(object_fields);
+  gc_mark(object_message);
 }
 
 void ip_start(object args)
