@@ -62,18 +62,19 @@ static void *independent_alloc(struct heap *h, int size, int align)
 
 void *heap_alloc_align(struct heap *h, int size, int align)
 {
-  int topgap, used,gap;
+  int topgap, used, gap;
   struct heap_block *n;
   if (size == 0) return NULL;
   topgap = gap_to_align(BLOCK_TOP, align);
-  if (topgap+size > HEAP_BLOCK_SIZE) return independent_alloc(h, size, align);
+  if (topgap + size > HEAP_BLOCK_SIZE) return independent_alloc(h, size, align);
   if (h->tail != NULL) {
     used = (int)(h->tail - h->block->buf);
     gap = gap_to_align(BLOCK_TOP + used, align);
     if (used + gap + size <= HEAP_BLOCK_SIZE) {
       h->tail += gap + size;
       return h->tail-size;
-    } else if (used < HEAP_BLOCK_SIZE / 2) {
+    }
+    if (used < HEAP_BLOCK_SIZE / 2) {
       return independent_alloc(h, size, align);
     }
   }
