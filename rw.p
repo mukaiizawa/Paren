@@ -11,7 +11,8 @@
   (some? (f (y) (eq? x y)) $reserved-words))
 
 (function! main (args)
+  (timeit
   (with-open ($in (.resolve $paren-home core.p) :read)
     (foreach (f (x) (write (cadr x)))
              (select (f (x) (&& (cons? x) (reserved-word? (car x))))
-                     (collect read)))))
+                     (collect read))))))

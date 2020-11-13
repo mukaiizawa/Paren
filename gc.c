@@ -12,7 +12,7 @@ int gc_used_memory;
 int gc_max_used_memory;
 
 #define LINK0_SIZE (sizeof(struct cons))
-#define LINK1_SIZE (2 * LINK0_SIZE)
+#define LINK1_SIZE (sizeof(struct env) + sizeof(object) * 4 * 2)
 static object link0, link1;
 
 static struct heap heap;
@@ -47,35 +47,52 @@ static object gc_alloc(int size)
       link1 = o->next;
     }
   } else o = xmalloc(size);
-  o->header &= 0;
-  set_dead(o);
   gc_used_memory += size;
   if (gc_used_memory > gc_max_used_memory) gc_max_used_memory = gc_used_memory;
+  o->header &= 0;
+  set_dead(o);
   return o;
 }
 
-int object_hash(void *p)
+object gc_new_toplevel_env(void)
 {
-  return hash((object)p);
-}
-
-object gc_new_env(object top)
-{
+  int i;
   object o;
   o = gc_alloc(sizeof(struct env));
   set_type(o, ENV);
-  o->env.top = top;
-  hashmap_init(&o->env.binding, object_hash);
+  o->env.top = object_nil;
+  o->env.symbol_count = 0;
+  o->env.half_size = 1 << 10;
+  o->env.table = xmalloc(sizeof(object) * o->env.half_size * 2);
+  for (i = 0; i < o->env.half_size; i++) o->env.table[i] = NULL;
   regist(o);
   return o;
 }
 
-static object new_proc(int type, object env, object params, object body)
+object gc_new_env(object top, int half_size)
+{
+  int i;
+  object o;
+  xassert(half_size > 0);
+  o = gc_alloc(sizeof(struct env) + sizeof(object) * half_size * 2);
+  set_type(o, ENV);
+  o->env.top = top;
+  o->env.symbol_count = 0;
+  o->env.half_size = half_size;
+  o->env.table = &o->env.top + 2;
+  for (i = 0; i < half_size; i++) o->env.table[i] = NULL;
+  regist(o);
+  return o;
+}
+
+static object new_proc(int type, object env, int param_count, object params
+    , object body)
 {
   object o;
   xassert(object_type_p(env, ENV));
   o = gc_alloc(sizeof(struct proc));
   o->proc.env = env;
+  o->proc.param_count = param_count;
   o->proc.params = params;
   o->proc.body = body;
   set_type(o, type);
@@ -83,14 +100,14 @@ static object new_proc(int type, object env, object params, object body)
   return o;
 }
 
-object gc_new_macro(object env, object params, object body)
+object gc_new_macro(object env, int param_count, object params, object body)
 {
-  return new_proc(MACRO, env, params, body);
+  return new_proc(MACRO, env, param_count, params, body);
 }
 
-object gc_new_proc(object env, object params, object body)
+object gc_new_proc(object env, int param_count, object params, object body)
 {
-  return new_proc(FUNC, env, params, body);
+  return new_proc(FUNC, env, param_count, params, body);
 }
 
 object gc_new_builtin(int type, object name, void *p)
@@ -255,13 +272,12 @@ static void mark_binding(void *key, void *val)
 void gc_mark(object o)
 {
   int i;
-  object p;
   if (sint_p(o)) return;
   if (alive_p(o)) return;
   set_alive(o);
   switch (object_type(o)) {
     case ENV:
-      hashmap_foreach(&o->env.binding, mark_binding);
+      object_env_foreach(o, mark_binding);
       gc_mark(o->env.top);
       break;
     case SPECIAL:
@@ -275,32 +291,23 @@ void gc_mark(object o)
       gc_mark(o->proc.body);
       break;
     case CONS:
-      p = o;
       while (o != object_nil) {
-        o = o->cons.cdr;
         set_alive(o);    // for stack overflow
-      }
-      while (p != object_nil) {
-        gc_mark(p->cons.car);
-        p = p->cons.cdr;
+        gc_mark(o->cons.car);
+        o = o->cons.cdr;
       }
       break;
     case ARRAY:
-      for (i = 0; i < o->array.size; i++)
-        gc_mark(o->array.elt[i]);
+      for (i = 0; i < o->array.size; i++) gc_mark(o->array.elt[i]);
       break;
     default: break;
   }
 }
 
-static void gc_free(object o)
+void gc_free(object o)
 {
   int size;
   size = object_byte_size(o);
-  if (object_type_p(o, ENV)) {
-    xassert(o != object_toplevel);
-    hashmap_free(&o->env.binding);
-  }
   if (size <= LINK0_SIZE) {
     size = LINK0_SIZE;
     o->next = link0;

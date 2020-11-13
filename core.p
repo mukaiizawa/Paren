@@ -1712,7 +1712,7 @@
         (if (memprefix? path-name "/") (<- root? true)
             (memprefix? path-name "~") (<- path-name
                                            (memcat
-                                             (if (eq? $host-name :windows)
+                                             (if (eq? $hostname :windows)
                                                  (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH"))
                                                  (getenv "HOME"))
                                              "/" (submem path-name 1))))
@@ -1778,8 +1778,8 @@
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
   (let (first-file (car (&path self)))
-    (if (eq? $host-name :windows) (&& (= (memlen first-file) 2)
-                                      (= ([] first-file 1) 0x3a))
+    (if (eq? $hostname :windows) (&& (= (memlen first-file) 2)
+                                     (= ([] first-file 1) 0x3a))
         (memeq? first-file "/"))))
 
 (method Path .relative? ()
