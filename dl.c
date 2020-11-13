@@ -13,8 +13,6 @@
 #define DLSYM(h, n) ((intptr_t)GetProcAddress((HMODULE)h, n))
 #endif
 
-#include "xbarray.h"
-#include "at.h"
 #include "object.h"
 #include "gc.h"
 #include "bi.h"

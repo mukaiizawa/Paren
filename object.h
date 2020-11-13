@@ -51,12 +51,17 @@ union s_expr {
   int header;
   struct env {
     int header;
+    int symbol_count;
+    int half_size;
     object top;
-    struct at binding;
+    object *table;
+    // object[half_size] syms;
+    // object[half_size] vals;
   } env;
   struct proc {
     int header;
     object env;
+    int param_count;
     object params;
     object body;
   } proc;
@@ -96,8 +101,6 @@ union s_expr {
 };
 
 extern object object_toplevel;
-
-// global object
 extern object object_nil;
 extern object object_true;
 extern object object_key;
@@ -123,3 +126,9 @@ extern char *object_describe(object o, char *buf);
 extern int object_list_len(object o);
 extern object object_bool(int b);
 extern object object_reverse(object o);
+
+extern object object_find(object e, object s);
+extern object object_find_propagation(object e, object s);
+extern void object_bind(object e, object s, object v);
+extern void object_bind_propagation(object e, object s, object v);
+extern void object_env_foreach(object e, void (*f)(void *s, void *v));

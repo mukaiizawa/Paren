@@ -9,8 +9,6 @@
 #endif
 
 #include "pf.h"
-#include "xarray.h"
-#include "at.h"
 #include "object.h"
 #include "lex.h"
 #include "gc.h"
@@ -130,11 +128,6 @@ static object new_string(char *name)
   return gc_new_mem_from(STRING, name, strlen(name));
 }
 
-static void bind_symbol(object k, object v)
-{
-  at_put(&object_toplevel->env.binding, k, v);
-}
-
 static void make_builtin(void)
 {
   int i;
@@ -142,11 +135,11 @@ static void make_builtin(void)
   object o;
   for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++) {
     o = gc_new_builtin(SPECIAL, new_symbol(s), special_table[i]);
-    bind_symbol(o->builtin.name, o);
+    object_bind(object_toplevel, o->builtin.name, o);
   }
   for (i = 0; (s = bi_as_symbol_name(function_name_table[i])) != NULL; i++) {
     o = gc_new_builtin(BUILTINFUNC, new_symbol(s), function_table[i]);
-    bind_symbol(o->builtin.name, o);
+    object_bind(object_toplevel, o->builtin.name, o);
   }
 }
 
@@ -157,9 +150,9 @@ static object parse_args(int argc, char *argv[])
   int st;
   LPWSTR *wcp;
   char buf[MAX_STR_LEN];
+  o = object_nil;
   if ((wcp = CommandLineToArgvW(GetCommandLineW(), &argc)) == NULL) st = 0;
   else {
-    o = object_nil;
     while (argc-- > 1) {
       if ((st = xwctomb(wcp[argc], buf)) == 0) break;
       o = gc_new_cons(new_string(buf), o);
@@ -179,9 +172,9 @@ static void make_initial_objects(int argc, char *argv[])
   char *host_name;
   object_nil = new_symbol("nil");
   object_true = new_symbol("true");
-  object_toplevel = gc_new_env(object_nil);
-  bind_symbol(object_nil, object_nil);
-  bind_symbol(object_true, object_true);
+  object_toplevel = gc_new_toplevel_env();
+  object_bind(object_toplevel, object_nil, object_nil);
+  object_bind(object_toplevel, object_true, object_true);
   object_key = new_keyword("key");
   object_opt = new_keyword("opt");
   object_rest = new_keyword("rest");
@@ -196,8 +189,8 @@ static void make_initial_objects(int argc, char *argv[])
   object_Class = new_symbol("Class");
   object_Exception = new_symbol("Exception");
   object_Error = new_symbol("Error");
-  bind_symbol(new_symbol("$args"), parse_args(argc, argv));
-  bind_symbol(new_symbol("core.p"), new_string(core_fn));
+  object_bind(object_toplevel, new_symbol("$args"), parse_args(argc, argv));
+  object_bind(object_toplevel, new_symbol("core.p"), new_string(core_fn));
 #if WINDOWS_P
   host_name = "windows";
 #elif OS_CODE == OS_LINUX
@@ -209,7 +202,7 @@ static void make_initial_objects(int argc, char *argv[])
 #else
   xassert(FALSE);
 #endif
-  bind_symbol(new_symbol("$host-name"), new_keyword(host_name));
+  object_bind(object_toplevel, new_symbol("$hostname"), new_keyword(host_name));
   make_builtin();
 }
 

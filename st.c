@@ -1,45 +1,32 @@
 // symbol table.
 
 #include "std.h"
-#include "at.h"
 #include "object.h"
 #include "st.h"
 
-#define INITIAL_ALLOC_SIZE 255
-#define at(s, i) s->table[i % s->alloc_size]
+#define table_index(s, i) ((i) % s->alloc_size)
 
-static object *alloc_table(int size)
+static void *alloc_table(int size)
 {
-  object *table;
-  table = xmalloc(sizeof(object) * size);
-  return table;
-}
-
-static int eq_p(object sym, char *val, int size)
-{
-  if (sym == NULL) return FALSE;
-  if (sym->mem.size != size) return FALSE;
-  return memcmp(sym->mem.elt, val, size) == 0;
+  return xmalloc(sizeof(object) * size);
 }
 
 static void extend(struct st *s)
 {
-  int i;
+  int i, alloc_size;
   object o, *table;
-  i = s->alloc_size;
+  alloc_size = s->alloc_size;
   table = s->table;
   s->table = alloc_table(s->alloc_size += s->alloc_size + 1);
   st_reset(s);
-  while (--i >= 0) {
-    if ((o = table[i]) == NULL) continue;
-    st_put(s, o);
-  }
+  for (i = 0; i < alloc_size; i++)
+    if ((o = table[i]) != NULL) st_put(s, o);
   xfree(table);
 }
 
 void st_init(struct st *s)
 {
-  s->table = alloc_table(s->alloc_size = INITIAL_ALLOC_SIZE);
+  s->table = alloc_table(s->alloc_size = 0xff);
   st_reset(s);
 }
 
@@ -53,17 +40,19 @@ void st_reset(struct st *s)
 object st_get(struct st *s, char *val, int size, int hval)
 {
   object o;
-  while ((o = at(s, hval++)) != NULL)
-    if (eq_p(o, val, size)) return o;
+  while ((o = s->table[table_index(s, hval)]) != NULL) {
+    if (o->mem.size == size && memcmp(o->mem.elt, val, size) == 0) return o;
+    hval++;
+  }
   return NULL;
 }
 
 object st_put(struct st *s, object sym)
 {
-  int hval;
-  hval = hash(sym);
-  while (at(s, hval) != NULL) hval++;
-  at(s, hval) = sym;
-  if (s->size++ > s->alloc_size / 2) extend(s);
+  int i;
+  if (s->size++ > s->alloc_size * 0.5) extend(s);
+  i = table_index(s, hash(sym));
+  while (s->table[i] != NULL) i = table_index(s, i + 1);
+  s->table[i] = sym;
   return sym;
 }

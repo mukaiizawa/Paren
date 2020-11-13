@@ -5,9 +5,6 @@
 #include <math.h>
 #include <float.h>
 
-#include "xarray.h"
-#include "xbarray.h"
-#include "at.h"
 #include "object.h"
 #include "gc.h"
 #include "bi.h"

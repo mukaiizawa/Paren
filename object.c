@@ -1,10 +1,9 @@
 // paren object
 
 #include "std.h"
-#include "xarray.h"
 #include "xbarray.h"
-#include "at.h"
 #include "object.h"
+#include "gc.h"
 
 object object_toplevel;
 object object_nil;
@@ -64,7 +63,8 @@ int object_byte_size(object o)
 {
   switch (object_type(o)) {
     case ENV:
-      return sizeof(struct env);
+      xassert(o != object_toplevel);
+      return sizeof(struct env) + sizeof(object) * o->env.half_size * 2;
     case MACRO:
     case FUNC:
       return sizeof(struct proc);
@@ -80,7 +80,7 @@ int object_byte_size(object o)
     case BYTES:
       return sizeof(struct mem) + o->mem.size - 1;
     case ARRAY:
-      return sizeof(struct array) + (o->array.size - 1) * sizeof(object);
+      return sizeof(struct array) + sizeof(object) * (o->array.size - 1);
     default:
       xassert(FALSE);
       return -1;
@@ -129,7 +129,6 @@ static void describe_array(object o, struct xbarray *x)
 
 static void describe_s_expr(object o, struct xbarray *x)
 {
-  object p;
   if (x->size > MAX_STR_LEN) return;
   switch (object_type(o)) {
     case ENV:
@@ -148,17 +147,9 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_add(x, ')');
       break;
     case CONS:
-      p = o->cons.car;
-      if (p == object_quote && object_type_p(o->cons.cdr, CONS)
-          && o->cons.cdr->cons.cdr == object_nil)
-      {
-        xbarray_add(x, '\'');
-        describe_s_expr(o->cons.cdr->cons.car, x);
-      } else {
-        xbarray_add(x, '(');
-        describe_cons(o, x);
-        xbarray_add(x, ')');
-      }
+      xbarray_add(x, '(');
+      describe_cons(o, x);
+      xbarray_add(x, ')');
       break;
     case SINT:
       xbarray_addf(x, "%d", sint_val(o));
@@ -190,7 +181,8 @@ static void describe_s_expr(object o, struct xbarray *x)
     case ARRAY:
       describe_array(o, x);
       break;
-    default: xassert(FALSE);
+    default:
+      xassert(FALSE);
   }
 }
 
@@ -201,11 +193,92 @@ char *object_describe(object o, char *buf)
   xbarray_init(&x);
   describe_s_expr(o, &x);
   xbarray_add(&x,'\0');
-  if(x.size <= MAX_STR_LEN) memcpy(buf, x.elt, x.size);
+  if (x.size <= MAX_STR_LEN) memcpy(buf, x.elt, x.size);
   else {
     memcpy(buf, x.elt, MAX_STR_LEN - 4);
     strcpy(buf + MAX_STR_LEN - 4, "...");
   }
   xbarray_free(&x);
   return buf;
+}
+
+
+static void extend_env(object e)
+{
+  int i, half_size;
+  object *table;
+  xassert(e == object_toplevel);
+  table = e->env.table;
+  half_size = e->env.half_size;
+  e->env.symbol_count = 0;
+  e->env.half_size *= 2;
+  e->env.table = xmalloc(sizeof(object) * e->env.half_size * 2);
+  for (i = 0; i < e->env.half_size; i++) e->env.table[i] = NULL;
+  for (i = 0; i < half_size; i++)
+    if (table[i] != NULL) object_bind(e, table[i], table[i + half_size]);
+  xfree(table);
+}
+
+object object_find(object e, object s)
+{
+  int i;
+  object o;
+  xassert(object_type_p(e, ENV));
+  i = hash(s) % e->env.half_size;
+  while ((o = e->env.table[i]) != NULL) {
+    if (o == s) return e->env.table[i + e->env.half_size];
+    if (++i == e->env.half_size) i = 0;
+  }
+  return NULL;
+}
+
+object object_find_propagation(object e, object s)
+{
+  object o;
+  while (e != object_nil) {
+    if ((o = object_find(e, s)) != NULL) return o;
+    e = e->env.top;
+  }
+  return NULL;
+}
+
+void object_bind(object e, object s, object v)
+{
+  int i;
+  object o;
+  xassert(object_type_p(e, ENV));
+  xassert(object_type_p(s, SYMBOL));
+  i = hash(s) % e->env.half_size;
+  while ((o = e->env.table[i]) != NULL) {
+    if (o == s) {
+      e->env.table[i + e->env.half_size] = v;
+      return;
+    }
+    if (++i == e->env.half_size) i = 0;
+  }
+  e->env.table[i] = s;
+  e->env.table[i + e->env.half_size] = v;
+  e->env.symbol_count++;
+  if (e->env.symbol_count * 2 > e->env.half_size) extend_env(e);
+}
+
+void object_bind_propagation(object e, object s, object v)
+{
+  while (e != object_toplevel) {
+    if (object_find(e, s) != NULL) {
+      object_bind(e, s, v);
+      return;
+    }
+    e = e->env.top;
+  }
+  object_bind(object_toplevel, s, v);
+}
+
+void object_env_foreach(object e, void (*f)(void *s, void *v))
+{
+  int i;
+  object *table;
+  table = e->env.table;
+  for (i = 0; i < e->env.half_size; i++)
+    if (table[i] != NULL) (*f)(table[i], table[i + e->env.half_size]);
 }

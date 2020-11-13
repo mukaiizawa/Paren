@@ -1,16 +1,13 @@
 // interpreter
 
 #include "std.h"
-#include "xarray.h"
-#include "xbarray.h"
-#include "at.h"
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
 #include "ip.h"
 
 /*
- * registers:
+ * virtual machine registers
  *   0 -- instruction argument.
  *   1 -- current environment.
  */
@@ -31,49 +28,9 @@ int ip_mark_error(char *msg)
   return FALSE;
 }
 
-// symbol
-
-static object symbol_find(object e, object s)
-{
-  xassert(object_type_p(e, ENV));
-  return at_get(&e->env.binding, s);
-}
-
-static object symbol_find_propagation(object e, object s)
-{
-  object v;
-  while (e != object_nil) {
-    if ((v = symbol_find(e, s)) != NULL) return v;
-    e = e->env.top;
-  }
-  return NULL;
-}
-
-static void symbol_bind(object e, object s, object v)
-{
-  xassert(object_type_p(e, ENV) && object_type_p(s, SYMBOL));
-  at_put(&e->env.binding, s, v);
-}
-
-static void symbol_bind_propagation(object e, object s, object v)
-{
-  while (e != object_toplevel) {
-    if (symbol_find(e, s) != NULL) {
-      symbol_bind(e, s, v);
-      return;
-    }
-    e = e->env.top;
-  }
-  symbol_bind(object_toplevel, s, v);
-}
-
 // stack frame
 
-#define STACK_GAP 10
-#define FRAME_STACK_SIZE 10000
-
 /*
- * frame structure.
  *
  * |       ...       |
  * |                 |
@@ -104,12 +61,8 @@ static void symbol_bind_propagation(object e, object s, object v)
  *
  */
 
-static int fp;
-static int sp;
-
-static object fs[FRAME_STACK_SIZE];
-
-// frame_type
+#define STACK_GAP 10
+#define FRAME_STACK_SIZE 10000
 #define FRAME_SIZE_MASK          0x0000000f
 #define   APPLY_FRAME            0x00000003
 #define   APPLY_BUILTIN_FRAME    0x00000013
@@ -126,11 +79,32 @@ static object fs[FRAME_STACK_SIZE];
 #define   IF_FRAME               0x00000123
 #define   LABELS_FRAME           0x00000133
 #define   FUNC_FRAME             0x00000144
-#define   LET_FRAME              0x00000153
+#define   LET_FRAME              0x00000152
 #define   QUOTE_FRAME            0x00000163
 #define   RETURN_FRAME           0x00000172
 #define   THROW_FRAME            0x00000182
 #define   UNWIND_PROTECT_FRAME   0x00000193
+
+#define fs_top() (sint_val(fs[fp]))
+#define fs_nth(i) (sint_val(fs[i]))
+#define set_fp(i) { fp = i; sp = next_fp(fp); }
+#define get_frame_var(base_fp, n) (fs[base_fp + 2 + n])
+#define set_frame_var(base_fp, n, o) (fs[base_fp + 2 + n] = o)
+#define frame_size(frame_type) (frame_type & FRAME_SIZE_MASK)
+#define next_fp(base_fp) (base_fp + frame_size(sint_val(fs[base_fp])))
+#define prev_fp(base_fp) (sint_val(fs[base_fp + 1]))
+#define gen0(frame_type) gen(frame_type);
+#define gen1(frame_type, lv0) \
+{ \
+  gen0(frame_type); \
+  set_frame_var(fp, 0, lv0); \
+}
+#define gen2(frame_type, lv0, lv1) \
+{ \
+  gen0(frame_type); \
+  set_frame_var(fp, 0, lv0); \
+  set_frame_var(fp, 1, lv1); \
+}
 
 char *frame_name(int frame_type)
 {
@@ -159,26 +133,9 @@ char *frame_name(int frame_type)
   }
 }
 
-#define fs_top() (sint_val(fs[fp]))
-#define fs_nth(i) (sint_val(fs[i]))
-#define set_fp(i) { fp = i; sp = next_fp(fp); }
-#define get_frame_var(base_fp, n) (fs[base_fp + 2 + n])
-#define set_frame_var(base_fp, n, o) (fs[base_fp + 2 + n] = o)
-#define frame_size(frame_type) (frame_type & FRAME_SIZE_MASK)
-#define next_fp(base_fp) (base_fp + frame_size(sint_val(fs[base_fp])))
-#define prev_fp(base_fp) (sint_val(fs[base_fp + 1]))
-#define gen0(frame_type) gen(frame_type);
-#define gen1(frame_type, lv0) \
-{ \
-  gen0(frame_type); \
-  set_frame_var(fp, 0, lv0); \
-}
-#define gen2(frame_type, lv0, lv1) \
-{ \
-  gen0(frame_type); \
-  set_frame_var(fp, 0, lv0); \
-  set_frame_var(fp, 1, lv1); \
-}
+static int fp;
+static int sp;
+static object fs[FRAME_STACK_SIZE];
 
 static void dump_fs(void)
 {
@@ -211,6 +168,7 @@ static void exit1(void)
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
+  dump_fs();
   exit(1);
 }
 
@@ -350,7 +308,7 @@ static int parse_args(void (*f)(object, object, object), object params
   return TRUE;
 }
 
-static void pop_proc_frame(void)
+static void pop_func_frame(void)
 {
   reg[1] = get_frame_var(fp, 0);
   pop_frame();
@@ -364,16 +322,17 @@ static void pop_let_frame(void)
 
 static void pop_apply_frame(void)
 {
-  object operator, fvar;
-  operator = get_frame_var(fp, 0);
+  object func, trace;
+  func = get_frame_var(fp, 0);
   pop_frame();
-  fvar = gc_new_cons(operator, reg[0]);
+  trace = gc_new_cons(func, reg[0]);
   // optimize tail recursion
-  if (fs_top() == FUNC_FRAME) set_frame_var(fp, 1, fvar);
-  else gen2(FUNC_FRAME, reg[1], fvar);
-  reg[1] = gc_new_env(operator->proc.env);
-  gen1(EVAL_SEQUENTIAL_FRAME, operator->proc.body);
-  parse_args(&symbol_bind, operator->proc.params, reg[0]);
+  if (fs_top() == FUNC_FRAME) set_frame_var(fp, 1, trace);
+  else gen2(FUNC_FRAME, reg[1], trace);
+  if (func->proc.param_count == 0) reg[1] = func->proc.env;
+  else reg[1] = gc_new_env(func->proc.env, func->proc.param_count * 2);
+  gen1(EVAL_SEQUENTIAL_FRAME, func->proc.body);
+  parse_args(&object_bind, func->proc.params, reg[0]);
 }
 
 static void pop_apply_builtin_frame(void)
@@ -399,8 +358,8 @@ static void pop_bind_frame(void)
 {
   object o;
   o = get_frame_var(fp, 0);
-  if (object_type_p(o, SYMBOL)) symbol_bind(reg[1], o, reg[0]);
-  else parse_args(&symbol_bind, o, reg[0]);
+  if (object_type_p(o, SYMBOL)) object_bind(reg[1], o, reg[0]);
+  else parse_args(&object_bind, o, reg[0]);
   pop_frame();
 }
 
@@ -429,8 +388,8 @@ static void pop_bind_propagation_frame(void)
 {
   object o;
   o = get_frame_var(fp, 0);
-  if (object_type_p(o, SYMBOL)) symbol_bind_propagation(reg[1], o, reg[0]);
-  else parse_args(&symbol_bind_propagation, o, reg[0]);
+  if (object_type_p(o, SYMBOL)) object_bind_propagation(reg[1], o, reg[0]);
+  else parse_args(&object_bind_propagation, o, reg[0]);
   pop_frame();
 }
 
@@ -440,7 +399,7 @@ static void pop_eval_frame(void)
   pop_frame();
   switch (object_type(reg[0])) {
     case SYMBOL:
-      if ((s = symbol_find_propagation(reg[1], reg[0])) == NULL) {
+      if ((s = object_find_propagation(reg[1], reg[0])) == NULL) {
         gen2(FUNC_FRAME, reg[1], reg[0]);    // for stack trace
         ip_mark_error("unbound symbol");
         return;
@@ -472,7 +431,7 @@ static void pop_eval_frame(void)
 static void pop_rewinding(void)
 {
   switch (fs_top()) {
-    case FUNC_FRAME: pop_proc_frame(); break;
+    case FUNC_FRAME: pop_func_frame(); break;
     case LET_FRAME: pop_let_frame(); break;
     case UNWIND_PROTECT_FRAME: xassert(FALSE); break;    // must be protected.
     default: pop_frame(); break;
@@ -598,7 +557,7 @@ static void pop_return_frame(void)
   while (fp != -1) {
     switch (fs_top()) {
       case FUNC_FRAME:
-        pop_proc_frame();
+        pop_func_frame();
         return;
       case UNWIND_PROTECT_FRAME: 
         args = get_frame_var(fp, 0);
@@ -628,7 +587,7 @@ static int resolve_anonimous_proc(void)
   xassert(named_proc == NULL);
   e = reg[1];
   while (e != object_nil) {
-    at_foreach(&e->env.binding, find_named_proc);
+    object_env_foreach(e, find_named_proc);
     if (named_proc != NULL) return TRUE;
     e = e->env.top;
   }
@@ -807,7 +766,7 @@ DEFUN(expand_macro)
   f = reg[0]->cons.car;
   args = reg[0]->cons.cdr;
   if (!object_type_p(f, SYMBOL)) return TRUE;
-  if ((f = symbol_find_propagation(reg[1], f)) == NULL) return TRUE;
+  if ((f = object_find_propagation(reg[1], f)) == NULL) return TRUE;
   if (!object_type_p(f, MACRO)) return TRUE;
   gen1(APPLY_FRAME, f);
   reg[0] = args;
@@ -819,7 +778,7 @@ DEFUN(bound_p)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
-  reg[0] = object_bool(symbol_find_propagation(reg[1], o) != NULL);
+  reg[0] = object_bool(object_find_propagation(reg[1], o) != NULL);
   return TRUE;
 }
 
@@ -842,10 +801,8 @@ static void trap(void)
 // paren object system.
 
 #define class_sym(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.car)
-#define class_super(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr \
-    ->cons.cdr->cons.car)
-#define class_features(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr \
-    ->cons.cdr->cons.cdr->cons.cdr->cons.car)
+#define class_super(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.car)
+#define class_features(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.car)
 
 static int object_class_p(object o)
 {
@@ -871,7 +828,7 @@ static int object_class_p(object o)
 static int find_class(object cls_sym, object *result)
 {
   if (!object_type_p(cls_sym, SYMBOL)) return FALSE;
-  if ((*result = symbol_find_propagation(reg[1], cls_sym)) == NULL) return FALSE;
+  if ((*result = object_find_propagation(reg[1], cls_sym)) == NULL) return FALSE;
   return object_class_p(*result);
 }
 
@@ -891,7 +848,7 @@ static int find_class_method(object cls_sym, object mtd_sym, object *result)
   xbarray_copy(&bi_buf, cls_sym->mem.elt, cls_sym->mem.size);
   xbarray_copy(&bi_buf, mtd_sym->mem.elt, mtd_sym->mem.size);
   s = gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size);
-  if (((*result) = symbol_find_propagation(reg[1], s)) == NULL) return TRUE;
+  if (((*result) = object_find_propagation(reg[1], s)) == NULL) return TRUE;
   return TRUE;
 }
 
@@ -983,7 +940,7 @@ DEFUN(cycle)
   return TRUE;
 }
 
-DEFUN(stack_frame)
+DEFUN(dump)
 {
   dump_fs();
   return TRUE;
@@ -991,10 +948,13 @@ DEFUN(stack_frame)
 
 // special operator
 
+static int param_count;
+
 static int parse_rest_param(object params)
 {
   switch (object_type(params->cons.car)) {
     case SYMBOL:
+      param_count++;
       break;
     default:
       return FALSE;
@@ -1008,6 +968,7 @@ static int parse_keyword_params(object params)
     switch (object_type(params->cons.car)) {
       case SYMBOL:
         params = params->cons.cdr;
+        param_count++;
         break;
       default:
         return FALSE;
@@ -1028,6 +989,7 @@ static int parse_optional_params(object params)
         return FALSE;
       case SYMBOL:
         params = params->cons.cdr;
+        param_count++;
         break;
       default:
         return FALSE;
@@ -1036,7 +998,7 @@ static int parse_optional_params(object params)
   return TRUE;
 }
 
-static int parse_required_params(object params, int nest_p)
+static int parse_required_params(object params)
 {
   object p;
   while (params != object_nil) {
@@ -1048,12 +1010,12 @@ static int parse_required_params(object params, int nest_p)
         if (p == object_rest) return parse_rest_param(params->cons.cdr);
         return FALSE;
       case CONS:
-        if (!nest_p) return FALSE;
-        if (!parse_required_params(params->cons.car, nest_p)) return FALSE;
+        if (!parse_required_params(params->cons.car)) return FALSE;
         params = params->cons.cdr;
         break;
       case SYMBOL:
         params = params->cons.cdr;
+        param_count++;
         break;
       default:
         return FALSE;
@@ -1062,29 +1024,40 @@ static int parse_required_params(object params, int nest_p)
   return TRUE;
 }
 
-static int gen_symbol_binding(object args, int frame_type)
+static int gen_bind_frames(int frame_type, object args)
 {
   object o;
   if ((o = args) == object_nil) return TRUE;
-  if (!object_type_p(args->cons.car, SYMBOL)) {
-    switch (frame_type) {
-      case BIND_FRAME:
-      case BIND_PROPAGATION_FRAME:
-        if (!object_type_p(o->cons.car, CONS)
-            || !parse_required_params(o->cons.car, TRUE))
-          return ip_mark_error("unexpected binding expression");
-        break;
-      default:
-        return ip_mark_error("expected symbol");
-    }
+  switch (object_type(o->cons.car)) {
+    case SYMBOL:
+      break;
+    case CONS:
+      if (!parse_required_params(o->cons.car)) return FALSE;
+      break;
+    default:
+      return ip_mark_error("unexpected binding expression");
   }
   if ((args = args->cons.cdr) == object_nil)
-    return ip_mark_error("expected symbol-value pairs");
-  if (!gen_symbol_binding(args->cons.cdr, frame_type)) return FALSE;
+    return ip_mark_error("missing binding value");
+  if (!gen_bind_frames(frame_type, args->cons.cdr)) return FALSE;
   gen1(frame_type, o->cons.car);
   gen0(EVAL_FRAME);
   gen1(QUOTE_FRAME, o->cons.cdr->cons.car);
   return TRUE;
+}
+
+static int count_let_sym(object params)
+{
+  while (params != object_nil) {
+    switch (object_type(params->cons.car)) {
+      case CONS: parse_required_params(params->cons.car); break;
+      case SYMBOL: param_count++; break;
+      case KEYWORD: break;
+      default: xassert(FALSE);
+    }
+    params = params->cons.cdr->cons.cdr;
+  }
+  return param_count;
 }
 
 DEFSP(let)
@@ -1092,10 +1065,16 @@ DEFSP(let)
   object args;
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   if (!bi_arg_list(argv->cons.car, &args)) return FALSE;
-  gen1(LET_FRAME, reg[1]);
-  gen1(EVAL_SEQUENTIAL_FRAME, argv->cons.cdr);
-  reg[1] = gc_new_env(reg[1]);
-  return gen_symbol_binding(args, BIND_FRAME);
+  if (args == object_nil) {
+    gen1(EVAL_SEQUENTIAL_FRAME, argv->cons.cdr);
+  } else {
+    gen0(LET_FRAME);
+    gen1(EVAL_SEQUENTIAL_FRAME, argv->cons.cdr);
+    if (!gen_bind_frames(BIND_FRAME, args)) return FALSE;
+    param_count = 0;
+    reg[1] = gc_new_env(reg[1], count_let_sym(args) * 2);
+  }
+  return TRUE;
 }
 
 DEFSP(dynamic)
@@ -1106,7 +1085,7 @@ DEFSP(dynamic)
   if (!bi_arg_type(argv->cons.car, SYMBOL, &s)) return FALSE;
   i = fp;
   e = reg[1];
-  if ((reg[0] = symbol_find(e, s)) != NULL) return TRUE;
+  if ((reg[0] = object_find(e, s)) != NULL) return TRUE;
   while ((i = prev_fp(i)) != -1) {
     switch (fs_nth(i)) {
       case LET_FRAME:
@@ -1118,14 +1097,14 @@ DEFSP(dynamic)
       default:
         continue;
     }
-    if ((reg[0] = symbol_find(e, s)) != NULL) return TRUE;
+    if ((reg[0] = object_find(e, s)) != NULL) return TRUE;
   }
   return FALSE;
 }
 
 DEFSP(symbol_bind)
 {
-  return gen_symbol_binding(argv, BIND_PROPAGATION_FRAME);
+  return gen_bind_frames(BIND_PROPAGATION_FRAME, argv);
 }
 
 DEFSP(begin)
@@ -1142,9 +1121,10 @@ DEFSP(macro)
   gen1(BIND_PROPAGATION_FRAME, o);
   argv = argv->cons.cdr;
   if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
-  if (!parse_required_params(params, TRUE))
+  param_count = 0;
+  if (!parse_required_params(params))
     return ip_mark_error("illegal macro parameter list");
-  reg[0] = gc_new_macro(reg[1], params, argv->cons.cdr);
+  reg[0] = gc_new_macro(reg[1], param_count, params, argv->cons.cdr);
   return TRUE;
 }
 
@@ -1153,9 +1133,10 @@ DEFSP(f)
   object params;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
-  if (!parse_required_params(params, FALSE))
+  param_count = 0;
+  if (!parse_required_params(params))
     return ip_mark_error("illegal function parameter list");
-  reg[0] = gc_new_proc(reg[1], params, argv->cons.cdr);
+  reg[0] = gc_new_proc(reg[1], param_count, params, argv->cons.cdr);
   return TRUE;
 }
 
@@ -1213,7 +1194,7 @@ DEFSP(catch)
   if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
   gen1(HANDLERS_FRAME, gc_new_array(object_list_len(params)));
   gen1(EVAL_SEQUENTIAL_FRAME, argv->cons.cdr);
-  return gen_symbol_binding(params, BIND_HANDLER_FRAME);
+  return gen_bind_frames(BIND_HANDLER_FRAME, params);
 }
 
 DEFSP(return)
@@ -1262,7 +1243,7 @@ static void ip_main(object args)
       case HANDLERS_FRAME: pop_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
       case LABELS_FRAME: pop_frame(); break;
-      case FUNC_FRAME: pop_proc_frame(); break;
+      case FUNC_FRAME: pop_func_frame(); break;
       case LET_FRAME: pop_let_frame(); break;
       case QUOTE_FRAME: reg[0] = get_frame_var(fp, 0); pop_frame(); break;
       case RETURN_FRAME: pop_return_frame(); break;
@@ -1279,6 +1260,23 @@ void ip_mark_object(void)
   int i;
   for (i = 0; i < REG_SIZE; i++) gc_mark(reg[i]);
   for (i = 0; i < sp; i++) gc_mark(fs[i]);
+  gc_mark(object_toplevel);
+  gc_mark(object_nil);
+  gc_mark(object_true);
+  gc_mark(object_key);
+  gc_mark(object_opt);
+  gc_mark(object_rest);
+  gc_mark(object_quote);
+  gc_mark(object_stack_trace);
+  gc_mark(object_Class);
+  gc_mark(object_Exception);
+  gc_mark(object_Error);
+  gc_mark(object_class);
+  gc_mark(object_symbol);
+  gc_mark(object_super);
+  gc_mark(object_features);
+  gc_mark(object_fields);
+  gc_mark(object_message);
 }
 
 void ip_start(object args)
