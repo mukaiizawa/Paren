@@ -375,9 +375,11 @@
   ; The macro in the body is expanded.
   ; Error if name is already bound.
   ; Returns name.
-  (if (bound? name) (error name " already bound")
-      (list begin0 (list quote name)
-            (list <- name (cons f (cons args (expand-macro-all body)))))))
+  (with-gensyms (gname)
+    (list let (list gname (list quote name))
+          (list if (list bound? gname) (list 'error gname " already bound")
+                (list <- name (cons f (cons args (expand-macro-all body)))))
+          gname)))
 
 (builtin-function eq? (x y :rest args)
   ; Returns whether all arguments are the same object.
