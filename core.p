@@ -364,8 +364,9 @@
                   (if (cons? expr) (each-expand (expand-macro expr))
                       expr))
                 each-expand (f (expr)
-                              (if expr (cons (expand1 (car expr))
-                                             (each-expand (cdr expr))))))
+                              (if (cons? expr) (cons (expand1 (car expr))
+                                                     (each-expand (cdr expr)))
+                                  expr)))
     (expand1 expr)))
 
 ; fundamental function
