@@ -18,7 +18,7 @@ body { display:flex; justify-content:center; font-family:Consolas, 'Courier New'
 aside { width:25vw; overflow:scroll; margin-left:1em; max-height:100vh; position:sticky; top:0; font-size:0.9rem; }
 aside ul { padding-left:0px; list-style:none; }
 aside ul span { margin-left:1em; }
-aside ul a { color:#000; text-decoration:none; margin:2px; }
+aside ul a { color:#000; text-decoration:none; margin:2px; white-space:nowrap; }
 article { width:75vw; margin-left:1em; }
 pre, blockquote, table { margin-left:1em; margin-right:1em; padding:0.5em; }
 h1 { margin-top:0.25em; }
