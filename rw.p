@@ -12,7 +12,7 @@
 
 (function! main (args)
   (timeit
-  (with-open ($in (.resolve $paren-home core.p) :read)
-    (foreach (f (x) (write (cadr x)))
-             (select (f (x) (&& (cons? x) (reserved-word? (car x))))
-                     (collect read))))))
+    (with-open ($in (.resolve $paren-home core.p) :read)
+      (foreach (f (x) (write (cadr x)))
+               (select (f (x) (&& (cons? x) (reserved-word? (car x))))
+                       (collect read))))))

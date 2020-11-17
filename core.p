@@ -1150,8 +1150,7 @@
   (! (memeq? x y)))
 
 (function memempty? (s)
-  ; Returns whether the s is "".
-  ; If s is nil, returns true.
+  ; Returns whether the s is "" or nil.
   (|| (nil? s) (= (memlen s) 0)))
 
 (builtin-function mem->bytes (x :opt i size)
