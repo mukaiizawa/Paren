@@ -205,6 +205,14 @@ static void gen_eval_args_frame(object args)
   }
 }
 
+static void gen_eval_sequential_frame(object args)
+{
+  if (args == object_nil) reg[0] = object_nil;
+  else {
+    gen1(EVAL_SEQUENTIAL_FRAME, args);
+  }
+}
+
 static void gen_if_frame(object args)
 {
   if (args == object_nil) return;
@@ -328,7 +336,7 @@ static void pop_apply_frame(void)
   else gen2(FUNC_FRAME, reg[1], trace);
   if (func->proc.param_count == 0) reg[1] = func->proc.env;
   else reg[1] = gc_new_env(func->proc.env, func->proc.param_count * 2);
-  gen1(EVAL_SEQUENTIAL_FRAME, func->proc.body);
+  gen_eval_sequential_frame(func->proc.body);
   parse_args(&object_bind, func->proc.params, reg[0]);
 }
 
@@ -475,7 +483,7 @@ static void pop_unwind_protect_frame(void)
   object body;
   body = get_frame_var(fp, 0);
   pop_frame();
-  gen1(EVAL_SEQUENTIAL_FRAME, body);
+  gen_eval_sequential_frame(body);
 }
 
 static void pop_goto_frame(void)
@@ -490,7 +498,7 @@ static void pop_goto_frame(void)
         o = get_frame_var(fp, 0);
         while (o != object_nil) {
           if (o->cons.car == label) {
-            gen1(EVAL_SEQUENTIAL_FRAME, o->cons.cdr);
+            gen_eval_sequential_frame(o->cons.cdr);
             return;
           }
           o = o->cons.cdr;
@@ -503,7 +511,7 @@ static void pop_goto_frame(void)
         pop_frame();
         gen0(GOTO_FRAME);
         gen1(QUOTE_FRAME, label);
-        gen1(EVAL_SEQUENTIAL_FRAME, o);
+        gen_eval_sequential_frame(o);
         return;
       default:
         pop_rewinding();
@@ -565,7 +573,7 @@ static void pop_return_frame(void)
         pop_frame();
         gen0(RETURN_FRAME);
         gen1(QUOTE_FRAME, reg[0]);
-        gen1(EVAL_SEQUENTIAL_FRAME, args);
+        gen_eval_sequential_frame(args);
         return;
       default:
         pop_rewinding();
@@ -659,7 +667,7 @@ static void pop_throw_frame(void)
         pop_frame();
         gen0(THROW_FRAME);
         gen1(QUOTE_FRAME, reg[0]);
-        gen1(EVAL_SEQUENTIAL_FRAME, body);
+        gen_eval_sequential_frame(body);
         return;
       case HANDLERS_FRAME:
         handlers = get_frame_var(fp, 0);
@@ -1066,11 +1074,10 @@ DEFSP(let)
   object args;
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   if (!bi_arg_list(argv->cons.car, &args)) return FALSE;
-  if (args == object_nil) {
-    gen1(EVAL_SEQUENTIAL_FRAME, argv->cons.cdr);
-  } else {
+  if (args == object_nil) gen_eval_sequential_frame(argv->cons.cdr);
+  else {
     gen0(LET_FRAME);
-    gen1(EVAL_SEQUENTIAL_FRAME, argv->cons.cdr);
+    gen_eval_sequential_frame(argv->cons.cdr);
     if (!gen_bind_frames(BIND_FRAME, args)) return FALSE;
     param_count = 0;
     reg[1] = gc_new_env(reg[1], count_let_sym(args) * 2);
@@ -1110,7 +1117,7 @@ DEFSP(symbol_bind)
 
 DEFSP(begin)
 {
-  gen1(EVAL_SEQUENTIAL_FRAME, argv);
+  gen_eval_sequential_frame(argv);
   return TRUE;
 }
 
@@ -1166,7 +1173,7 @@ DEFSP(unwind_protect)
 DEFSP(labels)
 {
   gen1(LABELS_FRAME, argv);
-  gen1(EVAL_SEQUENTIAL_FRAME, argv);
+  gen_eval_sequential_frame(argv);
   return TRUE;
 }
 
@@ -1194,7 +1201,7 @@ DEFSP(catch)
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
   gen1(HANDLERS_FRAME, gc_new_array(object_list_len(params)));
-  gen1(EVAL_SEQUENTIAL_FRAME, argv->cons.cdr);
+  gen_eval_sequential_frame(argv->cons.cdr);
   return gen_bind_frames(BIND_HANDLER_FRAME, params);
 }
 
@@ -1222,7 +1229,7 @@ static void ip_main(object args)
 {
   reg[0] = object_nil;
   reg[1] = object_toplevel;
-  gen1(EVAL_SEQUENTIAL_FRAME, args);
+  gen_eval_sequential_frame(args);
   while (fp != -1) {
     xassert(fp >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
