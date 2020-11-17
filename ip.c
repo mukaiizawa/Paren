@@ -73,17 +73,16 @@ int ip_mark_error(char *msg)
 #define   EVAL_FRAME             0x00000062
 #define   EVAL_ARGS_FRAME        0x00000074
 #define   EVAL_SEQUENTIAL_FRAME  0x00000083
-#define   FETCH_OPERATOR_FRAME   0x00000093
-#define   GOTO_FRAME             0x00000102
-#define   HANDLERS_FRAME         0x00000113
-#define   IF_FRAME               0x00000123
-#define   LABELS_FRAME           0x00000133
-#define   FUNC_FRAME             0x00000144
-#define   LET_FRAME              0x00000152
-#define   QUOTE_FRAME            0x00000163
-#define   RETURN_FRAME           0x00000172
-#define   THROW_FRAME            0x00000182
-#define   UNWIND_PROTECT_FRAME   0x00000193
+#define   GOTO_FRAME             0x00000092
+#define   HANDLERS_FRAME         0x00000103
+#define   IF_FRAME               0x00000113
+#define   LABELS_FRAME           0x00000123
+#define   FUNC_FRAME             0x00000134
+#define   LET_FRAME              0x00000142
+#define   QUOTE_FRAME            0x00000153
+#define   RETURN_FRAME           0x00000162
+#define   THROW_FRAME            0x00000172
+#define   UNWIND_PROTECT_FRAME   0x00000183
 
 #define fs_top() (sint_val(fs[fp]))
 #define fs_nth(i) (sint_val(fs[i]))
@@ -118,7 +117,6 @@ char *frame_name(int frame_type)
     case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
-    case FETCH_OPERATOR_FRAME: return "FETCH_OPERATOR_FRAME";
     case GOTO_FRAME: return "GOTO_FRAME";
     case HANDLERS_FRAME: return "HANDLERS_FRAME";
     case IF_FRAME: return "IF_FRAME";
@@ -168,7 +166,6 @@ static void exit1(void)
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
-  dump_fs();
   exit(1);
 }
 
@@ -393,23 +390,58 @@ static void pop_bind_propagation_frame(void)
   pop_frame();
 }
 
+static int eval_symbol(object *result)
+{
+  object o;
+  o = *result;
+  if ((*result = object_find_propagation(reg[1], *result)) == NULL) {
+    gen2(FUNC_FRAME, reg[1], o);    // for stack trace
+    ip_mark_error("unbound symbol");
+    return FALSE;
+  }
+  return TRUE;
+}
+
 static void pop_eval_frame(void)
 {
-  object s;
+  object args, operator;
+  int (*special)(int, object);
   pop_frame();
   switch (object_type(reg[0])) {
     case SYMBOL:
-      if ((s = object_find_propagation(reg[1], reg[0])) == NULL) {
-        gen2(FUNC_FRAME, reg[1], reg[0]);    // for stack trace
-        ip_mark_error("unbound symbol");
-        return;
-      }
-      reg[0] = s;
+      eval_symbol(&(reg[0]));
       return;
     case CONS:
-      gen1(FETCH_OPERATOR_FRAME, reg[0]->cons.cdr);
-      gen_eval_frame(reg[0]->cons.car);
-      return;
+      operator = reg[0]->cons.car;
+      args = reg[0]->cons.cdr;
+      if (object_type_p(operator, SYMBOL)) {
+        if (!eval_symbol(&operator)) return;
+      }
+      switch (object_type(operator)) {
+        case SPECIAL:
+          special = operator->builtin.u.special;
+          if ((*special)(object_list_len(args), args)) return;
+          gen2(FUNC_FRAME, reg[1], gc_new_cons(operator->builtin.name, args));    // for stack trace
+          return;
+        case BUILTINFUNC:
+          gen1(APPLY_BUILTIN_FRAME, operator);
+          gen_eval_args_frame(args);
+          return;
+        case MACRO:
+          gen0(EVAL_FRAME);
+          gen1(APPLY_FRAME, operator);
+          reg[0] = args;
+          return;
+        case FUNC:
+          gen1(APPLY_FRAME, operator);
+          gen_eval_args_frame(args);
+          return;
+        default:
+          ip_mark_error("expected operator");
+          xassert(FALSE);
+          return;
+      }
+      break;
     case MACRO:
     case FUNC:
     case BUILTINFUNC:
@@ -481,37 +513,6 @@ static void pop_goto_frame(void)
   ip_mark_error("expected labels context");
   set_fp(i);
   return;
-}
-
-static void pop_fetch_operator_frame(void)
-{
-  object args;
-  int (*special)(int, object);
-  args = get_frame_var(fp, 0);
-  pop_frame();
-  switch (object_type(reg[0])) {
-    case SPECIAL:
-      special = reg[0]->builtin.u.special;
-      if ((*special)(object_list_len(args), args)) return;
-      gen2(FUNC_FRAME, reg[1], gc_new_cons(reg[0]->builtin.name, args));    // for stack trace
-      return;
-    case BUILTINFUNC:
-      gen1(APPLY_BUILTIN_FRAME, reg[0]);
-      gen_eval_args_frame(args);
-      return;
-    case MACRO:
-      gen0(EVAL_FRAME);
-      gen1(APPLY_FRAME, reg[0]);
-      reg[0] = args;
-      return;
-    case FUNC:
-      gen1(APPLY_FRAME, reg[0]);
-      gen_eval_args_frame(args);
-      return;
-    default:
-      break;
-  }
-  ip_mark_error("expected operator");
 }
 
 static void pop_eval_args_frame(void)
@@ -1238,7 +1239,6 @@ static void ip_main(object args)
       case EVAL_FRAME: pop_eval_frame(); break;
       case EVAL_ARGS_FRAME: pop_eval_args_frame(); break;
       case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
-      case FETCH_OPERATOR_FRAME: pop_fetch_operator_frame(); break;
       case GOTO_FRAME: pop_goto_frame(); break;
       case HANDLERS_FRAME: pop_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
