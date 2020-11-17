@@ -28,6 +28,7 @@ extern char *xstrdup(char *s);
 #if WINDOWS_P
 extern int xwctomb(LPWSTR lp, char *p);
 extern int xmbtowc(char *p, LPWSTR lp);
+extern int xmbtomb(char *p, char *q);
 #endif
 
 #ifdef NDEBUG

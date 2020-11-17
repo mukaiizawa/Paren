@@ -21,6 +21,7 @@ extern int pf_stat(char *fn, struct pf_stat *statbuf);
 extern char *pf_exepath(char *argv0, char *path);
 extern int pf_utime(char *fn, int64_t mtime);
 extern char *pf_getcwd(char *buf);
+extern FILE *pf_fopen(char *fn, char *mode);
 extern int pf_readdir(char *path, struct xbarray *xba);
 extern int pf_mkdir(char *pn);
 extern int pf_remove(char *fn);

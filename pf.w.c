@@ -76,6 +76,13 @@ char *pf_getcwd(char *buf)
   return buf;
 }
 
+FILE *pf_fopen(char *fn, char *mode)
+{
+  char buf[MAX_STR_LEN];
+  if (!xmbtomb(fn, buf)) return FALSE;
+  return fopen(buf, mode);
+}
+
 int pf_readdir(char *path, struct xbarray *dirs)
 {
   char buf[MAX_STR_LEN];

@@ -98,6 +98,13 @@ int xmbtowc(char *p, LPWSTR lp)
   dwFlags = MB_PRECOMPOSED | MB_ERR_INVALID_CHARS;
   return MultiByteToWideChar(CP_UTF8, dwFlags, p, -1, lp, MAX_STR_LEN);
 }
+
+int xmbtomb(char *p, char *q)
+{
+  WCHAR wcbuf[MAX_STR_LEN];
+  if (!xmbtowc(p, wcbuf)) return FALSE;
+  return WideCharToMultiByte(CP_ACP, 0, wcbuf, -1, q, MAX_STR_LEN, NULL, NULL);
+}
 #endif
 
 #ifndef NDEBUG

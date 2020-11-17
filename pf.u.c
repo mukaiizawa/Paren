@@ -116,6 +116,11 @@ char *pf_getcwd(char *buf)
   return buf;
 }
 
+FILE *pf_fopen(char *fn, char *mode)
+{
+  return fopen(fn, mode);
+}
+
 int pf_readdir(char *path, struct xbarray *dirs)
 {
   char *fn;
