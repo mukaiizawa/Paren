@@ -15,13 +15,15 @@ OPTION:
     $default-css
 "
 body {
-  width:780px;
-  margin:auto;
+  display:flex;
+  justify-content:center;
   font-family:Consolas, 'Courier New', Courier, Monaco, monospace;
 }
-ul.contents { padding-left:0px; list-style:none; }
-ul.contents span { margin-left:1em; }
-ul.contents a { color:#000; text-decoration:none; margin:2px; overflow:visible; }
+aside { width:25em; overflow-y:scroll; margin-left:1em; }
+aside ul { padding-left:0px; list-style:none; }
+aside ul span { margin-left:1em; }
+aside ul a { color:#000; text-decoration:none; margin:2px; overflow:visible; }
+article { width:100em; margin-left:1em; }
 pre, blockquote, table { margin-left:1em; margin-right:1em; padding:0.5em; }
 h1 { margin-top:0.25em; }
 h1, h2, h3, h4, h5, h6, p, pre, blockquote, table { margin-bottom:0.75em; }
@@ -49,13 +51,14 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
     pad))
 
 (function parse-contents (contentss)
-  `((h1 "0. Contents")
-    (ul (:class "contents")
-        ,@(map (f (node)
-                 (let (id (cadadr node))
-                   `(li (:id ,(string 'contents- id))
-                        (a (:href ,(string "#" id)) ,@(contents-padding id) ,@(cddr node)))))
-               contentss))))
+  `((aside
+      (h1 "Table of Contents")
+      (ul (:class "contents")
+          ,@(map (f (node)
+                   (let (id (cadadr node))
+                     `(li (:id ,(string 'contents- id))
+                          (a (:href ,(string "#" id)) ,@(contents-padding id) ,@(cddr node)))))
+                 contentss)))))
 
 (function next-id (contents-index)
   (with-memory-stream ($out)
@@ -84,7 +87,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
          nodes)))
 
 (function make-html (nodes :key title? charset output-contents?)
-  (let (title nil contents (if output-contents? (parse-contents (reverse! $contents))))
+  (let (title nil table-of-contents (if output-contents? (parse-contents (reverse! $contents))))
     (if title? (<- title (car nodes) nodes (cdr nodes)))
     `((!DOCTYPE "html")
       (html (:lang "ja")
@@ -93,8 +96,8 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
               (title ,(caddr title))
               (style ,$default-css))
             (body
-              ,@contents
-              ,@nodes)))))
+              ,@table-of-contents
+              (article ,@nodes))))))
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))
