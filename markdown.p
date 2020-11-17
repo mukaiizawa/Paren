@@ -99,7 +99,7 @@
 (method MarkdownReader .parse-list ()
   (let (next-root nil next-depth nil node-stack nil
                   fetch (f ()
-                          (when (.continue? self)
+                          (when (memmem "1- " (.next self))
                             (<- next-depth 1)
                             (while (memeq? (.next self) " ")
                               (dotimes (i 4) (.skip self " "))

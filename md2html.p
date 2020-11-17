@@ -5,8 +5,8 @@
 
 (<- $usage
 "
-Usage: paren md2html.p [OPTION] FILE
-	Convert markdown file FILE to html file.
+Usage: paren md2html.p [OPTION]
+	Convert the markdown file read from the standard input into an html file and output it to the standard output.
 OPTION:
 	c -- Specify charset. If omitted, it is considered that 'UTF-8' is specified.
 	C -- Do not output table of contents.
@@ -14,16 +14,12 @@ OPTION:
 "
     $default-css
 "
-body {
-  display:flex;
-  justify-content:center;
-  font-family:Consolas, 'Courier New', Courier, Monaco, monospace;
-}
-aside { width:25em; overflow-y:scroll; margin-left:1em; }
+body { display:flex; justify-content:center; font-family:Consolas, 'Courier New', Courier, Monaco, monospace; }
+aside { width:25vw; overflow:scroll; margin-left:1em; max-height:100vh; position:sticky; top:0; font-size:0.9rem; }
 aside ul { padding-left:0px; list-style:none; }
 aside ul span { margin-left:1em; }
-aside ul a { color:#000; text-decoration:none; margin:2px; overflow:visible; }
-article { width:100em; margin-left:1em; }
+aside ul a { color:#000; text-decoration:none; margin:2px; }
+article { width:75vw; margin-left:1em; }
 pre, blockquote, table { margin-left:1em; margin-right:1em; padding:0.5em; }
 h1 { margin-top:0.25em; }
 h1, h2, h3, h4, h5, h6, p, pre, blockquote, table { margin-bottom:0.75em; }
@@ -101,14 +97,9 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))
-    (let ((op args) (.parse (.init (.new OptionParser) "tCc:") (cdr args)))
-      (if (nil? (car args)) (error "require markdown file path")
-          (let (p (Path.of (car args)) nodes nil)
-            (with-open ($in p :read)
-              (with-open ($out (string (.but-suffix p) ".html") :write)
-                (let (rd (.new MarkdownReader))
-                  (foreach (f (x) (write-line (xml->str x)))
-                           (make-html (parse-nodes (collect (f () (.read rd))))
-                                      :title? (.get op "t")
-                                      :charset (.get op "c")
-                                      :output-contents? (! (.get op "C"))))))))))))
+    (let ((op args) (.parse (.init (.new OptionParser) "tCc:") (cdr args)) rd (.new MarkdownReader))
+      (foreach (f (x) (write-line (xml->str x)))
+               (make-html (parse-nodes (collect (f () (.read rd))))
+                          :title? (.get op "t")
+                          :charset (.get op "c")
+                          :output-contents? (! (.get op "C")))))))
