@@ -1484,7 +1484,6 @@
   ; Works faster than method which defined with the `method` macro.
   (with-gensyms (receiver val)
     (let (key (mem->key field)
-              field (mem->str field)
               getter (memcat '& field)
               setter (memcat '& field '!))
       (list begin
