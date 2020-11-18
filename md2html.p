@@ -14,7 +14,7 @@ OPTION:
 "
     $default-css
 "
-body { display:flex; justify-content:center; font-family:Consolas, 'Courier New', Courier, Monaco, monospace; }
+body { margin:0; display:flex; justify-content:center; font-family:Consolas, 'Courier New', Courier, Monaco, monospace; }
 aside { width:25vw; overflow:scroll; margin-left:1em; max-height:100vh; position:sticky; top:0; font-size:0.9rem; }
 aside ul { padding-left:0px; list-style:none; }
 aside ul span { margin-left:1em; }
