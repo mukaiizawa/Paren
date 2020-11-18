@@ -14,7 +14,7 @@ OPTION:
 "
     $default-css
 "
-::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar { width:8px; height:8px; }
 ::-webkit-scrollbar-thumb { background-color:rgba(40, 40, 40, .5); border-radius:5px; }
 body { margin:0; display:flex; justify-content:center; font-family:Consolas, 'Courier New', Courier, Monaco, monospace; }
 aside { width:25vw; overflow:scroll; margin-left:1em; max-height:100vh; position:sticky; top:0; font-size:0.9rem; }
