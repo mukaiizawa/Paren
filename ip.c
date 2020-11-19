@@ -446,7 +446,6 @@ static void pop_eval_frame(void)
           return;
         default:
           ip_mark_error("expected operator");
-          xassert(FALSE);
           return;
       }
       break;
