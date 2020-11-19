@@ -65,13 +65,11 @@
     `(p ,@(reverse! children))))
 
 (method MarkdownReader .parse-pre ()
-  (let (lines nil get-line (f ()
-                             (dotimes (i 4) (.skip self " "))
-                             (.skip-line self)))
-    (push! lines (get-line))
-    (while (.continue? self)
-      (push! lines (get-line)))
-    `(pre ,(join (reverse! lines) "\n"))))
+  (let (get-line (f ()
+                   (when (memeq? (.next self) " ")
+                     (dotimes (i 4) (.skip self " "))
+                     (.skip-line self))))
+    `(pre ,(join (collect get-line) "\n"))))
 
 (method MarkdownReader .parse-quote ()
   (let (next-depth nil node-stack nil
@@ -99,7 +97,7 @@
 (method MarkdownReader .parse-list ()
   (let (next-root nil next-depth nil node-stack nil
                   fetch (f ()
-                          (when (memmem "1- " (.next self))
+                          (when (|| (.digit? self) (memmem "- " (.next self)))
                             (<- next-depth 1)
                             (while (memeq? (.next self) " ")
                               (dotimes (i 4) (.skip self " "))
@@ -108,9 +106,9 @@
                                 (begin
                                   (.skip self)    ; - xxx
                                   (push! next-root 'ul))
-                                (memeq? (.next self) "1")
+                                (.digit? self)
                                 (begin
-                                  (.skip self) (.skip self ".")    ; 1. xxx
+                                  (.skip-uint self) (.skip self ".")    ; 1. xxx
                                   (push! next-root 'ol))
                                 (.raise self "missing list"))
                             (.skip-space self)
@@ -131,8 +129,8 @@
 (method MarkdownReader .parse-tr (:opt tx)
   (let (txlist nil)
     (.skip self "|")
-    (while (.continue? self)
-      (while (.none-match? self "|") (.get self))
+    (while (memneq? (.next self) "\n")
+      (while (memneq? (.next self) "|") (.get self))
       (.skip self "|")
       (push! txlist (list tx (.token self))))
     (.skip self)
@@ -141,7 +139,7 @@
 (method MarkdownReader .parse-table ()
   (let (thlist (.parse-tr self 'th) tdlist nil)
     (.skip-line self)    ; skip separator.
-    (while (.continue? self)
+    (while (memeq? (.next self) "|")
       (push! tdlist (.parse-tr self 'td)))
     `(table
        (thead () ,thlist)
@@ -203,7 +201,8 @@
         (memeq? next "#") (.parse-header self)
         (memeq? next " ") (.parse-pre self)
         (memeq? next ">") (.parse-quote self)
-        (|| (memeq? next "-") (memeq? next "1")) (.parse-list self)
+        (memeq? next "-") (.parse-list self)
+        (memeq? next "1") (.parse-list self)
         (memeq? next "|") (.parse-table self)
         (memeq? next "[") (.parse-footnote-reference self)
         (memeq? next "<") (XMLReader.read self)
