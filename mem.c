@@ -197,6 +197,23 @@ DEFUN(mem_eq_p)
   return TRUE;
 }
 
+DEFUN(memcmp)
+{
+  int val, size;
+  object o, p;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_arg_mem(argv->cons.car, &o)) return FALSE;
+  if (!bi_arg_mem(argv->cons.cdr->cons.car, &p)) return FALSE;
+  size = o->mem.size;
+  if (size > p->mem.size) size = p->mem.size;
+  if ((val = memcmp(o->mem.elt, p->mem.elt, size)) == 0) {
+    if (o->mem.size < p->mem.size) val = -1;
+    else if (o->mem.size > p->mem.size) val = 1;
+  }
+  *result = gc_new_xint(val);
+  return TRUE;
+}
+
 DEFUN(memcat)
 {
   struct xbarray x;

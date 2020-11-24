@@ -1149,6 +1149,16 @@
   ; Same as (! (memeq? x y)).
   (! (memeq? x y)))
 
+(builtin-function memcmp (x y)
+  ; If x is equals to y, returns 0.
+  ; If x is lexicographically less than y, returns -1.
+  ; If x is lexicographically greater than y, returns 1.
+  (assert (= (memcmp "bar" "foo") -1))
+  (assert (= (memcmp "foo" "bar") 1))
+  (assert (= (memcmp "foo" "foo") 0))
+  (assert (= (memcmp "fo" "foo") -1))
+  (assert (= (memcmp "foo" "fo") 1)))
+
 (function memempty? (s)
   ; Returns whether the s is "" or nil.
   (|| (nil? s) (= (memlen s) 0)))
