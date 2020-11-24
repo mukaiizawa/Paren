@@ -138,7 +138,7 @@
              (let ((stag? tag) (.parse-tag self))
                (if (! stag?) tag    ; make sense
                    (let (name (car tag) child nil children nil)
-                     (while (neq? name (<- child (.read self)))
+                     (while (neq? name (<- child (XMLReader.read self)))
                        (if (symbol? child) (.raise self "unexpected close tag " child " expected " name)
                            (push! children child)))
                      (cons (car tag)
