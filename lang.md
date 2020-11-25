@@ -1,211 +1,109 @@
-Paren言語仕様書
+Paren language specification
 
 # Paren
-ParenはS式によって記述されるプログラミング言語である。
+Paren is a programming languages that written by S-expression and evaluates S-expressions.
 
-# S式
-リスト、または、アトムのことをS式という。
+# S-expressions
+S-expressions is a list or atom.
 
-S式は評価器によって評価されるとParenのデータを返す。
+## Lists
+A cons is a data structure with two components called car and cdr.
 
-Parenでは、任意のS式はデータであり、任意のデータはS式である。
+All cdrs refer to nil or cons.
 
-以後、評価器に評価されることが期待されるデータのことをS式という。
+A list is the entire cons that can be traced from a cons.
 
-## データ型
-Parenには次のデータ型がある。
+The entire car is called a list element.
 
-- array(配列)
-- byte-array(バイト配列)
-- cons(コンス)
-- function(関数)
-- keyword(キーワード)
-- macro(マクロ)
-- number(数値)
-- string(文字列)
-- symbol(シンボル)
+A list without elements is called an empty list and is represented by symbol nil.
 
-### array(配列)
-Parenの任意のデータ型を連続したメモリ上に配置したデータ型のことを配列という。
+## Atom
+An atom is the following data types.
 
-配列に配置されたデータのことを要素といい、先頭要素を零とした順番のことを要素番号という。
+- symbol
+- keyword
+- array
+- bytes
+- function
+- macro
+- number
+- string
 
-範囲外の要素番号で配列を参照するとエラーとなる。
+## Symbols
+A symbol is a data type for holding a reference to an S-expression.
 
-### byte-array(バイト配列)
-0から255までの数値のみ取り扱うことのできる配列のことをバイト配列という。
+A symbol is an object representing a string, the symbol's name.
 
-### cons(コンス)
-car、cdrとよばれる二つのParenデータへの参照を持つデータ型のことをコンスという。
+Unlike strings, two symbols whose names are spelled the same way are never distinguishable.
 
-carは任意のParenデータ型を参照することができるが、cdrはコンスかシンボルnilしか参照することしかできない。
+### Keywords
+Keywords are the same as symbols, except that they cannot hold references to other S-expression.
 
-### function(関数)
-零以上の引数を受け取り、零以上のS式を評価する仕組みを持つデータ型のことを関数という。
+### Arrays
+An array is a data type in which any S-expression is placed in continuous memory.
 
-関数は評価されるとParenのデータを返す。
+### Bytes
+A bytes is an array that specializes in handling only numbers from 0 to 255.
 
-### keyword(キーワード)
-評価されると常に自身を返すデータ型のことをキーワードという。
+### Functions
+A function is a data type that receives an argument of zero or more and evaluates an S-expression of zero or more.
 
-### macro(マクロ)
-評価器が評価する前に引数を別のS式に展開する仕組みを持つデータ型のことをマクロという。
+### Macros
+A macro is a data type that has a mechanism to expand its arguments into another S-expression.
 
-引数の展開規則もS式によって定義される。
+### Numbers
+A number is a data type that represents a number.
 
-### number(数値)
-数を表すデータ型のことを数値という。
+### Strings
+A string is a data type that represents a string.
 
-整数、実数にかかわらず、数値型として表現される。
+# Meta language
+The grammar is defined by the following EBNF notation.
 
-### string(文字列)
-文字の列を表すデータ型のことを文字列という。
+    x? -- x can be omitted.
+    x | y -- x or y.
+    x+ -- One or more repetition of x.
+    x* -- Zero or more repetition of x.
+    () -- Grouping.
+    'x' -- Fixed phrase. Indicates the character sequence. x may be plural.
+    [...] -- Character group. One of the characters specified in []. When writen as x-y, one of the ASCII character sets between x and y. The leading ~ indicates any character other than those specified in [].
+    = -- Definition. The syntax element indicated on the left side is defined on the right side.
 
-### symbol(シンボル)
-名前により識別され、高速で等価判定ができるデータのことをシンボルという。
+If '\' is described in a fixed phrase or a character group, it means the following character itself.
 
-また、シンボルは任意のデータと対として環境に束縛される。
+Exceptions are '\t' for tab characters, '\n' for newline characters.
 
-## リスト
-あるコンスから辿れる、car及びcdrの参照全体をリストという。
+# Lexical rules
+The lexical rules determines how a character sequence is split into a sequence of lexemes.
 
-## アトム
-コンスでない任意のParenのデータ型のことをアトムという。
+This rule is the minimum rule required to read core.p. This is because paren can overwrite the reader by paren itself.
 
-シンボル以外のアトムは評価されると自身を返す。
+    lexeme = symbol | keyword | string | number | '(' | ')' | '\''
+    comment = ';' [~\n]*
+    space = [\t\n ]
+    symbol = identifier
+    keyword = ':' identifier
+    string = '"' ([~"\\] | escape-sequence)* '"'
+    number = sign? (integer | float)
+    identifier = symbol-alpha identifier-rest*
+                 | sign ((symbol-alpha | sign) identifier-rest* )?
+    identifier-rest = symbol-alpha | digit | sign
+    escape-sequence = '\\' ([~cx] | 'c' [@-_a-z] | 'x' hexDigit hexDigit)
+    symbol-alpha = [!#$%&*./<=>?A-Z[\]^_a-z{|}]
+    sign = '+' | '-'
+    integer = (digit+ 'x')? [0-9a-z]+
+    float = digit+ '.' digit+ ('E' [+-]? digit+)?
+    hexDigit = digit | [a-f]
+    digit = [0-9]
+    sign = [+\-]
 
-シンボルは評価されると、その環境に束縛されているデータを返す。
+# Syntax rules
+The syntax rules describes the syntax of syntactic datain terms of a sequence of lexemes.
 
-# 字句規則
-ここで述べる字句規則の実装は、リードマクロによる実装も含む。
+It is possible to write a comment or a space arbitrarily at a break point in the syntax rules.
 
-## メタ言語
-Parenの文法を以下のEBNF表記で定義する。
-
-    x? -- xは省略可能。
-    x | y -- x又はy。
-    . -- 任意の一文字
-    x* -- xの零回以上の繰り返し。
-    x+ -- xの一回以上の繰り返し。
-    () -- グループ化。
-    'x' -- 固定字句。文字の並びxを示す。xは複数の場合もある。
-    [...] -- 文字グループ。[]内で指定された文字の何れか。
-             x-yと表記された場合はxとyの間の何れかを表す。
-             先頭に^を指定した場合は[]内で指定された文字以外の何れかを示す。
-    ::= -- 定義。左辺で示される構文要素を右辺で定義される。
-
-### 注意事項
-メタ言語内で可読性のため空白を挿入することがあるが、その空白はメタ言語において無視されるものとする。
-
-固定字句及び文字グループ中で`\`を記述した場合、後続する文字そのものを意味する。ただし、`\t`及び`\n`はそれぞれタブ文字、改行文字を意味するものとする。
-
-量指定子は特に指定がなければ最長一致とする。
-
-## 字句の区切り（separator）
-
-    separator ::= space | comment
-
-プログラムは空白又はコメントにより区切られる。
-
-これらは要素の区切りとして使用される以外は無視される。
-
-### 空白（space）
-
-    space ::= [\t\n ]
-
-空白はタブ文字、改行文字、半角スペースである。
-
-### コメント（comment）
-
-    comment ::= ';' [^\n]*
-
-コメントは`;`から行末までである。
-
-## ソースコード（source code）
-ソースコードは空白で区切られた任意個のS式からなる。
-
-    source_code ::= s_expr ( space s_expr )*
-
-## S式（s_expr）
-
-    s_expr ::= list | atom
-
-S式はリストまたはアトムである。
-
-### リスト（list）
-
-    list ::= '(' (s_expr separator s_expr* )? ')'
-
-リストは零以上のS式を括弧で括ったものである。
-
-### アトム（atom）
-
-    atom ::= symbol | keyword | number | string
-
-atomは次のリテラルがある。
-
-- シンボル
-- キーワード
-- 数値
-- 文字列
-
-#### 識別子（identifier）
-
-    identifier ::= identifier_symbol_alpha identifier_rest*
-                    | identifier_sign ( (identifier_symbol_alpha | identifier_sign) identifier_rest* )?
-    identifier_rest ::= identifier_symbol_alpha
-                        | identifier_digit
-                        | identifier_sign
-    identifier_symbol_alpha ::= [!#$%&*./<=>?A-Z[\]^_a-z{|}]
-    identifier_digit ::= [0-9]
-    identifier_sign ::= [+\-]
-
-識別子はシンボル、キーワードを定義するために定義する。
-
-#### シンボル（symbol）
-
-    symbol ::= identifier
-
-シンボルは識別子である。
-
-#### キーワード（keyword）
-
-    keyword ::= ':' identifier
-
-キーワードは先頭に`:`を付与した識別子である。
-
-#### 数値（number）
-
-    number ::= sign? (integer | float)
-    sign ::= '+' | '-'
-    integer ::= (digit+ 'x')? [0-9a-z]+
-    float ::= digit+ '.' digit+ ('E' [+-]? digit+)?
-    digit ::= [0-9]
-
-数値には整数と、浮動小数点数がある。
-
-整数は数値と'x'を前置する事で基数を指定出来る。
-
-基数は36まで設定可能だが、例外として0を指定すると16が指定されたものと見做す。
-
-浮動小数点数は倍精度浮動小数点数値である。指数表記可能。
-
-#### 文字列（string）
-
-    string ::= '"' ([^"\\] | esc)* '"'
-    esc ::= '\\' .
-
-文字列はダブルクォートで囲まれた文字またはエスケープシーケンスの列である。
-
-エスケープシーケンスは'\'から始まり次の一文字によりその意味が異なる。
-
-    \a -- 0x07(bell)
-    \b -- 0x08(back space)
-    \e -- 0x1B(escape)
-    \f -- 0x0c(form feed)
-    \n -- 0x0a(line feed)
-    \r -- 0x0d(carriage return)
-    \t -- 0x09(horizontal tab)
-    \v -- 0x0b(vertical tab)
-    \x -- interpret the following two letters as a hexadecimal number.
-    \ -- interpret the following letter as a 
+    s-expression = list | atom
+    list = '(' s-expression* ')' | abbrev-list
+    abbrev-list = abbrev-prefix s-expression
+    abbrev-prefix = '\''
+    atom = symbol | keyword | number | string
