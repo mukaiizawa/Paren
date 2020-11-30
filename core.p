@@ -2145,6 +2145,7 @@
   (&rdpos! self offset))
 
 (method MemoryStream .tell ()
+  ; Returns current byte position in stream.
   (&rdpos self))
 
 (method MemoryStream .to-s ()
@@ -2155,6 +2156,7 @@
 
 (method MemoryStream .reset ()
   ; Empty the contents of the stream.
+  ; Returns the receiver.
   (&rdpos! self 0)
   (&wrpos! self 0))
 
@@ -2183,9 +2185,13 @@
   (fwrite x (|| from 0) (|| size (memlen x)) (&fp self)))
 
 (method FileStream .seek (offset)
-  (fseek (&fp self) offset))
+  ; Sets the file position indicator of the receiver.
+  ; Returns the receiver.
+  (fseek (&fp self) offset)
+  self)
 
 (method FileStream .tell ()
+  ; Returns the current value of the file position indicator of the receiver.
   (ftell (&fp self)))
 
 (method FileStream .flush ()
