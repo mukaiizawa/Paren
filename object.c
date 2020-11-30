@@ -109,7 +109,7 @@ static void describe_mem(object o, struct xbarray *x)
   xbarray_adds(x, "#b[");
   for (i = 0; i < o->mem.size; i++) {
     if (i != 0) xbarray_add(x, ' ');
-    xbarray_addf(x, "0x%x", o->mem.elt[i]);
+    xbarray_addf(x, "0x%x", LC(o->mem.elt + i));
     if (x->size > MAX_STR_LEN) return;
   }
   xbarray_add(x, ']');
