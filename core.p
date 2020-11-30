@@ -2369,9 +2369,7 @@
 
 (method AheadReader .to-s ()
   (string "<" (&symbol (.class self)) ":0x" (address self) " "
-          (list :next (&next self)
-                :token (.to-s (&token self))
-                :lineno (&lineno self)) ">"))
+          (list :next (&next self) :lineno (&lineno self)) ">"))
 
 ; Paren reader
 
