@@ -184,6 +184,7 @@
   ; Return last evaluated value.
   ; If args is nil, returns nil.
   (if (nil? args) nil
+      (nil? (cdr args)) (car args)
       (with-gensyms (g)
         (let (rec (f (l)
                     (if (nil? l) nil
@@ -197,6 +198,7 @@
   ; If all args but the last evaluate to true values, and returns the results produced by evaluating the last args.
   ; If no args are supplied, returns true.
   (if (nil? args) true
+      (nil? (cdr args)) (car args)
       (let (rec (f (l)
                   (if (cdr l) (list if (car l) (rec (cdr l)))
                       (car l))))
