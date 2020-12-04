@@ -2468,7 +2468,7 @@
     :backquote (list 'quasiquote (.parse (.scan self)))
     :unquote (list 'unquote (.parse (.scan self)))
     :unquote-splicing (list 'unquote-splicing (.parse (.scan self)))
-    :read-macro ((assoc $read-table (str->code (&token self))) self)
+    :read-macro (apply (assoc $read-table (str->code (&token self))) (list self))
     :default (.raise self "syntax error")))
 
 (macro unquote (expr)
