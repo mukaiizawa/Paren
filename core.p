@@ -832,32 +832,26 @@
 (function every? (f l)
   ; Returns whether the result of the function f applied to all the elements of the list is true.
   ; If x is nil, returns true.
-  (while l
-    (if (f (car l)) (<- l (cdr l))
-        (return nil)))
-  true)
+  (if l (&& (f (car l)) (every? f (cdr l)))
+      true))
 
 (function some? (f l)
   ; Returns whether the function f applied to any element of the list is true.
   ; If x is nil, returns nil.
-  (while l
-    (if (f (car l)) (return true)
-        (<- l (cdr l)))))
+  (if (f (car l)) true
+      (some? f (cdr l))))
 
 (function none? (f l)
   ; Returns whether the result of the function f applied to all the elements of the list is nil.
   ; If x is nil, returns true.
-  (while l
-    (if (f (car l)) (return nil)
-        (<- l (cdr l))))
-  true)
+  (if (nil? l) true
+      (f (car l)) nil
+      (none? f (cdr l))))
 
 (function every-adjacent? (f l)
   ; Returns whether each adjacent element of the specified list l returns true when evaluated as an argument to the specified function fn.
-  (while (cdr l)
-    (if (f (car l) (cadr l)) (<- l (cdr l))
-        (return nil)))
-  true)
+  (if (cdr l) (&& (f (car l) (cadr l)) (every-adjacent? f (cdr l)))
+      true))
 
 ; number
 
