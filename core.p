@@ -781,30 +781,30 @@
     (rec l)
     (reverse! acc)))
 
-(function collect (f)
+(function collect (fx)
   ; Returns a list of the applied results until the function f returns nil.
-  (let (x nil acc nil)
-    (while (<- x (f)) (push! acc x))
-    (reverse! acc)))
+  (let (rec (f (val :opt acc)
+              (if val (rec (fx) (cons val acc))
+                  (reverse! acc))))
+    (rec (fx))))
 
-(function map (f args)
-  ; Returns a list of the results of mapping each element of the specified list args with the specified function f.
-  (let (acc nil)
-    (while args
-      (<- acc (cons (f (car args)) acc)
-          args (cdr args)))
-    (reverse! acc)))
+(function map (fx args)
+  ; Returns a list of the results of mapping each element of the specified list args with the specified function fx.
+  (let (rec (f (l :opt acc)
+              (if (nil? l) (reverse! acc)
+                  (rec (cdr l) (cons (fx (car l)) acc)))))
+    (rec args)))
 
-(function foreach (f args)
+(function foreach (fx args)
   ; Apply a function to each argument.
   ; Returns nil.
-  (while args
-    (f (car args))
-    (<- args (cdr args))))
+  (when args
+    (fx (car args))
+    (foreach fx (cdr args))))
 
-(function reduce (f args)
+(function reduce (fx args)
   ; Returns the value that apply function of two arguments cumulatively to the elements of the list args, from left to right.
-  (if (cdr args) (reduce f (cons (f (car args) (cadr args)) (cddr args)))
+  (if (cdr args) (reduce fx (cons (fx (car args) (cadr args)) (cddr args)))
       (car args)))
 
 (function find (f l)
@@ -817,11 +817,13 @@
           (<- l (cdr l))))
     '(nil nil)))
 
-(function select (f l)
+(function select (fx l)
   ; Returns a list with the elements for which the result of applying the function f is true.
-  (let (acc nil)
-    (dolist (x l) (if (f x) (push! acc x)))
-    (reverse! acc)))
+  (let (rec (f (l :opt acc)
+              (if (nil? l) (reverse! acc)
+                  (fx (car l)) (rec (cdr l) (cons (car l) acc))
+                  (rec (cdr l) acc))))
+    (rec l)))
 
 (function except (f l)
   ; Returns a list with the elements for which the result of applying the function f is true removed.
@@ -838,7 +840,8 @@
 (function some? (f l)
   ; Returns whether the function f applied to any element of the list is true.
   ; If x is nil, returns nil.
-  (if (f (car l)) true
+  (if (nil? l) nil
+      (f (car l)) true
       (some? f (cdr l))))
 
 (function none? (f l)
