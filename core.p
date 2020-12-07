@@ -781,79 +781,79 @@
     (rec l)
     (reverse! acc)))
 
-(function collect (fx)
-  ; Returns a list of the applied results until the function f returns nil.
+(function collect (fn)
+  ; Returns a list of the applied results until the function fn returns nil.
   (let (rec (f (val :opt acc)
-              (if val (rec (fx) (cons val acc))
+              (if val (rec (fn) (cons val acc))
                   (reverse! acc))))
-    (rec (fx))))
+    (rec (fn))))
 
-(function map (fx args)
+(function map (fn args)
   ; Returns a list of the results of mapping each element of the specified list args with the specified function fx.
   (let (rec (f (l :opt acc)
               (if (nil? l) (reverse! acc)
-                  (rec (cdr l) (cons (fx (car l)) acc)))))
+                  (rec (cdr l) (cons (fn (car l)) acc)))))
     (rec args)))
 
-(function foreach (fx args)
+(function foreach (fn args)
   ; Apply a function to each argument.
   ; Returns nil.
   (when args
-    (fx (car args))
-    (foreach fx (cdr args))))
+    (fn (car args))
+    (foreach fn (cdr args))))
 
-(function reduce (fx args)
+(function reduce (fn args)
   ; Returns the value that apply function of two arguments cumulatively to the elements of the list args, from left to right.
-  (if (cdr args) (reduce fx (cons (fx (car args) (cadr args)) (cddr args)))
+  (if (cdr args) (reduce fn (cons (fn (car args) (cadr args)) (cddr args)))
       (car args)))
 
-(function find (f l)
-  ; Find the element in the list l where the function f first returns not nil.
+(function find (fn l)
+  ; Find the element in the list l where the function fn first returns not nil.
   ; Returns a following list (such-element return-value).
   ; If there is no such element, returns '(nil nil).
   (let (e nil v nil)
     (while l
-      (if (<- e (car l) v (f e)) (return (list e v))
+      (if (<- e (car l) v (fn e)) (return (list e v))
           (<- l (cdr l))))
     '(nil nil)))
 
-(function select (fx l)
-  ; Returns a list with the elements for which the result of applying the function f is true.
+(function select (fn l)
+  ; Returns a list with the elements for which the result of applying the function fn is true.
   (let (rec (f (l :opt acc)
               (if (nil? l) (reverse! acc)
-                  (fx (car l)) (rec (cdr l) (cons (car l) acc))
+                  (fn (car l)) (rec (cdr l) (cons (car l) acc))
                   (rec (cdr l) acc))))
     (rec l)))
 
-(function except (f l)
-  ; Returns a list with the elements for which the result of applying the function f is true removed.
+(function except (fn l)
+  ; Returns a list with the elements for which the result of applying the function fn is true removed.
   (let (acc nil)
-    (dolist (x l) (if (nil? (f x)) (push! acc x)))
+    (dolist (x l) (if (nil? (fn x)) (push! acc x)))
     (reverse! acc)))
 
-(function every? (f l)
-  ; Returns whether the result of the function f applied to all the elements of the list is true.
+(function every? (fn l)
+  ; Returns whether the result of the function fn applied to all the elements of the list is true.
   ; If x is nil, returns true.
-  (if l (&& (f (car l)) (every? f (cdr l)))
+  (if l (&& (fn (car l)) (every? fn (cdr l)))
       true))
 
-(function some? (f l)
-  ; Returns whether the function f applied to any element of the list is true.
+(function some? (fn l)
+  ; Returns whether the function fn applied to any element of the list is true.
   ; If x is nil, returns nil.
   (if (nil? l) nil
-      (f (car l)) true
-      (some? f (cdr l))))
+      (fn (car l)) true
+      (some? fn (cdr l))))
 
-(function none? (f l)
-  ; Returns whether the result of the function f applied to all the elements of the list is nil.
+(function none? (fn l)
+  ; Returns whether the result of the function fn applied to all the elements of the list is nil.
   ; If x is nil, returns true.
   (if (nil? l) true
-      (f (car l)) nil
-      (none? f (cdr l))))
+      (fn (car l)) nil
+      (none? fn (cdr l))))
 
-(function every-adjacent? (f l)
+(function every-adjacent? (fn l)
   ; Returns whether each adjacent element of the specified list l returns true when evaluated as an argument to the specified function fn.
-  (if (cdr l) (&& (f (car l) (cadr l)) (every-adjacent? f (cdr l)))
+  (if (cdr l) (&& (fn (car l) (cadr l)) (every-adjacent? fn (cdr l)))
       true))
 
 ; number
@@ -2621,7 +2621,7 @@
   ; Evaluates the specified expression and returns a value.
   (assert (nil? (eval 'nil))))
 
-(builtin-function apply (f args)
+(builtin-function apply (fn args)
   ; Evaluates the specified expression and returns a value.
   ; Applies the function to the args.
   (assert (= (apply car '((1))) 1)))
