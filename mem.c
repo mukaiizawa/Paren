@@ -81,7 +81,7 @@ DEFUN(xmem_to_str)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, BYTES, &o)) return FALSE;
+  if (!bi_arg_mutable_mem(argv->cons.car, &o)) return FALSE;
   set_type(o, STRING);
   *result = o;
   return TRUE;

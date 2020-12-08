@@ -636,8 +636,9 @@
 (function join (l :opt delim)
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
   ; If delim is not specified, consider an empty string to be specified.
-  (if (nil? (cdr l)) (car l)
-      (nil? delim) (apply memcat l)
+  (if (nil? (cdr l)) (if (string? (<- l (car l))) l
+                         (mem->str l))
+      (nil? delim) (mem->str! (apply memcat l))
       (with-memory-stream ($out)
         (write-mem (car l))
         (dolist (x (cdr l))
@@ -767,6 +768,12 @@
   ; Returns a value corresponding to the specified key k of the specified asoociate list al.
   ; Error if there is no key.
   (assert (= (assoc '(:one 1 :two 2 :three 3) :one) 1)))
+
+(function nilable-assoc (al k)
+  ; Same as asooc except that it returns nil if the key does not exist.
+  (if (nil? al) nil
+      (eq? (car al) k) (cadr al)
+      (nilable-assoc (cddr al) k)))
 
 (builtin-function assoc! (al k v)
   ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
