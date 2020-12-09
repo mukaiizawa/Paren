@@ -636,8 +636,8 @@
 (function join (l :opt delim)
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
   ; If delim is not specified, consider an empty string to be specified.
-  (if (nil? (cdr l)) (if (string? (<- l (car l))) l
-                         (mem->str l))
+  (if (nil? l) nil
+      (nil? (cdr l)) (mem->str (car l))
       (nil? delim) (mem->str! (apply memcat l))
       (with-memory-stream ($out)
         (write-mem (car l))
@@ -1036,10 +1036,12 @@
 
 (function string (:rest args)
   ; Returns concatenated string which each of the specified args as string.
+  ; Treat nil as an empty string.
   (with-memory-stream ($out)
     (dolist (arg args)
-      (if (|| (string? arg) (keyword? arg) (symbol? arg) (bytes? arg)) (write-mem arg)
-          arg (write arg :end "")))))
+      (if (symbol? arg) (if arg (write-mem arg))
+          (|| (string? arg) (keyword? arg) (bytes? arg)) (write-mem arg)
+          (write arg :end "")))))
 
 (builtin-function string? (x)
   ; Returns whether the x is a string.
