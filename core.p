@@ -2072,7 +2072,6 @@
               (memeq? c "\r") (.write-mem self "\\r")
               (memeq? c "\t") (.write-mem self "\\t")
               (memeq? c "\v") (.write-mem self "\\v")
-              (memeq? c "\v") (.write-mem self "\\v")
               (memeq? c "\\") (.write-mem self "\\\\")
               (.write-mem self c)))
         (.write-byte self 0x22))
