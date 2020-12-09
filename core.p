@@ -1624,8 +1624,6 @@
   (write-mem (.to-s self))
   (write-line)
   (dolist (x (.stack-trace self))
-    (write-line)
-    (write-line)
     (write-mem "\tat: ") (write x)))
 
 (class SystemExit (Exception)
