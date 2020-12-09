@@ -1038,7 +1038,7 @@
   ; Returns concatenated string which each of the specified args as string.
   (with-memory-stream ($out)
     (dolist (arg args)
-      (if (string? arg) (write-mem arg)
+      (if (|| (string? arg) (keyword? arg) (symbol? arg) (bytes? arg)) (write-mem arg)
           arg (write arg :end "")))))
 
 (builtin-function string? (x)
@@ -1624,6 +1624,8 @@
   (write-mem (.to-s self))
   (write-line)
   (dolist (x (.stack-trace self))
+    (write-line)
+    (write-line)
     (write-mem "\tat: ") (write x)))
 
 (class SystemExit (Exception)
@@ -2061,7 +2063,18 @@
       (string? x)
       (begin
         (.write-byte self 0x22)
-        (.write-mem self x)
+        (dostring (c x)
+          (if (memeq? c "\a") (.write-mem self "\\a")
+              (memeq? c "\b") (.write-mem self "\\b")
+              (memeq? c "\e") (.write-mem self "\\e")
+              (memeq? c "\f") (.write-mem self "\\f")
+              (memeq? c "\n") (.write-mem self "\\n")
+              (memeq? c "\r") (.write-mem self "\\r")
+              (memeq? c "\t") (.write-mem self "\\t")
+              (memeq? c "\v") (.write-mem self "\\v")
+              (memeq? c "\v") (.write-mem self "\\v")
+              (memeq? c "\\") (.write-mem self "\\\\")
+              (.write-mem self c)))
         (.write-byte self 0x22))
       (symbol? x)
       (.write-mem self x)
