@@ -69,13 +69,13 @@
                             ")")))))
 
 (function select-from (table-names column-names :opt cond)
-  (string "select " (join column-names ", ")
-          " from "(join table-names ", ")
+  (string "select " (join (->list column-names) ", ")
+          " from "(join (->list table-names) ", ")
           (if cond (string " where" (parse-condition cond)))
           ";"))
 
 (function insert-into (table-name column-names values)
-  (string "insert into " table-name " (" (join column-names ", ") ") "
+  (string "insert into " table-name " (" (join (->list column-names) ", ") ") "
           "values (" (join (map ->sql-str values) ", ") ");\n"))
 
 (function update-set (table-name column-names values :opt cond)
