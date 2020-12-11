@@ -2073,6 +2073,7 @@
               (memeq? c "\t") (.write-mem self "\\t")
               (memeq? c "\v") (.write-mem self "\\v")
               (memeq? c "\\") (.write-mem self "\\\\")
+              (memeq? c "\"") (.write-mem self "\\\"")
               (.write-mem self c)))
         (.write-byte self 0x22))
       (symbol? x)
@@ -2728,11 +2729,11 @@
         (with-memory-stream ($in (.token lexer))
           (foreach write-byte (collect read)))))))
 
-(reader-macro m (reader)
-  ; Define expand-macro-all reader.
+(reader-macro p (reader)
+  ; Define print reader macro.
   (let (lexer (&lexer reader))
     (.skip lexer)
-    (list 'write (list 'expand-macro-all (list quote (.read reader))))))
+    (list 'write (.read reader))))
 
 (reader-macro . (reader)
   ; Define eval reader.
