@@ -32,14 +32,12 @@
         (reverse! fields))))
 
 (function! main (args)
-  (with-memory-stream ($in
-"foo,\"bar\",buzz
-\"foo\",bar,\"buzz\"
-")
-    (let (rd (.new CSVReader)
-             (r1 r2) (collect (f () (.read rd)))
-             (r11 r12 r13) r1
-             (r21 r22 r23) r2)
-      (assert (memeq? r11 r21))
-      (assert (memeq? r12 r22))
-      (assert (memeq? r13 r23)))))
+  (let (csv (join '("foo,\"bar\",buzz\n" "\"foo\",bar,\"buzz\"\n")))
+    (with-memory-stream ($in csv)
+      (let (rd (.new CSVReader)
+               (r1 r2) (collect (f () (.read rd)))
+               (r11 r12 r13) r1
+               (r21 r22 r23) r2)
+        (assert (memeq? r11 r21))
+        (assert (memeq? r12 r22))
+        (assert (memeq? r13 r23))))))

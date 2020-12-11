@@ -90,20 +90,31 @@
         (.parse-literal self))))
 
 (function! main (args)
-  (with-memory-stream
-    ($in "{
-         \"nodes\": [
-                     {\"id\":49,\"name\":\"object_p\", \"time\":0.73},
-                     {\"id\":36,\"name\":\"object_list_p\", \"time\":1.58},
-                     {\"id\":21,\"name\":\"object_list_len\", \"time\":3.58}
-                     ],
-         \"links\": [
-                     {\"source\":100,\"target\":100},
-                     {\"source\":100,\"target\":100},
-                     {\"source\":99,\"target\":99},
-                     {\"source\":99,\"target\":99},
-                     {\"source\":98,\"target\":49}
-                     ],
-         \"literal\": [true, false, null, 3.14, \"string\"]
-         }")
-         (write (json->str (write (.read (.new JSONReader)))))))
+  (let (json-str (join '("{"
+                         "  \"nodes\": ["
+                         "     {\"id\":49,\"name\":\"object_p\", \"time\":0.73},"
+                         "     {\"id\":21,\"name\":\"object_list_len\", \"time\":3.58}"
+                         "  ],"
+                         "  \"literal\": [true, false, null, 3.14, \"string\"]"
+                         "}")))
+    (with-memory-stream ($in json-str)
+      (let (json (.read (.new JSONReader))
+                 (nodes-key nodes-val literal-key literal-val) json)
+        (assert (eq? nodes-key :nodes))
+        (assert (array? nodes-val))
+        (let (nodes0 ([] nodes-val 0) nodes1 ([] nodes-val 1))
+          (assert (eq? (car nodes0) :id))
+          (assert (eq? (cadr nodes0) 49))
+          (assert (eq? (caddr nodes0) :name))
+          (assert (memeq? (cadddr nodes0) "object_p")))
+        (assert (eq? ([] literal-val 0) true))
+        (assert (eq? ([] literal-val 1) 'false))
+        (assert (eq? ([] literal-val 2) nil))
+        (assert (= ([] literal-val 3) 3.14))
+        (assert (memeq? ([] literal-val 4) "string"))
+        (write (json->str json))
+        (assert (memeq? (json->str json)
+                        (join '("{\"nodes\":["
+                                "{\"id\":49,\"name\":\"object_p\",\"time\":0.73},"
+                                "{\"id\":21,\"name\":\"object_list_len\",\"time\":3.58}"
+                                "],\"literal\":[true,false,null,3.14,\"string\"]}"))))))))

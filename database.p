@@ -13,7 +13,7 @@
 
 (function column->create-query (column)
   (let ((column-name :key primarykey? foreignkey required? type size default-value) column)
-    (string  "	" column-name " " (mem->str type) (if size (string "(" size ")"))
+    (string  "  " column-name " " (mem->str type) (if size (string "(" size ")"))
              (if default-value (string " default " default-value))
              (if (|| required? primarykey?) " not null"))))
 
@@ -21,7 +21,7 @@
   (let ((table-name :rest columns) table)
     (string "create table " table-name " (\n"
             (join (map column->create-query columns) ",\n")
-            "\n);\n\n")))
+            "\n);")))
 
 (function table->constraints (table)
   (let (primarykeys (select-table-columns table :primarykey?)
@@ -30,18 +30,20 @@
       (append
         (if primarykeys
             (list
-              (string "alter table " (car table) " add primary key (" (join (map car primarykeys) ", ") ");\n")))
+              (string "alter table " (car table) " add primary key (" (join (map car primarykeys) ", ") ");")))
         (map (f (x)
                (let (fk (assoc (cdr x) :foreignkey) (fk-table fk-column) (x.y->pairs fk))
-                 (string "alter table " (car table) " add constraints fk_" (car x) " foreign key(" (car x) ") references " fk-table "(" fk-column ");\n")))
-             foreignkeys)))))
+                 (string "alter table " (car table) " add constraints fk_" (car x) " foreign key(" (car x) ") references " fk-table "(" fk-column ");")))
+             foreignkeys))
+      "\n")))
 
 (function create-tables (tables)
   ; Returns a list representing a table in the table definition language.
   (join (except nil?
                 (append
                   (map table->create-query tables)
-                  (map table->constraints tables)))))
+                  (map table->constraints tables)))
+        "\n"))
 
 ;; DML
 
@@ -76,7 +78,7 @@
 
 (function insert-into (table-name column-names values)
   (string "insert into " table-name " (" (join (->list column-names) ", ") ") "
-          "values (" (join (map ->sql-str values) ", ") ");\n"))
+          "values (" (join (map ->sql-str values) ", ") ");"))
 
 (function update-set (table-name column-names values :opt cond)
   (string "update " table-name
@@ -99,11 +101,34 @@
                    (user_id :primarykey? true :foreignkey users.id :type "number(10)")
                    (product_id :primarykey? true :foreignkey products.id :type "number(10)")
                    (text :required? true :type "varchar(1000)"))))
-    (write-line (create-tables tables))
-    (write-line (select-from '(users reviews)
-                             '(usres.name reviews.text)
-                             '(and (= users.id reviews.user_id)
-                                   (= users.id 3)
-                                   (is-not-null reviews.text))))
-    (write-line (insert-into 'users '(:id :name) '(0 "alis")))
+    (assert (memeq? (create-tables tables)
+                    (join '("create table users ("
+                            "  id number(10) not null,"
+                            "  name varchar(10) not null"
+                            ");"
+                            "create table products ("
+                            "  id number(10) not null,"
+                            "  name varchar(10) not null,"
+                            "  price number(10) not null"
+                            ");"
+                            "create table reviews ("
+                            "  user_id number(10) not null,"
+                            "  product_id number(10) not null,"
+                            "  text varchar(1000) not null"
+                            ");"
+                            "alter table users add primary key (id);"
+                            "alter table products add primary key (id);"
+                            "alter table reviews add primary key (user_id, product_id);"
+                            "alter table reviews add constraints fk_user_id foreign key(user_id) references users(id);"
+                            "alter table reviews add constraints fk_product_id foreign key(product_id) references products(id);") "\n")))
+    (assert (memeq? (select-from '(users reviews)
+                                 '(usres.name reviews.text)
+                                 '(and (= users.id reviews.user_id)
+                                       (= users.id 3)
+                                       (is-not-null reviews.text)))
+                    (join '("select usres.name, reviews.text "
+                            "from users, reviews "
+                            "where users.id = reviews.user_id and ( users.id = 3 and ( reviews.text is not null));"))))
+    (assert (memeq?  (insert-into 'users '(:id :name) '(0 "alice"))
+                     "insert into users (id, name) values (0, 'alice');"))
     (assert (memeq? (delete-from 'users) "delete from users;"))))
