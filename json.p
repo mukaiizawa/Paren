@@ -112,7 +112,6 @@
         (assert (eq? ([] literal-val 2) nil))
         (assert (= ([] literal-val 3) 3.14))
         (assert (memeq? ([] literal-val 4) "string"))
-        (write (json->str json))
         (assert (memeq? (json->str json)
                         (join '("{\"nodes\":["
                                 "{\"id\":49,\"name\":\"object_p\",\"time\":0.73},"
