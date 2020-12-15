@@ -435,6 +435,13 @@
   (assert (! (keyword? 'foo)))
   (assert (! (keyword? (bytes 3)))))
 
+(function symcmp (x y)
+  ; If x is equals to y, returns 0.
+  ; If the memory address of x is less than y, returns -1.
+  ; If the memory address of x is greater than y, returns 1.
+  (if (eq? x y) 0
+      (- (address x) (address y))))
+
 (builtin-function bound? (sym)
   ; Returns whether the x is bound.
   (assert (bound? 'bound?))
