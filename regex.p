@@ -2,7 +2,7 @@
 
 (class Regex ()
   elements
-  text char-array
+  text
   start end
   anchored-start?
   anchored-end?)
@@ -134,10 +134,10 @@
           (<- n (++ n))))))
 
 (method Regex .char-at (i)
-  ([] (&char-array self) i))
+  ([] (&text self) i))
 
 (method Regex .text-length ()
-  (arrlen (&char-array self)))
+  (arrlen (&text self)))
 
 (method Regex .match-start ()
   ; Returns the matched start position.
@@ -158,19 +158,18 @@
 
 (method Regex .replace (s)
   ; Returns whether the string s matched this instance.
-  (let (text (&text self) textlen (memlen text)
-             start (&start self) end (&end self) matchlen (- end start)
-             slen (memlen s) mem (bytes (+ textlen (- matchlen) slen)))
-    (memcpy text 0 mem 0 start)
-    (memcpy s 0 mem start slen)
-    (memcpy text end mem (+ start slen) (- textlen end))
-    (mem->str! mem)))
+  (let (start (&start self) textlen (.text-length self))
+    (with-memory-stream (out)
+      (for (i 0) (< i start) (i (++ i))
+        (.write-mem out (.char-at self i)))
+      (.write-mem out s)
+      (for (i (&end self)) (< i textlen) (i (++ i))
+        (.write-mem out (.char-at self i))))))
 
 (method Regex .match? (s :opt start)
   ; Returns whether the string s matched this instance.
   (&start! self (|| start (<- start 0)))
-  (&text! self s)
-  (&char-array! self (str->arr s))
+  (&text! self (str->arr s))
   (if (&anchored-start? self)
       (return (&& (= start 0) (.try self (&elements self) 0))))
   (for (i start e (.text-length self)) (<= i e) (i (++ i))
