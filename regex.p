@@ -1,10 +1,9 @@
 ; regex module.
 
 (class Regex ()
-  text
   elements
-  start
-  end
+  text char-array
+  start end
   anchored-start?
   anchored-end?)
 
@@ -105,12 +104,12 @@
 (method Regex .test (elt i)
   (if (< i (.text-length self))
       (switch (&key elt)
-        :char (if (memeq? (.text-at self i) (&val elt)) (++ i))
+        :char (if (memeq? (.char-at self i) (&val elt)) (++ i))
         :alternate (dolist (elements (&val elt))
                      (if (.try self elements i) (return (&end self))))
         :any (++ i)
-        :char-class (if (strstr (&val elt) (.text-at self i)) (++ i))
-        :exclude-char-class (if (! (strstr (&val elt) (.text-at self i))) (++ i)))))
+        :char-class (if (strstr (&val elt) (.char-at self i)) (++ i))
+        :exclude-char-class (if (! (strstr (&val elt) (.char-at self i))) (++ i)))))
 
 (method Regex .try-n-times (elt i n)
   (dotimes (j n)
@@ -134,11 +133,11 @@
               (return true))
           (<- n (++ n))))))
 
-(method Regex .text-at (i)
-  ([] (&text self) i))
+(method Regex .char-at (i)
+  ([] (&char-array self) i))
 
 (method Regex .text-length ()
-  (arrlen (&text self)))
+  (arrlen (&char-array self)))
 
 (method Regex .match-start ()
   ; Returns the matched start position.
@@ -155,12 +154,23 @@
   (with-memory-stream (out)
     (dotimes (i (.text-length self))
       (if (< i (&start self)) (continue)
-          (< i (&end self)) (.write-mem out ([] (&text self) i))))))
+          (< i (&end self)) (.write-mem out (.char-at self i))))))
+
+(method Regex .replace (s)
+  ; Returns whether the string s matched this instance.
+  (let (text (&text self) textlen (memlen text)
+             start (&start self) end (&end self) matchlen (- end start)
+             slen (memlen s) mem (bytes (+ textlen (- matchlen) slen)))
+    (memcpy text 0 mem 0 start)
+    (memcpy s 0 mem start slen)
+    (memcpy text end mem (+ start slen) (- textlen end))
+    (mem->str! mem)))
 
 (method Regex .match? (s :opt start)
   ; Returns whether the string s matched this instance.
   (&start! self (|| start (<- start 0)))
-  (&text! self (str->arr s))
+  (&text! self s)
+  (&char-array! self (str->arr s))
   (if (&anchored-start? self)
       (return (&& (= start 0) (.try self (&elements self) 0))))
   (for (i start e (.text-length self)) (<= i e) (i (++ i))
@@ -168,53 +178,71 @@
     (if (.try self (&elements self) i) (return true))))
 
 (function! main (args)
-  ; anchore start
+  ;; anchore start
   (assert (.match? (Regex.compile "^") ""))
   (assert (nil? (.match? (Regex.compile "^a") "ba")))
   (assert (.match? (Regex.compile "a^") "a^"))
-  ; anchore end
+  ;; anchore end
   (assert (.match? (Regex.compile "$") ""))
   (assert (.match? (Regex.compile "$a") "$a"))
   (assert (nil? (.match? (Regex.compile "a$") "ab")))
-  ; char
-  (assert (let (re (Regex.compile "a"))
-            (&& (.match? re "a") (= (.match-start re) 0) (= (.match-end re) 1)
-                (.match? re "za") (= (.match-start re) 1) (= (.match-end re) 2)
-                (! (.match? re "")))))
-  ; any
-  (assert (let (re (Regex.compile "a.c"))
-            (&& (.match? re "abc") (= (.match-start re) 0) (= (.match-end re) 3)
-                (! (.match? re "ac")))))
-  ; character class
-  (assert (let (re (Regex.compile "[a-c]"))
-            (&& (.match? re "a")
-                (.match? re "b")
-                (.match? re "c"))))
-  (assert (let (re (Regex.compile "[^a-c]"))
-            (&& (! (.match? re "a"))
-                (! (.match? re "b"))
-                (! (.match? re "c")))))
-  ; alternate
-  (assert (let (re (Regex.compile "(ab|cd)"))
-            (&& (.match? re "ab")
-                (! (.match? re "bc"))
-                (.match? re "cd"))))
-  (assert (let (re (Regex.compile "(ab*|cd*)"))
-            (&& (.match? re "a") (= (.match-end re) 1)
-                (.match? re "abb") (= (.match-end re) 3)
-                (.match? re "c") (= (.match-end re) 1)
-                (.match? re "cdd") (= (.match-end re) 3))))
-  ; quantifiers
-  (assert (let (re (Regex.compile "^a*$"))
-            (&& (.match? re "")
-                (.match? re "a")
-                (.match? re "aa")
-                (.match? re "aaa")
-                (! (.match? re "aaab")))))
-  (assert (let (re (Regex.compile "a{2}"))
-            (&& (! (.match? re "a"))
-                (.match? re "aa"))))
-  (assert (let (re (Regex.compile "a{0,}"))
-            (&& (.match? re "")
-                (.match? re "a")
-                (.match? re "aa")))))
+  ;; char
+  (let (re (Regex.compile "a"))
+    (assert (.match? re "a"))
+    (assert (= (.match-start re) 0))
+    (assert (= (.match-end re) 1))
+    (assert (.match? re "za"))
+    (assert (= (.match-start re) 1))
+    (assert (= (.match-end re) 2))
+    (assert (! (.match? re ""))))
+  ;; any
+  (let (re (Regex.compile "a.c"))
+    (assert (.match? re "abc"))
+    (assert (= (.match-start re) 0))
+    (assert (= (.match-end re) 3))
+    (assert (! (.match? re "ac"))))
+  ;; character class
+  (let (re (Regex.compile "[a-c]"))
+    (assert (! (.match? re "0")))
+    (assert (.match? re "a"))
+    (assert (.match? re "b"))
+    (assert (.match? re "c")))
+  (let (re (Regex.compile "[^a-c]"))
+    (assert (.match? re "0"))
+    (assert (! (.match? re "a")))
+    (assert (! (.match? re "b")))
+    (assert (! (.match? re "c"))))
+  ;; alternate
+  (let (re (Regex.compile "(ab|cd)"))
+    (assert (.match? re "ab"))
+    (assert (memeq? (.replace re "foo") "foo"))
+    (assert (memeq? (.replace re "") ""))
+    (assert (! (.match? re "bc")))
+    (assert (.match? re "cd")))
+  (let (re (Regex.compile "(ab*|cd*)"))
+    (assert (.match? re "a"))
+    (assert (= (.match-end re) 1))
+    (assert (.match? re "abb"))
+    (assert (= (.match-end re) 3))
+    (assert (.match? re "c"))
+    (assert (= (.match-end re) 1))
+    (assert (.match? re "cdd"))
+    (assert (= (.match-end re) 3))
+    (assert (.match? re "abbcd"))
+    (assert (memeq? (.match-string re) "abb"))
+    (assert (memeq? (.replace re "") "cd"))
+    (assert (memeq? (.replace re "buzz") "buzzcd")))
+  ;; quantifiers
+  (let (re (Regex.compile "^a*$"))
+    (assert (.match? re ""))
+    (assert (.match? re "a"))
+    (assert (.match? re "aa"))
+    (assert (.match? re "aaa"))
+    (assert (! (.match? re "aaab"))))
+  (let (re (Regex.compile "a{2}"))
+    (assert (! (.match? re "a")))
+    (assert (.match? re "aa")))
+  (let (re (Regex.compile "a{0,}"))
+    (assert (.match? re ""))
+    (assert (.match? re "a"))
+    (assert (.match? re "aa"))))
