@@ -3,8 +3,8 @@
 (class Set ()
   cmp elements)
 
-(method Set .init (:opt cmp)
-  (&cmp! self (|| cmp eq?)))
+(method Set .init (cmp)
+  (&cmp! self cmp))
 
 (method Set .include? (val)
   (let (cmp (&cmp self))
@@ -15,16 +15,19 @@
 (method Set .add (val)
   (if (! (.include? self val))
       (&elements! self (cons val (&elements self))))
-  val)
+  self)
 
 (method Set .elements ()
   (&elements self))
 
+(method Set .size ()
+  (length (&elements self)))
+
 (function! main (args)
   (let (set (.init (.new Set) memeq?))
     (assert (! (.include? set "foo")))
-    (assert (memeq? (.add set "foo") "foo"))
+    (.add set "foo")
     (assert (.include? set "foo"))
-    (assert (memeq? (.add set "bar") "bar"))
-    (assert (memeq? (.add set "foo") "foo"))
-    (assert (= (length (.elements set)) 2))))
+    (.add set "bar")
+    (.add set "foo")
+    (assert (= (.size set) 2))))

@@ -146,23 +146,27 @@
                                  (reverse! children)))))))))
 
 (function! main (args)
-  (with-memory-stream
-    ($in (string "<!DOCTYPE html>"
-                 "<html lang='ja'>"
-                 "    <head>"
-                 "        <title>foo</title>"
-                 "    </head>"
-                 "<!-- -- comment -- -->"
-                 "    <body>"
-                 "         <hr/>"
-                 "         <div style='bar'"
-                 "              class='buzz'>"
-                 "           text node"
-                 "           text node"
-                 "         </div>"
-                 "         <hr/>"
-                 "    </body>"
-                 "</html>"))
-    (let (rd (.new XMLReader))
-      (write (map (f (x) (xml->str x))
-                  (write (collect (f () (.read rd)))))))))
+  (with-memory-stream ($in "<!DOCTYPE html>")
+    (let (rd (.new XMLReader) (doctype text) (.read rd))
+      (assert (eq? doctype '!DOCTYPE))
+      (assert (memeq? text "html"))))
+  (with-memory-stream ($in "<!-- -- foo -- -->")
+    (let (rd (.new XMLReader) (comment text) (.read rd))
+      (assert (eq? comment '!--))
+      (assert (memeq? text " -- foo -- "))))
+  (with-memory-stream ($in "<input type='hidden'/>")
+    (let (rd (.new XMLReader) (input (type type-val)) (.read rd))
+      (assert (eq? input 'input))
+      (assert (eq? type :type))
+      (assert (memeq? type-val "hidden"))))
+  (with-memory-stream ($in (join '("<ul>"
+                                   "    <li>foo</li>"
+                                   "    <li>bar</li>"
+                                   "</ul>")))
+    (let (rd (.new XMLReader) (ul ul-attr
+                                  (li1 li1-attr li1-text)
+                                  (li2 li2-attr li2-text)) (.read rd))
+      (assert (eq? ul 'ul))
+      (assert (eq? li1 li2 'li))
+      (assert (memeq? li1-text "foo"))
+      (assert (memeq? li2-text "bar")))))
