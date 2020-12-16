@@ -627,7 +627,8 @@
 (function list? (x)
   ; Returns whether the x is a list.
   ; Same as (|| (nil? x) (cons? x)).
-  (|| (nil? x) (cons? x)))
+  (if (cons? x) true
+      (nil? x)))
 
 (function ->list (x)
   ; Returns a list representation of x.
