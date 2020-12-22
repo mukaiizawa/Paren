@@ -2,7 +2,7 @@
 
 (import :xml)
 
-(class MarkdownReader (XMLReader))
+(class MarkdownReader (AheadReader XMLReader))
 
 (method MarkdownReader .none-match? (:rest args)
   (let (next (.next self))

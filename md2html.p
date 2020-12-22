@@ -65,12 +65,12 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
       (write-mem (string x ".")))))
 
 (function parse-header (contents-index node)
-  (let (hx (car node) x (- ([] hx 1) 0x30))
+  (let ((hx hx-attr :rest hx-text) node x (- ([] hx 1) 0x30))
     (dotimes (i 6)
       (if (= i (-- x)) ([] contents-index i (++ ([] contents-index i)))
           (> i (-- x)) ([] contents-index i 0)))
     (let (id (next-id contents-index))
-      (push! $contents `(,hx (:id ,id) ,@(cons id (cdr node)))))))
+      (push! $contents `(,hx (:id ,id) ,@(cons id hx-text))))))
 
 (function header? (node)
   (let (elt (car node))
