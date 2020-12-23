@@ -2479,7 +2479,7 @@
         (list :atom (.lex-symbol self)))))
 
 (class ParenReader ()
-  lexer token token-type)
+  lexer token-type token)
 
 (method ParenReader .init ()
   (&lexer! self (.new ParenLexer)))
@@ -2490,10 +2490,12 @@
     (&token! self token)))
 
 (method ParenReader .parse-list ()
-  (.scan self)
-  (if (eq? (&token-type self) :close-paren) nil
-      (eq? (&token-type self) :EOF) (.raise self "missing close-paren")
-      (cons (.parse self) (.parse-list self))))
+  (let (parse-cdr (f (acc)
+                    (.scan self)
+                    (if (eq? (&token-type self) :close-paren) (reverse! acc)
+                        (eq? (&token-type self) :EOF) (.raise self "missing close-paren")
+                        (parse-cdr (cons (.parse self) acc)))))
+    (parse-cdr nil)))
 
 (method ParenReader .parse ()
   (switch (&token-type self)
