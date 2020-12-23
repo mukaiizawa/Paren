@@ -1175,6 +1175,14 @@
   (assert (= (memcmp "fo" "foo") -1))
   (assert (= (memcmp "foo" "fo") 1)))
 
+(function memhash (x)
+  ; Returns hash value of mem.
+  (let (hval 17)
+    (dotimes (i (memlen x))
+      (if (< i 10) (<- hval (+ (* hval 31) ([] x i)))
+          (break)))
+    hval))
+
 (function memempty? (s)
   ; Returns whether the s is "" or nil.
   (|| (nil? s) (= (memlen s) 0)))
