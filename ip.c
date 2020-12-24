@@ -773,8 +773,9 @@ DEFUN(expand_macro)
   if (!object_type_p(reg[0], CONS)) return TRUE;
   f = reg[0]->cons.car;
   args = reg[0]->cons.cdr;
-  if (!object_type_p(f, SYMBOL)) return TRUE;
-  if ((f = object_find_propagation(reg[1], f)) == NULL) return TRUE;
+  if (object_type_p(f, SYMBOL)) {
+    if ((f = object_find_propagation(reg[1], f)) == NULL) return TRUE;
+  }
   if (!object_type_p(f, MACRO)) return TRUE;
   gen1(APPLY_FRAME, f);
   reg[0] = args;

@@ -362,14 +362,16 @@
 
 (function! expand-macro-all (expr)
   ; Same as expand-macro except that it executes recursively.
-  (let (expand1 (f (expr)
-                  (if (cons? expr) (each-expand (expand-macro expr))
-                      expr))
-                each-expand (f (expr)
-                              (if (cons? expr) (cons (expand1 (car expr))
-                                                     (each-expand (cdr expr)))
-                                  expr)))
-    (expand1 expr)))
+  (let (expand (f (x)
+                 (if (cons? x)
+                     (let (y (expand-macro x))
+                       (if (neq? x y) (expand y)
+                           (expand-cdr (cdr x) (cons (car x) nil))))
+                     x))
+               expand-cdr (f (x acc)
+                            (if x (expand-cdr (cdr x) (cons (expand (car x)) acc))
+                                (reverse! acc))))
+    (expand expr)))
 
 ; fundamental function
 
@@ -378,11 +380,13 @@
   ; The macro in the body is expanded.
   ; Error if name is already bound.
   ; Returns name.
-  (with-gensyms (gname)
-    (list let (list gname (list quote name))
-          (list if (list bound? gname) (list 'error gname " already bound")
-                (list <- name (cons f (cons args (expand-macro-all body)))))
-          gname)))
+  (let (expand-body (f (expr)
+                      (if expr (cons (expand-macro-all (car expr)) (expand-body (cdr expr))))))
+    (with-gensyms (gname)
+      (list let (list gname (list quote name))
+            (list if (list bound? gname) (list 'error gname " already bound")
+                  (list <- name (cons f (cons args (expand-body body)))))
+            gname))))
 
 (builtin-function eq? (x y :rest args)
   ; Returns whether all arguments are the same object.
