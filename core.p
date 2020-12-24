@@ -712,8 +712,7 @@
 (function butlast (l)
   ; Returns a list excluding the last element of the specified list l.
   (let (rec (f (rest)
-              (if (cdr rest) (cons (car rest) (rec (cdr rest)))
-                  nil)))
+              (if (cdr rest) (cons (car rest) (rec (cdr rest))))))
     (rec l)))
 
 (function .. (s e :opt step)
@@ -721,29 +720,26 @@
   (let (rec (f (s e step acc)
               (if (> s e) (reverse! acc)
                   (rec (+ s step) e step (cons s acc)))))
-    (assert (> step 0))
-    (rec s e (|| step 1) nil)))
+    (if (<= (|| step (<- step 1)) 0) (error "step must be positive")
+        (rec s e step nil))))
 
 (function group (l n)
   ; Returns a list in which the elements of l are grouped into sublists of length n.
   ; Error if the list length is not a multiple of n.
-  (if (<= n 0) (error "expected positive number")
-      (let (lis nil)
-        (while l
-          (let (sublis nil)
-            (dotimes (i n)
-              (if (nil? l) (error "indivisible by " n))
-              (push! sublis (car l))
-              (<- l (cdr l)))
-            (push! lis (reverse! sublis))))
-        (reverse! lis))))
+  (let (rec (f (l sublis m acc)
+              (if (/= n m) (if (nil? l) (error "indivisible by " n)
+                               (rec (cdr l) (cons (car l) sublis) (++ m) acc))
+                  (nil? l) (reverse! (cons (reverse! sublis) acc))
+                  (rec l nil 0 (cons (reverse! sublis) acc)))))
+    (if (<= n 0) (error "expected positive number")
+        (rec l nil 0 nil))))
 
 (function reverse (l)
   ; Returns a list with the elements of list l reversed.
-  (let (acc nil)
-    (dolist (x l)
-      (<- acc (cons x acc)))
-    acc))
+  (let (rec (f (l acc)
+              (if (nil? l) acc
+                  (rec (cdr l) (cons (car l) acc)))))
+    (rec l nil)))
 
 (builtin-function reverse! (l)
   ; Same as reverse except that it destructively modifies the argument list.
