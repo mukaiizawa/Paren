@@ -718,11 +718,11 @@
 
 (function .. (s e :opt step)
   ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
-  (let (acc nil step (|| step 1))
-    (while (<= s e)
-      (push! acc s)
-      (<- s (+ s step)))
-    (reverse! acc)))
+  (let (rec (f (s e step acc)
+              (if (> s e) (reverse! acc)
+                  (rec (+ s step) e step (cons s acc)))))
+    (assert (> step 0))
+    (rec s e (|| step 1) nil)))
 
 (function group (l n)
   ; Returns a list in which the elements of l are grouped into sublists of length n.
