@@ -262,14 +262,6 @@
   ; This repeats until the test becomes nil.
   ; Supports break, continue macro.
   ; Returns nil.
-  ;     (while test
-  ;        expr1
-  ;        expr2
-  ;        ...)
-  ;     (for nil test nil
-  ;        expr1
-  ;        expr2
-  ;        ...)
   (list labels
         :start
         (list if (list ! test) '(goto :break))
@@ -664,17 +656,19 @@
   (assert (= (car (last-cons '(1 2 3))) 3))
   (assert (nil? (last-cons nil))))
 
-(function nth (l n)
+(function nth (n l)
   ; Returns the nth element of the specified list l.
   ; If n is greater than the length of l, nil is returned.
-  (car (nthcdr l n)))
+  (car (nthcdr n l)))
 
-(function nthcdr (l n)
+(function nthcdr (n l)
   ; Returns the the specified nth cons of the specified list l.
   ; If n is greater than the length of l, nil is returned.
-  (for (i 0) (&& l (< i n)) (i (++ i))
-    (<- l (cdr l)))
-  l)
+  (let (rec (f (m l)
+              (if (= n m) l
+                  (rec (++ m) (cdr l)))))
+    (if (< n 0) (error "unexpected negative number")
+        l (rec 0 l))))
 
 (function last (x)
   ; Same as (car (last-cons x)).

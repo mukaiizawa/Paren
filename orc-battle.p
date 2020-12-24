@@ -197,7 +197,7 @@
 (function init-game ()
   (<- $player (.new Player))
   (dotimes (i $monster-count)
-    ([] $monsters i (.new (nth $monster-classes (randint (length $monster-classes)))))))
+    ([] $monsters i (.new (nth (randint (length $monster-classes)) $monster-classes)))))
 
 (function! main (args)
   (init-game)
