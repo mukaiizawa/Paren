@@ -732,7 +732,7 @@
                   (nil? l) (reverse! (cons (reverse! sublis) acc))
                   (rec l nil 0 (cons (reverse! sublis) acc)))))
     (if (<= n 0) (error "expected positive number")
-        (rec l nil 0 nil))))
+        l (rec l nil 0 nil))))
 
 (function reverse (l)
   ; Returns a list with the elements of list l reversed.
