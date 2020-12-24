@@ -204,45 +204,32 @@
                       (car l))))
         (rec args))))
 
-(macro switch (expr :rest body)
+(macro switch (test :rest body)
   ; The switch macro help control complex conditional and branching operations.
-  ; As shown below, the switch macro consists of one expr and multiple branches.
-  ;     (switch expr
-  ;       <branch>
-  ;       <branch>
-  ;       ...)
-  ;     <branch> ::= <labels> expr
-  ;     <labels> -- list of candidates for address comparison. Generally a symbol or keyword.
+  ; As shown below, the switch macro consists of one test and multiple branches.
+  ;     (switch <test> <branches>)
+  ;     <branches> ::= <branch> ...
+  ;     <branch> ::= <labels> <then>
+  ;     <test> -- An expression that determines which branch is evaluated.
+  ;     <labels> -- An element or list of element whose address is compared to test.
+  ;     <then> -- An expression that is evaluated only when control is transferred to a branch.
   ; You can also pass an atom in <labels>, in which case the elements are converted internally as a list.
-  ; expr is evaluated only once and compared from left to right for matching elements in the <labels> of each branch.
+  ; test is evaluated only once and compared from left to right for matching elements in the <labels> of each branch.
   ; If there is a matching element, control is transferred to that branch.
-  ; Otherwise, an error will occur.
-  ; If you specify keyword `:default` (-- must be atom) in <labels>, you can unconditionally transfer control to that branch regardless of the value of expr.
-  ; Macro expansion image is as follows.
-  ;     (switch :a
-  ;       :a "a"
-  ;       (:b) "b"
-  ;       (:c :d) "c or d"
-  ;       :default "others")
-  ;     (if (|| (eq? :a :a)) "a"
-  ;         (|| (eq? :a :b)) "b"
-  ;         (|| (eq? :a :c) (eq? :a :d)) "c or d"
-  ;         "others")
-  (with-gensyms (gexpr branches)
+  ; If you specify keyword :default in <labels>, you can unconditionally transfer control to that branch regardless of the value of test.
+  ; Error if, not specified :default and control reaches the end.
+  (with-gensyms (gtest)
     (let (branches (group body 2)
-                   candidates (list 'flatten (list 'map car (list quote branches)))
-                   parse-branch (f (branches)
-                                  (if (nil? branches)
-                                      (list true (list 'error gexpr " not included in " candidates))
-                                      (let (label (caar branches) then (cadar branches))
-                                        (cons (if (eq? label :default) (return (list true then))
-                                                  (cons '|| (map (f (label)
-                                                                   (list eq? (list quote label) gexpr))
-                                                                 (->list label))))
-                                              (cons then
-                                                    (parse-branch (cdr branches))))))))
-      (list let (list gexpr expr)
-            (cons if (parse-branch branches))))))
+                   default-branch (list 'error "switch/" gtest " not included in " (list quote (flatten (map car branches))))
+                   parse-branches (f (branches)
+                                    (if (nil? branches) (list default-branch)
+                                        (let ((label then) (car branches))
+                                          (if (eq? label :default) (return (list true then))
+                                              (cons (cons '|| (map (f (x) (list eq? (list quote x) gtest))
+                                                                   (->list label)))
+                                                    (cons then (parse-branches (cdr branches)))))))))
+      (list let (list gtest test)
+            (cons if (parse-branches branches))))))
 
 (macro break ()
   ; The break macro is expected evaluated in the iteration context like a for, while.
@@ -259,22 +246,6 @@
 (macro for (binding test update :rest body)
   ; The for macro creates a general-purpose iteration context and evaluates the specified body.
   ; Returns nil.
-  ; Macro expansion image is as follows.
-  ;     (for (i 0) (< i 10) (i (++ i))
-  ;         expr1
-  ;         expr2
-  ;         ...)
-  ;     (let (i 0)
-  ;        (labels :start
-  ;                (if (! test) (goto :break))
-  ;                expr1
-  ;                expr2
-  ;                ...
-  ;                :continue
-  ;                (<- i (++ i))
-  ;                (goto :start)
-  ;                :break)
-  ;         nil)
   (list let binding
         (list labels
               :start
@@ -1445,7 +1416,7 @@
 
 (builtin-function mkdir (filename)
   ; Attempts to create a directory whose name is pathname.
-  ; It is an error if filename already exists.
+  ; Error if filename already exists.
   ; Returns nil.
   )
 
