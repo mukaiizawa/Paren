@@ -153,7 +153,7 @@
                             "alter table reviews add primary key (user_id, product_id);"
                             "alter table reviews add constraints fk_user_id foreign key(user_id) references users(id);"
                             "alter table reviews add constraints fk_product_id foreign key(product_id) references products(id);") "\n")))
-    (assert (memeq? #p(select-from '(usres.name reviews.text) '(users reviews)
+    (assert (memeq? (select-from '(usres.name reviews.text) '(users reviews)
                                  :where '(and (= users.id reviews.user_id)
                                               (= users.id 3)
                                               (is-not-null reviews.text)))
