@@ -388,38 +388,6 @@
   (assert (macro? begin0))
   (assert (! (macro? begin))))
 
-; symbol & keyword
-
-(builtin-function symbol? (x)
-  ; Returns whether the x is symbol.
-  (assert (symbol? 'foo))
-  (assert (! (symbol? :foo)))
-  (assert (! (symbol? (bytes 3)))))
-
-(builtin-function keyword? (x)
-  ; Returns whether the x is keyword.
-  (assert (keyword? :foo))
-  (assert (! (keyword? 'foo)))
-  (assert (! (keyword? (bytes 3)))))
-
-(function symcmp (x y)
-  ; If x is equals to y, returns 0.
-  ; If the memory address of x is less than y, returns -1.
-  ; If the memory address of x is greater than y, returns 1.
-  (if (eq? x y) 0
-      (- (address x) (address y))))
-
-(builtin-function bound? (sym)
-  ; Returns whether the x is bound.
-  (assert (bound? 'bound?))
-  (assert (bound? 'nil)))
-
-(builtin-function gensym ()
-  ; Returns a numbered symbol starting with `$G-`.
-  ; gensim only guarantees that the symbols generated with each gensim call will not collide.
-  ; There is no inconvenience unless intentionally generating symbols starting with `$G-`.
-  (assert (neq? (gensym) (gensym))))
-
 ; list
 
 (function nil? (x)
@@ -791,25 +759,26 @@
   ; Find the element in the list l where the function fn first returns not nil.
   ; Returns a following list (such-element return-value).
   ; If there is no such element, returns '(nil nil).
-  (let (e nil v nil)
-    (while l
-      (if (<- e (car l) v (fn e)) (return (list e v))
-          (<- l (cdr l))))
-    '(nil nil)))
+  (let (rec (f (l :opt e v)
+              (if (&& l (! (<- e (car l) v (fn e)))) (rec (cdr l))
+                  (list e v))))
+    (rec l)))
 
 (function select (fn l)
   ; Returns a list with the elements for which the result of applying the function fn is true.
-  (let (rec (f (l :opt acc)
+  (let (rec (f (l acc)
               (if (nil? l) (reverse! acc)
                   (fn (car l)) (rec (cdr l) (cons (car l) acc))
                   (rec (cdr l) acc))))
-    (rec l)))
+    (rec l nil)))
 
 (function except (fn l)
   ; Returns a list with the elements for which the result of applying the function fn is true removed.
-  (let (acc nil)
-    (dolist (x l) (if (nil? (fn x)) (push! acc x)))
-    (reverse! acc)))
+  (let (rec (f (l acc)
+              (if (nil? l) (reverse! acc)
+                  (fn (car l)) (rec (cdr l) acc)
+                  (rec (cdr l) (cons (car l) acc)))))
+    (rec l nil)))
 
 (function every? (fn l)
   ; Returns whether the result of the function fn applied to all the elements of the list is true.
@@ -836,6 +805,308 @@
   (if (cdr l) (&& (fn (car l) (cadr l)) (every-adjacent? fn (cdr l)))
       true))
 
+; array
+
+(builtin-function array (size)
+  ; Returns an array of length size.
+  (assert (array 1)))
+
+(builtin-function array? (x)
+  ; Returns whether the x is an array.
+  ; However, bytes are not considered as arrays.
+  (assert (array? (array 3)))
+  (assert (! (array? (bytes 3)))))
+
+(builtin-function [] (x i :opt v)
+  ; Returns the i-th element of the array x.
+  ; If v is specified, update the i-th element of array x to v.
+  ; Returns v.
+  ; This function can also be applied to bytes.
+  (assert (nil? ([] (array 1) 0)))
+  (assert (= ([] (bytes 1) 0) 0))
+  (assert (let (a (array 1) b (bytes 1))
+            (&& ([] a 0 true)
+                ([] a 0)
+                ([] b 0 0xff)
+                (= ([] b 0) 0xff)))))
+
+(builtin-function arrlen (x)
+  ; Returns the length of the specified array x.
+  (assert (= (arrlen (array 3)) 3)))
+
+(builtin-function arrcpy (src src-i dst dst-i size)
+  ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
+  ; Returns dst.
+  ; Even if the areas to be copied overlap, it operates correctly.
+  ; This function also accepts strings.
+  (assert (let (s (array 1) d (array 2))
+            ([] s 0 1)
+            ([] d 0 :zero)
+            ([] d 1 :one)
+            (&& (= ([] (arrcpy s 0 d 1 1) 1) 1)
+                (eq? ([] d 0) :zero)
+                (= ([] d 1) 1)))))
+
+(function subarr (x start :opt end)
+  ; Returns a new array object selected from start to end (end not included) where start and end represent the index of items in that array x.
+  (let (xlen (arrlen x))
+    (if (< start 0) (error "illegal start")
+        (nil? end) (<- end xlen)
+        (> end xlen) (error "illegal end"))
+    (let (new-len (- end start) new-array (array new-len))
+      (arrcpy x start new-array 0 new-len))))
+
+; memory
+
+(builtin-function memeq? (x y)
+  ; Returns whether x arguments are the same byte sequence.
+  (assert (memeq? :foo "foo"))
+  (assert (memeq? :foo 'foo))
+  (assert (! (memeq? "foo" "bar"))))
+
+(function memneq? (x y)
+  ; Same as (! (memeq? x y)).
+  (! (memeq? x y)))
+
+(builtin-function memcmp (x y)
+  ; If x is equals to y, returns 0.
+  ; If x is lexicographically less than y, returns -1.
+  ; If x is lexicographically greater than y, returns 1.
+  (assert (= (memcmp "bar" "foo") -1))
+  (assert (= (memcmp "foo" "bar") 1))
+  (assert (= (memcmp "foo" "foo") 0))
+  (assert (= (memcmp "fo" "foo") -1))
+  (assert (= (memcmp "foo" "fo") 1)))
+
+(function memhash (x)
+  ; Returns hash value of mem.
+  (let (hval 17)
+    (dotimes (i (memlen x))
+      (if (< i 10) (<- hval (+ (* hval 31) ([] x i)))
+          (break)))
+    hval))
+
+(function memempty? (s)
+  ; Returns whether the s is "" or nil.
+  (|| (nil? s) (= (memlen s) 0)))
+
+(builtin-function mem->bytes (x :opt i size)
+  ; Returns bytes corresponding to byte sequence x.
+  ; If i is supplied, returns bytes of partial byte sequence from i of x.
+  ; If size is supplied, returns string of partial byte sequence from i to (size -1) of x.
+  (assert (memeq? (mem->bytes "a") "a")))
+
+(builtin-function mem->sym (x :opt i size)
+  ; Same as (mem->bytes x) except returns symbol.
+  (assert (eq? (mem->sym "foo") 'foo)))
+
+(builtin-function mem->key (x :opt i size)
+  ; Same as (mem->bytes x) except returns keyword.
+  (assert (eq? (mem->key "foo") :foo)))
+
+(builtin-function mem->str (x :opt i size)
+  ; Same as (mem->bytes x) except returns string.
+  (assert (memeq? (mem->str 'foo) "foo"))
+  (assert (memeq? (mem->str 'foo 1) "oo"))
+  (assert (memeq? (mem->str 'foo 1 1) "o")))
+
+(builtin-function mem->str! (x)
+  ; Same as (mem->str x), except that it destructively modifies the specified bytes x.
+  ; Generally faster than mem->str.
+  (assert (let (x (bytes 1))
+            ([] x 0 0x01)
+            (memeq? (mem->str! x) "\x01"))))
+
+(function memprefix? (x prefix)
+  ; Returns whether the byte sequence x with the specified prefix.
+  (&& (>= (memlen x) (memlen prefix))
+      (memmem x prefix 0 (memlen prefix))))
+
+(function memsuffix? (x suffix)
+  ; Returns whether the byte sequence x with the specified suffix.
+  (&& (>= (memlen x) (memlen suffix))
+      (memmem x suffix (- (memlen x) (memlen suffix)))))
+
+(builtin-function memlen (x)
+  ; Returns the size of the byte sequence x.
+  (assert (= (memlen "") 0))
+  (assert (= (memlen "012") 3)))
+
+(builtin-function memmem (x b :opt start end)
+  ; Returns the position where the byte b appears first in the byte sequence x.
+  ; If the b is not appeared, returns nil.
+  ; If b is byte sequence, returns the position where the partial byte sequence appears first in the byte sequence x.
+  ; If start is specified, search from start-th of the byte sequence x.
+  ; If end is specified, search untile end-th of the byte sequence x.
+  (assert (= (memmem "012" 0x31 1) 1))
+  (assert (= (memmem "012" 0x31 0 3) 1))
+  (assert (= (memmem "012" 0x31 0 3) 1))
+  (assert (= (memmem "012" "12" 0 3) 1)))
+
+(builtin-function memcpy (src src-i dst dst-i size)
+  ; Copy size elements from the `src-i`th element of the src byte sequence to the dst byte sequence `dst-i`th element and beyond.
+  ; Even if the areas to be copied overlap, it operates correctly.
+  ; Returns dst.
+  (assert (let (s "foo" d "bar")
+            (memeq? (memcpy s 1 d 1 2) "boo"))))
+
+(builtin-function submem (x start :opt end)
+  ; Returns the partial byte sequence starting from start.
+  ; If end is specified, returns the partial byte sequence from the i th to (end-1) th.
+  (assert (memeq? (submem "012" 0) "012"))
+  (assert (memeq? (submem "012" 1) "12"))
+  (assert (memeq? (submem "012" 1 2) "1")))
+
+(builtin-function memcat (x :rest args)
+  ; Returns the result of combining each args with x.
+  (assert (memeq? (memcat "0" "1" "2") "012")))
+
+; bytes
+
+(builtin-function bytes (size)
+  ; Returns a bytes of size the specified size.
+  ; The element is cleared to 0.
+  (assert (= (memlen (bytes 1)) 1))
+  (assert (= ([] (bytes 1) 0) 0)))
+
+(builtin-function bytes? (x)
+  ; Returns whether the x is bytes.
+  ; symbols, keywords, and strings are acceptable as arguments for some bytes api, but this function returns nil.
+  (assert (bytes? (bytes 3)))
+  (assert (! (bytes? 'foo)))
+  (assert (! (bytes? :foo)))
+  (assert (! (bytes? "foo")))
+  (assert (! (bytes? (array 3)))))
+
+; symbol & keyword
+
+(builtin-function symbol? (x)
+  ; Returns whether the x is symbol.
+  (assert (symbol? 'foo))
+  (assert (! (symbol? :foo)))
+  (assert (! (symbol? (bytes 3)))))
+
+(builtin-function keyword? (x)
+  ; Returns whether the x is keyword.
+  (assert (keyword? :foo))
+  (assert (! (keyword? 'foo)))
+  (assert (! (keyword? (bytes 3)))))
+
+(function symcmp (x y)
+  ; If x is equals to y, returns 0.
+  ; If the memory address of x is less than y, returns -1.
+  ; If the memory address of x is greater than y, returns 1.
+  (if (eq? x y) 0
+      (- (address x) (address y))))
+
+(builtin-function bound? (sym)
+  ; Returns whether the x is bound.
+  (assert (bound? 'bound?))
+  (assert (bound? 'nil)))
+
+(builtin-function gensym ()
+  ; Returns a numbered symbol starting with `$G-`.
+  ; gensim only guarantees that the symbols generated with each gensim call will not collide.
+  ; There is no inconvenience unless intentionally generating symbols starting with `$G-`.
+  (assert (neq? (gensym) (gensym))))
+
+; string
+
+(function string (:rest args)
+  ; Returns concatenated string which each of the specified args as string.
+  ; Treat nil as an empty string.
+  (with-memory-stream ($out)
+    (dolist (arg args)
+      (if (symbol? arg) (if arg (write-mem arg))
+          (|| (string? arg) (keyword? arg) (bytes? arg)) (write-mem arg)
+          (write arg :end "")))))
+
+(builtin-function string? (x)
+  ; Returns whether the x is a string.
+  (assert (string? ""))
+  (assert (string? "aaa"))
+  (assert (! (string? (bytes 1)))))
+
+(function str->num (s)
+  ; Returns a string as a number.
+  (with-memory-stream ($in s)
+    (.skip-number (.new AheadReader))))
+
+(function str->code (s)
+  ; Returns the code point of string s.
+  (let (b 0 val 0)
+    (with-memory-stream ($in s)
+      (while (/= (<- b (read-byte)) -1)
+        (<- val (| (<< val 8) b))))
+    val))
+
+(function code->str (i)
+  ; Returns string of code point.
+  (with-memory-stream ($out)
+    (while (/= i 0)
+      (write-byte (& i 0xff))
+      (<- i (>> i 8)))))
+
+(function str->arr (s)
+  ; Returns a character array of string s.
+  (let (a (.new Array) c nil)
+    (with-memory-stream ($in s)
+      (while (<- c (read-char)) (.add a c)))
+    (.to-a a)))
+
+(function substr (s start :opt end)
+  ; Returns a string that is a substring of the specified string s.
+  ; The substring begins at the specified start and extends to the character at index end - 1.
+  ; Thus the length of the substring is `end - start`.
+  (let (ms (.new MemoryStream))
+    (if (< start 0) (error "illegal start " start))
+    (.write-mem ms s)
+    (dotimes (i start)
+      (if (nil? (.read-char ms)) (error "illegal start " start)))
+    (if (nil? end) (submem s (.tell ms))
+        (let (pos (.tell ms))
+          (dotimes (i (- end start))
+            (if (nil? (.read-char ms)) (error "illegal end " end)))
+          (submem s pos (.tell ms))))))
+
+(function strnth (s i)
+  ; Returns the i-th character of string s.
+  ([] (str->arr s) i))
+
+(function strlen (s)
+  ; Returns the number of characters in string s.
+  (arrlen (str->arr s)))
+
+(function strstr (s pat :opt start)
+  ; Returns the position where the substring pat appears first in the string s.
+  ; If the string pat is not a substring of the string s, returns nil.
+  ; If start is specified, search for substring pat from start-th of the string s.
+  (let (start (|| start 0) sa (str->arr s) slen (arrlen sa)
+              pa (str->arr pat) plen (arrlen pa))
+    (if (< (- slen start) 0) (error "illegal start")
+        (= plen 0) (return 0))
+    (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (i (++ i))
+      (when (memeq? ([] sa i) p0)
+        (if (= plen 1) (return i))
+        (let (si (++ i) pi 1)
+          (while (memeq? ([] sa si) ([] pa pi))
+            (<- si (++ si) pi (++ pi))
+            (if (= pi plen) (return i))))))))
+
+(function strlstr (s pat)
+  ; Returns the position where the substring pat appears last in the string s.
+  ; If the string pat is not a substring of the string s, returns nil.
+  (let (sa (str->arr s) slen (arrlen sa)
+           pa (str->arr pat) plen (arrlen pa))
+    (if (= plen 0) (return (-- slen)))
+    (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (i (-- i))
+      (when (memeq? ([] sa i) p0)
+        (if (= plen 1) (return i))
+        (let (si (++ i) pi 1)
+          (while (memeq? ([] sa si) ([] pa pi))
+            (<- si (++ si) pi (++ pi))
+            (if (= pi plen) (return i))))))))
+
 ; number
 
 (builtin-function number? (x)
@@ -843,13 +1114,13 @@
   (assert (number? 1))
   (assert (number? 3.14))
   (assert (number? 0x20))
-  (assert (nil? (number? 'x))))
+  (assert (! (number? 'x))))
 
 (builtin-function int? (x)
   ; Returns whether the x is a integer.
   (assert (int? 1))
-  (assert (nil? (int? 3.14)))
-  (assert (nil? (int? 'x))))
+  (assert (! (int? 3.14)))
+  (assert (! (int? 'x))))
 
 (function byte? (x)
   ; Returns whether the x is a integer and between 0 and 255.
@@ -1004,275 +1275,6 @@
       (<- val (* val base)))
     (if (> power 0) val
         (/ val))))
-
-; string
-
-(function string (:rest args)
-  ; Returns concatenated string which each of the specified args as string.
-  ; Treat nil as an empty string.
-  (with-memory-stream ($out)
-    (dolist (arg args)
-      (if (symbol? arg) (if arg (write-mem arg))
-          (|| (string? arg) (keyword? arg) (bytes? arg)) (write-mem arg)
-          (write arg :end "")))))
-
-(builtin-function string? (x)
-  ; Returns whether the x is a string.
-  (assert (string? ""))
-  (assert (string? "aaa"))
-  (assert (! (string? (bytes 1)))))
-
-(function str->num (s)
-  ; Returns a string as a number.
-  (with-memory-stream ($in s)
-    (.skip-number (.new AheadReader))))
-
-(function str->code (s)
-  ; Returns the code point of string s.
-  (let (b 0 val 0)
-    (with-memory-stream ($in s)
-      (while (/= (<- b (read-byte)) -1)
-        (<- val (| (<< val 8) b))))
-    val))
-
-(function code->str (i)
-  ; Returns string of code point.
-  (with-memory-stream ($out)
-    (while (/= i 0)
-      (write-byte (& i 0xff))
-      (<- i (>> i 8)))))
-
-(function str->arr (s)
-  ; Returns a character array of string s.
-  (let (a (.new Array) c nil)
-    (with-memory-stream ($in s)
-      (while (<- c (read-char)) (.add a c)))
-    (.to-a a)))
-
-(function substr (s start :opt end)
-  ; Returns a string that is a substring of the specified string s.
-  ; The substring begins at the specified start and extends to the character at index end - 1.
-  ; Thus the length of the substring is `end - start`.
-  (let (ms (.new MemoryStream))
-    (if (< start 0) (error "illegal start " start))
-    (.write-mem ms s)
-    (dotimes (i start)
-      (if (nil? (.read-char ms)) (error "illegal start " start)))
-    (if (nil? end) (submem s (.tell ms))
-        (let (pos (.tell ms))
-          (dotimes (i (- end start))
-            (if (nil? (.read-char ms)) (error "illegal end " end)))
-          (submem s pos (.tell ms))))))
-
-(function strnth (s i)
-  ; Returns the i-th character of string s.
-  ([] (str->arr s) i))
-
-(function strlen (s)
-  ; Returns the number of characters in string s.
-  (arrlen (str->arr s)))
-
-(function strstr (s pat :opt start)
-  ; Returns the position where the substring pat appears first in the string s.
-  ; If the string pat is not a substring of the string s, returns nil.
-  ; If start is specified, search for substring pat from start-th of the string s.
-  (let (start (|| start 0) sa (str->arr s) slen (arrlen sa)
-              pa (str->arr pat) plen (arrlen pa))
-    (if (< (- slen start) 0) (error "illegal start")
-        (= plen 0) (return 0))
-    (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (i (++ i))
-      (when (memeq? ([] sa i) p0)
-        (if (= plen 1) (return i))
-        (let (si (++ i) pi 1)
-          (while (memeq? ([] sa si) ([] pa pi))
-            (<- si (++ si) pi (++ pi))
-            (if (= pi plen) (return i))))))))
-
-(function strlstr (s pat)
-  ; Returns the position where the substring pat appears last in the string s.
-  ; If the string pat is not a substring of the string s, returns nil.
-  (let (sa (str->arr s) slen (arrlen sa)
-           pa (str->arr pat) plen (arrlen pa))
-    (if (= plen 0) (return (-- slen)))
-    (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (i (-- i))
-      (when (memeq? ([] sa i) p0)
-        (if (= plen 1) (return i))
-        (let (si (++ i) pi 1)
-          (while (memeq? ([] sa si) ([] pa pi))
-            (<- si (++ si) pi (++ pi))
-            (if (= pi plen) (return i))))))))
-
-; bytes
-
-(builtin-function bytes (size)
-  ; Returns a bytes of size the specified size.
-  ; The element is cleared to 0.
-  )
-
-(builtin-function bytes? (x)
-  ; Returns whether the x is bytes.
-  ; symbols, keywords, and strings are acceptable as arguments for some bytes api, but this function returns nil.
-  (assert (bytes? (bytes 3)))
-  (assert (! (bytes? 'foo)))
-  (assert (! (bytes? :foo)))
-  (assert (! (bytes? "foo")))
-  (assert (! (bytes? (array 3)))))
-
-; memory
-
-(builtin-function memeq? (x y)
-  ; Returns whether x arguments are the same byte sequence.
-  (assert (memeq? :foo "foo"))
-  (assert (memeq? :foo 'foo))
-  (assert (! (memeq? "foo" "bar"))))
-
-(function memneq? (x y)
-  ; Same as (! (memeq? x y)).
-  (! (memeq? x y)))
-
-(builtin-function memcmp (x y)
-  ; If x is equals to y, returns 0.
-  ; If x is lexicographically less than y, returns -1.
-  ; If x is lexicographically greater than y, returns 1.
-  (assert (= (memcmp "bar" "foo") -1))
-  (assert (= (memcmp "foo" "bar") 1))
-  (assert (= (memcmp "foo" "foo") 0))
-  (assert (= (memcmp "fo" "foo") -1))
-  (assert (= (memcmp "foo" "fo") 1)))
-
-(function memhash (x)
-  ; Returns hash value of mem.
-  (let (hval 17)
-    (dotimes (i (memlen x))
-      (if (< i 10) (<- hval (+ (* hval 31) ([] x i)))
-          (break)))
-    hval))
-
-(function memempty? (s)
-  ; Returns whether the s is "" or nil.
-  (|| (nil? s) (= (memlen s) 0)))
-
-(builtin-function mem->bytes (x :opt i size)
-  ; Returns bytes corresponding to byte sequence x.
-  ; If i is supplied, returns bytes of partial byte sequence from i of x.
-  ; If size is supplied, returns string of partial byte sequence from i to (size -1) of x.
-  (assert (memeq? (mem->bytes "a") "a")))
-
-(builtin-function mem->sym (x :opt i size)
-  ; Same as (mem->bytes x) except returns symbol.
-  (assert (eq? (mem->sym "foo") 'foo)))
-
-(builtin-function mem->key (x :opt i size)
-  ; Same as (mem->bytes x) except returns keyword.
-  (assert (eq? (mem->key "foo") :foo)))
-
-(builtin-function mem->str (x :opt i size)
-  ; Same as (mem->bytes x) except returns string.
-  (assert (memeq? (mem->str 'foo) "foo"))
-  (assert (memeq? (mem->str 'foo 1) "oo"))
-  (assert (memeq? (mem->str 'foo 1 1) "o")))
-
-(builtin-function mem->str! (x)
-  ; Same as (mem->str x), except that it destructively modifies the specified bytes x.
-  ; Generally faster than mem->str.
-  (assert (let (x (bytes 1))
-            ([] x 0 0x01)
-            (memeq? (mem->str! x) "\x01"))))
-
-(function memprefix? (x prefix)
-  ; Returns whether the byte sequence x with the specified prefix.
-  (&& (>= (memlen x) (memlen prefix))
-      (memmem x prefix 0 (memlen prefix))))
-
-(function memsuffix? (x suffix)
-  ; Returns whether the byte sequence x with the specified suffix.
-  (&& (>= (memlen x) (memlen suffix))
-      (memmem x suffix (- (memlen x) (memlen suffix)))))
-
-(builtin-function memlen (x)
-  ; Returns the size of the byte sequence x.
-  (assert (= (memlen "") 0))
-  (assert (= (memlen "012") 3)))
-
-(builtin-function memmem (x b :opt start end)
-  ; Returns the position where the byte b appears first in the byte sequence x.
-  ; If the b is not appeared, returns nil.
-  ; If b is byte sequence, returns the position where the partial byte sequence appears first in the byte sequence x.
-  ; If start is specified, search from start-th of the byte sequence x.
-  ; If end is specified, search untile end-th of the byte sequence x.
-  (assert (= (memmem "012" 0x31 1) 1))
-  (assert (= (memmem "012" 0x31 0 3) 1))
-  (assert (= (memmem "012" 0x31 0 3) 1))
-  (assert (= (memmem "012" "12" 0 3) 1)))
-
-(builtin-function memcpy (src src-i dst dst-i size)
-  ; Copy size elements from the `src-i`th element of the src byte sequence to the dst byte sequence `dst-i`th element and beyond.
-  ; Returns dst.
-  ; Even if the areas to be copied overlap, it operates correctly.
-  (assert (let (s "foo" d "bar")
-            (memeq? (memcpy s 1 d 1 2) "boo"))))
-
-(builtin-function submem (x start :opt end)
-  ; Returns the partial byte sequence starting from start.
-  ; If end is specified, returns the partial byte sequence from the i th to (end-1) th.
-  (assert (memeq? (submem "012" 0) "012"))
-  (assert (memeq? (submem "012" 1) "12"))
-  (assert (memeq? (submem "012" 1 2) "1")))
-
-(builtin-function memcat (x :rest args)
-  ; Returns the result of combining each args with x.
-  (assert (memeq? (memcat "0" "1" "2") "012")))
-
-; array
-
-(builtin-function array (size)
-  ; Returns an array of length size.
-  (assert (array 1)))
-
-(builtin-function array? (x)
-  ; Returns whether the x is an array.
-  ; However, bytes are not considered as arrays.
-  (assert (array? (array 3)))
-  (assert (! (array? (bytes 3)))))
-
-(builtin-function [] (x i :opt v)
-  ; Returns the i-th element of the array x.
-  ; If v is specified, update the i-th element of array x to v.
-  ; Returns v.
-  ; This function can also be applied to bytes.
-  (assert (nil? ([] (array 1) 0)))
-  (assert (= ([] (bytes 1) 0) 0))
-  (assert (let (a (array 1) b (bytes 1))
-            (&& ([] a 0 true)
-                ([] a 0)
-                ([] b 0 0xff)
-                (= ([] b 0) 0xff)))))
-
-(builtin-function arrlen (x)
-  ; Returns the length of the specified array x.
-  (assert (= (arrlen (array 3)) 3)))
-
-(builtin-function arrcpy (src src-i dst dst-i size)
-  ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
-  ; Returns dst.
-  ; Even if the areas to be copied overlap, it operates correctly.
-  ; This function also accepts strings.
-  (assert (let (s (array 1) d (array 2))
-            ([] s 0 1)
-            ([] d 0 :zero)
-            ([] d 1 :one)
-            (&& (= ([] (arrcpy s 0 d 1 1) 1) 1)
-                (eq? ([] d 0) :zero)
-                (= ([] d 1) 1)))))
-
-(function subarr (x start :opt end)
-  ; Returns a new array object selected from start to end (end not included) where start and end represent the index of items in that array x.
-  (let (xlen (arrlen x))
-    (if (< start 0) (error "illegal start")
-        (nil? end) (<- end xlen)
-        (> end xlen) (error "illegal end"))
-    (let (new-len (- end start) new-array (array new-len))
-      (arrcpy x start new-array 0 new-len))))
 
 ; os
 
@@ -1481,9 +1483,7 @@
   ; If field name is 'xxx', bind a getter named `&xxx` and setter named `&xxx!`.
   ; Works faster than method which defined with the `method` macro.
   (with-gensyms (receiver val)
-    (let (key (mem->key field)
-              getter (memcat '& field)
-              setter (memcat '& field '!))
+    (let (key (mem->key field) getter (memcat '& field) setter (memcat getter '!))
       (list begin
             (list if (list ! (list 'bound? (list quote getter)))
                   (list 'function getter (list receiver)
@@ -1516,8 +1516,7 @@
                                            :super (if (eq? cls-sym 'Object) nil (|| super 'Object))
                                            :features features
                                            :fields fields)))
-        (cons begin
-              (map (f (field) (list 'make-accessor field)) fields))))
+        (cons begin (map (f (field) (list 'make-accessor field)) fields))))
 
 (macro method (cls-sym method-sym args :rest body)
   (let (global-sym (memcat cls-sym method-sym))
