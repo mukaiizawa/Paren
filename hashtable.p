@@ -1,4 +1,4 @@
-; hashtable module.
+; hash table module.
 
 (class HashTable ()
   hash eq? table table-size size)
