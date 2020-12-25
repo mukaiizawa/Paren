@@ -1442,6 +1442,11 @@
   ; Returns nil.
   )
 
+(builtin-function system (command)
+  ; Execute host system commands.
+  ; Returns the termination status of the child shell used to execute command.
+  )
+
 (builtin-function getenv (name)
   ; Looks up the environment variable named name in the environment list and returns value string.
   ; Returns nil if not found.
