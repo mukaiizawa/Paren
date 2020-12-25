@@ -12,6 +12,6 @@
 
 (function! main (args)
   (with-open ($in (.resolve $paren-home core.p) :read)
-    (foreach (f (x) (write (cadr x)))
+    (foreach (f (x) (write-line (cadr x)))
              (select (f (x) (&& (cons? x) (reserved-word? (car x))))
                      (collect read)))))
