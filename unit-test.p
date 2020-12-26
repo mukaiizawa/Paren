@@ -15,5 +15,7 @@
       (memsuffix? (peek-line path) "module.")))
 
 (function! main (args)
-  (write :unit-test)
-  (foreach unit-test (select module-file? (.children $paren-home))))
+  (let (debug? nil)
+    (assert (<- debug? true))
+    (if (! debug?) (error "need to build in debug mode")
+        (foreach unit-test (select module-file? (.children $paren-home))))))
