@@ -37,7 +37,6 @@
     nil))
 
 (method HashTable .rehash ()
-  (write-line :rehash)
   (let (old-table (&table self) new-table-size (<< (&table-size self) 1))
     (&table-size! self new-table-size)
     (&table! self (array new-table-size))
