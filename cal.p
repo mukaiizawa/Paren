@@ -11,7 +11,7 @@ Usage: paren cal.p [[YEAR] MONTH]
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))
-    (let (argc (length (<- args (cdr args))) dt (DateTime.now) dw nil y nil m nil)
+    (let (argc (length args) dt (DateTime.now) dw nil y nil m nil)
       (if (= argc 0) (<- y (.year dt) m (.month dt))
           (= argc 1) (<- y (.year dt) m (str->num (car args)))
           (= argc 2) (<- y (str->num (car args)) m (str->num (cadr args)))

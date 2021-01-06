@@ -23,8 +23,8 @@ Usage: paren curl.p URL
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))
-    (if (nil? (cdr args)) (error "too few arguments.")
-        (with-memory-stream ($in (cadr args))
+    (if (nil? args) (error "too few arguments.")
+        (with-memory-stream ($in (car args))
           (let (ar (.new AheadReader) proto nil host nil port nil)
             (while (memneq? (.next ar) ":") (.get ar))
             (<- proto (.token ar))

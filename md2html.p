@@ -99,7 +99,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))
-    (let ((op args) (.parse (.init (.new OptionParser) "tCc:") (cdr args)) rd (.new MarkdownReader))
+    (let ((op args) (.parse (.init (.new OptionParser) "tCc:") args) rd (.new MarkdownReader))
       (foreach (f (x) (write-line (xml->str x)))
                (make-html (parse-nodes (collect (f () (.read rd))))
                           :title? (.get op "t")

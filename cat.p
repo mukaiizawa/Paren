@@ -6,6 +6,6 @@
       (write-byte c))))
 
 (function! main (args)
-  (if (cdr args) (foreach (f (x) (with-open ($in x :read) (cat)))
-                          (cdr args))
+  (if args (foreach (f (x) (with-open ($in x :read) (cat)))
+                    args)
       (cat)))

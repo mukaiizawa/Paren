@@ -2680,7 +2680,7 @@
           (if (&& (! (.readable? script))
                   (! (.readable? (<- script (.resolve $paren-home script)))))
               (error "unreadable file " (car args))
-              (&& (load script) (bound? 'main)) (main args))))))
+              (&& (load script) (bound? 'main)) (main (cdr args)))))))
 
 (<- $import '(:core)
     $read-table nil
