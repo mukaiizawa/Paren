@@ -76,7 +76,7 @@
 (macro define-monster (name (:opt super :rest features) :rest fields)
   `(begin (class ,name ,(if super (cons super features) '(Monster))
             ,@fields)
-          (push! $monster-classes ,name)))
+          (push! ,name $monster-classes)))
 
 ; Monster
 

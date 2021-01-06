@@ -45,7 +45,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 (function contents-padding (id)
   (let (i -1 pad nil)
     (while (<- i (memmem id "." (++ i)))
-      (push! pad '(span)))
+      (push! '(span ()) pad))
     pad))
 
 (function parse-contents (contentss)
@@ -70,7 +70,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
       (if (= i (-- x)) ([] contents-index i (++ ([] contents-index i)))
           (> i (-- x)) ([] contents-index i 0)))
     (let (id (next-id contents-index))
-      (push! $contents `(,hx (:id ,id) ,@(cons id hx-text))))))
+      (push! `(,hx (:id ,id) ,@(cons id hx-text)) $contents))))
 
 (function header? (node)
   (let (elt (car node))
@@ -86,16 +86,16 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 
 (function make-html (nodes :key title? charset output-contents?)
   (let (title nil table-of-contents (if output-contents? (parse-contents (reverse! $contents))))
-    (if title? (<- title (car nodes) nodes (cdr nodes)))
+    (if title? (<- title `((title () ,(caddar nodes))) nodes (cdr nodes)))
     `((!DOCTYPE "html")
       (html (:lang "ja")
-            (head
-              (meta (:charset ,(|| charset $default-charset)))
-              (title ,(caddr title))
-              (style ,$default-css))
-            (body
-              ,@table-of-contents
-              (article ,@nodes))))))
+            (head ()
+                  (meta (:charset ,(|| charset $default-charset)))
+                  ,@title
+                  (style () ,$default-css))
+            (body ()
+                  ,@table-of-contents
+                  (article ,@nodes))))))
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))

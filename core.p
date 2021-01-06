@@ -572,7 +572,7 @@
   ; Otherwise, returns a list with x as the only element.
   (if (list? x) x
       (array? x) (let (acc nil)
-                   (doarray (e x) (push! acc e))
+                   (doarray (e x) (push! e acc))
                    (reverse! acc))
       (list x)))
 
@@ -691,7 +691,7 @@
   (assert (= (length (append '(1) '(2))) 2))
   (assert (= (length (append nil '(1) '(2))) 2)))
 
-(macro push! (sym x)
+(macro push! (x sym)
   ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
   ; Returns x.
   (with-gensyms (y)
@@ -724,7 +724,7 @@
 (function flatten (l)
   ; Returns a list in which the car parts of all cons that make up the specified list l are elements.
   (let (acc nil rec (f (x)
-                      (if (atom? x) (push! acc x)
+                      (if (atom? x) (push! x acc)
                           (dolist (i x) (rec i)))))
     (rec l)
     (reverse! acc)))
@@ -1572,8 +1572,8 @@
   (let (o nil)
     (for (cls self) cls (cls (find-class (assoc cls :super)))
       (dolist (field (reverse! (map mem->key (assoc cls :fields))))
-        (push! o nil)
-        (push! o field)))
+        (push! nil o)
+        (push! field o)))
     (car! (cdr o) (assoc self :symbol))
     (if (= (length (procparams (find-method (assoc o :class) '.init))) 1) (.init o)
         o)))
@@ -2531,8 +2531,8 @@
   ; Returns nil.
   (with-gensyms (g)
     (list let (list g (cons f (cons params body)))
-          (list 'push! '$read-table g)
-          (list 'push! '$read-table (list 'str->code (list quote next))))))
+          (list 'push! g '$read-table)
+          (list 'push! (list 'str->code (list quote next)) '$read-table))))
 
 (function read-byte ()
   ; Same as (.read-byte (dynamic $in)).
@@ -2667,7 +2667,7 @@
           (if (|| (.readable? p) (.readable? (<- p (.resolve $paren-home p))))
               (begin0 (load p)
                       (<- main nil)
-                      (push! $import key))
+                      (push! key $import))
               (error "unreadable module " key))))))
 
 (function boot (args)

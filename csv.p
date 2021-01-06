@@ -24,10 +24,10 @@
   ; - The last record in the file must have an ending line break.
   (if (nil? (.next self)) nil
       (let (fields nil)
-        (push! fields (.parse-field self))
+        (push! (.parse-field self) fields)
         (while (memeq? (.next self) ",")
           (.skip self)
-          (push! fields (.parse-field self)))
+          (push! (.parse-field self) fields))
         (.skip self "\n")
         (reverse! fields))))
 

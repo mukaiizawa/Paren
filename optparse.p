@@ -12,7 +12,7 @@
     (while (< i len)
       (let (opt ([] option i) optarg? (&& (< (<- i (++ i)) len) (memeq? ([] option i) ":")))
         (if optarg? (<- i (++ i))) 
-        (push! table (list opt optarg? nil))))
+        (push! (list opt optarg? nil) table)))
     (&table! self table)))
 
 (method OptionParser .lookup (opt)

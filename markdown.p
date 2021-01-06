@@ -56,12 +56,12 @@
 (method MarkdownReader .parse-paragraph ()
   (let (children nil text nil)
     (while (.continue? self)
-      (if (memeq? (.next self) "`") (push! children (.parse-code self))
-          (memeq? (.next self) "*") (push! children (.parse-em self))
-          (memeq? (.next self) "[") (push! children (.parse-ref self))
+      (if (memeq? (.next self) "`") (push! (.parse-code self) children)
+          (memeq? (.next self) "*") (push! (.parse-em self) children)
+          (memeq? (.next self) "[") (push! (.parse-ref self) children)
           (begin
             (while (.none-match? self "`" "*" "[") (.get self))
-            (if (memneq? (<- text (.token self)) "") (push! children text)))))
+            (if (memneq? (<- text (.token self)) "") (push! text children)))))
     `(p () ,@(reverse! children))))
 
 (method MarkdownReader .parse-pre ()
@@ -81,16 +81,16 @@
                                (<- next-depth (++ next-depth)))
                              (if (= next-depth 0) (.raise self "missing >"))
                              (.skip-space self)
-                             (push! node-stack (.skip-line (.skip-space self)))))
+                             (push! (.skip-line (.skip-space self)) node-stack)))
                    rec (f (depth nodes)
                          (while (fetch)
                            (if (< next-depth depth) (break)
                                (= next-depth depth) (begin
-                                                      (if (&& nodes (string? (car nodes))) (push! nodes '(br)))
-                                                      (push! nodes (pop! node-stack)))
+                                                      (if (&& nodes (string? (car nodes))) (push! '(br ()) nodes))
+                                                      (push! (pop! node-stack) nodes))
                                (begin
-                                 (push! nodes (rec next-depth (list (pop! node-stack))))
-                                 (if node-stack (push! nodes (pop! node-stack))))))
+                                 (push! (rec next-depth (list (pop! node-stack))) nodes)
+                                 (if node-stack (push! (pop! node-stack) nodes)))))
                          `(blockquote () ,@(reverse! nodes))))
     (rec 1 nil)))
 
@@ -105,24 +105,24 @@
                             (if (memeq? (.next self) "-")
                                 (begin
                                   (.skip self)    ; - xxx
-                                  (push! next-root 'ul))
+                                  (push! 'ul next-root))
                                 (.digit? self)
                                 (begin
                                   (.skip-uint self) (.skip self ".")    ; 1. xxx
-                                  (push! next-root 'ol))
+                                  (push! 'ol next-root))
                                 (.raise self "missing list"))
                             (.skip-space self)
-                            (push! node-stack (list 'li () (.skip-line (.skip-space self))))))
+                            (push! (list 'li () (.skip-line (.skip-space self))) node-stack)))
                   rec (f (root depth nodes)
                         (while (fetch)
                           (if (< next-depth depth) (break)
                               (= next-depth depth) (if (neq? root (pop! next-root)) (.raise self "mixed list type")
-                                                       (push! nodes (pop! node-stack)))
+                                                       (push! (pop! node-stack) nodes))
                               (begin
-                                (push! nodes (rec (pop! next-root) next-depth (list (pop! node-stack))))
+                                (push! (rec (pop! next-root) next-depth (list (pop! node-stack))) nodes)
                                 (when node-stack
                                   (if (neq? (pop! next-root) root) (.raise self "mixed list type")
-                                      (push! nodes (pop! node-stack)))))))
+                                      (push! (pop! node-stack) nodes))))))
                         (cons root (cons nil (reverse! nodes)))))
     (rec (if (memeq? (.next self) "-") 'ul 'ol) 1 nil)))
 
@@ -132,7 +132,7 @@
     (while (memneq? (.next self) "\n")
       (while (memneq? (.next self) "|") (.get self))
       (.skip self "|")
-      (push! txlist (list tx () (.token self))))
+      (push! (list tx () (.token self)) txlist))
     (.skip self)
     `(tr () ,@(reverse! txlist))))
 
@@ -140,7 +140,7 @@
   (let (thlist (.parse-tr self 'th) tdlist nil)
     (.skip-line self)    ; skip separator.
     (while (memeq? (.next self) "|")
-      (push! tdlist (.parse-tr self 'td)))
+      (push! (.parse-tr self 'td) tdlist))
     `(table ()
             (thead () ,thlist)
             (tbody () ,@(reverse! tdlist)))))

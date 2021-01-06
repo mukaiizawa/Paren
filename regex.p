@@ -21,10 +21,10 @@
 (function Regex.parse-group (ar)
   (.skip ar)
   (let (val nil)
-    (push! val (Regex.parse ar))
+    (push! (Regex.parse ar) val)
     (while (memeq? (&next ar) "|")
       (.skip ar)
-      (push! val (Regex.parse ar)))
+      (push! (Regex.parse ar) val))
     (.skip ar ")")
     (.init (.new Regex.Elt) :alternate (reverse! val))))
 
@@ -68,7 +68,7 @@
                    (memeq? c "(") (Regex.parse-group ar)
                    (memeq? c "[") (Regex.parse-charset ar)
                    (Regex.parse-char ar)))
-      (push! elements (Regex.parse-quantifier ar expr)))
+      (push! (Regex.parse-quantifier ar expr) elements))
     (reverse! elements)))
 
 (function Regex.compile (expr)
