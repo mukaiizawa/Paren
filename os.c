@@ -68,7 +68,7 @@ DEFUN(fgetc)
   int ch;
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_fp(argv->cons.car, &fp)) return FALSE;
+  if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   ch = fgetc(fp);
   if (ch == EOF && ferror(fp)) {
     clearerr(fp);
@@ -111,9 +111,9 @@ DEFUN(fgets)
 
 DEFUN(fread)
 {
-  object o;
   int from, size;
   FILE *fp;
+  object o;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
   if (!bi_arg_type(argv->cons.car, BYTES, &o)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
@@ -131,9 +131,9 @@ DEFUN(fread)
 
 DEFUN(fwrite)
 {
-  object o;
   int from, size;
   FILE *fp;
+  object o;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
   if (!bi_arg_mem(argv->cons.car, &o)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;

@@ -17,7 +17,6 @@ extern int bi_argc_range(int argc, int min, int max);
 extern int bi_arg_type(object o, int type, object *result);
 extern int bi_arg_mem(object o, object *result);
 extern int bi_arg_mutable_mem(object o, object *result);
-extern int bi_arg_fp(object o, FILE **result);
 extern int bi_arg_proc(object o, object *result);
 extern int bi_arg_list(object o, object *result);
 

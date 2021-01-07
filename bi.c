@@ -65,11 +65,6 @@ int bi_arg_mutable_mem(object o, object *result)
   }
 }
 
-int bi_arg_fp(object o, FILE **result)
-{
-  return bi_intptr(o, (intptr_t *)result);
-}
-
 int bi_arg_proc(object o, object *result)
 {
   switch (object_type(o)) {
