@@ -1287,29 +1287,6 @@
   ;      3 -- Open file for reading and writing.
   )
 
-(builtin-function fdopen (fd mode)
-  ; Associates a stream with the existing file descriptor fd.
-  ; Returns file poiner for the opened file.
-  ; For the meaning of mode, refer to fopen.
-  )
-
-(builtin-function client-socket (host port)
-  ; Create a new socket and connect it to terminal corresponding to host and port.
-  ; host and port must be a string that getaddrinfo(3) can resolve.
-  ; Returns the file descriptor corresponding to the created socket.
-  )
-
-(builtin-function server-socket (port)
-  ; Create a new socket and bind it to port.
-  ; Returns the file descriptor corresponding to the created socket.
-  ; Get connection with accept function.
-  )
-
-(builtin-function accept (fd)
-  ; Extracts the first connection request on the queue of pending connections for the listening socket fd and creates a new connected socket.
-  ; Returns a new file descriptor referring to that socket.
-  )
-
 (builtin-function fgetc (fp)
   ; Read byte from the stream associated with the file pointer fp.
   ; Returns read byte.
@@ -1328,12 +1305,12 @@
   )
 
 (builtin-function fread (buf from size fp)
-  ; Reads size bytes of data from the stream pointed to by fp, storing them at the location given by byte-array buf offset from.
+  ; Reads size bytes of data from the stream pointed to by fp, storing them at the location given by bytes buf offset from.
   ; Returns size;
   )
 
 (builtin-function fwrite (buf from size fp)
-  ; Writes size bytes of data to the stream pointed to by fp, obtaining them at the location given by byte-array buf offset from.
+  ; Writes size bytes of data to the stream pointed to by fp, obtaining them at the location given by bytes buf offset from.
   ; Returns size;
   )
 
@@ -1353,14 +1330,6 @@
 
 (builtin-function fclose (fp)
   ; Flushes the stream pointed to by fp (writing any buffered output data) and closes the underlying file descriptor.
-  ; Returns nil.
-  )
-
-(builtin-function closesocket (fd)
-  ; Closes the file descriptor corresponding to the socket created by the function shown below.
-  ; - client-socket
-  ; - server-socket
-  ; - accept
   ; Returns nil.
   )
 
@@ -2545,9 +2514,9 @@
   ; Same as (.write-byte (dynamic $out) x).
   (.write-byte (dynamic $out) x))
 
-(function write-mem (x)
+(function write-mem (x :opt from size)
   ; Same as (.write-mem (dynamic $out) x).
-  (.write-mem (dynamic $out) x))
+  (.write-mem (dynamic $out) x from size))
 
 (function write-line (:opt x)
   ; Same as (.write-line (dynamic $out) x).
@@ -2583,35 +2552,15 @@
                       (list '.to-s ms))))))
 
 (macro with-open ((sym path mode) :rest body)
+  ; Create file stream context.
+  ; The file stream is guaranteed to be closed when exiting the context.
+  ; Returns nil.
   (with-gensyms (gsym)
     (list let (list gsym nil)
           (list unwind-protect
                 (cons let (cons (list sym (list <- gsym (list '.open (list 'Path.of path) mode)))
                                 body))
                 (list if gsym (list '.close gsym))))))
-
-(macro with-server-socket ((in out fd) :rest body)
-  (with-gensyms (gfd)
-    (list let (list gfd nil)
-          (list unwind-protect
-                (list begin (list <- gfd fd)
-                      (list 'while true
-                            (list 'with-client-socket (list in out (list accept gfd))
-                                  (cons begin body))))
-                (list if gfd (list 'closesocket gfd))))))
-
-(macro with-client-socket ((in out fd) :rest body)
-  (with-gensyms (gfd gin gout)
-    (list let (list gfd nil gin nil gout nil)
-          (list unwind-protect
-                (list let (list gfd fd
-                                in (list <- gin (list '.init '(.new FileStream) (list fdopen gfd 0)))
-                                out (list <- gout (list '.init '(.new FileStream) (list fdopen gfd 1))))
-                      (cons begin body))
-                (list begin
-                      (list if gfd (list 'closesocket gfd))
-                      (list if gin (list '.close gin))
-                      (list if gout (list '.close gout)))))))
 
 ; execution
 

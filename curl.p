@@ -1,5 +1,7 @@
 ; curl.
 
+(import :sock)
+
 (<- $usage
 "
 Usage: paren curl.p URL
@@ -13,13 +15,12 @@ Usage: paren curl.p URL
 (function http-request (host port method uri version)
   ; RFC 2616
   ; Request-Line = Method SP Request-URI SP HTTP-Version CRLF
-  (let (line nil)
-    (with-client-socket (in out (client-socket host port))
-      (.write-mem out (string method " " uri " " version "\r\n"))
-      (.write-mem out "\r\n")
-      (.flush out)
-      (foreach (f (x) (.write-line $stdout x))
-               (collect (f () (.read-line in)))))))
+  (let (buf (bytes 4096) size nil)
+    (with-client-socket (sock host port)
+      (sendall (string method " " uri " " version "\r\n") sock)
+      (sendall "\r\n" sock)
+      (while (> (<- size (recv buf 0 (memlen buf) sock)) 0)
+        (write-mem buf 0 size)))))
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))

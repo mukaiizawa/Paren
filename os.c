@@ -50,19 +50,6 @@ DEFUN(fopen)
   return TRUE;
 }
 
-DEFUN(fdopen)
-{
-  int fd, mode;
-  FILE *fp;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_sint(argv->cons.car, &fd)) return FALSE;
-  if (!bi_sint(argv->cons.cdr->cons.car, &mode)) return FALSE;
-  if (0 > mode || mode >= sizeof(mode_table) / sizeof(char *)) return FALSE;
-  if ((fp = fdopen(fd, mode_table[mode])) == NULL) return FALSE;
-  *result = gc_new_xint((intptr_t)fp);
-  return TRUE;
-}
-
 DEFUN(fgetc)
 {
   int ch;

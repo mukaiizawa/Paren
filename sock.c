@@ -26,10 +26,7 @@
 { \
   int st; \
   WSADATA data; \
-  if ((st = WSAStartup(MAKEWORD(2, 0), &data)) != 0) { \
-    printf("%d\n", st); \
-    return FALSE; \
-  } \
+  if ((st = WSAStartup(MAKEWORD(2, 0), &data)) != 0) return FALSE; \
 }
 #define xcleanup() WSACleanup()
 #endif
@@ -65,9 +62,6 @@ DEFUN(client_socket)
   }
   freeaddrinfo(p);
   if (q == NULL) return FALSE;
-#if WINDOWS_P
-  fd = _open_osfhandle(fd, _O_RDONLY);
-#endif
   *result = gc_new_xint(fd);
   return TRUE;
 }
@@ -98,10 +92,37 @@ DEFUN(accept)
   if (!bi_sint(argv->cons.car, &sfd)) return FALSE;
   size = sizeof(addr);
   if ((cfd = accept(sfd, (struct sockaddr *) &addr, &size)) == -1) return FALSE;
-#if WINDOWS_P
-  cfd = _open_osfhandle(cfd, _O_RDONLY);
-#endif
   *result = gc_new_xint(cfd);
+  return TRUE;
+}
+
+DEFUN(recv)
+{
+  int fd, from, size;
+  object o;
+  if (!bi_argc_range(argc, 4, 4)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, BYTES, &o)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!(0 <= from && from + size <= o->mem.size)) return FALSE;
+  if (!bi_sint(argv->cons.cdr->cons.car, &fd)) return FALSE;
+  if ((size = recv(fd, o->mem.elt + from, size, 0)) < 0) return FALSE;
+  *result = gc_new_xint(size);
+  return TRUE;
+}
+
+DEFUN(send)
+{
+  int fd, from, size;
+  object o;
+  if (!bi_argc_range(argc, 4, 4)) return FALSE;
+  if (!bi_arg_mem(argv->cons.car, &o)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!(0 <= from && from + size <= o->mem.size)) return FALSE;
+  if (!bi_sint(argv->cons.cdr->cons.car, &fd)) return FALSE;
+  if ((size = send(fd, o->mem.elt + from, size, 0)) < 0) return FALSE;
+  *result = gc_new_xint(size);
   return TRUE;
 }
 
@@ -112,5 +133,6 @@ DEFUN(closesocket)
   if (!bi_sint(argv->cons.car, &fd)) return FALSE;
   xclose(fd);
   xcleanup();
+  *result = object_nil;
   return TRUE;
 }
