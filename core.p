@@ -6,29 +6,25 @@
   ; A special operator is a operator with special evaluation rules, possibly manipulating the evaluation environment, control flow, or both.
   name)
 
-(special-operator let
-  ; Special operator let create new environment and bind symbol then execute a series of expression that use these bindings.
-  ; First evaluates the expression init-expr1, then binds the symbol sym1 to that value,  then it evaluates init-expr2 and binds sym2, and so on.
-  ; init-expr is evaluated under the newly created environment.
-  ; Therefore, init-expr-n is affected by previously bound symbols(sym1, sym2, ... sym-n-1).
-  ; Then, evaluate expressions from left to right.
+(special-operator <-
+  ; Bind the bound-expr with the result of evaluating the binding-expr in order from the left to right.
+  ; The symbol is bound to the already bound environment closest to the current environment.
+  ; If it is not bound to the global environment, bind to the global environment.
+  ; If bound-expr is a tree rather than symbol, binds the symbols specified in tree to the corresponding values in the tree structure resulting from the evaluation of expression.
   ; Returns the last evaluation result.
-  (let (sym1 init-expr1 sym2 init-expr2 ...)
+  (<- bound-expr1 binding-expr1 bound-expr2 binding-expr2 ...))
+
+(special-operator let
+  ; Create new environment and bind symbol then execute a series of expression in that environment.
+  ; The binding mechanism is the same as special-operator '<-' except that it unconditionally binds the symbol to the newly created environment.
+  ; Returns the last evaluation result.
+  (let (bound-expr1 binding-expr1 bound-expr2 binding-expr2 ...)
     expr1
     expr2
     ...))
 
-(special-operator <-
-  ; Special operator `<-` is the symbol binding statement of Paren.
-  ; First evaluate expr1 and bind sym1 to the result, and so on.
-  ; If the symbol is not bound to the current environment, the parent environment is searched in turn.
-  ; If it is not bound to the global environment, bind to the global environment.
-  ; If the symbol is already bound, it will be bound again with the result of the evaluation.
-  ; Returns the last evaluation result.
-  (<- sym1 expr1 sym2 expr2 ...))
-
 (special-operator begin
-  ; Special operator progn evaluates expressions, in the order in which they are given.
+  ; Evaluate expressions in order from left to right.
   ; Returns the last evaluation result.
   (begin
     expr1
@@ -36,24 +32,21 @@
     ...))
 
 (special-operator quote
-  ; Special operator quote returns just expr.
+  ; Returns just expr.
   (quote expr))
 
 (special-operator if
-  ; Special operator if allows the execution of exprs to be dependent on test.
-  ; Statements are evaluated one at a time in the order in which they are given in the expression list until a stmt is found that evaluates to true.
-  ; Once one stmt has evaluated to true, no additional stmt are evaluated.
-  ; If no stmt yields true, nil is returned.
-  ; An odd number of arguments can be passed, in which case last argument act as a default phrase.
+  ; Evaluate statements in order from the left to right, then evaluate the expression corresponding to the statement that returned true first.
+  ; If none of the statemnet returns true, evaluate default-expr.
+  ; If default-expr is omitted, it is considered to be specified by nil.
   ; Returns the last evaluation result.
   (if stmt1 expr1
       stmt2 expr2
       ...
-      stmt-n expr-n
-      [default-phrase]))
+      [default-expr]))
 
 (special-operator f
-  ; Special operator f creates an anonymous function.
+  ; Returns an anonymous function.
   ; There are the following types of parameters.
   ; - required parameter
   ; - optional parameter
@@ -65,8 +58,8 @@
   ; Rest parameters implement variable length arguments.
   ; Returns the anonymous function.
   (f ([required_param] ...
-      [:opt optional_param ...]
-      [{ :rest rest_param | :key keyword_param ... }] )
+                       [:opt optional_param ...]
+                       [{ :rest rest_param | :key keyword_param ... }] )
     expr1
     expr2
     ...))
@@ -89,36 +82,36 @@
     ...))
 
 (special-operator unwind-protect
-  ; Special operator unwind-protect evaluates protected-expr and guarantees that cleanup-exprs are executed before unwind-protect exits, whether it terminates normally or is aborted by a control transfer of some kind.
-  ; unwind-protect is intended to be used to make sure that certain side effects take place after the evaluation of protected-expr.
+  ; Evaluates protected-expr and guarantees that cleanup-exprs are executed before unwind-protect exits, whether it terminates normally or is aborted by a control transfer of some kind.
+  ; Returns the last expressions result of cleanup-expr.
   (unwind-protect protected-expr
-                  cleanup-expr
+                  cleanup-expr1
+                  cleanup-expr2
                   ...))
 
-(special-operator goto
-  ; Special operator goto is used in the context of labels.
-  ; label must be a keyword and can only jump within the most recent labels context.
-  ; Labels and gotos are rarely used directly and are used to define macros that create iteration contexts.
-  (goto label))
-
 (special-operator labels
-  ; Special operator labels create a context for jumping with goto expressions.
+  ; Create a context for jumping with goto expressions.
   ; When a goto is evaluated in the labels context, transfer control to the location of the specified expr that matches the specified keyword.
   (labels expr1
           expr2
           ...))
 
+(special-operator goto
+  ; Jump to the specified label in the most recent labels context.
+  (goto label))
+
 (special-operator throw
-  ; Special operator throw provide a mechanism to control global escape.
-  ; By using special operator catch, it is possible to catch the occurrence of exception during evaluation.
+  ; Throw an exception.
   ; The throwing object must be an instance of the Paren object system.
   (throw expr))
 
 (special-operator catch
   ; Special operator catch evaluate expr in order.
-  ; If an error is thrown by the throw operator during expr evaluation, control is transferred to the handler and processing is performed.
-  ; Handler must be a function with one required parameter.
-  ; Since paren often uses the catch macro wrapped in the object system, it is not used directly.
+  ; If an error is thrown by the throw operator during expr evaluation, 
+  ; Determine if the objects thrown in order from the left to right are instances of the specified class.
+  ; Transfer control to the corresponding handler if there is a matching class.
+  ; If not, the exception is propagated to the higher context.
+  ; Handler must be a function with only one required parameter to receive the thrown object.
   (catch (Error1 handler1 Error2 handler2 ...)
     expr1
     expr2
@@ -126,13 +119,11 @@
 
 (special-operator assert
   ; Evaluates the specified expression and kill the system if the results is nil.
-  ; Not executed if not in debug mode.
-  ; It is used when an argument or an internal state is abnormal, or a process that can not be reached is executed.
+  ; If compiling with the debug option off, Returns nil and the expression is not evaluated.
   (assert expr))
 
 (special-operator dynamic
   ; Evaluate symbols with a dynamic scope.
-  ; Used when dynamically binding the standard input.
   (dynamic sym))
 
 ; fundamental macro
