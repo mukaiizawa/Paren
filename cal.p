@@ -17,7 +17,7 @@ Usage: paren cal.p [[YEAR] MONTH]
           (= argc 2) (<- y (str->num (car args)) m (str->num (cadr args)))
           (error "too many arguments."))
       (<- dt (DateTime.of y m 1) dw (.day-week dt))
-      (write-line (string y "-" m))
+      (write-line (string y "-" (int->str m :padding 2)))
       (write-line  "Su Mo Tu We Th Fr Sa")
       (dotimes (i (-- (* dw 3))) (write-mem " "))
       (dotimes (i (.monthlen dt))
