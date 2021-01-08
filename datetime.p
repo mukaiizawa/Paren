@@ -9,6 +9,7 @@
 
 (function DateTime.offset (y m d)
   ; Returns the difference date from 0001-01-01 for yyyy-mm-dd.
+  (if (<= m 2) (<- y (-- y) m (+ m 12)))
   (+ (* 365 (-- y))
      (// y 4) (- (// y 100)) (// y 400)
      (// (- (* 306 m) 324) 10)
