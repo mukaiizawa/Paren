@@ -1,12 +1,12 @@
 ; socket module.
 
-;; Requires sock option at compile time.
+(if (! (bound? 'client-socket)) (error "Requires sock option at compile time."))
 
 (builtin-function client-socket (host port)
   ; Create a new socket and connect it to terminal corresponding to host and port.
   ; host must be a string that getaddrinfo(3) can resolve.
   ; Returns the file descriptor corresponding to the created socket.
-  (assert (bound? 'client-socket)))
+  )
 
 (builtin-function server-socket (port)
   ; Create a new socket and bind it to port.

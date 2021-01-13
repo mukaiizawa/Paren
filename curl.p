@@ -13,8 +13,8 @@ Usage: paren curl.p URL
       (error "unsupported protocol. " proto)))
 
 (function http-request (host port method uri version)
-  ; RFC 2616
-  ; Request-Line = Method SP Request-URI SP HTTP-Version CRLF
+  ;; RFC 2616
+  ;; Request-Line = Method SP Request-URI SP HTTP-Version CRLF
   (let (buf (bytes 4096) size nil)
     (with-client-socket (sock host port)
       (sendall (string method " " uri " " version "\r\n") sock)
@@ -38,4 +38,4 @@ Usage: paren curl.p URL
             (if (memeq? (.next ar) "/") (.get ar)
                 (.put ar "/"))
             (while (.next ar) (.get ar))
-            (http-request host (|| port (default-port proto)) "GET" (.token ar) "HTTP/1.0"))))))
+            (http-request host (|| port (default-port proto)) :GET (.token ar) "HTTP/1.0"))))))
