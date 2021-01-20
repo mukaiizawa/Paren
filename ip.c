@@ -750,15 +750,16 @@ DEFUN(eval)
 
 DEFUN(apply)
 {
+  object args;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_arg_list(argv->cons.cdr->cons.car, &args)) return FALSE;
+  reg[0] = args;
   switch (object_type(argv->cons.car)) {
     case BUILTINFUNC:
       gen1(APPLY_BUILTIN_FRAME, argv->cons.car);
-      reg[0] = argv->cons.cdr->cons.car;
       return TRUE;
     case FUNC:
       gen1(APPLY_FRAME, argv->cons.car);
-      reg[0] = argv->cons.cdr->cons.car;
       return TRUE;
     default:
       return ip_mark_error("expected function");
