@@ -5,7 +5,7 @@
 #define DEFSP(name) int special_##name(int argc, object argv)
 #define DEFUN(name) int function_##name(int argc, object argv, object *result)
 
-struct xbarray bi_buf;
+extern struct xbarray bi_buf;
 
 extern char *special_name_table[];
 extern char *function_name_table[];
