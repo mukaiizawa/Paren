@@ -1,0 +1,35 @@
+; list directory contents.
+
+(import :optparse)
+(import :datetime)
+
+(function ls (path :key long? recur? only-file? only-dir? full-path?)
+  (let (ls.d
+         (f (path)
+           (if (.dir? path) (foreach ls.f (.children path))))
+         ls.f
+         (f (path)
+           (if (&& only-file? (! (.file? path))) (return nil)
+               (&& only-dir? (! (.dir? path))) (return nil)
+               (write1 path))
+           (if recur? (ls.d path)))
+         write1
+         (f (path)
+           (if long? (write-mem
+                       (string (if (.dir? path) "d" (.other? path) "?" "-")
+                               (if (.readable? path) "r" "-")
+                               (if (.writable? path) "w" "-")
+                               " " (int->str (.size path) :padding 11)
+                               " " (.to-s (.init (.new DateTime) (.mtime path)))
+                               " ")))
+           (write-line (if full-path? (.to-s path) (.name path)))))
+    (ls.d path)))
+
+(function! main (args)
+  (let ((op args) (.parse (.init (.new OptionParser) "lrfdF") args))
+    (ls (Path.of (|| (car args) "."))
+        :long? (.get op "l")
+        :recur? (.get op "r")
+        :only-file? (.get op "f")
+        :only-dir? (.get op "d")
+        :full-path? (.get op "F"))))
