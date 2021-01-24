@@ -1859,7 +1859,7 @@
 (method Stream .trail? (b)
   (switch (dynamic $encoding)
     :UTF-8 (= (& b 0xc0) 0x80)
-    :SJIS (|| (<= 0x81 b 0x9f) (<= 0xe0 b 0xfc))))
+    :SJIS (|| (< 0x80 b1 0xa0) (< 0xdf b1))))
 
 (method Stream .read-char ()
   ; Read 1 character from stream.
@@ -1891,7 +1891,7 @@
       :SJIS
       (if (< b1 0) (return nil)
           (< b1 0x80) (<- size 1)
-          (|| (< 0x80 b1 0xa0) (< 0xdf b1)) (<- b2 (.read-byte self) size 2)
+          (.trail? b1) (<- b2 (.read-byte self) size 2)
           (.illegal-character self b1)))
     (let (c (bytes size))
       (if (= size 1) ([] c 0 b1)
