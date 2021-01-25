@@ -2,26 +2,22 @@
 
 (import :datetime)
 
-(<- $usage
-"
-Usage: paren cal.p [[YEAR] MONTH]
-	Display the calendar for the specified year and month.
-	If the year and month are omitted, it is considered that the current year and month are specified.
-")
+(function cal (y m)
+  ; cal [[YEAR] MONTH]
+  ; Display the calendar for the specified year and month.
+  ; If the year and month are omitted, it is considered that the current year and month are specified.
+  (let (dt (DateTime.of y m 1) dw (.day-week dt))
+    (write-line (string y "-" (int->str m :padding 2)))
+    (write-line  "Su Mo Tu We Th Fr Sa")
+    (dotimes (i (-- (* dw 3))) (write-mem " "))
+    (dotimes (i (.monthlen dt))
+      (if (/= dw 0) (write-mem " "))
+      (write-mem (int->str (++ i) :padding 2))
+      (if (= (<- dw (mod (++ dw) 7)) 0)
+          (write-line)))))
 
 (function! main (args)
-  (catch (Error (f (e) (write-line $usage) (throw e)))
-    (let (argc (length args) dt (DateTime.now) dw nil y nil m nil)
-      (if (= argc 0) (<- y (.year dt) m (.month dt))
-          (= argc 1) (<- y (.year dt) m (str->num (car args)))
-          (= argc 2) (<- y (str->num (car args)) m (str->num (cadr args)))
-          (error "too many arguments."))
-      (<- dt (DateTime.of y m 1) dw (.day-week dt))
-      (write-line (string y "-" (int->str m :padding 2)))
-      (write-line  "Su Mo Tu We Th Fr Sa")
-      (dotimes (i (-- (* dw 3))) (write-mem " "))
-      (dotimes (i (.monthlen dt))
-        (if (/= dw 0) (write-mem " "))
-        (write-mem (int->str (++ i) :padding 2))
-        (if (= (<- dw (mod (++ dw) 7)) 0)
-            (write-line))))))
+  (let (argc (length args) now (DateTime.now))
+    (if (= argc 2) (cal (str->num (car args)) (str->num (cadr args)))
+        (= args 1) (cal (.year now) (str->num (car args)))
+        (cal (.year now) (.month now)))))
