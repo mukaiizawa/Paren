@@ -3,6 +3,11 @@
 (import :optparse)
 
 (function wc ()
+  ; wc [OPTION]...
+  ; Print newline, word, and byte counts.
+  ;     -b print the byte counts
+  ;     -w print the word counts
+  ;     -l print the line counts
   (let (c nil bytec 0 wordc 0 linec 0)
     (while (<- c (read-char))
       (if (memeq? c "\n") (<- linec (++ linec))
