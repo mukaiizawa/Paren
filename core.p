@@ -2616,10 +2616,11 @@
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
   (catch (SystemExit (f (e) (return true)))
     (if (nil? args) (repl)
-        (let (script (Path.of (car args)))
-          (if (&& (! (.readable? script))
-                  (! (.readable? (<- script (.resolve $paren-home script)))))
-              (error "unreadable file " (car args))
+        (let ((_ script) (find (f (dir)
+                                 (let (full-path (.resolve dir (car args)))
+                                   (if (.readable? full-path) full-path)))
+                               (cons (Path.getcwd) $runtime-path)))
+          (if (nil? script) (error "unreadable file " (car args))
               (&& (load script) (bound? 'main)) (main (cdr args)))))))
 
 (<- $import '(:core)
@@ -2629,7 +2630,8 @@
     $in $stdin
     $out $stdout
     $encoding :UTF-8
-    $paren-home (.parent (.resolve (Path.getcwd) core.p)))
+    $paren-home (.parent (.resolve (Path.getcwd) core.p))
+    $runtime-path (list (.resolve $paren-home "coreutils") $paren-home))
 
 (reader-macro a (reader)
   ; Define an array literal.
