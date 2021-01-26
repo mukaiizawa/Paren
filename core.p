@@ -727,12 +727,25 @@
                   (reverse! acc))))
     (rec (fn))))
 
-(function map (fn args)
+(function zip (:rest args)
+  ; Returns a list of list, where the i-th list contains the i-th element from each of the argument.
+  ; The list of return values depends on the length of the first args length.
+  (let (rec (f (args acc)
+              (if (nil? (car args)) (reverse! acc)
+                  (rec (map cdr args) (cons (map car args) acc)))))
+    (rec args nil)))
+
+(function map (fn args :rest more-args)
   ; Returns a list of the results of mapping each element of the specified list args with the specified function fx.
-  (let (rec (f (l :opt acc)
-              (if (nil? l) (reverse! acc)
-                  (rec (cdr l) (cons (fn (car l)) acc)))))
-    (rec args)))
+  (let (map1 (f (fn args :opt acc)
+               (if (nil? args) (reverse! acc)
+                   (map1 fn (cdr args) (cons (fn (car args)) acc))))
+             mapn (f (args-list :opt acc)
+                    (if (nil? (car args-list)) (reverse! acc)
+                        (mapn (map1 cdr args-list)
+                              (cons (apply fn (map1 car args-list)) acc)))))
+    (if (nil? more-args) (map1 fn args)
+        (mapn (cons args more-args)))))
 
 (function foreach (fn args)
   ; Apply a function to each argument.
@@ -1044,6 +1057,13 @@
     (with-memory-stream ($in s)
       (while (<- c (read-char)) (.add a c)))
     (.to-a a)))
+
+(function str->list (s)
+  ; Returns a character list of string s.
+  (let (acc nil)
+    (with-memory-stream ($in s)
+      (while (<- c (read-char)) (push! c acc)))
+    (reverse! acc)))
 
 (function substr (s start :opt end)
   ; Returns a string that is a substring of the specified string s.
