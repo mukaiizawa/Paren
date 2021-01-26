@@ -1058,13 +1058,6 @@
       (while (<- c (read-char)) (.add a c)))
     (.to-a a)))
 
-(function str->list (s)
-  ; Returns a character list of string s.
-  (let (acc nil)
-    (with-memory-stream ($in s)
-      (while (<- c (read-char)) (push! c acc)))
-    (reverse! acc)))
-
 (function substr (s start :opt end)
   ; Returns a string that is a substring of the specified string s.
   ; The substring begins at the specified start and extends to the character at index end - 1.
