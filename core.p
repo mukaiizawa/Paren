@@ -557,14 +557,9 @@
       (nil? x)))
 
 (function ->list (x)
-  ; Returns a list representation of x.
+  ; Returns a list with x as the only element.
   ; If x is a list, returns x.
-  ; If x is an array, returns a list containing all of the elements in x.
-  ; Otherwise, returns a list with x as the only element.
   (if (list? x) x
-      (array? x) (let (acc nil)
-                   (doarray (e x) (push! e acc))
-                   (reverse! acc))
       (list x)))
 
 (function join (l :opt delim)
@@ -583,7 +578,7 @@
   ; Returns a list of characters in string s.
   ; If delim is specified, returns a list of strings s delimited by delimiter.
   (if (memempty? s) nil
-      (nil? delim) (->list (str->arr s))
+      (nil? delim) (arr->list (str->arr s))
       (let (i 0 lis nil chars nil
               sa (str->arr s) salen (arrlen sa)
               da (str->arr delim) dalen (arrlen da) end (- salen dalen)
@@ -821,6 +816,13 @@
   (assert (array? (array 3)))
   (assert (! (array? (bytes 3)))))
 
+(function arr->list (x)
+  ; Returns a list containing all of the elements in x.
+  (let (rec (f (i acc)
+              (if (< i 0) acc
+                  (rec (-- i) (cons ([] x i) acc)))))
+    (rec (-- (arrlen x)) nil)))
+
 (builtin-function [] (x i :opt v)
   ; Returns the i-th element of the array x.
   ; If v is specified, update the i-th element of array x to v.
@@ -860,7 +862,7 @@
     (let (new-len (- end start) new-array (array new-len))
       (arrcpy x start new-array 0 new-len))))
 
-; memory
+  ; memory
 
 (builtin-function memeq? (x y)
   ; Returns whether x arguments are the same byte sequence.
