@@ -110,7 +110,9 @@
   (arrlen (&text self)))
 
 (method Regex .subtext (start :opt end)
-  (apply memcat (arr->list (subarr (&text self) start (|| end (.text-length self))))))
+  (let (text (arr->list (subarr (&text self) start (|| end (.text-length self)))))
+    (if (nil? text) ""
+        (apply memcat text))))
 
 (method Regex .match-string ()
   (.subtext self (&start self) (&end self)))
