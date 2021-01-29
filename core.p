@@ -634,13 +634,20 @@
               (if (cdr rest) (cons (car rest) (rec (cdr rest))))))
     (rec l)))
 
-(function .. (s e :opt step)
-  ; Returns a list with the specified step increments from the specified integer s to the specified integer e.
-  (let (rec (f (s e step acc)
-              (if (> s e) (reverse! acc)
-                  (rec (+ s step) e step (cons s acc)))))
-    (if (<= (|| step (<- step 1)) 0) (error "step must be positive")
-        (rec s e step nil))))
+(function .. (start :opt stop step)
+  ; Returns a list of numbers that increase step by step from start for which start < stop holds.
+  ; The contents of the list is determined by the formula.
+  ;     { x | start + step * i, i >= 0, x < stop } -- step > 0
+  ;     { x | start + step * i, i >= 0, x > stop } -- step < 0
+  ; If stop and step are omitted, consider the same as (range 0 start 1).
+  ; If step is omitted, consider the same as (range start stop 1).
+  (let (rec (f (i cmp next stop step :opt acc)
+              (if (cmp next stop) (rec (++ i) cmp (+ next step) stop step (cons next acc))
+                  (reverse! acc))))
+    (assert (/= step 0))
+    (if (nil? stop) (<- stop start start 0 step 1)
+        (nil? step) (<- step 1))
+    (rec 0 (if (> step 0) < >) start stop step)))
 
 (function group (l n)
   ; Returns a list in which the elements of l are grouped into sublists of length n.

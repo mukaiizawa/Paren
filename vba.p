@@ -188,7 +188,7 @@
                                   (cons (vba-sub (string "sub" counts) (.to-s mem)) subroutines)
                                   (.reset mem))))))
          (subroutine-counts subroutines) (parse-exprs (except nil? (flatten exprs))
-                                                      0 nil (.new MemoryStream)))
+                                                      1 nil (.new MemoryStream)))
     (string "Option Explicit\n"
             (join subroutines)
             (vba-sub :main
