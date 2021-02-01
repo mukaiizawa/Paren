@@ -179,8 +179,9 @@
   ; Ignore if the leaves contain nil.
   (let (parse-exprs
          (f (exprs counts subroutines mem)
-           (if (nil? exprs) (list counts (reverse! (cons (vba-sub (string "sub" counts) (.to-s mem))
-                                                         subroutines)))
+           (if (nil? exprs) (list (++ counts)
+                                  (reverse! (cons (vba-sub (string "sub" counts) (.to-s mem))
+                                                  subroutines)))
                (begin
                  (.write-mem mem (car exprs))
                  (if (< (.size mem) 2000) (parse-exprs (cdr exprs) counts subroutines mem)
@@ -188,14 +189,14 @@
                                   (cons (vba-sub (string "sub" counts) (.to-s mem)) subroutines)
                                   (.reset mem))))))
          (subroutine-counts subroutines) (parse-exprs (except nil? (flatten exprs))
-                                                      1 nil (.new MemoryStream)))
+                                                      0 nil (.new MemoryStream)))
     (string "Option Explicit\n"
             (join subroutines)
             (vba-sub :main
                      "Application.ScreenUpdating = False\n"
                      "Application.DisplayAlerts = False\n"
                      (join (map (f (x) (string "Call sub" x "\n"))
-                                (.. 0 subroutine-counts)))
+                                (.. subroutine-counts)))
                      "Application.DisplayAlerts = True\n"
                      "Application.ScreenUpdating = True\n"))))
 
