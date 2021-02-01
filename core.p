@@ -210,6 +210,7 @@
   ; If you specify keyword :default in <labels>, you can unconditionally transfer control to that branch regardless of the value of test.
   ; Error if, not specified :default and control reaches the end.
   (with-gensyms (gtest)
+    (assert (= (mod (length body) 2) 0))
     (let (branches (group body 2)
                    default-branch (list 'error "switch/" gtest " not included in " (list quote (flatten (map car branches))))
                    parse-branches (f (branches)
@@ -619,10 +620,21 @@
   ; Returns the the specified nth cons of the specified list l.
   ; If n is greater than the length of l, nil is returned.
   (let (rec (f (m l)
-              (if (= n m) l
-                  (rec (++ m) (cdr l)))))
-    (if (< n 0) (error "unexpected negative number")
-        l (rec 0 l))))
+              (if l
+                  (if (= n m) l
+                      (rec (++ m) (cdr l))))))
+    (assert (>= n 0))
+    (rec 0 l)))
+
+(function sublis (l start :opt end)
+  ; Returns a list that is a sublist of the specified list l.
+  ; The sublist begins at the specified start and extends to the element at index end - 1.
+  ; Thus the length of the sublist is `end - start`.
+  (let (rec (f (l n acc)
+              (if (&& l (/= n 0)) (rec (cdr l) (-- n) (cons (car l) acc))
+                  (reverse! acc))))
+    (if (nil? end) (nthcdr start l)
+        (rec (nthcdr start l) (- end start) nil))))
 
 (function last (x)
   ; Same as (car (last-cons x)).
@@ -651,14 +663,11 @@
 
 (function group (l n)
   ; Returns a list in which the elements of l are grouped into sublists of length n.
-  ; Error if the list length is not a multiple of n.
-  (let (rec (f (l sublis m acc)
-              (if (/= n m) (if (nil? l) (error "indivisible by " n)
-                               (rec (cdr l) (cons (car l) sublis) (++ m) acc))
-                  (nil? l) (reverse! (cons (reverse! sublis) acc))
-                  (rec l nil 0 (cons (reverse! sublis) acc)))))
-    (if (<= n 0) (error "expected positive number")
-        l (rec l nil 0 nil))))
+  (let (rec (f (l acc)
+              (if (nil? l) (reverse! acc)
+                  (rec (nthcdr n l) (cons (sublis l 0 n) acc)))))
+    (assert (> n 0))
+    (rec l nil)))
 
 (function reverse (l)
   ; Returns a list with the elements of list l reversed.
