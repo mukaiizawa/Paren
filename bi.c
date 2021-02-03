@@ -238,23 +238,28 @@ int bi_double(object o, double *p)
   return FALSE;
 }
 
+#define MAX_STRINGS 2
+
 int bi_strings(int n, object argv, char **ss)
 {
   int i;
+  int offset[MAX_STRINGS]; // xbarray use realloc.
   object o;
+  xassert(n <= MAX_STRINGS);
+  xassert(object_type_p(argv, CONS));
   xbarray_reset(&bi_buf);
   for (i = 0; i < n; i++) {
-    xassert(object_type_p(argv, CONS));
     o = argv->cons.car;
+    argv = argv->cons.cdr;
     if (!object_type_p(o, STRING)) {
       mark_type_error();
       return FALSE;
     }
-    ss[i] = xbarray_reserve(&bi_buf, o->mem.size);
-    memcpy(ss[i], o->mem.elt, o->mem.size);
+    offset[i] = bi_buf.size;
+    memcpy(xbarray_reserve(&bi_buf, o->mem.size), o->mem.elt, o->mem.size);
     xbarray_add(&bi_buf, '\0');
-    argv = argv->cons.cdr;
   }
+  for(i = 0; i < n; i++) ss[i] = bi_buf.elt + offset[i];
   return TRUE;
 }
 
