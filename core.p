@@ -820,6 +820,19 @@
   (if (cdr l) (&& (fn (car l) (cadr l)) (every-adjacent? fn (cdr l)))
       true))
 
+(function union (fn :rest sets)
+  (let ((test sets) (if (function? fn) (list fn sets)
+                        (list eq? (cons fn sets))))
+    (reduce (f (X Y)
+              (reduce (f (X y)
+                        (if (none? (f (x) (test x y)) X) (cons y X)
+                            X))
+                      (cons X Y)))
+            sets)))
+
+; (function intersection (fn :rest rest))
+; (function difference (fn :rest rest))
+
 ; array
 
 (builtin-function array (size)
