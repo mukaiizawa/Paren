@@ -62,15 +62,19 @@
             "If " x ".Name = \"" (&name self) "\" Then " x ".Delete: Exit For\n"
             "Next\n")))
 
+(method VBASheet .rename (to)
+  ; Returns vba to rename sheet.
+  (string (.to-vbastr self) ".Name = \"" (&name to) "\"\n"))
+
 (method VBASheet .add-last ()
   ; Returns vba to add this sheet to the end of the workbook.
   (string "Worksheets.Add after:=" (.to-vbastr $vba-last-sheet) "\n"
-          (.to-vbastr $vba-active-sheet) ".Name = \"" (&name self) "\"\n"))
+          (.rename $vba-active-sheet self)))
 
 (method VBASheet .copy-to-last (dest-sheet)
   ; Returns vba that copies this sheet to the specified sheet.
   (string (.to-vbastr self) ".Copy after:=" (.to-vbastr $vba-last-sheet) "\n"
-          (.to-vbastr $vba-last-sheet) ".Name = \"" (&name dest-sheet) "\"\n"))
+          (.rename $vba-last-sheet dest-sheet)))
 
 (method VBASheet .select-range (r)
   ; Returns vba to select the specified range for this sheet.
@@ -206,6 +210,7 @@
     (assert (memeq? (.activate sheet1) "Worksheets(\"Sheet1\").Activate\n"))
     (assert (memeq? (.show sheet1) "Worksheets(\"Sheet1\").Visible = True\n"))
     (assert (memeq? (.hide sheet1) "Worksheets(\"Sheet1\").Visible = xlVeryHidden\n"))
+    (assert (memeq? (.rename sheet1 sheet2) "Worksheets(\"Sheet1\").Name = \"Sheet2\"\n"))
     (assert (memeq? (.remove sheet1)
                     (join '("Dim G1"
                             "For Each G1 In Worksheets"
