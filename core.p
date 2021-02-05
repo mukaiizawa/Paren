@@ -2538,6 +2538,8 @@
 (method ParenReader .read ()
   (.parse (.scan self)))
 
+; Object system wrapper.
+
 (macro reader-macro (next params :rest body)
   ; Define a reader macro starting with `# + next`.
   ; next must be a single character string.
