@@ -831,7 +831,17 @@
             sets)))
 
 ; (function intersection (fn :rest rest))
-; (function difference (fn :rest rest))
+
+(function difference (fn :rest rest)
+  (let ((test minuend subtrahends) (if (function? fn) (list fn (car rest) (cdr rest))
+                                       (list eq? fn rest)))
+    (select (f (x)
+              (every? (f (subtrahend)
+                        (none? (f (y)
+                                 (test x y))
+                               subtrahend))
+                      subtrahends))
+            minuend)))
 
 ; array
 
@@ -2675,7 +2685,9 @@
     $out $stdout
     $encoding :UTF-8
     $paren-home (.parent (.resolve (Path.getcwd) core.p))
-    $runtime-path (list (.resolve $paren-home "coreutils") $paren-home))
+    $runtime-path (cons $paren-home
+                        (map (f (path) (.resolve $paren-home path))
+                             '("coreutils" "tool"))))
 
 (reader-macro a (reader)
   ; Define an array literal.
