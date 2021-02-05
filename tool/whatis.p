@@ -8,4 +8,4 @@
   (&& (.file? path) (memeq? (.suffix path) "p")))
 
 (function! main (args)
-  (foreach peek (select paren-file? (.children $paren-home))))
+  (foreach peek (select paren-file? (.children (Path.getcwd)))))
