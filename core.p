@@ -2645,8 +2645,7 @@
   ; Load the specified file.
   ; Returns true if successfully loaded.
   (with-open ($in path :read)
-    (foreach (f (x) (eval x))
-             (collect read)))
+    (foreach eval (collect read)))
   true)
 
 (function import (key)
