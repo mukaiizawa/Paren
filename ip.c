@@ -922,8 +922,7 @@ DEFUN(find_method)
   object cls, cls_sym, mtd_sym, features;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_arg_type(argv->cons.car, SYMBOL, &cls_sym)) return FALSE;
-  argv = argv->cons.cdr;
-  if (!bi_arg_type(argv->cons.car, SYMBOL, &mtd_sym)) return FALSE;
+  if (!bi_arg_type(argv->cons.cdr->cons.car, SYMBOL, &mtd_sym)) return FALSE;
   while (TRUE) {
     // find class method
     if (!find_class_method(cls_sym, mtd_sym, result)) return FALSE;
