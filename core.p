@@ -821,6 +821,7 @@
       true))
 
 (function union (fn :rest sets)
+  ; Return the union of lists.
   (let ((test sets) (if (function? fn) (list fn sets)
                         (list eq? (cons fn sets))))
     (reduce (f (X Y)
@@ -830,11 +831,19 @@
                       (cons X Y)))
             sets)))
 
-; (function intersection (fn :rest rest))
+(function intersection (fn :rest sets)
+  ; Return the intersection of lists.
+  (let ((test sets) (if (function? fn) (list fn sets)
+                        (list eq? (cons fn sets))))
+    (reduce (f (X Y)
+              (select (f (x) (some? (f (y) (test x y)) Y))
+                      X))
+            sets)))
 
-(function difference (fn :rest rest)
-  (let ((test minuend subtrahends) (if (function? fn) (list fn (car rest) (cdr rest))
-                                       (list eq? fn rest)))
+(function difference (fn :rest sets)
+  ; Return the difference of lists.
+  (let ((test minuend subtrahends) (if (function? fn) (list fn (car sets) (cdr sets))
+                                       (list eq? fn sets)))
     (select (f (x)
               (every? (f (subtrahend)
                         (none? (f (y)
