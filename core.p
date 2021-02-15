@@ -2685,7 +2685,7 @@
                                    (if (.readable? full-path) full-path)))
                                (cons (Path.getcwd) $runtime-path)))
           (if (nil? script) (error "unreadable file " (car args))
-              (&& (load script) (bound? 'main)) (main (cdr args)))))))
+              (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 
 (<- $import '(:core)
     $read-table nil
