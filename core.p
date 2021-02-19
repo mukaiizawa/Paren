@@ -2403,11 +2403,11 @@
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (|| (memmem "!#$%&*./<=>?^[]_{|}" (.next self))
+  (|| (memmem "!#$%&*./<=>?^[]_{|}" (&next self))
       (.alpha? self)))
 
 (method ParenLexer .identifier-sign? ()
-  (memmem "+-" (.next self)))
+  (memmem "+-" (&next self)))
 
 (method ParenLexer .identifier-trail? ()
   (|| (.identifier-symbol-alpha? self)
@@ -2421,12 +2421,14 @@
 
 (method ParenLexer .get-identifier ()
   (if (.identifier-sign? self)
-      (begin (.get self)
-             (.get-identifier-sign self))
+      (begin
+        (.get self)
+        (.get-identifier-sign self))
       (.identifier-symbol-alpha? self)
-      (begin (while (.identifier-trail? self)
-               (.get self))
-             self)
+      (begin
+        (while (.identifier-trail? self)
+          (.get self))
+        self)
       (.raise self "illegal identifier")))
 
 (method ParenLexer .lex-sign ()
@@ -2434,8 +2436,9 @@
     (if (.digit? self)
         (let (val (.skip-number self))
           (if (memeq? sign "-") (- val) val))
-        (begin (.put self sign)
-               (mem->sym (.token (.get-identifier-sign self)))))))
+        (begin
+          (.put self sign)
+          (mem->sym (.token (.get-identifier-sign self)))))))
 
 (method ParenLexer .lex-symbol ()
   (mem->sym (.token (.get-identifier self))))
@@ -2465,7 +2468,7 @@
         (memeq? next "\"") (list :atom (.lex-string self))
         (memeq? next ":") (list :atom (.lex-keyword self))
         (memeq? next ";") (begin (.skip-line self) (.lex self))
-        (memeq? next "#") (begin (.skip self) (list :read-macro (mem->sym (.next self))))
+        (memeq? next "#") (begin (.skip self) (list :read-macro (mem->sym (&next self))))
         (memmem "+-" next) (list :atom (.lex-sign self))
         (memmem "0123456789" next) (list :atom (.skip-number self))
         (list :atom (.lex-symbol self)))))
