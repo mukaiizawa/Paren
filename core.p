@@ -375,6 +375,11 @@
   (assert (builtin? +))
   (assert (! (builtin? builtin-function))))
 
+(builtin-function special-operator? (x)
+  ; Returns whether the x is a special-operator.
+  (assert (special-operator? <-))
+  (assert (! (special-operator? special-operator?))))
+
 (builtin-function macro? (x)
   ; Returns whether the x is a macro.
   (assert (macro? begin0))
