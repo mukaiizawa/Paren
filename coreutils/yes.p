@@ -5,5 +5,4 @@
   (yes s))
 
 (function main (args)
-  (if args (yes (car args))
-      (yes "y")))
+  (yes (|| (car args) "y")))
