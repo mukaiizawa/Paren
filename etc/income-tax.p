@@ -18,11 +18,14 @@
     (if (&& income-e (> income income-e)) (find-tax-record (cdr table) income)
         record)))
 
-(function ->tsv (income)
+(function list->tsv (lis)
+  (join (map string lis) "\t"))
+
+(function income->tsv (income)
   (let ((_ _ tax-rate deduction) (find-tax-record $tax-table income)
                                  tax (- (* income tax-rate) deduction))
-    (join (map string (list income tax (- income tax))) "\t")))
+    (list->tsv (list income tax (- income tax)))))
 
 (function! main (args)
-  (foreach (f (income) (write-line (->tsv income)))
-           (.. 0 $income-upper $income-step)))
+  (foreach write-line
+           (map income->tsv (.. 0 $income-upper $income-step))))
