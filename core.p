@@ -2667,20 +2667,22 @@
     (foreach eval (collect read)))
   true)
 
-(function import (key)
-  ; Load the file corresponding to the specified keyword.
-  ; Search the $paren-home directory.
+(function import (key :opt import-dir)
+  ; Load the module file corresponding to the specified keyword from the specified directory.
+  ; If import-dir is omitted, it is considered to be specified $paren-home directory.
   ; Bind main to nil after processing.
   ; Returns true if successfully loaded.
   ; Module file to read must be UTF-8.
   (let ($encoding :UTF-8)
     (if (some? (f (x) (eq? x key)) $import) true
-        (let (p (Path.of (string (mem->sym key) ".p")))
-          (if (|| (.readable? p) (.readable? (<- p (.resolve $paren-home p))))
-              (begin0 (load p)
-                      (<- main nil)
-                      (push! key $import))
-              (error "unreadable module " key))))))
+        (let (module (.resolve (if import-dir (Path.of import-dir) $paren-home)
+                               (memcat (mem->str key) ".p")))
+          (if (! (.readable? module)) (error "unreadable module " (.to-s module))
+              (begin
+                (load module)
+                (<- main nil)
+                (push! key $import)
+                true))))))
 
 (function boot (args)
   ; Executed when paren is executed.
@@ -2691,7 +2693,7 @@
         (let ((_ script) (find (f (dir)
                                  (let (full-path (.resolve dir (car args)))
                                    (if (.readable? full-path) full-path)))
-                               (cons (Path.getcwd) $runtime-path)))
+                               (cons (Path.getcwd) $script-path)))
           (if (nil? script) (error "unreadable file " (car args))
               (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 
@@ -2703,9 +2705,8 @@
     $out $stdout
     $encoding :UTF-8
     $paren-home (.parent (.resolve (Path.getcwd) core.p))
-    $runtime-path (cons $paren-home
-                        (map (f (path) (.resolve $paren-home path))
-                             '("coreutils" "tool"))))
+    $script-path (map (f (path) (.resolve $paren-home path))
+                      '("coreutils" "tool")))
 
 (reader-macro a (reader)
   ; Define an array literal.
