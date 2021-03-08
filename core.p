@@ -777,11 +777,9 @@
 
 (function find (fn l)
   ; Find the element in the list l where the function fn first returns not nil.
-  ; Returns a following list (such-element return-value).
-  ; If there is no such element, returns '(nil nil).
-  (let (rec (f (l :opt e v)
-              (if (&& l (! (<- e (car l) v (fn e)))) (rec (cdr l))
-                  (list e v))))
+  ; Returns the return value of the function fn that did not return nil first.
+  ; If there is no such element, returns nil.
+  (let (rec (f (l) (|| (fn (car l)) (rec (cdr l)))))
     (rec l)))
 
 (function select (fn l)
@@ -2690,10 +2688,10 @@
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
   (catch (SystemExit (f (e) (return true)))
     (if (nil? args) (repl)
-        (let ((_ script) (find (f (dir)
-                                 (let (full-path (.resolve dir (car args)))
-                                   (if (.readable? full-path) full-path)))
-                               (cons (Path.getcwd) $script-path)))
+        (let (script (find (f (dir)
+                             (let (full-path (.resolve dir (car args)))
+                               (if (.readable? full-path) full-path)))
+                           (cons (Path.getcwd) $script-path)))
           (if (nil? script) (error "unreadable file " (car args))
               (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 

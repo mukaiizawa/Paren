@@ -16,7 +16,8 @@
     (&table! self table)))
 
 (method OptionParser .lookup (opt)
-  (let ((record v) (find (f (x) (memeq? opt (car x))) (&table self)))
+  (let (record (find (f (x) (if (memeq? opt (car x)) x))
+                     (&table self)))
     (if (nil? record) (.raise self "unknown option " opt)
         record)))
 
