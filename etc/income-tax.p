@@ -13,15 +13,15 @@
     $income-upper 20000000
     $income-step 100000)
 
-(function find-tax-record (table x)
+(function find-tax-record (table income)
   (let (record (car table) (_ income-e _ _) record)
-    (if (|| (nil? income-e) (<= x income-e)) record
-        (find-tax-record (cdr table) x))))
+    (if (&& income-e (> income income-e)) (find-tax-record (cdr table) income)
+        record)))
 
 (function ->tsv (income)
   (let ((_ _ tax-rate deduction) (find-tax-record $tax-table income)
                                  tax (- (* income tax-rate) deduction))
-    (join (map string (list income tax (- income tax))) "\t" )))
+    (join (map string (list income tax (- income tax))) "\t")))
 
 (function! main (args)
   (foreach (f (income) (write-line (->tsv income)))
