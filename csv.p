@@ -5,15 +5,15 @@
 (method CSVReader .get-quoted ()
   (.skip self)
   (while true
-    (if (memneq? (.next self) "\"") (.get self)
+    (if (!= (.next self) "\"") (.get self)
         (begin
           (.skip self)
-          (if (memeq? (.next self) "\"") (.get self)
+          (if (= (.next self) "\"") (.get self)
               (return nil))))))
 
 (method CSVReader .parse-field ()
-  (if (memeq? (.next self) "\"") (.get-quoted self)
-      (while (none? (f (x) (memeq? (.next self) x)) '("," "\n"))
+  (if (= (.next self) "\"") (.get-quoted self)
+      (while (none? (f (x) (= (.next self) x)) '("," "\n"))
         (.get self)))
   (.token self))
 
@@ -25,7 +25,7 @@
   (if (nil? (.next self)) nil
       (let (fields nil)
         (push! (.parse-field self) fields)
-        (while (memeq? (.next self) ",")
+        (while (= (.next self) ",")
           (.skip self)
           (push! (.parse-field self) fields))
         (.skip self "\n")
@@ -34,10 +34,5 @@
 (function! main (args)
   (let (csv (join '("foo,\"bar\",buzz\n" "\"foo\",bar,\"buzz\"\n")))
     (with-memory-stream ($in csv)
-      (let (rd (.new CSVReader)
-               (r1 r2) (collect (f () (.read rd)))
-               (r11 r12 r13) r1
-               (r21 r22 r23) r2)
-        (assert (memeq? r11 r21))
-        (assert (memeq? r12 r22))
-        (assert (memeq? r13 r23))))))
+      (let (rd (.new CSVReader) (r1 r2) (collect (f () (.read rd))))
+        (assert (= r1 r2))))))

@@ -3,7 +3,7 @@
 (import :random)
 
 (function tempfile.name (prefix dot suffix)
-  (string prefix (randstr 12 :alnum? true) dot suffix))
+  (str prefix (randstr 12 :alnum? true) dot suffix))
 
 (method Path .tempdir (:key prefix suffix)
   ; Create an temporary directory under the receiver.
@@ -27,7 +27,7 @@
     (assert (.dir? dir))
     (assert (.readable? temp))
     (with-open ($out temp :write) (write-line "foo"))
-    (with-open ($in temp :read) (assert (memeq? (read-line) "foo")))
+    (with-open ($in temp :read) (assert (= (read-line) "foo")))
     (.remove temp)
     (.remove dir)
     (assert (.none? dir))

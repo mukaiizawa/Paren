@@ -66,32 +66,34 @@
     (&key! sentinel key)
     (&left! sentinel sentinel)
     (&right! sentinel sentinel)
-    (while (/= (<- d (cmp (&key p) key)) 0)
+    (while (!= (<- d (cmp (&key p) key)) 0)
       (if (< d 0)
-          (begin (<- q (&left p))
-                 (if (= (<- d (cmp (&key q) key)) 0)
-                     (begin (<- p (.rotl p)) (break))
-                     (<- p (if (< d 0) (.rotll p) (.rotlr p)))))
-          (begin (<- q (&right p))
-                 (if (= (<- d (cmp (&key q) key)) 0)
-                     (begin (<- p (.rotr p)) (break))
-                     (<- p (if (> d 0) (.rotrr p) (.rotrl p)))))))
+          (begin
+            (<- q (&left p))
+            (if (= (<- d (cmp (&key q) key)) 0)
+                (begin (<- p (.rotl p)) (break))
+                (<- p (if (< d 0) (.rotll p) (.rotlr p)))))
+          (begin
+            (<- q (&right p))
+            (if (= (<- d (cmp (&key q) key)) 0)
+                (begin (<- p (.rotr p)) (break))
+                (<- p (if (> d 0) (.rotrr p) (.rotrl p)))))))
     (&top! self p)
     p))
 
 (method Splay .resume ()
   (let (top (&top self) left (&left top) right (&right top) sentinel (&sentinel self))
-    (if (eq? left sentinel) (&top! self right)
-        (eq? right sentinel) (&top! self left)
+    (if (== left sentinel) (&top! self right)
+        (== right sentinel) (&top! self left)
         (let (p left)
-          (while (neq? (&right p) sentinel) (<- p (&right p)))
+          (while (!= (&right p) sentinel) (<- p (&right p)))
           (&right! p right)
           (&top! self left)))
     nil))
 
 (method Splay .has-key? (key)
   ; Returns whether the value corresponding to the key exists.
-  (let (top (.balance self key) absent? (eq? top (&sentinel self)))
+  (let (top (.balance self key) absent? (== top (&sentinel self)))
     (if absent? (.resume self)
         true)))
 
@@ -103,7 +105,7 @@
   ; Returns the value corresponding to key.
   ; If there is no corresponding value for the key, returns nil.
   (let (top (.balance self key) sentinel (&sentinel self))
-    (if (eq? top sentinel) (.resume self)
+    (if (== top sentinel) (.resume self)
         (&val top))))
 
 (method Splay .put (key val)
@@ -111,7 +113,7 @@
   ; Works with or without a corresponding value already.
   ; Returns the receiver.
   (let (top (.balance self key) sentinel (&sentinel self))
-    (if (eq? top sentinel) (begin
+    (if (== top sentinel) (begin
                              (&top! self (.init (.new SplayNode) key val (&left sentinel) (&right sentinel)))
                              (&size! self (++ (&size self))))
         (&val! top val))))
@@ -121,7 +123,7 @@
   ; If there is no corresponding value for the key, do nothing.
   ; Returns the receiver.
   (let (top (.balance self key))
-    (if (neq? top (&sentinel self)) (&size! self (-- (&size self))))
+    (if (!= top (&sentinel self)) (&size! self (-- (&size self))))
     (.resume self)
     self))
 
@@ -129,7 +131,7 @@
   ; Call a function fn that takes a key and a value as arguments for each node in splay.
   (let (sentinel (&sentinel self)
                  rec (f (node)
-                       (when (neq? sentinel node)
+                       (when (!= sentinel node)
                          (rec (&left node))
                          (fn (&key node) (&val node))
                          (rec (&right node)))))
@@ -152,7 +154,7 @@
     (.put splay :one "1")
     ;; (:one "1" :two 2 :three 3)
     (assert (= (.size splay) 3))
-    (assert (memeq? (.get splay :one) "1"))
+    (assert (= (.get splay :one) "1"))
     (.remove splay :one)
     ;; (:two 2 :three 3)
     (assert (= (.size splay) 2))
@@ -166,5 +168,5 @@
     (assert (nil? (.get splay :four)))
     (let (key-set nil)
       (.foreach splay (f (key val) (push! key key-set)))
-      (assert (= (length key-set) 1))
-      (assert (eq? (car key-set) :three)))))
+      (assert (= (len key-set) 1))
+      (assert (== (car key-set) :three)))))

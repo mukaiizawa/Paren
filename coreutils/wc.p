@@ -10,8 +10,8 @@
   ;     -l print the line counts
   (let (c nil bytec 0 wordc 0 linec 0)
     (while (<- c (read-char))
-      (if (memeq? c "\n") (<- linec (++ linec))
-          (memeq? c " ") (<- wordc (++ wordc)))
+      (if (= c "\n") (<- linec (++ linec))
+          (= c " ") (<- wordc (++ wordc)))
       (<- bytec (+ bytec (memlen c))))
     (list bytec wordc linec)))
 
@@ -21,4 +21,4 @@
     (if (.get op "b") (write bytec)
         (.get op "w") (write wordc)
         (.get op "l") (write linec)
-        (write-line (join (map string (list bytec wordc linec)) " ")))))
+        (write-line (join (map str (list bytec wordc linec)) " ")))))

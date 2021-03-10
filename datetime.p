@@ -103,7 +103,7 @@
              (list (&hour self) (&minute self) (&second self))) ":"))
 
 (method DateTime .datetime.to-s ()
-  (string (.date.to-s self) " " (.time.to-s self)))
+  (str (.date.to-s self) " " (.time.to-s self)))
 
 (method DateTime .day-week.to-s ()
   (nth (.day-week self) '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat")))
@@ -124,8 +124,8 @@
     (assert (.eq? dt dt))
     (assert (! (.eq? dt nil))))
   (let (dt (DateTime.of 2020 08 06 12 10 30))
-    (assert (memeq? (.date.to-s dt) "2020-08-06"))
-    (assert (memeq? (.time.to-s dt) "12:10:30"))
-    (assert (memeq? (.datetime.to-s dt) "2020-08-06 12:10:30"))
-    (assert (memeq? (.day-week.to-s dt) "Thu"))
-    (assert (memeq? (.to-s dt) "2020-08-06 Thu 12:10:30"))))
+    (assert (= (.date.to-s dt) "2020-08-06"))
+    (assert (= (.time.to-s dt) "12:10:30"))
+    (assert (= (.datetime.to-s dt) "2020-08-06 12:10:30"))
+    (assert (= (.day-week.to-s dt) "Thu"))
+    (assert (= (.to-s dt) "2020-08-06 Thu 12:10:30"))))

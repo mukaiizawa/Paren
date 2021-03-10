@@ -88,7 +88,7 @@ DEFUN(append)
   return TRUE;
 }
 
-DEFUN(length)
+DEFUN(len)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;

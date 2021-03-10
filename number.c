@@ -65,60 +65,6 @@ DEFUN(int_p)
   return TRUE;
 }
 
-static int double_equal_p(double x, object argv, object *result)
-{
-  int64_t i;
-  double d;
-  if (argv == object_nil) {
-    *result = object_true;
-    return TRUE;
-  }
-  if (bi_int64(argv->cons.car, &i)) {
-    if (fabs(x - (double)i) > DBL_EPSILON) return TRUE;
-    return double_equal_p(x, argv->cons.cdr, result);
-  }
-  if (bi_double(argv->cons.car, &d)) {
-    if (fabs(x - d) > DBL_EPSILON) return TRUE;
-    return double_equal_p(x, argv->cons.cdr, result);
-  }
-  return TRUE;
-}
-
-static int int64_equal_p(int64_t x, object argv, object *result)
-{
-  int64_t y;
-  if (argv == object_nil) {
-    *result = object_true;
-    return TRUE;
-  }
-  if (bi_int64(argv->cons.car, &y)) {
-    if (x != y) return TRUE;
-    return int64_equal_p(x, argv->cons.cdr, result);
-  }
-  return double_equal_p((double)x, argv, result);
-}
-
-DEFUN(number_equal_p)
-{
-  object o, p;
-  int64_t i;
-  double d;
-  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  o = argv;
-  p = o->cons.car;
-  *result = object_true;
-  while ((o = o->cons.cdr) != object_nil) {
-    if (o->cons.car != p) {
-      *result = object_nil;
-      break;
-    }
-  }
-  if (*result == object_true) return TRUE;
-  if (bi_int64(p, &i)) return int64_equal_p(i, argv->cons.cdr, result);
-  if (bi_double(p, &d)) return double_equal_p(d, argv->cons.cdr, result);
-  return TRUE;
-}
-
 static int double_add(double x, object argv, object *result)
 {
   int64_t i;

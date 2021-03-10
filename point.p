@@ -21,7 +21,7 @@
   (&y self))
 
 (method Point .to-s ()
-  (string "(" (&x self) ", " (&y self) ")"))
+  (str "(" (&x self) ", " (&y self) ")"))
 
 (method Point .eq (p)
   (&& (is-a? p Point)
@@ -39,4 +39,4 @@
     (assert (! (.eq p (Point.of 3 5))))
     (assert (! (.eq p (Point.of 2 5))))
     (assert (.eq p (.add (Point.of 1 1) (Point.of 2 3))))
-    (assert (memeq? (.to-s p) "(3, 4)"))))
+    (assert (= (.to-s p) "(3, 4)"))))

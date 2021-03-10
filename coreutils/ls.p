@@ -23,12 +23,12 @@
          write1
          (f (path)
            (if long? (write-mem
-                       (string (if (.dir? path) "d" (.other? path) "?" "-")
-                               (if (.readable? path) "r" "-")
-                               (if (.writable? path) "w" "-")
-                               " " (int->str (.size path) :padding 11)
-                               " " (.to-s (.init (.new DateTime) (.mtime path)))
-                               " ")))
+                       (str (if (.dir? path) "d" (.other? path) "?" "-")
+                            (if (.readable? path) "r" "-")
+                            (if (.writable? path) "w" "-")
+                            " " (int->str (.size path) :padding 11)
+                            " " (.to-s (.init (.new DateTime) (.mtime path)))
+                            " ")))
            (write-line (if full-path? (.to-s path) (.name path)))))
     (ls.d path)))
 

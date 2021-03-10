@@ -19,7 +19,7 @@
         record)))
 
 (function list->tsv (lis)
-  (join (map string lis) "\t"))
+  (join (map str lis) "\t"))
 
 (function income->tsv (income)
   (let ((_ _ tax-rate deduction) (find-tax-record $tax-table income)

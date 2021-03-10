@@ -12,14 +12,14 @@
               try-write (f (count line)
                           (when (|| (&& (! uniq?) (! duplicate?))
                                     (&& uniq? (= c 1))
-                                    (&& duplicate? (/= c 1)))
+                                    (&& duplicate? (!= c 1)))
                             (when count?
                               (write-mem (int->str count :padding 7))
                               (write-mem " "))
                             (write-line line))))
     (when prev
       (dolist (line (collect read-line))
-        (if (memeq? prev line) (<- count (++ count))
+        (if (= prev line) (<- count (++ count))
             (begin
               (try-write count prev)
               (<- count 1 prev line))))

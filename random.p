@@ -25,7 +25,7 @@
   (let (numeric (if (|| alnum? numeric?) "0123456789")
                 lower (if (|| alnum? alpha? lower?) "abcdefghijklmnopqrstuvwxyz")
                 upper (if (|| alnum? alpha? upper?) "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-                table (string numeric lower upper)
+                table (str numeric lower upper)
                 table-size (memlen table)
                 val (bytes size))
     (assert (> table-size 0))

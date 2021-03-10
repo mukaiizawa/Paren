@@ -3,7 +3,7 @@
 (function unit-test (p)
   (let (pathstr (.to-s p))
     (write-line pathstr)
-    (system (string "paren " pathstr))))
+    (system (str "paren " pathstr))))
 
 (function peek-line (path)
   (with-open ($in path :read)
@@ -11,7 +11,7 @@
 
 (function! module-file? (path)
   (&& (.file? path)
-      (memeq? (.suffix path) "p")
+      (= (.suffix path) "p")
       (memsuffix? (peek-line path) "module.")))
 
 (function! main (args)

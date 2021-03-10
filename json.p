@@ -28,21 +28,21 @@
   (if (cons? x) (json.obj->str x)
       (array? x) (json.arr->str x)
       (nil? x) "null"
-      (eq? x 'true) "true"
-      (eq? x 'false) "false"
-      (number? x) (string x)
-      (string "\"" (mem->str x) "\"")))
+      (= x 'true) "true"
+      (= x 'false) "false"
+      (number? x) (str x)
+      (str "\"" (mem->str x) "\"")))
 
 (class JSONReader (AheadReader))
 
 (method JSONReader .parse-object ()
   (let (object nil)
     (.skip self "{")
-    (when (memneq? (.next (.skip-space self)) "}")
+    (when (!= (.next (.skip-space self)) "}")
       (push! (mem->key (.parse-string (.skip-space self))) object)
       (.skip (.skip-space self) ":")
       (push! (.read self) object))
-    (while (memneq? (.next (.skip-space self)) "}")
+    (while (!= (.next (.skip-space self)) "}")
       (.skip self ",")
       (push! (mem->key (.parse-string (.skip-space self))) object)
       (.skip (.skip-space self) ":")
@@ -53,9 +53,9 @@
 (method JSONReader .parse-array ()
   (let (a (.new Array))
     (.skip self "[")
-    (when (memneq? (.next (.skip-space self)) "]")
+    (when (!= (.next (.skip-space self)) "]")
       (.add a (.read self)))
-    (while (memneq? (.next (.skip-space self)) "]")
+    (while (!= (.next (.skip-space self)) "]")
       (.skip self ",")
       (.add a (.read self)))
     (.skip self)
@@ -63,57 +63,57 @@
 
 (method JSONReader .parse-string ()
   (.skip self)
-  (while (memneq? (&next self) "\"") (.get-escape self))
+  (while (!= (&next self) "\"") (.get-escape self))
   (.skip self)
   (.token self))
 
 (method JSONReader .parse-literal ()
   (if (.digit? self) (.skip-number self)
-      (memeq? (.next self) "t") (begin
-                                   (dostring (c "true") (.skip self c))
-                                   'true)
-      (memeq? (.next self) "f") (begin
-                                   (dostring (c "false") (.skip self c))
-                                   'false)
-      (memeq? (.next self) "n") (begin
-                                   (dostring (c "null") (.skip self c))
-                                   nil)
+      (= (.next self) "t") (begin
+                             (dostring (c "true") (.skip self c))
+                             'true)
+      (= (.next self) "f") (begin
+                             (dostring (c "false") (.skip self c))
+                             'false)
+      (= (.next self) "n") (begin
+                             (dostring (c "null") (.skip self c))
+                             nil)
       (.raise self "unexpected token")))
 
 (method JSONReader .read ()
   ; Read json. -- specified by RFC 8259.
   (let (next (.next (.skip-space self)))
     (if (nil? next) nil
-        (memeq? next "{") (.parse-object self)
-        (memeq? next "[") (.parse-array self)
-        (memeq? next "\"") (.parse-string self)
+        (= next "{") (.parse-object self)
+        (= next "[") (.parse-array self)
+        (= next "\"") (.parse-string self)
         (.parse-literal self))))
 
 (function! main (args)
-  (let (json-str (join '("{"
-                         "  \"nodes\": ["
-                         "     {\"id\":49,\"name\":\"object_p\", \"time\":0.73},"
-                         "     {\"id\":21,\"name\":\"object_list_len\", \"time\":3.58}"
-                         "  ],"
-                         "  \"literal\": [true, false, null, 3.14, \"string\"]"
-                         "}")))
+  (let (json-str (str "{"
+                      "  \"nodes\": ["
+                      "     {\"id\":49,\"name\":\"object_p\", \"time\":0.73},"
+                      "     {\"id\":21,\"name\":\"object_list_len\", \"time\":3.58}"
+                      "  ],"
+                      "  \"literal\": [true, false, null, 3.14, \"string\"]"
+                      "}"))
     (with-memory-stream ($in json-str)
       (let (json (.read (.new JSONReader))
                  (nodes-key nodes-val literal-key literal-val) json)
-        (assert (eq? nodes-key :nodes))
+        (assert (== nodes-key :nodes))
         (assert (array? nodes-val))
         (let (nodes0 ([] nodes-val 0) nodes1 ([] nodes-val 1))
-          (assert (eq? (car nodes0) :id))
-          (assert (eq? (cadr nodes0) 49))
-          (assert (eq? (caddr nodes0) :name))
-          (assert (memeq? (cadddr nodes0) "object_p")))
-        (assert (eq? ([] literal-val 0) true))
-        (assert (eq? ([] literal-val 1) 'false))
-        (assert (eq? ([] literal-val 2) nil))
+          (assert (== (car nodes0) :id))
+          (assert (== (cadr nodes0) 49))
+          (assert (== (caddr nodes0) :name))
+          (assert (= (cadddr nodes0) "object_p")))
+        (assert (== ([] literal-val 0) true))
+        (assert (== ([] literal-val 1) 'false))
+        (assert (== ([] literal-val 2) nil))
         (assert (= ([] literal-val 3) 3.14))
-        (assert (memeq? ([] literal-val 4) "string"))
-        (assert (memeq? (json->str json)
-                        (join '("{\"nodes\":["
-                                "{\"id\":49,\"name\":\"object_p\",\"time\":0.73},"
-                                "{\"id\":21,\"name\":\"object_list_len\",\"time\":3.58}"
-                                "],\"literal\":[true,false,null,3.14,\"string\"]}"))))))))
+        (assert (= ([] literal-val 4) "string"))
+        (assert (= (json->str json)
+                   (join '("{\"nodes\":["
+                           "{\"id\":49,\"name\":\"object_p\",\"time\":0.73},"
+                           "{\"id\":21,\"name\":\"object_list_len\",\"time\":3.58}"
+                           "],\"literal\":[true,false,null,3.14,\"string\"]}"))))))))
