@@ -210,7 +210,7 @@
   ; If you specify keyword :default in <labels>, you can unconditionally transfer control to that branch regardless of the value of test.
   ; Error if, not specified :default and control reaches the end.
   (with-gensyms (gtest)
-    (assert (= (mod (length body) 2) 0))
+    (assert (= (mod (len body) 2) 0))
     (let (branches (group body 2)
                    default-branch (list 'error "switch/" gtest " not included in " (list quote (flatten (map car branches))))
                    parse-branches (f (branches)
@@ -606,10 +606,10 @@
               i (++ i)))
         (reverse! (cons (join-chars) lis)))))
 
-(builtin-function length (l)
+(builtin-function len (l)
   ; Returns the length of the specified list l.
-  (assert (= (length nil) 0))
-  (assert (= (length '(1)) 1)))
+  (assert (= (len nil) 0))
+  (assert (= (len '(1)) 1)))
 
 (builtin-function last-cons (x)
   ; Returns the terminal cons.
@@ -696,9 +696,9 @@
   (assert (nil? (append)))
   (assert (nil? (append nil)))
   (assert (nil? (append nil nil)))
-  (assert (= (length (append '(1 2) '(3))) 3))
-  (assert (= (length (append '(1) '(2))) 2))
-  (assert (= (length (append nil '(1) '(2))) 2)))
+  (assert (= (append '(1 2) '(3)) '(1 2 3)))
+  (assert (= (append '(1) '(2)) '(1 2)))
+  (assert (= (append nil '(1) '(2)) '(1 2))))
 
 (macro push! (x sym)
   ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
@@ -1580,7 +1580,7 @@
         (push! nil o)
         (push! field o)))
     (car! (cdr o) (assoc self :symbol))
-    (if (= (length (procparams (find-method (assoc o :class) '.init))) 1) (.init o)
+    (if (= (len (procparams (find-method (assoc o :class) '.init))) 1) (.init o)
         o)))
 
 (method Class .super ()

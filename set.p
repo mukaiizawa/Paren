@@ -21,7 +21,7 @@
   (&elements self))
 
 (method Set .size ()
-  (length (&elements self)))
+  (len (&elements self)))
 
 (function! main (args)
   (let (set (.init (.new Set) =))

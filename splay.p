@@ -168,5 +168,5 @@
     (assert (nil? (.get splay :four)))
     (let (key-set nil)
       (.foreach splay (f (key val) (push! key key-set)))
-      (assert (= (length key-set) 1))
+      (assert (= (len key-set) 1))
       (assert (== (car key-set) :three)))))

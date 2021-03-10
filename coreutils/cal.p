@@ -17,7 +17,7 @@
           (write-line)))))
 
 (function! main (args)
-  (let (argc (length args) now (DateTime.now))
+  (let (argc (len args) now (DateTime.now))
     (if (= argc 2) (cal (str->num (car args)) (str->num (cadr args)))
         (= argc 1) (cal (.year now) (str->num (car args)))
         (cal (.year now) (.month now)))))
