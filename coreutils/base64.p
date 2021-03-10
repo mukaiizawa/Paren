@@ -10,7 +10,7 @@
   (let (read-mem (f ()
                    (with-memory-stream ($out)
                      (let (b nil)
-                       (while (/= (<- b (read-byte)) -1)
+                       (while (!= (<- b (read-byte)) -1)
                          (write-byte b)))))
                  mem (read-mem))
     (write-mem (if decode? (base64.decode mem)

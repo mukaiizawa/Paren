@@ -27,7 +27,7 @@
     (assert (.dir? dir))
     (assert (.readable? temp))
     (with-open ($out temp :write) (write-line "foo"))
-    (with-open ($in temp :read) (assert (memeq? (read-line) "foo")))
+    (with-open ($in temp :read) (assert (= (read-line) "foo")))
     (.remove temp)
     (.remove dir)
     (assert (.none? dir))

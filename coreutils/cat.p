@@ -2,7 +2,7 @@
 
 (function cat ()
   (let (c nil)
-    (while (/= (<- c (read-byte)) -1)
+    (while (!= (<- c (read-byte)) -1)
       (write-byte c))))
 
 (function! main (args)

@@ -39,4 +39,4 @@
     (assert (! (.eq p (Point.of 3 5))))
     (assert (! (.eq p (Point.of 2 5))))
     (assert (.eq p (.add (Point.of 1 1) (Point.of 2 3))))
-    (assert (memeq? (.to-s p) "(3, 4)"))))
+    (assert (= (.to-s p) "(3, 4)"))))

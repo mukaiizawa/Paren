@@ -12,5 +12,5 @@ Usage: paren crypt.p [KEY]
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))
     (let (key (car args) len (memlen key) pos 0 b nil)
-      (while (/= (<- b (read-byte)) -1)
+      (while (!= (<- b (read-byte)) -1)
         (write-byte (^ b ([] key (<- pos (mod (++ pos) len)))))))))

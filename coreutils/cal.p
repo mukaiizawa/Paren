@@ -11,7 +11,7 @@
     (write-line  "Su Mo Tu We Th Fr Sa")
     (dotimes (i (-- (* dw 3))) (write-mem " "))
     (dotimes (i (.monthlen dt))
-      (if (/= dw 0) (write-mem " "))
+      (if (!= dw 0) (write-mem " "))
       (write-mem (int->str (++ i) :padding 2))
       (if (= (<- dw (mod (++ dw) 7)) 0)
           (write-line)))))

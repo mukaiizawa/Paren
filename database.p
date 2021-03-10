@@ -76,8 +76,8 @@
 (function parse-ordering (expr)
   (let (group-by (f (expr acc)
                    (if (nil? expr) (reverse! acc)
-                       (if (memeq? (cadr expr) :asc) (group-by (cddr expr) (cons (car expr) acc))
-                           (memeq? (cadr expr) :desc) (group-by (cddr expr) (cons (string (car expr) " desc") acc))
+                       (if (= (cadr expr) :asc) (group-by (cddr expr) (cons (car expr) acc))
+                           (= (cadr expr) :desc) (group-by (cddr expr) (cons (string (car expr) " desc") acc))
                            (group-by (cdr expr) (cons (car expr) acc))))))
     (join (group-by (->list expr) nil) ", ")))
 
@@ -133,41 +133,41 @@
                    (user_id :primarykey? true :foreignkey users.id :type "number(10)")
                    (product_id :primarykey? true :foreignkey products.id :type "number(10)")
                    (text :required? true :type "varchar(1000)"))))
-    (assert (memeq? (create-tables tables)
-                    (join '("create table users ("
-                            "  id number(10) not null,"
-                            "  name varchar(10) not null"
-                            ");"
-                            "create table products ("
-                            "  id number(10) not null,"
-                            "  name varchar(10) not null,"
-                            "  price number(10) not null"
-                            ");"
-                            "create table reviews ("
-                            "  user_id number(10) not null,"
-                            "  product_id number(10) not null,"
-                            "  text varchar(1000) not null"
-                            ");"
-                            "alter table users add primary key (id);"
-                            "alter table products add primary key (id);"
-                            "alter table reviews add primary key (user_id, product_id);"
-                            "alter table reviews add constraints fk_user_id foreign key(user_id) references users(id);"
-                            "alter table reviews add constraints fk_product_id foreign key(product_id) references products(id);") "\n")))
-    (assert (memeq? (select-from '(usres.name reviews.text) '(users reviews)
-                                 :where '(and (= users.id reviews.user_id)
-                                              (= users.id 3)
-                                              (is-not-null reviews.text)))
-                    (join '("select usres.name, reviews.text "
-                            "from users, reviews "
-                            "where users.id = reviews.user_id and ( users.id = 3 and ( reviews.text is not null));"))))
-    (assert (memeq? (select-from '(id (count *)) 'users :group-by 'id)
-                    "select id, count(*) from users group by id;"))
-    (assert (memeq? (select-from '* 'users :order-by 'id)
-                    "select * from users order by id;"))
-    (assert (memeq? (select-from '* 'users :order-by '(id :asc name :desc))
-                    "select * from users order by id, name desc;"))
-    (assert (memeq?  (insert-into 'users '(:id :name) '(0 "alice"))
-                     "insert into users (id, name) values (0, 'alice');"))
-    (assert (memeq? (update-set 'products '(price) '((+ price 1000)) '(= id 10))
-                    "update products set price = price + 1000 where id = 10;"))
-    (assert (memeq? (delete-from 'users) "delete from users;"))))
+    (assert (= (create-tables tables)
+               (join '("create table users ("
+                       "  id number(10) not null,"
+                       "  name varchar(10) not null"
+                       ");"
+                       "create table products ("
+                       "  id number(10) not null,"
+                       "  name varchar(10) not null,"
+                       "  price number(10) not null"
+                       ");"
+                       "create table reviews ("
+                       "  user_id number(10) not null,"
+                       "  product_id number(10) not null,"
+                       "  text varchar(1000) not null"
+                       ");"
+                       "alter table users add primary key (id);"
+                       "alter table products add primary key (id);"
+                       "alter table reviews add primary key (user_id, product_id);"
+                       "alter table reviews add constraints fk_user_id foreign key(user_id) references users(id);"
+                       "alter table reviews add constraints fk_product_id foreign key(product_id) references products(id);") "\n")))
+    (assert (= (select-from '(usres.name reviews.text) '(users reviews)
+                            :where '(and (= users.id reviews.user_id)
+                                         (= users.id 3)
+                                         (is-not-null reviews.text)))
+               (join '("select usres.name, reviews.text "
+                       "from users, reviews "
+                       "where users.id = reviews.user_id and ( users.id = 3 and ( reviews.text is not null));"))))
+    (assert (= (select-from '(id (count *)) 'users :group-by 'id)
+               "select id, count(*) from users group by id;"))
+    (assert (= (select-from '* 'users :order-by 'id)
+               "select * from users order by id;"))
+    (assert (= (select-from '* 'users :order-by '(id :asc name :desc))
+               "select * from users order by id, name desc;"))
+    (assert (=  (insert-into 'users '(:id :name) '(0 "alice"))
+                "insert into users (id, name) values (0, 'alice');"))
+    (assert (= (update-set 'products '(price) '((+ price 1000)) '(= id 10))
+               "update products set price = price + 1000 where id = 10;"))
+    (assert (= (delete-from 'users) "delete from users;"))))

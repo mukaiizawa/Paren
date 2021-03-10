@@ -1,15 +1,15 @@
 ; set module.
 
 (class Set ()
-  cmp elements)
+  eq? elements)
 
-(method Set .init (cmp)
-  (&cmp! self cmp))
+(method Set .init (eq?)
+  (&eq?! self eq?))
 
 (method Set .include? (val)
-  (let (cmp (&cmp self))
+  (let (eq? (&eq? self))
     (dolist (elt (&elements self))
-      (if (cmp elt val) (return true)))
+      (if (eq? elt val) (return true)))
     (return nil)))
 
 (method Set .add (val)
@@ -24,7 +24,7 @@
   (length (&elements self)))
 
 (function! main (args)
-  (let (set (.init (.new Set) memeq?))
+  (let (set (.init (.new Set) =))
     (assert (! (.include? set "foo")))
     (.add set "foo")
     (assert (.include? set "foo"))

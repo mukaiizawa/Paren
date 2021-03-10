@@ -207,60 +207,60 @@
 (function! main (args)
   (let (sheet1 (sheet "Sheet1") sheet2 (sheet "Sheet2")
                A1 (range "A1") origin (cell 0 0))
-    (assert (memeq? (.activate sheet1) "Worksheets(\"Sheet1\").Activate\n"))
-    (assert (memeq? (.show sheet1) "Worksheets(\"Sheet1\").Visible = True\n"))
-    (assert (memeq? (.hide sheet1) "Worksheets(\"Sheet1\").Visible = xlVeryHidden\n"))
-    (assert (memeq? (.rename sheet1 sheet2) "Worksheets(\"Sheet1\").Name = \"Sheet2\"\n"))
-    (assert (memeq? (.remove sheet1)
-                    (join '("Dim G1"
-                            "For Each G1 In Worksheets"
-                            "If G1.Name = \"Sheet1\" Then G1.Delete: Exit For"
-                            "Next" "") "\n")))
-    (assert (memeq? (.add-last sheet1)
-                    (join '("Worksheets.Add after:=Worksheets(Worksheets.Count)"
-                            "ActiveSheet.Name = \"Sheet1\"" "") "\n")))
-    (assert (memeq? (.copy-to-last sheet1 sheet2)
-                    (join '("Worksheets(\"Sheet1\").Copy after:=Worksheets(Worksheets.Count)"
-                            "Worksheets(Worksheets.Count).Name = \"Sheet2\"" "") "\n")))
-    (assert (memeq? (.select-range sheet1 origin) (.select-A1 sheet1)))
-    (assert (memeq? (.put sheet1 origin '("foo" "bar"))
-                    (join '("Dim G2"
-                            "G2 = \"foo\""
-                            "G2 = G2 & vblf & \"bar\""
-                            "Worksheets(\"Sheet1\").Cells(1, 1).Value = G2" "") "\n")))
-    (assert (memeq? (.copy-range sheet1 A1 sheet2 A1)
-                    (join '("Worksheets(\"Sheet1\").Range(\"A1\").Copy"
-                            "Worksheets(\"Sheet2\").Range(\"A1\").Select"
-                            "ActiveSheet.Paste" "") "\n")))
-    (assert (memeq? (.border sheet1 origin)
-                    "Worksheets(\"Sheet1\").Cells(1, 1).Borders.LineStyle = True\n"))
-    (assert (memeq? (.print-title-rows sheet1 origin)
-                    "Worksheets(\"Sheet1\").PageSetup.PrintTitleRows = Cells(1, 1).Address\n"))
-    (assert (memeq? (.print-area sheet1 origin)
-                    "Worksheets(\"Sheet1\").PageSetup.PrintArea = Cells(1, 1).Address\n"))
-    (assert (memeq? (.auto-fit-row sheet1 origin)
-                    "Worksheets(\"Sheet1\").Cells(1, 1).EntireRow.AutoFit\n"))
-    (assert (memeq? (.wrap-text sheet1 origin)
-                    "Worksheets(\"Sheet1\").Cells(1, 1).WrapText = True\n"))
-    (assert (memeq? (.fix-header sheet1 origin)
-                    (join '("Worksheets(\"Sheet1\").Activate"
-                            "Worksheets(\"Sheet1\").Cells(1, 1).Select"
-                            "ActiveWindow.FreezePanes = True" "") "\n")))
-    (assert (memeq? (.horizontal-align sheet1 origin :right)
-                    "Worksheets(\"Sheet1\").Cells(1, 1).HorizontalAlignment = xlRight\n"))
-    (assert (memeq? (.vertical-align sheet1 origin :top)
-                    "Worksheets(\"Sheet1\").Cells(1, 1).VerticalAlignment = xlTop\n"))
-    (assert (memeq? (.font-size sheet1 origin 9)
-                    "Worksheets(\"Sheet1\").Cells(1, 1).Font.Size = 9\n"))
-    (assert (memeq? (vba (.hide sheet1))
-                    (join '("Option Explicit"
-                            "Sub sub0()"
-                            "Worksheets(\"Sheet1\").Visible = xlVeryHidden"
-                            "End Sub"
-                            "Sub main()"
-                            "Application.ScreenUpdating = False"
-                            "Application.DisplayAlerts = False"
-                            "Call sub0"
-                            "Application.DisplayAlerts = True"
-                            "Application.ScreenUpdating = True"
-                            "End Sub" "") "\n")))))
+    (assert (= (.activate sheet1) "Worksheets(\"Sheet1\").Activate\n"))
+    (assert (= (.show sheet1) "Worksheets(\"Sheet1\").Visible = True\n"))
+    (assert (= (.hide sheet1) "Worksheets(\"Sheet1\").Visible = xlVeryHidden\n"))
+    (assert (= (.rename sheet1 sheet2) "Worksheets(\"Sheet1\").Name = \"Sheet2\"\n"))
+    (assert (= (.remove sheet1)
+               (join '("Dim G1"
+                       "For Each G1 In Worksheets"
+                       "If G1.Name = \"Sheet1\" Then G1.Delete: Exit For"
+                       "Next" "") "\n")))
+    (assert (= (.add-last sheet1)
+               (join '("Worksheets.Add after:=Worksheets(Worksheets.Count)"
+                       "ActiveSheet.Name = \"Sheet1\"" "") "\n")))
+    (assert (= (.copy-to-last sheet1 sheet2)
+               (join '("Worksheets(\"Sheet1\").Copy after:=Worksheets(Worksheets.Count)"
+                       "Worksheets(Worksheets.Count).Name = \"Sheet2\"" "") "\n")))
+    (assert (= (.select-range sheet1 origin) (.select-A1 sheet1)))
+    (assert (= (.put sheet1 origin '("foo" "bar"))
+               (join '("Dim G2"
+                       "G2 = \"foo\""
+                       "G2 = G2 & vblf & \"bar\""
+                       "Worksheets(\"Sheet1\").Cells(1, 1).Value = G2" "") "\n")))
+    (assert (= (.copy-range sheet1 A1 sheet2 A1)
+               (join '("Worksheets(\"Sheet1\").Range(\"A1\").Copy"
+                       "Worksheets(\"Sheet2\").Range(\"A1\").Select"
+                       "ActiveSheet.Paste" "") "\n")))
+    (assert (= (.border sheet1 origin)
+               "Worksheets(\"Sheet1\").Cells(1, 1).Borders.LineStyle = True\n"))
+    (assert (= (.print-title-rows sheet1 origin)
+               "Worksheets(\"Sheet1\").PageSetup.PrintTitleRows = Cells(1, 1).Address\n"))
+    (assert (= (.print-area sheet1 origin)
+               "Worksheets(\"Sheet1\").PageSetup.PrintArea = Cells(1, 1).Address\n"))
+    (assert (= (.auto-fit-row sheet1 origin)
+               "Worksheets(\"Sheet1\").Cells(1, 1).EntireRow.AutoFit\n"))
+    (assert (= (.wrap-text sheet1 origin)
+               "Worksheets(\"Sheet1\").Cells(1, 1).WrapText = True\n"))
+    (assert (= (.fix-header sheet1 origin)
+               (join '("Worksheets(\"Sheet1\").Activate"
+                       "Worksheets(\"Sheet1\").Cells(1, 1).Select"
+                       "ActiveWindow.FreezePanes = True" "") "\n")))
+    (assert (= (.horizontal-align sheet1 origin :right)
+               "Worksheets(\"Sheet1\").Cells(1, 1).HorizontalAlignment = xlRight\n"))
+    (assert (= (.vertical-align sheet1 origin :top)
+               "Worksheets(\"Sheet1\").Cells(1, 1).VerticalAlignment = xlTop\n"))
+    (assert (= (.font-size sheet1 origin 9)
+               "Worksheets(\"Sheet1\").Cells(1, 1).Font.Size = 9\n"))
+    (assert (= (vba (.hide sheet1))
+               (join '("Option Explicit"
+                       "Sub sub0()"
+                       "Worksheets(\"Sheet1\").Visible = xlVeryHidden"
+                       "End Sub"
+                       "Sub main()"
+                       "Application.ScreenUpdating = False"
+                       "Application.DisplayAlerts = False"
+                       "Call sub0"
+                       "Application.DisplayAlerts = True"
+                       "Application.ScreenUpdating = True"
+                       "End Sub" "") "\n")))))

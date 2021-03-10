@@ -72,15 +72,11 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
     (let (id (next-id contents-index))
       (push! `(,hx (:id ,id) ,@(cons id hx-text)) $contents))))
 
-(function header? (node)
-  (let (elt (car node))
-    (some? (f (hx) (eq? hx elt)) $headers)))
-
 (function parse-nodes (nodes)
   (let (contents-index (array 6))
     (dotimes (i 6) ([] contents-index i 0))
     (map (f (node)
-           (if (header? node) (parse-header contents-index node)
+           (if (include? (car node) $headers) (parse-header contents-index node)
                node))
          nodes)))
 

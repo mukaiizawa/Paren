@@ -357,15 +357,15 @@
   (assert (== :x :x))
   (assert (! (== "x" "x"))))
 
-(function /= (x y)
-  ; Same as (! (= x y))).
-  (! (= x y)))
-
 (builtin-function ! (x)
   ; Returns whether the x is nil.
   (assert (! (== 'x 'y)))
   (assert (! nil))
   (assert (== (! true) nil)))
+
+(function != (x y)
+  ; Same as (! (= x y))).
+  (! (= x y)))
 
 (builtin-function address (x)
   ; Returns address of the specified x.
@@ -592,7 +592,7 @@
               da (str->arr delim) dalen (arrlen da) end (- salen dalen)
               match? (f ()
                        (dotimes (j dalen)
-                         (if (/= ([] sa (+ i j)) ([] da j)) (return nil)))
+                         (if (!= ([] sa (+ i j)) ([] da j)) (return nil)))
                        true)
               join-chars (f () (if chars (apply memcat (reverse! chars)) "")))
         (while (<= i end)
@@ -638,7 +638,7 @@
   ; The sublist begins at the specified start and extends to the element at index end - 1.
   ; Thus the length of the sublist is `end - start`.
   (let (rec (f (l n acc)
-              (if (&& l (/= n 0)) (rec (cdr l) (-- n) (cons (car l) acc))
+              (if (&& l (!= n 0)) (rec (cdr l) (-- n) (cons (car l) acc))
                   (reverse! acc))))
     (if (nil? end) (nthcdr start l)
         (rec (nthcdr start l) (- end start) nil))))
@@ -663,7 +663,7 @@
   (let (rec (f (i cmp next stop step :opt acc)
               (if (cmp next stop) (rec (++ i) cmp (+ next step) stop step (cons next acc))
                   (reverse! acc))))
-    (assert (/= step 0))
+    (assert (!= step 0))
     (if (nil? stop) (<- stop start start 0 step 1)
         (nil? step) (<- step 1))
     (rec 0 (if (> step 0) < >) start stop step)))
@@ -819,6 +819,10 @@
   (if (nil? l) true
       (fn (car l)) nil
       (none? fn (cdr l))))
+
+(function include? (x l)
+  ; Returns whether x is included in X.
+  (some? (f (y) (= x y)) l))
 
 (function every-adjacent? (fn l)
   ; Returns whether each adjacent element of the specified list l returns true when evaluated as an argument to the specified function fn.
@@ -1056,7 +1060,7 @@
   ; Returns a numbered symbol starting with `$G-`.
   ; gensim only guarantees that the symbols generated with each gensim call will not collide.
   ; There is no inconvenience unless intentionally generating symbols starting with `$G-`.
-  (assert (/= (gensym) (gensym))))
+  (assert (!= (gensym) (gensym))))
 
 ; string
 
@@ -1084,14 +1088,14 @@
   ; Returns the code point of string s.
   (let (b 0 val 0)
     (with-memory-stream ($in s)
-      (while (/= (<- b (read-byte)) -1)
+      (while (!= (<- b (read-byte)) -1)
         (<- val (| (<< val 8) b))))
     val))
 
 (function code->str (i)
   ; Returns string of code point.
   (with-memory-stream ($out)
-    (while (/= i 0)
+    (while (!= i 0)
       (write-byte (& i 0xff))
       (<- i (>> i 8)))))
 
@@ -1519,7 +1523,7 @@
         (list quote cls-sym)
         (list <- cls-sym (list quote (list :class 'Class
                                            :symbol cls-sym
-                                           :super (|| super (if (/= cls-sym 'Object) 'Object))
+                                           :super (|| super (if (!= cls-sym 'Object) 'Object))
                                            :features features
                                            :fields fields)))
         (cons begin (map (f (field) (list 'make-accessor field)) fields))))
@@ -1715,7 +1719,7 @@
   (if (is-a? path-name Path) path-name
       (let (c nil path nil root? nil)
         (if (memprefix? path-name "/") (<- root? true)
-            (memprefix? path-name "~") (<- path-name (memcat (if (/= $hostname :windows) (getenv "HOME")
+            (memprefix? path-name "~") (<- path-name (memcat (if (!= $hostname :windows) (getenv "HOME")
                                                                  (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH")))
                                                              "/" (submem path-name 1))))
         (<- path (except memempty?
@@ -1837,27 +1841,27 @@
 
 (method Path .none? ()
   ; Returns whether the receiver is not exits.
-  (/= (& (.mode self) 1) 0))
+  (!= (& (.mode self) 1) 0))
 
 (method Path .file? ()
   ; Returns whether the receiver is a regular file.
-  (/= (& (.mode self) 2) 0))
+  (!= (& (.mode self) 2) 0))
 
 (method Path .dir? ()
   ; Returns whether the receiver is a directory.
-  (/= (& (.mode self) 4) 0))
+  (!= (& (.mode self) 4) 0))
 
 (method Path .other? ()
   ; Returns whether the receiver is neither a regular file nor a directory.
-  (/= (& (.mode self) 8) 0))
+  (!= (& (.mode self) 8) 0))
 
 (method Path .readable? ()
   ; Returns whether the receiver is readable.
-  (/= (& (.mode self) 16) 0))
+  (!= (& (.mode self) 16) 0))
 
 (method Path .writable? ()
   ; Returns whether the receiver is writable.
-  (/= (& (.mode self) 32) 0))
+  (!= (& (.mode self) 32) 0))
 
 (method Path .size ()
   ; Returns the size of the receiver.
@@ -1967,7 +1971,7 @@
                            (+ x 0x61 -10)))
               write1 (f (n padding)
                        (let (upper (// n radix))
-                         (if (/= upper 0) (write1 upper (-- padding))
+                         (if (!= upper 0) (write1 upper (-- padding))
                              (dotimes (i padding) (.write-byte self 0x30)))
                          (.write-byte self (->byte (mod n radix))))))
     (when (< n 0)
@@ -2070,7 +2074,7 @@
       (begin
         (.write-mem self "#b[")
         (dotimes (i (memlen x))
-          (if (/= i 0) (.write-byte self 0x20))
+          (if (!= i 0) (.write-byte self 0x20))
           (.write-mem self "0x")
           (.write-int self ([] x i) :radix 16 :padding 2))
         (.write-byte self 0x5d))
@@ -2078,7 +2082,7 @@
       (begin
         (.write-mem self "#a[")
         (dotimes (i (arrlen x))
-          (.write self ([] x i) :start (&& (/= i 0) " ") :end ""))
+          (.write self ([] x i) :start (&& (!= i 0) " ") :end ""))
         (.write-byte self 0x5d))
       (|| (macro? x)
           (function? x))
@@ -2242,7 +2246,7 @@
   ; Error if expected is specified and the next character is not the same as the expected.
   (let (next (&next self))
     (if (nil? next) (.raise self "unexpected EOF")
-        (&& expected (/= next expected)) (.raise self
+        (&& expected (!= next expected)) (.raise self
                                                  "unexpected character '" next "'. "
                                                  "expected '" expected "'")
         (= next "\n") (&lineno! self (++ (&lineno self))))
@@ -2251,7 +2255,7 @@
 
 (method AheadReader .skip-escape ()
   (let (c (.skip self))
-    (if (/= c "\\") c
+    (if (!= c "\\") c
         (= (<- c (.skip self)) "a") 0x07
         (= c "b") 0x08
         (= c "c") (if (<= 0x40 (<- c (toupper (str->code (.skip self)))) 0x5f) (& c 0x1f)
@@ -2423,7 +2427,7 @@
 
 (method ParenLexer .lex-string ()
   (.skip self)
-  (while (/= (&next self) "\"") (.get-escape self))
+  (while (!= (&next self) "\"") (.get-escape self))
   (.skip self "\"")
   (.token self))
 
@@ -2435,7 +2439,7 @@
         (= next ")") (begin (.skip self) '(:close-paren))
         (= next "'") (begin (.skip self) '(:quote))
         (= next "`") (begin (.skip self) '(:backquote))
-        (= next ",") (begin (.skip self) (if (/= (&next self) "@") '(:unquote)
+        (= next ",") (begin (.skip self) (if (!= (&next self) "@") '(:unquote)
                                              (begin (.skip self) '(:unquote-splicing))))
         (= next "\"") (list :atom (.lex-string self))
         (= next ":") (list :atom (.lex-keyword self))
@@ -2681,7 +2685,7 @@
   (let (lexer (&lexer reader) a (.new Array))
     (.skip lexer)
     (.skip lexer "[")
-    (while (/= (.next lexer) "]") (.get lexer))
+    (while (!= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (with-memory-stream ($in (.token lexer))
       (foreach (f (x) (.add a x))
@@ -2693,7 +2697,7 @@
   (let (lexer (&lexer reader))
     (.skip lexer)
     (.skip lexer "[")
-    (while (/= (.next lexer) "]") (.get lexer))
+    (while (!= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (mem->bytes
       (with-memory-stream ($out)

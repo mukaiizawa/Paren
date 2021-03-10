@@ -11,7 +11,7 @@
 
 (function! module-file? (path)
   (&& (.file? path)
-      (memeq? (.suffix path) "p")
+      (= (.suffix path) "p")
       (memsuffix? (peek-line path) "module.")))
 
 (function! main (args)

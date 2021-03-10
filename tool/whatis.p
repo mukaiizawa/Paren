@@ -5,7 +5,7 @@
     (write-line (string (.base-name path) " --" (submem (read-line) 1)))))
 
 (function! paren-file? (path)
-  (&& (.file? path) (memeq? (.suffix path) "p")))
+  (&& (.file? path) (= (.suffix path) "p")))
 
 (function! main (args)
   (foreach peek (select paren-file? (.children (Path.getcwd)))))
