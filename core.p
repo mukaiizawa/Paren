@@ -781,7 +781,9 @@
   ; Find the element in the list l where the function fn first returns not nil.
   ; Returns the return value of the function fn that did not return nil first.
   ; If there is no such element, returns nil.
-  (let (rec (f (l) (|| (fn (car l)) (rec (cdr l)))))
+  (let (rec (f (l)
+              (if l
+                  (|| (fn (car l)) (rec (cdr l))))))
     (rec l)))
 
 (function select (fn l)
