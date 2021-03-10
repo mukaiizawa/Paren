@@ -98,15 +98,14 @@ static char *symbol_name_map[] = {
   "unwind_protect", "unwind-protect",
   // ip/DEFUN
   "bound_p", "bound?",
+  "eq_p", "=",
+  "same_p", "==",
   "expand_macro", "expand-macro",
   "find_class", "find-class",
   "find_method", "find-method",
   "is_a_p", "is-a?",
   "not", "!",
   "object_p", "object?",
-  // bi
-  "eq_p", "eq?",
-  "neq_p", "neq?",
   // array
   "array_access", "[]",
   "array_p", "array?",
@@ -117,7 +116,6 @@ static char *symbol_name_map[] = {
   "bytes_new", "bytes",
   "bytes_p", "bytes?",
   "keyword_p", "keyword?",
-  "mem_eq_p", "memeq?",
   "mem_to_bytes", "mem->bytes",
   "mem_to_key", "mem->key",
   "mem_to_str", "mem->str",
@@ -148,7 +146,6 @@ static char *symbol_name_map[] = {
   "int_divide", "//",
   "number_add", "+",
   "number_divide", "/",
-  "number_equal_p", "=",
   "number_lt", "<",
   "number_modulo", "mod",
   "number_multiply", "*",

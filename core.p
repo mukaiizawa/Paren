@@ -216,8 +216,8 @@
                    parse-branches (f (branches)
                                     (if (nil? branches) (list default-branch)
                                         (let ((label then) (car branches))
-                                          (if (eq? label :default) (return (list true then))
-                                              (cons (cons '|| (map (f (x) (list eq? (list quote x) gtest))
+                                          (if (== label :default) (return (list true then))
+                                              (cons (cons '|| (map (f (x) (list = (list quote x) gtest))
                                                                    (->list label)))
                                                     (cons then (parse-branches (cdr branches)))))))))
       (list let (list gtest test)
@@ -313,15 +313,15 @@
 (builtin-function expand-macro (expr)
   ; Returns the result of expanding the macro when expr is a list and car is a macro.
   ; Otherwise returns expr.
-  (assert (eq? (car (expand-macro '(begin0 1 2 3))) let)))
+  (assert (== (car (expand-macro '(begin0 1 2 3))) let)))
 
 (function! expand-macro-all (expr)
   ; Same as expand-macro except that it executes recursively.
   (let (expand (f (x)
                  (if (cons? x)
                      (let (y (expand-macro x))
-                       (if (neq? x y) (expand y)
-                           (expand-cdr (cdr x) (cons (car x) nil))))
+                       (if (= x y) (expand-cdr (cdr x) (cons (car x) nil))
+                           (expand y)))
                      x))
                expand-cdr (f (x acc)
                             (if x (expand-cdr (cdr x) (cons (expand (car x)) acc))
@@ -343,21 +343,29 @@
                   (list <- name (cons f (cons args (expand-body body)))))
             gname))))
 
-(builtin-function eq? (x y :rest args)
-  ; Returns whether all arguments are the same object.
-  (assert (! (eq? 'x 'y 'z)))
-  (assert (eq? 'x 'x 'x)))
+(builtin-function = (x y)
+  ; Returns whether x and y are same type and equal.
+  (assert (= 1 1))
+  (assert (= 1.0 1))
+  (assert (= 1 1.0))
+  (assert (! (= 10 20)))
+  (assert (= 'x 'x))
+  (assert (! (= 'x 'y))))
 
-(builtin-function neq? (x y :rest args)
-  ; Same as (! (eq? x y)).
-  (assert (neq? 'x 'y 'z))
-  (assert (! (neq? 'x 'x 'x))))
+(builtin-function == (x y)
+  ; Returns whether x and y are same.
+  (assert (== :x :x))
+  (assert (! (== "x" "x"))))
+
+(function /= (x y)
+  ; Same as (! (= x y))).
+  (! (= x y)))
 
 (builtin-function ! (x)
   ; Returns whether the x is nil.
-  (assert (! (eq? 'x 'y 'z)))
+  (assert (! (== 'x 'y)))
   (assert (! nil))
-  (assert (eq? (! true) nil)))
+  (assert (== (! true) nil)))
 
 (builtin-function address (x)
   ; Returns address of the specified x.
@@ -394,8 +402,7 @@
 (builtin-function cons? (x)
   ; Returns whether the x is a cons.
   (assert (cons? '(1)))
-  (assert (! (cons? nil)))
-  (assert (! (cons? '()))))
+  (assert (! (cons? nil))))
 
 (function atom? (x)
   ; Returns whether the x is an atom.
@@ -405,8 +412,7 @@
 (builtin-function cons (x y)
   ; Returns a cons such that the specified x is the car part and y is the cdr part.
   ; Error if y is not cons.
-  (assert (eq? (car (cons 'x nil)) 'x))
-  (assert (nil? (cdr (cons 'x nil)))))
+  (assert (= (cons 'x nil) '(x))))
 
 (builtin-function car (x)
   ; Returns car of the specified cons x.
@@ -419,24 +425,20 @@
   ; Destructively change the car of the specified cons x to the specified v.
   ; Returns v.
   ; Error if x is not cons.
-  (let (x '(1 2 3))
-    (assert (eq? (car! x 'one) 'one))
-    (assert (eq? (car x) 'one))))
+  (assert (let (x '(1 2 3)) (&& (== (car! x :one) :one) (= x '(:one 2 3))))))
 
 (builtin-function cdr (x)
   ; Returns cdr of the specified cons x.
   ; If x is nil, returns nil.
   ; Error if x is not list.
-  (assert (= (car (cdr '(1 2 3))) 2))
+  (assert (= (cdr '(1 2 3)) '(2 3)))
   (assert (nil? (cdr '()))))
 
 (builtin-function cdr! (x v)
   ; Destructively changes the cdr of the specified cons to the specified v.
   ; Returns v.
   ; Error if x is not cons or v is not list.
-  (let (x '(1 2 3))
-    (cdr! x '(two))
-    (assert (eq? (car (cdr x)) 'two))))
+  (assert (let (x '(1 2 3)) (&& (= (cdr! x '(two)) '(two)) (= x '(1 two))))))
 
 (function caar (x)
   ; Same as (car (car x)).
@@ -590,7 +592,7 @@
               da (str->arr delim) dalen (arrlen da) end (- salen dalen)
               match? (f ()
                        (dotimes (j dalen)
-                         (if (! (memeq? ([] sa (+ i j)) ([] da j))) (return nil)))
+                         (if (/= ([] sa (+ i j)) ([] da j)) (return nil)))
                        true)
               join-chars (f () (if chars (apply memcat (reverse! chars)) "")))
         (while (<= i end)
@@ -720,13 +722,13 @@
 (function nilable-assoc (al k)
   ; Same as asooc except that it returns nil if the key does not exist.
   (if (nil? al) nil
-      (eq? (car al) k) (cadr al)
+      (= (car al) k) (cadr al)
       (nilable-assoc (cddr al) k)))
 
 (builtin-function assoc! (al k v)
   ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
   ; Error if there is no key.
-  (assert (eq? (assoc! '(:one 1 :two 2 :three 3) :one 'one) 'one)))
+  (assert (= (assoc! '(:one 1 :two 2 :three 3) :one 'one) 'one)))
 
 (function flatten (l)
   ; Returns a list in which the car parts of all cons that make up the specified list l are elements.
@@ -826,7 +828,7 @@
 (function union (fn :rest sets)
   ; Return the union of lists.
   (let ((test sets) (if (function? fn) (list fn sets)
-                        (list eq? (cons fn sets))))
+                        (list = (cons fn sets))))
     (reduce (f (X Y)
               (reduce (f (X y)
                         (if (none? (f (x) (test x y)) X) (cons y X)
@@ -837,7 +839,7 @@
 (function intersection (fn :rest sets)
   ; Return the intersection of lists.
   (let ((test sets) (if (function? fn) (list fn sets)
-                        (list eq? (cons fn sets))))
+                        (list = (cons fn sets))))
     (reduce (f (X Y)
               (select (f (x) (some? (f (y) (test x y)) Y))
                       X))
@@ -846,7 +848,7 @@
 (function difference (fn :rest sets)
   ; Return the difference of lists.
   (let ((test minuend subtrahends) (if (function? fn) (list fn (car sets) (cdr sets))
-                                       (list eq? fn sets)))
+                                       (list = fn sets)))
     (select (f (x)
               (every? (f (subtrahend)
                         (none? (f (y)
@@ -901,7 +903,7 @@
             ([] d 0 :zero)
             ([] d 1 :one)
             (&& (= ([] (arrcpy s 0 d 1 1) 1) 1)
-                (eq? ([] d 0) :zero)
+                (= ([] d 0) :zero)
                 (= ([] d 1) 1)))))
 
 (function subarr (x start :opt end)
@@ -914,16 +916,6 @@
       (arrcpy x start new-array 0 new-len))))
 
   ; memory
-
-(builtin-function memeq? (x y)
-  ; Returns whether x arguments are the same byte sequence.
-  (assert (memeq? :foo "foo"))
-  (assert (memeq? :foo 'foo))
-  (assert (! (memeq? "foo" "bar"))))
-
-(function memneq? (x y)
-  ; Same as (! (memeq? x y)).
-  (! (memeq? x y)))
 
 (builtin-function memcmp (x y)
   ; If x is equals to y, returns 0.
@@ -951,28 +943,28 @@
   ; Returns bytes corresponding to byte sequence x.
   ; If i is supplied, returns bytes of partial byte sequence from i of x.
   ; If size is supplied, returns string of partial byte sequence from i to (size -1) of x.
-  (assert (memeq? (mem->bytes "a") "a")))
+  (assert (= (mem->bytes "a") (mem->bytes :a))))
 
 (builtin-function mem->sym (x :opt i size)
   ; Same as (mem->bytes x) except returns symbol.
-  (assert (eq? (mem->sym "foo") 'foo)))
+  (assert (== (mem->sym "foo") 'foo)))
 
 (builtin-function mem->key (x :opt i size)
   ; Same as (mem->bytes x) except returns keyword.
-  (assert (eq? (mem->key "foo") :foo)))
+  (assert (== (mem->key "foo") :foo)))
 
 (builtin-function mem->str (x :opt i size)
   ; Same as (mem->bytes x) except returns string.
-  (assert (memeq? (mem->str 'foo) "foo"))
-  (assert (memeq? (mem->str 'foo 1) "oo"))
-  (assert (memeq? (mem->str 'foo 1 1) "o")))
+  (assert (= (mem->str 'foo) "foo"))
+  (assert (= (mem->str 'foo 1) "oo"))
+  (assert (= (mem->str 'foo 1 1) "o")))
 
 (builtin-function mem->str! (x)
   ; Same as (mem->str x), except that it destructively modifies the specified bytes x.
   ; Generally faster than mem->str.
   (assert (let (x (bytes 1))
             ([] x 0 0x01)
-            (memeq? (mem->str! x) "\x01"))))
+            (= (mem->str! x) "\x01"))))
 
 (function memprefix? (x prefix)
   ; Returns whether the byte sequence x with the specified prefix.
@@ -1004,19 +996,18 @@
   ; Copy size elements from the `src-i`th element of the src byte sequence to the dst byte sequence `dst-i`th element and beyond.
   ; Even if the areas to be copied overlap, it operates correctly.
   ; Returns dst.
-  (assert (let (s "foo" d "bar")
-            (memeq? (memcpy s 1 d 1 2) "boo"))))
+  (assert (let (s "foo" d "bar") (= (memcpy s 1 d 1 2) "boo"))))
 
 (builtin-function submem (x start :opt end)
   ; Returns the partial byte sequence starting from start.
   ; If end is specified, returns the partial byte sequence from the i th to (end-1) th.
-  (assert (memeq? (submem "012" 0) "012"))
-  (assert (memeq? (submem "012" 1) "12"))
-  (assert (memeq? (submem "012" 1 2) "1")))
+  (assert (= (submem "012" 0) "012"))
+  (assert (= (submem "012" 1) "12"))
+  (assert (= (submem "012" 1 2) "1")))
 
 (builtin-function memcat (x :rest args)
   ; Returns the result of combining each args with x.
-  (assert (memeq? (memcat "0" "1" "2") "012")))
+  (assert (= (memcat "0" "1" "2") "012")))
 
 ; bytes
 
@@ -1053,7 +1044,7 @@
   ; If x is equals to y, returns 0.
   ; If the memory address of x is less than y, returns -1.
   ; If the memory address of x is greater than y, returns 1.
-  (if (eq? x y) 0
+  (if (== x y) 0
       (- (address x) (address y))))
 
 (builtin-function bound? (sym)
@@ -1065,7 +1056,7 @@
   ; Returns a numbered symbol starting with `$G-`.
   ; gensim only guarantees that the symbols generated with each gensim call will not collide.
   ; There is no inconvenience unless intentionally generating symbols starting with `$G-`.
-  (assert (neq? (gensym) (gensym))))
+  (assert (/= (gensym) (gensym))))
 
 ; string
 
@@ -1138,29 +1129,27 @@
   ; Returns the position where the substring pat appears first in the string s.
   ; If the string pat is not a substring of the string s, returns nil.
   ; If start is specified, search for substring pat from start-th of the string s.
-  (let (start (|| start 0) sa (str->arr s) slen (arrlen sa)
-              pa (str->arr pat) plen (arrlen pa))
+  (let (start (|| start 0) sa (str->arr s) slen (arrlen sa) pa (str->arr pat) plen (arrlen pa))
     (if (< (- slen start) 0) (error "illegal start")
         (= plen 0) (return 0))
     (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (i (++ i))
-      (when (memeq? ([] sa i) p0)
+      (when (= ([] sa i) p0)
         (if (= plen 1) (return i))
         (let (si (++ i) pi 1)
-          (while (memeq? ([] sa si) ([] pa pi))
+          (while (= ([] sa si) ([] pa pi))
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
 (function strlstr (s pat)
   ; Returns the position where the substring pat appears last in the string s.
   ; If the string pat is not a substring of the string s, returns nil.
-  (let (sa (str->arr s) slen (arrlen sa)
-           pa (str->arr pat) plen (arrlen pa))
+  (let (sa (str->arr s) slen (arrlen sa) pa (str->arr pat) plen (arrlen pa))
     (if (= plen 0) (return (-- slen)))
     (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (i (-- i))
-      (when (memeq? ([] sa i) p0)
+      (when (= ([] sa i) p0)
         (if (= plen 1) (return i))
         (let (si (++ i) pi 1)
-          (while (memeq? ([] sa si) ([] pa pi))
+          (while (= ([] sa si) ([] pa pi))
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
@@ -1219,16 +1208,6 @@
   (if (&& (alpha? b) (<= 0x61 b 0x7a)) (- b 0x20)
       b))
 
-(builtin-function = (x y :rest args)
-  ; Returns whether all arguments are the same value.
-  ; However, arguments for which the function `eq?` returns true will always return true.
-  (assert (= 1 1 1))
-  (assert (= 1.0 1.0 1.0))
-  (assert (= 1 1.00 1))
-  (assert (! (= 10 20)))
-  (assert (= 'x 'x))
-  (assert (! (= 'x 'y))))
-
 (builtin-function & (x y)
   ; bitwise and.
   (assert (= (& 0x333333333 0x555555555) 0x111111111)))
@@ -1249,10 +1228,6 @@
   ; bitwise xor.
   (assert (= (^ 3 0x500000000) 0x500000003))
   (assert (= (^ 0x500000000 0x500000003) 3)))
-
-(function /= (x y)
-  ; Same as (! (= x y))).
-  (! (= x y)))
 
 (builtin-function + (x :rest args)
   ; Returns the sum of the args.
@@ -1544,7 +1519,7 @@
         (list quote cls-sym)
         (list <- cls-sym (list quote (list :class 'Class
                                            :symbol cls-sym
-                                           :super (if (eq? cls-sym 'Object) nil (|| super 'Object))
+                                           :super (|| super (if (/= cls-sym 'Object) 'Object))
                                            :features features
                                            :fields fields)))
         (cons begin (map (f (field) (list 'make-accessor field)) fields))))
@@ -1577,7 +1552,7 @@
 (method Object .eq? (o)
   ; Returns whether the o is equals of the receiver.
   ; Overwrite this method if there is class-specific comparisons.
-  (eq? self o))
+  (= self o))
 
 (method Object .to-s ()
   ; Returns a String representing the receiver.
@@ -1740,18 +1715,15 @@
   (if (is-a? path-name Path) path-name
       (let (c nil path nil root? nil)
         (if (memprefix? path-name "/") (<- root? true)
-            (memprefix? path-name "~") (<- path-name
-                                           (memcat
-                                             (if (eq? $hostname :windows)
-                                                 (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH"))
-                                                 (getenv "HOME"))
-                                             "/" (submem path-name 1))))
+            (memprefix? path-name "~") (<- path-name (memcat (if (/= $hostname :windows) (getenv "HOME")
+                                                                 (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH")))
+                                                             "/" (submem path-name 1))))
         (<- path (except memempty?
                          (split
                            (with-memory-stream ($out)
                              (with-memory-stream ($in path-name)
                                (while (<- c (read-char))
-                                 (if (memeq? c "\\") (write-mem "/")
+                                 (if (= c "\\") (write-mem "/")
                                      (write-mem c)))))
                            "/")))
         (if root? (<- path (cons "/"path)))
@@ -1807,10 +1779,9 @@
 
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
-  (let (first-file (car (&path self)))
-    (if (eq? $hostname :windows) (&& (= (memlen first-file) 2)
-                                     (= ([] first-file 1) 0x3a))
-        (memeq? first-file "/"))))
+  (let (first (car (&path self)))
+    (if (== $hostname :windows) (&& (= (memlen first) 2) (= ([] first 1) 0x3a))
+        (= first "/"))))
 
 (method Path .relative? ()
   ; Same as (! (.absolute? self))
@@ -1825,7 +1796,7 @@
 (method Path .to-s ()
   ; Returns a string representation of the receiver.
   (reduce (f (acc rest)
-            (memcat (if (memeq? acc "/") "" acc) "/" rest))
+            (memcat (if (= acc "/") "" acc) "/" rest))
           (&path self)))
 
 (method Path .open (mode)
@@ -2052,16 +2023,16 @@
   (if start (.write-mem self start))
   (if (cons? x)
       (let (ope (car x))
-        (if (&& (eq? ope 'quote) (nil? (cddr x)))
+        (if (&& (== ope 'quote) (nil? (cddr x)))
             (begin
               (.write-byte self 0x27) (.write self (cadr x) :end ""))
-            (&& (eq? ope 'quasiquote) (nil? (cddr x)))
+            (&& (== ope 'quasiquote) (nil? (cddr x)))
             (begin
               (.write-byte self 0x60) (.write self (cadr x) :end ""))
-            (&& (eq? ope 'unquote) (nil? (cddr x)))
+            (&& (== ope 'unquote) (nil? (cddr x)))
             (begin
               (.write-byte self 0x2c) (.write self (cadr x) :end ""))
-            (&& (eq? ope 'unquote-splicing) (nil? (cddr x)))
+            (&& (== ope 'unquote-splicing) (nil? (cddr x)))
             (begin
               (.write-mem self ",@") (.write self (cadr x) :end ""))
             (begin
@@ -2075,16 +2046,16 @@
       (begin
         (.write-byte self 0x22)
         (dostring (c x)
-          (if (memeq? c "\a") (.write-mem self "\\a")
-              (memeq? c "\b") (.write-mem self "\\b")
-              (memeq? c "\e") (.write-mem self "\\e")
-              (memeq? c "\f") (.write-mem self "\\f")
-              (memeq? c "\n") (.write-mem self "\\n")
-              (memeq? c "\r") (.write-mem self "\\r")
-              (memeq? c "\t") (.write-mem self "\\t")
-              (memeq? c "\v") (.write-mem self "\\v")
-              (memeq? c "\\") (.write-mem self "\\\\")
-              (memeq? c "\"") (.write-mem self "\\\"")
+          (if (= c "\a") (.write-mem self "\\a")
+              (= c "\b") (.write-mem self "\\b")
+              (= c "\e") (.write-mem self "\\e")
+              (= c "\f") (.write-mem self "\\f")
+              (= c "\n") (.write-mem self "\\n")
+              (= c "\r") (.write-mem self "\\r")
+              (= c "\t") (.write-mem self "\\t")
+              (= c "\v") (.write-mem self "\\v")
+              (= c "\\") (.write-mem self "\\\\")
+              (= c "\"") (.write-mem self "\\\"")
               (.write-mem self c)))
         (.write-byte self 0x22))
       (symbol? x)
@@ -2271,27 +2242,27 @@
   ; Error if expected is specified and the next character is not the same as the expected.
   (let (next (&next self))
     (if (nil? next) (.raise self "unexpected EOF")
-        (&& expected (memneq? next expected)) (.raise self
-                                                      "unexpected character '" next "'. "
-                                                      "expected '" expected "'")
-        (memeq? next "\n") (&lineno! self (++ (&lineno self))))
+        (&& expected (/= next expected)) (.raise self
+                                                 "unexpected character '" next "'. "
+                                                 "expected '" expected "'")
+        (= next "\n") (&lineno! self (++ (&lineno self))))
     (&next! self (.read-char (&stream self)))
     next))
 
 (method AheadReader .skip-escape ()
   (let (c (.skip self))
-    (if (memneq? c "\\") c
-        (memeq? (<- c (.skip self)) "a") 0x07
-        (memeq? c "b") 0x08
-        (memeq? c "c") (if (<= 0x40 (<- c (toupper (str->code (.skip self)))) 0x5f) (& c 0x1f)
-                           (.raise self "illegal ctrl char"))
-        (memeq? c "e") 0x1b
-        (memeq? c "f") 0x0c
-        (memeq? c "n") 0x0a
-        (memeq? c "r") 0x0d
-        (memeq? c "t") 0x09
-        (memeq? c "v") 0x0b
-        (memeq? c "x") (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16))
+    (if (/= c "\\") c
+        (= (<- c (.skip self)) "a") 0x07
+        (= c "b") 0x08
+        (= c "c") (if (<= 0x40 (<- c (toupper (str->code (.skip self)))) 0x5f) (& c 0x1f)
+                      (.raise self "illegal ctrl char"))
+        (= c "e") 0x1b
+        (= c "f") 0x0c
+        (= c "n") 0x0a
+        (= c "r") 0x0d
+        (= c "t") 0x09
+        (= c "v") 0x0b
+        (= c "x") (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16))
         c)))
 
 (method AheadReader .skip-line ()
@@ -2300,7 +2271,7 @@
   ; If stream reached eof, returns nil.
   (let (next (&next self))
     (if (nil? next) (.skip self)    ; raise error.
-        (memeq? next "\n") (begin (.skip self) "")
+        (= next "\n") (begin (.skip self) "")
         (let (line (.read-line (&stream self)))
           (if line (begin
                      (<- line (memcat next line))
@@ -2318,8 +2289,8 @@
 
 (method AheadReader .skip-sign ()
   (let (next (&next self))
-    (if (memeq? next "+") (begin (.skip self) nil)
-        (memeq? next "-") (begin (.skip self) true)
+    (if (= next "+") (begin (.skip self) nil)
+        (= next "-") (begin (.skip self) true)
         nil)))
 
 (method AheadReader .skip-digit (:opt radix)
@@ -2343,14 +2314,14 @@
 
 (method AheadReader .skip-unumber ()
   (let (val (.skip-uint self))
-    (if (memeq? (&next self) "x")
+    (if (= (&next self) "x")
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
           (.skip self)
           (if (! (.alnum? self)) (.raise self "missing lower or digits")
               (while (.alnum? self)
                 (<- val (+ (* val radix) (.skip-digit self 16))))))
-        (memeq? (&next self) ".")
+        (= (&next self) ".")
         (let (factor 0.1)
           (.skip self)
           (while (.digit? self)
@@ -2438,7 +2409,7 @@
   (let (sign (.skip self))
     (if (.digit? self)
         (let (val (.skip-number self))
-          (if (memeq? sign "-") (- val) val))
+          (if (= sign "-") (- val) val))
         (begin
           (.put self sign)
           (mem->sym (.token (.get-identifier-sign self)))))))
@@ -2452,8 +2423,7 @@
 
 (method ParenLexer .lex-string ()
   (.skip self)
-  (while (memneq? (&next self) "\"")
-    (.get-escape self))
+  (while (/= (&next self) "\"") (.get-escape self))
   (.skip self "\"")
   (.token self))
 
@@ -2461,17 +2431,16 @@
   (.skip-space self)
   (let (next (&next self))
     (if (nil? next) '(:EOF)
-        (memeq? next "(") (begin (.skip self) '(:open-paren))
-        (memeq? next ")") (begin (.skip self) '(:close-paren))
-        (memeq? next "'") (begin (.skip self) '(:quote))
-        (memeq? next "`") (begin (.skip self) '(:backquote))
-        (memeq? next ",") (begin (.skip self) (if (memeq? (&next self) "@")
-                                                  (begin (.skip self) '(:unquote-splicing))
-                                                  '(:unquote)))
-        (memeq? next "\"") (list :atom (.lex-string self))
-        (memeq? next ":") (list :atom (.lex-keyword self))
-        (memeq? next ";") (begin (.skip-line self) (.lex self))
-        (memeq? next "#") (begin (.skip self) (list :read-macro (mem->sym (&next self))))
+        (= next "(") (begin (.skip self) '(:open-paren))
+        (= next ")") (begin (.skip self) '(:close-paren))
+        (= next "'") (begin (.skip self) '(:quote))
+        (= next "`") (begin (.skip self) '(:backquote))
+        (= next ",") (begin (.skip self) (if (/= (&next self) "@") '(:unquote)
+                                             (begin (.skip self) '(:unquote-splicing))))
+        (= next "\"") (list :atom (.lex-string self))
+        (= next ":") (list :atom (.lex-keyword self))
+        (= next ";") (begin (.skip-line self) (.lex self))
+        (= next "#") (begin (.skip self) (list :read-macro (mem->sym (&next self))))
         (memmem "+-" next) (list :atom (.lex-sign self))
         (memmem "0123456789" next) (list :atom (.skip-number self))
         (list :atom (.lex-symbol self)))))
@@ -2490,8 +2459,8 @@
 (method ParenReader .parse-list ()
   (let (parse-cdr (f (acc)
                     (.scan self)
-                    (if (eq? (&token-type self) :close-paren) (reverse! acc)
-                        (eq? (&token-type self) :EOF) (.raise self "missing close-paren")
+                    (if (== (&token-type self) :close-paren) (reverse! acc)
+                        (== (&token-type self) :EOF) (.raise self "missing close-paren")
                         (parse-cdr (cons (.parse self) acc)))))
     (parse-cdr nil)))
 
@@ -2672,7 +2641,7 @@
   ; Returns true if successfully loaded.
   ; Module file to read must be UTF-8.
   (let ($encoding :UTF-8)
-    (if (some? (f (x) (eq? x key)) $import) true
+    (if (some? (f (x) (== x key)) $import) true
         (let (module (.resolve (if import-dir (Path.of import-dir) $paren-home)
                                (memcat (mem->str key) ".p")))
           (if (! (.readable? module)) (error "unreadable module " (.to-s module))
@@ -2712,7 +2681,7 @@
   (let (lexer (&lexer reader) a (.new Array))
     (.skip lexer)
     (.skip lexer "[")
-    (while (memneq? (.next lexer) "]") (.get lexer))
+    (while (/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (with-memory-stream ($in (.token lexer))
       (foreach (f (x) (.add a x))
@@ -2724,7 +2693,7 @@
   (let (lexer (&lexer reader))
     (.skip lexer)
     (.skip lexer "[")
-    (while (memneq? (.next lexer) "]") (.get lexer))
+    (while (/= (.next lexer) "]") (.get lexer))
     (.skip lexer)
     (mem->bytes
       (with-memory-stream ($out)

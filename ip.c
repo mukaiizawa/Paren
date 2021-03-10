@@ -1,6 +1,10 @@
 // interpreter
 
 #include "std.h"
+
+#include <math.h>
+#include <float.h>
+
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
@@ -166,6 +170,9 @@ static void exit1(void)
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
+#ifndef NDEBUG
+  dump_fs();
+#endif
   exit(1);
 }
 
@@ -692,29 +699,76 @@ static void pop_throw_frame(void)
 
 // built in functions
 
+static int dbl_eq(double x, object p)
+{
+  int64_t i;
+  double d;
+  if (bi_int64(p, &i)) return fabs(x - (double)i) < DBL_EPSILON;
+  if (bi_double(p, &d)) return fabs(x - d) < DBL_EPSILON;
+  return FALSE;
+}
+
+static int int64eq_p(int64_t x, object p)
+{
+  int64_t y;
+  if (bi_int64(p, &y)) return x == y;
+  return dbl_eq((double)x, p);
+}
+
+static int numeq_p(object o, object p)
+{
+  int64_t i;
+  double d;
+  if (bi_int64(o, &i)) return int64eq_p(i, p);
+  if (bi_double(o, &d)) return dbl_eq(d, p);
+  return FALSE;
+}
+
+static int eq_p(object o, object p)
+{
+  int i;
+  if (o == p) return TRUE;
+  switch (object_type(o)) {
+    case SINT:
+    case XINT:
+    case XFLOAT:
+      return numeq_p(o, p);
+    case BYTES:
+    case STRING:
+      if (object_type(o) != object_type(p)) return FALSE;
+      if (o->mem.size != p->mem.size) return FALSE;
+      return memcmp(o->mem.elt, p->mem.elt, o->mem.size) == 0;
+    case CONS:
+      if (!object_type_p(p, CONS)) return FALSE;
+      while (o != object_nil) {
+        if (p == object_nil) return FALSE;
+        if (!eq_p(o->cons.car, p->cons.car)) return FALSE;
+        o = o->cons.cdr;
+        p = p->cons.cdr;
+      }
+      return TRUE;
+    case ARRAY:
+      if (!object_type_p(p, ARRAY)) return FALSE;
+      if (o->array.size != p->array.size) return FALSE;
+      for (i = 0; i < o->array.size; i++)
+        if (!eq_p(o->cons.car, p->cons.car)) return FALSE;
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
 DEFUN(eq_p)
 {
-  object o;
-  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  o = argv->cons.car;
-  reg[0] = object_nil;
-  while ((argv = argv->cons.cdr) != object_nil) {
-    if (o != argv->cons.car) return TRUE;
-  }
-  reg[0] = object_true;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  reg[0] = object_bool(eq_p(argv->cons.car, argv->cons.cdr->cons.car));
   return TRUE;
 }
 
-DEFUN(neq_p)
+DEFUN(same_p)
 {
-  object o;
-  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  o = argv->cons.car;
-  reg[0] = object_nil;
-  while ((argv = argv->cons.cdr) != object_nil) {
-    if (o == argv->cons.car) return TRUE;
-  }
-  reg[0] = object_true;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  reg[0] = object_bool(argv->cons.car == argv->cons.cdr->cons.car);
   return TRUE;
 }
 
