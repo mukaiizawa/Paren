@@ -17,7 +17,7 @@ Usage: paren curl.p URL
   ;; Request-Line = Method SP Request-URI SP HTTP-Version CRLF
   (let (buf (bytes 4096) size nil)
     (with-client-socket (sock host port)
-      (sendall (string method " " uri " " version "\r\n") sock)
+      (sendall (str method " " uri " " version "\r\n") sock)
       (sendall "\r\n" sock)
       (while (> (<- size (recv buf 0 (memlen buf) sock)) 0)
         (write-mem buf 0 size)))))

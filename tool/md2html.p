@@ -54,15 +54,15 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
       (ul (:class "contents")
           ,@(map (f (node)
                    (let (id (cadadr node))
-                     `(li (:id ,(string 'contents- id))
-                          (a (:href ,(string "#" id)) ,@(contents-padding id) ,@(cddr node)))))
+                     `(li (:id ,(str 'contents- id))
+                          (a (:href ,(str "#" id)) ,@(contents-padding id) ,@(cddr node)))))
                  contentss)))))
 
 (function next-id (contents-index)
   (with-memory-stream ($out)
     (doarray (x contents-index)
       (if (= x 0) (break))
-      (write-mem (string x ".")))))
+      (write-mem (str x ".")))))
 
 (function parse-header (contents-index node)
   (let ((hx hx-attr :rest hx-text) node x (- ([] hx 1) 0x30))

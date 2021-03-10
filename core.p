@@ -1064,7 +1064,7 @@
 
 ; string
 
-(function string (:rest args)
+(function str (:rest args)
   ; Returns concatenated string which each of the specified args as string.
   ; Treat nil as an empty string.
   (with-memory-stream ($out)
@@ -1560,7 +1560,7 @@
 
 (method Object .to-s ()
   ; Returns a String representing the receiver.
-  (string "<" (&symbol (.class self)) ":0x" (address self)  ">"))
+  (str "<" (&symbol (.class self)) ":0x" (address self)  ">"))
 
 (method Object .raise (:rest args)
   (apply error (cons (.to-s self) (cons " " args))))
@@ -1631,7 +1631,7 @@
 
 (function error (:rest args)
   ; Throw a instance of the Error, which message is args.
-  (throw (.message (.new Error) (apply string args))))
+  (throw (.message (.new Error) (apply str args))))
 
 (class Comparable ()
   ; A feature that provides comparison operators.
@@ -1895,7 +1895,7 @@
 
 (method Stream .illegal-character (:rest seq)
   (error "illegal byte sequence -- "
-         (map (f (x) (string "0x" (int->str x :radix 16))) seq)))
+         (map (f (x) (str "0x" (int->str x :radix 16))) seq)))
 
 (method Stream .trail? (b)
   (switch (dynamic $encoding)
@@ -2373,8 +2373,8 @@
   (&stream self))
 
 (method AheadReader .to-s ()
-  (string "<" (&symbol (.class self)) ":0x" (address self) " "
-          (list :next (&next self) :lineno (&lineno self)) ">"))
+  (str "<" (&symbol (.class self)) ":0x" (address self) " "
+       (list :next (&next self) :lineno (&lineno self)) ">"))
 
 ; Paren reader
 

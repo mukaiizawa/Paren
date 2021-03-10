@@ -16,7 +16,7 @@
     (while (= (.next self) "#")
       (.skip self)
       (<- level (++ level)))
-    (if (<= 1 level  6) (list (mem->sym (string 'h level)) () (.skip-line (.skip-space self)))
+    (if (<= 1 level  6) (list (mem->sym (str 'h level)) () (.skip-line (.skip-space self)))
         (.raise self "illegal header level " level))))
 
 (method MarkdownReader .parse-code ()
@@ -36,8 +36,8 @@
   (while (.none-match? self "]") (.get self))
   (.skip self "]")
   (let (i (.token self))
-    `(sup (:id ,(string "fnrefere" i))
-          (a (:href ,(string "#fnreferr" i)) ,i))))
+    `(sup (:id ,(str "fnrefere" i))
+          (a (:href ,(str "#fnreferr" i)) ,i))))
 
 (method MarkdownReader .parse-link ()
   (while (.none-match? self "]") (.get self))
@@ -152,8 +152,8 @@
   (.skip self)
   (.skip self ":")
   (let (i (.token self))
-    `(small (:id ,(string "fnreferr" i))
-            (a (:href ,(string "#fnrefere" i)) ,(string "[" i "]"))
+    `(small (:id ,(str "fnreferr" i))
+            (a (:href ,(str "#fnrefere" i)) ,(str "[" i "]"))
             ,(.skip-line (.skip-space self)))))
 
 (method MarkdownReader .read ()

@@ -9,7 +9,7 @@
           (write-mem (car l))
           (if (keyword? (car (<- l (cdr l)))) (continue)
               (string? (car l)) (begin
-                                  (write-mem (string "='" (car l) "'"))
+                                  (write-mem (str "='" (car l) "'"))
                                   (<- l (cdr l)))
               (assert nil))))))
 
@@ -17,16 +17,16 @@
   ; Returns a list representation of xml as a string.
   (if (atom? l) l
       (let ((name :opt attrs :rest children) l)
-        (if (== name '?xml) (string "<? " attrs " ?>")
-            (== name '!DOCTYPE) (string "<!DOCTYPE " (cadr l) ">")
-            (== name '!--) (string "<!--" attrs "-->")
+        (if (== name '?xml) (str "<? " attrs " ?>")
+            (== name '!DOCTYPE) (str "<!DOCTYPE " (cadr l) ">")
+            (== name '!--) (str "<!--" attrs "-->")
             (&& attrs (|| (atom? attrs) (! (keyword? (car attrs)))))
-            (string "<" name  ">"
-                    (join (map xml->str (cons attrs children)))
-                    "</" name ">")
-            (string "<" name (xml-attrs->str attrs) ">"
-                    (join (map xml->str children))
-                    "</" name ">")))))
+            (str "<" name  ">"
+                 (join (map xml->str (cons attrs children)))
+                 "</" name ">")
+            (str "<" name (xml-attrs->str attrs) ">"
+                 (join (map xml->str children))
+                 "</" name ">")))))
 
 ; reader
 
@@ -155,10 +155,10 @@
     (assert (= (.read (.new XMLReader)) '(div ()))))
   (with-memory-stream ($in "<input type='hidden'/>")
     (assert (= (.read (.new XMLReader)) '(input (:type "hidden")))))
-  (with-memory-stream ($in (string "<ul>"
-                                   "    <li>foo</li>"
-                                   "    <li>bar</li>"
-                                   "</ul>"))
+  (with-memory-stream ($in (str "<ul>"
+                                "    <li>foo</li>"
+                                "    <li>bar</li>"
+                                "</ul>"))
     (assert (= (.read (.new XMLReader)) '(ul ()
                                              (li () "foo")
                                              (li () "bar"))))))

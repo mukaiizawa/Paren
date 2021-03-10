@@ -21,7 +21,7 @@
   (&y self))
 
 (method Point .to-s ()
-  (string "(" (&x self) ", " (&y self) ")"))
+  (str "(" (&x self) ", " (&y self) ")"))
 
 (method Point .eq (p)
   (&& (is-a? p Point)

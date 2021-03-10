@@ -25,7 +25,7 @@ Usage: paren cdep.p
   (catch (Error (f (e) (write-line $usage) (throw e)))
     (write-line "# following rules are generated automatically.")
     (foreach (f (cfile)
-               (write-line (join (cons (string (.but-suffix cfile) ".o:")
+               (write-line (join (cons (str (.but-suffix cfile) ".o:")
                                        (cons (.name cfile) (parse-cfile cfile)))
                                  " ")))
              (select (f (x) (= (.suffix x) "c"))

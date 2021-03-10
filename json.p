@@ -30,8 +30,8 @@
       (nil? x) "null"
       (= x 'true) "true"
       (= x 'false) "false"
-      (number? x) (string x)
-      (string "\"" (mem->str x) "\"")))
+      (number? x) (str x)
+      (str "\"" (mem->str x) "\"")))
 
 (class JSONReader (AheadReader))
 
@@ -90,13 +90,13 @@
         (.parse-literal self))))
 
 (function! main (args)
-  (let (json-str (string "{"
-                         "  \"nodes\": ["
-                         "     {\"id\":49,\"name\":\"object_p\", \"time\":0.73},"
-                         "     {\"id\":21,\"name\":\"object_list_len\", \"time\":3.58}"
-                         "  ],"
-                         "  \"literal\": [true, false, null, 3.14, \"string\"]"
-                         "}"))
+  (let (json-str (str "{"
+                      "  \"nodes\": ["
+                      "     {\"id\":49,\"name\":\"object_p\", \"time\":0.73},"
+                      "     {\"id\":21,\"name\":\"object_list_len\", \"time\":3.58}"
+                      "  ],"
+                      "  \"literal\": [true, false, null, 3.14, \"string\"]"
+                      "}"))
     (with-memory-stream ($in json-str)
       (let (json (.read (.new JSONReader))
                  (nodes-key nodes-val literal-key literal-val) json)

@@ -22,16 +22,16 @@
   (&strength! self 30))
 
 (method Player .to-s ()
-  (string "You are a valiant knight with a health of " (&health self)
-          ", an agility of " (&agility self)
-          ", and a strength of " (&strength self)))
+  (str "You are a valiant knight with a health of " (&health self)
+       ", an agility of " (&agility self)
+       ", and a strength of " (&strength self)))
 
 (method Player .stab ()
   (.hit (.pick-monster self) (+ 2 (rand1-n (>> (&strength self) 1)))))
 
 (method Player .double-swing ()
   (let (x (rand1-n (// (&strength self) 6)))
-    (write-line (string "Your double swing has a strength of " x))
+    (write-line (str "Your double swing has a strength of " x))
     (.hit (.pick-monster self) x)
     (if (! (monsters-dead?)) (.hit (.pick-monster self) x))))
 
@@ -91,14 +91,14 @@
 (method Monster .hit (x)
   (&health! self (- (&health self) x))
   (if (.dead? self)
-      (write-line (string "You killed the " (&symbol (.class self)) "!"))
-      (write-line (string "You hit the " (&symbol (.class self)) ", knocking off " x  " health points!"))))
+      (write-line (str "You killed the " (&symbol (.class self)) "!"))
+      (write-line (str "You hit the " (&symbol (.class self)) ", knocking off " x  " health points!"))))
 
 (method Monster .attack ()
   (assert nil))
 
 (method Monster .to-s ()
-  (string "A fierce " (&symbol (.class self))))
+  (str "A fierce " (&symbol (.class self))))
 
 (define-monster Orc () club-level)
 
@@ -108,17 +108,17 @@
 
 (method Orc .attack ()
   (let (x (rand1-n (&club-level self)))
-    (write-line (string "An orc swings his club at you and knocks off " x " of your health points."))
+    (write-line (str "An orc swings his club at you and knocks off " x " of your health points."))
     (.hit $player x :type :health)))
 
 (method Orc .to-s ()
-  (string "A wicked orc with a level " (&club-level self) " club"))
+  (str "A wicked orc with a level " (&club-level self) " club"))
 
 (define-monster Hydra ())
 
 (method Hydra .attack ()
   (let (x (rand1-n (>> (&health self) 1)))
-    (write-line (string "A hydra attacks you with " x " of its heads! It also grows back one more head!"))
+    (write-line (str "A hydra attacks you with " x " of its heads! It also grows back one more head!"))
     (&health! self (++ (&health self)))
     (.hit $player x :type :health)))
 
@@ -126,10 +126,10 @@
   (&health! self (- (&health self) x))
   (if (.dead? self)
       (write-line "The corpse of the fully decapitated and decapacitated hydra falls to the floor!")
-      (write-line (string "You lop off " x " of the hydra's heads!"))))
+      (write-line (str "You lop off " x " of the hydra's heads!"))))
 
 (method Hydra .to-s ()
-  (string "A malicious hydra with " (&health self) " heads."))
+  (str "A malicious hydra with " (&health self) " heads."))
 
 (define-monster Slime () sliminess)
 
@@ -139,14 +139,14 @@
 
 (method Slime .attack ()
   (let (x (rand1-n (&sliminess self)))
-    (write-line (string "A slime mold wraps around your legs and decreases your agility by " x "!"))
+    (write-line (str "A slime mold wraps around your legs and decreases your agility by " x "!"))
     (.hit $player x :type :agility)
     (when (randbool)
       (write-line "It also squirts in your face, taking away a health point!")
       (.hit $player 1 :type :health))))
 
 (method Slime .to-s ()
-  (string "A slime mold with a sliminess of " (&sliminess self)))
+  (str "A slime mold with a sliminess of " (&sliminess self)))
 
 (define-monster Brigand ())
 
@@ -178,8 +178,8 @@
   (write-line "Your foes:")
   (dotimes (i $monster-count)
     (let (m ([] $monsters i))
-      (write-line (string i ". " (if (.dead? m) "**dead**"
-                                     (string "(Health=" (&health m) ") " (.to-s m))))))))
+      (write-line (str i ". " (if (.dead? m) "**dead**"
+                                  (str "(Health=" (&health m) ") " (.to-s m))))))))
 
 (function game-loop ()
   (if (|| (.dead? $player) (monsters-dead?)) (return nil))

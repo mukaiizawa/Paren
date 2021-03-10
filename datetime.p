@@ -103,7 +103,7 @@
              (list (&hour self) (&minute self) (&second self))) ":"))
 
 (method DateTime .datetime.to-s ()
-  (string (.date.to-s self) " " (.time.to-s self)))
+  (str (.date.to-s self) " " (.time.to-s self)))
 
 (method DateTime .day-week.to-s ()
   (nth (.day-week self) '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat")))

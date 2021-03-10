@@ -21,4 +21,4 @@
     (if (.get op "b") (write bytec)
         (.get op "w") (write wordc)
         (.get op "l") (write linec)
-        (write-line (join (map string (list bytec wordc linec)) " ")))))
+        (write-line (join (map str (list bytec wordc linec)) " ")))))

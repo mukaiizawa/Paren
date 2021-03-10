@@ -3,7 +3,7 @@
 (function unit-test (p)
   (let (pathstr (.to-s p))
     (write-line pathstr)
-    (system (string "paren " pathstr))))
+    (system (str "paren " pathstr))))
 
 (function peek-line (path)
   (with-open ($in path :read)
