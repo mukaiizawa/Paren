@@ -42,7 +42,7 @@ endif
 .c.o:
 	$(cc) $(cflags) $<
 
-paren=paren$(exe)
+paren=../paren$(exe)
 all: $(paren)
 
 defsp=ip.c

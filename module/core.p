@@ -2648,7 +2648,7 @@
   ; Module file to read must be UTF-8.
   (let ($encoding :UTF-8)
     (if (some? (f (x) (== x key)) $import) true
-        (let (module (.resolve (if import-dir (Path.of import-dir) $paren-home)
+        (let (module (.resolve (if import-dir (Path.of import-dir) (.resolve $paren-home "module"))
                                (memcat (mem->str key) ".p")))
           (if (! (.readable? module)) (error "unreadable module " (.to-s module))
               (begin
@@ -2677,7 +2677,7 @@
     $in $stdin
     $out $stdout
     $encoding :UTF-8
-    $paren-home (.parent (.resolve (Path.getcwd) core.p))
+    $paren-home (.parent (.parent (.resolve (Path.getcwd) core.p)))
     $script-path (map (f (path) (.resolve $paren-home path))
                       '("coreutils" "tool")))
 

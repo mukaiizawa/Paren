@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
   *strrchr(buf, '.') = '\0';
 #endif
   buf[strlen(buf) - strlen("paren")] = '\0';
-  core_fn = strcat(buf, "core.p");
+  core_fn = strcat(buf, "module/core.p");
   gc_init();
   make_initial_objects(argc, argv);
   ip_start(load());
