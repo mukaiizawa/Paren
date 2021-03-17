@@ -1,8 +1,8 @@
 # makefile
-# Usage: make os={linux|windows} [cc=gcc] [debug={off|on}]
+# Usage: make os={unix|windows} [cc=gcc] [debug={off|on}]
 # 	[sock=off|on]
 
-supportos=linux windows
+supportos=unix windows
 cc?=gcc
 debug?=off
 sock?=off
@@ -10,7 +10,7 @@ sock?=off
 ifeq ($(filter $(supportos),$(os)),)
 $(error illegal os)
 endif
-ifeq ($(os), linux)
+ifeq ($(os), unix)
 extobj+=pf.u.o xsleep.u.o
 ifeq ($(sock),on)
 defun+=sock.c
