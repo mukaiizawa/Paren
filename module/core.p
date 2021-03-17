@@ -714,22 +714,6 @@
         (list car sym)
         (list <- sym (list cdr sym))))
 
-(builtin-function assoc (al k)
-  ; Returns a value corresponding to the specified key k of the specified asoociate list al.
-  ; Error if there is no key.
-  (assert (= (assoc '(:one 1 :two 2 :three 3) :one) 1)))
-
-(function nilable-assoc (al k)
-  ; Same as asooc except that it returns nil if the key does not exist.
-  (if (nil? al) nil
-      (= (car al) k) (cadr al)
-      (nilable-assoc (cddr al) k)))
-
-(builtin-function assoc! (al k v)
-  ; Change the value corresponding to the specified key k in the specified association list al to the specified vlaue v.
-  ; Error if there is no key.
-  (assert (= (assoc! '(:one 1 :two 2 :three 3) :one 'one) 'one)))
-
 (function flatten (l)
   ; Returns a list in which the car parts of all cons that make up the specified list l are elements.
   (let (acc nil rec (f (x)
@@ -863,65 +847,162 @@
                       subtrahends))
             minuend)))
 
-; array
+; number
 
-(builtin-function array (size)
-  ; Returns an array of length size.
-  (assert (array 1)))
+(builtin-function number? (x)
+  ; Returns whether the x is a number.
+  (assert (number? 1))
+  (assert (number? 3.14))
+  (assert (number? 0x20))
+  (assert (! (number? 'x))))
 
-(builtin-function array? (x)
-  ; Returns whether the x is an array.
-  ; However, bytes are not considered as arrays.
-  (assert (array? (array 3)))
-  (assert (! (array? (bytes 3)))))
+(builtin-function int? (x)
+  ; Returns whether the x is a integer.
+  (assert (int? 1))
+  (assert (! (int? 3.14)))
+  (assert (! (int? 'x))))
 
-(function arr->list (x)
-  ; Returns a list containing all of the elements in x.
-  (let (rec (f (i acc)
-              (if (< i 0) acc
-                  (rec (-- i) (cons ([] x i) acc)))))
-    (rec (-- (arrlen x)) nil)))
+(function byte? (x)
+  ; Returns whether the x is a integer and between 0 and 255.
+  (&& (int? x) (<= 0 x 255)))
 
-(builtin-function [] (x i :opt v)
-  ; Returns the i-th element of the array x.
-  ; If v is specified, update the i-th element of array x to v.
-  ; Returns v.
-  ; This function can also be applied to bytes.
-  (assert (nil? ([] (array 1) 0)))
-  (assert (= ([] (bytes 1) 0) 0))
-  (assert (let (a (array 1) b (bytes 1))
-            (&& ([] a 0 true)
-                ([] a 0)
-                ([] b 0 0xff)
-                (= ([] b 0) 0xff)))))
+(function space? (b)
+  ; Returns whether byte b is a space character.
+  (|| (= b 0x09)
+      (= b 0x0a)
+      (= b 0x0d)
+      (= b 0x20)))
 
-(builtin-function arrlen (x)
-  ; Returns the length of the specified array x.
-  (assert (= (arrlen (array 3)) 3)))
+(function print? (b)
+  ; Returns whether b is printable.
+  (<= 0x20 b 0x7e))
 
-(builtin-function arrcpy (src src-i dst dst-i size)
-  ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
-  ; Returns dst.
-  ; Even if the areas to be copied overlap, it operates correctly.
-  ; This function also accepts strings.
-  (assert (let (s (array 1) d (array 2))
-            ([] s 0 1)
-            ([] d 0 :zero)
-            ([] d 1 :one)
-            (&& (= ([] (arrcpy s 0 d 1 1) 1) 1)
-                (= ([] d 0) :zero)
-                (= ([] d 1) 1)))))
+(function alpha? (b)
+  ; Returns whether byte b is an alphabetic character.
+  (|| (<= 0x41 b 0x5a) (<= 0x61 b 0x7a)))
 
-(function subarr (x start :opt end)
-  ; Returns a new array object selected from start to end (end not included) where start and end represent the index of items in that array x.
-  (let (xlen (arrlen x))
-    (if (< start 0) (error "illegal start")
-        (nil? end) (<- end xlen)
-        (> end xlen) (error "illegal end"))
-    (let (new-len (- end start) new-array (array new-len))
-      (arrcpy x start new-array 0 new-len))))
+(function digit? (b)
+  ; Returns whether byte b is a digit character.
+  (<= 0x30 b 0x39))
 
-  ; memory
+(function int->str (i :key radix padding)
+  ; Returns string of i.
+  (with-memory-stream (out)
+    (.write-int out i :radix radix :padding padding)))
+
+(function tolower (b)
+  ; Returns lowercase if byte b is an alphabetic character.
+  ; Otherwise returns b.
+  (if (&& (alpha? b) (<= 0x41 b 0x5a)) (+ b 0x20)
+      b))
+
+(function toupper (b)
+  ; Returns uppercase if byte b is an alphabetic character.
+  ; Otherwise returns b.
+  (if (&& (alpha? b) (<= 0x61 b 0x7a)) (- b 0x20)
+      b))
+
+(builtin-function & (x y)
+  ; bitwise and.
+  (assert (= (& 0x333333333 0x555555555) 0x111111111)))
+
+(builtin-function | (x y)
+  ; bitwise or.
+  (assert (= (| 0x333333333 0x555555555) 0x777777777)))
+
+(builtin-function << (x y)
+  ; bitwise left shift.
+  (assert (= (<< 3 2) 12)))
+
+(function >> (x y)
+  ; bitwise right shift.
+  (<< x (- y)))
+
+(builtin-function ^ (x y)
+  ; bitwise xor.
+  (assert (= (^ 3 0x500000000) 0x500000003))
+  (assert (= (^ 0x500000000 0x500000003) 3)))
+
+(builtin-function + (x :rest args)
+  ; Returns the sum of the args.
+  (assert (= (+ 1) 1))
+  (assert (= (+ 1 2 3) 6))
+  (assert (= (+ 1 2.0 3.0) 6)))
+
+(function - (x :rest args)
+  ; Returns the value of the specified x minus the sum of the specified args.
+  ; If args is nil, returns inverted value of the x.
+  (if (nil? args) (* x -1)
+      (+ x (- (apply + args)))))
+
+(builtin-function * (x :rest args)
+  ; Returns the product of the arguments.
+  (assert (= (* 1 2 3) 6))
+  (assert (= (* 1.0 2.0 3.0) 6))
+  (assert (= (* 1 2.0 3.0) 6)))
+
+(builtin-function / (x :rest args)
+  ; Returns the quotient of the x divided by the each args.
+  ; If args is nil, returns the reciprocal of x.
+  (assert (= (/ 2) 0.5))
+  (assert (= (/ 12 2 3) 2))
+  (assert (= (/ 3 2 5) 0.3)))
+
+(builtin-function // (x :opt y)
+  ; Returns an integer value of the number x.
+  ; If y is specified, returns the quotient of the x divided by the y.
+  (assert (= (// 3) 3))
+  (assert (= (// 3.14) 3))
+  (assert (= (// 2 1) 2))
+  (assert (= (// 2 2) 1))
+  (assert (= (// 2 3) 0)))
+
+(builtin-function mod (x y)
+  ; Returns the remainder of dividing x by y.
+  (assert (= (mod 4 5) 4))
+  (assert (= (mod 4 3) 1))
+  (assert (= (mod 4 2) 0)))
+
+(builtin-function < (:rest args)
+  ; Returns whether the each of the specified args are in monotonically decreasing order.
+  (assert (< 0 1 2))
+  (assert (< 0 1.0 2))
+  (assert (nil? (< 0 0 1))))
+
+(function > (:rest args)
+  ; Returns whether the each of the specified args are in monotonically increasing order.
+  (every-adjacent? (f (x y) (< y x)) args))
+
+(function <= (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
+  (every-adjacent? (f (x y) (! (< y x))) args))
+
+(function >= (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
+  (every-adjacent? (f (x y) (! (< x y))) args))
+
+(function ++ (x)
+  ; Same as (+ x 1).
+  (+ x 1))
+
+(function -- (x)
+  ; Same as (- x 1).
+  (- x 1))
+
+(function abs (x)
+  ; Returns the absolute value of the specified number x.
+  (if (< x 0) (- x)
+      x))
+
+(function exp (base power)
+  ; Returns base-number raised to the power power-number.
+  (let (val 1)
+    (dotimes (i (abs power))
+      (<- val (* val base)))
+    (if (> power 0) val
+        (/ val))))
+
+; memory
 
 (builtin-function memcmp (x y)
   ; If x is equals to y, returns 0.
@@ -1159,160 +1240,87 @@
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
-; number
+; array
 
-(builtin-function number? (x)
-  ; Returns whether the x is a number.
-  (assert (number? 1))
-  (assert (number? 3.14))
-  (assert (number? 0x20))
-  (assert (! (number? 'x))))
+(builtin-function array (size)
+  ; Returns an array of length size.
+  (assert (array 1)))
 
-(builtin-function int? (x)
-  ; Returns whether the x is a integer.
-  (assert (int? 1))
-  (assert (! (int? 3.14)))
-  (assert (! (int? 'x))))
+(builtin-function array? (x)
+  ; Returns whether the x is an array.
+  ; However, bytes are not considered as arrays.
+  (assert (array? (array 3)))
+  (assert (! (array? (bytes 3)))))
 
-(function byte? (x)
-  ; Returns whether the x is a integer and between 0 and 255.
-  (&& (int? x) (<= 0 x 255)))
+(function arr->list (x)
+  ; Returns a list containing all of the elements in x.
+  (let (rec (f (i acc)
+              (if (< i 0) acc
+                  (rec (-- i) (cons ([] x i) acc)))))
+    (rec (-- (arrlen x)) nil)))
 
-(function space? (b)
-  ; Returns whether byte b is a space character.
-  (|| (= b 0x09)
-      (= b 0x0a)
-      (= b 0x0d)
-      (= b 0x20)))
+(builtin-function [] (x i :opt v)
+  ; Returns the i-th element of the array x.
+  ; If v is specified, update the i-th element of array x to v.
+  ; Returns v.
+  ; This function can also be applied to bytes.
+  (assert (nil? ([] (array 1) 0)))
+  (assert (= ([] (bytes 1) 0) 0))
+  (assert (let (a (array 1) b (bytes 1))
+            (&& ([] a 0 true)
+                ([] a 0)
+                ([] b 0 0xff)
+                (= ([] b 0) 0xff)))))
 
-(function print? (b)
-  ; Returns whether b is printable.
-  (<= 0x20 b 0x7e))
+(builtin-function arrlen (x)
+  ; Returns the length of the specified array x.
+  (assert (= (arrlen (array 3)) 3)))
 
-(function alpha? (b)
-  ; Returns whether byte b is an alphabetic character.
-  (|| (<= 0x41 b 0x5a) (<= 0x61 b 0x7a)))
+(builtin-function arrcpy (src src-i dst dst-i size)
+  ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
+  ; Returns dst.
+  ; Even if the areas to be copied overlap, it operates correctly.
+  ; This function also accepts strings.
+  (assert (let (s (array 1) d (array 2))
+            ([] s 0 1)
+            ([] d 0 :zero)
+            ([] d 1 :one)
+            (&& (= ([] (arrcpy s 0 d 1 1) 1) 1)
+                (= ([] d 0) :zero)
+                (= ([] d 1) 1)))))
 
-(function digit? (b)
-  ; Returns whether byte b is a digit character.
-  (<= 0x30 b 0x39))
+(function subarr (x start :opt end)
+  ; Returns a new array object selected from start to end (end not included) where start and end represent the index of items in that array x.
+  (let (xlen (arrlen x))
+    (if (< start 0) (error "illegal start")
+        (nil? end) (<- end xlen)
+        (> end xlen) (error "illegal end"))
+    (let (new-len (- end start) new-array (array new-len))
+      (arrcpy x start new-array 0 new-len))))
 
-(function int->str (i :key radix padding)
-  ; Returns string of i.
-  (with-memory-stream (out)
-    (.write-int out i :radix radix :padding padding)))
+; object
 
-(function tolower (b)
-  ; Returns lowercase if byte b is an alphabetic character.
-  ; Otherwise returns b.
-  (if (&& (alpha? b) (<= 0x41 b 0x5a)) (+ b 0x20)
-      b))
+(builtin-function object ()
+  ; Returns an empty object.
+  (assert (object? (object))))
 
-(function toupper (b)
-  ; Returns uppercase if byte b is an alphabetic character.
-  ; Otherwise returns b.
-  (if (&& (alpha? b) (<= 0x61 b 0x7a)) (- b 0x20)
-      b))
+(builtin-function object? (x)
+  ; Returns whether the x is an object.
+  (assert (object? '(:class Object))))
 
-(builtin-function & (x y)
-  ; bitwise and.
-  (assert (= (& 0x333333333 0x555555555) 0x111111111)))
+(builtin-function keys (o)
+  ; Returns a list of keys contained object o.
+  (assert (nil? (keys (object)))))
 
-(builtin-function | (x y)
-  ; bitwise or.
-  (assert (= (| 0x333333333 0x555555555) 0x777777777)))
-
-(builtin-function << (x y)
-  ; bitwise left shift.
-  (assert (= (<< 3 2) 12)))
-
-(function >> (x y)
-  ; bitwise right shift.
-  (<< x (- y)))
-
-(builtin-function ^ (x y)
-  ; bitwise xor.
-  (assert (= (^ 3 0x500000000) 0x500000003))
-  (assert (= (^ 0x500000000 0x500000003) 3)))
-
-(builtin-function + (x :rest args)
-  ; Returns the sum of the args.
-  (assert (= (+ 1) 1))
-  (assert (= (+ 1 2 3) 6))
-  (assert (= (+ 1 2.0 3.0) 6)))
-
-(function - (x :rest args)
-  ; Returns the value of the specified x minus the sum of the specified args.
-  ; If args is nil, returns inverted value of the x.
-  (if (nil? args) (* x -1)
-      (+ x (- (apply + args)))))
-
-(builtin-function * (x :rest args)
-  ; Returns the product of the arguments.
-  (assert (= (* 1 2 3) 6))
-  (assert (= (* 1.0 2.0 3.0) 6))
-  (assert (= (* 1 2.0 3.0) 6)))
-
-(builtin-function / (x :rest args)
-  ; Returns the quotient of the x divided by the each args.
-  ; If args is nil, returns the reciprocal of x.
-  (assert (= (/ 2) 0.5))
-  (assert (= (/ 12 2 3) 2))
-  (assert (= (/ 3 2 5) 0.3)))
-
-(builtin-function // (x :opt y)
-  ; Returns an integer value of the number x.
-  ; If y is specified, returns the quotient of the x divided by the y.
-  (assert (= (// 3) 3))
-  (assert (= (// 3.14) 3))
-  (assert (= (// 2 1) 2))
-  (assert (= (// 2 2) 1))
-  (assert (= (// 2 3) 0)))
-
-(builtin-function mod (x y)
-  ; Returns the remainder of dividing x by y.
-  (assert (= (mod 4 5) 4))
-  (assert (= (mod 4 3) 1))
-  (assert (= (mod 4 2) 0)))
-
-(builtin-function < (:rest args)
-  ; Returns whether the each of the specified args are in monotonically decreasing order.
-  (assert (< 0 1 2))
-  (assert (< 0 1.0 2))
-  (assert (nil? (< 0 0 1))))
-
-(function > (:rest args)
-  ; Returns whether the each of the specified args are in monotonically increasing order.
-  (every-adjacent? (f (x y) (< y x)) args))
-
-(function <= (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
-  (every-adjacent? (f (x y) (! (< y x))) args))
-
-(function >= (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
-  (every-adjacent? (f (x y) (! (< x y))) args))
-
-(function ++ (x)
-  ; Same as (+ x 1).
-  (+ x 1))
-
-(function -- (x)
-  ; Same as (- x 1).
-  (- x 1))
-
-(function abs (x)
-  ; Returns the absolute value of the specified number x.
-  (if (< x 0) (- x)
-      x))
-
-(function exp (base power)
-  ; Returns base-number raised to the power power-number.
-  (let (val 1)
-    (dotimes (i (abs power))
-      (<- val (* val base)))
-    (if (> power 0) val
-        (/ val))))
+(builtin-function {} (o key :opt val)
+  ; Returns the value associated key.
+  ; If key is not associated, returns nil.
+  ; If val is specified, returns val and associate key with val.
+  (assert (nil? ({} (object) :foo)))
+  (assert (let (o (object))
+            (&& (= ({} o :foo 'foo) 'foo) 
+                (= (keys o) '(:foo))
+                (= ({} o :foo) 'foo)))))
 
 ; os
 
@@ -1468,27 +1476,18 @@
 
 ; Paren object system
 
-(builtin-function object? (x)
-  ; Returns whether the x is an object.
-  (assert (object? '(:class Object))))
-
 (builtin-function is-a? (o cls)
   ; Returns whether the specified object o regarded as the specified class cls's instance.
-  (assert (is-a? '(:class Object)
-                 '(:class Class :symbol Object :super nil :features nil :fields (class)))))
+  )
 
 (builtin-function find-class (cls-sym)
-  ; Returns the class corresponding to the specified symbol cls_sym.
+  ; Returns the class corresponding to the specified symbol cls-sym.
   ; If cls-sym is not bound or cls-sym is not a class instance, returns nil.
   )
 
 (builtin-function find-method (cls-sym method-sym)
   ; Returns the method by which an instance of the class name cls-sym is dispatched.
   )
-
-(function error-if-not-object (o)
-  ; Returns the method by which an instance of the class name cls-sym is dispatched.
-  (if (! (object? o)) (error "expected object")))
 
 (macro make-accessor (field)
   ; Returns an expression that binds getter and setter.
@@ -1499,38 +1498,44 @@
       (list begin
             (list if (list ! (list 'bound? (list quote getter)))
                   (list 'function getter (list receiver)
-                        (list 'error-if-not-object receiver)
-                        (list 'assoc receiver key)))
+                        (list {} receiver key)))
             (list if (list ! (list 'bound? (list quote setter)))
                   (list 'function setter (list receiver val)
-                        (list 'error-if-not-object receiver)
-                        (list begin (list 'assoc! receiver key val) receiver)))))))
+                        (list {} receiver key val)
+                        receiver))))))
 
 (macro make-method-dispatcher (method-sym)
   (when (! (bound? method-sym))
     (with-gensyms (receiver args)
       (list 'function method-sym (list receiver :rest args)
-            (list 'error-if-not-object receiver)
             (list 'apply
-                  (list 'find-method
-                        (list 'cadr receiver)    ; <=> (assoc cls :class)
-                        (list quote method-sym))
+                  (list find-method (list {} receiver :class) (list quote method-sym))
                   (list 'cons receiver args))))))
 
 (macro class (cls-sym (:opt super :rest features) :rest fields)
-  ; Returns expression that create class named cls-sym.
+  ; Define class.
+  ; Returns class symbol.
   (if (! (every? symbol? fields)) (error "fields must be symbol")
       (bound? cls-sym) (error cls-sym " already bound"))
-  (list begin0
-        (list quote cls-sym)
-        (list <- cls-sym (list quote (list :class 'Class
-                                           :symbol cls-sym
-                                           :super (|| super (if (!= cls-sym 'Object) 'Object))
-                                           :features features
-                                           :fields fields)))
-        (cons begin (map (f (field) (list 'make-accessor field)) fields))))
+  (list begin
+        (list <- cls-sym '(object))
+        (cons begin
+              (map (f (k v) (list {} (list quote cls-sym) k v))
+                   '(:class :symbol :super :features :fields) 
+                   (list quote
+                         (list 'Class
+                               cls-sym
+                               (|| super (if (!= cls-sym 'Object) 'Object))
+                               features
+                               fields))))
+        (cons begin
+              (map (f (field) (list 'make-accessor field))
+                   fields))
+        (list quote cls-sym)))
 
 (macro method (cls-sym method-sym args :rest body)
+  ; Define method.
+  ; Returns method symbol.
   (let (global-sym (memcat cls-sym method-sym))
     (if (nil? (find-class cls-sym)) (error "unbound class")
         (bound? global-sym) (error global-sym " already bound"))
@@ -1576,13 +1581,12 @@
   ; Construct an instance.
   ; If .init method has argument, must invoke after create an instance.
   ; Otherwise automatically invoke .init method.
-  (let (o nil)
-    (for (cls self) cls (cls (find-class (assoc cls :super)))
-      (dolist (field (reverse! (map mem->key (assoc cls :fields))))
-        (push! nil o)
-        (push! field o)))
-    (car! (cdr o) (assoc self :symbol))
-    (if (= (len (procparams (find-method (assoc o :class) '.init))) 1) (.init o)
+  (let (o (object))
+    (for (cls self) cls (cls (find-class ({} cls :super)))
+      (foreach (f (k) ({} o k nil))
+               (map mem->key ({} cls :fields))))
+    ({} o :class ({} self :symbol))
+    (if (= (procparams (find-method ({} o :class) '.init)) '(self)) (.init o)
         o)))
 
 (method Class .super ()
