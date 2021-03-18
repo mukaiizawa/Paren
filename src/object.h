@@ -1,35 +1,36 @@
 // paren object
 
-typedef union s_expr *object;
+typedef union cstruct *object;
 
-#define HASH_MASK      0x000fffff
-#define ALIVE_BIT      0x01000000
-#define TYPE_MASK      0x00f00000
-#define   ENV          0x00000001
-#define   MACRO        0x00000002
-#define   FUNC         0x00000003
-#define   SPECIAL      0x00000004
-#define   BUILTINFUNC  0x00000005
-#define   CONS         0x00000006
-#define   SINT         0x00000007
-#define   XINT         0x00000008
-#define   XFLOAT       0x00000009
-#define   SYMBOL       0x0000000a
-#define   KEYWORD      0x0000000b
-#define   STRING       0x0000000c
-#define   BYTES        0x0000000d
-#define   ARRAY        0x0000000e
+#define ALIVE_BIT 0x01000000
+#define TYPE_MASK 0x00f00000
+#define HASH_MASK 0x000fffff
 
-#define TYPE_POS 20
+#define TYPE_OFFSET 20
+#define ENV         0x1
+#define MACRO       0x2
+#define FUNC        0x3
+#define SPECIAL     0x4
+#define BUILTINFUNC 0x5
+#define CONS        0x6
+#define SINT        0x7
+#define XINT        0x8
+#define XFLOAT      0x9
+#define SYMBOL      0xa
+#define KEYWORD     0xb
+#define STRING      0xc
+#define BYTES       0xd
+#define ARRAY       0xe
+#define OBJECT      0xf
 
 #define SINT_BITS 30
 #define SINT_MAX 0x3fffffff
-#define SINT_MIN (-SINT_MAX-1)
+#define SINT_MIN (- SINT_MAX - 1)
 
 #define XINT_BITS 63
 
-#define LC(p) (*(unsigned char*)(p))
-#define SC(p,v) (*(unsigned char*)(p)=(unsigned char)(v))
+#define LC(p) (*(unsigned char *)(p))
+#define SC(p,v) (*(unsigned char *)(p)=(unsigned char)(v))
 
 #define hash(o) ((o)->header & HASH_MASK)
 #define set_hash(o, v) {(o)->header &= ~HASH_MASK; (o)->header |= v;}
@@ -38,8 +39,8 @@ typedef union s_expr *object;
 #define set_dead(o) ((o)->header &= ~ALIVE_BIT)
 #define alive_p(o) ((o)->header & ALIVE_BIT)
 
-#define set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= (type << TYPE_POS);}
-#define object_type(o) (sint_p(o)? SINT: (o->header & TYPE_MASK)>> TYPE_POS)
+#define set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= (type << TYPE_OFFSET);}
+#define object_type(o) (sint_p(o)? SINT: (o->header & TYPE_MASK)>> TYPE_OFFSET)
 #define object_type_p(o, type) (object_type(o) == type)
 
 #define byte_p(i) (0 <= i && i < 256)
@@ -47,15 +48,15 @@ typedef union s_expr *object;
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
 #define sint(i) ((object)((((intptr_t)i) << 1) | 1))
 
-union s_expr {
+union cstruct {
   int header;
   struct env {
     int header;
-    int symbol_count;
+    int entry_count;
     int half_size;
     object top;
     object *table;
-    // object[half_size] syms;
+    // object[half_size] keys;
     // object[half_size] vals;
   } env;
   struct proc {
