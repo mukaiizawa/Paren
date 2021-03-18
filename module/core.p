@@ -1629,10 +1629,6 @@
   ; In principle, this exception is not caught.
   )
 
-(class Interrrupt (Exception)
-  ; Dispatched when the user presses the interrupt key (usually Ctrl-c).
-  )
-
 (class Error (Exception))
 
 (function error (:rest args)
