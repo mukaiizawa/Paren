@@ -7,21 +7,21 @@ typedef union cstruct *object;
 #define HASH_MASK 0x000fffff
 
 #define TYPE_OFFSET 20
-#define ENV         0x1
-#define MACRO       0x2
-#define FUNC        0x3
-#define SPECIAL     0x4
-#define BUILTINFUNC 0x5
-#define CONS        0x6
-#define SINT        0x7
-#define XINT        0x8
-#define XFLOAT      0x9
-#define SYMBOL      0xa
-#define KEYWORD     0xb
-#define STRING      0xc
-#define BYTES       0xd
-#define ARRAY       0xe
-#define OBJECT      0xf
+#define SINT        0x0
+#define XINT        0x1
+#define XFLOAT      0x2
+#define CONS        0x3
+#define SYMBOL      0x4
+#define KEYWORD     0x5
+#define STRING      0x6
+#define BYTES       0x7
+#define ARRAY       0x8
+#define OBJECT      0x9
+#define MACRO       0xa
+#define FUNC        0xb
+#define SPECIAL     0xc
+#define BUILTINFUNC 0xd
+#define ENV         0xe
 
 #define SINT_BITS 30
 #define SINT_MAX 0x3fffffff
@@ -50,15 +50,36 @@ typedef union cstruct *object;
 
 union cstruct {
   int header;
-  struct env {
+  struct xint {
+    int header;
+    int64_t val;
+  } xint;
+  struct xfloat {
+    int header;
+    double val; 
+  } xfloat;
+  struct cons {
+    int header;
+    object car;
+    object cdr;
+  } cons;
+  struct mem {
+    int header;
+    int size;
+    char elt[1];
+  } mem;
+  struct array {
+    int header;
+    int size;
+    object elt[1];
+  } array;
+  struct map {
     int header;
     int entry_count;
     int half_size;
     object top;
     object *table;
-    // object[half_size] keys;
-    // object[half_size] vals;
-  } env;
+  } map;
   struct proc {
     int header;
     object env;
@@ -75,29 +96,6 @@ union cstruct {
       int (*function)(int, object, object *);
     } u;
   } builtin;
-  struct cons {
-    int header;
-    object car;
-    object cdr;
-  } cons;
-  struct xint {
-    int header;
-    int64_t val;
-  } xint;
-  struct xfloat {
-    int header;
-    double val; 
-  } xfloat;
-  struct mem {
-    int header;
-    int size;
-    char elt[1];
-  } mem;
-  struct array {
-    int header;
-    int size;
-    object elt[1];
-  } array;
   object next;
 };
 
@@ -132,4 +130,4 @@ extern object object_find(object e, object s);
 extern object object_find_propagation(object e, object s);
 extern void object_bind(object e, object s, object v);
 extern void object_bind_propagation(object e, object s, object v);
-extern void object_env_foreach(object e, void (*f)(void *s, void *v));
+extern void object_map_foreach(object e, void (*f)(void *s, void *v));

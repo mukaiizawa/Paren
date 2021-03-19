@@ -1302,11 +1302,11 @@
 
 (builtin-function object ()
   ; Returns an empty object.
-  (assert (object? (object))))
+  )
 
 (builtin-function object? (x)
   ; Returns whether the x is an object.
-  (assert (object? '(:class Object))))
+  (assert (object? (object))))
 
 (builtin-function keys (o)
   ; Returns a list of keys contained object o.

@@ -20,6 +20,7 @@ static char *core_fn;
 // parser
 
 static int next_token;
+static object parse_expr(void);
 
 static int parse_skip(void)
 {
@@ -32,8 +33,6 @@ static int parse_token(int token)
   if (next_token != token) lex_error("missing %s", lex_token_name(buf, token));
   return parse_skip();
 }
-
-static object parse_expr(void);
 
 static object parse_cdr(void)
 {
@@ -172,7 +171,7 @@ static void make_initial_objects(int argc, char *argv[])
   char *host_name;
   object_nil = new_symbol("nil");
   object_true = new_symbol("true");
-  object_toplevel = gc_new_toplevel_env();
+  object_toplevel = gc_new_env(object_nil, 1 << 10);
   object_bind(object_toplevel, object_nil, object_nil);
   object_bind(object_toplevel, object_true, object_true);
   object_key = new_keyword("key");

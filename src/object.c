@@ -62,18 +62,12 @@ int object_list_p(object o)
 int object_byte_size(object o)
 {
   switch (object_type(o)) {
-    case ENV:
-      xassert(o != object_toplevel);
-      return sizeof(struct env) + sizeof(object) * o->env.half_size * 2;
-    case MACRO:
-    case FUNC:
-      return sizeof(struct proc);
-    case CONS:
-      return sizeof(struct cons);
     case XINT:
       return sizeof(struct xint);
     case XFLOAT:
       return sizeof(struct xfloat);
+    case CONS:
+      return sizeof(struct cons);
     case SYMBOL:
     case KEYWORD:
     case STRING:
@@ -81,6 +75,12 @@ int object_byte_size(object o)
       return sizeof(struct mem) + o->mem.size - 1;
     case ARRAY:
       return sizeof(struct array) + sizeof(object) * (o->array.size - 1);
+    case MACRO:
+    case FUNC:
+      return sizeof(struct proc);
+    case ENV:
+    case OBJECT:
+      return sizeof(struct map);
     default:
       xassert(FALSE);
       return -1;
@@ -127,30 +127,26 @@ static void describe_array(object o, struct xbarray *x)
   xbarray_add(x, ']');
 }
 
+static void describe_map(object o, struct xbarray *x)
+{
+  int i;
+  object p;
+  xbarray_adds(x, "#{");
+  for (i = 0; i < o->map.half_size; i++) {
+    if ((p = o->map.table[i]) == NULL) continue;
+    xbarray_add(x, ' ');
+    describe_s_expr(o->map.table[i], x);
+    xbarray_add(x, ' ');
+    describe_s_expr(o->map.table[i + o->map.half_size], x);
+    if (x->size > MAX_STR_LEN) return;
+  }
+  xbarray_add(x, '}');
+}
+
 static void describe_s_expr(object o, struct xbarray *x)
 {
   if (x->size > MAX_STR_LEN) return;
   switch (object_type(o)) {
-    case ENV:
-      xbarray_addf(x, "#(:environment 0x%p :top 0x%p)", o, o->env.top);
-      break;
-    case MACRO:
-    case FUNC:
-      if (object_type_p(o, MACRO)) xbarray_adds(x, "(macro ");
-      else xbarray_adds(x, "(f ");
-      if (o->proc.params == object_nil) xbarray_adds(x, "()");
-      else describe_s_expr(o->proc.params, x);
-      if (o->proc.body != object_nil) {
-        xbarray_add(x, ' ');
-        describe_cons(o->proc.body, x);
-      }
-      xbarray_add(x, ')');
-      break;
-    case CONS:
-      xbarray_add(x, '(');
-      describe_cons(o, x);
-      xbarray_add(x, ')');
-      break;
     case SINT:
       xbarray_addf(x, "%d", sint_val(o));
       break;
@@ -159,6 +155,11 @@ static void describe_s_expr(object o, struct xbarray *x)
       break;
     case XFLOAT:
       xbarray_addf(x, "%g", o->xfloat.val);
+      break;
+    case CONS:
+      xbarray_add(x, '(');
+      describe_cons(o, x);
+      xbarray_add(x, ')');
       break;
     case STRING:
       xbarray_add(x, '"');
@@ -180,6 +181,24 @@ static void describe_s_expr(object o, struct xbarray *x)
       break;
     case ARRAY:
       describe_array(o, x);
+      break;
+    case OBJECT:
+      describe_map(o, x);
+      break;
+    case MACRO:
+    case FUNC:
+      if (object_type_p(o, MACRO)) xbarray_adds(x, "(macro ");
+      else xbarray_adds(x, "(f ");
+      if (o->proc.params == object_nil) xbarray_adds(x, "()");
+      else describe_s_expr(o->proc.params, x);
+      if (o->proc.body != object_nil) {
+        xbarray_add(x, ' ');
+        describe_cons(o->proc.body, x);
+      }
+      xbarray_add(x, ')');
+      break;
+    case ENV:
+      xbarray_addf(x, "#(:environment 0x%p :top 0x%p)", o, o->map.top);
       break;
     default:
       xassert(FALSE);
@@ -203,31 +222,14 @@ char *object_describe(object o, char *buf)
 }
 
 
-static void extend_env(object e)
-{
-  int i, half_size;
-  object *table;
-  xassert(e == object_toplevel);
-  table = e->env.table;
-  half_size = e->env.half_size;
-  e->env.symbol_count = 0;
-  e->env.half_size *= 2;
-  e->env.table = xmalloc(sizeof(object) * e->env.half_size * 2);
-  for (i = 0; i < e->env.half_size; i++) e->env.table[i] = NULL;
-  for (i = 0; i < half_size; i++)
-    if (table[i] != NULL) object_bind(e, table[i], table[i + half_size]);
-  xfree(table);
-}
-
 object object_find(object e, object s)
 {
   int i;
   object o;
-  xassert(object_type_p(e, ENV));
-  i = hash(s) % e->env.half_size;
-  while ((o = e->env.table[i]) != NULL) {
-    if (o == s) return e->env.table[i + e->env.half_size];
-    if (++i == e->env.half_size) i = 0;
+  i = hash(s) % e->map.half_size;
+  while ((o = e->map.table[i]) != NULL) {
+    if (o == s) return e->map.table[i + e->map.half_size];
+    if (++i == e->map.half_size) i = 0;
   }
   return NULL;
 }
@@ -237,7 +239,7 @@ object object_find_propagation(object e, object s)
   object o;
   while (e != object_nil) {
     if ((o = object_find(e, s)) != NULL) return o;
-    e = e->env.top;
+    e = e->map.top;
   }
   return NULL;
 }
@@ -246,20 +248,18 @@ void object_bind(object e, object s, object v)
 {
   int i;
   object o;
-  xassert(object_type_p(e, ENV));
-  xassert(object_type_p(s, SYMBOL));
-  i = hash(s) % e->env.half_size;
-  while ((o = e->env.table[i]) != NULL) {
+  i = hash(s) % e->map.half_size;
+  while ((o = e->map.table[i]) != NULL) {
     if (o == s) {
-      e->env.table[i + e->env.half_size] = v;
+      e->map.table[i + e->map.half_size] = v;
       return;
     }
-    if (++i == e->env.half_size) i = 0;
+    if (++i == e->map.half_size) i = 0;
   }
-  e->env.table[i] = s;
-  e->env.table[i + e->env.half_size] = v;
-  e->env.symbol_count++;
-  if (e->env.symbol_count * 2 > e->env.half_size) extend_env(e);
+  e->map.table[i] = s;
+  e->map.table[i + e->map.half_size] = v;
+  e->map.entry_count++;
+  if (e->map.entry_count * 2 > e->map.half_size) gc_extend_table(e);
 }
 
 void object_bind_propagation(object e, object s, object v)
@@ -269,16 +269,16 @@ void object_bind_propagation(object e, object s, object v)
       object_bind(e, s, v);
       return;
     }
-    e = e->env.top;
+    e = e->map.top;
   }
   object_bind(object_toplevel, s, v);
 }
 
-void object_env_foreach(object e, void (*f)(void *s, void *v))
+void object_map_foreach(object e, void (*f)(void *s, void *v))
 {
   int i;
   object *table;
-  table = e->env.table;
-  for (i = 0; i < e->env.half_size; i++)
-    if (table[i] != NULL) (*f)(table[i], table[i + e->env.half_size]);
+  table = e->map.table;
+  for (i = 0; i < e->map.half_size; i++)
+    if (table[i] != NULL) (*f)(table[i], table[i + e->map.half_size]);
 }

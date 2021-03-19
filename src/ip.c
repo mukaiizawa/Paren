@@ -32,6 +32,16 @@ int ip_mark_error(char *msg)
   return FALSE;
 }
 
+static object new_Error(char *msg)
+{
+  object o;
+  o = gc_new_object();
+  object_bind(o, object_class, object_Error);
+  object_bind(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
+  object_bind(o, object_stack_trace, object_nil);
+  return o;
+}
+
 // stack frame
 
 /*
@@ -66,27 +76,28 @@ int ip_mark_error(char *msg)
  */
 
 #define STACK_GAP 10
+
 #define FRAME_STACK_SIZE 10000
-#define FRAME_SIZE_MASK          0x0000000f
-#define   APPLY_FRAME            0x00000003
-#define   APPLY_BUILTIN_FRAME    0x00000013
-#define   ASSERT_FRAME           0x00000023
-#define   BIND_HANDLER_FRAME     0x00000033
-#define   BIND_FRAME             0x00000043
-#define   BIND_PROPAGATION_FRAME 0x00000053
-#define   EVAL_FRAME             0x00000062
-#define   EVAL_ARGS_FRAME        0x00000074
-#define   EVAL_SEQUENTIAL_FRAME  0x00000083
-#define   GOTO_FRAME             0x00000092
-#define   HANDLERS_FRAME         0x00000103
-#define   IF_FRAME               0x00000113
-#define   LABELS_FRAME           0x00000123
-#define   FUNC_FRAME             0x00000134
-#define   LET_FRAME              0x00000142
-#define   QUOTE_FRAME            0x00000153
-#define   RETURN_FRAME           0x00000162
-#define   THROW_FRAME            0x00000172
-#define   UNWIND_PROTECT_FRAME   0x00000183
+#define FRAME_SIZE_MASK          0x00f
+#define   APPLY_FRAME            0x003
+#define   APPLY_BUILTIN_FRAME    0x013
+#define   ASSERT_FRAME           0x023
+#define   BIND_HANDLER_FRAME     0x033
+#define   BIND_FRAME             0x043
+#define   BIND_PROPAGATION_FRAME 0x053
+#define   EVAL_FRAME             0x062
+#define   EVAL_ARGS_FRAME        0x074
+#define   EVAL_SEQUENTIAL_FRAME  0x083
+#define   GOTO_FRAME             0x092
+#define   HANDLERS_FRAME         0x0a3
+#define   IF_FRAME               0x0b3
+#define   LABELS_FRAME           0x0c3
+#define   FUNC_FRAME             0x0d4
+#define   LET_FRAME              0x0e2
+#define   QUOTE_FRAME            0x0f3
+#define   RETURN_FRAME           0x102
+#define   THROW_FRAME            0x112
+#define   UNWIND_PROTECT_FRAME   0x123
 
 #define fs_top() (sint_val(fs[fp]))
 #define fs_nth(i) (sint_val(fs[i]))
@@ -158,18 +169,16 @@ static void exit1(void)
 {
   char buf[MAX_STR_LEN];
   object o;
-  o = reg[0]->cons.cdr;
-  printf("%s", object_describe(o->cons.car, buf));
-  o = o->cons.cdr->cons.cdr;
-  if (o->cons.car != object_nil)
-    printf(" -- %s.", object_describe(o->cons.car, buf));
+  printf("%s", object_describe(object_find(reg[0], object_class), buf));
+  if ((o = object_find(reg[0], object_message)) != object_nil)
+    printf(" -- %s.", object_describe(o, buf));
   printf("\n");
-  while (o->cons.car != object_stack_trace) o = o->cons.cdr;
-  o = o->cons.cdr->cons.car;
+  o = object_find(reg[0], object_stack_trace);
   while (o != object_nil) {
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
+  dump_fs();
   exit(1);
 }
 
@@ -325,7 +334,7 @@ static void pop_func_frame(void)
 
 static void pop_let_frame(void)
 {
-  reg[1] = reg[1]->env.top;
+  reg[1] = reg[1]->map.top;
   pop_frame();
 }
 
@@ -453,10 +462,6 @@ static void pop_eval_frame(void)
           return;
       }
       break;
-    case MACRO:
-    case FUNC:
-    case BUILTINFUNC:
-    case SPECIAL:
     case SINT:
     case XINT:
     case XFLOAT:
@@ -464,6 +469,11 @@ static void pop_eval_frame(void)
     case STRING:
     case BYTES:
     case ARRAY:
+    case OBJECT:
+    case MACRO:
+    case FUNC:
+    case BUILTINFUNC:
+    case SPECIAL:
       return;
     default:
       xassert(FALSE);
@@ -599,9 +609,9 @@ static int resolve_anonimous_proc(void)
   xassert(named_proc == NULL);
   e = reg[1];
   while (e != object_nil) {
-    object_env_foreach(e, find_named_proc);
+    object_map_foreach(e, find_named_proc);
     if (named_proc != NULL) return TRUE;
-    e = e->env.top;
+    e = e->map.top;
   }
   return FALSE;
 }
@@ -637,9 +647,6 @@ static object call_stack(void)
   return o;
 }
 
-static int object_p(object o);
-static int object_is_a_p(object o, object cls_sym);
-
 static void push_call_stack(object o)
 {
   while (object_type_p(o, CONS)) {
@@ -654,14 +661,16 @@ static void push_call_stack(object o)
   }
 }
 
+static int pos_is_a_p(object o, object cls_sym);
+
 static void pop_throw_frame(void)
 {
   int i, j;
   object cls_sym, handler, handlers, body;
   i = fp;
   pop_frame();
-  if (!object_is_a_p(reg[0], object_Exception))
-    reg[0] = gc_new_Error("expected Exception object");
+  if (!pos_is_a_p(reg[0], object_Exception))
+    reg[0] = new_Error("expected Exception object");
   push_call_stack(reg[0]);
   while (fp > -1) {
     switch (fs_top()) {
@@ -679,7 +688,7 @@ static void pop_throw_frame(void)
         for (j = 0; j < handlers->array.size; j += 2) {
           cls_sym = handlers->array.elt[j];
           handler = handlers->array.elt[j + 1];
-          if (!object_is_a_p(reg[0], cls_sym)) continue;
+          if (!pos_is_a_p(reg[0], cls_sym)) continue;
           gen1(APPLY_FRAME, handler);
           reg[0] = gc_new_cons(reg[0], object_nil);
           return;
@@ -849,7 +858,7 @@ static void trap(void)
     case TRAP_ERROR:
       xassert(error_msg != NULL);
       gen0(THROW_FRAME);
-      reg[0] = gc_new_Error(error_msg);
+      reg[0] = new_Error(error_msg);
       ip_trap_code = TRAP_NONE;
       error_msg = NULL;
       break;
@@ -861,43 +870,45 @@ static void trap(void)
 
 // paren object system.
 
-#define class_sym(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.car)
-#define class_super(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.car)
-#define class_features(cls) ((cls)->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.cdr->cons.car)
-
-static int object_class_p(object o)
+static int pos_object_p(object o)
 {
-  return object_type_p(o, CONS)
-    && o->cons.car == object_class
-    && (o = o->cons.cdr) != object_nil
-    && o->cons.car == object_Class
-    && (o = o->cons.cdr) != object_nil
-    && o->cons.car == object_symbol
-    && (o = o->cons.cdr) != object_nil
-    && (o = o->cons.cdr) != object_nil
-    && o->cons.car == object_super
-    && (o = o->cons.cdr) != object_nil
-    && (o = o->cons.cdr) != object_nil
-    && o->cons.car == object_features
-    && (o = o->cons.cdr) != object_nil
-    && (o = o->cons.cdr) != object_nil
-    && o->cons.car == object_fields
-    && (o = o->cons.cdr) != object_nil
-    && (o = o->cons.cdr) == object_nil;
+  return object_type_p(o, OBJECT) && object_find(o, object_class) != NULL;
+}
+
+static int pos_class_p(object o)
+{
+  return object_type_p(o, OBJECT)
+    && object_find(o, object_class) == object_Class
+    && object_find(o, object_symbol) != NULL
+    && object_find(o, object_super) != NULL
+    && object_find(o, object_features) != NULL
+    && object_find(o, object_fields) != NULL;
 }
 
 static int find_class(object cls_sym, object *result)
 {
   if (!object_type_p(cls_sym, SYMBOL)) return FALSE;
   if ((*result = object_find_propagation(reg[1], cls_sym)) == NULL) return FALSE;
-  return object_class_p(*result);
+  return pos_class_p(*result);
 }
 
 static int find_super_class(object cls_sym, object *result)
 {
   object cls;
   if (!find_class(cls_sym, &cls)) return FALSE;
-  return find_class(class_super(cls), result);
+  return find_class(object_find(cls, object_super), result);
+}
+
+static int pos_is_a_p(object o, object cls_sym) {
+  object o_cls_sym;
+  xassert(object_type_p(cls_sym, SYMBOL));
+  if (!pos_object_p(o)) return FALSE;
+  o_cls_sym = object_find(o, object_class);
+  while (TRUE) {
+    if (o_cls_sym == cls_sym) return TRUE;
+    if (!find_super_class(o_cls_sym, &o)) return FALSE;
+    o_cls_sym = object_find(o, object_class);
+  }
 }
 
 static int find_class_method(object cls_sym, object mtd_sym, object *result)
@@ -913,37 +924,10 @@ static int find_class_method(object cls_sym, object mtd_sym, object *result)
   return TRUE;
 }
 
-static int object_p(object o)
-{
-  if (!object_type_p(o, CONS)) return FALSE;
-  if (o->cons.car != object_class) return FALSE;
-  o = o->cons.cdr;
-  while (TRUE) {
-    if (!object_type_p(o, CONS)) return FALSE;
-    if (o->cons.cdr == object_nil) return TRUE;
-    o = o->cons.cdr;
-    if (!object_type_p(o, CONS)) return FALSE;
-    if (!object_type_p(o->cons.car, KEYWORD)) return FALSE;
-    o = o->cons.cdr;
-  }
-}
-
-static int object_is_a_p(object o, object cls_sym) {
-  object o_cls_sym;
-  xassert(object_type_p(cls_sym, SYMBOL));
-  if (!object_p(o)) return FALSE;
-  o_cls_sym = o->cons.cdr->cons.car;
-  while (TRUE) {
-    if (o_cls_sym == cls_sym) return TRUE;
-    if (!find_super_class(o_cls_sym, &o)) return FALSE;
-    o_cls_sym = class_sym(o);
-  }
-}
-
 DEFUN(object_p)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  reg[0] = object_bool(object_p(argv->cons.car));
+  reg[0] = object_bool(object_type_p(argv->cons.car, OBJECT));
   return TRUE;
 }
 
@@ -952,11 +936,11 @@ DEFUN(is_a_p)
   object o, cls;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   o = argv->cons.car;
-  if (!object_class_p(cls = argv->cons.cdr->cons.car)) {
+  if (!pos_class_p(cls = argv->cons.cdr->cons.car)) {
     ip_mark_error("require Class instance");
     return FALSE;
   }
-  reg[0] = object_bool(object_is_a_p(o, class_sym(cls)));
+  reg[0] = object_bool(pos_is_a_p(o, object_find(cls, object_class)));
   return TRUE;
 }
 
@@ -980,7 +964,7 @@ DEFUN(find_method)
     if (*result != NULL) return TRUE;
     // find feature method
     if (!find_class(cls_sym, &cls)) return FALSE;
-    features = class_features(cls);
+    features = object_find(cls, object_features);
     while (features != object_nil) {
       xassert(object_type_p(features, CONS));
       if (!find_class_method(features->cons.car, mtd_sym, result)) return FALSE;
@@ -988,8 +972,8 @@ DEFUN(find_method)
       features = features->cons.cdr;
     }
     // super class
-    if (!find_class(class_super(cls), &cls)) break;
-    cls_sym = class_sym(cls);
+    if (!find_class(object_find(cls, object_super), &cls)) break;
+    cls_sym = object_find(cls, object_class);
   }
   return ip_mark_error("undeclared method");
 }
@@ -1148,7 +1132,7 @@ DEFSP(dynamic)
   while ((i = prev_fp(i)) != -1) {
     switch (fs_nth(i)) {
       case LET_FRAME:
-        e = e->env.top;
+        e = e->map.top;
         break;
       case FUNC_FRAME:
         e = get_frame_var(i, 0);
@@ -1195,7 +1179,7 @@ DEFSP(f)
   param_count = 0;
   if (!parse_required_params(params))
     return ip_mark_error("illegal function parameter list");
-  reg[0] = gc_new_proc(reg[1], param_count, params, argv->cons.cdr);
+  reg[0] = gc_new_func(reg[1], param_count, params, argv->cons.cdr);
   return TRUE;
 }
 
