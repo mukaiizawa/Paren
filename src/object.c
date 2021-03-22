@@ -79,7 +79,7 @@ int object_byte_size(object o)
     case FUNC:
       return sizeof(struct proc);
     case ENV:
-    case OBJECT:
+    case DICT:
       return sizeof(struct map);
     default:
       xassert(FALSE);
@@ -182,7 +182,7 @@ static void describe_s_expr(object o, struct xbarray *x)
     case ARRAY:
       describe_array(o, x);
       break;
-    case OBJECT:
+    case DICT:
       describe_map(o, x);
       break;
     case MACRO:

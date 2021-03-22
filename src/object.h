@@ -1,6 +1,6 @@
 // paren object
 
-typedef union cstruct *object;
+typedef union _object *object;
 
 #define ALIVE_BIT 0x01000000
 #define TYPE_MASK 0x00f00000
@@ -16,7 +16,7 @@ typedef union cstruct *object;
 #define STRING      0x6
 #define BYTES       0x7
 #define ARRAY       0x8
-#define OBJECT      0x9
+#define DICT        0x9
 #define MACRO       0xa
 #define FUNC        0xb
 #define SPECIAL     0xc
@@ -48,7 +48,7 @@ typedef union cstruct *object;
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
 #define sint(i) ((object)((((intptr_t)i) << 1) | 1))
 
-union cstruct {
+union _object {
   int header;
   struct xint {
     int header;

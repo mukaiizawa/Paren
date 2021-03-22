@@ -469,7 +469,7 @@ static void pop_eval_frame(void)
     case STRING:
     case BYTES:
     case ARRAY:
-    case OBJECT:
+    case DICT:
     case MACRO:
     case FUNC:
     case BUILTINFUNC:
@@ -872,12 +872,12 @@ static void trap(void)
 
 static int pos_object_p(object o)
 {
-  return object_type_p(o, OBJECT) && object_find(o, object_class) != NULL;
+  return object_type_p(o, DICT) && object_find(o, object_class) != NULL;
 }
 
 static int pos_class_p(object o)
 {
-  return object_type_p(o, OBJECT)
+  return object_type_p(o, DICT)
     && object_find(o, object_class) == object_Class
     && object_find(o, object_symbol) != NULL
     && object_find(o, object_super) != NULL
@@ -927,7 +927,7 @@ static int find_class_method(object cls_sym, object mtd_sym, object *result)
 DEFUN(object_p)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  reg[0] = object_bool(object_type_p(argv->cons.car, OBJECT));
+  reg[0] = object_bool(object_type_p(argv->cons.car, DICT));
   return TRUE;
 }
 

@@ -70,7 +70,7 @@ static void gc_free0(int size, object o)
 void gc_free(object o)
 {
   switch (object_type(o)) {
-    case OBJECT:
+    case DICT:
     case ENV:
       gc_free0(sizeof(object) * o->map.half_size * 2, *(o->map.table));
       break;
@@ -229,7 +229,7 @@ static object new_map(int type, int half_size, object top)
 
 object gc_new_object(void)
 {
-  return new_map(OBJECT, 8, object_nil);
+  return new_map(DICT, 8, object_nil);
 }
 
 static object new_proc(int type, object env, int param_count, object params
@@ -311,7 +311,7 @@ void gc_mark(object o)
     case ARRAY:
       for (i = 0; i < o->array.size; i++) gc_mark(o->array.elt[i]);
       break;
-    case OBJECT:
+    case DICT:
       object_map_foreach(o, mark_binding);
       break;
     case SPECIAL:
