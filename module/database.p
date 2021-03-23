@@ -8,7 +8,7 @@
           (submem x.y (++ i)))))
 
 (function select-table-columns (table key)
-  (select (f (x) (nilable-assoc (cdr x) key))
+  (select (f (x) (assoc (cdr x) key))
           (cdr table)))
 
 (function column->create-query (column)

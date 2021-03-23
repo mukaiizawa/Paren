@@ -653,6 +653,13 @@
               (if (cdr rest) (cons (car rest) (rec (cdr rest))))))
     (rec l)))
 
+(function assoc (alist key)
+  ; Returns the value corresponding to the key in the associative list.
+  ; If there is no corresponding value, returns nil.
+  (if (nil? alist) nil
+      (= (car alist) key) (cadr alist)
+      (assoc (cddr alist) key)))
+
 (function .. (start :opt stop step)
   ; Returns a list of numbers that increase step by step from start for which start < stop holds.
   ; The contents of the list is determined by the formula.
