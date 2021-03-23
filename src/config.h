@@ -47,7 +47,6 @@
 #endif
 #endif
 
-
 // runtime
 
 #define IP_POLLING_INTERVAL 256

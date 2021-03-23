@@ -1,4 +1,4 @@
-// paren object
+// paren object.
 
 typedef union _object *object;
 
@@ -111,6 +111,7 @@ extern object object_stack_trace;
 extern object object_Class;
 extern object object_Exception;
 extern object object_Error;
+extern object object_SystemExit;
 
 extern object object_class;
 extern object object_symbol;

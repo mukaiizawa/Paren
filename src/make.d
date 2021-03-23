@@ -2,6 +2,7 @@
 array.o: array.c xbarray.h bi.h ip.h gc.h object.h config.h std.h
 bi.o: bi.c defun.wk defsp.wk ip.h xbarray.h bi.h gc.h object.h config.h std.h
 cons.o: cons.c xbarray.h bi.h ip.h gc.h object.h config.h std.h
+dict.o: dict.c xbarray.h bi.h ip.h gc.h object.h config.h std.h
 dl.o: dl.c xbarray.h bi.h gc.h object.h config.h std.h
 gc.o: gc.c gc.h ip.h st.h object.h xarray.h heap.h config.h std.h
 heap.o: heap.c heap.h config.h std.h

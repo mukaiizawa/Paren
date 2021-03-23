@@ -1,4 +1,4 @@
-// paren object
+// paren object.
 
 #include "std.h"
 #include "xbarray.h"
@@ -17,6 +17,7 @@ object object_stack_trace;
 object object_Class;
 object object_Exception;
 object object_Error;
+object object_SystemExit;
 
 object object_class;
 object object_symbol;
@@ -106,10 +107,9 @@ static void describe_cons(object o, struct xbarray *x)
 static void describe_mem(object o, struct xbarray *x)
 {
   int i;
-  xbarray_adds(x, "#b[");
+  xbarray_adds(x, "#[");
   for (i = 0; i < o->mem.size; i++) {
-    if (i != 0) xbarray_add(x, ' ');
-    xbarray_addf(x, "0x%x", LC(o->mem.elt + i));
+    xbarray_addf(x, "0x%x ", LC(o->mem.elt + i));
     if (x->size > MAX_STR_LEN) return;
   }
   xbarray_add(x, ']');
@@ -118,10 +118,10 @@ static void describe_mem(object o, struct xbarray *x)
 static void describe_array(object o, struct xbarray *x)
 {
   int i;
-  xbarray_adds(x, "#a[");
+  xbarray_adds(x, "#[ ");
   for (i = 0; i < o->array.size; i++) {
-    if (i != 0) xbarray_add(x, ' ');
     describe_s_expr(o->array.elt[i], x);
+    xbarray_add(x, ' ');
     if (x->size > MAX_STR_LEN) return;
   }
   xbarray_add(x, ']');
@@ -131,13 +131,13 @@ static void describe_map(object o, struct xbarray *x)
 {
   int i;
   object p;
-  xbarray_adds(x, "#{");
+  xbarray_adds(x, "#{ ");
   for (i = 0; i < o->map.half_size; i++) {
     if ((p = o->map.table[i]) == NULL) continue;
-    xbarray_add(x, ' ');
     describe_s_expr(o->map.table[i], x);
     xbarray_add(x, ' ');
     describe_s_expr(o->map.table[i + o->map.half_size], x);
+    xbarray_add(x, ' ');
     if (x->size > MAX_STR_LEN) return;
   }
   xbarray_add(x, '}');

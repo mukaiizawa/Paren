@@ -65,6 +65,17 @@ int bi_arg_mutable_mem(object o, object *result)
   }
 }
 
+int bi_arg_immutable_mem(object o, object *result)
+{
+  switch (object_type(o)) {
+    case SYMBOL:
+    case KEYWORD:
+      return arg_type(o, TRUE, result);
+    default:
+      return arg_type(o, FALSE, result);
+  }
+}
+
 int bi_arg_proc(object o, object *result)
 {
   switch (object_type(o)) {
@@ -105,15 +116,13 @@ static char *symbol_name_map[] = {
   "find_method", "find-method",
   "is_a_p", "is-a?",
   "not", "!",
-  "object_p", "object?",
   // array
   "array_access", "[]",
   "array_p", "array?",
-  "array_copy", "arrcpy",
-  "array_new", "array",
-  "array_length", "arrlen",
+  // dict
+  "dict_access", "{}",
+  "dict_p", "dict?",
   // mem
-  "bytes_new", "bytes",
   "bytes_p", "bytes?",
   "keyword_p", "keyword?",
   "mem_to_bytes", "mem->bytes",
@@ -125,7 +134,6 @@ static char *symbol_name_map[] = {
   "xmem_to_str", "mem->str!",
   // cons
   "cons_p", "cons?",
-  "set_assoc", "assoc!",
   "last_cons", "last-cons",
   "nth_set", "nth!",
   "set_car", "car!",

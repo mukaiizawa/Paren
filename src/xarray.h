@@ -1,4 +1,4 @@
-// extensible array
+// extensible array.
 
 struct xarray {
   void **elt;

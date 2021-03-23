@@ -1,4 +1,4 @@
-// extensible array
+// extensible array.
 
 /* lisence {{{
 Mulk system.

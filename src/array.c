@@ -1,10 +1,19 @@
-// array
+// array.
 
 #include "std.h"
 #include "object.h"
 #include "gc.h"
 #include "ip.h"
 #include "bi.h"
+
+DEFUN(array)
+{
+  int size;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_sint(argv->cons.car, &size)) return FALSE;
+  *result = gc_new_array(size);
+  return TRUE;
+}
 
 DEFUN(array_p)
 {
@@ -72,16 +81,7 @@ DEFUN(array_access)
   }
 }
 
-DEFUN(array_new)
-{
-  int size;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_sint(argv->cons.car, &size)) return FALSE;
-  *result = gc_new_array(size);
-  return TRUE;
-}
-
-DEFUN(array_length)
+DEFUN(arrlen)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -90,7 +90,7 @@ DEFUN(array_length)
   return TRUE;
 }
 
-DEFUN(array_copy)
+DEFUN(arrcpy)
 {
   int oi, pi, size;
   object o, p;

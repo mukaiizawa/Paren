@@ -1,4 +1,4 @@
-// mem
+// memory.
 
 #include "std.h"
 #include "object.h"
@@ -6,7 +6,7 @@
 #include "ip.h"
 #include "bi.h"
 
-DEFUN(bytes_new)
+DEFUN(bytes)
 {
   int size;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;

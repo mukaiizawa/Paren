@@ -1,4 +1,4 @@
-// garbage collector
+// garbage collector.
 
 #include "std.h"
 #include "heap.h"
@@ -29,7 +29,7 @@ static int mem_hash(char *val, int size)
   return hval & HASH_MASK;
 }
 
-static object gc_alloc(int size)
+static void *gc_alloc(int size)
 {
   object o;
   if (size <= LINK0_SIZE) {
@@ -53,8 +53,10 @@ static object gc_alloc(int size)
   return o;
 }
 
-static void gc_free0(int size, object o)
+static void gc_free0(int size, void *p)
 {
+  object o;
+  o = p;
   if (size <= LINK0_SIZE) {
     size = LINK0_SIZE;
     o->next = link0;
@@ -72,7 +74,7 @@ void gc_free(object o)
   switch (object_type(o)) {
     case DICT:
     case ENV:
-      gc_free0(sizeof(object) * o->map.half_size * 2, *(o->map.table));
+      gc_free0(sizeof(object) * o->map.half_size * 2, o->map.table);
       break;
     default:
       break;
@@ -221,13 +223,13 @@ static object new_map(int type, int half_size, object top)
   o->map.top = top;
   o->map.entry_count = 0;
   o->map.half_size = half_size;
-  o->map.table = (object *)gc_alloc(sizeof(object) * half_size * 2);
+  o->map.table = gc_alloc(sizeof(object) * half_size * 2);
   for (i = 0; i < half_size; i++) o->map.table[i] = NULL;
   regist(o);
   return o;
 }
 
-object gc_new_object(void)
+object gc_new_dict(void)
 {
   return new_map(DICT, 8, object_nil);
 }
@@ -281,11 +283,11 @@ void gc_extend_table(object o)
   half_size = o->map.half_size;
   o->map.entry_count = 0;
   o->map.half_size *= 2;
-  o->map.table = (object *)gc_alloc(sizeof(object) * o->map.half_size * 2);
+  o->map.table = gc_alloc(sizeof(object) * o->map.half_size * 2);
   for (i = 0; i < o->map.half_size; i++) o->map.table[i] = NULL;
   for (i = 0; i < half_size; i++)
     if (table[i] != NULL) object_bind(o, table[i], table[i + half_size]);
-  gc_free0(sizeof(object) * half_size * 2, *table);
+  gc_free0(sizeof(object) * half_size * 2, table);
 }
 
 static void mark_binding(void *key, void *val)

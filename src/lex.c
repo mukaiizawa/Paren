@@ -1,4 +1,4 @@
-// lexical analysis
+// lexical analysis.
 
 #include "std.h"
 

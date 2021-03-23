@@ -171,7 +171,7 @@ static void make_initial_objects(int argc, char *argv[])
   char *host_name;
   object_nil = new_symbol("nil");
   object_true = new_symbol("true");
-  object_toplevel = gc_new_env(object_nil, 1 << 10);
+  object_toplevel = gc_new_env(object_nil, 1 << 11);
   object_bind(object_toplevel, object_nil, object_nil);
   object_bind(object_toplevel, object_true, object_true);
   object_key = new_keyword("key");
@@ -188,6 +188,7 @@ static void make_initial_objects(int argc, char *argv[])
   object_Class = new_symbol("Class");
   object_Exception = new_symbol("Exception");
   object_Error = new_symbol("Error");
+  object_SystemExit = new_symbol("SystemExit");
   object_bind(object_toplevel, new_symbol("$args"), parse_args(argc, argv));
   object_bind(object_toplevel, new_symbol("core.p"), new_string(core_fn));
 #if WINDOWS_P

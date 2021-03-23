@@ -1,4 +1,4 @@
-// path and files for windows.
+// path and files for unix.
 
 #include "std.h"
 #include <stdlib.h>

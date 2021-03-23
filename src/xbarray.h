@@ -1,4 +1,4 @@
-// xc extensible byte array.
+// extensible byte array.
 
 #ifndef INCLUDE_xbarray_H
 #define INCLUDE_xbarray_H

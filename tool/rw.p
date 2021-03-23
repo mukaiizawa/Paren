@@ -8,7 +8,7 @@
        builtin-function))
 
 (function! main (args)
-  (with-open ($in (.resolve $paren-home core.p) :read)
+  (with-open ($in (.resolve (.resolve $paren-home "module") core.p) :read)
     (foreach write-line
              (map cadr
                   (select (f (x) (&& (cons? x) (include? (car x) $reserved-words)))

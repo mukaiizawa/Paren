@@ -1,4 +1,4 @@
-// xc std
+// xc std.
 
 #define TRUE 1
 #define FALSE 0

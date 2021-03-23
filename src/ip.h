@@ -1,4 +1,4 @@
-// interpreter
+// interpreter.
 
 extern int ip_trap_code;
 #define TRAP_NONE 0

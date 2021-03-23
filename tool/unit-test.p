@@ -18,4 +18,4 @@
   (let (debug? nil)
     (assert (<- debug? true))
     (if (! debug?) (error "need to build in debug mode")
-        (foreach unit-test (select module-file? (.children $paren-home))))))
+        (foreach unit-test (select module-file? (.children (Path.getcwd)))))))

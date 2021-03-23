@@ -1,4 +1,4 @@
-// cons
+// cons.
 
 #include "std.h"
 #include "object.h"
@@ -117,42 +117,4 @@ DEFUN(xreverse)
   if (o == object_nil) *result = object_nil;
   else *result = object_reverse(o);
   return TRUE;
-}
-
-DEFUN(assoc)
-{
-  object o, k;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
-  k = argv->cons.cdr->cons.car;
-  while (o != object_nil) {
-    if (o->cons.car == k) {
-      if (!bi_arg_type(o->cons.cdr, CONS, &o)) break;
-      *result = o->cons.car;
-      return TRUE;
-    }
-    if (!bi_arg_type(o->cons.cdr, CONS, &o)) break;
-    o = o->cons.cdr;
-  }
-  return ip_mark_error("property not found");
-}
-
-DEFUN(set_assoc)
-{
-  object o, k, v;
-  if (!bi_argc_range(argc, 3, 3)) return FALSE;
-  if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
-  k = argv->cons.cdr->cons.car;
-  v = argv->cons.cdr->cons.cdr->cons.car;
-  while (o != object_nil) {
-    if (o->cons.car == k) {
-      if (!bi_arg_type(o->cons.cdr, CONS, &o)) break;
-      o->cons.car = v;
-      *result = v;
-      return TRUE;
-    }
-    if (!bi_arg_type(o->cons.cdr, CONS, &o)) break;
-    o = o->cons.cdr;
-  }
-  return ip_mark_error("property not found");
 }

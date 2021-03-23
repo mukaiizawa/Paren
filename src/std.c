@@ -1,4 +1,4 @@
-// xc std
+// xc std.
 
 /* lisence {{{
 Mulk system.

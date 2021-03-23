@@ -1298,29 +1298,33 @@
     (let (new-len (- end start) new-array (array new-len))
       (arrcpy x start new-array 0 new-len))))
 
-; object
+; dictionary
 
-(builtin-function object ()
-  ; Returns an empty object.
+(builtin-function dict ()
+  ; Returns an empty dictionary.
   )
 
-(builtin-function object? (x)
-  ; Returns whether the x is an object.
-  (assert (object? (object))))
+(builtin-function dict? (x)
+  ; Returns whether the x is a dictionary.
+  (assert (dict? (dict)))
+  (assert (! (dict? (array 1)))))
 
-(builtin-function keys (o)
-  ; Returns a list of keys contained object o.
-  (assert (nil? (keys (object)))))
+(builtin-function keys (d)
+  ; Returns a list of keys contained in this dictionary.
+  (assert (let (d (dict))
+            (&& (nil? (keys d))
+                (= ({} d :foo 'foo) 'foo)
+                (= (keys d) '(:foo))))))
 
-(builtin-function {} (o key :opt val)
+
+(builtin-function {} (d key :opt val)
   ; Returns the value associated key.
   ; If key is not associated, returns nil.
-  ; If val is specified, returns val and associate key with val.
-  (assert (nil? ({} (object) :foo)))
-  (assert (let (o (object))
-            (&& (= ({} o :foo 'foo) 'foo) 
-                (= (keys o) '(:foo))
-                (= ({} o :foo) 'foo)))))
+  ; If val is specified, associate key with val and returns val.
+  (assert (let (d (dict))
+            (&& (nil? ({} d :foo))
+                (= ({} d :foo 'foo) 'foo)
+                (= ({} d :foo) 'foo)))))
 
 ; os
 
@@ -1476,6 +1480,11 @@
 
 ; Paren object system
 
+(function object? (x)
+  ; Returns whether x is an object in the Paren object system.
+  ; Same as (&& (dict? x) ({} x :class)).
+  (&& (dict? x) ({} x :class)))
+
 (builtin-function is-a? (o cls)
   ; Returns whether the specified object o regarded as the specified class cls's instance.
   )
@@ -1496,21 +1505,21 @@
   (with-gensyms (receiver val)
     (let (key (mem->key field) getter (memcat '& field) setter (memcat getter '!))
       (list begin
-            (list if (list ! (list 'bound? (list quote getter)))
-                  (list 'function getter (list receiver)
+            (list if (list ! (list bound? (list quote getter)))
+                  (list function getter (list receiver)
                         (list {} receiver key)))
-            (list if (list ! (list 'bound? (list quote setter)))
-                  (list 'function setter (list receiver val)
+            (list if (list ! (list bound? (list quote setter)))
+                  (list function setter (list receiver val)
                         (list {} receiver key val)
                         receiver))))))
 
 (macro make-method-dispatcher (method-sym)
   (when (! (bound? method-sym))
     (with-gensyms (receiver args)
-      (list 'function method-sym (list receiver :rest args)
-            (list 'apply
+      (list function method-sym (list receiver :rest args)
+            (list apply
                   (list find-method (list {} receiver :class) (list quote method-sym))
-                  (list 'cons receiver args))))))
+                  (list cons receiver args))))))
 
 (macro class (cls-sym (:opt super :rest features) :rest fields)
   ; Define class.
@@ -1518,18 +1527,17 @@
   (if (! (every? symbol? fields)) (error "fields must be symbol")
       (bound? cls-sym) (error cls-sym " already bound"))
   (list begin
-        (list <- cls-sym '(object))
+        (list <- cls-sym '(dict))
         (cons begin
-              (map (f (k v) (list {} (list quote cls-sym) k v))
+              (map (f (k v) (list {} cls-sym k (list quote v)))
                    '(:class :symbol :super :features :fields) 
-                   (list quote
-                         (list 'Class
-                               cls-sym
-                               (|| super (if (!= cls-sym 'Object) 'Object))
-                               features
-                               fields))))
+                   (list 'Class
+                         cls-sym
+                         (|| super (if (!= cls-sym 'Object) 'Object))
+                         features
+                         fields)))
         (cons begin
-              (map (f (field) (list 'make-accessor field))
+              (map (f (field) (list make-accessor field))
                    fields))
         (list quote cls-sym)))
 
@@ -1540,8 +1548,8 @@
     (if (nil? (find-class cls-sym)) (error "unbound class")
         (bound? global-sym) (error global-sym " already bound"))
     (list begin
-          (list 'make-method-dispatcher method-sym)
-          (cons 'function (cons global-sym (cons (cons 'self args) body))))))
+          (list make-method-dispatcher method-sym)
+          (cons function (cons global-sym (cons (cons 'self args) body))))))
 
 (class Object ()
   ; Object is a class that is the basis of all class hierarchies.
@@ -1581,13 +1589,17 @@
   ; Construct an instance.
   ; If .init method has argument, must invoke after create an instance.
   ; Otherwise automatically invoke .init method.
-  (let (o (object))
+  (let (o (dict))
     (for (cls self) cls (cls (find-class ({} cls :super)))
-      (foreach (f (k) ({} o k nil))
-               (map mem->key ({} cls :fields))))
+      (foreach (f (x) ({} o (mem->key x) nil))
+               ({} cls :fields)))
     ({} o :class ({} self :symbol))
     (if (= (procparams (find-method ({} o :class) '.init)) '(self)) (.init o)
         o)))
+
+(method Class .symbol ()
+  ; Returns the class symbol.
+  (&symbol self))
 
 (method Class .super ()
   ; Returns the class representing the superclass of the receiver.
@@ -2072,19 +2084,25 @@
         (.write-mem self x))
       (number? x)
       (.write-number self x)
+      (dict? x)
+      (begin
+        (.write-mem self "#{ ")
+        (dolist (key (keys x))
+          (.write self key :end " ")
+          (.write self ({} x key) :end " "))
+        (.write-mem self "}"))
       (bytes? x)
       (begin
-        (.write-mem self "#b[")
+        (.write-mem self "#[ ")
         (dotimes (i (memlen x))
-          (if (!= i 0) (.write-byte self 0x20))
           (.write-mem self "0x")
-          (.write-int self ([] x i) :radix 16 :padding 2))
+          (.write-int self ([] x i) :radix 16 :padding 2)
+          (.write-byte self 0x20))
         (.write-byte self 0x5d))
       (array? x)
       (begin
-        (.write-mem self "#a[")
-        (dotimes (i (arrlen x))
-          (.write self ([] x i) :start (&& (!= i 0) " ") :end ""))
+        (.write-mem self "#[ ")
+        (dotimes (i (arrlen x)) (.write self ([] x i) :end " "))
         (.write-byte self 0x5d))
       (|| (macro? x)
           (function? x))
@@ -2479,7 +2497,7 @@
     :backquote (list 'quasiquote (.parse (.scan self)))
     :unquote (list 'unquote (.parse (.scan self)))
     :unquote-splicing (list 'unquote-splicing (.parse (.scan self)))
-    :read-macro (apply (assoc $read-table (str->code (&token self))) (list self))
+    :read-macro (apply ({} $read-table (&token self)) (list self))
     :default (.raise self "syntax error")))
 
 (macro unquote (expr)
@@ -2537,8 +2555,7 @@
   ; Returns nil.
   (with-gensyms (g)
     (list let (list g (cons f (cons params body)))
-          (list 'push! g '$read-table)
-          (list 'push! (list 'str->code (list quote next)) '$read-table))))
+          (list {} $read-table (list quote next) g))))
 
 (function read-byte ()
   ; Same as (.read-byte (dynamic $in)).
@@ -2671,7 +2688,7 @@
               (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 
 (<- $import '(:core)
-    $read-table nil
+    $read-table (dict)
     $stdin (.init (.new FileStream) (fp 0))
     $stdout (.init (.new FileStream) (fp 1))
     $in $stdin
@@ -2681,30 +2698,20 @@
     $script-path (map (f (path) (.resolve $paren-home path))
                       '("coreutils" "tool")))
 
-(reader-macro a (reader)
-  ; Define an array literal.
-  ; Array elements are not evaluated.
-  (let (lexer (&lexer reader) a (.new Array))
-    (.skip lexer)
-    (.skip lexer "[")
-    (while (!= (.next lexer) "]") (.get lexer))
-    (.skip lexer)
-    (with-memory-stream ($in (.token lexer))
-      (foreach (f (x) (.add a x))
-               (collect read)))
+(reader-macro [ (reader)
+  ; Define array/bytes literal reader.
+  (let (a (.new Array) expr nil)
+    (.read reader)    ; skip '['
+    (while (!= (<- expr (.read reader)) ']) (.add a expr))
     (.to-a a)))
 
-(reader-macro b (reader)
-  ; Define an bytes literal.
-  (let (lexer (&lexer reader))
-    (.skip lexer)
-    (.skip lexer "[")
-    (while (!= (.next lexer) "]") (.get lexer))
-    (.skip lexer)
-    (mem->bytes
-      (with-memory-stream ($out)
-        (with-memory-stream ($in (.token lexer))
-          (foreach write-byte (collect read)))))))
+(reader-macro { (reader)
+  ; Define dictionary literal reader.
+  (let (d (dict) k nil)
+    (.read reader)    ; skip '{'
+    (while (!= (<- k (.read reader)) '})
+      ({} d k (eval (.read reader))))
+    d))
 
 (reader-macro p (reader)
   ; Define print reader macro.

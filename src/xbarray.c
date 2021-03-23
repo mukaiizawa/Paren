@@ -1,4 +1,4 @@
-// xc extensible byte array.
+// extensible byte array.
 
 /* lisence {{{
 Mulk system.

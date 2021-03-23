@@ -1,9 +1,15 @@
-// interpreter
+// interpreter.
 
 #include "std.h"
 
 #include <math.h>
 #include <float.h>
+
+#if UNIX_P
+#include <signal.h>
+#elif WINDOWS_P
+#include <windows.h>
+#endif
 
 #include "object.h"
 #include "gc.h"
@@ -20,6 +26,42 @@ static object reg[REG_SIZE];
 
 static long cycle;
 
+// interrupt
+
+#if UNIX_P
+
+static void intr_handler(int signo)
+{
+  ip_trap_code = TRAP_INTERRUPT;
+}
+
+static void intr_init(void)
+{
+  struct sigaction sa;
+  memset(&sa, 0, sizeof(sa));
+  sa.sa_handler = intr_handler;
+  if (sigaction(SIGINT, &sa, NULL) == -1) xerror("sigaction/failed.");
+}
+
+#elif WINDOWS_P
+
+static BOOL intr_handler(DWORD dwCtrlType)
+{
+  if (dwCtrlType == CTRL_C_EVENT) {
+    ip_trap_code = TRAP_INTERRUPT;
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void intr_init(void)
+{
+  if (SetConsoleCtrlHandler((PHANDLER_ROUTINE)intr_handler, TRUE) == 0)
+    xerror("SetConsoleCtrlHandler/failed.");
+}
+
+#endif
+
 // error
 
 int ip_trap_code;
@@ -32,13 +74,12 @@ int ip_mark_error(char *msg)
   return FALSE;
 }
 
-static object new_Error(char *msg)
+static object new_Error(object cls, char *msg)
 {
   object o;
-  o = gc_new_object();
-  object_bind(o, object_class, object_Error);
-  object_bind(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
-  object_bind(o, object_stack_trace, object_nil);
+  o = gc_new_dict();
+  object_bind(o, object_class, cls);
+  if (msg != NULL) object_bind(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
   return o;
 }
 
@@ -159,9 +200,8 @@ static void dump_fs(void)
     printf("+-----------------------------\n");
     printf("|%d: %s\n", i, frame_name(frame_type));
     printf("|%d: %d\n", i + 1, sint_val(fs[i + 1]));
-    for (j = 0; j < frame_size(frame_type) - 2; j++) {
+    for (j = 0; j < frame_size(frame_type) - 2; j++)
       printf("|%d: %s\n", i + j + 2, object_describe(get_frame_var(i, j), buf));
-    }
   }
 }
 
@@ -170,7 +210,7 @@ static void exit1(void)
   char buf[MAX_STR_LEN];
   object o;
   printf("%s", object_describe(object_find(reg[0], object_class), buf));
-  if ((o = object_find(reg[0], object_message)) != object_nil)
+  if ((o = object_find(reg[0], object_message)) != NULL && o != object_nil)
     printf(" -- %s.", object_describe(o, buf));
   printf("\n");
   o = object_find(reg[0], object_stack_trace);
@@ -178,7 +218,6 @@ static void exit1(void)
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
-  dump_fs();
   exit(1);
 }
 
@@ -273,8 +312,7 @@ static int parse_args(void (*f)(object, object, object), object params
       bi_argc_range(0, 1, 1);
       return FALSE;
     }
-    if (object_type_p(params->cons.car, SYMBOL))
-      (*f)(reg[1], params->cons.car, args->cons.car);
+    if (object_type_p(params->cons.car, SYMBOL)) (*f)(reg[1], params->cons.car, args->cons.car);
     else if (!parse_args(f, params->cons.car, args->cons.car)) return FALSE;
     params = params->cons.cdr;
     args = args->cons.cdr;
@@ -616,7 +654,7 @@ static int resolve_anonimous_proc(void)
   return FALSE;
 }
 
-static object call_stack(void)
+static object get_call_stack(void)
 {
   int i;
   object o, p, f, args;
@@ -647,20 +685,6 @@ static object call_stack(void)
   return o;
 }
 
-static void push_call_stack(object o)
-{
-  while (object_type_p(o, CONS)) {
-    if (o->cons.car == object_stack_trace) {
-      o = o->cons.cdr;
-      if (object_type_p(o, CONS)) {
-        if (o->cons.car == object_nil) o->cons.car = call_stack();
-      }
-      return;
-    }
-    o = o->cons.cdr;
-  }
-}
-
 static int pos_is_a_p(object o, object cls_sym);
 
 static void pop_throw_frame(void)
@@ -670,8 +694,9 @@ static void pop_throw_frame(void)
   i = fp;
   pop_frame();
   if (!pos_is_a_p(reg[0], object_Exception))
-    reg[0] = new_Error("expected Exception object");
-  push_call_stack(reg[0]);
+    reg[0] = new_Error(object_Error, "expected Exception object");
+  if (object_find(reg[0], object_stack_trace) == NULL)
+    object_bind(reg[0], object_stack_trace, get_call_stack());
   while (fp > -1) {
     switch (fs_top()) {
       case UNWIND_PROTECT_FRAME:
@@ -854,18 +879,20 @@ DEFUN(bound_p)
 
 static void trap(void)
 {
+  gen0(THROW_FRAME);
   switch (ip_trap_code) {
     case TRAP_ERROR:
-      xassert(error_msg != NULL);
-      gen0(THROW_FRAME);
-      reg[0] = new_Error(error_msg);
-      ip_trap_code = TRAP_NONE;
-      error_msg = NULL;
+      reg[0] = new_Error(object_Error, error_msg);
+      break;
+    case TRAP_INTERRUPT:
+      reg[0] = new_Error(object_SystemExit, NULL);
       break;
     default:
-      ip_trap_code = TRAP_NONE;
+      xassert(FALSE);
       break;
   }
+  ip_trap_code = TRAP_NONE;
+  error_msg = NULL;
 }
 
 // paren object system.
@@ -899,36 +926,27 @@ static int find_super_class(object cls_sym, object *result)
   return find_class(object_find(cls, object_super), result);
 }
 
+
 static int pos_is_a_p(object o, object cls_sym) {
   object o_cls_sym;
   xassert(object_type_p(cls_sym, SYMBOL));
   if (!pos_object_p(o)) return FALSE;
   o_cls_sym = object_find(o, object_class);
-  while (TRUE) {
-    if (o_cls_sym == cls_sym) return TRUE;
+  while (o_cls_sym != cls_sym) {
     if (!find_super_class(o_cls_sym, &o)) return FALSE;
-    o_cls_sym = object_find(o, object_class);
+    o_cls_sym = object_find(o, object_symbol);
   }
+  return TRUE;
 }
 
-static int find_class_method(object cls_sym, object mtd_sym, object *result)
+static object find_class_method(object cls_sym, object mtd_sym)
 {
-  object s;
   xassert(object_type_p(cls_sym, SYMBOL));
   xassert(object_type_p(mtd_sym, SYMBOL));
   xbarray_reset(&bi_buf);
   xbarray_copy(&bi_buf, cls_sym->mem.elt, cls_sym->mem.size);
   xbarray_copy(&bi_buf, mtd_sym->mem.elt, mtd_sym->mem.size);
-  s = gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size);
-  if (((*result) = object_find_propagation(reg[1], s)) == NULL) return TRUE;
-  return TRUE;
-}
-
-DEFUN(object_p)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  reg[0] = object_bool(object_type_p(argv->cons.car, DICT));
-  return TRUE;
+  return object_find_propagation(reg[1], gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size));
 }
 
 DEFUN(is_a_p)
@@ -940,7 +958,7 @@ DEFUN(is_a_p)
     ip_mark_error("require Class instance");
     return FALSE;
   }
-  reg[0] = object_bool(pos_is_a_p(o, object_find(cls, object_class)));
+  reg[0] = object_bool(pos_is_a_p(o, object_find(cls, object_symbol)));
   return TRUE;
 }
 
@@ -960,22 +978,19 @@ DEFUN(find_method)
   if (!bi_arg_type(argv->cons.cdr->cons.car, SYMBOL, &mtd_sym)) return FALSE;
   while (TRUE) {
     // find class method
-    if (!find_class_method(cls_sym, mtd_sym, result)) return FALSE;
-    if (*result != NULL) return TRUE;
+    if ((*result = find_class_method(cls_sym, mtd_sym)) != NULL) return TRUE;
     // find feature method
     if (!find_class(cls_sym, &cls)) return FALSE;
     features = object_find(cls, object_features);
+    if (!object_list_p(features)) return FALSE;
     while (features != object_nil) {
-      xassert(object_type_p(features, CONS));
-      if (!find_class_method(features->cons.car, mtd_sym, result)) return FALSE;
-      if (*result != NULL) return TRUE;
+      if ((*result = find_class_method(features->cons.car, mtd_sym)) != NULL) return TRUE;
       features = features->cons.cdr;
     }
     // super class
-    if (!find_class(object_find(cls, object_super), &cls)) break;
-    cls_sym = object_find(cls, object_class);
+    if (!find_super_class(cls_sym, &cls)) return ip_mark_error("undeclared method");
+    cls_sym = object_find(cls, object_symbol);
   }
-  return ip_mark_error("undeclared method");
 }
 
 DEFUN(cycle)
@@ -1268,9 +1283,7 @@ static void ip_main(object args)
   while (fp != -1) {
     xassert(fp >= 0);
     if (ip_trap_code != TRAP_NONE) trap();
-    if (cycle % IP_POLLING_INTERVAL == 0) {
-      gc_chance();
-    }
+    if (cycle % IP_POLLING_INTERVAL == 0) gc_chance();
     switch (fs_top()) {
       case APPLY_FRAME: pop_apply_frame(); break;
       case APPLY_BUILTIN_FRAME: pop_apply_builtin_frame(); break;
@@ -1313,6 +1326,7 @@ void ip_mark_object(void)
   gc_mark(object_Class);
   gc_mark(object_Exception);
   gc_mark(object_Error);
+  gc_mark(object_SystemExit);
   gc_mark(object_class);
   gc_mark(object_symbol);
   gc_mark(object_super);
@@ -1328,5 +1342,6 @@ void ip_start(object args)
   cycle = 0;
   xbarray_init(&bi_buf);
   ip_trap_code = TRAP_NONE;
+  intr_init();
   ip_main(args);
 }

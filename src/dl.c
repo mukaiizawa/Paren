@@ -1,4 +1,4 @@
-// dynamic library
+// dynamic library.
 
 #include "std.h"
 

@@ -1,4 +1,4 @@
-// xsleep
+// xsleep for unix.
 
 #include "std.h"
 #include "xsleep.h"

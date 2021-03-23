@@ -1,4 +1,4 @@
-// number
+// number.
 
 #include "std.h"
 
