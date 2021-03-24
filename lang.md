@@ -23,6 +23,7 @@ An atom is the following data types.
 - symbol
 - keyword
 - array
+- dictionary
 - bytes
 - function
 - macro
@@ -41,6 +42,21 @@ Keywords are the same as symbols, except that they cannot hold references to oth
 
 ### Arrays
 An array is a data type in which any S-expression is placed in continuous memory.
+
+### Dictionary
+A dictionary is an data type composed of a collection of (key, value) pairs, such that each possible key appears at most once in the collection.
+
+Operations associated with this data type allow.
+
+- the addition of a pair to the collection;
+- the modification of an existing pair;
+- the lookup of a value associated with a particular key.
+
+Unlike general dictionaries, pairs cannot be deleted. This limitation is because the main purpose of dictionary is to build the Paren Object System.
+
+Only symbols or keywords can be specified for key.
+
+Any value can be entered in value.
 
 ### Bytes
 A bytes is an array that specializes in handling only numbers from 0 to 255.
