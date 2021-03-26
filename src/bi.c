@@ -155,7 +155,7 @@ static char *symbol_name_map[] = {
   "number_add", "+",
   "number_divide", "/",
   "number_lt", "<",
-  "number_modulo", "mod",
+  "number_modulo", "%",
   "number_multiply", "*",
   "number_p", "number?",
   // sock

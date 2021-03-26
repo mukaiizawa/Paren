@@ -210,7 +210,7 @@
   ; If you specify keyword :default in <labels>, you can unconditionally transfer control to that branch regardless of the value of test.
   ; Error if, not specified :default and control reaches the end.
   (with-gensyms (gtest)
-    (assert (= (mod (len body) 2) 0))
+    (assert (= (% (len body) 2) 0))
     (let (branches (group body 2)
                    default-branch (list 'error "switch/" gtest " not included in " (list quote (flatten (map car branches))))
                    parse-branches (f (branches)
@@ -964,11 +964,11 @@
   (assert (= (// 2 2) 1))
   (assert (= (// 2 3) 0)))
 
-(builtin-function mod (x y)
+(builtin-function % (x y)
   ; Returns the remainder of dividing x by y.
-  (assert (= (mod 4 5) 4))
-  (assert (= (mod 4 3) 1))
-  (assert (= (mod 4 2) 0)))
+  (assert (= (% 4 5) 4))
+  (assert (= (% 4 3) 1))
+  (assert (= (% 4 2) 0)))
 
 (builtin-function < (:rest args)
   ; Returns whether the each of the specified args are in monotonically decreasing order.
@@ -1994,7 +1994,7 @@
                        (let (upper (// n radix))
                          (if (!= upper 0) (write1 upper (-- padding))
                              (dotimes (i padding) (.write-byte self 0x30)))
-                         (.write-byte self (->byte (mod n radix))))))
+                         (.write-byte self (->byte (% n radix))))))
     (when (< n 0)
       (.write-byte self 0x2d)
       (<- n (- n) padding (-- padding)))

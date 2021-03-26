@@ -20,10 +20,10 @@
     (&unix-time! self unix-time)
     ;; utc to localtime and offset from 0001-01-01
     (<- t (+ unix-time (utcoffset) 62135596800))
-    (&second! self (mod t 60)) (<- t (// t 60))
-    (&minute! self (mod t 60)) (<- t (// t 60))
-    (&hour! self (mod t 24)) (<- t (// t 24))
-    (&day-week! self (mod (+ t 1) 7))    ; 0001-01-01 is Mon
+    (&second! self (% t 60)) (<- t (// t 60))
+    (&minute! self (% t 60)) (<- t (// t 60))
+    (&hour! self (% t 24)) (<- t (// t 24))
+    (&day-week! self (% (+ t 1) 7))    ; 0001-01-01 is Mon
     (<- y (++ (// t 365)))
     (while (> (<- offset (DateTime.offset y 1 1)) t)
       (<- y (-- y)))

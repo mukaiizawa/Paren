@@ -26,7 +26,7 @@
 
 (method HashTable .table-index (key)
   (let (hash (&hash self))
-    (mod (hash key) (&table-size self))))
+    (% (hash key) (&table-size self))))
 
 (method HashTable .get (key)
   ; Returns the value corresponding to the key.

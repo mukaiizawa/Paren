@@ -13,7 +13,7 @@
     (dotimes (i (.monthlen dt))
       (if (!= dw 0) (write-mem " "))
       (write-mem (int->str (++ i) :padding 2))
-      (if (= (<- dw (mod (++ dw) 7)) 0)
+      (if (= (<- dw (% (++ dw) 7)) 0)
           (write-line)))))
 
 (function! main (args)
