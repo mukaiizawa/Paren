@@ -22,14 +22,10 @@ DEFUN(dict_p)
 
 DEFUN(keys)
 {
-  int i;
-  object o, *table;
+  object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  o = argv->cons.car;
-  table = o->map.table;
-  *result = object_nil;
-  for (i = 0; i < o->map.half_size; i++)
-    if (table[i] != NULL) *result = gc_new_cons(table[i], *result);
+  if (!bi_arg_type(argv->cons.car, DICT, &o)) return FALSE;
+  *result = object_map_keys(o);
   return TRUE;
 }
 

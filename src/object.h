@@ -127,8 +127,9 @@ extern int object_list_len(object o);
 extern object object_bool(int b);
 extern object object_reverse(object o);
 
-extern object object_find(object e, object s);
-extern object object_find_propagation(object e, object s);
-extern void object_bind(object e, object s, object v);
-extern void object_bind_propagation(object e, object s, object v);
-extern void object_map_foreach(object e, void (*f)(void *s, void *v));
+extern object object_find(object o, object s);
+extern object object_find_propagation(object o, object s);
+extern void object_bind(object o, object s, object v);
+extern void object_bind_propagation(object o, object s, object v);
+extern object object_map_keys(object o);
+extern void object_map_foreach(object o, void (*f)(void *s, void *v));

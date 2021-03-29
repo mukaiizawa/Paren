@@ -222,63 +222,75 @@ char *object_describe(object o, char *buf)
 }
 
 
-object object_find(object e, object s)
+object object_find(object o, object s)
 {
   int i;
-  object o;
-  i = hash(s) % e->map.half_size;
-  while ((o = e->map.table[i]) != NULL) {
-    if (o == s) return e->map.table[i + e->map.half_size];
-    if (++i == e->map.half_size) i = 0;
+  object p;
+  i = hash(s) % o->map.half_size;
+  while ((p = o->map.table[i]) != NULL) {
+    if (p == s) return o->map.table[i + o->map.half_size];
+    if (++i == o->map.half_size) i = 0;
   }
   return NULL;
 }
 
-object object_find_propagation(object e, object s)
+object object_find_propagation(object o, object s)
 {
-  object o;
-  while (e != object_nil) {
-    if ((o = object_find(e, s)) != NULL) return o;
-    e = e->map.top;
+  object p;
+  while (o != object_nil) {
+    if ((p = object_find(o, s)) != NULL) return p;
+    o = o->map.top;
   }
   return NULL;
 }
 
-void object_bind(object e, object s, object v)
+void object_bind(object o, object s, object v)
 {
   int i;
-  object o;
-  i = hash(s) % e->map.half_size;
-  while ((o = e->map.table[i]) != NULL) {
-    if (o == s) {
-      e->map.table[i + e->map.half_size] = v;
+  object p;
+  i = hash(s) % o->map.half_size;
+  while ((p = o->map.table[i]) != NULL) {
+    if (p == s) {
+      o->map.table[i + o->map.half_size] = v;
       return;
     }
-    if (++i == e->map.half_size) i = 0;
+    if (++i == o->map.half_size) i = 0;
   }
-  e->map.table[i] = s;
-  e->map.table[i + e->map.half_size] = v;
-  e->map.entry_count++;
-  if (e->map.entry_count * 2 > e->map.half_size) gc_extend_table(e);
+  o->map.table[i] = s;
+  o->map.table[i + o->map.half_size] = v;
+  o->map.entry_count++;
+  if (o->map.entry_count * 2 > o->map.half_size) gc_extend_table(o);
 }
 
-void object_bind_propagation(object e, object s, object v)
+void object_bind_propagation(object o, object s, object v)
 {
-  while (e != object_toplevel) {
-    if (object_find(e, s) != NULL) {
-      object_bind(e, s, v);
+  while (o != object_toplevel) {
+    if (object_find(o, s) != NULL) {
+      object_bind(o, s, v);
       return;
     }
-    e = e->map.top;
+    o = o->map.top;
   }
   object_bind(object_toplevel, s, v);
 }
 
-void object_map_foreach(object e, void (*f)(void *s, void *v))
+void object_map_foreach(object o, void (*f)(void *s, void *v))
 {
   int i;
   object *table;
-  table = e->map.table;
-  for (i = 0; i < e->map.half_size; i++)
-    if (table[i] != NULL) (*f)(table[i], table[i + e->map.half_size]);
+  table = o->map.table;
+  for (i = 0; i < o->map.half_size; i++)
+    if (table[i] != NULL) (*f)(table[i], table[i + o->map.half_size]);
+}
+
+object object_map_keys(object o)
+{
+  int i;
+  object keys, *table;
+  xassert(object_type_p(o, DICT));
+  table = o->map.table;
+  keys = object_nil;
+  for (i = 0; i < o->map.half_size; i++)
+    if (table[i] != NULL) keys = gc_new_cons(table[i], keys);
+  return keys;
 }

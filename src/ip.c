@@ -218,6 +218,7 @@ static void exit1(void)
     printf("	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
+  dump_fs();
   exit(1);
 }
 
@@ -730,6 +731,8 @@ static void pop_throw_frame(void)
 
 // built in functions
 
+static int eq_p(object o, object p);
+
 static int dbl_eq(double x, object p)
 {
   int64_t i;
@@ -753,6 +756,19 @@ static int numeq_p(object o, object p)
   if (bi_int64(o, &i)) return int64eq_p(i, p);
   if (bi_double(o, &d)) return dbl_eq(d, p);
   return FALSE;
+}
+
+static int dict_eq_p(object o, object p)
+{
+  object v, keys;
+  if (o->map.entry_count != p->map.entry_count) return FALSE;
+  keys = object_map_keys(o);
+  while (keys != object_nil) {
+    if ((v = object_find(p, keys->cons.car)) == NULL) return FALSE;
+    if (!eq_p(object_find(o, keys->cons.car), v)) return FALSE;
+    keys = keys->cons.cdr;
+  }
+  return TRUE;
 }
 
 static int eq_p(object o, object p)
@@ -784,6 +800,9 @@ static int eq_p(object o, object p)
       for (i = 0; i < o->array.size; i++)
         if (!eq_p(o->cons.car, p->cons.car)) return FALSE;
       return TRUE;
+    case DICT:
+      if (!object_type_p(p, DICT)) return FALSE;
+      return dict_eq_p(o, p);
     default:
       return FALSE;
   }
