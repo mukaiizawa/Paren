@@ -2,11 +2,6 @@
 
 ;; DDL
 
-(function x.y->pairs (x.y)
-  (let (x.y (mem->str x.y) i (memmem x.y "."))
-    (list (submem x.y 0 i)
-          (submem x.y (++ i)))))
-
 (function select-table-columns (table key)
   (select (f (x) (assoc (cdr x) key))
           (cdr table)))
@@ -32,7 +27,7 @@
             (list
               (str "alter table " (car table) " add primary key (" (join (map car primarykeys) ", ") ");")))
         (map (f (x)
-               (let (fk (assoc (cdr x) :foreignkey) (fk-table fk-column) (x.y->pairs fk))
+               (let (fk (assoc (cdr x) :foreignkey) (fk-table fk-column) (split fk "."))
                  (str "alter table " (car table) " add constraints fk_" (car x)
                       " foreign key(" (car x) ") references " fk-table "(" fk-column ");")))
              foreignkeys))
@@ -60,18 +55,18 @@
                            (str ope "(" (join (map parse-expr args) ", ") ")")))))
     (join (map parse-expr (->list expr)) ", ")))
 
-(function parse-condition (expr)
+(function parse-cond (expr)
   (if (atom? expr) (->sql-str expr)
       (let ((ope :rest args) expr)
         (switch ope
-          in (str ope " in (" (join (map ->sql-str (cdr args)) ",") ")")
-          not (str " not (" (parse-condition (car args)) ")")
+          in (str (car args) " in (" (join (map ->sql-str (cdr args)) ",") ")")
+          not (str " not (" (parse-cond (car args)) ")")
           is-null (str " " (car args) " is null")
           is-not-null (str " " (car args) " is not null")
           (< > <= >= = <>) (str  " " (->sql-str (car args)) " " ope " " (->sql-str (cadr args)))
-          (and or) (str (parse-condition (car args)) " " ope " ("
-                        (if (cddr args) (parse-condition (cons ope (cdr args)))
-                            (parse-condition (cadr args)))
+          (and or) (str (parse-cond (car args)) " " ope " ("
+                        (if (cddr args) (parse-cond (cons ope (cdr args)))
+                            (parse-cond (cadr args)))
                         ")")))))
 
 (function parse-ordering (expr)
@@ -93,17 +88,19 @@
   ; In that case, it is necessary to explicitly write the join condition in the where clause.
   (str "select " (parse-select-expr column-names)
        " from "(join (->list table-names) ", ")
-       (if where (str " where" (parse-condition where)))
+       (if where (str " where" (parse-cond where)))
        (if group-by (str " group by " (join (->list group-by) ", ")))
-       (if having (str " having " (parse-condition having)))
+       (if having (str " having " (parse-cond having)))
        (if order-by (str " order by " (parse-ordering order-by)))
        ";"))
 
 (function insert-into (table-name column-names values)
+  ; Returns the insert query string.
   (str "insert into " table-name " (" (join (->list column-names) ", ") ") "
        "values (" (join (map ->sql-str values) ", ") ");"))
 
 (function update-set (table-name column-names values :opt cond)
+  ; Returns the update query string.
   (let (gen-set (f (column-names vlaues mem)
                   (if (nil? column-names) (.to-s mem)
                       (begin
@@ -114,12 +111,13 @@
                         (gen-set (cdr column-names) (cdr values) mem)))))
     (str "update " table-name
          " set " (gen-set (->list column-names) (->list values) (.new MemoryStream))
-         (if cond (str " where" (parse-condition cond)))
+         (if cond (str " where" (parse-cond cond)))
          ";")))
 
 (function delete-from (table-name :opt cond)
+  ; Returns the delete query string.
   (str "delete from " table-name
-       (if cond (str " where" (parse-condition cond)))
+       (if cond (str " where" (parse-cond cond)))
        ";"))
 
 (function! main (args)
@@ -167,8 +165,11 @@
                "select * from users order by id;"))
     (assert (= (select-from '* 'users :order-by '(id :asc name :desc))
                "select * from users order by id, name desc;"))
-    (assert (=  (insert-into 'users '(:id :name) '(0 "alice"))
-                "insert into users (id, name) values (0, 'alice');"))
+    (assert (= (insert-into 'users '(:id :name) '(0 "alice"))
+               "insert into users (id, name) values (0, 'alice');"))
     (assert (= (update-set 'products '(price) '((+ price 1000)) '(= id 10))
                "update products set price = price + 1000 where id = 10;"))
-    (assert (= (delete-from 'users) "delete from users;"))))
+    (assert (= (delete-from 'users)
+               "delete from users;"))
+    (assert (= (delete-from 'products '(= id 3))
+               "delete from products where id = 3;"))))
