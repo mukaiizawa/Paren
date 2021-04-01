@@ -932,6 +932,7 @@
 
 (builtin-function + (x :rest args)
   ; Returns the sum of the args.
+  (assert (= (+) 0))
   (assert (= (+ 1) 1))
   (assert (= (+ 1 2 3) 6))
   (assert (= (+ 1 2.0 3.0) 6)))
