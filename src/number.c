@@ -98,7 +98,10 @@ static int int64_add(int64_t x, object argv, object *result)
 
 DEFUN(number_add)
 {
-  if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
+  if (argc == 0) {
+    *result = gc_new_xint(0);
+    return TRUE;
+  }
   return int64_add(0, argv, result);
 }
 

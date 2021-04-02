@@ -64,6 +64,11 @@
   ; Returns the index of the day of the week (0:sun, 1:mon, ... , 6: sat).
   (&day-week self))
 
+(method DateTime .week-of-month ()
+  ; Returns the week of month of the receiver.
+  (let (first-day-of-month (DateTime.of (&year self) (&month self) 1))
+    (++ (// (+ (&day self) -1 (&day-week first-day-of-month)) 7))))
+
 (method DateTime .hour ()
   ; Returns the hour (0-23).
   (&hour self))
@@ -93,6 +98,37 @@
          (DateTime.offset (&year self) 2 1))
     (4 6 9 11) 30
     :default 31))
+
+(method DateTime .holiday? ()
+  ; Returns whether the receiver is Saturday, Sunday, or a public holiday.
+  (let (day-week (&day-week self))
+    (|| (= day-week 0) (= day-week 6) (.public-holiday? self))))
+
+(method DateTime .public-holiday? ()
+  ; Returns whether the receiver is a public holiday.
+  ;; https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
+  ; Do not use for strict judgment due to sloppy construction.
+  (let (y (&year self) m (&month self) d (&day self)
+          y-1980 (- y 1980) monday? (= (&day-week self) 1) nth-monday (++ (// (-- d) 7)))
+    (|| (&& (= m 1) (= d 1))
+        (&& (= m 1) monday? (= nth-monday 2))
+        (&& (= m 2) (= d 11))
+        (&& (= m 3) (= d (// (+ 20.8431 (* 0.242194 y-1980) (// y-1980 -4)))))
+        (&& (= m 4) (= d 29))
+        (&& (= m 5) (= d 3))
+        (&& (= m 5) (= d 4))
+        (&& (= m 5) (= d 5))
+        (&& (= m 7) monday? (= nth-monday 3))
+        (&& (= m 8) (= d 11))
+        (&& (= m 9) monday? (= nth-monday 3))
+        (&& (= m 9) (= d (// (+ 23.2488 (* 0.242194 y-1980) (// y-1980 -4)))))
+        (&& (= m 10) monday? (= nth-monday 2))
+        (&& (= m 11) (= d 3))
+        (&& (= m 11) (= d 23))
+        (|| (&& (< y 1989) (= m 4) (= d 29))
+            (&& (< y 2019) (= m 12) (= d 23))
+            (&& (= m 2) (= d 23)))
+        (&& monday? (.public-holiday? (.init (.new DateTime) (- (.unix-time self) (* 60 60 24))))))))
 
 (method DateTime .date.to-s ()
   (join (map (f (x) (int->str x :padding 2))

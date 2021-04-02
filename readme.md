@@ -44,3 +44,4 @@ Paren is a the programmable programming language.
 # Special Thanks
 
 - Ken'ichi Tokuoka
+- Kohei Kai

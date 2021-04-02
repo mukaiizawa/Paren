@@ -932,6 +932,7 @@
 
 (builtin-function + (x :rest args)
   ; Returns the sum of the args.
+  (assert (= (+) 0))
   (assert (= (+ 1) 1))
   (assert (= (+ 1 2 3) 6))
   (assert (= (+ 1 2.0 3.0) 6)))
@@ -2351,12 +2352,12 @@
           (.skip self)
           (if (! (.alnum? self)) (.raise self "missing lower or digits")
               (while (.alnum? self)
-                (<- val (+ (* val radix) (.skip-digit self 16))))))
+                (<- val (+ (* val radix) (.skip-digit self radix))))))
         (= (&next self) ".")
         (let (factor 0.1)
           (.skip self)
           (while (.digit? self)
-            (<- val (+ val (* factor (.skip-digit self 16)))
+            (<- val (+ val (* factor (.skip-digit self)))
                 factor (/ factor 10)))
           (when (= (&next self) 0x65)
             (.skip self)
