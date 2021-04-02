@@ -16,7 +16,7 @@ Paren is a the programmable programming language.
 ## Unix
 
     $ git clone https://github.com/mukaiizawa/Paren
-    $ cd src & make os=unix
+    $ cd Paren/src & make os=unix
     $ ../paren
     ) "hello world"
     "hello world"
@@ -24,7 +24,7 @@ Paren is a the programmable programming language.
 ## Windows
 
     $ git clone https://github.com/mukaiizawa/Paren
-    $ cd src & make os=windows
+    $ cd Paren/src & make os=windows
     $ ../paren
     ) "hello world"
     "hello world"
