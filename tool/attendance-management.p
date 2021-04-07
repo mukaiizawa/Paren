@@ -24,6 +24,7 @@
 ;
 ; # see also
 ; coreutils/cal.p
+; tool/ldate.p
 
 (<- $minimum-operating-time 140)
 
