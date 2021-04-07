@@ -7,8 +7,8 @@
 (class DateTime (Object)
   unix-time year month day day-week hour minute second)
 
-(function DateTime.offset (y m d)
-  ; Returns the difference date from 0001-01-01 for yyyy-mm-dd.
+(function DateTime%offset (y m d)
+  ;; Returns the difference date from 0001-01-01 for yyyy-mm-dd.
   (if (<= m 2) (<- y (-- y) m (+ m 12)))
   (+ (* 365 (-- y))
      (// y 4) (- (// y 100)) (// y 400)
@@ -25,11 +25,11 @@
     (&hour! self (% t 24)) (<- t (// t 24))
     (&day-week! self (% (+ t 1) 7))    ; 0001-01-01 is Mon
     (<- y (++ (// t 365)))
-    (while (> (<- offset (DateTime.offset y 1 1)) t)
+    (while (> (<- offset (DateTime%offset y 1 1)) t)
       (<- y (-- y)))
     (&year! self y)
     (&month! self (++ (// (- t offset) 31)))
-    (<- offset (DateTime.offset y (&month self) 1))
+    (<- offset (DateTime%offset y (&month self) 1))
     (let (mlen (.monthlen self))
       (when (<= (+ offset mlen) t) 
         (&month! self (++ (&month self)))
@@ -43,7 +43,7 @@
 (function DateTime.of (year month day :opt hour minute second)
   (.init (.new DateTime)
          ;; day count 1970-01-01
-         (+ (* (+ (DateTime.offset year month day) -719162) 24 60 60)
+         (+ (* (+ (DateTime%offset year month day) -719162) 24 60 60)
             (if hour (* hour 60 60) 0)
             (if minute (* minute 60) 0)
             (- (|| second 0) (utcoffset)))))
@@ -94,10 +94,16 @@
 (method DateTime .monthlen ()
   ; Returns the number of days in the year
   (switch (&month self)
-    2 (- (DateTime.offset (&year self) 3 1)
-         (DateTime.offset (&year self) 2 1))
+    2 (- (DateTime%offset (&year self) 3 1)
+         (DateTime%offset (&year self) 2 1))
     (4 6 9 11) 30
     :default 31))
+
+(method DateTime .offset (:key days)
+  ; Returns an instance at the specified offset from the receiver.
+  (let (offset 0)
+    (if days (<- offset (* days 60 60 24)))
+    (.init (.new DateTime) (+ (.unix-time self) offset))))
 
 (method DateTime .holiday? ()
   ; Returns whether the receiver is Saturday, Sunday, or a public holiday.
@@ -128,7 +134,7 @@
         (|| (&& (< y 1989) (= m 4) (= d 29))
             (&& (< y 2019) (= m 12) (= d 23))
             (&& (= m 2) (= d 23)))
-        (&& monday? (.public-holiday? (.init (.new DateTime) (- (.unix-time self) (* 60 60 24))))))))
+        (&& monday? (.public-holiday? (.offset self :days -1))))))
 
 (method DateTime .date.to-s ()
   (join (map (f (x) (int->str x :padding 2))
