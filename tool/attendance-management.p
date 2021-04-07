@@ -1,69 +1,60 @@
 ; attendance management.
 
 ; # input specification
-; Input must be sorted
 ;
-; Ignore blank lines or lines starting with `#`;
+;     INPUT = (MONTH ...)
+;     MONTH = (month scheduled-work-days DAY ...)
+;     DAY = day start-time-of-work end-time-of-work deduction-time
 ;
-;     # date,start time,end time,deduction time
-;     2021-04-01,8:00,18:00,1
-;     2021-04-02,8:00,18:00,1
-;     ...
+;     ("2021-04" 20
+;      ; 2021-04
+;      ; Su Mo Tu We Th Fr Sa
+;      ;             01 02 03
+;      ; 04 05 06 07 08 09 10
+;      ; 11 12 13 14 15 16 17
+;      ; 18 19 20 21 22 23 24
+;      ; 25 26 27 28 29 30
+;      1 "10:00" "18:00" 1
+;      2 "10:00" "18:00" 1
+;      5 "10:00" "18:00" 1
+;      7 "10:00" "18:00" 1
+;      ...)
+;
+;      ...
+;
+; # see also
+; coreutils/cal.p
 
-(function ->yyyy-mm (yyyy-mm-dd)
-  (submem yyyy-mm-dd 0 7))
+(<- $minimum-operating-time 140)
 
-(function group-by-month (records)
-  ;; (("2021-04-01" nil)
-  ;;  ("2021-04-06" 420)
-  ;;  ...
-  ;;  ("2021-07-01" 480))
-  ;; ->
-  ;; (("2021-04" ("2021-04-01" nil) ("2021-04-06" 420) ...)
-  ;;  ...
-  ;;  ("2021-07" ("2021-07-01" 420))
-  (let (yyyy-mm (->yyyy-mm (caar records)) months nil result nil)
-    (dolist (record records)
-      (let ((yyyy-mm-dd working-time) record)
-        (if (memprefix? yyyy-mm-dd yyyy-mm) (push! record months)
-            (begin
-              (push! (cons yyyy-mm months) result)
-              (<- yyyy-mm (->yyyy-mm yyyy-mm-dd)
-                  months (list record))))))
-    (push! (cons yyyy-mm months) result)
-    (reverse! result)))
+(function hhmm->min (hhmm)
+  (let ((hh mm) (map str->num (split hhmm ":")))
+    (+ (* 60 hh) mm)))
 
-(function parse-line (line)
-  ;; yyyy-mm-dd,mm:dd,mm:dd,deduction-time
-  ;; -> yyyy-mm-dd,working-time
-  (let ((yyyy-mm-dd start end deduction-time) (split line ",")
-                                              hhmm->min (f (hhmm)
-                                                          (let ((h m) (map str->num (split hhmm ":")))
-                                                            (+ (* 60 h) m))))
-    (list yyyy-mm-dd (if (!= start "") (- (hhmm->min end)
-                                          (hhmm->min start)
-                                          (if (memempty? deduction-time) 0
-                                              (* 60 (str->num deduction-time))))))))
+(function ->working-hours (expr)
+  ; (day start-time-of-work end-time-of-work deduction-time)
+  ; -> (day working-hours)
+  (let ((day start end deduction-time) expr)
+    (list day (/ (- (hhmm->min end) (hhmm->min start) (* 60 deduction-time)) 60))))
 
-(function parse-month (tree)
-  ;; ("2021-04" ("2021-04-01" nil) ("2021-04-06" 420) ...)
-  (let ((yyyy-mm :rest attendances) tree
-                                    active-attendances (except (f (x) (nil? (cadr x))) attendances)
-                                    working-days (len active-attendances)
-                                    working-hours (/ (apply + (map cadr active-attendances)) 60)
-                                    average-working-hours (if (= working-days 0) 'NaN
-                                                              (/ working-hours working-days)))
-    (join (map str (list yyyy-mm
-                         working-days
-                         working-hours
-                         average-working-hours))
-          ",")))
+(function parse-days (expr)
+  (if (!= (% (len expr) 4) 0) (error "illegal format " expr)
+      (let (days (map ->working-hours (group expr 4))
+                 working-days (len days)
+                 working-hours (apply + (map cadr days)))
+        (list working-days  working-hours))))
+
+(function format (day hours)
+  (list :day day :h hours :h/day (if (= day 0) 'NaN (/ hours day))))
+
+(function parse-month (expr)
+  (let ((year-month scheduled-work-days :rest days) expr
+        (working-days working-hours) (parse-days days)
+        rest-working-days (- scheduled-work-days working-days)
+        rest-working-hours (- $minimum-operating-time working-hours))
+    (list year-month
+          (list :total (format working-days working-hours))
+          (list :rest (format rest-working-days rest-working-hours)))))
 
 (function! main (args)
-  (write-line "# year-month,working days,working hours,average working hours")
-  (foreach write-line
-           (map parse-month
-                (group-by-month 
-                  (map parse-line
-                       (except (f (line) (|| (memempty? line) (memprefix? line "#")))
-                               (collect read-line)))))))
+  (foreach write (map parse-month (collect read))))
