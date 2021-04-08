@@ -197,11 +197,11 @@ static void dump_fs(void)
   char buf[MAX_STR_LEN];
   for (i = 0; i <= fp; i = next_fp(i)) {
     frame_type = sint_val(fs[i]);
-    printf("+-----------------------------\n");
-    printf("|%d: %s\n", i, frame_name(frame_type));
-    printf("|%d: %d\n", i + 1, sint_val(fs[i + 1]));
+    fprintf(stderr, "+-----------------------------\n");
+    fprintf(stderr, "|%d: %s\n", i, frame_name(frame_type));
+    fprintf(stderr, "|%d: %d\n", i + 1, sint_val(fs[i + 1]));
     for (j = 0; j < frame_size(frame_type) - 2; j++)
-      printf("|%d: %s\n", i + j + 2, object_describe(get_frame_var(i, j), buf));
+      fprintf(stderr, "|%d: %s\n", i + j + 2, object_describe(get_frame_var(i, j), buf));
   }
 }
 
@@ -209,13 +209,13 @@ static void exit1(void)
 {
   char buf[MAX_STR_LEN];
   object o;
-  printf("%s", object_describe(object_find(reg[0], object_class), buf));
+  fprintf(stderr, "%s", object_describe(object_find(reg[0], object_class), buf));
   if ((o = object_find(reg[0], object_message)) != NULL && o != object_nil)
-    printf(" -- %s.", object_describe(o, buf));
-  printf("\n");
+    fprintf(stderr, " -- %s.", object_describe(o, buf));
+  fprintf(stderr, "\n");
   o = object_find(reg[0], object_stack_trace);
   while (o != object_nil) {
-    printf("	at: %s\n", object_describe(o->cons.car, buf));
+    fprintf(stderr, "	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
   }
   exit(1);
