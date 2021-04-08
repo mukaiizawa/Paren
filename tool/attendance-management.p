@@ -2,7 +2,7 @@
 
 ; # input specification
 ;
-;     INPUT = (MONTH ...)
+;     INPUT = MONTH ...
 ;     MONTH = (month scheduled-work-days DAY ...)
 ;     DAY = day start-time-of-work end-time-of-work deduction-time
 ;
