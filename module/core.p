@@ -2708,18 +2708,19 @@
 
 (reader-macro [ (reader)
   ; Define array/bytes literal reader.
-  (let (a (.new Array) expr nil)
-    (.read reader)    ; skip '['
-    (while (!= (<- expr (.read reader)) ']) (.add a expr))
-    (.to-a a)))
+  (if (!= (.read reader) '[) (error "missing space in array literal")
+      (let ($G-a (.new Array) $G-v nil)
+          (while (!= (<- $G-v (.read reader)) '])
+              (.add $G-a (eval $G-v)))
+        (.to-a $G-a))))
 
 (reader-macro { (reader)
   ; Define dictionary literal reader.
-  (let (d (dict) k nil)
-    (.read reader)    ; skip '{'
-    (while (!= (<- k (.read reader)) '})
-      ({} d k (eval (.read reader))))
-    d))
+  (if (!= (.read reader) '{) (error "missing space in dictionary literal")
+      (let ($G-d (dict) $G-k nil)
+        (while (!= (<- $G-k (.read reader)) '})
+          ({} $G-d $G-k (eval (.read reader))))
+        $G-d)))
 
 (reader-macro p (reader)
   ; Define print reader macro.
