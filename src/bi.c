@@ -147,6 +147,7 @@ static char *symbol_name_map[] = {
   "special_operator_p", "special-operator?",
   // number
   "bit_and", "&",
+  "bit_not", "~",
   "bit_or", "|",
   "bit_shift", "<<",
   "bit_xor", "^",

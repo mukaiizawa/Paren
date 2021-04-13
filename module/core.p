@@ -909,26 +909,37 @@
   (if (&& (alpha? b) (<= 0x61 b 0x7a)) (- b 0x20)
       b))
 
+(builtin-function ~ (x)
+  ; Returns bitwise NOT of x.
+  ; x must be positive integer.
+  (assert (= (~ (~ 2x1010)) 2x1010))
+  (assert (= (& (~ 2x1010) 2x1111) 2x0101)))
+
 (builtin-function & (x y)
-  ; bitwise and.
+  ; Returns bitwise AND of x and y.
+  ; x and y must be positive integer.
   (assert (= (& 0x333333333 0x555555555) 0x111111111)))
 
 (builtin-function | (x y)
-  ; bitwise or.
+  ; Returns bitwise OR of x and y.
+  ; x and y must be positive integer.
   (assert (= (| 0x333333333 0x555555555) 0x777777777)))
+
+(builtin-function ^ (x y)
+  ; Returns bitwise XOR of x and y.
+  ; x and y must be positive integer.
+  (assert (= (^ 3 0x500000000) 0x500000003))
+  (assert (= (^ 0x500000000 0x500000003) 3)))
 
 (builtin-function << (x y)
   ; bitwise left shift.
+  ; x must be positive integer.
   (assert (= (<< 3 2) 12)))
 
 (function >> (x y)
   ; bitwise right shift.
+  ; x must be positive integer.
   (<< x (- y)))
-
-(builtin-function ^ (x y)
-  ; bitwise xor.
-  (assert (= (^ 3 0x500000000) 0x500000003))
-  (assert (= (^ 0x500000000 0x500000003) 3)))
 
 (builtin-function + (x :rest args)
   ; Returns the sum of the args.
@@ -2409,7 +2420,7 @@
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (|| (memmem "!#$%&*./<=>?^[]_{|}" (&next self))
+  (|| (memmem "!#$%&*./<=>?^[]_{|}~" (&next self))
       (.alpha? self)))
 
 (method ParenLexer .identifier-sign? ()

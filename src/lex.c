@@ -161,6 +161,7 @@ static int identifier_symbol_alpha_p(void)
     case '{':
     case '|':
     case '}':
+    case '~':
       return TRUE;
     default:
       return isalpha(next_ch);

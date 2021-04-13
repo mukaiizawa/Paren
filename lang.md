@@ -105,7 +105,7 @@ This rule is the minimum rule required to read core.p. This is because paren can
                  | sign ((symbol-alpha | sign) identifier-rest* )?
     identifier-rest = symbol-alpha | digit | sign
     escape-sequence = '\\' ([~cx] | 'c' [@-_a-z] | 'x' hexDigit hexDigit)
-    symbol-alpha = [!#$%&*./<=>?A-Z[\]^_a-z{|}]
+    symbol-alpha = [!#$%&*./<=>?A-Z[\]^_a-z{|}~]
     sign = '+' | '-'
     integer = (digit+ 'x')? [0-9a-z]+
     float = digit+ '.' digit+ ('E' [+-]? digit+)?
