@@ -283,22 +283,13 @@ DEFUN(number_lt)
   return mark_required_number();
 }
 
-static int64_t max_xint(void)
-{
-  int i;
-  int64_t x;
-  x = 0;
-  for (i = 0; i < XINT_BITS; i++) x = (x << 1) | 1;
-  return x;
-}
-
 DEFUN(bit_not)
 {
   int64_t x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_int64(argv->cons.car, &x) || x < 0)
     return mark_required_positive_int();
-  *result = gc_new_xint(~x & max_xint());
+  *result = gc_new_xint(~x & INT64_MAX);
   return TRUE;
 }
 
