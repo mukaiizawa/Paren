@@ -7,4 +7,5 @@
   (yes s))
 
 (function main (args)
-  (yes (|| (car args) "y")))
+  (catch (Exception (f (x) nil))
+    (yes (|| (car args) "y"))))

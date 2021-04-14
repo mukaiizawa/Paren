@@ -7,6 +7,5 @@
   ; Display the current time.
   (write-line (.to-s (DateTime.now))))
 
-
 (function! main (args)
   (date))
