@@ -6,7 +6,7 @@
          ,a (,i32 (| (<< ,a ,s) (>> ,a (- 32 ,s))))
          ,a (,i32 (+ ,a ,b)))))
 
-(function md5.transform-block (block A B C D)
+(function md5.next (block A B C D)
   (let ((a b c d) (list A B C D)
                   S11 7 S12 12 S13 17 S14 22
                   S21 5 S22 9  S23 14 S24 20
@@ -86,10 +86,10 @@
     (md5.apply I b c d a ([] block  9) S44 0xeb86d391)
     (list (+ A a) (+ B b) (+ C c) (+ D d))))
 
-(function md5.block (i msg msglen padding)
+(function md5.block (n msg msglen padding)
   (let (block (array 16))
     (dotimes (i 16) ([] block i 0))
-    (for (i (<< i 6) j 0) (< j 64) (i (++ i) j (++ j))
+    (for (i (<< n 6) j 0) (< j 64) (i (++ i) j (++ j))
       ([] block (>> j 2) (| (<< (if (< i msglen) ([] msg i)
                                     ([] padding (- i msglen))) 24)
                             (>> ([] block (>> j 2)) 8))))
@@ -109,8 +109,8 @@
     (dotimes (i 8)
       ([] padding (+ (- padlen 8) i) (& 0xff msglen-bits))
       (<- msglen-bits (>> msglen-bits 8)))
-    (dotimes (i N)
-      (<- (A B C D) (md5.transform-block (md5.block i msg msglen padding) A B C D)))
+    (dotimes (n N)
+      (<- (A B C D) (md5.next (md5.block n msg msglen padding) A B C D)))
     (dotimes (i 4)
       (let (x (nth i (list A B C D)))
         ([] md5sum (+ (* i 4) 0) (& x 0xff))
