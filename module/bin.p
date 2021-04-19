@@ -21,5 +21,4 @@
   (| (<< i n) (>> i (- 32 n))))
 
 (function! main (args)
-  (assert (= (hexstr (bytes 3)) "000000"))
-  (assert (= (i32 (i32rotr 2x110011 2)) 2x111100)))
+  (assert (= (hexstr (bytes 3)) "000000")))
