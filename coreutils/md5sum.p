@@ -16,10 +16,7 @@
   ; md5sum [OPTION]
   ; Print or check MD5 (128-bit) checksums.
   ;     -c FILE read MD5 sums from the FILEs and check them
-  (let (mem (with-memory-stream ($out)
-              (let (ch nil)
-              (while (!= (<- ch (read-byte)) -1) (write-byte ch)))))
-    (hexstr (md5.sum mem))))
+  (hexstr (md5.sum (read-bytes))))
 
 (function comment? (line)
   (memprefix? line "#"))

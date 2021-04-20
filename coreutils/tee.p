@@ -3,14 +3,13 @@
 (import :optparse)
 
 (function tee (file :key append?)
-  ; tee FILE
+  ; tee [OPTION] FILE
   ; Copy standard input to FILE, and also to standard output.
   ;     -a append to FILE.
-  (with-open ($out file (if append? :append :write))
-    (let (c nil)
-      (while (!= (<- c (read-byte)) -1)
-        (let ($out $stdout) (write-byte c))
-        (write-byte c)))))
+  (let (bytes (read-bytes))
+    (write-bytes bytes)
+    (with-open ($out file (if append? :append :write))
+      (write-bytes bytes))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "a") args))

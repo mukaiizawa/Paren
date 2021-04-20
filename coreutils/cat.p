@@ -3,11 +3,9 @@
 (function cat ()
   ; cat [FILE]...
   ; Concatenate FILE(s) to standard output.
-  (let (c nil)
-    (while (!= (<- c (read-byte)) -1)
-      (write-byte c))))
+  (write-bytes (read-bytes)))
 
 (function! main (args)
-  (if args (foreach (f (x) (with-open ($in x :read) (cat)))
-                    args)
-      (cat)))
+  (if (nil? args) (cat)
+      (foreach (f (x) (with-open ($in x :read) (cat)))
+               args)))
