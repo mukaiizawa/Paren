@@ -11,7 +11,7 @@
           (begin
             (write-line)
             (<- i (chwidth ch))))
-      (write-mem ch))))
+      (write-bytes ch))))
 
 (function! main (args)
   (fold (if args (str->num (car args)) 100)))

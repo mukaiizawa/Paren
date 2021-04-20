@@ -192,11 +192,11 @@
   (let (replace (f (re start max-replace mem)
                   (if (&& (!= max-replace 0) (.match? re src start))
                       (begin
-                        (.write-mem mem (.subtext re start (&start re)))
-                        (.write-mem mem dest)
+                        (.write-bytes mem (.subtext re start (&start re)))
+                        (.write-bytes mem dest)
                         (replace re (&end re) (&& (number? max-replace) (-- max-replace)) mem))
                       (begin
-                        (.write-mem mem (.subtext re start))
+                        (.write-bytes mem (.subtext re start))
                         (.to-s mem)))))
     (replace (Regex.compile expr) 0 max-replace (.new MemoryStream))))
 

@@ -4,7 +4,7 @@
   ; Returns the hexadecimal representation of the byte sequence.
   (with-memory-stream ($out)
     (dotimes (i (memlen mem))
-      (write-mem (int->str ([] mem i) :radix 16 :padding 2)))))
+      (write-bytes (int->str ([] mem i) :radix 16 :padding 2)))))
 
 (function i32 (i)
   ; Returns a value with the argument masked in 32 bits.

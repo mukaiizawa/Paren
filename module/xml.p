@@ -5,11 +5,11 @@
       (with-memory-stream ($out)
         (while l
           (assert (keyword? (car l)))
-          (write-mem " ")
-          (write-mem (car l))
+          (write-bytes " ")
+          (write-bytes (car l))
           (if (keyword? (car (<- l (cdr l)))) (continue)
               (string? (car l)) (begin
-                                  (write-mem (str "='" (car l) "'"))
+                                  (write-bytes (str "='" (car l) "'"))
                                   (<- l (cdr l)))
               (assert nil))))))
 

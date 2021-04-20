@@ -2,26 +2,26 @@
 
 (function json.obj->str (lis)
   (with-memory-stream ($out)
-    (write-mem "{")
+    (write-bytes "{")
     (let (i 0)
       (while lis
-        (if (> i 0) (write-mem ",")
+        (if (> i 0) (write-bytes ",")
             (<- i (++ i)))
-        (write-mem (json->str (car lis)))
-        (write-mem ":")
+        (write-bytes (json->str (car lis)))
+        (write-bytes ":")
         (<- lis (cdr lis))
         (assert lis)    ; must be pair
-        (write-mem (json->str (car lis)))
+        (write-bytes (json->str (car lis)))
         (<- lis (cdr lis))))
-    (write-mem "}")))
+    (write-bytes "}")))
 
 (function json.arr->str (arr)
   (with-memory-stream ($out)
-    (write-mem "[")
+    (write-bytes "[")
     (for (i 0) (< i (arrlen arr)) (i (++ i))
-      (if (> i 0) (write-mem ","))
-      (write-mem (json->str ([] arr i))))
-    (write-mem "]")))
+      (if (> i 0) (write-bytes ","))
+      (write-bytes (json->str ([] arr i))))
+    (write-bytes "]")))
 
 (function json->str (x)
   ; Returns a list representation of json as a string.

@@ -7,5 +7,5 @@
     (while true
       (let (client-sock (accept sock) buf (bytes 4096) size nil)
         (while (!= (<- size (recvall buf client-sock)) 0)
-          (write-mem buf 0 size)
+          (write-bytes buf 0 size)
           (send buf 0 size client-sock))))))

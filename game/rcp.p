@@ -10,7 +10,7 @@
 
 (function user-choice ()
   (write-line "r(ock), p(aper), s(cissors):")
-  (write-mem "> ")
+  (write-bytes "> ")
   (let (choice (choice->index (read-line)))
     (if choice choice
         (begin

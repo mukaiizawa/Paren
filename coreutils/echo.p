@@ -6,7 +6,7 @@
   ; echo [OPTION] [STRING]...
   ; Echo the STRING(s) to standard output.
   ;     -n do not output the trailing newline
-  (if args (write-mem (join args " ")))
+  (if args (write-bytes (join args " ")))
   (if newline? (write-line)))
 
 (function! main (args)

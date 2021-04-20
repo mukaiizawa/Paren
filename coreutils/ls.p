@@ -22,7 +22,7 @@
            (if recur? (ls.d path)))
          write1
          (f (path)
-           (if long? (write-mem
+           (if long? (write-bytes
                        (str (if (.dir? path) "d" (.other? path) "?" "-")
                             (if (.readable? path) "r" "-")
                             (if (.writable? path) "w" "-")

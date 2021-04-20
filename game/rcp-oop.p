@@ -25,7 +25,7 @@
   (&name! self name))
 
 (method User .choice ()
-  (write-mem (str (.to-s self) ": r(ock), p(aper), s(cissors) >> "))
+  (write-bytes (str (.to-s self) ": r(ock), p(aper), s(cissors) >> "))
   (let (choice (choice->index (read-line)))
     (if choice
         (begin
@@ -53,10 +53,10 @@
 
 (function choice-player (msg)
   (write-line msg)
-  (write-mem "0:user, 1:Computer, 2:Computer(uses only Rock)>> ")
+  (write-bytes "0:user, 1:Computer, 2:Computer(uses only Rock)>> ")
   (let (line (read-line))
     (if (= line "0") (begin
-                       (write-mem "your name>> ")
+                       (write-bytes "your name>> ")
                        (.init (.new User) (read-line)))
         (= line "1") (.new Computer)
         (= line "2") (.new RockComputer)

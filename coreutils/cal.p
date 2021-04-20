@@ -9,10 +9,10 @@
   (let (dt (DateTime.of y m 1) dw (.day-week dt))
     (write-line (str y "-" (int->str m :padding 2)))
     (write-line  "Su Mo Tu We Th Fr Sa")
-    (dotimes (i (-- (* dw 3))) (write-mem " "))
+    (dotimes (i (-- (* dw 3))) (write-bytes " "))
     (dotimes (i (.monthlen dt))
-      (if (!= dw 0) (write-mem " "))
-      (write-mem (int->str (++ i) :padding 2))
+      (if (!= dw 0) (write-bytes " "))
+      (write-bytes (int->str (++ i) :padding 2))
       (if (= (<- dw (% (++ dw) 7)) 0)
           (write-line)))))
 

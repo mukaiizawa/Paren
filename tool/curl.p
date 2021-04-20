@@ -20,7 +20,7 @@ Usage: paren curl.p URL
       (sendall (str method " " uri " " version "\r\n") sock)
       (sendall "\r\n" sock)
       (while (> (<- size (recv buf 0 (memlen buf) sock)) 0)
-        (write-mem buf 0 size)))))
+        (write-bytes buf 0 size)))))
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))

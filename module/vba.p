@@ -187,7 +187,7 @@
                                   (reverse! (cons (vba-sub (str "sub" counts) (.to-s mem))
                                                   subroutines)))
                (begin
-                 (.write-mem mem (car exprs))
+                 (.write-bytes mem (car exprs))
                  (if (< (.size mem) 2000) (parse-exprs (cdr exprs) counts subroutines mem)
                      (parse-exprs (cdr exprs) (++ counts)
                                   (cons (vba-sub (str "sub" counts) (.to-s mem)) subroutines)

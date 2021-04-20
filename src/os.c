@@ -159,16 +159,6 @@ DEFUN(ftell)
   return TRUE;
 }
 
-DEFUN(fflush)
-{
-  FILE *fp;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
-  fflush(fp);
-  *result = object_nil;
-  return TRUE;
-}
-
 DEFUN(fclose)
 {
   FILE *fp;

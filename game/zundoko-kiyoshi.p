@@ -5,10 +5,10 @@
 (function zundoko-kiyoshi (n)
   (if (randbool)
       (begin
-        (write-mem "ズン")
+        (write-bytes "ズン")
         (zundoko-kiyoshi (++ n)))
       (begin
-        (write-mem "ドコ")
+        (write-bytes "ドコ")
         (if (< n 4) (zundoko-kiyoshi 0)
             (write-line "キヨシ")))))
 

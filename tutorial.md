@@ -1143,12 +1143,13 @@ Parenのすべてのエラー/例外はExceptionクラスを継承している�
 
 - input
     - read-byte
+    - read-bytes
     - read-char
     - read-line
     - read
 - output
     - write-byte
-    - write-mem
+    - write-bytes
     - write-line
     - write
 

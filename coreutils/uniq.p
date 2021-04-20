@@ -14,8 +14,8 @@
                                     (&& uniq? (= c 1))
                                     (&& duplicate? (!= c 1)))
                             (when count?
-                              (write-mem (int->str count :padding 7))
-                              (write-mem " "))
+                              (write-bytes (int->str count :padding 7))
+                              (write-bytes " "))
                             (write-line line))))
     (when prev
       (dolist (line (collect read-line))

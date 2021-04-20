@@ -104,10 +104,10 @@
   (let (gen-set (f (column-names vlaues mem)
                   (if (nil? column-names) (.to-s mem)
                       (begin
-                        (if (> (.size mem) 0) (.write-mem ", "))
-                        (.write-mem mem (car column-names))
-                        (.write-mem mem " = ")
-                        (.write-mem mem (parse-value-expr (car values)))
+                        (if (> (.size mem) 0) (.write-bytes ", "))
+                        (.write-bytes mem (car column-names))
+                        (.write-bytes mem " = ")
+                        (.write-bytes mem (parse-value-expr (car values)))
                         (gen-set (cdr column-names) (cdr values) mem)))))
     (str "update " table-name
          " set " (gen-set (->list column-names) (->list values) (.new MemoryStream))

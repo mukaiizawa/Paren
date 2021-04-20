@@ -577,10 +577,10 @@
       (nil? (cdr l)) (mem->str (car l))
       (nil? delim) (mem->str! (apply memcat l))
       (with-memory-stream ($out)
-        (write-mem (car l))
+        (write-bytes (car l))
         (dolist (x (cdr l))
-          (write-mem delim)
-          (write-mem x)))))
+          (write-bytes delim)
+          (write-bytes x)))))
 
 (function split (s :opt delim)
   ; Returns a list of characters in string s.
@@ -1171,8 +1171,8 @@
   ; Treat nil as an empty string.
   (with-memory-stream ($out)
     (dolist (arg args)
-      (if (symbol? arg) (if arg (write-mem arg))
-          (|| (string? arg) (keyword? arg) (bytes? arg)) (write-mem arg)
+      (if (symbol? arg) (if arg (write-bytes arg))
+          (|| (string? arg) (keyword? arg) (bytes? arg)) (write-bytes arg)
           (write arg :end "")))))
 
 (builtin-function string? (x)
@@ -1214,7 +1214,7 @@
   ; Thus the length of the substring is `end - start`.
   (let (ms (.new MemoryStream))
     (if (< start 0) (error "illegal start " start))
-    (.write-mem ms s)
+    (.write-bytes ms s)
     (dotimes (i start)
       (if (nil? (.read-char ms)) (error "illegal start " start)))
     (if (nil? end) (submem s (.tell ms))
@@ -1399,11 +1399,6 @@
 
 (builtin-function ftell (fp)
   ; Returns the current value of the file position indicator for the stream pointed to by fp.
-  )
-
-(builtin-function fflush (fp)
-  ; Flushes the stream pointed to by fp (writing any buffered output data).
-  ; Returns nil.
   )
 
 (builtin-function fclose (fp)
@@ -1650,10 +1645,10 @@
   (&stack-trace self))
 
 (method Exception .print-stack-trace ()
-  (write-mem (.to-s self))
+  (write-bytes (.to-s self))
   (write-line)
   (dolist (x (.stack-trace self))
-    (write-mem "\tat: ") (write x)))
+    (write-bytes "\tat: ") (write x)))
 
 (class SystemExit (Exception)
   ; Dispatched to shut down the Paren system.
@@ -1760,8 +1755,8 @@
                            (with-memory-stream ($out)
                              (with-memory-stream ($in path-name)
                                (while (<- c (read-char))
-                                 (if (= c "\\") (write-mem "/")
-                                     (write-mem c)))))
+                                 (if (= c "\\") (write-bytes "/")
+                                     (write-bytes c)))))
                            "/")))
         (if root? (<- path (cons "/"path)))
         (&path! (.new Path) path))))
@@ -1921,8 +1916,15 @@
   )
 
 (method Stream .read-byte (:rest args)
-  ; Read 1byte from stream.
+  ; Read 1byte from the receiver.
   ; Returns -1 when the stream reaches the end.
+  ; Must be implemented in the inherited class.
+  (assert nil))
+
+(method Stream .read-bytes (:opt buf from size)
+  ; Reads size bytes of data from the receiver and saves it in the from position from the location specified by buf.
+  ; Return the size of items read.
+  ; If args is omitted, read until the stream reaches the end and returns it.
   ; Must be implemented in the inherited class.
   (assert nil))
 
@@ -1936,7 +1938,7 @@
     :SJIS (|| (< 0x80 b1 0xa0) (< 0xdf b1))))
 
 (method Stream .read-char ()
-  ; Read 1 character from stream.
+  ; Read 1 character from the receiver
   ; Returns nil when the stream reaches the end.
   (let (b1 (.read-byte self) b2 nil b3 nil b4 nil size 0)
     (switch (dynamic $encoding)
@@ -1975,7 +1977,7 @@
       (mem->str! c))))
 
 (method Stream .read ()
-  ; Read expression from the specified stream.
+  ; Read expression from the receiver.
   ; Returns nil if eof reached.
   (let ($in self)
     (.read (.new ParenReader))))
@@ -1991,12 +1993,28 @@
             (= c 0x0a) (break)
             (.write-byte out c))))))
 
+(method Stream .write-byte (byte)
+  ; Write byte to the receiver.
+  ; Returns byte.
+  ; Must be implemented in the inherited class.
+  (assert nil))
+
+(method Stream .write-bytes (bytes :opt from size)
+  ; Write size bytes to the receiver from the from position from the location specified by buf.
+  ; Returns the size of bytes written.
+  ; If from is omitted, write the entire argument bytes to the stream and returns bytes.
+  ; Must be implemented in the inherited class.
+  (assert nil))
+
 (method Stream .write-line (:opt bytes)
-  (if bytes (.write-mem self bytes))
-  (.write-byte self 0x0a))
+  ; Write bytes to the receiver.
+  ; Returns bytes.
+  (if bytes (.write-bytes self bytes))
+  (.write-byte self 0x0a)
+  bytes)
 
 (method Stream .write-int (n :key radix padding)
-  ; Write integer to stream.
+  ; Write an integer with the specified padding and radix.
   ; Returns n.
   (let (radix (|| radix 10) padding (|| padding 0)
               ->byte (f (x)
@@ -2013,51 +2031,10 @@
     (write1 n (-- padding)))
   n)
 
-(method Stream .write-number (n)
-  (if (int? n) (.write-int self n)
-      (= n 0.0) (.write-byte self 0x30)
-      (let (mant n exp 8)
-        (let (write-mant1
-               (f ()
-                 (let (upper (// (// mant) 100000000))
-                   (.write-int self upper)
-                   (<- mant (* (- mant (* upper 100000000)) 10))))
-               write-fraction
-               (f (n)
-                 (write-mant1)
-                 (dotimes (i (-- n))
-                   (if (= mant 0) (break)
-                       (write-mant1)))))
-          (when (< mant 0)
-            (.write-byte self 0x2d)
-            (<- mant (- mant)))
-          (while (>= mant 1000000000)
-            (<- mant (/ mant 10) exp (++ exp)))
-          (while (< mant 100000000)
-            (<- mant (* mant 10) exp (-- exp)))
-          (if (<= 0 exp 6)
-              (begin
-                (dotimes (i (++ exp))
-                  (write-mant1))
-                (.write-byte self 0x2e)
-                (write-fraction (- 16 exp 1)))
-              (<= -3 exp -1)
-              (begin
-                (.write-mem self "0.")
-                (dotimes (i (- (- exp) 1))
-                  (.write-byte self 0x30))
-                (write-fraction 16))
-              (begin
-                (write-mant1)
-                (.write-byte self 0x2e)
-                (write-fraction 15)
-                (.write-byte self 0x65)
-                (.write-int self exp)))))))
-
 (method Stream .write (x :key start end)
   ; Write the specified x as a readable format.
   ; Returns x.
-  (if start (.write-mem self start))
+  (if start (.write-bytes self start))
   (if (cons? x)
       (let (ope (car x))
         (if (&& (== ope 'quote) (nil? (cddr x)))
@@ -2071,70 +2048,106 @@
               (.write-byte self 0x2c) (.write self (cadr x) :end ""))
             (&& (== ope 'unquote-splicing) (nil? (cddr x)))
             (begin
-              (.write-mem self ",@") (.write self (cadr x) :end ""))
+              (.write-bytes self ",@") (.write self (cadr x) :end ""))
             (begin
               (.write-byte self 0x28)
               (.write self (car x) :end "")
               (dolist (x (cdr x)) (.write self x :start " " :end ""))
               (.write-byte self 0x29))))
       (builtin? x)
-      (.write-mem self (builtin-name x))
+      (.write-bytes self (builtin-name x))
       (string? x)
       (begin
         (.write-byte self 0x22)
         (dostring (c x)
-          (if (= c "\a") (.write-mem self "\\a")
-              (= c "\b") (.write-mem self "\\b")
-              (= c "\e") (.write-mem self "\\e")
-              (= c "\f") (.write-mem self "\\f")
-              (= c "\n") (.write-mem self "\\n")
-              (= c "\r") (.write-mem self "\\r")
-              (= c "\t") (.write-mem self "\\t")
-              (= c "\v") (.write-mem self "\\v")
-              (= c "\\") (.write-mem self "\\\\")
-              (= c "\"") (.write-mem self "\\\"")
-              (.write-mem self c)))
+          (if (= c "\a") (.write-bytes self "\\a")
+              (= c "\b") (.write-bytes self "\\b")
+              (= c "\e") (.write-bytes self "\\e")
+              (= c "\f") (.write-bytes self "\\f")
+              (= c "\n") (.write-bytes self "\\n")
+              (= c "\r") (.write-bytes self "\\r")
+              (= c "\t") (.write-bytes self "\\t")
+              (= c "\v") (.write-bytes self "\\v")
+              (= c "\\") (.write-bytes self "\\\\")
+              (= c "\"") (.write-bytes self "\\\"")
+              (.write-bytes self c)))
         (.write-byte self 0x22))
       (symbol? x)
-      (.write-mem self x)
+      (.write-bytes self x)
       (keyword? x)
       (begin
         (.write-byte self 0x3a)
-        (.write-mem self x))
+        (.write-bytes self x))
       (number? x)
-      (.write-number self x)
+      (if (int? x) (.write-int self x)
+          (= x 0.0) (.write-byte self 0x30)
+          (let (mant x exp 8)
+            (let (write-mant1 (f ()
+                                (let (upper (// (// mant) 100000000))
+                                  (.write-int self upper)
+                                  (<- mant (* (- mant (* upper 100000000)) 10))))
+                              write-fraction (f (x)
+                                               (write-mant1)
+                                               (dotimes (i (-- x))
+                                                 (if (= mant 0) (break)
+                                                     (write-mant1)))))
+              (when (< mant 0)
+                (.write-byte self 0x2d)
+                (<- mant (- mant)))
+              (while (>= mant 1000000000)
+                (<- mant (/ mant 10) exp (++ exp)))
+              (while (< mant 100000000)
+                (<- mant (* mant 10) exp (-- exp)))
+              (if (<= 0 exp 6)
+                  (begin
+                    (dotimes (i (++ exp))
+                      (write-mant1))
+                    (.write-byte self 0x2e)
+                    (write-fraction (- 16 exp 1)))
+                  (<= -3 exp -1)
+                  (begin
+                    (.write-bytes self "0.")
+                    (dotimes (i (- (- exp) 1))
+                      (.write-byte self 0x30))
+                    (write-fraction 16))
+                  (begin
+                    (write-mant1)
+                    (.write-byte self 0x2e)
+                    (write-fraction 15)
+                    (.write-byte self 0x65)
+                    (.write-int self exp))))))
       (dict? x)
       (begin
-        (.write-mem self "#{ ")
+        (.write-bytes self "#{ ")
         (dolist (key (keys x))
           (.write self key :end " ")
           (.write self ({} x key) :end " "))
-        (.write-mem self "}"))
+        (.write-bytes self "}"))
       (bytes? x)
       (begin
-        (.write-mem self "#[ ")
+        (.write-bytes self "#[ ")
         (dotimes (i (memlen x))
-          (.write-mem self "0x")
+          (.write-bytes self "0x")
           (.write-int self ([] x i) :radix 16 :padding 2)
           (.write-byte self 0x20))
         (.write-byte self 0x5d))
       (array? x)
       (begin
-        (.write-mem self "#[ ")
+        (.write-bytes self "#[ ")
         (dotimes (i (arrlen x)) (.write self ([] x i) :end " "))
         (.write-byte self 0x5d))
       (|| (macro? x)
           (function? x))
       (begin
-        (if (macro? x) (.write-mem self "(macro")
-            (.write-mem self "(f"))
+        (if (macro? x) (.write-bytes self "(macro")
+            (.write-bytes self "(f"))
         (.write-byte self 0x20)
         (.write self (procparams x) :end "")
         (dolist (body (procbody x))
           (.write self body :start " " :end ""))
         (.write-byte self 0x29))
       (assert nil))
-  (.write-mem self (|| end "\n"))
+  (.write-bytes self (|| end "\n"))
   x)
 
 (class MemoryStream (Stream)
@@ -2160,33 +2173,40 @@
     self))
 
 (method MemoryStream .read-byte ()
+  ; Implementation of the Stream.read-byte.
   (let (rdpos (&rdpos self))
     (if (= rdpos (&wrpos self)) -1
         (begin0 ([] (&buf self) rdpos)
                 (&rdpos! self (++ rdpos))))))
 
-(method MemoryStream .read-bytes (buf from size)
-  (let (rest (- (&wrpos self) (&rdpos self)))
-    (if (< rest size) (<- size rest))
-    (memcpy (&buf self) (&rdpos self) buf (&wrpos self) size)
-    size))
+(method MemoryStream .read-bytes (:opt buf from size)
+  ; Implementation of the Stream.read-bytes.
+  (if (nil? buf) (submem (&buf self) (&rdpos self) (&wrpos self))
+      (let (rest (- (&wrpos self) (&rdpos self)))
+        (if (< rest size) (<- size rest))
+        (memcpy (&buf self) (&rdpos self) buf (&wrpos self) size)
+        size)))
 
 (method MemoryStream .write-byte (byte)
+  ; Implementation of the Stream.write-byte.
   (let (wrpos (&wrpos self))
     (.reserve self 1)
     ([] (&buf self) wrpos byte)
     (&wrpos! self (++ wrpos))
     byte))
 
-(method MemoryStream .write-mem (mem :opt from size)
-  (.reserve self (|| size (<- size (memlen mem))))
-  (memcpy mem (|| from 0) (&buf self) (&wrpos self) size)
+(method MemoryStream .write-bytes (bytes :opt from size)
+  ; Implementation of the Stream.write-bytes.
+  (.reserve self (|| size (<- size (memlen bytes))))
+  (memcpy bytes (|| from 0) (&buf self) (&wrpos self) size)
   (&wrpos! self (+ (&wrpos self) size))
-  size)
+  (if from size bytes))
 
 (method MemoryStream .seek (offset)
-  (if (! (<= 0 offset (&wrpos self))) (error "index outof bound"))
-  (&rdpos! self offset))
+  ; Sets the file position indicator of the receiver.
+  ; Returns the receiver.
+  (if (! (<= 0 offset (&wrpos self))) (.raise "index outof bound")
+      (&rdpos! self offset)))
 
 (method MemoryStream .tell ()
   ; Returns current byte position in stream.
@@ -2214,19 +2234,29 @@
   (&fp! self fp))
 
 (method FileStream .read-byte ()
+  ; Implementation of the Stream.read-byte.
   (fgetc (&fp self)))
 
-(method FileStream .read-bytes (buf from size)
-  (fread buf from size (&fp self)))
+(method FileStream .read-bytes (:opt buf from size)
+  ; Implementation of the Stream.read-bytes.
+  (if (nil? buf) (with-memory-stream (out)
+                   (<- buf (bytes 1024))
+                   (while (> (<- size (.read-bytes self buf 0 1024)) 0)
+                     (.write-bytes out buf 0 size)))
+      (fread buf from size (&fp self))))
 
 (method FileStream .read-line ()
+  ; Override of the Stream.read-line.
   (fgets (&fp self)))
 
 (method FileStream .write-byte (byte)
+  ; Implementation of the Stream.write-byte.
   (fputc byte (&fp self)))
 
-(method FileStream .write-mem (x :opt from size)
-  (fwrite x (|| from 0) (|| size (memlen x)) (&fp self)))
+(method FileStream .write-bytes (bytes :opt from size)
+  ; Implementation of the Stream.write-bytes.
+  (fwrite bytes (|| from 0) (|| size (memlen bytes)) (&fp self))
+  (if from size bytes))
 
 (method FileStream .seek (offset)
   ; Sets the file position indicator of the receiver.
@@ -2237,9 +2267,6 @@
 (method FileStream .tell ()
   ; Returns the current value of the file position indicator of the receiver.
   (ftell (&fp self)))
-
-(method FileStream .flush ()
-  (fflush (&fp self)))
 
 (method FileStream .close ()
   (fclose (&fp self)))
@@ -2398,7 +2425,7 @@
   ; Put the o to the end of the token regardless of the stream.
   ; Returns o;
   (if (byte? o) (.write-byte (&token self) o)
-      (.write-mem (&token self) o))
+      (.write-bytes (&token self) o))
   o)
 
 (method AheadReader .token ()
@@ -2580,6 +2607,10 @@
   ; Same as (.read-byte (dynamic $in)).
   (.read-byte (dynamic $in)))
 
+(function read-bytes (:opt buf from size)
+  ; Same as (.read-bytes (dynamic $in)).
+  (.read-bytes (dynamic $in) buf from size))
+
 (function read-char ()
   ; Same as (.read-char (dynamic $in)).
   (.read-char (dynamic $in)))
@@ -2596,9 +2627,9 @@
   ; Same as (.write-byte (dynamic $out) x).
   (.write-byte (dynamic $out) x))
 
-(function write-mem (x :opt from size)
-  ; Same as (.write-mem (dynamic $out) x).
-  (.write-mem (dynamic $out) x from size))
+(function write-bytes (x :opt from size)
+  ; Same as (.write-bytes (dynamic $out) x).
+  (.write-bytes (dynamic $out) x from size))
 
 (function write-line (:opt x)
   ; Same as (.write-line (dynamic $out) x).
@@ -2607,9 +2638,6 @@
 (function write (x :key start end)
   ; Same as (.write (dynamic $out) x :start start :end end)).
   (.write (dynamic $out) x :start start :end end))
-
-(function flush ()
-  (.flush (dynamic $out)))
 
 (macro with-memory-stream ((ms :opt s) :rest body)
   ; Create memory stream context.
@@ -2620,14 +2648,14 @@
   ;     (with-memory-stream (ms s)
   ;        expr1 expr2 ...)
   ;     (let (ms (.new MemoryStream))
-  ;        (if s (.write-mem ms s))
+  ;        (if s (.write-bytes ms s))
   ;        expr1 expr2 ...
   ;        (if s (.to-s ms)))
   (with-gensyms (g)
     (list let (list ms '(.new MemoryStream) g s)
           (list if g
                 (list begin
-                      (list if g (list '.write-mem ms g))
+                      (list if g (list '.write-bytes ms g))
                       (cons begin body))
                 (list begin
                       (cons begin body)
@@ -2661,7 +2689,7 @@
   (let (expr nil)
     (while true
       (catch (Error (f (e) (.print-stack-trace e)))
-        (write-mem ") ")
+        (write-bytes ") ")
         (if (<- expr (read)) (write (eval (expand-macro-all expr)))
             (break))))))
 

@@ -42,7 +42,7 @@
 
 (method Player .attack ()
   (write-line)
-  (write-mem "Attack style: [s]tab [d]ouble swing [r]oundhouse:")
+  (write-bytes "Attack style: [s]tab [d]ouble swing [r]oundhouse:")
   (switch (read)
     's (.stab self)
     'd (.double-swing self)
@@ -58,7 +58,7 @@
 
 (method Player .pick-monster ()
   (write-line)
-  (write-mem "Monster #:")
+  (write-bytes "Monster #:")
   (let (x (read) m nil)
     (if (! (&& (int? x) (<= 0 x (-- $monster-count)))) (write-line "That is not a valid monster number.")
         (.dead? (<- m ([] $monsters x))) (write-line "That monster is alread dead.")

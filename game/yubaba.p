@@ -12,7 +12,7 @@
 (function! main (args)
   (let (name nil)
     (say "契約書だよ。そこに名前を書きな。")
-    (write-mem "> ")
+    (write-bytes "> ")
     (say "フン、" (<- name (read-line)) " というのかい。贅沢な名だねえ。")
     (say "今からおまえの名は " (<- name (new-name name)) " だ。いいかい、" name " だよ。")
     (say "分かったら返事をするんだ、" name " ！！")))
