@@ -1722,28 +1722,28 @@
 
 (class Path ()
   ; A class that handles a file path.
-  ; Construct with Path.of function.
+  ; Construct with path function.
   ; It should not be construct by new.
   ; The corresponding file does not have to exist.
   ; You can read and write files to the corresponding path as needed.
   path)
 
-(function Path.of (path-name)
+(function path (path-name)
   ; Constructs and returns the path object corresponding to path-name.
   ; Internally it just holds the string path-name as a list of filenames.
-  ;     (Path.of "foo/bar/buzz") -- ("foo" "bar" "buzz")
-  ;     (Path.of "/etc") -- ("/" "etc")
+  ;     (path "foo/bar/buzz") -- ("foo" "bar" "buzz")
+  ;     (path "/etc") -- ("/" "etc")
   ; The first `~` expands to the home directory using the environment variable.
   ; Any `~` other than the beginning is ignored.
-  ;     (Path.of "~/.vimrc") <=> ("home" "foo" ".vimrc")
-  ;     (Path.of "~/~.vimrc") <=> ("home" "foo" ".vimrc")
+  ;     (path "~/.vimrc") <=> ("home" "foo" ".vimrc")
+  ;     (path "~/~.vimrc") <=> ("home" "foo" ".vimrc")
   ; All characters `\` in path-name are replaced with `/` for processing.
-  ;     (Path.of "C:\\foo") <=> ("C:" "foo")
+  ;     (path "C:\\foo") <=> ("C:" "foo")
   ; `.` and `..` included in path-name are not treated specially.
   ; Path class places the highest priority on keeping the implementation simple, and assumes that these features are implemente where necessary.
-  ;     (Path.of "foo/bar/../buzz") <=> ("foo" "bar" ".." "buzz")
+  ;     (path "foo/bar/../buzz") <=> ("foo" "bar" ".." "buzz")
   ; Two or more consecutive `/`s or trailing `/`s are ignored.
-  ;     (Path.of "foo//bar/") <=> ("foo" "bar")
+  ;     (path "foo//bar/") <=> ("foo" "bar")
   (if (is-a? path-name Path) path-name
       (let (c nil path nil root? nil)
         (if (memprefix? path-name "/") (<- root? true)
@@ -1761,9 +1761,9 @@
         (if root? (<- path (cons "/"path)))
         (&path! (.new Path) path))))
 
-(function Path.getcwd ()
+(function path.getcwd ()
   ; Returns the path corresponding to the current directory.
-  (Path.of (getcwd)))
+  (path (getcwd)))
 
 (method Path .name ()
   ; Returns file name.
@@ -1799,15 +1799,15 @@
   (let (path (butlast (&path self)))
     (if path (&path! (.new Path) path))))
 
-(method Path .resolve (path)
+(method Path .resolve (p)
   ; Resolve the given path against this path.
   ; If the argument is a character string, convert it to a path object before processing.
   ; If the path parameter is an absolute path then this method trivially returns path
   ; Otherwise this method concatenate this path and the speciifed path.
   ; `.` and `..` included in path-name are not treated specially.
-  (if (string? path) (<- path (Path.of path)))
-  (if (.absolute? path) path
-      (Path.of (memcat (.to-s self) "/" (.to-s path)))))
+  (if (string? p) (<- p (path p)))
+  (if (.absolute? p) p
+      (path (memcat (.to-s self) "/" (.to-s p)))))
 
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
@@ -2661,14 +2661,14 @@
                       (cons begin body)
                       (list '.to-s ms))))))
 
-(macro with-open ((sym path mode) :rest body)
+(macro with-open ((sym p mode) :rest body)
   ; Create file stream context.
   ; The file stream is guaranteed to be closed when exiting the context.
   ; Returns nil.
   (with-gensyms (gsym)
     (list let (list gsym nil)
           (list unwind-protect
-                (cons let (cons (list sym (list <- gsym (list '.open (list 'Path.of path) mode)))
+                (cons let (cons (list sym (list <- gsym (list '.open (list path p) mode)))
                                 body))
                 (list if gsym (list '.close gsym))))))
 
@@ -2712,7 +2712,7 @@
   ; Module file to read must be UTF-8.
   (let ($encoding :UTF-8)
     (if (some? (f (x) (== x key)) $import) true
-        (let (module (.resolve (if import-dir (Path.of import-dir) (.resolve $paren-home "module"))
+        (let (module (.resolve (if import-dir (path import-dir) (.resolve $paren-home "module"))
                                (memcat (mem->str key) ".p")))
           (if (! (.readable? module)) (error "unreadable module " (.to-s module))
               (begin
@@ -2730,7 +2730,7 @@
         (let (script (find (f (dir)
                              (let (full-path (.resolve dir (car args)))
                                (if (.readable? full-path) full-path)))
-                           (cons (Path.getcwd) $script-path)))
+                           (cons (path.getcwd) $script-path)))
           (if (nil? script) (error "unreadable file " (car args))
               (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 
@@ -2741,8 +2741,8 @@
     $in $stdin
     $out $stdout
     $encoding :UTF-8
-    $paren-home (.parent (.parent (.resolve (Path.getcwd) core.p)))
-    $script-path (map (f (path) (.resolve $paren-home path))
+    $paren-home (.parent (.parent (.resolve (path.getcwd) core.p)))
+    $script-path (map (f (p) (.resolve $paren-home p))
                       '("coreutils" "tool")))
 
 (reader-macro [ (reader)

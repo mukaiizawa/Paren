@@ -2,10 +2,10 @@
 
 (class Point ()
   ; Represents a point in a two-dimensional rectangular coordinate system.
-  ; Create an instance with Point.of function.
+  ; Create an instance with point function.
   x y)
 
-(function Point.of (x y)
+(function point (x y)
   ; Returns a point instance corresponding to the coordinates (x, y).
   (if (! (every? number? (list x y))) (.raise self "illegal arguments."))
   (let (p (.new Point))
@@ -29,14 +29,14 @@
 
 (method Point .add (p)
   ; Returns the instance of Point corresponds to the sum of receiver and p.
-  (if (is-a? p Point) (Point.of (+ (&x self) (&x p)) (+ (&y self) (&y p)))
+  (if (is-a? p Point) (point (+ (&x self) (&x p)) (+ (&y self) (&y p)))
       (.raise self "illegal arguments." p)))
 
 (function! main (args)
-  (let (p (Point.of 3 4))
-    (assert (.eq p (Point.of 3 4)))
-    (assert (! (.eq p (Point.of 2 4))))
-    (assert (! (.eq p (Point.of 3 5))))
-    (assert (! (.eq p (Point.of 2 5))))
-    (assert (.eq p (.add (Point.of 1 1) (Point.of 2 3))))
+  (let (p (point 3 4))
+    (assert (.eq p (point 3 4)))
+    (assert (! (.eq p (point 2 4))))
+    (assert (! (.eq p (point 3 5))))
+    (assert (! (.eq p (point 2 5))))
+    (assert (.eq p (.add (point 1 1) (point 2 3))))
     (assert (= (.to-s p) "(3, 4)"))))

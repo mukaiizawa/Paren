@@ -13,7 +13,7 @@ Usage: paren cdep.p
             (<- close-quote (strlstr line "\""))
             (<- file-name (substr line (++ open-quote) close-quote))
             (! (include? file-name dependencies)))
-        (parse-cfile (Path.of file-name) (cons file-name dependencies))
+        (parse-cfile (path file-name) (cons file-name dependencies))
         dependencies)))
 
 (function parse-cfile (file :opt dependencies)
@@ -29,4 +29,4 @@ Usage: paren cdep.p
                                        (cons (.name cfile) (parse-cfile cfile)))
                                  " ")))
              (select (f (x) (= (.suffix x) "c"))
-                     (.children (Path.getcwd))))))
+                     (.children (path.getcwd))))))

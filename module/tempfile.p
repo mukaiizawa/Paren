@@ -1,9 +1,9 @@
 ; temporary file module.
 
-(import :random)
+(import :rand)
 
 (function tempfile.name (prefix dot suffix)
-  (str prefix (randstr 12 :alnum? true) dot suffix))
+  (str prefix (rand.str 12 :alnum? true) dot suffix))
 
 (method Path .tempdir (:key prefix suffix)
   ; Create an temporary directory under the receiver.
@@ -23,7 +23,7 @@
     p))
 
 (function! main (args)
-  (let (dir (.tempdir (Path.getcwd)) temp (.tempfile dir))
+  (let (dir (.tempdir (path.getcwd)) temp (.tempfile dir))
     (assert (.dir? dir))
     (assert (.readable? temp))
     (with-open ($out temp :write) (write-line "foo"))

@@ -83,7 +83,7 @@
 
 (method VBASheet .select-A1 ()
   ; Returns vba to select cell A1 of this sheet.
-  (.select-range self (cell 0 0)))
+  (.select-range self (vba.cell 0 0)))
 
 (method VBASheet .put (r val)
   ; Returns vba that sets the value val to the specified range.
@@ -126,7 +126,7 @@
   (str (.select-range self r)
        "ActiveWindow.FreezePanes = True\n"))
 
-(function vba-alignment (alignment)
+(function vba.alignment (alignment)
   (switch alignment
     :bottom "xlBottom"
     :center "xlCenter"
@@ -137,11 +137,11 @@
 
 (method VBASheet .horizontal-align (r :opt alignment)
   ; Returns vba that sets the specified range to the specified horizontal alignment.
-  (str (.to-vbastr self) "." (.to-vbastr r) ".HorizontalAlignment = " (vba-alignment alignment) "\n"))
+  (str (.to-vbastr self) "." (.to-vbastr r) ".HorizontalAlignment = " (vba.alignment alignment) "\n"))
 
 (method VBASheet .vertical-align (r alignment)
   ; Returns vba that sets the specified range to the specified vertical alignment.
-  (str (.to-vbastr self) "." (.to-vbastr r) ".VerticalAlignment = " (vba-alignment alignment) "\n"))
+  (str (.to-vbastr self) "." (.to-vbastr r) ".VerticalAlignment = " (vba.alignment alignment) "\n"))
 
 (method VBASheet .font-size (r n)
   ; Returns vba that sets the font size of the specified range to the specified size.
@@ -149,31 +149,28 @@
 
 ; api
 
-(let (sym-counts 0)
-  (function vba-gensym ()
-    (str "G" (<- sym-counts (++ sym-counts)))))
-
 (macro with-vba-vars ((:rest vars) :rest exprs)
   ; Create a context that uses vba variables.
   ; All evaluation results of argument expressions must be vba.
-  `(let ,(reduce (f (x y) `(,y (vba-gensym) ,@x)) (cons nil vars))
-     (str ,@(reduce (f (x y) `("Dim " ,y "\n" ,@x)) (cons nil vars))
-          ,@exprs)))
+  (let (vbasym (f () (str "G" (submem (str (gensym)) 3))))
+    `(let ,(reduce (f (x y) `(,y ,(vbasym) ,@x)) (cons nil vars))
+       (str ,@(reduce (f (x y) `("Dim " ,y "\n" ,@x)) (cons nil vars))
+            ,@exprs))))
 
-(function cell (row col)
+(function vba.cell (row col)
   ; Returns the VBACell instance corresponding to the specified row and column.
   (.init (.new VBACell) row col))
 
-(function range (expr)
+(function vba.range (expr)
   ; Returns the vbarange instance corresponding to the specified expression.
   ; Expressions that can be specified follow vba.
   (.init (.new VBARange) expr))
 
-(function sheet (name)
+(function vba.sheet (name)
   ; Returns the vba instance corresponding to the sheet name of the specified string.
   (.init (.new VBASheet) name))
 
-(function vba-sub (name :rest exprs)
+(function vba.sub (name :rest exprs)
   (str "Sub " name "()\n"
        (join exprs)
        "End Sub\n"))
@@ -184,19 +181,19 @@
   (let (parse-exprs
          (f (exprs counts subroutines mem)
            (if (nil? exprs) (list (++ counts)
-                                  (reverse! (cons (vba-sub (str "sub" counts) (.to-s mem))
+                                  (reverse! (cons (vba.sub (str "sub" counts) (.to-s mem))
                                                   subroutines)))
                (begin
                  (.write-bytes mem (car exprs))
                  (if (< (.size mem) 2000) (parse-exprs (cdr exprs) counts subroutines mem)
                      (parse-exprs (cdr exprs) (++ counts)
-                                  (cons (vba-sub (str "sub" counts) (.to-s mem)) subroutines)
+                                  (cons (vba.sub (str "sub" counts) (.to-s mem)) subroutines)
                                   (.reset mem))))))
          (subroutine-counts subroutines) (parse-exprs (except nil? (flatten exprs))
                                                       0 nil (.new MemoryStream)))
     (str "Option Explicit\n"
          (join subroutines)
-         (vba-sub :main
+         (vba.sub :main
                   "Application.ScreenUpdating = False\n"
                   "Application.DisplayAlerts = False\n"
                   (join (map (f (x) (str "Call sub" x "\n"))
@@ -205,17 +202,12 @@
                   "Application.ScreenUpdating = True\n"))))
 
 (function! main (args)
-  (let (sheet1 (sheet "Sheet1") sheet2 (sheet "Sheet2")
-               A1 (range "A1") origin (cell 0 0))
+  (let (sheet1 (vba.sheet "Sheet1") sheet2 (vba.sheet "Sheet2")
+               A1 (vba.range "A1") origin (vba.cell 0 0))
     (assert (= (.activate sheet1) "Worksheets(\"Sheet1\").Activate\n"))
     (assert (= (.show sheet1) "Worksheets(\"Sheet1\").Visible = True\n"))
     (assert (= (.hide sheet1) "Worksheets(\"Sheet1\").Visible = xlVeryHidden\n"))
     (assert (= (.rename sheet1 sheet2) "Worksheets(\"Sheet1\").Name = \"Sheet2\"\n"))
-    (assert (= (.remove sheet1)
-               (join '("Dim G1"
-                       "For Each G1 In Worksheets"
-                       "If G1.Name = \"Sheet1\" Then G1.Delete: Exit For"
-                       "Next" "") "\n")))
     (assert (= (.add-last sheet1)
                (join '("Worksheets.Add after:=Worksheets(Worksheets.Count)"
                        "ActiveSheet.Name = \"Sheet1\"" "") "\n")))
@@ -223,11 +215,6 @@
                (join '("Worksheets(\"Sheet1\").Copy after:=Worksheets(Worksheets.Count)"
                        "Worksheets(Worksheets.Count).Name = \"Sheet2\"" "") "\n")))
     (assert (= (.select-range sheet1 origin) (.select-A1 sheet1)))
-    (assert (= (.put sheet1 origin '("foo" "bar"))
-               (join '("Dim G2"
-                       "G2 = \"foo\""
-                       "G2 = G2 & vblf & \"bar\""
-                       "Worksheets(\"Sheet1\").Cells(1, 1).Value = G2" "") "\n")))
     (assert (= (.copy-range sheet1 A1 sheet2 A1)
                (join '("Worksheets(\"Sheet1\").Range(\"A1\").Copy"
                        "Worksheets(\"Sheet2\").Range(\"A1\").Select"

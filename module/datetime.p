@@ -7,7 +7,7 @@
 (class DateTime (Object)
   unix-time year month day day-week hour minute second)
 
-(function DateTime%offset (y m d)
+(function datetime.offset-0001-01-01 (y m d)
   ;; Returns the difference date from 0001-01-01 for yyyy-mm-dd.
   (if (<= m 2) (<- y (-- y) m (+ m 12)))
   (+ (* 365 (-- y))
@@ -25,11 +25,11 @@
     (&hour! self (% t 24)) (<- t (// t 24))
     (&day-week! self (% (+ t 1) 7))    ; 0001-01-01 is Mon
     (<- y (++ (// t 365)))
-    (while (> (<- offset (DateTime%offset y 1 1)) t)
+    (while (> (<- offset (datetime.offset-0001-01-01 y 1 1)) t)
       (<- y (-- y)))
     (&year! self y)
     (&month! self (++ (// (- t offset) 31)))
-    (<- offset (DateTime%offset y (&month self) 1))
+    (<- offset (datetime.offset-0001-01-01 y (&month self) 1))
     (let (mlen (.monthlen self))
       (when (<= (+ offset mlen) t) 
         (&month! self (++ (&month self)))
@@ -37,16 +37,18 @@
       (&day! self (+ t (- offset) 1)))
     self))
 
-(function DateTime.now ()
-  (.init (.new DateTime) (time)))
-
-(function DateTime.of (year month day :opt hour minute second)
+(function datetime (year month day :opt hour minute second)
+  ; Returns the DateTime instance corresponding to the specified argument.
   (.init (.new DateTime)
          ;; day count 1970-01-01
-         (+ (* (+ (DateTime%offset year month day) -719162) 24 60 60)
+         (+ (* (+ (datetime.offset-0001-01-01 year month day) -719162) 24 60 60)
             (if hour (* hour 60 60) 0)
             (if minute (* minute 60) 0)
             (- (|| second 0) (utcoffset)))))
+
+(function datetime.now ()
+  ; Returns a DateTime instance corresponding to the current time.
+  (.init (.new DateTime) (time)))
 
 (method DateTime .year ()
   ; Returns the year.
@@ -66,7 +68,7 @@
 
 (method DateTime .week-of-month ()
   ; Returns the week of month of the receiver.
-  (let (first-day-of-month (DateTime.of (&year self) (&month self) 1))
+  (let (first-day-of-month (datetime (&year self) (&month self) 1))
     (++ (// (+ (&day self) -1 (&day-week first-day-of-month)) 7))))
 
 (method DateTime .hour ()
@@ -94,8 +96,8 @@
 (method DateTime .monthlen ()
   ; Returns the number of days in the year
   (switch (&month self)
-    2 (- (DateTime%offset (&year self) 3 1)
-         (DateTime%offset (&year self) 2 1))
+    2 (- (datetime.offset-0001-01-01 (&year self) 3 1)
+         (datetime.offset-0001-01-01 (&year self) 2 1))
     (4 6 9 11) 30
     :default 31))
 
@@ -165,7 +167,7 @@
     (assert (= (.unix-time dt) (- 1407737889 (utcoffset))))
     (assert (.eq? dt dt))
     (assert (! (.eq? dt nil))))
-  (let (dt (DateTime.of 2020 08 06 12 10 30))
+  (let (dt (datetime 2020 08 06 12 10 30))
     (assert (= (.date.to-s dt) "2020-08-06"))
     (assert (= (.time.to-s dt) "12:10:30"))
     (assert (= (.datetime.to-s dt) "2020-08-06 12:10:30"))

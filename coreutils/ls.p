@@ -34,7 +34,7 @@
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "lrfdF") args))
-    (ls (Path.of (|| (car args) "."))
+    (ls (path (|| (car args) "."))
         :long? (.get op "l")
         :recur? (.get op "r")
         :only-file? (.get op "f")

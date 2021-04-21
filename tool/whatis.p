@@ -8,4 +8,4 @@
   (&& (.file? path) (= (.suffix path) "p")))
 
 (function! main (args)
-  (foreach peek (select paren-file? (.children (Path.getcwd)))))
+  (foreach peek (select paren-file? (.children (path.getcwd)))))

@@ -1,6 +1,6 @@
 ; xml module.
 
-(function xml-attrs->str (l)
+(function xml.attrs->str (l)
   (if l
       (with-memory-stream ($out)
         (while l
@@ -17,14 +17,14 @@
   ; Returns a list representation of xml as a string.
   (if (atom? l) l
       (let ((name :opt attrs :rest children) l)
-        (if (== name '?xml) (str "<? " attrs " ?>")
-            (== name '!DOCTYPE) (str "<!DOCTYPE " (cadr l) ">")
-            (== name '!--) (str "<!--" attrs "-->")
+        (if (= name '?xml) (str "<? " attrs " ?>")
+            (= name '!DOCTYPE) (str "<!DOCTYPE " (cadr l) ">")
+            (= name '!--) (str "<!--" attrs "-->")
             (&& attrs (|| (atom? attrs) (! (keyword? (car attrs)))))
             (str "<" name  ">"
                  (join (map xml->str (cons attrs children)))
                  "</" name ">")
-            (str "<" name (xml-attrs->str attrs) ">"
+            (str "<" name (xml.attrs->str attrs) ">"
                  (join (map xml->str children))
                  "</" name ">")))))
 

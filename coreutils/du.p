@@ -26,6 +26,6 @@
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "as") args))
-    (du (Path.of (if args (car args) "."))
+    (du (path (if args (car args) "."))
         :all? (.get op "a")
         :summary? (.get op "s"))))

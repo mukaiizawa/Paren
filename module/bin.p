@@ -1,24 +1,24 @@
 ; binary module.
 
-(function hexstr (mem)
+(function bin.hexstr (mem)
   ; Returns the hexadecimal representation of the byte sequence.
   (with-memory-stream ($out)
     (dotimes (i (memlen mem))
       (write-bytes (int->str ([] mem i) :radix 16 :padding 2)))))
 
-(function i32 (i)
+(function bin.&32 (i)
   ; Returns a value with the argument masked in 32 bits.
   (& i 0xffffffff))
 
-(function i32rotr (i n)
+(function bin.rotr32 (i n)
   ; Returns the value obtained by rotating the two's complement binary representation of the specified int value right by the specified number of bits.
   (assert (<= n 32))
   (| (>> i n) (<< i (- 32 n))))
 
-(function i32rotl (i n)
+(function bin.rotl32 (i n)
   ; Returns the value obtained by rotating the two's complement binary representation of the specified int value left by the specified number of bits.
   (assert (<= n 32))
   (| (<< i n) (>> i (- 32 n))))
 
 (function! main (args)
-  (assert (= (hexstr (bytes 3)) "000000")))
+  (assert (= (bin.hexstr (bytes 3)) "000000")))

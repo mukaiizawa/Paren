@@ -27,4 +27,4 @@
     (if (nil? check-file) (write-line (md5sum))
         (foreach write-line
                  (map check-line
-                      (except comment? (.to-l (Path.of check-file))))))))
+                      (except comment? (.to-l (path check-file))))))))
