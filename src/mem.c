@@ -6,15 +6,6 @@
 #include "ip.h"
 #include "bi.h"
 
-DEFUN(bytes)
-{
-  int size;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_sint(argv->cons.car, &size)) return FALSE;
-  *result = gc_new_mem(BYTES, size);
-  return TRUE;
-}
-
 static int mem_p(int argc, object argv, object *result, int type)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -57,8 +48,13 @@ static int mem_to(int argc, object argv, object *result, int type)
   return TRUE;
 }
 
-DEFUN(mem_to_bytes)
+DEFUN(bytes)
 {
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (object_type_p(argv->cons.car, SINT)) {
+    *result = gc_new_mem(BYTES, sint_val(argv->cons.car));
+    return TRUE;
+  }
   return mem_to(argc, argv, result, BYTES);
 }
 

@@ -821,6 +821,21 @@ DEFUN(same_p)
   return TRUE;
 }
 
+static int xstrlen(object o, int *len)
+{
+  int i, ch;
+  i = *len = 0;
+  while (i < o->mem.size) {
+    if ((ch = LC(o->mem.elt + i)) < 0x80) i++;
+    else if (ch < 0xe0) i += 2;
+    else if (ch < 0xf0) i += 3;
+    else if (ch < 0xf8) i += 4;
+    else return FALSE;
+    (*len)++;
+  }
+  return TRUE;
+}
+
 DEFUN(len)
 {
   int len;
@@ -835,8 +850,10 @@ DEFUN(len)
       case KEYWORD:
       case SYMBOL:
       case BYTES:
-      case STRING:
         len = o->mem.size;
+        break;
+      case STRING:
+        if (!xstrlen(o, &len)) return FALSE;
         break;
       case ARRAY:
         len = o->array.size;
