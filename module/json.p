@@ -18,7 +18,7 @@
 (function json.arr->str (arr)
   (with-memory-stream ($out)
     (write-bytes "[")
-    (for (i 0) (< i (arrlen arr)) (i (++ i))
+    (for (i 0) (< i (len arr)) (i (++ i))
       (if (> i 0) (write-bytes ","))
       (write-bytes (json->str ([] arr i))))
     (write-bytes "]")))

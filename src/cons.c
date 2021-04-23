@@ -88,15 +88,6 @@ DEFUN(append)
   return TRUE;
 }
 
-DEFUN(len)
-{
-  object o;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
-  *result = gc_new_xint(object_list_len(o));
-  return TRUE;
-}
-
 DEFUN(last_cons)
 {
   object o;

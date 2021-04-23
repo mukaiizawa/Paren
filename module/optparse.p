@@ -8,7 +8,7 @@
   ; Options with ':' immediately after the specified character have option arguments.
   ; Returns this object.
   (<- option (str->arr option))
-  (let (table nil i 0 len (arrlen option))
+  (let (table nil i 0 len (len option))
     (while (< i len)
       (let (opt ([] option i) optarg? (&& (< (<- i (++ i)) len) (= ([] option i) ":")))
         (if optarg? (<- i (++ i))) 
@@ -27,7 +27,7 @@
   (while args
     (let (arg (car args))
       (if (= arg "--") (return (list self (cdr args))))
-      (let (argarr (str->arr arg) arglen (arrlen argarr))
+      (let (argarr (str->arr arg) arglen (len argarr))
         (if (!= ([] argarr 0) "-") (break))    ; end of option.
         (for (i 1) (< i arglen) (i (++ i))
           (let (record (.lookup self ([] argarr i))

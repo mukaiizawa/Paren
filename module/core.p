@@ -295,7 +295,7 @@
   ; Supports break, continue macro.
   ; Returns nil.
   (with-gensyms (ga gi glen)
-    (list 'for (list gi 0 ga a glen (list 'arrlen ga)) (list < gi glen) (list gi (list '++ gi))
+    (list 'for (list gi 0 ga a glen (list 'len ga)) (list < gi glen) (list gi (list '++ gi))
           (list let (list i (list [] ga gi))
                 (cons begin body)))))
 
@@ -392,6 +392,17 @@
   ; Returns whether the x is a macro.
   (assert (macro? begin0))
   (assert (! (macro? begin))))
+
+(builtin-function len (x)
+  ; Returns the length of the sequence x.
+  ; The argument may be a list, symbol, keyword, string, bytes and dictionary.
+  ; If the argument is string, returns the byte length.
+  ; To get the number of characters, use (len (split str)) etc.
+  (assert (= (len nil) 0))
+  (assert (= (len '(1)) 1))
+  (assert (= (len (array 1)) 1))
+  (assert (= (let (d (dict)) ({} d :x 1)) 1))
+  (assert (= (len "foo") 3)))
 
 ; list
 
@@ -588,8 +599,8 @@
   (if (memempty? s) nil
       (nil? delim) (arr->list (str->arr s))
       (let (i 0 lis nil chars nil
-              sa (str->arr s) salen (arrlen sa)
-              da (str->arr delim) dalen (arrlen da) end (- salen dalen)
+              sa (str->arr s) salen (len sa)
+              da (str->arr delim) dalen (len da) end (- salen dalen)
               match? (f ()
                        (dotimes (j dalen)
                          (if (!= ([] sa (+ i j)) ([] da j)) (return nil)))
@@ -605,11 +616,6 @@
           (<- chars (cons ([] sa i) chars)
               i (++ i)))
         (reverse! (cons (join-chars) lis)))))
-
-(builtin-function len (l)
-  ; Returns the length of the specified list l.
-  (assert (= (len nil) 0))
-  (assert (= (len '(1)) 1)))
 
 (builtin-function last-cons (x)
   ; Returns the terminal cons.
@@ -1036,14 +1042,14 @@
 (function memhash (x)
   ; Returns hash value of mem.
   (let (hval 17)
-    (dotimes (i (memlen x))
+    (dotimes (i (len x))
       (if (< i 10) (<- hval (+ (* hval 31) ([] x i)))
           (break)))
     hval))
 
 (function memempty? (s)
   ; Returns whether the s is "" or nil.
-  (|| (nil? s) (= (memlen s) 0)))
+  (|| (nil? s) (= (len s) 0)))
 
 (builtin-function mem->bytes (x :opt i size)
   ; Returns bytes corresponding to byte sequence x.
@@ -1074,18 +1080,13 @@
 
 (function memprefix? (x prefix)
   ; Returns whether the byte sequence x with the specified prefix.
-  (&& (>= (memlen x) (memlen prefix))
-      (memmem x prefix 0 (memlen prefix))))
+  (&& (>= (len x) (len prefix))
+      (memmem x prefix 0 (len prefix))))
 
 (function memsuffix? (x suffix)
   ; Returns whether the byte sequence x with the specified suffix.
-  (&& (>= (memlen x) (memlen suffix))
-      (memmem x suffix (- (memlen x) (memlen suffix)))))
-
-(builtin-function memlen (x)
-  ; Returns the size of the byte sequence x.
-  (assert (= (memlen "") 0))
-  (assert (= (memlen "012") 3)))
+  (&& (>= (len x) (len suffix))
+      (memmem x suffix (- (len x) (len suffix)))))
 
 (builtin-function memmem (x b :opt start end)
   ; Returns the position where the byte b appears first in the byte sequence x.
@@ -1120,7 +1121,7 @@
 (builtin-function bytes (size)
   ; Returns a bytes of size the specified size.
   ; The element is cleared to 0.
-  (assert (= (memlen (bytes 1)) 1))
+  (assert (= (len (bytes 1)) 1))
   (assert (= ([] (bytes 1) 0) 0)))
 
 (builtin-function bytes? (x)
@@ -1229,13 +1230,13 @@
 
 (function strlen (s)
   ; Returns the number of characters in string s.
-  (arrlen (str->arr s)))
+  (len (str->arr s)))
 
 (function strstr (s pat :opt start)
   ; Returns the position where the substring pat appears first in the string s.
   ; If the string pat is not a substring of the string s, returns nil.
   ; If start is specified, search for substring pat from start-th of the string s.
-  (let (start (|| start 0) sa (str->arr s) slen (arrlen sa) pa (str->arr pat) plen (arrlen pa))
+  (let (start (|| start 0) sa (str->arr s) slen (len sa) pa (str->arr pat) plen (len pa))
     (if (< (- slen start) 0) (error "illegal start")
         (= plen 0) (return 0))
     (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (i (++ i))
@@ -1249,7 +1250,7 @@
 (function strlstr (s pat)
   ; Returns the position where the substring pat appears last in the string s.
   ; If the string pat is not a substring of the string s, returns nil.
-  (let (sa (str->arr s) slen (arrlen sa) pa (str->arr pat) plen (arrlen pa))
+  (let (sa (str->arr s) slen (len sa) pa (str->arr pat) plen (len pa))
     (if (= plen 0) (return (-- slen)))
     (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (i (-- i))
       (when (= ([] sa i) p0)
@@ -1276,7 +1277,7 @@
   (let (rec (f (i acc)
               (if (< i 0) acc
                   (rec (-- i) (cons ([] x i) acc)))))
-    (rec (-- (arrlen x)) nil)))
+    (rec (-- (len x)) nil)))
 
 (builtin-function [] (x i :opt v)
   ; Returns the i-th element of the array x.
@@ -1290,10 +1291,6 @@
                 ([] a 0)
                 ([] b 0 0xff)
                 (= ([] b 0) 0xff)))))
-
-(builtin-function arrlen (x)
-  ; Returns the length of the specified array x.
-  (assert (= (arrlen (array 3)) 3)))
 
 (builtin-function arrcpy (src src-i dst dst-i size)
   ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
@@ -1310,7 +1307,7 @@
 
 (function subarr (x start :opt end)
   ; Returns a new array object selected from start to end (end not included) where start and end represent the index of items in that array x.
-  (let (xlen (arrlen x))
+  (let (xlen (len x))
     (if (< start 0) (error "illegal start")
         (nil? end) (<- end xlen)
         (> end xlen) (error "illegal end"))
@@ -1697,7 +1694,7 @@
   self)
 
 (method Array .reserve (size)
-  (let (req (+ (&size self) size) elt-size (arrlen (&elt self)))
+  (let (req (+ (&size self) size) elt-size (len (&elt self)))
     (when (< elt-size req)
       (while (< (<- elt-size (* elt-size 2)) req))
       (let (elt (array elt-size))
@@ -1812,7 +1809,7 @@
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
   (let (first (car (&path self)))
-    (if (== $hostname :windows) (&& (= (memlen first) 2) (= ([] first 1) 0x3a))
+    (if (== $hostname :windows) (&& (= (len first) 2) (= ([] first 1) 0x3a))
         (= first "/"))))
 
 (method Path .relative? ()
@@ -2126,7 +2123,7 @@
       (bytes? x)
       (begin
         (.write-bytes self "#[ ")
-        (dotimes (i (memlen x))
+        (dotimes (i (len x))
           (.write-bytes self "0x")
           (.write-int self ([] x i) :radix 16 :padding 2)
           (.write-byte self 0x20))
@@ -2134,7 +2131,7 @@
       (array? x)
       (begin
         (.write-bytes self "#[ ")
-        (dotimes (i (arrlen x)) (.write self ([] x i) :end " "))
+        (dotimes (i (len x)) (.write self ([] x i) :end " "))
         (.write-byte self 0x5d))
       (|| (macro? x)
           (function? x))
@@ -2164,7 +2161,7 @@
   (&wrpos self))
 
 (method MemoryStream .reserve (size)
-  (let (req (+ (&wrpos self) size) buf-size (memlen (&buf self)))
+  (let (req (+ (&wrpos self) size) buf-size (len (&buf self)))
     (when (< buf-size req)
       (while (< (<- buf-size (* buf-size 2)) req))
       (let (buf (bytes buf-size))
@@ -2197,7 +2194,7 @@
 
 (method MemoryStream .write-bytes (bytes :opt from size)
   ; Implementation of the Stream.write-bytes.
-  (.reserve self (|| size (<- size (memlen bytes))))
+  (.reserve self (|| size (<- size (len bytes))))
   (memcpy bytes (|| from 0) (&buf self) (&wrpos self) size)
   (&wrpos! self (+ (&wrpos self) size))
   (if from size bytes))
@@ -2255,7 +2252,7 @@
 
 (method FileStream .write-bytes (bytes :opt from size)
   ; Implementation of the Stream.write-bytes.
-  (fwrite bytes (|| from 0) (|| size (memlen bytes)) (&fp self))
+  (fwrite bytes (|| from 0) (|| size (len bytes)) (&fp self))
   (if from size bytes))
 
 (method FileStream .seek (offset)

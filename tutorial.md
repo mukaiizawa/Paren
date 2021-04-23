@@ -102,10 +102,6 @@ Parenには複数行に跨がれるコメントは言語仕様として存在し
     true
     ) (memcat "hello" " " "world")
     "hello world"
-    ) (memlen "hello world")
-    11
-    ) (strlen "hello world")
-    11
     ) (substr "hello world" 6)
     "world"
     ) (substr "hello world" 0 5)
@@ -458,7 +454,7 @@ Parenには複数行に跨がれるコメントは言語仕様として存在し
     #[ :zero nil nil ]
     ) ([] a 0)
     :zero
-    ) (arrlen a)
+    ) (len a)
     3
     ) (arr->list a)
     (:zero nil nil)
@@ -483,12 +479,12 @@ Parenには複数行に跨がれるコメントは言語仕様として存在し
     #[ 0x22 0x00 0x00 ]
     ) ([] b 0)
     34
-    ) (memlen b)
+    ) (len b)
     3
 
 `mem`から始まるいくつかの関数は、バイト列と見做せるシンボル、文字列、キーワードに適用できる。
 
-    ) (memlen "foo")
+    ) (len "foo")
     3
     ) (memcat "foo" "bar")
     "foobar"

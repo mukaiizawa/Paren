@@ -821,6 +821,36 @@ DEFUN(same_p)
   return TRUE;
 }
 
+DEFUN(len)
+{
+  int len;
+  object o;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if ((o = argv->cons.car) == object_nil) len = 0;
+  else {
+    switch (object_type(o)) {
+      case CONS:
+        len = object_list_len(o);
+        break;
+      case KEYWORD:
+      case SYMBOL:
+      case BYTES:
+      case STRING:
+        len = o->mem.size;
+        break;
+      case ARRAY:
+        len = o->array.size;
+        break;
+      case DICT:
+        len = object_map_len(o);
+      default:
+        return FALSE;
+    }
+  }
+  reg[0] = gc_new_xint(len);
+  return TRUE;
+}
+
 DEFUN(address)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;

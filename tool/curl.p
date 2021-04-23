@@ -19,7 +19,7 @@ Usage: paren curl.p URL
     (with-client-socket (sock host port)
       (sendall (str method " " uri " " version "\r\n") sock)
       (sendall "\r\n" sock)
-      (while (> (<- size (recv buf 0 (memlen buf) sock)) 0)
+      (while (> (<- size (recv buf 0 (len buf) sock)) 0)
         (write-bytes buf 0 size)))))
 
 (function! main (args)

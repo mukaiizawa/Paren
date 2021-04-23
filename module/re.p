@@ -109,7 +109,7 @@
   ([] (&text self) i))
 
 (method Re .text-length ()
-  (arrlen (&text self)))
+  (len (&text self)))
 
 (method Re .subtext (start :opt end)
   (let (text (arr->list (subarr (&text self) start (|| end (.text-length self)))))
@@ -148,7 +148,7 @@
   ;         {n,}    {n,}?    match at least n times.
   ;         {n,m}   {n,m}?   match from n to m times.
   (if (is-a? expr Re) expr
-      (let (r (.new Re) s 0 e (memlen expr) anchored? nil)
+      (let (r (.new Re) s 0 e (len expr) anchored? nil)
         (when (= ([] expr 0) 0x5e)
           (&anchored-start?! r true)
           (<- s (++ s) anchored? true))

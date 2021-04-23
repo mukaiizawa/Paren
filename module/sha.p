@@ -55,7 +55,7 @@
   (let ((H1 H2 H3 H4 H5 H6 H7 H8)
         '(0x6a09e667 0xbb67ae85 0x3c6ef372 0xa54ff53a
           0x510e527f 0x9b05688c 0x1f83d9ab 0x5be0cd19)
-        msglen (memlen msg)
+        msglen (len msg)
         N (++ (>> (+ msglen 8) 6))
         padlen (- (<< N 6) msglen)
         padding (bytes padlen)

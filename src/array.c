@@ -81,15 +81,6 @@ DEFUN(array_access)
   }
 }
 
-DEFUN(arrlen)
-{
-  object o;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, ARRAY, &o)) return FALSE;
-  *result = gc_new_xint(o->array.size);
-  return TRUE;
-}
-
 DEFUN(arrcpy)
 {
   int oi, pi, size;

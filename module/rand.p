@@ -16,7 +16,7 @@
 
 (function rand.bytes (bytes)
   ; Returns the specified bytes with a random value.
-  (dotimes (i (memlen bytes))
+  (dotimes (i (len bytes))
     ([] bytes i (rand.int 0xff)))
   bytes)
 
@@ -26,7 +26,7 @@
                 lower (if (|| alnum? alpha? lower?) "abcdefghijklmnopqrstuvwxyz")
                 upper (if (|| alnum? alpha? upper?) "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
                 table (str numeric lower upper)
-                table-size (memlen table)
+                table-size (len table)
                 val (bytes size))
     (assert (> table-size 0))
     (dotimes (i size)

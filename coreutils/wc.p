@@ -12,7 +12,7 @@
     (while (<- c (read-char))
       (if (= c "\n") (<- linec (++ linec))
           (= c " ") (<- wordc (++ wordc)))
-      (<- bytec (+ bytec (memlen c))))
+      (<- bytec (+ bytec (len c))))
     (list bytec wordc linec)))
 
 (function! main (args)

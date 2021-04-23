@@ -100,7 +100,7 @@
   ; MD5 hash algorithm as defined in RFC 1321.
   ; Returns the MD5 checksum of the data.
   (let ((A B C D) '(0x67452301 0xefcdab89 0x98badcfe 0x10325476)
-                  msglen (memlen msg)
+                  msglen (len msg)
                   N (++ (>> (+ msglen 8) 6))
                   padlen (- (<< N 6) msglen)
                   padding (bytes padlen)

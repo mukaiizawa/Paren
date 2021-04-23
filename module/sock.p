@@ -30,12 +30,12 @@
   )
 
 (function recvall (buf sock)
-  ; Same as (recv buf 0 (memlen buf) sock)).
-  (recv buf 0 (memlen buf) sock))
+  ; Same as (recv buf 0 (len buf) sock)).
+  (recv buf 0 (len buf) sock))
 
 (function sendall (buf sock)
-  ; Same as (send buf 0 (memlen buf) sock)).
-  (send buf 0 (memlen buf) sock))
+  ; Same as (send buf 0 (len buf) sock)).
+  (send buf 0 (len buf) sock))
 
 (builtin-function closesocket (sock)
   ; Closes the socket.
