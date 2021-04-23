@@ -1,13 +1,12 @@
 ; yubaba
 
-(import :random)
+(import :rand)
 
 (function say (:rest args)
   (write-line (apply str (cons "湯婆婆：" args))))
 
 (function new-name (name)
-  (let (i (randint (strlen name)))
-    (substr name i (++ i))))
+  (strnth name (rand.int (strlen name))))
 
 (function! main (args)
   (let (name nil)

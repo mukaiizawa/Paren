@@ -1,6 +1,6 @@
 ; Rock paper scissors.
 
-(import :random)
+(import :rand)
 
 (<- $choices '(rock paper scissors))
 
@@ -18,7 +18,7 @@
           (user-choice)))))
 
 (function computer-choice ()
-  (randint 3))
+  (rand.int 3))
 
 (function rcp ()
   (let (user-choice (user-choice) computer-choice (computer-choice))

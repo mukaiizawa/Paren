@@ -1,6 +1,6 @@
 ; Rock paper scissors Object-oriented version.
 
-(import :random)
+(import :rand)
 
 (<- $choices '(rock paper scissors))
 
@@ -41,7 +41,7 @@
   (&name! self "Computer"))
 
 (method Computer .choice ()
-  (let (choice (randint 3))
+  (let (choice (rand.int 3))
     (.show self choice)
     choice))
 

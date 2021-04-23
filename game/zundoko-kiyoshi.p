@@ -1,9 +1,9 @@
 ; zundoko kiyoshi.
 
-(import :random)
+(import :rand)
 
 (function zundoko-kiyoshi (n)
-  (if (randbool)
+  (if (rand.bool)
       (begin
         (write-bytes "ズン")
         (zundoko-kiyoshi (++ n)))

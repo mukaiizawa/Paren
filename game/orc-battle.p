@@ -1,6 +1,6 @@
 ; Conrad Barski's Land of Lisp orc-battle implementation.
 
-(import :random)
+(import :rand)
 (import :math)
 
 (<- $player nil
@@ -9,7 +9,7 @@
     $monsters (array $monster-count))
 
 (function rand1-n (n)
-  (++ (randint (max n 1))))
+  (++ (rand.int (math.max n 1))))
 
 ; Player
 
@@ -66,7 +66,7 @@
     (.pick-monster self)))
 
 (method Player .pick-monster-randomly ()
-  (let (m ([] $monsters (randint $monster-count)))
+  (let (m ([] $monsters (rand.int $monster-count)))
     (if (.dead? m) (.pick-monster-randomly self)
         m)))
 
@@ -151,7 +151,7 @@
 (define-monster Brigand ())
 
 (method Brigand .attack ()
-  (let (x (max (&health $player) (&agility $player) (&strength $player)))
+  (let (x (math.max (&health $player) (&agility $player) (&strength $player)))
     (if (= x (&health $player))
         (begin
           (write-line "A brigand hits you with his slingshot, taking off 2 health points!")
@@ -197,7 +197,7 @@
 (function init-game ()
   (<- $player (.new Player))
   (dotimes (i $monster-count)
-    ([] $monsters i (.new (nth (randint (len $monster-classes)) $monster-classes)))))
+    ([] $monsters i (.new (nth (rand.int (len $monster-classes)) $monster-classes)))))
 
 (function! main (args)
   (init-game)
