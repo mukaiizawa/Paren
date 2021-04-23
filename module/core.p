@@ -633,9 +633,9 @@
   ; Returns the the specified nth cons of the specified list l.
   ; If n is greater than the length of l, nil is returned.
   (let (rec (f (m l)
-              (if l
-                  (if (= n m) l
-                      (rec (++ m) (cdr l))))))
+              (if (nil? l) l
+                  (= n m) l
+                  (rec (++ m) (cdr l)))))
     (assert (>= n 0))
     (rec 0 l)))
 
@@ -2032,7 +2032,9 @@
   ; Write the specified x as a readable format.
   ; Returns x.
   (if start (.write-bytes self start))
-  (if (cons? x)
+  (if (nil? x)
+      (.write-bytes self :nil)
+      (cons? x)
       (let (ope (car x))
         (if (&& (== ope 'quote) (nil? (cddr x)))
             (begin
