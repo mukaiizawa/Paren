@@ -5,7 +5,7 @@
 (<- $choices '(rock paper scissors))
 
 (function choice->index (c)
-  (find (f (x) (if (memprefix? (car x) c) (cadr x)))
+  (find (f (x) (if (prefix? (car x) c) (cadr x)))
         (zip $choices (.. (len $choices)))))
 
 (function user-choice ()

@@ -821,16 +821,22 @@ DEFUN(same_p)
   return TRUE;
 }
 
-static int xstrlen(object o, int *len)
+static int ch_len(unsigned char ch, int *len)
 {
-  int i, ch;
+  if (ch < 0x80) (*len) += 1;
+  else if (ch < 0xe0) (*len) += 2;
+  else if (ch < 0xf0) (*len) += 3;
+  else if (ch < 0xf8) (*len) += 4;
+  else return ip_mark_error("Illegal byte sequence");
+  return TRUE;
+}
+
+static int str_len(object o, int *len)
+{
+  int i;
   i = *len = 0;
   while (i < o->mem.size) {
-    if ((ch = LC(o->mem.elt + i)) < 0x80) i++;
-    else if (ch < 0xe0) i += 2;
-    else if (ch < 0xf0) i += 3;
-    else if (ch < 0xf8) i += 4;
-    else return FALSE;
+    if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
     (*len)++;
   }
   return TRUE;
@@ -853,7 +859,7 @@ DEFUN(len)
         len = o->mem.size;
         break;
       case STRING:
-        if (!xstrlen(o, &len)) return FALSE;
+        if (!str_len(o, &len)) return FALSE;
         break;
       case ARRAY:
         len = o->array.size;
@@ -861,11 +867,64 @@ DEFUN(len)
       case DICT:
         len = object_map_len(o);
       default:
-        return FALSE;
+        return bi_mark_type_error();
     }
   }
   reg[0] = gc_new_xint(len);
   return TRUE;
+}
+
+DEFUN(slice)
+{
+  int i, s, t, start, stop;
+  object o;
+  if (!bi_argc_range(argc, 1, 3)) return FALSE;
+  reg[0] = object_nil;
+  if ((o = argv->cons.car) == object_nil) return TRUE;
+  if (argc < 2) start = 0;
+  else if (!bi_spint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
+  if (argc < 3) stop = -1;
+  else if (!bi_spint((argv = argv->cons.cdr)->cons.car, &stop)) return FALSE;
+  else if (start > stop) return FALSE;
+  switch (object_type(o)) {
+    case CONS:
+      for (i = 0; i < start; i++) {
+        if ((o = o->cons.cdr) == object_nil) return TRUE;
+      }
+      if (o == object_nil || stop == -1) reg[0] = o;
+      else {
+        for (i = start; i < stop; i++) {
+          reg[0] = gc_new_cons(o->cons.car, reg[0]);
+          if ((o = o->cons.cdr) == object_nil) break;
+        }
+        reg[0] = object_reverse(reg[0]);
+      }
+      return TRUE;
+    case BYTES:
+      if (stop == -1) stop = o->mem.size;
+      else if (stop > o->mem.size) return FALSE;
+      reg[0] = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
+      return TRUE;
+    case STRING:
+      for (i = s = 0; i < start; i++)
+        if (!ch_len(LC(o->mem.elt + s), &s)) return FALSE;
+      if (stop == -1) t = o->mem.size;
+      else {
+        for (i = start, t = s; i < stop; i++) {
+          if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
+        }
+      }
+      reg[0] = gc_new_mem_from(STRING, o->mem.elt + s, t - s);
+      return TRUE;
+    case ARRAY:
+      if (stop == -1) stop = o->array.size;
+      else if (stop > o->array.size) return FALSE;
+      reg[0] = gc_new_array(s = stop - start);
+      memcpy(reg[0]->array.elt, o->array.elt + start, sizeof(object) * s);
+      return TRUE;
+    default:
+      return bi_mark_type_error();
+  }
 }
 
 DEFUN(address)

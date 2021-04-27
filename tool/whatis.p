@@ -2,7 +2,7 @@
 
 (function! peek (path)
   (with-open ($in path :read)
-    (write-line (str (.base-name path) " --" (submem (read-line) 1)))))
+    (write-line (str (.base-name path) " --" (slice (read-line) 1)))))
 
 (function! paren-file? (path)
   (&& (.file? path) (= (.suffix path) "p")))

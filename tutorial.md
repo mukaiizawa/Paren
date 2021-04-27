@@ -102,9 +102,9 @@ Parenには複数行に跨がれるコメントは言語仕様として存在し
     true
     ) (memcat "hello" " " "world")
     "hello world"
-    ) (substr "hello world" 6)
+    ) (slice "hello world" 6)
     "world"
-    ) (substr "hello world" 0 5)
+    ) (slice "hello world" 0 5)
     "hello"
     ) (strstr "foo" "foo")
     0
@@ -482,17 +482,17 @@ Parenには複数行に跨がれるコメントは言語仕様として存在し
     ) (len b)
     3
 
-`mem`から始まるいくつかの関数は、バイト列と見做せるシンボル、文字列、キーワードに適用できる。
+いくつかの関数は、バイト列と見做せるシンボル、文字列、キーワードにも適用できる。
 
     ) (len "foo")
     3
     ) (memcat "foo" "bar")
     "foobar"
-    ) (submem "012" 0)
+    ) (slice "012" 0)
     "012"
-    ) (submem "012" 1)
+    ) (slice "012" 1)
     "12"
-    ) (submem "012" 1 2)
+    ) (slice "012" 1 2)
     "1"
 
 # 辞書

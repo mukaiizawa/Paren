@@ -19,7 +19,7 @@
   (hexstr (md5.sum (read-bytes))))
 
 (function comment? (line)
-  (memprefix? line "#"))
+  (prefix? line "#"))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "c:") args)

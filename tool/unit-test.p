@@ -12,7 +12,7 @@
 (function! module-file? (path)
   (&& (.file? path)
       (= (.suffix path) "p")
-      (memsuffix? (peek-line path) "module.")))
+      (suffix? (peek-line path) "module.")))
 
 (function! main (args)
   (let (debug? nil)

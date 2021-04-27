@@ -6,7 +6,7 @@
   (write-line (apply str (cons "湯婆婆：" args))))
 
 (function new-name (name)
-  (strnth name (rand.int (strlen name))))
+  ([] name (rand.int (len name))))
 
 (function! main (args)
   (let (name nil)

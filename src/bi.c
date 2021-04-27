@@ -21,17 +21,15 @@ int bi_argc_range(int argc, int min, int max)
   return TRUE;
 }
 
-static void mark_type_error(void)
+int bi_mark_type_error(void)
 {
   ip_mark_error("illegal argument type");
+  return FALSE;
 }
 
 static int arg_type(object o, int test, object *result)
 {
-  if (!test) {
-    mark_type_error();
-    return FALSE;
-  }
+  if (!test) return bi_mark_type_error();
   *result = o;
   return TRUE;
 }
@@ -209,6 +207,12 @@ int bi_sint(object o, int *p)
   return TRUE;
 }
 
+int bi_spint(object o, int *p)
+{
+  if (!bi_sint(o, p) || *p < 0) return ip_mark_error("expected positive integer");
+  return TRUE;
+}
+
 int bi_int64(object o, int64_t *p)
 {
   if (sint_p(o)) *p = sint_val(o);
@@ -226,8 +230,7 @@ int bi_intptr(object o, intptr_t *p)
       return TRUE;
     }
   }
-  mark_type_error();
-  return FALSE;
+  return bi_mark_type_error();
 }
 
 int bi_double(object o, double *p)
@@ -258,7 +261,7 @@ int bi_strings(int n, object argv, char **ss)
     o = argv->cons.car;
     argv = argv->cons.cdr;
     if (!object_type_p(o, STRING)) {
-      mark_type_error();
+      bi_mark_type_error();
       return FALSE;
     }
     offset[i] = bi_buf.size;

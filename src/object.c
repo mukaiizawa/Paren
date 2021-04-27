@@ -289,7 +289,7 @@ int object_map_len(object o)
   object *table;
   xassert(object_type_p(o, DICT));
   table = o->map.table;
-  for (i = 0; i < o->map.half_size; i++)
+  for (i = len = 0; i < o->map.half_size; i++)
     if (table[i] != NULL) len++;
   return len;
 }

@@ -43,8 +43,8 @@ DEFUN(fopen)
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if ((fn = bi_string(argv)) == NULL) return FALSE;
-  if (!bi_sint(argv->cons.cdr->cons.car, &mode)) return FALSE;
-  if (0 > mode || mode >= sizeof(mode_table) / sizeof(char *)) return FALSE;
+  if (!bi_spint(argv->cons.cdr->cons.car, &mode)) return FALSE;
+  if (mode >= sizeof(mode_table) / sizeof(char *)) return FALSE;
   if ((fp = pf_fopen(fn, mode_table[mode])) == NULL) return FALSE;
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;
@@ -103,9 +103,9 @@ DEFUN(fread)
   object o;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
   if (!bi_arg_type(argv->cons.car, BYTES, &o)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_spint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (!(0 <= from && from + size <= o->mem.size)) return FALSE;
+  if (from + size > o->mem.size) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   size = fread(o->mem.elt + from, 1, size, fp);
   if (size == 0 && ferror(fp)) {
@@ -123,9 +123,9 @@ DEFUN(fwrite)
   object o;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
   if (!bi_arg_mem(argv->cons.car, &o)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (!(0 <= from && from + size <= o->mem.size)) return FALSE;
+  if (!bi_spint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_spint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (from + size > o->mem.size) return FALSE;
   if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   size = fwrite(o->mem.elt + from, 1, size, fp);
   if (size == 0 && ferror(fp)) {

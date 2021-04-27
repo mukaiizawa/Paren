@@ -8,7 +8,7 @@ Usage: paren cdep.p
 
 (function parse-line (line dependencies)
   (let (open-quote nil close-quote nil file-name nil)
-    (if (&& (memprefix? line "#include")
+    (if (&& (prefix? line "#include")
             (<- open-quote (strstr line "\""))
             (<- close-quote (strlstr line "\""))
             (<- file-name (substr line (++ open-quote) close-quote))

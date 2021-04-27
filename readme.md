@@ -39,6 +39,7 @@ Paren is a the programmable programming language.
     + module -- importable Paren module files
     + src -- implementation of Paren itself
     + tool -- implementation of tool by Paren
+    glossary.md  -- glossary
     lang.md  -- Paren language specification
     license.txt -- Paren license file
     tutorial.md -- tutorial of Paren
