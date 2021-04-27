@@ -112,7 +112,7 @@
   (len (&text self)))
 
 (method Re .subtext (start :opt end)
-  (let (text (arr->list (subarr (&text self) start (|| end (.text-length self)))))
+  (let (text (arr->list (slice (&text self) start (|| end (.text-length self)))))
     (if (nil? text) ""
         (apply memcat text))))
 
@@ -155,7 +155,7 @@
         (when (= ([] expr (-- e)) 0x24)
           (&anchored-end?! r true)
           (<- e (-- e) anchored? true))
-        (if anchored? (<- expr (submem expr s e)))
+        (if anchored? (<- expr (slice expr s e)))
         (with-memory-stream ($in expr)
           (&elements! r (re.parse (.new AheadReader)))))))
 

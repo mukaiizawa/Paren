@@ -269,7 +269,7 @@
   ; Supports break, continue macro.
   ; Returns nil.
   (with-gensyms (gl)
-    (list 'for (list gl l i (list car gl)) gl (list gl (list cdr gl) i (list car gl))
+    (list for (list gl l i (list car gl)) gl (list gl (list cdr gl) i (list car gl))
           (cons begin body))))
 
 (macro dotimes ((i n) :rest body)
@@ -278,7 +278,7 @@
   ; Supports break, continue macro.
   ; Returns nil.
   (with-gensyms (gn)
-    (list 'for (list i 0 gn n) (list < i gn) (list i (list '++ i))
+    (list for (list i 0 gn n) (list < i gn) (list i (list '++ i))
           (cons begin body))))
 
 (macro dostring ((c s) :rest body)
@@ -364,7 +364,7 @@
   (assert (== (! true) nil)))
 
 (function != (x y)
-  ; Same as (! (= x y))).
+  ; Same as `(! (= x y)))`.
   (! (= x y)))
 
 (builtin-function address (x)
@@ -393,21 +393,10 @@
   (assert (macro? begin0))
   (assert (! (macro? begin))))
 
-(builtin-function len (x)
-  ; Returns the length of the sequence x.
-  ; The argument may be a list, symbol, keyword, string, bytes and dictionary.
-  ; If the argument is string, returns the byte length.
-  ; To get the number of characters, use (len (split str)) etc.
-  (assert (= (len nil) 0))
-  (assert (= (len '(1)) 1))
-  (assert (= (len (array 1)) 1))
-  (assert (= (let (d (dict)) ({} d :x 1)) 1))
-  (assert (= (len "foo") 3)))
-
 ; list
 
 (function nil? (x)
-  ; Same as (! x).
+  ; Same as `(! x)`.
   (! x))
 
 (builtin-function cons? (x)
@@ -452,115 +441,115 @@
   (assert (let (x '(1 2 3)) (&& (= (cdr! x '(two)) '(two)) (= x '(1 two))))))
 
 (function caar (x)
-  ; Same as (car (car x)).
+  ; Same as `(car (car x))`.
   (car (car x)))
 
 (function cadr (x)
-  ; Same as (car (cdr x)).
+  ; Same as `(car (cdr x))`.
   (car (cdr x)))
 
 (function cdar (x)
-  ; Same as (cdr (car x)).
+  ; Same as `(cdr (car x))`.
   (cdr (car x)))
 
 (function cddr (x)
-  ; Same as (cdr (cdr x)).
+  ; Same as `(cdr (cdr x))`.
   (cdr (cdr x)))
 
 (function caaar (x)
-  ; Same as (car (caar x)).
+  ; Same as `(car (caar x))`.
   (car (caar x)))
 
 (function caadr (x)
-  ; Same as (car (cadr x)).
+  ; Same as `(car (cadr x))`.
   (car (cadr x)))
 
 (function cadar (x)
-  ; Same as (car (cdar x)).
+  ; Same as `(car (cdar x))`.
   (car (cdar x)))
 
 (function caddr (x)
-  ; Same as (car (cddr x)).
+  ; Same as `(car (cddr x))`.
   (car (cddr x)))
 
 (function cdaar (x)
-  ; Same as (cdr (caar x)).
+  ; Same as `(cdr (caar x))`.
   (cdr (caar x)))
 
 (function cdadr (x)
-  ; Same as (cdr (cadr x)).
+  ; Same as `(cdr (cadr x))`.
   (cdr (cadr x)))
 
 (function cddar (x)
-  ; Same as (cdr (cdar x)).
+  ; Same as `(cdr (cdar x))`.
   (cdr (cdar x)))
 
 (function cdddr (x)
-  ; Same as (cdr (cddr x)).
+  ; Same as `(cdr (cddr x))`.
   (cdr (cddr x)))
 
 (function caaaar (x)
-  ; Same as (car (caaar x)).
+  ; Same as `(car (caaar x))`.
   (car (caaar x)))
 
 (function caaadr (x)
-  ; Same as (car (caadr x)).
+  ; Same as `(car (caadr x))`.
   (car (caadr x)))
 
 (function caadar (x)
-  ; Same as (car (cadar x)).
+  ; Same as `(car (cadar x))`.
   (car (cadar x)))
 
 (function caaddr (x)
-  ; Same as (car (caddr x)).
+  ; Same as `(car (caddr x))`.
   (car (caddr x)))
 
 (function cadaar (x)
-  ; Same as (car (cdaar x)).
+  ; Same as `(car (cdaar x))`.
   (car (cdaar x)))
 
 (function cadadr (x)
-  ; Same as (car (cdadr x)).
+  ; Same as `(car (cdadr x))`.
   (car (cdadr x)))
 
 (function caddar (x)
-  ; Same as (car (cddar x)).
+  ; Same as `(car (cddar x))`.
   (car (cddar x)))
 
 (function cadddr (x)
-  ; Same as (car (cdddr x)).
+  ; Same as `(car (cdddr x))`.
   (car (cdddr x)))
 
 (function cdaaar (x)
-  ; Same as (cdr (caaar x)).
+  ; Same as `(cdr (caaar x))`.
   (cdr (caaar x)))
 
 (function cdaadr (x)
-  ; Same as (cdr (caadr x)).
+  ; Same as `(cdr (caadr x))`.
   (cdr (caadr x)))
 
 (function cdadar (x)
-  ; Same as (cdr (cadar x)).
+  ; Same as `(cdr (cadar x))`.
   (cdr (cadar x)))
 
 (function cdaddr (x)
-  ; Same as (cdr (caddr x)).
+  ; Same as `(cdr (caddr x))`.
   (cdr (caddr x)))
 
 (function cddaar (x)
-  ; Same as (cdr (cdaar x)).
+  ; Same as `(cdr (cdaar x))`.
   (cdr (cdaar x)))
 
 (function cddadr (x)
-  ; Same as (cdr (cdadr x)).
+  ; Same as `(cdr (cdadr x))`.
   (cdr (cdadr x)))
 
 (function cdddar (x)
-  ; Same as (cdr (cddar x)).
+  ; Same as `(cdr (cddar x))`.
   (cdr (cddar x)))
 
 (function cddddr (x)
-  ; Same as (cdr (cdddr x)).
+  ; Same as `(cdr (cdddr x))`.
   (cdr (cdddr x)))
 
 (builtin-function list (:rest args)
@@ -571,7 +560,7 @@
 
 (function list? (x)
   ; Returns whether the x is a list.
-  ; Same as (|| (nil? x) (cons? x)).
+  ; Same as `(|| (nil? x) (cons? x))`.
   (if (cons? x) true
       (nil? x)))
 
@@ -589,9 +578,7 @@
       (nil? delim) (mem->str! (apply memcat l))
       (with-memory-stream ($out)
         (write-bytes (car l))
-        (dolist (x (cdr l))
-          (write-bytes delim)
-          (write-bytes x)))))
+        (dolist (x (cdr l)) (write-bytes delim) (write-bytes x)))))
 
 (function split (s :opt delim)
   ; Returns a list of characters in string s.
@@ -624,33 +611,13 @@
   (assert (= (car (last-cons '(1 2 3))) 3))
   (assert (nil? (last-cons nil))))
 
-(function nth (n l)
+(function nth (n x)
   ; Returns the nth element of the specified list l.
   ; If n is greater than the length of l, nil is returned.
-  (car (nthcdr n l)))
-
-(function nthcdr (n l)
-  ; Returns the the specified nth cons of the specified list l.
-  ; If n is greater than the length of l, nil is returned.
-  (let (rec (f (m l)
-              (if (nil? l) l
-                  (= n m) l
-                  (rec (++ m) (cdr l)))))
-    (assert (>= n 0))
-    (rec 0 l)))
-
-(function sublis (l start :opt end)
-  ; Returns a list that is a sublist of the specified list l.
-  ; The sublist begins at the specified start and extends to the element at index end - 1.
-  ; Thus the length of the sublist is `end - start`.
-  (let (rec (f (l n acc)
-              (if (&& l (!= n 0)) (rec (cdr l) (-- n) (cons (car l) acc))
-                  (reverse! acc))))
-    (if (nil? end) (nthcdr start l)
-        (rec (nthcdr start l) (- end start) nil))))
+  (car (slice x n)))
 
 (function last (x)
-  ; Same as (car (last-cons x)).
+  ; Same as `(car (last-cons x))`.
   (car (last-cons x)))
 
 (function butlast (l)
@@ -669,23 +636,22 @@
 (function .. (start :opt stop step)
   ; Returns a list of numbers that increase step by step from start for which start < stop holds.
   ; The contents of the list is determined by the formula.
-  ;     { x | start + step * i, i >= 0, x < stop } -- step > 0
-  ;     { x | start + step * i, i >= 0, x > stop } -- step < 0
-  ; If stop and step are omitted, consider the same as (range 0 start 1).
-  ; If step is omitted, consider the same as (range start stop 1).
-  (let (rec (f (i cmp next stop step :opt acc)
-              (if (cmp next stop) (rec (++ i) cmp (+ next step) stop step (cons next acc))
+  ;     { x | start + step * i, i >= 0, x < stop }
+  ; If stop and step are omitted, consider the same as `(.. 0 start 1)`.
+  ; If step is omitted, consider the same as `(.. start stop 1)`.
+  (let (rec (f (i next stop step :opt acc)
+              (if (< next stop) (rec (++ i) (+ next step) stop step (cons next acc))
                   (reverse! acc))))
-    (assert (!= step 0))
     (if (nil? stop) (<- stop start start 0 step 1)
-        (nil? step) (<- step 1))
-    (rec 0 (if (> step 0) < >) start stop step)))
+        (nil? step) (<- step 1)
+        (<= step 0) (error "illegal step"))
+    (rec 0 start stop step) ))
 
 (function group (l n)
   ; Returns a list in which the elements of l are grouped into sublists of length n.
   (let (rec (f (l acc)
               (if (nil? l) (reverse! acc)
-                  (rec (nthcdr n l) (cons (sublis l 0 n) acc)))))
+                  (rec (slice l n) (cons (slice l 0 n) acc)))))
     (assert (> n 0))
     (rec l nil)))
 
@@ -1007,11 +973,11 @@
   (every-adjacent? (f (x y) (! (< x y))) args))
 
 (function ++ (x)
-  ; Same as (+ x 1).
+  ; Same as `(+ x 1)`.
   (+ x 1))
 
 (function -- (x)
-  ; Same as (- x 1).
+  ; Same as `(- x 1)`.
   (- x 1))
 
 (function abs (x)
@@ -1028,6 +994,10 @@
         (/ val))))
 
 ; memory
+
+(builtin-function memlen (x)
+  ; Returns byte length of bytes-like object x.
+  (assert (= (memlen "foo") 3)))
 
 (builtin-function memcmp (x y)
   ; If x is equals to y, returns 0.
@@ -1051,39 +1021,33 @@
   ; Returns whether the s is "" or nil.
   (|| (nil? s) (= (len s) 0)))
 
-(builtin-function mem->bytes (x :opt i size)
-  ; Returns bytes corresponding to byte sequence x.
-  ; If i is supplied, returns bytes of partial byte sequence from i of x.
-  ; If size is supplied, returns string of partial byte sequence from i to (size -1) of x.
-  (assert (= (mem->bytes "a") (mem->bytes :a))))
-
 (builtin-function mem->sym (x :opt i size)
-  ; Same as (mem->bytes x) except returns symbol.
+  ; Same as `(bytes x i size)` except returns symbol.
   (assert (== (mem->sym "foo") 'foo)))
 
 (builtin-function mem->key (x :opt i size)
-  ; Same as (mem->bytes x) except returns keyword.
+  ; Same as `(bytes x i size)` except returns keyword.
   (assert (== (mem->key "foo") :foo)))
 
 (builtin-function mem->str (x :opt i size)
-  ; Same as (mem->bytes x) except returns string.
+  ; Same as `(bytes x i size)` except returns string.
   (assert (= (mem->str 'foo) "foo"))
   (assert (= (mem->str 'foo 1) "oo"))
   (assert (= (mem->str 'foo 1 1) "o")))
 
 (builtin-function mem->str! (x)
-  ; Same as (mem->str x), except that it destructively modifies the specified bytes x.
+  ; Same as `(mem->str x)` except that it destructively modifies the specified bytes x.
   ; Generally faster than mem->str.
   (assert (let (x (bytes 1))
             ([] x 0 0x01)
             (= (mem->str! x) "\x01"))))
 
-(function memprefix? (x prefix)
+(function prefix? (x prefix)
   ; Returns whether the byte sequence x with the specified prefix.
   (&& (>= (len x) (len prefix))
       (memmem x prefix 0 (len prefix))))
 
-(function memsuffix? (x suffix)
+(function suffix? (x suffix)
   ; Returns whether the byte sequence x with the specified suffix.
   (&& (>= (len x) (len suffix))
       (memmem x suffix (- (len x) (len suffix)))))
@@ -1103,14 +1067,8 @@
   ; Copy size elements from the `src-i`th element of the src byte sequence to the dst byte sequence `dst-i`th element and beyond.
   ; Even if the areas to be copied overlap, it operates correctly.
   ; Returns dst.
-  (assert (let (s "foo" d "bar") (= (memcpy s 1 d 1 2) "boo"))))
-
-(builtin-function submem (x start :opt end)
-  ; Returns the partial byte sequence starting from start.
-  ; If end is specified, returns the partial byte sequence from the i th to (end-1) th.
-  (assert (= (submem "012" 0) "012"))
-  (assert (= (submem "012" 1) "12"))
-  (assert (= (submem "012" 1 2) "1")))
+  (assert (let (s (bytes "foo") d (bytes "bar"))
+            (= (mem->str (memcpy s 1 d 1 2)) "boo"))))
 
 (builtin-function memcat (x :rest args)
   ; Returns the result of combining each args with x.
@@ -1118,9 +1076,12 @@
 
 ; bytes
 
-(builtin-function bytes (size)
-  ; Returns a bytes of size the specified size.
+(builtin-function bytes (bytes/size :opt i size)
+  ; If the first argument is an integer, returns a bytes of size the specified size.
   ; The element is cleared to 0.
+  ; If the first argument is a byte sequence object, returns bytes corresponding to byte sequence x.
+  ; If i is supplied, returns bytes of partial byte sequence from i of x.
+  ; If size is supplied, returns string of partial byte sequence from i to (size -1) of x.
   (assert (= (len (bytes 1)) 1))
   (assert (= ([] (bytes 1) 0) 0)))
 
@@ -1172,8 +1133,8 @@
   ; Treat nil as an empty string.
   (with-memory-stream ($out)
     (dolist (arg args)
-      (if (symbol? arg) (if arg (write-bytes arg))
-          (|| (string? arg) (keyword? arg) (bytes? arg)) (write-bytes arg)
+      (if (nil? arg) :continue
+          (|| (symbol? arg) (keyword? arg) (string? arg) (bytes? arg)) (write-bytes arg)
           (write arg :end "")))))
 
 (builtin-function string? (x)
@@ -1218,19 +1179,11 @@
     (.write-bytes ms s)
     (dotimes (i start)
       (if (nil? (.read-char ms)) (error "illegal start " start)))
-    (if (nil? end) (submem s (.tell ms))
+    (if (nil? end) (slice s (.tell ms))
         (let (pos (.tell ms))
           (dotimes (i (- end start))
             (if (nil? (.read-char ms)) (error "illegal end " end)))
-          (submem s pos (.tell ms))))))
-
-(function strnth (s i)
-  ; Returns the i-th character of string s.
-  ([] (str->arr s) i))
-
-(function strlen (s)
-  ; Returns the number of characters in string s.
-  (len (str->arr s)))
+          (slice s pos (.tell ms))))))
 
 (function strstr (s pat :opt start)
   ; Returns the position where the substring pat appears first in the string s.
@@ -1292,28 +1245,6 @@
                 ([] b 0 0xff)
                 (= ([] b 0) 0xff)))))
 
-(builtin-function arrcpy (src src-i dst dst-i size)
-  ; Copy size elements from the `src-i`th element of the src bytes to the dst bytes `dst-i`th element and beyond.
-  ; Returns dst.
-  ; Even if the areas to be copied overlap, it operates correctly.
-  ; This function also accepts strings.
-  (assert (let (s (array 1) d (array 2))
-            ([] s 0 1)
-            ([] d 0 :zero)
-            ([] d 1 :one)
-            (&& (= ([] (arrcpy s 0 d 1 1) 1) 1)
-                (= ([] d 0) :zero)
-                (= ([] d 1) 1)))))
-
-(function subarr (x start :opt end)
-  ; Returns a new array object selected from start to end (end not included) where start and end represent the index of items in that array x.
-  (let (xlen (len x))
-    (if (< start 0) (error "illegal start")
-        (nil? end) (<- end xlen)
-        (> end xlen) (error "illegal end"))
-    (let (new-len (- end start) new-array (array new-len))
-      (arrcpy x start new-array 0 new-len))))
-
 ; dictionary
 
 (builtin-function dict ()
@@ -1341,6 +1272,33 @@
             (&& (nil? ({} d :foo))
                 (= ({} d :foo 'foo) 'foo)
                 (= ({} d :foo) 'foo)))))
+
+; sequence & collection
+
+(builtin-function len (x)
+  ; Returns the length of the collection x.
+  (assert (= (len nil) 0))
+  (assert (= (len '(1)) 1))
+  (assert (= (len (array 1)) 1))
+  (assert (= (let (d (dict)) ({} d :x 1)) 1))
+  (assert (= (len "foo") 3)))
+
+(builtin-function slice (x :opt start stop)
+  ; Returns a subsequence of sequence x.
+  ; If start is omitted, it defaults to 0.
+  ; If stop is omitted, it defaults to `(len x)`.
+  (assert (= (slice nil) nil))
+  (assert (= (slice nil 0) nil))
+  (assert (= (slice nil 0 1) nil))
+  (assert (let (lis '(0 1 2))
+            (= (slice lis ) lis)
+            (= (slice lis 0) lis)
+            (= (slice lis 0 2) '(0 1))))
+  (assert (let (s "abc")
+            (= (slice s ) s)
+            (= (slice s 0) "bc")
+            (= (slice s 0 0) "")
+            (= (slice s 0 2) "ab"))))
 
 ; os
 
@@ -1493,7 +1451,7 @@
 
 (function object? (x)
   ; Returns whether x is an object in the Paren object system.
-  ; Same as (&& (dict? x) ({} x :class)).
+  ; Same as `(&& (dict? x) ({} x :class))`.
   (&& (dict? x) ({} x :class)))
 
 (builtin-function is-a? (o cls)
@@ -1697,9 +1655,9 @@
   (let (req (+ (&size self) size) elt-size (len (&elt self)))
     (when (< elt-size req)
       (while (< (<- elt-size (* elt-size 2)) req))
-      (let (elt (array elt-size))
-        (arrcpy (&elt self) 0 elt 0 (&size self))
-        (&elt! self elt)))
+      (let (src (&elt self) dst (array elt-size))
+        (dotimes (i (&size self)) ([] dst i ([] src i)))
+        (&elt! self dst)))
     self))
 
 (method Array .add (val)
@@ -1713,9 +1671,7 @@
 
 (method Array .to-a ()
   ; Returns an array representation of the receiver.
-  (let (size (&size self) a (array size))
-    (arrcpy (&elt self) 0 a 0 size)
-    a))
+  (slice (&elt self) 0 (&size self)))
 
 (class Path ()
   ; A class that handles a file path.
@@ -1743,10 +1699,10 @@
   ;     (path "foo//bar/") <=> ("foo" "bar")
   (if (is-a? path-name Path) path-name
       (let (c nil path nil root? nil)
-        (if (memprefix? path-name "/") (<- root? true)
-            (memprefix? path-name "~") (<- path-name (memcat (if (!= $hostname :windows) (getenv "HOME")
+        (if (prefix? path-name "/") (<- root? true)
+            (prefix? path-name "~") (<- path-name (memcat (if (!= $hostname :windows) (getenv "HOME")
                                                                  (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH")))
-                                                             "/" (submem path-name 1))))
+                                                             "/" (slice path-name 1))))
         (<- path (except memempty?
                          (split
                            (with-memory-stream ($out)
@@ -1813,7 +1769,7 @@
         (= first "/"))))
 
 (method Path .relative? ()
-  ; Same as (! (.absolute? self))
+  ; Same as `(! (.absolute? self))`.
   (! (.absolute? self)))
 
 (method Path .to-l ()
@@ -1925,47 +1881,33 @@
   ; Must be implemented in the inherited class.
   (assert nil))
 
-(method Stream .illegal-character (:rest seq)
-  (error "illegal byte sequence -- "
+(method Stream .raise (:rest seq)
+  (error "illegal byte sequence "
          (map (f (x) (str "0x" (int->str x :radix 16))) seq)))
-
-(method Stream .trail? (b)
-  (switch (dynamic $encoding)
-    :UTF-8 (= (& b 0xc0) 0x80)
-    :SJIS (|| (< 0x80 b1 0xa0) (< 0xdf b1))))
 
 (method Stream .read-char ()
   ; Read 1 character from the receiver
   ; Returns nil when the stream reaches the end.
   (let (b1 (.read-byte self) b2 nil b3 nil b4 nil size 0)
-    (switch (dynamic $encoding)
-      :UTF-8
-      (if (< b1 0) (return nil)
-          (< b1 0x80) (<- size 1)
-          (< b1 0xc2) (.illegal-character self b1)
-          (< b1 0xe0) (if (|| (= (& b1 0x3e) 0)
-                              (! (.trail? self (<- b2 (.read-byte self)))))
-                          (.illegal-character self b1 b2)
-                          (<- size 2))
-          (< b1 0xf0) (if (|| (! (.trail? self (<- b2 (.read-byte self))))
-                              (&& (= b1 0xe0)
-                                  (= (& b2 0x20) 0))
-                              (! (.trail? self (<- b3 (.read-byte self)))))
-                          (.illegal-character self b1 b2 b3)
-                          (<- size 3))
-          (< b1 0xf8) (if (|| (! (.trail? self (<- b2 (.read-byte self))))
-                              (&& (= b1 0xf0)
-                                  (= (& b2 0x30) 0))
-                              (! (.trail? self (<- b3 (.read-byte self))))
-                              (! (.trail? self (<- b4 (.read-byte self)))))
-                          (.illegal-character self b1 b2 b3 b4)
-                          (<- size 4))
-          (.illegal-character self b1))
-      :SJIS
-      (if (< b1 0) (return nil)
-          (< b1 0x80) (<- size 1)
-          (.trail? b1) (<- b2 (.read-byte self) size 2)
-          (.illegal-character self b1)))
+    (if (< b1 0) (return nil)
+        (< b1 0x80) (<- size 1)
+        (< b1 0xc2) (.raise self b1)
+        (< b1 0xe0) (if (|| (= (& b1 0x3e) 0)
+                            (!= (& (<- b2 (.read-byte self)) 0xc0) 0x80))
+                        (.raise self b1 b2)
+                        (<- size 2))
+        (< b1 0xf0) (if (|| (!= (& (<- b2 (.read-byte self)) 0xc0) 0x80)
+                            (&& (= b1 0xe0) (= (& b2 0x20) 0))
+                            (!= (& (<- b3 (.read-byte self)) 0xc0) 0x80))
+                        (.raise self b1 b2 b3)
+                        (<- size 3))
+        (< b1 0xf8) (if (|| (!= (& (<- b2 (.read-byte self)) 0xc0) 0x80)
+                            (&& (= b1 0xf0) (= (& b2 0x30) 0))
+                            (!= (& (<- b3 (.read-byte self)) 0xc0) 0x80)
+                            (!= (& (<- b4 (.read-byte self)) 0xc0) 0x80))
+                        (.raise self b1 b2 b3 b4)
+                        (<- size 4))
+        (.raise self b1))
     (let (c (bytes size))
       (if (= size 1) ([] c 0 b1)
           (= size 2) (begin ([] c 0 b1) ([] c 1 b2))
@@ -2003,12 +1945,12 @@
   ; Must be implemented in the inherited class.
   (assert nil))
 
-(method Stream .write-line (:opt bytes)
-  ; Write bytes to the receiver.
+(method Stream .write-line (:opt string)
+  ; Write string to the receiver.
   ; Returns bytes.
-  (if bytes (.write-bytes self bytes))
+  (if string (.write-bytes self string))
   (.write-byte self 0x0a)
-  bytes)
+  string)
 
 (method Stream .write-int (n :key radix padding)
   ; Write an integer with the specified padding and radix.
@@ -2180,7 +2122,7 @@
 
 (method MemoryStream .read-bytes (:opt buf from size)
   ; Implementation of the Stream.read-bytes.
-  (if (nil? buf) (submem (&buf self) (&rdpos self) (&wrpos self))
+  (if (nil? buf) (slice (&buf self) (&rdpos self) (&wrpos self))
       (let (rest (- (&wrpos self) (&rdpos self)))
         (if (< rest size) (<- size rest))
         (memcpy (&buf self) (&rdpos self) buf (&wrpos self) size)
@@ -2194,12 +2136,12 @@
     (&wrpos! self (++ wrpos))
     byte))
 
-(method MemoryStream .write-bytes (bytes :opt from size)
+(method MemoryStream .write-bytes (x :opt from size)
   ; Implementation of the Stream.write-bytes.
-  (.reserve self (|| size (<- size (len bytes))))
-  (memcpy bytes (|| from 0) (&buf self) (&wrpos self) size)
+  (.reserve self (|| size (<- size (memlen x))))
+  (memcpy x (|| from 0) (&buf self) (&wrpos self) size)
   (&wrpos! self (+ (&wrpos self) size))
-  (if from size bytes))
+  (if from size x))
 
 (method MemoryStream .seek (offset)
   ; Sets the file position indicator of the receiver.
@@ -2238,10 +2180,11 @@
 
 (method FileStream .read-bytes (:opt buf from size)
   ; Implementation of the Stream.read-bytes.
-  (if (nil? buf) (with-memory-stream (out)
+  (if (nil? buf) (bytes
+                   (with-memory-stream (out)
                    (<- buf (bytes 1024))
                    (while (> (<- size (.read-bytes self buf 0 1024)) 0)
-                     (.write-bytes out buf 0 size)))
+                     (.write-bytes out buf 0 size))))
       (fread buf from size (&fp self))))
 
 (method FileStream .read-line ()
@@ -2252,10 +2195,10 @@
   ; Implementation of the Stream.write-byte.
   (fputc byte (&fp self)))
 
-(method FileStream .write-bytes (bytes :opt from size)
+(method FileStream .write-bytes (x :opt from size)
   ; Implementation of the Stream.write-bytes.
-  (fwrite bytes (|| from 0) (|| size (len bytes)) (&fp self))
-  (if from size bytes))
+  (fwrite x (|| from 0) (|| size (memlen x)) (&fp self))
+  (if from size x))
 
 (method FileStream .seek (offset)
   ; Sets the file position indicator of the receiver.
@@ -2603,39 +2546,39 @@
           (list {} $read-table (list quote next) g))))
 
 (function read-byte ()
-  ; Same as (.read-byte (dynamic $in)).
+  ; Same as `(.read-byte (dynamic $in))`.
   (.read-byte (dynamic $in)))
 
 (function read-bytes (:opt buf from size)
-  ; Same as (.read-bytes (dynamic $in)).
+  ; Same as `(.read-bytes (dynamic $in))`.
   (.read-bytes (dynamic $in) buf from size))
 
 (function read-char ()
-  ; Same as (.read-char (dynamic $in)).
+  ; Same as `(.read-char (dynamic $in))`.
   (.read-char (dynamic $in)))
 
 (function read-line ()
-  ; Same as (.read-line (dynamic $in)).
+  ; Same as `(.read-line (dynamic $in))`.
   (.read-line (dynamic $in)))
 
 (function read ()
-  ; Same as (.read (dynamic $in)).
+  ; Same as `(.read (dynamic $in))`.
   (.read (dynamic $in)))
 
 (function write-byte (x)
-  ; Same as (.write-byte (dynamic $out) x).
+  ; Same as `(.write-byte (dynamic $out) x)`.
   (.write-byte (dynamic $out) x))
 
 (function write-bytes (x :opt from size)
-  ; Same as (.write-bytes (dynamic $out) x).
+  ; Same as `(.write-bytes (dynamic $out) x)`.
   (.write-bytes (dynamic $out) x from size))
 
 (function write-line (:opt x)
-  ; Same as (.write-line (dynamic $out) x).
+  ; Same as `(.write-line (dynamic $out) x)`.
   (.write-line (dynamic $out) x))
 
 (function write (x :key start end)
-  ; Same as (.write (dynamic $out) x :start start :end end)).
+  ; Same as `(.write (dynamic $out) x :start start :end end))`.
   (.write (dynamic $out) x :start start :end end))
 
 (macro with-memory-stream ((ms :opt s) :rest body)
@@ -2709,16 +2652,15 @@
   ; Bind main to nil after processing.
   ; Returns true if successfully loaded.
   ; Module file to read must be UTF-8.
-  (let ($encoding :UTF-8)
-    (if (some? (f (x) (== x key)) $import) true
-        (let (module (.resolve (if import-dir (path import-dir) (.resolve $paren-home "module"))
-                               (memcat (mem->str key) ".p")))
-          (if (! (.readable? module)) (error "unreadable module " (.to-s module))
-              (begin
-                (load module)
-                (<- main nil)
-                (push! key $import)
-                true))))))
+  (if (some? (f (x) (== x key)) $import) true
+      (let (module (.resolve (if import-dir (path import-dir) (.resolve $paren-home "module"))
+                             (memcat (mem->str key) ".p")))
+        (if (! (.readable? module)) (error "unreadable module " (.to-s module))
+            (begin
+              (load module)
+              (<- main nil)
+              (push! key $import)
+              true)))))
 
 (function boot (args)
   ; Executed when paren is executed.
@@ -2739,7 +2681,6 @@
     $stdout (.init (.new FileStream) (fp 1))
     $in $stdin
     $out $stdout
-    $encoding :UTF-8
     $paren-home (.parent (.parent (.resolve (path.getcwd) core.p)))
     $script-path (map (f (p) (.resolve $paren-home p))
                       '("coreutils" "tool")))
