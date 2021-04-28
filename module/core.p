@@ -2259,16 +2259,16 @@
 (method AheadReader .skip-escape ()
   (let (c (.skip self))
     (if (!= c "\\") c
-        (= (<- c (.skip self)) "a") 0x07
-        (= c "b") 0x08
+        (= (<- c (.skip self)) "a") "\x07"
+        (= c "b") "\x08"
         (= c "c") (if (<= 0x40 (<- c (toupper (str->code (.skip self)))) 0x5f) (& c 0x1f)
                       (.raise self "illegal ctrl char"))
-        (= c "e") 0x1b
-        (= c "f") 0x0c
-        (= c "n") 0x0a
-        (= c "r") 0x0d
-        (= c "t") 0x09
-        (= c "v") 0x0b
+        (= c "e") "\x1b"
+        (= c "f") "\x0c"
+        (= c "n") "\x0a"
+        (= c "r") "\x0d"
+        (= c "t") "\x09"
+        (= c "v") "\x0b"
         (= c "x") (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16))
         c)))
 
@@ -2361,8 +2361,7 @@
 (method AheadReader .put (o)
   ; Put the o to the end of the token regardless of the stream.
   ; Returns o;
-  (if (byte? o) (.write-byte (&token self) o)
-      (.write-bytes (&token self) o))
+  (.write-bytes (&token self) o)
   o)
 
 (method AheadReader .token ()
