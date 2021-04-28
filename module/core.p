@@ -174,12 +174,10 @@
   ; The evaluation of all args terminates when a args evaluates to true.
   ; Return last evaluated value.
   ; If args is nil, returns nil.
-  (if (nil? args) nil
-      (nil? (cdr args)) (car args)
+  (if (! args) nil
+      (! (cdr args)) (car args)
       (with-gensyms (g)
-        (let (rec (f (l)
-                    (if (nil? l) nil
-                        (cons (list <- g (car l)) (cons g (rec (cdr l)))))))
+        (let (rec (f (l) (if l (cons (list <- g (car l)) (cons g (rec (cdr l)))))))
           (list let (list g nil)
                 (cons if (rec args)))))))
 
@@ -188,8 +186,8 @@
   ; As soon as any form evaluates to nil, and returns nil without evaluating the remaining forms.
   ; If all args but the last evaluate to true values, and returns the results produced by evaluating the last args.
   ; If no args are supplied, returns true.
-  (if (nil? args) true
-      (nil? (cdr args)) (car args)
+  (if (! args) true
+      (! (cdr args)) (car args)
       (let (rec (f (l)
                   (if (cdr l) (list if (car l) (rec (cdr l)))
                       (car l))))
@@ -208,7 +206,7 @@
   ; test is evaluated only once and compared from left to right for matching elements in the <labels> of each branch.
   ; If there is a matching element, control is transferred to that branch.
   ; If you specify keyword :default in <labels>, you can unconditionally transfer control to that branch regardless of the value of test.
-  ; Error if, not specified :default and control reaches the end.
+  ; Error if not specified :default and control reaches the end.
   (with-gensyms (gtest)
     (assert (= (% (len body) 2) 0))
     (let (branches (group body 2)
@@ -286,8 +284,8 @@
   ; Supports break, continue macro.
   ; Returns nil.
   (with-gensyms (ga)
-    (list let (list ga (list 'str->arr s))
-          (list 'doarray (list c ga)
+    (list let (list ga (list str->arr s))
+          (list doarray (list c ga)
                 (cons begin body)))))
 
 (macro doarray ((i a) :rest body)
@@ -295,7 +293,7 @@
   ; Supports break, continue macro.
   ; Returns nil.
   (with-gensyms (ga gi glen)
-    (list 'for (list gi 0 ga a glen (list 'len ga)) (list < gi glen) (list gi (list '++ gi))
+    (list for (list gi 0 ga a glen (list len ga)) (list < gi glen) (list gi (list ++ gi))
           (list let (list i (list [] ga gi))
                 (cons begin body)))))
 
@@ -328,8 +326,6 @@
                                 (reverse! acc))))
     (expand expr)))
 
-; fundamental function
-
 (macro function (name args :rest body)
   ; Bind a symbol the specified name on an anonimous function whose parametes are args and whose body is body.
   ; The macro in the body is expanded.
@@ -342,6 +338,8 @@
             (list if (list bound? gname) (list 'error gname " already bound")
                   (list <- name (cons f (cons args (expand-body body)))))
             gname))))
+
+; fundamental function
 
 (builtin-function = (x y)
   ; Returns whether x and y are same type and equal.
@@ -372,6 +370,50 @@
   ; The addresses of symbols or keywords with the same name are always equal.
   (assert (= (address 'x) (address 'x))))
 
+(builtin-function len (x)
+  ; Returns the length of the collection x.
+  (assert (= (len nil) 0))
+  (assert (= (len '(1)) 1))
+  (assert (= (len (array 1)) 1))
+  (assert (= (let (d (dict)) ({} d :x 1)) 1))
+  (assert (= (len "foo") 3)))
+
+(builtin-function slice (x :opt start stop)
+  ; Returns a subsequence of sequence x.
+  ; If start is omitted, it defaults to 0.
+  ; If stop is omitted, it defaults to `(len x)`.
+  (assert (= (slice nil) nil))
+  (assert (= (slice nil 0) nil))
+  (assert (= (slice nil 0 1) nil))
+  (assert (let (lis '(0 1 2))
+            (= (slice lis ) lis)
+            (= (slice lis 0) lis)
+            (= (slice lis 0 2) '(0 1))))
+  (assert (let (s "abc")
+            (= (slice s ) s)
+            (= (slice s 0) "bc")
+            (= (slice s 0 0) "")
+            (= (slice s 0 2) "ab"))))
+
+(function empty? (x)
+  ; Returns whether the x is "" or nil.
+  (if x (= (len x) 0) true))
+
+(builtin-function [] (x i :opt v)
+  ; Returns the i-th element of the sequence x.
+  ; If v is specified, update the i-th element of mutable sequence x to v, returns v.
+  ; Error if x is an immutable sequence and v is specified.
+  (assert (= ([] (array 1) 0) nil))
+  (assert (= ([] "foo" 0) "f"))
+  (assert (= ([] (bytes 1) 0) 0))
+  (assert (let (a (array 1) b (bytes 1))
+            (&& ([] a 0 true)
+                ([] a 0)
+                ([] b 0 0xff)
+                (= ([] b 0) 0xff)))))
+
+; function & macro
+
 (builtin-function function? (x)
   ; Returns whether the x is a function.
   (assert (function? (f (x) x)))
@@ -392,6 +434,14 @@
   ; Returns whether the x is a macro.
   (assert (macro? begin0))
   (assert (! (macro? begin))))
+
+(builtin-function procparams (proc)
+  ; Returns the parameter of the function or macro.
+  )
+
+(builtin-function procbody (proc)
+  ; Returns the body of the function or macro.
+  )
 
 ; list
 
@@ -583,7 +633,7 @@
 (function split (s :opt delim)
   ; Returns a list of characters in string s.
   ; If delim is specified, returns a list of strings s delimited by delimiter.
-  (if (memempty? s) nil
+  (if (empty? s) nil
       (nil? delim) (arr->list (str->arr s))
       (let (i 0 lis nil chars nil
               sa (str->arr s) salen (len sa)
@@ -993,107 +1043,6 @@
     (if (> power 0) val
         (/ val))))
 
-; memory
-
-(builtin-function memlen (x)
-  ; Returns byte length of bytes-like object x.
-  (assert (= (memlen "foo") 3)))
-
-(builtin-function memcmp (x y)
-  ; If x is equals to y, returns 0.
-  ; If x is lexicographically less than y, returns -1.
-  ; If x is lexicographically greater than y, returns 1.
-  (assert (= (memcmp "bar" "foo") -1))
-  (assert (= (memcmp "foo" "bar") 1))
-  (assert (= (memcmp "foo" "foo") 0))
-  (assert (= (memcmp "fo" "foo") -1))
-  (assert (= (memcmp "foo" "fo") 1)))
-
-(function memhash (x)
-  ; Returns hash value of mem.
-  (let (hval 17)
-    (dotimes (i (len x))
-      (if (< i 10) (<- hval (+ (* hval 31) ([] x i)))
-          (break)))
-    hval))
-
-(function memempty? (s)
-  ; Returns whether the s is "" or nil.
-  (|| (nil? s) (= (len s) 0)))
-
-(builtin-function mem->sym (x :opt i size)
-  ; Same as `(bytes x i size)` except returns symbol.
-  (assert (== (mem->sym "foo") 'foo)))
-
-(builtin-function mem->key (x :opt i size)
-  ; Same as `(bytes x i size)` except returns keyword.
-  (assert (== (mem->key "foo") :foo)))
-
-(builtin-function mem->str (x :opt i size)
-  ; Same as `(bytes x i size)` except returns string.
-  (assert (= (mem->str 'foo) "foo"))
-  (assert (= (mem->str 'foo 1) "oo"))
-  (assert (= (mem->str 'foo 1 1) "o")))
-
-(builtin-function mem->str! (x)
-  ; Same as `(mem->str x)` except that it destructively modifies the specified bytes x.
-  ; Generally faster than mem->str.
-  (assert (let (x (bytes 1))
-            ([] x 0 0x01)
-            (= (mem->str! x) "\x01"))))
-
-(function prefix? (x prefix)
-  ; Returns whether the byte sequence x with the specified prefix.
-  (&& (>= (len x) (len prefix))
-      (memmem x prefix 0 (len prefix))))
-
-(function suffix? (x suffix)
-  ; Returns whether the byte sequence x with the specified suffix.
-  (&& (>= (len x) (len suffix))
-      (memmem x suffix (- (len x) (len suffix)))))
-
-(builtin-function memmem (x b :opt start end)
-  ; Returns the position where the byte b appears first in the byte sequence x.
-  ; If the b is not appeared, returns nil.
-  ; If b is byte sequence, returns the position where the partial byte sequence appears first in the byte sequence x.
-  ; If start is specified, search from start-th of the byte sequence x.
-  ; If end is specified, search untile end-th of the byte sequence x.
-  (assert (= (memmem "012" 0x31 1) 1))
-  (assert (= (memmem "012" 0x31 0 3) 1))
-  (assert (= (memmem "012" 0x31 0 3) 1))
-  (assert (= (memmem "012" "12" 0 3) 1)))
-
-(builtin-function memcpy (src src-i dst dst-i size)
-  ; Copy size elements from the `src-i`th element of the src byte sequence to the dst byte sequence `dst-i`th element and beyond.
-  ; Even if the areas to be copied overlap, it operates correctly.
-  ; Returns dst.
-  (assert (let (s (bytes "foo") d (bytes "bar"))
-            (= (mem->str (memcpy s 1 d 1 2)) "boo"))))
-
-(builtin-function memcat (x :rest args)
-  ; Returns the result of combining each args with x.
-  (assert (= (memcat "0" "1" "2") "012")))
-
-; bytes
-
-(builtin-function bytes (bytes/size :opt i size)
-  ; If the first argument is an integer, returns a bytes of size the specified size.
-  ; The element is cleared to 0.
-  ; If the first argument is a byte sequence object, returns bytes corresponding to byte sequence x.
-  ; If i is supplied, returns bytes of partial byte sequence from i of x.
-  ; If size is supplied, returns string of partial byte sequence from i to (size -1) of x.
-  (assert (= (len (bytes 1)) 1))
-  (assert (= ([] (bytes 1) 0) 0)))
-
-(builtin-function bytes? (x)
-  ; Returns whether the x is bytes.
-  ; symbols, keywords, and strings are acceptable as arguments for some bytes api, but this function returns nil.
-  (assert (bytes? (bytes 3)))
-  (assert (! (bytes? 'foo)))
-  (assert (! (bytes? :foo)))
-  (assert (! (bytes? "foo")))
-  (assert (! (bytes? (array 3)))))
-
 ; symbol & keyword
 
 (builtin-function symbol? (x)
@@ -1213,6 +1162,93 @@
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
+; bytes
+
+(builtin-function memlen (x)
+  ; Returns byte length of bytes-like object x.
+  (assert (= (memlen "foo") 3)))
+
+(builtin-function mem->sym (x :opt i size)
+  ; Same as `(bytes x i size)` except returns symbol.
+  (assert (== (mem->sym "foo") 'foo)))
+
+(builtin-function mem->key (x :opt i size)
+  ; Same as `(bytes x i size)` except returns keyword.
+  (assert (== (mem->key "foo") :foo)))
+
+(builtin-function mem->str (x :opt i size)
+  ; Same as `(bytes x i size)` except returns string.
+  (assert (= (mem->str 'foo) "foo"))
+  (assert (= (mem->str 'foo 1) "oo"))
+  (assert (= (mem->str 'foo 1 1) "o")))
+
+(builtin-function mem->str! (x)
+  ; Same as `(mem->str x)` except that it destructively modifies the specified bytes x.
+  ; Generally faster than mem->str.
+  (assert (let (x (bytes 1))
+            ([] x 0 0x01)
+            (= (mem->str! x) "\x01"))))
+
+(function prefix? (x prefix)
+  ; Returns whether the byte sequence x with the specified prefix.
+  (&& (>= (len x) (len prefix))
+      (memmem x prefix 0 (len prefix))))
+
+(function suffix? (x suffix)
+  ; Returns whether the byte sequence x with the specified suffix.
+  (&& (>= (len x) (len suffix))
+      (memmem x suffix (- (len x) (len suffix)))))
+
+(builtin-function memmem (x b :opt start end)
+  ; Returns the position where the byte b appears first in the byte sequence x.
+  ; If the b is not appeared, returns nil.
+  ; If b is byte sequence, returns the position where the partial byte sequence appears first in the byte sequence x.
+  ; If start is specified, search from start-th of the byte sequence x.
+  ; If end is specified, search untile end-th of the byte sequence x.
+  (assert (= (memmem "012" 0x31 1) 1))
+  (assert (= (memmem "012" 0x31 0 3) 1))
+  (assert (= (memmem "012" 0x31 0 3) 1))
+  (assert (= (memmem "012" "12" 0 3) 1)))
+
+(builtin-function memcpy (src src-i dst dst-i size)
+  ; Copy size elements from the `src-i`th element of the src byte sequence to the dst byte sequence `dst-i`th element and beyond.
+  ; Even if the areas to be copied overlap, it operates correctly.
+  ; Returns dst.
+  (assert (let (s (bytes "foo") d (bytes "bar"))
+            (= (mem->str (memcpy s 1 d 1 2)) "boo"))))
+
+(builtin-function memcat (x :rest args)
+  ; Returns the result of combining each args with x.
+  (assert (= (memcat "0" "1" "2") "012")))
+
+(builtin-function memcmp (x y)
+  ; If x is equals to y, returns 0.
+  ; If x is lexicographically less than y, returns -1.
+  ; If x is lexicographically greater than y, returns 1.
+  (assert (= (memcmp "bar" "foo") -1))
+  (assert (= (memcmp "foo" "bar") 1))
+  (assert (= (memcmp "foo" "foo") 0))
+  (assert (= (memcmp "fo" "foo") -1))
+  (assert (= (memcmp "foo" "fo") 1)))
+
+(builtin-function bytes (bytes/size :opt i size)
+  ; If the first argument is an integer, returns a bytes of size the specified size.
+  ; The element is cleared to 0.
+  ; If the first argument is a byte sequence object, returns bytes corresponding to byte sequence x.
+  ; If i is supplied, returns bytes of partial byte sequence from i of x.
+  ; If size is supplied, returns string of partial byte sequence from i to (size -1) of x.
+  (assert (= (len (bytes 1)) 1))
+  (assert (= ([] (bytes 1) 0) 0)))
+
+(builtin-function bytes? (x)
+  ; Returns whether the x is bytes.
+  ; symbols, keywords, and strings are acceptable as arguments for some bytes api, but this function returns nil.
+  (assert (bytes? (bytes 3)))
+  (assert (! (bytes? 'foo)))
+  (assert (! (bytes? :foo)))
+  (assert (! (bytes? "foo")))
+  (assert (! (bytes? (array 3)))))
+
 ; array
 
 (builtin-function array (size)
@@ -1232,19 +1268,6 @@
                   (rec (-- i) (cons ([] x i) acc)))))
     (rec (-- (len x)) nil)))
 
-(builtin-function [] (x i :opt v)
-  ; Returns the i-th element of the array x.
-  ; If v is specified, update the i-th element of array x to v.
-  ; Returns v.
-  ; This function can also be applied to bytes.
-  (assert (nil? ([] (array 1) 0)))
-  (assert (= ([] (bytes 1) 0) 0))
-  (assert (let (a (array 1) b (bytes 1))
-            (&& ([] a 0 true)
-                ([] a 0)
-                ([] b 0 0xff)
-                (= ([] b 0) 0xff)))))
-
 ; dictionary
 
 (builtin-function dict ()
@@ -1263,7 +1286,6 @@
                 (= ({} d :foo 'foo) 'foo)
                 (= (keys d) '(:foo))))))
 
-
 (builtin-function {} (d key :opt val)
   ; Returns the value associated key.
   ; If key is not associated, returns nil.
@@ -1272,33 +1294,6 @@
             (&& (nil? ({} d :foo))
                 (= ({} d :foo 'foo) 'foo)
                 (= ({} d :foo) 'foo)))))
-
-; sequence & collection
-
-(builtin-function len (x)
-  ; Returns the length of the collection x.
-  (assert (= (len nil) 0))
-  (assert (= (len '(1)) 1))
-  (assert (= (len (array 1)) 1))
-  (assert (= (let (d (dict)) ({} d :x 1)) 1))
-  (assert (= (len "foo") 3)))
-
-(builtin-function slice (x :opt start stop)
-  ; Returns a subsequence of sequence x.
-  ; If start is omitted, it defaults to 0.
-  ; If stop is omitted, it defaults to `(len x)`.
-  (assert (= (slice nil) nil))
-  (assert (= (slice nil 0) nil))
-  (assert (= (slice nil 0 1) nil))
-  (assert (let (lis '(0 1 2))
-            (= (slice lis ) lis)
-            (= (slice lis 0) lis)
-            (= (slice lis 0 2) '(0 1))))
-  (assert (let (s "abc")
-            (= (slice s ) s)
-            (= (slice s 0) "bc")
-            (= (slice s 0 0) "")
-            (= (slice s 0 2) "ab"))))
 
 ; os
 
@@ -1701,9 +1696,9 @@
       (let (c nil path nil root? nil)
         (if (prefix? path-name "/") (<- root? true)
             (prefix? path-name "~") (<- path-name (memcat (if (!= $hostname :windows) (getenv "HOME")
-                                                                 (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH")))
-                                                             "/" (slice path-name 1))))
-        (<- path (except memempty?
+                                                              (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH")))
+                                                          "/" (slice path-name 1))))
+        (<- path (except empty?
                          (split
                            (with-memory-stream ($out)
                              (with-memory-stream ($in path-name)
@@ -1765,7 +1760,7 @@
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
   (let (first (car (&path self)))
-    (if (== $hostname :windows) (&& (= (len first) 2) (= ([] first 1) 0x3a))
+    (if (== $hostname :windows) (&& (= (len first) 2) (= ([] first 1) ":"))
         (= first "/"))))
 
 (method Path .relative? ()
@@ -2182,9 +2177,9 @@
   ; Implementation of the Stream.read-bytes.
   (if (nil? buf) (bytes
                    (with-memory-stream (out)
-                   (<- buf (bytes 1024))
-                   (while (> (<- size (.read-bytes self buf 0 1024)) 0)
-                     (.write-bytes out buf 0 size))))
+                     (<- buf (bytes 1024))
+                     (while (> (<- size (.read-bytes self buf 0 1024)) 0)
+                       (.write-bytes out buf 0 size))))
       (fread buf from size (&fp self))))
 
 (method FileStream .read-line ()

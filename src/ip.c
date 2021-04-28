@@ -842,6 +842,21 @@ static int str_len(object o, int *len)
   return TRUE;
 }
 
+static int str_slice(object o, int start, int stop, object *result)
+{
+  int i, s, t;
+  for (i = s = 0; i < start; i++)
+    if (!ch_len(LC(o->mem.elt + s), &s)) return FALSE;
+  if (stop == -1) t = o->mem.size;
+  else {
+    for (i = start, t = s; i < stop; i++) {
+      if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
+    }
+  }
+  *result = gc_new_mem_from(STRING, o->mem.elt + s, t - s);
+  return TRUE;
+}
+
 DEFUN(len)
 {
   int len;
@@ -853,8 +868,6 @@ DEFUN(len)
       case CONS:
         len = object_list_len(o);
         break;
-      case KEYWORD:
-      case SYMBOL:
       case BYTES:
         len = o->mem.size;
         break;
@@ -876,7 +889,7 @@ DEFUN(len)
 
 DEFUN(slice)
 {
-  int i, s, t, start, stop;
+  int i, start, stop, len;
   object o;
   if (!bi_argc_range(argc, 1, 3)) return FALSE;
   reg[0] = object_nil;
@@ -906,38 +919,60 @@ DEFUN(slice)
       reg[0] = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
       return TRUE;
     case STRING:
-      for (i = s = 0; i < start; i++)
-        if (!ch_len(LC(o->mem.elt + s), &s)) return FALSE;
-      if (stop == -1) t = o->mem.size;
-      else {
-        for (i = start, t = s; i < stop; i++) {
-          if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
-        }
-      }
-      reg[0] = gc_new_mem_from(STRING, o->mem.elt + s, t - s);
+      if (!str_slice(o, start, stop, &(reg[0]))) return FALSE;
       return TRUE;
     case ARRAY:
       if (stop == -1) stop = o->array.size;
       else if (stop > o->array.size) return FALSE;
-      reg[0] = gc_new_array(s = stop - start);
-      memcpy(reg[0]->array.elt, o->array.elt + start, sizeof(object) * s);
+      reg[0] = gc_new_array(len = stop - start);
+      memcpy(reg[0]->array.elt, o->array.elt + start, sizeof(object) * len);
       return TRUE;
     default:
       return bi_mark_type_error();
   }
 }
 
+DEFUN(at)
+{
+  int i, byte;
+  object o;
+  if (!bi_argc_range(argc, 2, 3)) return FALSE;
+  o = argv->cons.car;
+  if (!bi_spint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
+  switch (object_type(o)) {
+    case STRING:
+      if (argc == 2) return str_slice(o, i, i + 1, result);
+      return FALSE;
+    case BYTES:
+      if (i >= o->mem.size) return FALSE;
+      if (argc == 2) *result = sint(LC(o->mem.elt + i));
+      else {
+        if (!bi_sint((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
+        if (!byte_p(byte)) return FALSE;
+        SC(o->mem.elt + i, byte);
+      }
+      return TRUE;
+    case ARRAY:
+      if (i >= o->array.size) return FALSE;
+      if (argc == 2) *result = o->array.elt[i];
+      else *result = o->array.elt[i] = argv->cons.cdr->cons.car;
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
 DEFUN(address)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  reg[0] = gc_new_xint((intptr_t)argv->cons.car);
+  *result = gc_new_xint((intptr_t)argv->cons.car);
   return TRUE;
 }
 
 DEFUN(not)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  reg[0] = object_bool(argv->cons.car == object_nil);
+  *result = object_bool(argv->cons.car == object_nil);
   return TRUE;
 }
 
@@ -946,7 +981,7 @@ DEFUN(gensym)
   static int c = 0;
   xbarray_reset(&bi_buf);
   xbarray_addf(&bi_buf, "$G-%d", ++c);
-  reg[0] = gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size);
+  *result = gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size);
   return TRUE;
 }
 

@@ -26,12 +26,10 @@
                 lower (if (|| alnum? alpha? lower?) "abcdefghijklmnopqrstuvwxyz")
                 upper (if (|| alnum? alpha? upper?) "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
                 table (str numeric lower upper)
-                table-size (len table)
-                val (bytes size))
+                table-size (len table))
     (assert (> table-size 0))
-    (dotimes (i size)
-      ([] val i ([] table (rand.int table-size))))
-    (mem->str! val)))
+    (with-memory-stream ($out)
+      (dotimes (i size) (write-bytes ([] table (rand.int table-size)))))))
 
 (function rand.val ()
   ; Returns the next random floating point number in the range [0.0, 1.0).

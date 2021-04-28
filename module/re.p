@@ -149,10 +149,10 @@
   ;         {n,m}   {n,m}?   match from n to m times.
   (if (is-a? expr Re) expr
       (let (r (.new Re) s 0 e (len expr) anchored? nil)
-        (when (= ([] expr 0) 0x5e)
+        (when (prefix? expr "^")
           (&anchored-start?! r true)
           (<- s (++ s) anchored? true))
-        (when (= ([] expr (-- e)) 0x24)
+        (when (suffix? expr "$")
           (&anchored-end?! r true)
           (<- e (-- e) anchored? true))
         (if anchored? (<- expr (slice expr s e)))

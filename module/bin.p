@@ -3,8 +3,7 @@
 (function bin.hexstr (mem)
   ; Returns the hexadecimal representation of the byte sequence.
   (with-memory-stream ($out)
-    (dotimes (i (len mem))
-      (write-bytes (int->str ([] mem i) :radix 16 :padding 2)))))
+    (doarray (x mem) (write-bytes (int->str x :radix 16 :padding 2)))))
 
 (function bin.&32 (i)
   ; Returns a value with the argument masked in 32 bits.

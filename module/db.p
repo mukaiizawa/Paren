@@ -26,7 +26,7 @@
         (if primarykeys (list (str "alter table " (car table) " "
                                    "add primary key (" (join (map car primarykeys) ", ") ");")))
         (map (f (x)
-               (let (fk (assoc (cdr x) :foreignkey) (fk-table fk-column) (split fk "."))
+               (let (fk (assoc (cdr x) :foreignkey) (fk-table fk-column) (split (str fk) "."))
                  (str "alter table " (car table) " "
                       "add constraints fk_" (car x) " "
                       "foreign key(" (car x) ") "

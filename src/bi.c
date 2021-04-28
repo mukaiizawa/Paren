@@ -109,13 +109,13 @@ static char *symbol_name_map[] = {
   "bound_p", "bound?",
   "eq_p", "=",
   "same_p", "==",
+  "at", "[]",
   "expand_macro", "expand-macro",
   "find_class", "find-class",
   "find_method", "find-method",
   "is_a_p", "is-a?",
   "not", "!",
   // array
-  "array_access", "[]",
   "array_p", "array?",
   // dict
   "dict_access", "{}",

@@ -3,6 +3,14 @@
 (class HashTable ()
   hash eq? table table-size size)
 
+(function memhash (x)
+  ; Returns hash value of mem.
+  (let (mem (bytes x) hval 17)
+    (dotimes (i (len mem))
+      (if (< i 10) (<- hval (+ (* hval 31) ([] mem i)))
+          (break)))
+    hval))
+
 (method HashTable .init (hash eq?)
   ; Initialize using the key hash function hash and the comparison function eq?.
   ; Returns the receiver.
