@@ -728,7 +728,7 @@ static void pop_throw_frame(void)
   exit1();
 }
 
-// built in functions
+// fundamental built in functions
 
 static int eq_p(object o, object p);
 
