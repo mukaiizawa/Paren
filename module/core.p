@@ -2622,11 +2622,11 @@
 (function repl ()
   ; Enter repl(read eval print loop) mode.
   ; Executed when there is no command line argument when paren starts.
-  (let (expr nil)
+  (let ($G-expr nil)
     (while true
       (catch (Error (f (e) (.print-stack-trace e)))
         (write-bytes ") ")
-        (if (<- expr (read)) (write (eval (expand-macro-all expr)))
+        (if (<- $G-expr (read)) (write (eval (expand-macro-all $G-expr)))
             (break))))))
 
 (function quit ()
@@ -2647,11 +2647,11 @@
   ; Returns true if successfully loaded.
   ; Module file to read must be UTF-8.
   (if (some? (f (x) (== x key)) $import) true
-      (let (module (.resolve (if import-dir (path import-dir) (.resolve $paren-home "module"))
-                             (memcat (mem->str key) ".p")))
-        (if (! (.readable? module)) (error "unreadable module " (.to-s module))
+      (let ($G-module (.resolve (if import-dir (path import-dir) (.resolve $paren-home "module"))
+                                (memcat (mem->str key) ".p")))
+        (if (! (.readable? $G-module)) (error "unreadable module " (.to-s $G-module))
             (begin
-              (load module)
+              (load $G-module)
               (<- main nil)
               (push! key $import)
               true)))))
@@ -2697,14 +2697,12 @@
 
 (reader-macro p (reader)
   ; Define print reader macro.
-  (let (lexer (&lexer reader))
-    (.skip lexer)
-    (list 'write (.read reader))))
+  (.skip (&lexer reader))
+  (list 'write (.read reader)))
 
 (reader-macro . (reader)
   ; Define eval reader.
-  (let (lexer (&lexer reader))
-    (.skip lexer)
-    (eval (.read reader))))
+  (.skip (&lexer reader))
+  (eval (.read reader)))
 
 (boot $args)
