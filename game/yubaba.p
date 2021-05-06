@@ -1,4 +1,4 @@
-; yubaba
+; yubaba.
 
 (import :rand)
 
