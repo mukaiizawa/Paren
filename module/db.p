@@ -8,7 +8,7 @@
 
 (function db.column->create-query (column)
   (let ((column-name :key primarykey? foreignkey required? type size default-value) column)
-    (str "  " column-name " " (mem->str type) (if size (str "(" size ")"))
+    (str "  " column-name " " type (if size (str "(" size ")"))
          (if default-value (str " default " default-value))
          (if (|| required? primarykey?) " not null"))))
 

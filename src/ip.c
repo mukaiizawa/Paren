@@ -976,15 +976,6 @@ DEFUN(not)
   return TRUE;
 }
 
-DEFUN(gensym)
-{
-  static int c = 0;
-  xbarray_reset(&bi_buf);
-  xbarray_addf(&bi_buf, "$G-%d", ++c);
-  *result = gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size);
-  return TRUE;
-}
-
 DEFUN(eval)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;

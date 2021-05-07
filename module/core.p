@@ -132,7 +132,7 @@
   ; Bind an anonimous function to a specified symbol name.
   ; Same as function macro except for the following points.
   ; - No error even if the symbol is already bound.
-  ; - Do not inline macros
+  ; - Macros are not expanded.
   ; Returns name.
   (list <- name (cons f (cons args body))))
 
@@ -149,7 +149,7 @@
   ;     (let (a (gensym) b (gensym) c (gensym))
   ;       ...)
   (let (rec (f (syms)
-              (if syms (cons (car syms) (cons '(gensym) (rec (cdr syms)))))))
+              (if syms (cons (car syms) (cons '(symbol) (rec (cdr syms)))))))
     (cons let (cons (rec syms) body))))
 
 (macro begin0 (:rest body)
@@ -624,8 +624,8 @@
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
   ; If delim is not specified, consider an empty string to be specified.
   (if (nil? l) nil
-      (nil? (cdr l)) (mem->str (car l))
-      (nil? delim) (mem->str! (apply memcat l))
+      (nil? (cdr l)) (string (car l))
+      (nil? delim) (string! (apply memcat l))
       (with-memory-stream ($out)
         (write-bytes (car l))
         (dolist (x (cdr l)) (write-bytes delim) (write-bytes x)))))
@@ -1045,6 +1045,15 @@
 
 ; symbol & keyword
 
+(builtin-function symbol (:opt x i size)
+  ; If there are no arguments, returns numbered symbol starting with `$G-`.
+  ; If x is supplied, Same as `(bytes x i size)` except returns symbol.
+  (assert (== (symbol "foo") 'foo)))
+
+(builtin-function keyword (x :opt i size)
+  ; Same as `(bytes x i size)` except returns keyword.
+  (assert (== (keyword "foo") :foo)))
+
 (builtin-function symbol? (x)
   ; Returns whether the x is symbol.
   (assert (symbol? 'foo))
@@ -1069,13 +1078,20 @@
   (assert (bound? 'bound?))
   (assert (bound? 'nil)))
 
-(builtin-function gensym ()
-  ; Returns a numbered symbol starting with `$G-`.
-  ; gensim only guarantees that the symbols generated with each gensim call will not collide.
-  ; There is no inconvenience unless intentionally generating symbols starting with `$G-`.
-  (assert (!= (gensym) (gensym))))
-
 ; string
+
+(builtin-function string (x :opt i size)
+  ; Same as `(bytes x i size)` except returns string.
+  (assert (= (string 'foo) "foo"))
+  (assert (= (string 'foo 1) "oo"))
+  (assert (= (string 'foo 1 1) "o")))
+
+(builtin-function string! (x)
+  ; Same as `(string x)` except that it destructively modifies the specified bytes x.
+  ; Generally faster than mem->str.
+  (assert (let (x (bytes 1))
+            ([] x 0 0x01)
+            (= (string! x) "\x01"))))
 
 (function str (:rest args)
   ; Returns concatenated string which each of the specified args as string.
@@ -1168,27 +1184,6 @@
   ; Returns byte length of bytes-like object x.
   (assert (= (memlen "foo") 3)))
 
-(builtin-function mem->sym (x :opt i size)
-  ; Same as `(bytes x i size)` except returns symbol.
-  (assert (== (mem->sym "foo") 'foo)))
-
-(builtin-function mem->key (x :opt i size)
-  ; Same as `(bytes x i size)` except returns keyword.
-  (assert (== (mem->key "foo") :foo)))
-
-(builtin-function mem->str (x :opt i size)
-  ; Same as `(bytes x i size)` except returns string.
-  (assert (= (mem->str 'foo) "foo"))
-  (assert (= (mem->str 'foo 1) "oo"))
-  (assert (= (mem->str 'foo 1 1) "o")))
-
-(builtin-function mem->str! (x)
-  ; Same as `(mem->str x)` except that it destructively modifies the specified bytes x.
-  ; Generally faster than mem->str.
-  (assert (let (x (bytes 1))
-            ([] x 0 0x01)
-            (= (mem->str! x) "\x01"))))
-
 (function prefix? (x prefix)
   ; Returns whether the byte sequence x with the specified prefix.
   (&& (>= (len x) (len prefix))
@@ -1215,7 +1210,7 @@
   ; Even if the areas to be copied overlap, it operates correctly.
   ; Returns dst.
   (assert (let (s (bytes "foo") d (bytes "bar"))
-            (= (mem->str (memcpy s 1 d 1 2)) "boo"))))
+            (= (string (memcpy s 1 d 1 2)) "boo"))))
 
 (builtin-function memcat (x :rest args)
   ; Returns the result of combining each args with x.
@@ -1467,7 +1462,7 @@
   ; If field name is 'xxx', bind a getter named `&xxx` and setter named `&xxx!`.
   ; Works faster than method which defined with the `method` macro.
   (with-gensyms (receiver val)
-    (let (key (mem->key field) getter (memcat '& field) setter (memcat getter '!))
+    (let (key (keyword field) getter (memcat '& field) setter (memcat getter '!))
       (list begin
             (list if (list ! (list bound? (list quote getter)))
                   (list function getter (list receiver)
@@ -1555,7 +1550,7 @@
   ; Otherwise automatically invoke .init method.
   (let (o (dict))
     (for (cls self) cls (cls (find-class ({} cls :super)))
-      (foreach (f (x) ({} o (mem->key x) nil))
+      (foreach (f (x) ({} o (keyword x) nil))
                ({} cls :fields)))
     ({} o :class ({} self :symbol))
     (if (= (procparams (find-method ({} o :class) '.init)) '(self)) (.init o)
@@ -1587,7 +1582,7 @@
 
 (method Exception .to-s ()
   ; Returns a String representing the receiver.
-  (let (class-name (mem->str (&class self)) msg (&message self))
+  (let (class-name (string (&class self)) msg (&message self))
     (if msg (memcat class-name " -- " msg)
         class-name)))
 
@@ -1908,7 +1903,7 @@
           (= size 2) (begin ([] c 0 b1) ([] c 1 b2))
           (= size 3) (begin ([] c 0 b1) ([] c 1 b2) ([] c 2 b3))
           (= size 4) (begin ([] c 0 b1) ([] c 1 b2) ([] c 2 b3) ([] c 3 b4)))
-      (mem->str! c))))
+      (string! c))))
 
 (method Stream .read ()
   ; Read expression from the receiver.
@@ -2152,7 +2147,7 @@
   ; Returns the contents written to the stream as a string.
   (let (size (&wrpos self))
     (if (= size 0) ""
-        (mem->str (&buf self) 0 size))))
+        (string (&buf self) 0 size))))
 
 (method MemoryStream .reset ()
   ; Empty the contents of the stream.
@@ -2418,14 +2413,14 @@
           (if (= sign "-") (- val) val))
         (begin
           (.put self sign)
-          (mem->sym (.token (.get-identifier-sign self)))))))
+          (symbol (.token (.get-identifier-sign self)))))))
 
 (method ParenLexer .lex-symbol ()
-  (mem->sym (.token (.get-identifier self))))
+  (symbol (.token (.get-identifier self))))
 
 (method ParenLexer .lex-keyword ()
   (.skip self)
-  (mem->key (.token (.get-identifier self))))
+  (keyword (.token (.get-identifier self))))
 
 (method ParenLexer .lex-string ()
   (.skip self)
@@ -2446,7 +2441,7 @@
         (= next "\"") (list :atom (.lex-string self))
         (= next ":") (list :atom (.lex-keyword self))
         (= next ";") (begin (.skip-line self) (.lex self))
-        (= next "#") (begin (.skip self) (list :read-macro (mem->sym (&next self))))
+        (= next "#") (begin (.skip self) (list :read-macro (symbol (&next self))))
         (memmem "+-" next) (list :atom (.lex-sign self))
         (memmem "0123456789" next) (list :atom (.skip-number self))
         (list :atom (.lex-symbol self)))))
@@ -2648,7 +2643,7 @@
   ; Module file to read must be UTF-8.
   (if (some? (f (x) (== x key)) $import) true
       (let ($G-module (.resolve (if import-dir (path import-dir) (.resolve $paren-home "module"))
-                                (memcat (mem->str key) ".p")))
+                                (memcat (string key) ".p")))
         (if (! (.readable? $G-module)) (error "unreadable module " (.to-s $G-module))
             (begin
               (load $G-module)
@@ -2680,12 +2675,12 @@
                       '("coreutils" "tool")))
 
 (reader-macro [ (reader)
-  ; Define array/bytes literal reader.
-  (if (!= (.read reader) '[) (error "missing space in array literal")
-      (let ($G-a (.new Array) $G-v nil)
-          (while (!= (<- $G-v (.read reader)) '])
-              (.add $G-a (eval $G-v)))
-        (.to-a $G-a))))
+   ; Define array/bytes literal reader.
+   (if (!= (.read reader) '[) (error "missing space in array literal")
+       (let ($G-a (.new Array) $G-v nil)
+         (while (!= (<- $G-v (.read reader)) '])
+             (.add $G-a (eval $G-v)))
+         (.to-a $G-a))))
 
 (reader-macro { (reader)
   ; Define dictionary literal reader.

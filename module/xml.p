@@ -40,7 +40,7 @@
   (let (attrs nil q nil)
     (while (! (memmem  "/>" (.next (.skip-space self))))
       (while (!= (.next self) "=") (.get self))
-      (push! (mem->key (.token self)) attrs)
+      (push! (keyword (.token self)) attrs)
       (.skip self "=")
       (if (! (memmem "'\"" (<- q (.skip (.skip-space self))))) (continue))    ; single attribute
       (while (!= (.next self) q) (.get-escape self))
@@ -54,7 +54,7 @@
              (!= (.next self) "/")
              (!= (.next self) ">"))
     (.get self))
-  (mem->sym (.token self)))
+  (symbol (.token self)))
 
 (method XMLReader .parse-?tag ()
   (dostring (c "?xml") (.skip self c))
@@ -98,7 +98,7 @@
       (.skip self "/")
       (while (!= (.next self) ">") (.get self))
       (.skip self)
-      (return (list stag? (mem->sym (.token self)))))    ; return etag symbol.
+      (return (list stag? (symbol (.token self)))))    ; return etag symbol.
     (if (= (.next self) "!") (list stag? (.parse-!tag self))
         (= (.next self) "?") (list stag? (.parse-?tag self))
         (let (name (.parse-name self) attrs (.parse-attrs self))

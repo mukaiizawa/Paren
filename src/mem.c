@@ -58,22 +58,29 @@ DEFUN(bytes)
   return mem_to(argc, argv, result, BYTES);
 }
 
-DEFUN(mem_to_sym)
+DEFUN(symbol)
 {
+  static int c = 0;
+  if (argc == 0) {
+    xbarray_reset(&bi_buf);
+    xbarray_addf(&bi_buf, "$G-%d", ++c);
+    *result = gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size);
+    return TRUE;
+  }
   return mem_to(argc, argv, result, SYMBOL);
 }
 
-DEFUN(mem_to_key)
+DEFUN(keyword)
 {
   return mem_to(argc, argv, result, KEYWORD);
 }
 
-DEFUN(mem_to_str)
+DEFUN(string)
 {
   return mem_to(argc, argv, result, STRING);
 }
 
-DEFUN(xmem_to_str)
+DEFUN(xstring)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;

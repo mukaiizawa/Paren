@@ -16,7 +16,7 @@
     (while (= (.next self) "#")
       (.skip self)
       (<- level (++ level)))
-    (if (<= 1 level  6) (list (mem->sym (str 'h level)) () (.skip-line (.skip-space self)))
+    (if (<= 1 level  6) (list (symbol (str 'h level)) () (.skip-line (.skip-space self)))
         (.raise self "illegal header level " level))))
 
 (method MarkdownReader .parse-code ()

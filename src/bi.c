@@ -123,13 +123,9 @@ static char *symbol_name_map[] = {
   // mem
   "bytes_p", "bytes?",
   "keyword_p", "keyword?",
-  "mem_to_bytes", "mem->bytes",
-  "mem_to_key", "mem->key",
-  "mem_to_str", "mem->str",
-  "mem_to_sym", "mem->sym",
   "string_p", "string?",
   "symbol_p", "symbol?",
-  "xmem_to_str", "mem->str!",
+  "xstring", "string!",
   // cons
   "cons_p", "cons?",
   "last_cons", "last-cons",
