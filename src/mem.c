@@ -217,3 +217,37 @@ DEFUN(memcat)
   xbarray_free(&x);
   return TRUE;
 }
+
+DEFUN(chr)
+{
+  int x, size;
+  char buf[4];
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_spint(argv->cons.car, &x)) return FALSE;
+  if (x <= 0x7f) {
+    size = 1;
+    buf[0] = x;
+  } else if (x <= 0x7ff) {
+    size = 2;
+    buf[0] = 0xc0 | ((x >> 6) & 0x3f);
+    buf[1] = 0x80 | (x & 0x3f);
+  } else if (x <= 0xffff) {
+    size = 3;
+    buf[0] = 0xe0 | ((x >> 12) & 0x3f);
+    buf[1] = 0x80 | ((x >> 6) & 0x3f);
+    buf[2] = 0x80 | (x & 0x3f);
+  } else if (x <= 0xfffff) {
+    size = 4;
+    buf[0] = 0xf0 | ((x >> 18) & 0x3f);
+    buf[1] = 0x80 | ((x >> 12) & 0x3f);
+    buf[2] = 0x80 | ((x >> 6) & 0x3f);
+    buf[3] = 0x80 | (x & 0x3f);
+  } else return FALSE;
+  result = gc_new_mem_from(STRING, buf, size);
+  return TRUE;
+}
+
+DEFUN(ord)
+{
+  return TRUE;
+}
