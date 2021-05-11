@@ -2470,7 +2470,7 @@
     :EOF nil
     :atom (&token self)
     :open-paren (.parse-list self)
-    :quote (list quote (.parse (.scan self)))
+    :quote (list 'quote (.parse (.scan self)))
     :backquote (list 'quasiquote (.parse (.scan self)))
     :unquote (list 'unquote (.parse (.scan self)))
     :unquote-splicing (list 'unquote-splicing (.parse (.scan self)))
