@@ -97,7 +97,7 @@
 (method MarkdownReader .parse-list ()
   (let (next-root nil next-depth nil node-stack nil
                   fetch (f ()
-                          (when (|| (.digit? self) (memmem "- " (.next self)))
+                          (when (|| (.next? self digit?) (memmem "- " (.next self)))
                             (<- next-depth 1)
                             (while (= (.next self) " ")
                               (dotimes (i 4) (.skip self " "))
@@ -106,7 +106,7 @@
                                 (begin
                                   (.skip self)    ; - xxx
                                   (push! 'ul next-root))
-                                (.digit? self)
+                                (.next? self digit?)
                                 (begin
                                   (.skip-uint self) (.skip self ".")    ; 1. xxx
                                   (push! 'ol next-root))

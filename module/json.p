@@ -68,16 +68,19 @@
   (.token self))
 
 (method JSONReader .parse-literal ()
-  (if (.digit? self) (.skip-number self)
-      (= (.next self) "t") (begin
-                             (dostring (c "true") (.skip self c))
-                             'true)
-      (= (.next self) "f") (begin
-                             (dostring (c "false") (.skip self c))
-                             'false)
-      (= (.next self) "n") (begin
-                             (dostring (c "null") (.skip self c))
-                             nil)
+  (if (.next? self digit?) (.skip-number self)
+      (= (.next self) "t")
+      (begin
+        (dostring (c "true") (.skip self c))
+        'true)
+      (= (.next self) "f")
+      (begin
+        (dostring (c "false") (.skip self c))
+        'false)
+      (= (.next self) "n")
+      (begin
+        (dostring (c "null") (.skip self c))
+        nil)
       (.raise self "unexpected token")))
 
 (method JSONReader .read ()

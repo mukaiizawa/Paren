@@ -895,41 +895,10 @@
   ; Returns whether the x is a integer and between 0 and 255.
   (&& (int? x) (<= 0 x 255)))
 
-(function space? (b)
-  ; Returns whether byte b is a space character.
-  (|| (= b 0x09)
-      (= b 0x0a)
-      (= b 0x0d)
-      (= b 0x20)))
-
-(function print? (b)
-  ; Returns whether b is printable.
-  (<= 0x20 b 0x7e))
-
-(function alpha? (b)
-  ; Returns whether byte b is an alphabetic character.
-  (|| (<= 0x41 b 0x5a) (<= 0x61 b 0x7a)))
-
-(function digit? (b)
-  ; Returns whether byte b is a digit character.
-  (<= 0x30 b 0x39))
-
 (function int->str (i :key radix padding)
   ; Returns string of i.
   (with-memory-stream (out)
     (.write-int out i :radix radix :padding padding)))
-
-(function tolower (b)
-  ; Returns lowercase if byte b is an alphabetic character.
-  ; Otherwise returns b.
-  (if (&& (alpha? b) (<= 0x41 b 0x5a)) (+ b 0x20)
-      b))
-
-(function toupper (b)
-  ; Returns uppercase if byte b is an alphabetic character.
-  ; Otherwise returns b.
-  (if (&& (alpha? b) (<= 0x61 b 0x7a)) (- b 0x20)
-      b))
 
 (builtin-function ~ (x)
   ; Returns bitwise NOT of x.
@@ -1113,20 +1082,79 @@
   (with-memory-stream ($in s)
     (.skip-number (.new AheadReader))))
 
-(function str->code (s)
-  ; Returns the code point of string s.
-  (let (b 0 val 0)
-    (with-memory-stream ($in s)
-      (while (!= (<- b (read-byte)) -1)
-        (<- val (| (<< val 8) b))))
-    val))
+(builtin-function chr (i)
+  ; Returns an integer representing the Unicode code point of that character.
+  (assert (= (chr 0x20) " "))
+  (assert (= (chr 0x61) "a"))
+  (assert (= (chr 0x376) "Ͷ"))
+  (assert (= (chr 0x8056) "聖"))
+  (assert (= (chr 0x611b) "愛"))
+  (assert (= (chr 0x2123d) "𡈽")))
 
-(function code->str (i)
-  ; Returns string of code point.
-  (with-memory-stream ($out)
-    (while (!= i 0)
-      (write-byte (& i 0xff))
-      (<- i (>> i 8)))))
+(builtin-function ord (s)
+  ; Returns the string representing a character whose Unicode code point is the integer i.
+  (assert (= (ord " ") 0x20))
+  (assert (= (ord "a") 0x61))
+  (assert (= (ord "Ͷ") 0x376))
+  (assert (= (ord "聖") 0x8056))
+  (assert (= (ord "愛") 0x611b))
+  (assert (= (ord "𡈽") 0x2123d)))
+
+(builtin-function ascii? (s)
+  ; Returns whether all characters in the string are ASCII.
+  ; If s is empty, returns nil.
+  (assert (ascii? "abc"))
+  (assert (! (ascii? "あいう"))))
+
+(builtin-function alnum? (s)
+  ; Returns whether all characters in the string are alphanumeric.
+  ; If s is empty, returns nil.
+  (assert (alnum? "abc123"))
+  (assert (! (alnum? " "))))
+
+(builtin-function alpha? (s)
+  ; Returns whether all characters in the string are alphabetic ASCII characters.
+  ; If s is empty, returns nil.
+  (assert (alpha? "abc"))
+  (assert (! (alpha? "123"))))
+
+(builtin-function digit? (s)
+  ; Returns whether all characters in the string are ASCII decimal digits.
+  ; If s is empty, returns nil.
+  (assert (digit? "0123456789"))
+  (assert (! (digit? "abc"))))
+
+(builtin-function space? (s)
+  ; Returns whether all characters in the string are whitespace.
+  ; If s is empty, returns nil.
+  (assert (space? " \t\r\n"))
+  (assert (! (space? ""))))
+
+(builtin-function print? (s)
+  ; Returns whether all characters in the string are printable.
+  ; If s is empty, returns nil.
+  (assert (print? " "))
+  (assert (! (print? "\e"))))
+
+(builtin-function lower? (s)
+  ; Returns whether all characters in the string are ASCII lowercase.
+  ; If s is empty, returns nil.
+  (assert (lower? "abc"))
+  (assert (! (lower? "ABC"))))
+
+(builtin-function upper? (s)
+  ; Returns whether all characters in the string are ASCII uppercase.
+  ; If s is empty, returns nil.
+  (assert (upper? "ABC"))
+  (assert (! (upper? "abc"))))
+
+(builtin-function lower (s)
+  ; Return a copy of the string with all the cased characters converted to lowercase.
+  (assert (= (lower "ABC123") "abc123")))
+
+(builtin-function upper (b)
+  ; Return a copy of the string with all the cased characters converted to uppercase.
+  (assert (= (upper "abc123") "ABC123")))
 
 (function str->arr (s)
   ; Returns a character array of string s.
@@ -2221,23 +2249,10 @@
   ; Returns a pre-read character.
   (&next self))
 
-(method AheadReader .alpha? ()
-  ; Returns true if next character is alphabetic.
-  (alpha? (str->code (&next self))))
-
-(method AheadReader .digit? ()
-  ; Returns true if next character is digit.
-  (digit? (str->code (&next self))))
-
-(method AheadReader .space? ()
-  ; Returns true if next character is space.
-  (space? (str->code (&next self))))
-
-(method AheadReader .alnum? ()
-  ; Returns true if next character is digit or alphabetic.
-  (let (b (str->code (&next self)))
-    (|| (digit? b)
-        (alpha? b))))
+(method AheadReader .next? (predicate)
+  ; Returns whether The end of the file has not been reached and the predicate is satisfied
+  ; EOF is reached, returns nil.
+  (&& (&next self) (predicate (&next self))))
 
 (method AheadReader .skip (:opt expected)
   ; Skip next character and returns it.
@@ -2254,17 +2269,17 @@
 (method AheadReader .skip-escape ()
   (let (c (.skip self))
     (if (!= c "\\") c
-        (= (<- c (.skip self)) "a") "\x07"
-        (= c "b") "\x08"
-        (= c "c") (if (<= 0x40 (<- c (toupper (str->code (.skip self)))) 0x5f) (& c 0x1f)
+        (= (<- c (.skip self)) "n") "\n"
+        (= c "r") "\r"
+        (= c "t") "\t"
+        (= c "a") "\a"
+        (= c "b") "\b"
+        (= c "c") (if (<= 0x40 (<- c (ord (upper (.skip self)))) 0x5f) (chr (& c 0x1f))
                       (.raise self "illegal ctrl char"))
-        (= c "e") "\x1b"
-        (= c "f") "\x0c"
-        (= c "n") "\x0a"
-        (= c "r") "\x0d"
-        (= c "t") "\x09"
-        (= c "v") "\x0b"
-        (= c "x") (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16))
+        (= c "e") "\e"
+        (= c "f") "\f"
+        (= c "v") "\v"
+        (= c "x") (chr (+ (* 16 (.skip-digit self 16)) (.skip-digit self 16)))
         c)))
 
 (method AheadReader .skip-line ()
@@ -2285,8 +2300,7 @@
 (method AheadReader .skip-space ()
   ; Skip as long as a space character follows.
   ; Returns self.
-  (while (space? (str->code (&next self)))
-    (.skip self))
+  (while (.next? self space?) (.skip self))
   self)
 
 (method AheadReader .skip-sign ()
@@ -2296,16 +2310,15 @@
         nil)))
 
 (method AheadReader .skip-digit (:opt radix)
-  (let (byte (str->code (.skip self))
-             val (if (digit? byte) (- byte 0x30)
-                     (alpha? byte) (+ (- (tolower byte) 0x61) 10)))
+  (let (ch (.skip self) val (if (digit? ch) (- (ord ch) 0x30)
+                                (alpha? ch) (+ (- (ord (lower ch)) 0x61) 10)))
     (if (|| (nil? val) (>= val (|| radix 10))) (.raise self "illegal digit.")
         val)))
 
 (method AheadReader .skip-uint ()
-  (if (! (.digit? self)) (.raise self "missing digits")
+  (if (! (.next? self digit?)) (.raise self "missing digits")
       (let (val 0)
-        (while (.digit? self)
+        (while (.next? self digit?)
           (<- val (+ (* val 10) (.skip-digit self))))
         val)))
 
@@ -2320,13 +2333,13 @@
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
           (.skip self)
-          (if (! (.alnum? self)) (.raise self "missing lower or digits")
-              (while (.alnum? self)
+          (if (! (.next? self alnum?)) (.raise self "missing lower or digits")
+              (while (.next? self alnum?)
                 (<- val (+ (* val radix) (.skip-digit self radix))))))
         (= (&next self) ".")
         (let (factor 0.1)
           (.skip self)
-          (while (.digit? self)
+          (while (.next? self digit?)
             (<- val (+ val (* factor (.skip-digit self)))
                 factor (/ factor 10)))
           (when (= (&next self) 0x65)
@@ -2379,7 +2392,7 @@
 
 (method ParenLexer .identifier-symbol-alpha? ()
   (|| (memmem "!#$%&*./<=>?^[]_{|}~" (&next self))
-      (.alpha? self)))
+      (.next? self alpha?)))
 
 (method ParenLexer .identifier-sign? ()
   (memmem "+-" (&next self)))
@@ -2387,7 +2400,7 @@
 (method ParenLexer .identifier-trail? ()
   (|| (.identifier-symbol-alpha? self)
       (.identifier-sign? self)
-      (.digit? self)))
+      (.next? self digit?)))
 
 (method ParenLexer .get-identifier-sign ()
   (when (|| (.identifier-sign? self) (.identifier-symbol-alpha? self))
@@ -2408,7 +2421,7 @@
 
 (method ParenLexer .lex-sign ()
   (let (sign (.skip self))
-    (if (.digit? self)
+    (if (.next? self digit?)
         (let (val (.skip-number self))
           (if (= sign "-") (- val) val))
         (begin

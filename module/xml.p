@@ -50,7 +50,7 @@
 
 (method XMLReader .parse-name ()
   (.skip-space self)
-  (while (&& (! (.space? self))
+  (while (&& (! (.next? self space?))
              (!= (.next self) "/")
              (!= (.next self) ">"))
     (.get self))
@@ -131,7 +131,7 @@
   ;     <attr> ::= <key> ['=' '"' <value> '"']
   ;     <text> -- a text node.
   (if (nil? (.next self)) (return nil))
-  (while (.space? self) (.get self))
+  (while (.next? self space?) (.get self))
   (if (!= (.next self) "<") (.parse-text self)
       (begin (.token self)    ; cleanup spaces
              (let ((stag? tag) (.parse-tag self))
