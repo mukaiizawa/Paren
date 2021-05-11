@@ -243,11 +243,38 @@ DEFUN(chr)
     buf[2] = 0x80 | ((x >> 6) & 0x3f);
     buf[3] = 0x80 | (x & 0x3f);
   } else return FALSE;
-  result = gc_new_mem_from(STRING, buf, size);
+  *result = gc_new_mem_from(STRING, buf, size);
   return TRUE;
 }
 
 DEFUN(ord)
 {
+  int x;
+  object o;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, STRING, &o)) return FALSE;
+  switch (o->mem.size) {
+    case 1:
+      x = LC(o->mem.elt);
+      break;
+    case 2:
+      x = ((LC(o->mem.elt) & 0x3f) << 6)
+        | (LC(o->mem.elt + 1) & 0x3f);
+      break;
+    case 3:
+      x = ((LC(o->mem.elt) & 0xf) << 12)
+        | ((LC(o->mem.elt + 1) & 0x3f) << 6)
+        | (LC(o->mem.elt + 2) & 0x3f);
+      break;
+    case 4:
+      x = ((LC(o->mem.elt) & 0x3) << 18)
+        | ((LC(o->mem.elt + 1) & 0x3f) << 12)
+        | ((LC(o->mem.elt + 2) & 0x3f) << 6)
+        | (LC(o->mem.elt + 3) & 0x3f);
+      break;
+    default:
+      return FALSE;
+  }
+  *result = gc_new_xint(x);
   return TRUE;
 }
