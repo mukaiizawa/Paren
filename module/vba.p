@@ -127,13 +127,13 @@
        "ActiveWindow.FreezePanes = True\n"))
 
 (function vba.alignment (alignment)
-  (switch alignment
-    :bottom "xlBottom"
-    :center "xlCenter"
-    :left "xlLeft"
-    :right "xlRight"
-    :top "xlTop"
-    :default "xlGeneral"))
+  (if (== alignment :bottom) "xlBottom"
+      (== alignment :center) "xlCenter"
+      (== alignment :left) "xlLeft"
+      (== alignment :right) "xlRight"
+      (== alignment :top) "xlTop"
+      (== alignment :default) "xlGeneral"
+      (error "unexpected alignment.")))
 
 (method VBASheet .horizontal-align (r :opt alignment)
   ; Returns vba that sets the specified range to the specified horizontal alignment.

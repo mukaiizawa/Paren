@@ -193,34 +193,6 @@
                       (car l))))
         (rec args))))
 
-(macro switch (test :rest body)
-  ; The switch macro help control complex conditional and branching operations.
-  ; As shown below, the switch macro consists of one test and multiple branches.
-  ;     (switch <test> <branches>)
-  ;     <branches> ::= <branch> ...
-  ;     <branch> ::= <labels> <then>
-  ;     <test> -- An expression that determines which branch is evaluated.
-  ;     <labels> -- An element or list of element whose address is compared to test.
-  ;     <then> -- An expression that is evaluated only when control is transferred to a branch.
-  ; You can also pass an atom in <labels>, in which case the elements are converted internally as a list.
-  ; test is evaluated only once and compared from left to right for matching elements in the <labels> of each branch.
-  ; If there is a matching element, control is transferred to that branch.
-  ; If you specify keyword :default in <labels>, you can unconditionally transfer control to that branch regardless of the value of test.
-  ; Error if not specified :default and control reaches the end.
-  (with-gensyms (gtest)
-    (assert (= (% (len body) 2) 0))
-    (let (branches (group body 2)
-                   default-branch (list 'error "switch/" gtest " not included in " (list quote (flatten (map car branches))))
-                   parse-branches (f (branches)
-                                    (if (nil? branches) (list default-branch)
-                                        (let ((label then) (car branches))
-                                          (if (== label :default) (return (list true then))
-                                              (cons (cons '|| (map (f (x) (list = (list quote x) gtest))
-                                                                   (->list label)))
-                                                    (cons then (parse-branches (cdr branches)))))))))
-      (list let (list gtest test)
-            (cons if (parse-branches branches))))))
-
 (macro break ()
   ; The break macro is expected evaluated in the iteration context like a for, while.
   ; Jump to :break label which causes the inner-most loop to be terminated immediately when executed.
@@ -1804,12 +1776,11 @@
 
 (method Path .open (mode)
   ; Returns a stream that reads the contents of the receiver.
-  (.init (.new FileStream) (fopen (.to-s self)
-                                  (switch mode
-                                    :read 0
-                                    :write 1
-                                    :append 2
-                                    :update 3))))
+  (.init (.new FileStream) (fopen (.to-s self) (if (= mode :read) 0
+                                                   (= mode :write) 1
+                                                   (= mode :append) 2
+                                                   (= mode :update) 3
+                                                   (assert nil)))))
 
 (method Path .mkdir ()
   ; Create a directory corresponding to this receiver, including any necessary but nonexistent parent directories.
@@ -2479,16 +2450,16 @@
     (parse-cdr nil)))
 
 (method ParenReader .parse ()
-  (switch (&token-type self)
-    :EOF nil
-    :atom (&token self)
-    :open-paren (.parse-list self)
-    :quote (list 'quote (.parse (.scan self)))
-    :backquote (list 'quasiquote (.parse (.scan self)))
-    :unquote (list 'unquote (.parse (.scan self)))
-    :unquote-splicing (list 'unquote-splicing (.parse (.scan self)))
-    :read-macro (apply ({} $read-table (&token self)) (list self))
-    :default (.raise self "syntax error")))
+  (let (type (&token-type self))
+    (if (= type :EOF) nil
+        (= type :atom) (&token self)
+        (= type :open-paren) (.parse-list self)
+        (= type :quote) (list 'quote (.parse (.scan self)))
+        (= type :backquote) (list 'quasiquote (.parse (.scan self)))
+        (= type :unquote) (list 'unquote (.parse (.scan self)))
+        (= type :unquote-splicing) (list 'unquote-splicing (.parse (.scan self)))
+        (= type :read-macro) (apply ({} $read-table (&token self)) (list self))
+        (.raise self "syntax error"))))
 
 (macro unquote (expr)
   (list 'error "unexpected unquote -- ," expr))
@@ -2497,40 +2468,22 @@
   (list 'error "unexpected unquote-splicing -- ,@" expr))
 
 (macro quasiquote (expr)
-  (let (descend (f (x level)
-                  (if (atom? x) (list quote x)
-                      (switch (car x)
-                        quasiquote (list cons
-                                         '(quote quasiquote)
-                                         (descend (cdr x) (++ level)))
-                        unquote (if (= level 0) (cadr x)
-                                    (list cons
-                                          '(quote unquote)
-                                          (descend (cdr x) (-- level))))
-                        unquote-splicing (if (= level 0) (cadr x)
-                                             (list cons
-                                                   '(quote unquote-splicing)
-                                                   (descend (cdr x) (-- level))))
-                        :default (list append
-                                       (descend-car (car x) level)
-                                       (descend (cdr x) level)))))
-                descend-car (f (x level)
-                              (if (atom? x) (list quote (list x))
-                                  (switch (car x)
-                                    quasiquote (list list (list cons
-                                                                '(quote quasiquote)
-                                                                (descend (cdr x) (++ level))))
-                                    unquote (if (= level 0) (cons list (cdr x))
-                                                (list list (list cons
-                                                                 '(quote unquote)
-                                                                 (descend (cdr x) (-- level)))))
-                                    unquote-splicing (if (= level 0) (cons append (cdr x))
-                                                         (list list (list cons
-                                                                          '(quote unquote-splicing)
-                                                                          (descend (cdr x) (-- level)))))
-                                    :default (list list (list append
-                                                              (descend-car (car x) level)
-                                                              (descend (cdr x) level)))))))
+  (let (descend
+         (f (x level)
+           (if (atom? x) (list quote x)
+               (let (ope (car x))
+                 (if (= ope 'quasiquote) (list cons ''quasiquote (descend (cdr x) (++ level)))
+                     (= ope 'unquote) (if (= level 0) (cadr x) (list cons ''unquote (descend (cdr x) (-- level))))
+                     (= ope 'unquote-splicing) (if (= level 0) (cadr x) (list cons ''unquote-splicing (descend (cdr x) (-- level))))
+                     (list append (descend-car (car x) level) (descend (cdr x) level))))))
+         descend-car
+         (f (x level)
+           (if (atom? x) (list quote (list x))
+               (let (ope (car x))
+                 (if (= ope 'quasiquote) (list list (list cons ''quasiquote (descend (cdr x) (++ level))))
+                     (= ope 'unquote) (if (= level 0) (cons list (cdr x)) (list list (list cons ''unquote (descend (cdr x) (-- level)))))
+                     (= ope 'unquote-splicing) (if (= level 0) (cons append (cdr x)) (list list (list cons ''unquote-splicing (descend (cdr x) (-- level)))))
+                     (list list (list append (descend-car (car x) level) (descend (cdr x) level))))))))
     (descend expr 0)))
 
 (method ParenReader .read ()
