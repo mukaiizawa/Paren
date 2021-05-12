@@ -15,7 +15,7 @@ DEFUN(array)
   return TRUE;
 }
 
-DEFUN(array_p)
+DEFUN(array_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(object_type_p(argv->cons.car, ARRAY));

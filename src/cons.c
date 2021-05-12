@@ -6,7 +6,7 @@
 #include "ip.h"
 #include "bi.h"
 
-DEFUN(cons_p)
+DEFUN(cons_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(object_type_p(argv->cons.car, CONS));
@@ -38,7 +38,7 @@ DEFUN(car)
   return TRUE;
 }
 
-DEFUN(set_car)
+DEFUN(car_21_)
 {
   object o, p;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
@@ -59,7 +59,7 @@ DEFUN(cdr)
   return TRUE;
 }
 
-DEFUN(set_cdr)
+DEFUN(cdr_21_)
 {
   object o, p;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
@@ -88,7 +88,7 @@ DEFUN(append)
   return TRUE;
 }
 
-DEFUN(last_cons)
+DEFUN(last_2d_cons)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -100,7 +100,7 @@ DEFUN(last_cons)
   return TRUE;
 }
 
-DEFUN(xreverse)
+DEFUN(reverse_21_)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;

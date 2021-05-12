@@ -15,7 +15,7 @@
 #define DLSYM(h, n) ((intptr_t)GetProcAddress((HMODULE)h, n))
 #endif
 
-DEFUN(dl_open)
+DEFUN(dl_2e_fopen)
 {
   char *n;
   intptr_t h;
@@ -26,7 +26,7 @@ DEFUN(dl_open)
   return TRUE;
 }
 
-DEFUN(dl_sym)
+DEFUN(dl_2e_sym)
 {
   char *n;
   intptr_t h, sym;
@@ -40,7 +40,7 @@ DEFUN(dl_sym)
 
 #define MAX_ARGS 7
 
-DEFUN(dl_call)
+DEFUN(dl_2e_call)
 {
   int i, type;
   intptr_t func, cargs[MAX_ARGS], cret;
@@ -83,7 +83,7 @@ DEFUN(dl_call)
   return TRUE;
 }
 
-DEFUN(dl_load_byte)
+DEFUN(dl_2e_load_2d_byte)
 {
   intptr_t addr;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -92,7 +92,7 @@ DEFUN(dl_load_byte)
   return TRUE;
 }
 
-DEFUN(dl_store_byte)
+DEFUN(dl_2e_store_2d_byte)
 {
   int byte;
   intptr_t addr;
@@ -104,7 +104,7 @@ DEFUN(dl_store_byte)
   return TRUE;
 }
 
-DEFUN(mem_address)
+DEFUN(dl_2e_address)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;

@@ -26,7 +26,7 @@
 #define xcleanup() WSACleanup()
 #endif
 
-DEFUN(client_socket)
+DEFUN(client_2d_socket)
 {
   int port, fd;
   char *host, sport[MAX_STR_LEN];
@@ -54,7 +54,7 @@ DEFUN(client_socket)
   return TRUE;
 }
 
-DEFUN(server_socket)
+DEFUN(server_2d_socket)
 {
   int port, fd;
   struct sockaddr_in addr;

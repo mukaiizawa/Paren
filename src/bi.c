@@ -97,73 +97,6 @@ int bi_arg_list(object o, object *result)
 #include "defun.wk"
 #undef DEFUN
 
-static char *symbol_name_map[] = {
-  // ip/DEFSP
-  "symbol_bind", "<-",
-  "unwind_protect", "unwind-protect",
-  // ip/DEFUN
-  "bound_p", "bound?",
-  "eq_p", "=",
-  "same_p", "==",
-  "at", "[]",
-  "expand_macro", "expand-macro",
-  "find_class", "find-class",
-  "find_method", "find-method",
-  "is_a_p", "is-a?",
-  "in_p", "in?",
-  "not", "!",
-  // array
-  "array_p", "array?",
-  // dict
-  "dict_access", "{}",
-  "dict_p", "dict?",
-  // mem
-  "bytes_p", "bytes?",
-  "keyword_p", "keyword?",
-  "string_p", "string?",
-  "symbol_p", "symbol?",
-  "xstring", "string!",
-  "ascii_p", "ascii?",
-  "alnum_p", "alnum?",
-  "alpha_p", "alpha?",
-  "digit_p", "digit?",
-  "space_p", "space?",
-  "print_p", "print?",
-  "lower_p", "lower?",
-  "upper_p", "upper?",
-  // cons
-  "cons_p", "cons?",
-  "last_cons", "last-cons",
-  "nth_set", "nth!",
-  "set_car", "car!",
-  "set_cdr", "cdr!",
-  "xreverse", "reverse!",
-  // proc
-  "builtin_name", "builtin-name",
-  "builtin_p", "builtin?",
-  "function_p", "function?",
-  "macro_p", "macro?",
-  "special_operator_p", "special-operator?",
-  // number
-  "bit_and", "&",
-  "bit_not", "~",
-  "bit_or", "|",
-  "bit_shift", "<<",
-  "bit_xor", "^",
-  "int_p", "int?",
-  "int_divide", "//",
-  "number_add", "+",
-  "number_divide", "/",
-  "number_lt", "<",
-  "number_modulo", "%",
-  "number_multiply", "*",
-  "number_p", "number?",
-  // sock
-  "server_socket", "server-socket",
-  "client_socket", "client-socket",
-  NULL
-};
-
 char *special_name_table[] = {
 #define DEFSP(name) #name,
 #include "defsp.wk"
@@ -192,13 +125,28 @@ int (*function_table[])(int argc, object argv, object *result) = {
   NULL
 };
 
-char *bi_as_symbol_name(char *name)
+static int digit_val(char ch)
 {
-  int i;
+  if (isdigit(ch)) return ch - '0';
+  return ch - 'a' + 10;
+}
+
+char *bi_as_symbol_name(char *name, char *buf)
+{
+  char len;
+  int s, t;
   if (name == NULL) return NULL;
-  for (i = 0; symbol_name_map[i] != NULL; i += 2)
-    if (strcmp(name, symbol_name_map[i]) == 0) return symbol_name_map[i + 1];
-  return name;
+  s = t = 0;
+  len = strlen(name);
+  while (s < len) {
+    if (name[s] != '_') buf[t++] = name[s++];
+    else {
+      buf[t++] = 16 * digit_val(name[s + 1]) + digit_val(name[s + 2]);
+      s += 4;
+    }
+  }
+  buf[t] = '\0';
+  return buf;
 }
 
 int bi_sint(object o, int *p)

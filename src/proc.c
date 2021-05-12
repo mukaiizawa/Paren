@@ -6,14 +6,14 @@
 #include "bi.h"
 #include "ip.h"
 
-DEFUN(special_operator_p)
+DEFUN(special_2d_operator_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(object_type_p(argv->cons.car, SPECIAL));
   return TRUE;
 }
 
-DEFUN(builtin_p)
+DEFUN(builtin_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (object_type(argv->cons.car)) {
@@ -27,20 +27,7 @@ DEFUN(builtin_p)
   }
 }
 
-DEFUN(builtin_name)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
-    case BUILTINFUNC:
-    case SPECIAL:
-      *result = argv->cons.car->builtin.name;
-      return TRUE;
-    default:
-      return FALSE;
-  }
-}
-
-DEFUN(function_p)
+DEFUN(function_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (object_type(argv->cons.car)) {
@@ -55,11 +42,24 @@ DEFUN(function_p)
   return TRUE;
 }
 
-DEFUN(macro_p)
+DEFUN(macro_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(object_type_p(argv->cons.car, MACRO));
   return TRUE;
+}
+
+DEFUN(builtin_2d_name)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  switch (object_type(argv->cons.car)) {
+    case BUILTINFUNC:
+    case SPECIAL:
+      *result = argv->cons.car->builtin.name;
+      return TRUE;
+    default:
+      return FALSE;
+  }
 }
 
 DEFUN(procparams)

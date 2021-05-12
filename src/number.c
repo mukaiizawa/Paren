@@ -31,7 +31,7 @@ static int mark_division_by_zero(void)
   return ip_mark_error("division by zero");
 }
 
-DEFUN(number_p)
+DEFUN(number_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (object_type(argv->cons.car)) {
@@ -46,7 +46,7 @@ DEFUN(number_p)
   }
 }
 
-DEFUN(int_p)
+DEFUN(int_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (object_type(argv->cons.car)) {
@@ -92,7 +92,7 @@ static int int64_add(int64_t x, object argv, object *result)
   return double_add((double)x, argv, result);
 }
 
-DEFUN(number_add)
+DEFUN(_2b_)
 {
   if (argc == 0) {
     *result = gc_new_xint(0);
@@ -143,7 +143,7 @@ static int int64_multiply(int64_t ix, object argv, object *result)
   return double_multiply((double)ix, argv, result);
 }
 
-DEFUN(number_multiply)
+DEFUN(_2a_)
 {
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   return int64_multiply(1, argv, result);
@@ -180,7 +180,7 @@ static int int64_divide(int64_t ix, object argv, object *result)
   return double_divide((double)ix, argv, result);
 }
 
-DEFUN(number_divide)
+DEFUN(_2f_)
 {
   int64_t ix;
   double dx;
@@ -196,7 +196,7 @@ DEFUN(number_divide)
 #define DBL_MAX_INT ((int64_t)1<<DBL_MANT_DIG)
 #define DBL_MIN_INT (-DBL_MAX_INT-1)
 
-DEFUN(int_divide)
+DEFUN(_2f__2f_)
 {
   int64_t ix, iy;
   double dx;
@@ -222,7 +222,7 @@ DEFUN(int_divide)
   }
 }
 
-DEFUN(number_modulo)
+DEFUN(_25_)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
@@ -266,7 +266,7 @@ static int int64_lt(int64_t x, object argv, object *result)
   return double_lt((double)x, argv, result);
 }
 
-DEFUN(number_lt)
+DEFUN(_3c_)
 {
   int64_t i;
   double d;
@@ -279,7 +279,7 @@ DEFUN(number_lt)
   return mark_required_number();
 }
 
-DEFUN(bit_not)
+DEFUN(_7e_)
 {
   int64_t x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -289,7 +289,7 @@ DEFUN(bit_not)
   return TRUE;
 }
 
-DEFUN(bit_and)
+DEFUN(_26_)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
@@ -304,7 +304,7 @@ DEFUN(bit_and)
   return TRUE;
 }
 
-DEFUN(bit_or)
+DEFUN(_7c_)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
@@ -319,7 +319,7 @@ DEFUN(bit_or)
   return TRUE;
 }
 
-DEFUN(bit_xor)
+DEFUN(_5e_)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
@@ -342,7 +342,7 @@ static int bits(int64_t x)
   return XINT_BITS;
 }
 
-DEFUN(bit_shift)
+DEFUN(_3c__3c_)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;

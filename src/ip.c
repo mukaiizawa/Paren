@@ -720,14 +720,14 @@ static void pop_throw_frame(void)
 
 // fundamental built in functions
 
-DEFUN(eq_p)
+DEFUN(_3d_)
 {
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   reg[0] = object_bool(object_eq_p(argv->cons.car, argv->cons.cdr->cons.car));
   return TRUE;
 }
 
-DEFUN(same_p)
+DEFUN(_3d__3d_)
 {
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   reg[0] = object_bool(argv->cons.car == argv->cons.cdr->cons.car);
@@ -809,52 +809,7 @@ DEFUN(slice)
   }
 }
 
-DEFUN(in_p)
-{
-  int i, start, stop, len;
-  object o;
-  if (!bi_argc_range(argc, 1, 3)) return FALSE;
-  reg[0] = object_nil;
-  if ((o = argv->cons.car) == object_nil) return TRUE;
-  if (argc < 2) start = 0;
-  else if (!bi_spint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
-  if (argc < 3) stop = -1;
-  else if (!bi_spint((argv = argv->cons.cdr)->cons.car, &stop)) return FALSE;
-  else if (start > stop) return FALSE;
-  switch (object_type(o)) {
-    case CONS:
-      for (i = 0; i < start; i++) {
-        if ((o = o->cons.cdr) == object_nil) return TRUE;
-      }
-      if (o == object_nil || stop == -1) reg[0] = o;
-      else {
-        for (i = start; i < stop; i++) {
-          reg[0] = gc_new_cons(o->cons.car, reg[0]);
-          if ((o = o->cons.cdr) == object_nil) break;
-        }
-        reg[0] = list_reverse(reg[0]);
-      }
-      return TRUE;
-    case BYTES:
-      if (stop == -1) stop = o->mem.size;
-      else if (stop > o->mem.size) return FALSE;
-      reg[0] = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
-      return TRUE;
-    case STRING:
-      if (!str_slice(o, start, stop, &(reg[0]))) return FALSE;
-      return TRUE;
-    case ARRAY:
-      if (stop == -1) stop = o->array.size;
-      else if (stop > o->array.size) return FALSE;
-      reg[0] = gc_new_array(len = stop - start);
-      memcpy(reg[0]->array.elt, o->array.elt + start, sizeof(object) * len);
-      return TRUE;
-    default:
-      return bi_mark_type_error();
-  }
-}
-
-DEFUN(at)
+DEFUN(_5b__5d_)
 {
   int i, byte;
   object o;
@@ -891,7 +846,7 @@ DEFUN(address)
   return TRUE;
 }
 
-DEFUN(not)
+DEFUN(_21_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   *result = object_bool(argv->cons.car == object_nil);
@@ -923,7 +878,7 @@ DEFUN(apply)
   }
 }
 
-DEFUN(expand_macro)
+DEFUN(expand_2d_macro)
 {
   object f, args;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -940,7 +895,7 @@ DEFUN(expand_macro)
   return TRUE;
 }
 
-DEFUN(bound_p)
+DEFUN(bound_3f_)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -1021,7 +976,7 @@ static object find_class_method(object cls_sym, object mtd_sym)
   return map_get_propagation(reg[1], gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size));
 }
 
-DEFUN(is_a_p)
+DEFUN(is_2d_a_3f_)
 {
   object o, cls;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
@@ -1034,7 +989,7 @@ DEFUN(is_a_p)
   return TRUE;
 }
 
-DEFUN(find_class)
+DEFUN(find_2d_class)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!object_type_p(argv->cons.car, SYMBOL)) return FALSE;
@@ -1042,7 +997,7 @@ DEFUN(find_class)
   return TRUE;
 }
 
-DEFUN(find_method)
+DEFUN(find_2d_method)
 {
   object cls, cls_sym, mtd_sym, features;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
@@ -1232,7 +1187,7 @@ DEFSP(dynamic)
   return FALSE;
 }
 
-DEFSP(symbol_bind)
+DEFSP(_3c__2d_)
 {
   return gen_bind_frames(BIND_PROPAGATION_FRAME, argv);
 }
@@ -1284,7 +1239,7 @@ DEFSP(if)
   return TRUE;
 }
 
-DEFSP(unwind_protect)
+DEFSP(unwind_2d_protect)
 {
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   gen1(UNWIND_PROTECT_FRAME, argv->cons.cdr);

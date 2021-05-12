@@ -123,14 +123,14 @@ static object new_string(char *name)
 static void make_builtin(void)
 {
   int i;
-  char *s;
+  char buf[MAX_STR_LEN];
   object o;
-  for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++) {
-    o = gc_new_builtin(SPECIAL, new_symbol(s), special_table[i]);
+  for (i = 0; bi_as_symbol_name(special_name_table[i], buf) != NULL; i++) {
+    o = gc_new_builtin(SPECIAL, new_symbol(buf), special_table[i]);
     map_put(object_toplevel, o->builtin.name, o);
   }
-  for (i = 0; (s = bi_as_symbol_name(function_name_table[i])) != NULL; i++) {
-    o = gc_new_builtin(BUILTINFUNC, new_symbol(s), function_table[i]);
+  for (i = 0; bi_as_symbol_name(function_name_table[i], buf) != NULL; i++) {
+    o = gc_new_builtin(BUILTINFUNC, new_symbol(buf), function_table[i]);
     map_put(object_toplevel, o->builtin.name, o);
   }
 }

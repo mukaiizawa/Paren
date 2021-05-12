@@ -13,22 +13,22 @@ static int mem_p(int argc, object argv, object *result, int type)
   return TRUE;
 }
 
-DEFUN(symbol_p)
+DEFUN(symbol_3f_)
 {
   return mem_p(argc, argv, result, SYMBOL);
 }
 
-DEFUN(keyword_p)
+DEFUN(keyword_3f_)
 {
   return mem_p(argc, argv, result, KEYWORD);
 }
 
-DEFUN(string_p)
+DEFUN(string_3f_)
 {
   return mem_p(argc, argv, result, STRING);
 }
 
-DEFUN(bytes_p)
+DEFUN(bytes_3f_)
 {
   return mem_p(argc, argv, result, BYTES);
 }
@@ -80,7 +80,7 @@ DEFUN(string)
   return mem_to(argc, argv, result, STRING);
 }
 
-DEFUN(xstring)
+DEFUN(string_21_)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -158,17 +158,6 @@ DEFUN(memmem)
     }
   }
   *result = object_nil;
-  return TRUE;
-}
-
-DEFUN(mem_eq_p)
-{
-  object o, p;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_arg_mem(argv->cons.car, &o)) return FALSE;
-  if (!bi_arg_mem(argv->cons.cdr->cons.car, &p)) return FALSE;
-  *result = object_bool((o->mem.size == p->mem.size)
-      && memcmp(o->mem.elt, p->mem.elt, p->mem.size) == 0);
   return TRUE;
 }
 
@@ -279,7 +268,7 @@ DEFUN(ord)
   return TRUE;
 }
 
-DEFUN(ascii_p)
+DEFUN(ascii_3f_)
 {
   int len;
   object o;
@@ -307,37 +296,37 @@ static int xctype_p(int argc, object argv, int (*f)(int c), object *result)
   return TRUE;
 }
 
-DEFUN(alnum_p)
+DEFUN(alnum_3f_)
 {
   return xctype_p(argc, argv, isalnum, result);
 }
 
-DEFUN(alpha_p)
+DEFUN(alpha_3f_)
 {
   return xctype_p(argc, argv, isalpha, result);
 }
 
-DEFUN(digit_p)
+DEFUN(digit_3f_)
 {
   return xctype_p(argc, argv, isdigit, result);
 }
 
-DEFUN(space_p)
+DEFUN(space_3f_)
 {
   return xctype_p(argc, argv, isspace, result);
 }
 
-DEFUN(print_p)
+DEFUN(print_3f_)
 {
   return xctype_p(argc, argv, isprint, result);
 }
 
-DEFUN(lower_p)
+DEFUN(lower_3f_)
 {
   return xctype_p(argc, argv, islower, result);
 }
 
-DEFUN(upper_p)
+DEFUN(upper_3f_)
 {
   return xctype_p(argc, argv, isupper, result);
 }
