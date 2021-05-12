@@ -384,6 +384,10 @@
                 ([] b 0 0xff)
                 (= ([] b 0) 0xff)))))
 
+(function in? (elt seq)
+  ; Returns whether x is included in X.
+  (some? (f (y) (= elt y)) seq))
+
 ; function & macro
 
 (builtin-function function? (x)
@@ -806,10 +810,6 @@
   (if (nil? l) true
       (fn (car l)) nil
       (none? fn (cdr l))))
-
-(function include? (x l)
-  ; Returns whether x is included in X.
-  (some? (f (y) (= x y)) l))
 
 (function every-adjacent? (fn l)
   ; Returns whether each adjacent element of the specified list l returns true when evaluated as an argument to the specified function fn.

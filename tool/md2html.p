@@ -76,7 +76,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
   (let (contents-index (array 6))
     (dotimes (i 6) ([] contents-index i 0))
     (map (f (node)
-           (if (include? (car node) $headers) (parse-header contents-index node)
+           (if (in? (car node) $headers) (parse-header contents-index node)
                node))
          nodes)))
 

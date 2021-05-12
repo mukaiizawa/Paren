@@ -809,6 +809,51 @@ DEFUN(slice)
   }
 }
 
+DEFUN(in_p)
+{
+  int i, start, stop, len;
+  object o;
+  if (!bi_argc_range(argc, 1, 3)) return FALSE;
+  reg[0] = object_nil;
+  if ((o = argv->cons.car) == object_nil) return TRUE;
+  if (argc < 2) start = 0;
+  else if (!bi_spint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
+  if (argc < 3) stop = -1;
+  else if (!bi_spint((argv = argv->cons.cdr)->cons.car, &stop)) return FALSE;
+  else if (start > stop) return FALSE;
+  switch (object_type(o)) {
+    case CONS:
+      for (i = 0; i < start; i++) {
+        if ((o = o->cons.cdr) == object_nil) return TRUE;
+      }
+      if (o == object_nil || stop == -1) reg[0] = o;
+      else {
+        for (i = start; i < stop; i++) {
+          reg[0] = gc_new_cons(o->cons.car, reg[0]);
+          if ((o = o->cons.cdr) == object_nil) break;
+        }
+        reg[0] = list_reverse(reg[0]);
+      }
+      return TRUE;
+    case BYTES:
+      if (stop == -1) stop = o->mem.size;
+      else if (stop > o->mem.size) return FALSE;
+      reg[0] = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
+      return TRUE;
+    case STRING:
+      if (!str_slice(o, start, stop, &(reg[0]))) return FALSE;
+      return TRUE;
+    case ARRAY:
+      if (stop == -1) stop = o->array.size;
+      else if (stop > o->array.size) return FALSE;
+      reg[0] = gc_new_array(len = stop - start);
+      memcpy(reg[0]->array.elt, o->array.elt + start, sizeof(object) * len);
+      return TRUE;
+    default:
+      return bi_mark_type_error();
+  }
+}
+
 DEFUN(at)
 {
   int i, byte;

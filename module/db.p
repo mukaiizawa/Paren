@@ -67,9 +67,9 @@
             (str " " (car args) " is null")
             (= ope 'is-not-null)
             (str " " (car args) " is not null")
-            (include? ope '(< > <= >= = <>))
+            (in? ope '(< > <= >= = <>))
             (str  " " (db.sqlstr (car args)) " " ope " " (db.sqlstr (cadr args)))
-            (include? ope '(and or))
+            (in? ope '(and or))
             (str (db.parse-cond (car args)) " " ope " ("
                  (if (cddr args) (db.parse-cond (cons ope (cdr args)))
                      (db.parse-cond (cadr args)))

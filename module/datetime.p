@@ -98,7 +98,7 @@
   (let (m (&month self))
     (if (= m 2) (- (datetime.offset-0001-01-01 (&year self) 3 1)
                    (datetime.offset-0001-01-01 (&year self) 2 1))
-        (include? m '(4 6 9 11)) 30
+        (in? m '(4 6 9 11)) 30
         31)))
 
 (method DateTime .offset (:key days)
