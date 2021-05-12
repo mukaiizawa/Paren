@@ -43,18 +43,19 @@
 (method Player .attack ()
   (write-line)
   (write-bytes "Attack style: [s]tab [d]ouble swing [r]oundhouse:")
-  (switch (read)
-    's (.stab self)
-    'd (.double-swing self)
-    'r (.round-house self)
-    :default (begin (write-line "That is not a valid attack style.")
-                    (.attack self))))
+  (let (cmd (read))
+    (if (= cmd 's) (.stab self)
+        (= cmd 'd) (.double-swing self)
+        (= cmd 'r) (.round-house self)
+        (begin
+          (write-line "That is not a valid attack style.")
+          (.attack self)))))
 
 (method Player .hit (x :key type)
-  (switch type
-    :health (&health! self (- (&health self) x))
-    :agility (&agility! self (- (&agility self) x))
-    :strength (&strength! self (- (&strength self) x))))
+  (if (= type :health) (&health! self (- (&health self) x))
+      (= type :agility) (&agility! self (- (&agility self) x))
+      (= type :strength) (&strength! self (- (&strength self) x))
+      (assert nil)))
 
 (method Player .pick-monster ()
   (write-line)
@@ -141,7 +142,7 @@
   (let (x (rand1-n (&sliminess self)))
     (write-line (str "A slime mold wraps around your legs and decreases your agility by " x "!"))
     (.hit $player x :type :agility)
-    (when (randbool)
+    (when (rand.bool)
       (write-line "It also squirts in your face, taking away a health point!")
       (.hit $player 1 :type :health))))
 
