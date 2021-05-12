@@ -2420,8 +2420,7 @@
         (= next ")") (begin (.skip self) '(:close-paren))
         (= next "'") (begin (.skip self) '(:quote))
         (= next "`") (begin (.skip self) '(:backquote))
-        (= next ",") (begin (.skip self) (if (!= (&next self) "@") '(:unquote)
-                                             (begin (.skip self) '(:unquote-splicing))))
+        (= next ",") (begin (.skip self) (if (= (&next self) "@") (begin (.skip self) '(:unquote-splicing)) '(:unquote)))
         (= next "\"") (list :atom (.lex-string self))
         (= next ":") (list :atom (.lex-keyword self))
         (= next ";") (begin (.skip-line self) (.lex self))
@@ -2451,14 +2450,14 @@
 
 (method ParenReader .parse ()
   (let (type (&token-type self))
-    (if (= type :EOF) nil
-        (= type :atom) (&token self)
-        (= type :open-paren) (.parse-list self)
-        (= type :quote) (list 'quote (.parse (.scan self)))
-        (= type :backquote) (list 'quasiquote (.parse (.scan self)))
-        (= type :unquote) (list 'unquote (.parse (.scan self)))
-        (= type :unquote-splicing) (list 'unquote-splicing (.parse (.scan self)))
-        (= type :read-macro) (apply ({} $read-table (&token self)) (list self))
+    (if (== type :EOF) nil
+        (== type :atom) (&token self)
+        (== type :open-paren) (.parse-list self)
+        (== type :quote) (list 'quote (.parse (.scan self)))
+        (== type :backquote) (list 'quasiquote (.parse (.scan self)))
+        (== type :unquote) (list 'unquote (.parse (.scan self)))
+        (== type :unquote-splicing) (list 'unquote-splicing (.parse (.scan self)))
+        (== type :read-macro) (apply ({} $read-table (&token self)) (list self))
         (.raise self "syntax error"))))
 
 (macro unquote (expr)
