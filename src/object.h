@@ -132,11 +132,6 @@ extern int list_len(object o);
 extern object list_reverse(object o);
 
 extern int ch_len(unsigned char ch, int *len);
-#if WINDOWS_P
-extern int str_wctomb(LPWSTR lp, char *p);
-extern int str_mbtowc(char *p, LPWSTR lp);
-extern int str_mbtomb(char *p, char *q);
-#endif
 extern int str_len(object o, int *len);
 extern int str_slice(object o, int start, int stop, object *result);
 
