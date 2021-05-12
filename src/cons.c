@@ -106,6 +106,6 @@ DEFUN(xreverse)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_arg_list(argv->cons.car, &o)) return FALSE;
   if (o == object_nil) *result = object_nil;
-  else *result = object_reverse(o);
+  else *result = list_reverse(o);
   return TRUE;
 }

@@ -25,7 +25,7 @@ DEFUN(keys)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_arg_type(argv->cons.car, DICT, &o)) return FALSE;
-  *result = object_map_keys(o);
+  *result = map_keys(o);
   return TRUE;
 }
 
@@ -36,10 +36,10 @@ DEFUN(dict_access)
   if (!bi_arg_type(argv->cons.car, DICT, &o)) return FALSE;
   if (!bi_arg_immutable_mem((argv = argv->cons.cdr)->cons.car, &key)) return FALSE;
   if (argc == 2) {
-    if ((*result = object_find(o, key)) == NULL) *result = object_nil;
+    if ((*result = map_get(o, key)) == NULL) *result = object_nil;
   } else {
     *result = argv->cons.cdr->cons.car;
-    object_bind(o, key, *result);
+    map_put(o, key, *result);
   }
   return TRUE;
 }

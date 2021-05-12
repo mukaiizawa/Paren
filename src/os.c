@@ -1,11 +1,6 @@
 // os module.
 
 #include "std.h"
-
-#include <time.h>
-#include <string.h>
-#include <errno.h>
-
 #include "xsleep.h"
 #include "object.h"
 #include "gc.h"

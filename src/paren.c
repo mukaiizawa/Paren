@@ -1,13 +1,6 @@
 // paren main routine.
 
 #include "std.h"
-
-#if WINDOWS_P
-#include <io.h>
-#include <fcntl.h>
-#include <mbctype.h>
-#endif
-
 #include "pf.h"
 #include "object.h"
 #include "lex.h"
@@ -134,11 +127,11 @@ static void make_builtin(void)
   object o;
   for (i = 0; (s = bi_as_symbol_name(special_name_table[i])) != NULL; i++) {
     o = gc_new_builtin(SPECIAL, new_symbol(s), special_table[i]);
-    object_bind(object_toplevel, o->builtin.name, o);
+    map_put(object_toplevel, o->builtin.name, o);
   }
   for (i = 0; (s = bi_as_symbol_name(function_name_table[i])) != NULL; i++) {
     o = gc_new_builtin(BUILTINFUNC, new_symbol(s), function_table[i]);
-    object_bind(object_toplevel, o->builtin.name, o);
+    map_put(object_toplevel, o->builtin.name, o);
   }
 }
 
@@ -172,8 +165,8 @@ static void make_initial_objects(int argc, char *argv[])
   object_nil = new_symbol("nil");
   object_true = new_symbol("true");
   object_toplevel = gc_new_env(object_nil, 1 << 11);
-  object_bind(object_toplevel, object_nil, object_nil);
-  object_bind(object_toplevel, object_true, object_true);
+  map_put(object_toplevel, object_nil, object_nil);
+  map_put(object_toplevel, object_true, object_true);
   object_key = new_keyword("key");
   object_opt = new_keyword("opt");
   object_rest = new_keyword("rest");
@@ -189,8 +182,8 @@ static void make_initial_objects(int argc, char *argv[])
   object_Exception = new_symbol("Exception");
   object_Error = new_symbol("Error");
   object_SystemExit = new_symbol("SystemExit");
-  object_bind(object_toplevel, new_symbol("$args"), parse_args(argc, argv));
-  object_bind(object_toplevel, new_symbol("core.p"), new_string(core_fn));
+  map_put(object_toplevel, new_symbol("$args"), parse_args(argc, argv));
+  map_put(object_toplevel, new_symbol("core.p"), new_string(core_fn));
 #if WINDOWS_P
   host_name = "windows";
 #elif OS_CODE == OS_LINUX
@@ -202,7 +195,7 @@ static void make_initial_objects(int argc, char *argv[])
 #else
   xassert(FALSE);
 #endif
-  object_bind(object_toplevel, new_symbol("$hostname"), new_keyword(host_name));
+  map_put(object_toplevel, new_symbol("$hostname"), new_keyword(host_name));
   make_builtin();
 }
 

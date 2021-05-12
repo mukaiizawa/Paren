@@ -99,7 +99,7 @@ int xmbtowc(char *p, LPWSTR lp)
   return MultiByteToWideChar(CP_UTF8, dwFlags, p, -1, lp, MAX_STR_LEN);
 }
 
-int xmbtomb(char *p, char *q)
+int xmbtombacp(char *p, char *q)
 {
   WCHAR wcbuf[MAX_STR_LEN];
   if (!xmbtowc(p, wcbuf)) return FALSE;

@@ -1,9 +1,10 @@
 // paren object.
 
 #include "std.h"
-#include "xbarray.h"
 #include "object.h"
 #include "gc.h"
+#include "bi.h"
+#include "ip.h"
 
 object object_toplevel;
 object object_nil;
@@ -25,40 +26,6 @@ object object_super;
 object object_features;
 object object_fields;
 object object_message;
-
-int object_list_len(object o)
-{
-  int i;
-  xassert(object_list_p(o));
-  for (i = 0; object_type_p(o, CONS); i++) o = o->cons.cdr;
-  return i;
-}
-
-object object_bool(int b)
-{
-  if (b) return object_true;
-  return object_nil;
-}
-
-object object_reverse(object o)
-{
-  object p, acc;
-  xassert(object_list_p(o));
-  acc = object_nil;
-  while (o != object_nil) {
-    p = o->cons.cdr;
-    o->cons.cdr = acc;
-    acc = o;
-    o = p;
-  }
-  return acc;
-}
-
-int object_list_p(object o)
-{
-  if (o == object_nil) return TRUE;
-  return object_type_p(o, CONS);
-}
 
 int object_byte_size(object o)
 {
@@ -221,12 +188,150 @@ char *object_describe(object o, char *buf)
   return buf;
 }
 
+object object_bool(int b)
+{
+  if (b) return object_true;
+  return object_nil;
+}
 
-object object_find(object o, object s)
+static int dbl_eq(double x, object p)
+{
+  int64_t i;
+  double d;
+  if (bi_int64(p, &i)) return fabs(x - (double)i) < DBL_EPSILON;
+  if (bi_double(p, &d)) return fabs(x - d) < DBL_EPSILON;
+  return FALSE;
+}
+
+static int int64eq_p(int64_t x, object p)
+{
+  int64_t y;
+  if (bi_int64(p, &y)) return x == y;
+  return dbl_eq((double)x, p);
+}
+
+static int numeq_p(object o, object p)
+{
+  int64_t i;
+  double d;
+  if (bi_int64(o, &i)) return int64eq_p(i, p);
+  if (bi_double(o, &d)) return dbl_eq(d, p);
+  return FALSE;
+}
+
+static int dict_eq_p(object o, object p)
+{
+  object v, keys;
+  if (o->map.entry_count != p->map.entry_count) return FALSE;
+  keys = map_keys(o);
+  while (keys != object_nil) {
+    if ((v = map_get(p, keys->cons.car)) == NULL) return FALSE;
+    if (!object_eq_p(map_get(o, keys->cons.car), v)) return FALSE;
+    keys = keys->cons.cdr;
+  }
+  return TRUE;
+}
+
+int object_eq_p(object o, object p)
+{
+  int i;
+  if (o == p) return TRUE;
+  switch (object_type(o)) {
+    case SINT:
+    case XINT:
+    case XFLOAT:
+      return numeq_p(o, p);
+    case BYTES:
+    case STRING:
+      if (object_type(o) != object_type(p)) return FALSE;
+      if (o->mem.size != p->mem.size) return FALSE;
+      return memcmp(o->mem.elt, p->mem.elt, o->mem.size) == 0;
+    case CONS:
+      if (!object_type_p(p, CONS)) return FALSE;
+      while (o != object_nil) {
+        if (p == object_nil) return FALSE;
+        if (!object_eq_p(o->cons.car, p->cons.car)) return FALSE;
+        o = o->cons.cdr;
+        p = p->cons.cdr;
+      }
+      return TRUE;
+    case ARRAY:
+      if (!object_type_p(p, ARRAY)) return FALSE;
+      if (o->array.size != p->array.size) return FALSE;
+      for (i = 0; i < o->array.size; i++)
+        if (!object_eq_p(o->cons.car, p->cons.car)) return FALSE;
+      return TRUE;
+    case DICT:
+      if (!object_type_p(p, DICT)) return FALSE;
+      return dict_eq_p(o, p);
+    default:
+      return FALSE;
+  }
+}
+
+int list_len(object o)
+{
+  int i;
+  xassert(list_p(o));
+  for (i = 0; object_type_p(o, CONS); i++) o = o->cons.cdr;
+  return i;
+}
+
+object list_reverse(object o)
+{
+  object p, acc;
+  xassert(list_p(o));
+  acc = object_nil;
+  while (o != object_nil) {
+    p = o->cons.cdr;
+    o->cons.cdr = acc;
+    acc = o;
+    o = p;
+  }
+  return acc;
+}
+
+int ch_len(unsigned char ch, int *len)
+{
+  if (ch < 0x80) (*len) += 1;
+  else if (ch < 0xe0) (*len) += 2;
+  else if (ch < 0xf0) (*len) += 3;
+  else if (ch < 0xf8) (*len) += 4;
+  else return ip_mark_error("Illegal byte sequence");
+  return TRUE;
+}
+
+int str_len(object o, int *len)
+{
+  int i;
+  i = *len = 0;
+  while (i < o->mem.size) {
+    if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
+    (*len)++;
+  }
+  return TRUE;
+}
+
+int str_slice(object o, int start, int stop, object *result)
+{
+  int i, s, t;
+  for (i = s = 0; i < start; i++)
+    if (!ch_len(LC(o->mem.elt + s), &s)) return FALSE;
+  if (stop == -1) t = o->mem.size;
+  else {
+    for (i = start, t = s; i < stop; i++) {
+      if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
+    }
+  }
+  *result = gc_new_mem_from(STRING, o->mem.elt + s, t - s);
+  return TRUE;
+}
+
+object map_get(object o, object s)
 {
   int i;
   object p;
-  i = hash(s) % o->map.half_size;
+  i = object_hash(s) % o->map.half_size;
   while ((p = o->map.table[i]) != NULL) {
     if (p == s) return o->map.table[i + o->map.half_size];
     if (++i == o->map.half_size) i = 0;
@@ -234,21 +339,21 @@ object object_find(object o, object s)
   return NULL;
 }
 
-object object_find_propagation(object o, object s)
+object map_get_propagation(object o, object s)
 {
   object p;
   while (o != object_nil) {
-    if ((p = object_find(o, s)) != NULL) return p;
+    if ((p = map_get(o, s)) != NULL) return p;
     o = o->map.top;
   }
   return NULL;
 }
 
-void object_bind(object o, object s, object v)
+void map_put(object o, object s, object v)
 {
   int i;
   object p;
-  i = hash(s) % o->map.half_size;
+  i = object_hash(s) % o->map.half_size;
   while ((p = o->map.table[i]) != NULL) {
     if (p == s) {
       o->map.table[i + o->map.half_size] = v;
@@ -262,19 +367,19 @@ void object_bind(object o, object s, object v)
   if (o->map.entry_count * 2 > o->map.half_size) gc_extend_table(o);
 }
 
-void object_bind_propagation(object o, object s, object v)
+void map_put_propagation(object o, object s, object v)
 {
   while (o != object_toplevel) {
-    if (object_find(o, s) != NULL) {
-      object_bind(o, s, v);
+    if (map_get(o, s) != NULL) {
+      map_put(o, s, v);
       return;
     }
     o = o->map.top;
   }
-  object_bind(object_toplevel, s, v);
+  map_put(object_toplevel, s, v);
 }
 
-void object_map_foreach(object o, void (*f)(void *s, void *v))
+void map_foreach(object o, void (*f)(void *s, void *v))
 {
   int i;
   object *table;
@@ -283,7 +388,7 @@ void object_map_foreach(object o, void (*f)(void *s, void *v))
     if (table[i] != NULL) (*f)(table[i], table[i + o->map.half_size]);
 }
 
-int object_map_len(object o)
+int map_len(object o)
 {
   int i, len;
   object *table;
@@ -294,7 +399,7 @@ int object_map_len(object o)
   return len;
 }
 
-object object_map_keys(object o)
+object map_keys(object o)
 {
   int i;
   object keys, *table;

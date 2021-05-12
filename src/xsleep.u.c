@@ -2,7 +2,6 @@
 
 #include "std.h"
 #include "xsleep.h"
-#include <time.h>
 
 void xsleep(double t)
 {

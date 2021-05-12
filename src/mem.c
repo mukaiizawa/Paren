@@ -85,7 +85,7 @@ DEFUN(xstring)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_arg_mutable_mem(argv->cons.car, &o)) return FALSE;
-  set_type(o, STRING);
+  object_set_type(o, STRING);
   *result = o;
   return TRUE;
 }
@@ -277,4 +277,93 @@ DEFUN(ord)
   }
   *result = gc_new_xint(x);
   return TRUE;
+}
+
+DEFUN(ascii_p)
+{
+  int len;
+  object o;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, STRING, &o)) return FALSE;
+  if (!str_len(o, &len)) return FALSE;
+  *result = object_bool(len == o->mem.size);
+  return TRUE;
+}
+
+static int xctype_p(int argc, object argv, int (*f)(int c), object *result)
+{
+  int i;
+  object o;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, STRING, &o)) return FALSE;
+  *result = object_nil;
+  if (o->mem.size == 0) return TRUE;
+  i = 0;
+  while (i < o->mem.size) {
+    if (!f(LC(o->mem.elt + i))) return TRUE;
+    if (!(ch_len(LC(o->mem.elt + i), &i))) return FALSE;
+  }
+  *result = object_true;
+  return TRUE;
+}
+
+DEFUN(alnum_p)
+{
+  return xctype_p(argc, argv, isalnum, result);
+}
+
+DEFUN(alpha_p)
+{
+  return xctype_p(argc, argv, isalpha, result);
+}
+
+DEFUN(digit_p)
+{
+  return xctype_p(argc, argv, isdigit, result);
+}
+
+DEFUN(space_p)
+{
+  return xctype_p(argc, argv, isspace, result);
+}
+
+DEFUN(print_p)
+{
+  return xctype_p(argc, argv, isprint, result);
+}
+
+DEFUN(lower_p)
+{
+  return xctype_p(argc, argv, islower, result);
+}
+
+DEFUN(upper_p)
+{
+  return xctype_p(argc, argv, isupper, result);
+}
+
+static int ch_conv_case(int argc, object argv, int (*f)(int c), int offset, object *result)
+{
+  int i, ch;
+  object o;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_arg_type(argv->cons.car, STRING, &o)) return FALSE;
+  o = gc_new_mem_from(STRING, o->mem.elt, o->mem.size);
+  i = 0;
+  while (i < o->mem.size) {
+    if (f(ch = LC(o->mem.elt + i))) SC(o->mem.elt + i, ch + offset);
+    if (!(ch_len(ch, &i))) return FALSE;
+  }
+  *result = o;
+  return TRUE;
+}
+
+DEFUN(lower)
+{
+  return ch_conv_case(argc, argv, isupper, 0x20, result);
+}
+
+DEFUN(upper)
+{
+  return ch_conv_case(argc, argv, islower, -0x20, result);
 }

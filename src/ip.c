@@ -1,16 +1,6 @@
 // interpreter.
 
 #include "std.h"
-
-#include <math.h>
-#include <float.h>
-
-#if UNIX_P
-#include <signal.h>
-#elif WINDOWS_P
-#include <windows.h>
-#endif
-
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
@@ -78,8 +68,8 @@ static object new_Error(object cls, char *msg)
 {
   object o;
   o = gc_new_dict();
-  object_bind(o, object_class, cls);
-  if (msg != NULL) object_bind(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
+  map_put(o, object_class, cls);
+  if (msg != NULL) map_put(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
   return o;
 }
 
@@ -209,11 +199,11 @@ static void exit1(void)
 {
   char buf[MAX_STR_LEN];
   object o;
-  fprintf(stderr, "%s", object_describe(object_find(reg[0], object_class), buf));
-  if ((o = object_find(reg[0], object_message)) != NULL && o != object_nil)
+  fprintf(stderr, "%s", object_describe(map_get(reg[0], object_class), buf));
+  if ((o = map_get(reg[0], object_message)) != NULL && o != object_nil)
     fprintf(stderr, " -- %s.", object_describe(o, buf));
   fprintf(stderr, "\n");
-  o = object_find(reg[0], object_stack_trace);
+  o = map_get(reg[0], object_stack_trace);
   while (o != object_nil) {
     fprintf(stderr, "	at: %s\n", object_describe(o->cons.car, buf));
     o = o->cons.cdr;
@@ -303,8 +293,8 @@ static int parse_args(void (*f)(object, object, object), object params
     , object args)
 {
   object o, k, v;
-  if (!object_list_p(params)) return ip_mark_error("illegal parameters");
-  if (!object_list_p(args)) return ip_mark_error("illegal arguments");
+  if (!list_p(params)) return ip_mark_error("illegal parameters");
+  if (!list_p(args)) return ip_mark_error("illegal arguments");
   // parse required args
   while (params != object_nil) {
     if (object_type_p(params->cons.car, KEYWORD)) break;
@@ -388,7 +378,7 @@ static void pop_apply_frame(void)
   if (func->proc.param_count == 0) reg[1] = func->proc.env;
   else reg[1] = gc_new_env(func->proc.env, func->proc.param_count * 2);
   gen_eval_sequential_frame(func->proc.body);
-  parse_args(&object_bind, func->proc.params, reg[0]);
+  parse_args(&map_put, func->proc.params, reg[0]);
 }
 
 static void pop_apply_builtin_frame(void)
@@ -399,7 +389,7 @@ static void pop_apply_builtin_frame(void)
   args = reg[0];
   function = f->builtin.u.function;
   pop_frame();
-  if ((*function)(object_list_len(args), args, &(reg[0]))) return;
+  if ((*function)(list_len(args), args, &(reg[0]))) return;
   gen2(FUNC_FRAME, reg[1], gc_new_cons(f->builtin.name, args));    // for stack trace
   if (error_msg == NULL) ip_mark_error("built-in function failed");
 }
@@ -414,8 +404,8 @@ static void pop_bind_frame(void)
 {
   object o;
   o = get_frame_var(fp, 0);
-  if (object_type_p(o, SYMBOL)) object_bind(reg[1], o, reg[0]);
-  else parse_args(&object_bind, o, reg[0]);
+  if (object_type_p(o, SYMBOL)) map_put(reg[1], o, reg[0]);
+  else parse_args(&map_put, o, reg[0]);
   pop_frame();
 }
 
@@ -444,8 +434,8 @@ static void pop_bind_propagation_frame(void)
 {
   object o;
   o = get_frame_var(fp, 0);
-  if (object_type_p(o, SYMBOL)) object_bind_propagation(reg[1], o, reg[0]);
-  else parse_args(&object_bind_propagation, o, reg[0]);
+  if (object_type_p(o, SYMBOL)) map_put_propagation(reg[1], o, reg[0]);
+  else parse_args(&map_put_propagation, o, reg[0]);
   pop_frame();
 }
 
@@ -453,7 +443,7 @@ static int eval_symbol(object *result)
 {
   object o;
   o = *result;
-  if ((*result = object_find_propagation(reg[1], *result)) == NULL) {
+  if ((*result = map_get_propagation(reg[1], *result)) == NULL) {
     gen2(FUNC_FRAME, reg[1], o);    // for stack trace
     ip_mark_error("unbound symbol");
     return FALSE;
@@ -479,7 +469,7 @@ static void pop_eval_frame(void)
       switch (object_type(operator)) {
         case SPECIAL:
           special = operator->builtin.u.special;
-          if ((*special)(object_list_len(args), args)) return;
+          if ((*special)(list_len(args), args)) return;
           gen2(FUNC_FRAME, reg[1], gc_new_cons(operator->builtin.name, args));    // for stack trace
           return;
         case BUILTINFUNC:
@@ -582,7 +572,7 @@ static void pop_eval_args_frame(void)
   set_frame_var(fp, 1, acc);
   if (rest == object_nil) {
     pop_frame();
-    reg[0] = object_reverse(acc);
+    reg[0] = list_reverse(acc);
   } else {
     set_frame_var(fp, 0, rest->cons.cdr);
     gen_eval_frame(rest->cons.car);
@@ -647,7 +637,7 @@ static int resolve_anonimous_proc(void)
   xassert(named_proc == NULL);
   e = reg[1];
   while (e != object_nil) {
-    object_map_foreach(e, find_named_proc);
+    map_foreach(e, find_named_proc);
     if (named_proc != NULL) return TRUE;
     e = e->map.top;
   }
@@ -695,8 +685,8 @@ static void pop_throw_frame(void)
   pop_frame();
   if (!pos_is_a_p(reg[0], object_Exception))
     reg[0] = new_Error(object_Error, "expected Exception object");
-  if (object_find(reg[0], object_stack_trace) == NULL)
-    object_bind(reg[0], object_stack_trace, get_call_stack());
+  if (map_get(reg[0], object_stack_trace) == NULL)
+    map_put(reg[0], object_stack_trace, get_call_stack());
   while (fp > -1) {
     switch (fs_top()) {
       case UNWIND_PROTECT_FRAME:
@@ -730,87 +720,10 @@ static void pop_throw_frame(void)
 
 // fundamental built in functions
 
-static int eq_p(object o, object p);
-
-static int dbl_eq(double x, object p)
-{
-  int64_t i;
-  double d;
-  if (bi_int64(p, &i)) return fabs(x - (double)i) < DBL_EPSILON;
-  if (bi_double(p, &d)) return fabs(x - d) < DBL_EPSILON;
-  return FALSE;
-}
-
-static int int64eq_p(int64_t x, object p)
-{
-  int64_t y;
-  if (bi_int64(p, &y)) return x == y;
-  return dbl_eq((double)x, p);
-}
-
-static int numeq_p(object o, object p)
-{
-  int64_t i;
-  double d;
-  if (bi_int64(o, &i)) return int64eq_p(i, p);
-  if (bi_double(o, &d)) return dbl_eq(d, p);
-  return FALSE;
-}
-
-static int dict_eq_p(object o, object p)
-{
-  object v, keys;
-  if (o->map.entry_count != p->map.entry_count) return FALSE;
-  keys = object_map_keys(o);
-  while (keys != object_nil) {
-    if ((v = object_find(p, keys->cons.car)) == NULL) return FALSE;
-    if (!eq_p(object_find(o, keys->cons.car), v)) return FALSE;
-    keys = keys->cons.cdr;
-  }
-  return TRUE;
-}
-
-static int eq_p(object o, object p)
-{
-  int i;
-  if (o == p) return TRUE;
-  switch (object_type(o)) {
-    case SINT:
-    case XINT:
-    case XFLOAT:
-      return numeq_p(o, p);
-    case BYTES:
-    case STRING:
-      if (object_type(o) != object_type(p)) return FALSE;
-      if (o->mem.size != p->mem.size) return FALSE;
-      return memcmp(o->mem.elt, p->mem.elt, o->mem.size) == 0;
-    case CONS:
-      if (!object_type_p(p, CONS)) return FALSE;
-      while (o != object_nil) {
-        if (p == object_nil) return FALSE;
-        if (!eq_p(o->cons.car, p->cons.car)) return FALSE;
-        o = o->cons.cdr;
-        p = p->cons.cdr;
-      }
-      return TRUE;
-    case ARRAY:
-      if (!object_type_p(p, ARRAY)) return FALSE;
-      if (o->array.size != p->array.size) return FALSE;
-      for (i = 0; i < o->array.size; i++)
-        if (!eq_p(o->cons.car, p->cons.car)) return FALSE;
-      return TRUE;
-    case DICT:
-      if (!object_type_p(p, DICT)) return FALSE;
-      return dict_eq_p(o, p);
-    default:
-      return FALSE;
-  }
-}
-
 DEFUN(eq_p)
 {
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  reg[0] = object_bool(eq_p(argv->cons.car, argv->cons.cdr->cons.car));
+  reg[0] = object_bool(object_eq_p(argv->cons.car, argv->cons.cdr->cons.car));
   return TRUE;
 }
 
@@ -818,42 +731,6 @@ DEFUN(same_p)
 {
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   reg[0] = object_bool(argv->cons.car == argv->cons.cdr->cons.car);
-  return TRUE;
-}
-
-static int ch_len(unsigned char ch, int *len)
-{
-  if (ch < 0x80) (*len) += 1;
-  else if (ch < 0xe0) (*len) += 2;
-  else if (ch < 0xf0) (*len) += 3;
-  else if (ch < 0xf8) (*len) += 4;
-  else return ip_mark_error("Illegal byte sequence");
-  return TRUE;
-}
-
-static int str_len(object o, int *len)
-{
-  int i;
-  i = *len = 0;
-  while (i < o->mem.size) {
-    if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
-    (*len)++;
-  }
-  return TRUE;
-}
-
-static int str_slice(object o, int start, int stop, object *result)
-{
-  int i, s, t;
-  for (i = s = 0; i < start; i++)
-    if (!ch_len(LC(o->mem.elt + s), &s)) return FALSE;
-  if (stop == -1) t = o->mem.size;
-  else {
-    for (i = start, t = s; i < stop; i++) {
-      if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
-    }
-  }
-  *result = gc_new_mem_from(STRING, o->mem.elt + s, t - s);
   return TRUE;
 }
 
@@ -866,7 +743,7 @@ DEFUN(len)
   else {
     switch (object_type(o)) {
       case CONS:
-        len = object_list_len(o);
+        len = list_len(o);
         break;
       case BYTES:
         len = o->mem.size;
@@ -878,7 +755,7 @@ DEFUN(len)
         len = o->array.size;
         break;
       case DICT:
-        len = object_map_len(o);
+        len = map_len(o);
       default:
         return bi_mark_type_error();
     }
@@ -910,7 +787,7 @@ DEFUN(slice)
           reg[0] = gc_new_cons(o->cons.car, reg[0]);
           if ((o = o->cons.cdr) == object_nil) break;
         }
-        reg[0] = object_reverse(reg[0]);
+        reg[0] = list_reverse(reg[0]);
       }
       return TRUE;
     case BYTES:
@@ -930,95 +807,6 @@ DEFUN(slice)
     default:
       return bi_mark_type_error();
   }
-}
-
-static int xctype_p(int argc, object argv, int (*f)(int c), object *result)
-{
-  int i;
-  object o;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, STRING, &o)) return FALSE;
-  *result = object_nil;
-  if (o->mem.size == 0) return TRUE;
-  i = 0;
-  while (i < o->mem.size) {
-    if (!f(LC(o->mem.elt + i))) return TRUE;
-    if (!(ch_len(LC(o->mem.elt + i), &i))) return FALSE;
-  }
-  *result = object_true;
-  return TRUE;
-}
-
-DEFUN(ascii_p)
-{
-  int len;
-  object o;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, STRING, &o)) return FALSE;
-  if (!str_len(o, &len)) return FALSE;
-  *result = object_bool(len == o->mem.size);
-  return TRUE;
-}
-
-DEFUN(alnum_p)
-{
-  return xctype_p(argc, argv, isalnum, result);
-}
-
-DEFUN(alpha_p)
-{
-  return xctype_p(argc, argv, isalpha, result);
-}
-
-DEFUN(digit_p)
-{
-  return xctype_p(argc, argv, isdigit, result);
-}
-
-DEFUN(space_p)
-{
-  return xctype_p(argc, argv, isspace, result);
-}
-
-DEFUN(print_p)
-{
-  return xctype_p(argc, argv, isprint, result);
-}
-
-DEFUN(lower_p)
-{
-  return xctype_p(argc, argv, islower, result);
-}
-
-DEFUN(upper_p)
-{
-  return xctype_p(argc, argv, isupper, result);
-}
-
-static int ch_conv_case(int argc, object argv, int (*f)(int c), int offset, object *result)
-{
-  int i, ch;
-  object o;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, STRING, &o)) return FALSE;
-  o = gc_new_mem_from(STRING, o->mem.elt, o->mem.size);
-  i = 0;
-  while (i < o->mem.size) {
-    if (f(ch = LC(o->mem.elt + i))) SC(o->mem.elt + i, ch + offset);
-    if (!(ch_len(ch, &i))) return FALSE;
-  }
-  *result = o;
-  return TRUE;
-}
-
-DEFUN(lower)
-{
-  return ch_conv_case(argc, argv, isupper, 0x20, result);
-}
-
-DEFUN(upper)
-{
-  return ch_conv_case(argc, argv, islower, -0x20, result);
 }
 
 DEFUN(at)
@@ -1099,7 +887,7 @@ DEFUN(expand_macro)
   f = reg[0]->cons.car;
   args = reg[0]->cons.cdr;
   if (object_type_p(f, SYMBOL)) {
-    if ((f = object_find_propagation(reg[1], f)) == NULL) return TRUE;
+    if ((f = map_get_propagation(reg[1], f)) == NULL) return TRUE;
   }
   if (!object_type_p(f, MACRO)) return TRUE;
   gen1(APPLY_FRAME, f);
@@ -1112,7 +900,7 @@ DEFUN(bound_p)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
-  reg[0] = object_bool(object_find_propagation(reg[1], o) != NULL);
+  reg[0] = object_bool(map_get_propagation(reg[1], o) != NULL);
   return TRUE;
 }
 
@@ -1138,23 +926,23 @@ static void trap(void)
 
 static int pos_object_p(object o)
 {
-  return object_type_p(o, DICT) && object_find(o, object_class) != NULL;
+  return object_type_p(o, DICT) && map_get(o, object_class) != NULL;
 }
 
 static int pos_class_p(object o)
 {
   return object_type_p(o, DICT)
-    && object_find(o, object_class) == object_Class
-    && object_find(o, object_symbol) != NULL
-    && object_find(o, object_super) != NULL
-    && object_find(o, object_features) != NULL
-    && object_find(o, object_fields) != NULL;
+    && map_get(o, object_class) == object_Class
+    && map_get(o, object_symbol) != NULL
+    && map_get(o, object_super) != NULL
+    && map_get(o, object_features) != NULL
+    && map_get(o, object_fields) != NULL;
 }
 
 static int find_class(object cls_sym, object *result)
 {
   if (!object_type_p(cls_sym, SYMBOL)) return FALSE;
-  if ((*result = object_find_propagation(reg[1], cls_sym)) == NULL) return FALSE;
+  if ((*result = map_get_propagation(reg[1], cls_sym)) == NULL) return FALSE;
   return pos_class_p(*result);
 }
 
@@ -1162,7 +950,7 @@ static int find_super_class(object cls_sym, object *result)
 {
   object cls;
   if (!find_class(cls_sym, &cls)) return FALSE;
-  return find_class(object_find(cls, object_super), result);
+  return find_class(map_get(cls, object_super), result);
 }
 
 
@@ -1170,10 +958,10 @@ static int pos_is_a_p(object o, object cls_sym) {
   object o_cls_sym;
   xassert(object_type_p(cls_sym, SYMBOL));
   if (!pos_object_p(o)) return FALSE;
-  o_cls_sym = object_find(o, object_class);
+  o_cls_sym = map_get(o, object_class);
   while (o_cls_sym != cls_sym) {
     if (!find_super_class(o_cls_sym, &o)) return FALSE;
-    o_cls_sym = object_find(o, object_symbol);
+    o_cls_sym = map_get(o, object_symbol);
   }
   return TRUE;
 }
@@ -1185,7 +973,7 @@ static object find_class_method(object cls_sym, object mtd_sym)
   xbarray_reset(&bi_buf);
   xbarray_copy(&bi_buf, cls_sym->mem.elt, cls_sym->mem.size);
   xbarray_copy(&bi_buf, mtd_sym->mem.elt, mtd_sym->mem.size);
-  return object_find_propagation(reg[1], gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size));
+  return map_get_propagation(reg[1], gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size));
 }
 
 DEFUN(is_a_p)
@@ -1197,7 +985,7 @@ DEFUN(is_a_p)
     ip_mark_error("require Class instance");
     return FALSE;
   }
-  reg[0] = object_bool(pos_is_a_p(o, object_find(cls, object_symbol)));
+  reg[0] = object_bool(pos_is_a_p(o, map_get(cls, object_symbol)));
   return TRUE;
 }
 
@@ -1220,15 +1008,15 @@ DEFUN(find_method)
     if ((*result = find_class_method(cls_sym, mtd_sym)) != NULL) return TRUE;
     // find feature method
     if (!find_class(cls_sym, &cls)) return FALSE;
-    features = object_find(cls, object_features);
-    if (!object_list_p(features)) return FALSE;
+    features = map_get(cls, object_features);
+    if (!list_p(features)) return FALSE;
     while (features != object_nil) {
       if ((*result = find_class_method(features->cons.car, mtd_sym)) != NULL) return TRUE;
       features = features->cons.cdr;
     }
     // super class
     if (!find_super_class(cls_sym, &cls)) return ip_mark_error("undeclared method");
-    cls_sym = object_find(cls, object_symbol);
+    cls_sym = map_get(cls, object_symbol);
   }
 }
 
@@ -1382,7 +1170,7 @@ DEFSP(dynamic)
   if (!bi_arg_type(argv->cons.car, SYMBOL, &s)) return FALSE;
   i = fp;
   e = reg[1];
-  if ((reg[0] = object_find(e, s)) != NULL) return TRUE;
+  if ((reg[0] = map_get(e, s)) != NULL) return TRUE;
   while ((i = prev_fp(i)) != -1) {
     switch (fs_nth(i)) {
       case LET_FRAME:
@@ -1394,7 +1182,7 @@ DEFSP(dynamic)
       default:
         continue;
     }
-    if ((reg[0] = object_find(e, s)) != NULL) return TRUE;
+    if ((reg[0] = map_get(e, s)) != NULL) return TRUE;
   }
   return FALSE;
 }
@@ -1489,7 +1277,7 @@ DEFSP(catch)
   object params;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
-  gen1(HANDLERS_FRAME, gc_new_array(object_list_len(params)));
+  gen1(HANDLERS_FRAME, gc_new_array(list_len(params)));
   gen_eval_sequential_frame(argv->cons.cdr);
   return gen_bind_frames(BIND_HANDLER_FRAME, params);
 }

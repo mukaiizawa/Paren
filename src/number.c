@@ -1,10 +1,6 @@
 // number.
 
 #include "std.h"
-
-#include <math.h>
-#include <float.h>
-
 #include "object.h"
 #include "gc.h"
 #include "bi.h"

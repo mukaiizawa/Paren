@@ -32,14 +32,14 @@ typedef union _object *object;
 #define LC(p) (*(unsigned char *)(p))
 #define SC(p,v) (*(unsigned char *)(p)=(unsigned char)(v))
 
-#define hash(o) ((o)->header & HASH_MASK)
-#define set_hash(o, v) {(o)->header &= ~HASH_MASK; (o)->header |= v;}
+#define object_hash(o) ((o)->header & HASH_MASK)
+#define object_set_hash(o, v) {(o)->header &= ~HASH_MASK; (o)->header |= v;}
 
-#define set_alive(o) ((o)->header |= ALIVE_BIT)
-#define set_dead(o) ((o)->header &= ~ALIVE_BIT)
-#define alive_p(o) ((o)->header & ALIVE_BIT)
+#define object_set_alive(o) ((o)->header |= ALIVE_BIT)
+#define object_set_dead(o) ((o)->header &= ~ALIVE_BIT)
+#define object_alive_p(o) ((o)->header & ALIVE_BIT)
 
-#define set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= (type << TYPE_OFFSET);}
+#define object_set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= (type << TYPE_OFFSET);}
 #define object_type(o) (sint_p(o)? SINT: (o->header & TYPE_MASK)>> TYPE_OFFSET)
 #define object_type_p(o, type) (object_type(o) == type)
 
@@ -47,6 +47,7 @@ typedef union _object *object;
 #define sint_p(o) ((((intptr_t)o) & 1) == 1)
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
 #define sint(i) ((object)((((intptr_t)i) << 1) | 1))
+#define list_p(o) (o == object_nil || object_type_p(o, CONS))
 
 union _object {
   int header;
@@ -99,6 +100,7 @@ union _object {
   object next;
 };
 
+// symbol & keyword.
 extern object object_toplevel;
 extern object object_nil;
 extern object object_true;
@@ -108,11 +110,11 @@ extern object object_rest;
 extern object object_quote;
 extern object object_stack_trace;
 
+// paren object system.
 extern object object_Class;
 extern object object_Exception;
 extern object object_Error;
 extern object object_SystemExit;
-
 extern object object_class;
 extern object object_symbol;
 extern object object_super;
@@ -120,17 +122,28 @@ extern object object_features;
 extern object object_fields;
 extern object object_message;
 
-extern int object_list_p(object o);
+// object function.
 extern int object_byte_size(object o);
 extern char *object_describe(object o, char *buf);
-extern int object_list_len(object o);
 extern object object_bool(int b);
-extern object object_reverse(object o);
+extern int object_eq_p(object o, object p);
 
-extern object object_find(object o, object s);
-extern object object_find_propagation(object o, object s);
-extern void object_bind(object o, object s, object v);
-extern void object_bind_propagation(object o, object s, object v);
-extern int object_map_len(object o);
-extern object object_map_keys(object o);
-extern void object_map_foreach(object o, void (*f)(void *s, void *v));
+extern int list_len(object o);
+extern object list_reverse(object o);
+
+extern int ch_len(unsigned char ch, int *len);
+#if WINDOWS_P
+extern int str_wctomb(LPWSTR lp, char *p);
+extern int str_mbtowc(char *p, LPWSTR lp);
+extern int str_mbtomb(char *p, char *q);
+#endif
+extern int str_len(object o, int *len);
+extern int str_slice(object o, int start, int stop, object *result);
+
+extern object map_get(object o, object s);
+extern object map_get_propagation(object o, object s);
+extern void map_put(object o, object s, object v);
+extern void map_put_propagation(object o, object s, object v);
+extern int map_len(object o);
+extern object map_keys(object o);
+extern void map_foreach(object o, void (*f)(void *s, void *v));

@@ -1,15 +1,13 @@
 // socket.
 
 #include "std.h"
-
-#include <string.h>
+#include "object.h"
+#include "gc.h"
+#include "bi.h"
+#include "pf.h"
+#include "ip.h"
 
 #if UNIX_P
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #define xsocket(x, y, z) socket(x, y, z)
 #define xclose(x) close(x)
 #define xstartup() {}
@@ -17,9 +15,6 @@
 #endif
 
 #if WINDOWS_P
-#include <fcntl.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #define xsocket(x, y, z) WSASocket(x, y, z, NULL, 0, 0)
 #define xclose(x) closesocket(x)
 #define xstartup() \
@@ -30,13 +25,6 @@
 }
 #define xcleanup() WSACleanup()
 #endif
-
-#include "xsleep.h"
-#include "object.h"
-#include "gc.h"
-#include "bi.h"
-#include "pf.h"
-#include "ip.h"
 
 DEFUN(client_socket)
 {

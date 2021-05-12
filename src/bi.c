@@ -1,10 +1,6 @@
 // built-in.
 
 #include "std.h"
-
-#include <math.h>
-#include <float.h>
-
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
@@ -87,7 +83,7 @@ int bi_arg_proc(object o, object *result)
 
 int bi_arg_list(object o, object *result)
 {
-  return arg_type(o, object_list_p(o), result);
+  return arg_type(o, list_p(o), result);
 }
 
 #undef DEFSP

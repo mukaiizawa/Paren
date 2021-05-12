@@ -24,10 +24,6 @@ SOFTWARE.
 }}} */
 
 #include "std.h"
-
-#include <string.h>
-#include <stddef.h>
-
 #include "heap.h"
 
 struct heap heap_perm = {NULL, NULL};

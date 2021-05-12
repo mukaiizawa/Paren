@@ -57,8 +57,7 @@ int pf_utime(char *fn, int64_t mtime)
   mtime = mtime * 10000000 + 116444736000000000;
   ft.dwLowDateTime = mtime & 0xffffffff;
   ft.dwHighDateTime = mtime >> 32;
-  hFile = CreateFile(fn, GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
-      FILE_ATTRIBUTE_NORMAL, NULL);
+  hFile = CreateFile(fn, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if (hFile == INVALID_HANDLE_VALUE) return FALSE;
   if (!SetFileTime(hFile, NULL, NULL, &ft)) return FALSE;
   CloseHandle(hFile);
@@ -79,7 +78,7 @@ char *pf_getcwd(char *buf)
 FILE *pf_fopen(char *fn, char *mode)
 {
   char buf[MAX_STR_LEN];
-  if (!xmbtomb(fn, buf)) return FALSE;
+  if (!xmbtombacp(fn, buf)) return FALSE;
   return fopen(buf, mode);
 }
 

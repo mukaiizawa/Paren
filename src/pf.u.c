@@ -1,15 +1,6 @@
 // path and files for unix.
 
 #include "std.h"
-#include <stdlib.h>
-#include <string.h>
-#include <utime.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-
 #include "pf.h"
 
 #define PATH_SEPR '/'

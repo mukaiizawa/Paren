@@ -11,16 +11,17 @@
 int gc_used_memory;
 int gc_max_used_memory;
 
+static struct heap heap;
+
 #define LINK0_SIZE (sizeof(struct cons))
 #define LINK1_SIZE (sizeof(struct map))
 static object link0, link1;
 
-static struct heap heap;
+#define regist(o) (xarray_add(table, o))
 static struct xarray *table, *work_table, table0, table1;
+
 static struct st symbol_table;
 static struct st keyword_table;
-
-#define regist(o) (xarray_add(table, o))
 
 static int mem_hash(char *val, int size)
 {
@@ -87,7 +88,7 @@ object gc_new_xint(int64_t val)
   object o;
   if (SINT_MIN <= val && val <= SINT_MAX) return sint((int)val);
   o = gc_alloc(sizeof(struct xint));
-  set_type(o, XINT);
+  object_set_type(o, XINT);
   o->xint.val = val;
   regist(o);
   return o;
@@ -97,7 +98,7 @@ object gc_new_xfloat(double val)
 {
   object o;
   o = gc_alloc(sizeof(struct xfloat));
-  set_type(o, XFLOAT);
+  object_set_type(o, XFLOAT);
   o->xfloat.val = val;
   regist(o);
   return o;
@@ -107,7 +108,7 @@ static object new_cons(void)
 {
   object o;
   o = gc_alloc(sizeof(struct cons));
-  set_type(o, CONS);
+  object_set_type(o, CONS);
   regist(o);
   return o;
 }
@@ -140,7 +141,7 @@ static object new_mem(int type, int size)
   object o;
   xassert(size >= 0);
   o = gc_alloc(sizeof(struct mem) + size - 1);
-  set_type(o, type);
+  object_set_type(o, type);
   o->mem.size = size;
   regist(o);
   return o;
@@ -175,7 +176,7 @@ object gc_new_mem_from(int type, char *val, int size)
       hval = mem_hash(val, size);
       if ((o = st_get(s, val, size, hval)) != NULL) return o;
       o = new_mem_from(type, val, size);
-      set_hash(o, hval);
+      object_set_hash(o, hval);
       return st_put(s, o);
     case STRING:
     case BYTES:
@@ -191,7 +192,7 @@ static object new_array(int size)
   object o;
   xassert(size >= 0);
   o = gc_alloc(sizeof(struct array) + sizeof(object) * (size - 1));
-  set_type(o, ARRAY);
+  object_set_type(o, ARRAY);
   o->array.size = size;
   regist(o);
   return o;
@@ -219,7 +220,7 @@ static object new_map(int type, int half_size, object top)
   int i;
   object o;
   o = gc_alloc(sizeof(struct map));
-  set_type(o, type);
+  object_set_type(o, type);
   o->map.top = top;
   o->map.entry_count = 0;
   o->map.half_size = half_size;
@@ -234,8 +235,7 @@ object gc_new_dict(void)
   return new_map(DICT, 8, object_nil);
 }
 
-static object new_proc(int type, object env, int param_count, object params
-    , object body)
+static object new_proc(int type, object env, int param_count, object params, object body)
 {
   object o;
   xassert(object_type_p(env, ENV));
@@ -244,7 +244,7 @@ static object new_proc(int type, object env, int param_count, object params
   o->proc.param_count = param_count;
   o->proc.params = params;
   o->proc.body = body;
-  set_type(o, type);
+  object_set_type(o, type);
   regist(o);
   return o;
 }
@@ -265,7 +265,7 @@ object gc_new_builtin(int type, object name, void *p)
   o = gc_alloc(sizeof(struct builtin));
   o->builtin.name = name;
   o->builtin.u.p = p;
-  set_type(o, type);
+  object_set_type(o, type);
   regist(o);
   return o;
 }
@@ -286,7 +286,7 @@ void gc_extend_table(object o)
   o->map.table = gc_alloc(sizeof(object) * o->map.half_size * 2);
   for (i = 0; i < o->map.half_size; i++) o->map.table[i] = NULL;
   for (i = 0; i < half_size; i++)
-    if (table[i] != NULL) object_bind(o, table[i], table[i + half_size]);
+    if (table[i] != NULL) map_put(o, table[i], table[i + half_size]);
   gc_free0(sizeof(object) * half_size * 2, table);
 }
 
@@ -300,21 +300,21 @@ void gc_mark(object o)
 {
   int i;
   if (sint_p(o)) return;
-  if (alive_p(o)) return;
-  set_alive(o);
+  if (object_alive_p(o)) return;
+  object_set_alive(o);
   switch (object_type(o)) {
     case CONS:
       while (o != object_nil) {
-        set_alive(o);    // for stack overflow
         gc_mark(o->cons.car);
         o = o->cons.cdr;
+        object_set_alive(o);    // for stack overflow
       }
       break;
     case ARRAY:
       for (i = 0; i < o->array.size; i++) gc_mark(o->array.elt[i]);
       break;
     case DICT:
-      object_map_foreach(o, mark_binding);
+      map_foreach(o, mark_binding);
       break;
     case SPECIAL:
     case BUILTINFUNC:
@@ -328,7 +328,7 @@ void gc_mark(object o)
       break;
     case ENV:
       gc_mark(o->map.top);
-      object_map_foreach(o, mark_binding);
+      map_foreach(o, mark_binding);
     default:
       break;
   }
@@ -352,9 +352,9 @@ static void sweep_s_expr(void)
   st_reset(&keyword_table);
   for (i = 0; i < work_table->size; i++) {
     o = work_table->elt[i];
-    if (!alive_p(o)) gc_free(o);
+    if (!object_alive_p(o)) gc_free(o);
     else {
-      set_dead(o);
+      object_set_dead(o);
       switch (object_type(o)) {
         case SYMBOL: st_put(&symbol_table, o); break;
         case KEYWORD: st_put(&keyword_table, o); break;
@@ -377,8 +377,8 @@ void gc_chance(void)
 void gc_init(void)
 {
   gc_used_memory = gc_max_used_memory = 0;
-  heap_init(&heap);
   link0 = link1 = NULL;
+  heap_init(&heap);
   xarray_init(&table0);
   xarray_init(&table1);
   table = &table0;

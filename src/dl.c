@@ -1,9 +1,11 @@
 // dynamic library.
 
 #include "std.h"
+#include "object.h"
+#include "gc.h"
+#include "bi.h"
 
 #if UNIX_P
-#include <dlfcn.h>
 #define DLOPEN(n) ((intptr_t)dlopen(n, RTLD_LAZY))
 #define DLSYM(h, n) ((intptr_t)dlsym((void*)h, n))
 #endif
@@ -12,10 +14,6 @@
 #define DLOPEN(n) ((intptr_t)LoadLibrary(n))
 #define DLSYM(h, n) ((intptr_t)GetProcAddress((HMODULE)h, n))
 #endif
-
-#include "object.h"
-#include "gc.h"
-#include "bi.h"
 
 DEFUN(dl_open)
 {
