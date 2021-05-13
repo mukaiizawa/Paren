@@ -1064,7 +1064,7 @@
   (assert (= (chr 0x611b) "愛"))
   (assert (= (chr 0x2123d) "𡈽")))
 
-(builtin-function ord (s)
+(builtin-function ord (ch)
   ; Returns the string representing a character whose Unicode code point is the integer i.
   (assert (= (ord " ") 0x20))
   (assert (= (ord "a") 0x61))
@@ -1072,6 +1072,14 @@
   (assert (= (ord "聖") 0x8056))
   (assert (= (ord "愛") 0x611b))
   (assert (= (ord "𡈽") 0x2123d)))
+
+(function wcwidth (ch)
+  ; Returns character width assigned to the character chr as string.
+  (if (print? ch) 1
+      (let (cp (ord ch))
+        (if (<= 0xff61 cp 0xffdf) 1    ; Halfwidth Katakana
+            (<= 0x3000 cp 0xffe6) 2    ; Fullwidth characters
+            0))))
 
 (builtin-function ascii? (s)
   ; Returns whether all characters in the string are ASCII.
