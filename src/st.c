@@ -4,6 +4,7 @@
 #include "object.h"
 #include "st.h"
 
+#define LOAD_FACTOR 0.5
 #define table_index(s, i) ((i) % s->alloc_size)
 
 static void *alloc_table(int size)
@@ -50,7 +51,7 @@ object st_get(struct st *s, char *val, int size, int hval)
 object st_put(struct st *s, object sym)
 {
   int i;
-  if (s->size++ > s->alloc_size * 0.5) extend(s);
+  if (s->size++ > s->alloc_size * LOAD_FACTOR) extend(s);
   i = table_index(s, object_hash(sym));
   while (s->table[i] != NULL) i = table_index(s, i + 1);
   s->table[i] = sym;
