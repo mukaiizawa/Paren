@@ -264,7 +264,8 @@ static void gen_if_frame(object args)
 
 static int same_symbol_keyword_p(object sym, object key)
 {
-  xassert(object_type_p(sym, SYMBOL) && object_type_p(key, KEYWORD));
+  xassert(object_type_p(sym, SYMBOL));
+  xassert(object_type_p(key, KEYWORD));
   if (sym->mem.size != key->mem.size) return FALSE;
   return memcmp(sym->mem.elt, key->mem.elt, sym->mem.size) == 0;
 }
@@ -289,8 +290,7 @@ static int valid_keyword_args(object params, object args)
   return TRUE;
 }
 
-static int parse_args(void (*f)(object, object, object), object params
-    , object args)
+static int parse_args(void (*f)(object, object, object), object params, object args)
 {
   object o, k, v;
   if (!list_p(params)) return ip_mark_error("illegal parameters");
@@ -723,14 +723,14 @@ static void pop_throw_frame(void)
 DEFUN(_3d_)
 {
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  reg[0] = object_bool(object_eq_p(argv->cons.car, argv->cons.cdr->cons.car));
+  *result = object_bool(object_eq_p(argv->cons.car, argv->cons.cdr->cons.car));
   return TRUE;
 }
 
 DEFUN(_3d__3d_)
 {
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  reg[0] = object_bool(argv->cons.car == argv->cons.cdr->cons.car);
+  *result = object_bool(argv->cons.car == argv->cons.cdr->cons.car);
   return TRUE;
 }
 
@@ -760,7 +760,7 @@ DEFUN(len)
         return bi_mark_type_error();
     }
   }
-  reg[0] = gc_new_xint(len);
+  *result = gc_new_xint(len);
   return TRUE;
 }
 
@@ -769,7 +769,7 @@ DEFUN(slice)
   int i, start, stop, len;
   object o;
   if (!bi_argc_range(argc, 1, 3)) return FALSE;
-  reg[0] = object_nil;
+  *result = object_nil;
   if ((o = argv->cons.car) == object_nil) return TRUE;
   if (argc < 2) start = 0;
   else if (!bi_spint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
@@ -781,29 +781,52 @@ DEFUN(slice)
       for (i = 0; i < start; i++) {
         if ((o = o->cons.cdr) == object_nil) return TRUE;
       }
-      if (o == object_nil || stop == -1) reg[0] = o;
+      if (o == object_nil || stop == -1) *result = o;
       else {
         for (i = start; i < stop; i++) {
-          reg[0] = gc_new_cons(o->cons.car, reg[0]);
+          *result = gc_new_cons(o->cons.car, *result);
           if ((o = o->cons.cdr) == object_nil) break;
         }
-        reg[0] = list_reverse(reg[0]);
+        *result = list_reverse(*result);
       }
       return TRUE;
     case BYTES:
       if (stop == -1) stop = o->mem.size;
       else if (stop > o->mem.size) return FALSE;
-      reg[0] = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
+      *result = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
       return TRUE;
     case STRING:
-      if (!str_slice(o, start, stop, &(reg[0]))) return FALSE;
-      return TRUE;
+      return str_slice(o, start, stop, result);
     case ARRAY:
       if (stop == -1) stop = o->array.size;
       else if (stop > o->array.size) return FALSE;
-      reg[0] = gc_new_array(len = stop - start);
-      memcpy(reg[0]->array.elt, o->array.elt + start, sizeof(object) * len);
+      *result = gc_new_array(len = stop - start);
+      memcpy((*result)->array.elt, o->array.elt + start, sizeof(object) * len);
       return TRUE;
+    default:
+      return bi_mark_type_error();
+  }
+}
+
+DEFUN(in_3f_)
+{
+  object o, p;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  *result = object_nil;
+  if ((o = argv->cons.cdr->cons.car) == object_nil) return TRUE;
+  switch (object_type(o)) {
+    case CONS:
+      p = argv->cons.car;
+      while (!object_eq_p(o->cons.car, p)) {
+        if ((o = o->cons.cdr) == object_nil) return TRUE;
+      }
+      *result = object_true;
+      return TRUE;
+    case BYTES:
+    case STRING:
+    case ARRAY:
+    case DICT:
+      return FALSE;
     default:
       return bi_mark_type_error();
   }

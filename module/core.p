@@ -384,9 +384,10 @@
                 ([] b 0 0xff)
                 (= ([] b 0) 0xff)))))
 
-(function in? (elt seq)
-  ; Returns whether x is included in X.
-  (some? (f (y) (= elt y)) seq))
+(builtin-function in? (x s)
+  ; Returns whether an item of s is equal to x.
+  (assert (in? 1 '(1 2 3)))
+  (assert (! (in? 0 '(1 2 3)))))
 
 ; function & macro
 
