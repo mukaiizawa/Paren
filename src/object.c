@@ -388,17 +388,6 @@ void map_foreach(object o, void (*f)(void *s, void *v))
     if (table[i] != NULL) (*f)(table[i], table[i + o->map.half_size]);
 }
 
-int map_len(object o)
-{
-  int i, len;
-  object *table;
-  xassert(object_type_p(o, DICT));
-  table = o->map.table;
-  for (i = len = 0; i < o->map.half_size; i++)
-    if (table[i] != NULL) len++;
-  return len;
-}
-
 object map_keys(object o)
 {
   int i;
