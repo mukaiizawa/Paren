@@ -27,11 +27,11 @@ typedef union _object *object;
 #define SINT_MAX 0x3fffffff
 #define SINT_MIN (- SINT_MAX - 1)
 #define XINT_BITS 63
-#define DBL_MAX_INT ((int64_t)1<<DBL_MANT_DIG)
-#define DBL_MIN_INT (-DBL_MAX_INT-1)
+#define DBL_MAX_INT ((int64_t)1 << DBL_MANT_DIG)
+#define DBL_MIN_INT (- DBL_MAX_INT - 1)
 
 #define LC(p) (*(unsigned char *)(p))
-#define SC(p,v) (*(unsigned char *)(p)=(unsigned char)(v))
+#define SC(p,v) (*(unsigned char *)(p) = (unsigned char)(v))
 
 #define object_hash(o) ((o)->header & HASH_MASK)
 #define object_set_hash(o, v) {(o)->header &= ~HASH_MASK; (o)->header |= v;}
