@@ -1,6 +1,6 @@
 ; Paren core library.
 
-; special operator
+;; special operator.
 
 (macro special-operator (name syntax)
   ; A special operator is a operator with special evaluation rules, possibly manipulating the evaluation environment, control flow, or both.
@@ -126,7 +126,7 @@
   ; Evaluate symbols with a dynamic scope.
   (dynamic sym))
 
-; fundamental macro
+;; fundamental macro.
 
 (macro function! (name args :rest body)
   ; Bind an anonimous function to a specified symbol name.
@@ -311,7 +311,7 @@
                   (list <- name (cons f (cons args (expand-body body)))))
             gname))))
 
-; fundamental function
+;; fundamental function.
 
 (builtin-function = (x y)
   ; Returns whether x and y are same type and equal.
@@ -389,7 +389,7 @@
   (assert (in? 1 '(1 2 3)))
   (assert (! (in? 0 '(1 2 3)))))
 
-; function & macro
+;; function & macro.
 
 (builtin-function function? (x)
   ; Returns whether the x is a function.
@@ -420,7 +420,7 @@
   ; Returns the body of the function or macro.
   )
 
-; list
+;; list.
 
 (function nil? (x)
   ; Same as `(! x)`.
@@ -849,7 +849,7 @@
                       subtrahends))
             minuend)))
 
-; number
+;; number.
 
 (builtin-function number? (x)
   ; Returns whether the x is a number.
@@ -985,7 +985,7 @@
     (if (> power 0) val
         (/ val))))
 
-; symbol & keyword
+;; symbol & keyword.
 
 (builtin-function symbol (:opt x i size)
   ; If there are no arguments, returns numbered symbol starting with `$G-`.
@@ -1020,7 +1020,7 @@
   (assert (bound? 'bound?))
   (assert (bound? 'nil)))
 
-; string
+;; string.
 
 (builtin-function string (x :opt i size)
   ; Same as `(bytes x i size)` except returns string.
@@ -1179,7 +1179,7 @@
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
-; bytes
+;; bytes.
 
 (builtin-function memlen (x)
   ; Returns byte length of bytes-like object x.
@@ -1245,7 +1245,7 @@
   (assert (! (bytes? "foo")))
   (assert (! (bytes? (array 3)))))
 
-; array
+;; array.
 
 (builtin-function array (size)
   ; Returns an array of length size.
@@ -1264,7 +1264,7 @@
                   (rec (-- i) (cons ([] x i) acc)))))
     (rec (-- (len x)) nil)))
 
-; dictionary
+;; dictionary.
 
 (builtin-function dict ()
   ; Returns an empty dictionary.
@@ -1291,7 +1291,7 @@
                 (= ({} d :foo 'foo) 'foo)
                 (= ({} d :foo) 'foo)))))
 
-; os
+;; os.
 
 (builtin-function fp (fd)
   ; Returns the file pointer associated with the file descriptor.
@@ -1438,7 +1438,7 @@
   ; Returns nil.
   )
 
-; Paren object system
+;; Paren object system.
 
 (function object? (x)
   ; Returns whether x is an object in the Paren object system.
@@ -1511,6 +1511,8 @@
           (list make-method-dispatcher method-sym)
           (cons function (cons global-sym (cons (cons 'self args) body))))))
 
+;;; fundamental class.
+
 (class Object ()
   ; Object is a class that is the basis of all class hierarchies.
   ; This class provides basic functionality common to all objects.
@@ -1568,8 +1570,6 @@
 (method Class .features ()
   ; Returns the feature list representing the feature of the receiver.
   (map find-class (&features self)))
-
-;; exception
 
 (class Exception ()
   ; The Exception class is the superclass of all exceptions.
@@ -1663,6 +1663,8 @@
 (method Array .to-a ()
   ; Returns an array representation of the receiver.
   (slice (&elt self) 0 (&size self)))
+
+;;; Path.
 
 (class Path ()
   ; A class that handles a file path.
@@ -1852,7 +1854,7 @@
   (map (f (x) (.resolve self x))
        (split (readdir (.to-s self)) "\n")))
 
-;; stream I/O
+;;; I/O.
 
 (class Stream ()
   ; Abstract class for reading and writing streams.
@@ -2358,8 +2360,6 @@
   (str "<" (&symbol (.class self)) ":0x" (address self) " "
        (list :next (&next self) :lineno (&lineno self)) ">"))
 
-; Paren reader
-
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
@@ -2489,8 +2489,6 @@
 (method ParenReader .read ()
   (.parse (.scan self)))
 
-; Object system wrapper.
-
 (macro reader-macro (next params :rest body)
   ; Define a reader macro starting with `# + next`.
   ; next must be a single character string.
@@ -2569,7 +2567,7 @@
                                 body))
                 (list if gsym (list '.close gsym))))))
 
-; execution
+;;; execution.
 
 (builtin-function eval (expr)
   ; Evaluates the specified expression and returns a value.
