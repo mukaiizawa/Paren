@@ -1,11 +1,65 @@
 // interpreter.
 
-extern int ip_trap_code;
 #define TRAP_NONE 0
 #define TRAP_ERROR 1
-#define TRAP_INTERRUPT 2 /* ctrl-c */
-#define TRAP_QUIT 3 /* for WM_CLOSE, etc */
+#define TRAP_INTERRUPT 2 // Ctrl-c
+extern int ip_trap_code;
 
-extern int ip_mark_error(char *msg);
+enum error {
+  Exception,
+    SystemExit,
+    Error,
+      SyntaxError,
+      ArgumentError,
+      RuntimeError,
+      IOError,
+  error_nil
+};
+
+enum error_msg {
+  // ArgumentError
+  expected_array,
+  expected_binding_value,
+  expected_bytes,
+  expected_bytes_like,
+  expected_cons,
+  expected_dict,
+  expected_function,
+  expected_function_macro,
+  expected_immuatable_bytes_like,
+  expected_instance_of_Class_class,
+  expected_instance_of_Exception_class,
+  expected_integer,
+  expected_keyword,
+  expected_keyword_parameter,
+  expected_keyword_parameter_value,
+  expected_list,
+  expected_muatable_bytes_like,
+  expected_number,
+  expected_operator,
+  expected_positive_integer,
+  expected_sequence,
+  expected_string,
+  expected_symbol,
+  index_out_of_range,
+  invalid_args,
+  invalid_binding_expr,
+  invalid_utf8_byte_sequense,
+  too_few_arguments,
+  too_many_arguments,
+  undeclared_keyword_param,
+  // RuntimeError
+  assert_failed,
+  builtin_failed,
+  expected_labels_context,
+  stack_over_flow,
+  unbound_symbol,
+  numeric_overflow,
+  division_by_zero,
+  // none
+  error_msg_nil
+};
+
+extern int ip_throw(enum error e, enum error_msg em);
 extern void ip_mark_object(void);
 extern void ip_start(object args);

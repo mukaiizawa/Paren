@@ -114,8 +114,6 @@ extern object object_stack_trace;
 // paren object system.
 extern object object_Class;
 extern object object_Exception;
-extern object object_Error;
-extern object object_SystemExit;
 extern object object_class;
 extern object object_symbol;
 extern object object_super;

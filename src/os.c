@@ -13,12 +13,12 @@ DEFUN(fp)
   int fd;
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_sint(argv->cons.car, &fd)) return FALSE;
+  if (!bi_cint(argv->cons.car, &fd)) return FALSE;
   switch (fd) {
     case 0: fp = stdin; break;
     case 1: fp = stdout; break;
     case 2: fp = stderr; break;
-    default: return ip_mark_error("unexpected file discripter");
+    default: return ip_throw(ArgumentError, index_out_of_range);
   }
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;
@@ -37,8 +37,8 @@ DEFUN(fopen)
   int mode;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if ((fn = bi_string(argv)) == NULL) return FALSE;
-  if (!bi_spint(argv->cons.cdr->cons.car, &mode)) return FALSE;
+  if (!bi_cstring(argv, &fn)) return FALSE;
+  if (!bi_cpint(argv->cons.cdr->cons.car, &mode)) return FALSE;
   if (mode >= sizeof(mode_table) / sizeof(char *)) return FALSE;
   if ((fp = pf_fopen(fn, mode_table[mode])) == NULL) return FALSE;
   *result = gc_new_xint((intptr_t)fp);
@@ -50,7 +50,7 @@ DEFUN(fgetc)
   int ch;
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   ch = fgetc(fp);
   if (ch == EOF && ferror(fp)) {
     clearerr(fp);
@@ -66,9 +66,9 @@ DEFUN(fputc)
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   *result = argv->cons.car;
-  if (!bi_sint(argv->cons.car, &byte)) return FALSE;
+  if (!bi_cint(argv->cons.car, &byte)) return FALSE;
   if (!byte_p(byte)) return FALSE;
-  if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   if (fputc(byte, fp) == EOF) return FALSE;
   return TRUE;
 }
@@ -79,7 +79,7 @@ DEFUN(fgets)
   FILE *fp;
   struct xbarray x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   xbarray_init(&x);
   s = xbarray_fgets(&x, fp);
   if (s == NULL) *result = object_nil;
@@ -97,11 +97,11 @@ DEFUN(fread)
   FILE *fp;
   object o;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, BYTES, &o)) return FALSE;
-  if (!bi_spint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
+  if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_cint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (from + size > o->mem.size) return FALSE;
-  if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   size = fread(o->mem.elt + from, 1, size, fp);
   if (size == 0 && ferror(fp)) {
     clearerr(fp);
@@ -117,11 +117,11 @@ DEFUN(fwrite)
   FILE *fp;
   object o;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
-  if (!bi_arg_mem(argv->cons.car, &o)) return FALSE;
-  if (!bi_spint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
-  if (!bi_spint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!bi_arg_bytes_like(argv->cons.car, &o)) return FALSE;
+  if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (from + size > o->mem.size) return FALSE;
-  if (!bi_intptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   size = fwrite(o->mem.elt + from, 1, size, fp);
   if (size == 0 && ferror(fp)) {
     clearerr(fp);
@@ -136,8 +136,8 @@ DEFUN(fseek)
   int off;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
-  if (!bi_sint((argv = argv->cons.cdr)->cons.car, &off)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_cint((argv = argv->cons.cdr)->cons.car, &off)) return FALSE;
   *result = object_nil;
   if (off == -1) return fseek(fp, 0, SEEK_END) == 0;
   return fseek(fp, off, SEEK_SET) == 0;
@@ -148,7 +148,7 @@ DEFUN(ftell)
   int pos;
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   if ((pos = ftell(fp)) == -1) return FALSE;
   *result = gc_new_xint(pos);
   return TRUE;
@@ -158,7 +158,7 @@ DEFUN(fclose)
 {
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_intptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   fclose(fp);
   *result = object_nil;
   return TRUE;
@@ -170,7 +170,7 @@ DEFUN(stat)
   char *fn;
   struct pf_stat statbuf;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if ((fn = bi_string(argv)) == NULL) return FALSE;
+  if (!bi_cstring(argv, &fn)) return FALSE;
   mode = pf_stat(fn, &statbuf);
   if (mode == PF_ERROR) return FALSE;
   if (mode == PF_NONE) {
@@ -189,8 +189,8 @@ DEFUN(utime)
   char *fn;
   int64_t tv;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if ((fn = bi_string(argv)) == NULL) return FALSE;
-  if (!bi_int64(argv->cons.cdr->cons.car, &tv)) return FALSE;
+  if (!bi_cstring(argv, &fn)) return FALSE;
+  if (!bi_cint64(argv->cons.cdr->cons.car, &tv)) return FALSE;
   *result = object_nil;
   return pf_utime(fn, tv);
 }
@@ -208,7 +208,7 @@ DEFUN(chdir)
 {
   char *fn;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if ((fn = bi_string(argv)) == NULL) return FALSE;
+  if (!bi_cstring(argv, &fn)) return FALSE;
   *result = object_nil;
   return pf_chdir(fn);
 }
@@ -218,7 +218,7 @@ DEFUN(readdir)
   char *path;
   struct xbarray dirs;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if ((path = bi_string(argv)) == NULL) return FALSE;
+  if (!bi_cstring(argv, &path)) return FALSE;
   xbarray_init(&dirs);
   if (!pf_readdir(path, &dirs)) return FALSE;
   *result = gc_new_mem_from(STRING, dirs.elt, dirs.size);
@@ -230,7 +230,7 @@ DEFUN(remove)
 {
   char *fn;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if ((fn = bi_string(argv)) == NULL) return FALSE;
+  if (!bi_cstring(argv, &fn)) return FALSE;
   *result = object_nil;
   return pf_remove(fn);
 }
@@ -239,7 +239,7 @@ DEFUN(mkdir)
 {
   char *path;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if ((path = bi_string(argv)) == NULL) return FALSE;
+  if (!bi_cstring(argv, &path)) return FALSE;
   *result = object_nil;
   return pf_mkdir(path);
 }
@@ -248,7 +248,7 @@ DEFUN(rename)
 {
   char *src_dst[2];
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_strings(2, argv, src_dst)) return FALSE;
+  if (!bi_cstrings(2, argv, src_dst)) return FALSE;
   *result = object_nil;
   return rename(src_dst[0], src_dst[1]) == 0;
 }
@@ -271,7 +271,7 @@ DEFUN(sleep)
 {
   double t;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_double(argv->cons.car, &t)) return FALSE;
+  if (!bi_cdouble(argv->cons.car, &t)) return FALSE;
   xsleep(t);
   *result = object_nil;
   return TRUE;
@@ -301,8 +301,8 @@ DEFUN(system)
 {
   char *s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if ((s = bi_string(argv)) == NULL) return FALSE;
-  *result = sint(system(s));
+  if (!bi_cstring(argv, &s)) return FALSE;
+  *result = gc_new_xint(system(s));
   return TRUE;
 }
 
@@ -310,7 +310,7 @@ DEFUN(getenv)
 {
   char *s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if ((s = bi_string(argv)) == NULL) return FALSE;
+  if (!bi_cstring(argv, &s)) return FALSE;
   if ((s = getenv(s)) == NULL) *result = object_nil;
   else *result = gc_new_mem_from(STRING, s, strlen(s));
   return TRUE;
@@ -320,7 +320,7 @@ DEFUN(putenv)
 {
   char *kv[2];
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_strings(2, argv, kv)) return FALSE;
+  if (!bi_cstrings(2, argv, kv)) return FALSE;
   *strchr(kv[0], '\0') = '=';
   *result = object_nil;
   return putenv(xstrdup(kv[0])) == 0;

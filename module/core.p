@@ -1615,6 +1615,11 @@
   ; Throw a instance of the Error, which message is args.
   (throw (.message (.new Error) (apply str args))))
 
+(class SyntaxError (Error))
+(class ArgumentError (Error))
+(class RuntimeError (Error))
+(class IOError (Error))
+
 (class Comparable ()
   ; A feature that provides comparison operators.
   )

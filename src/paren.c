@@ -180,8 +180,6 @@ static void make_initial_objects(int argc, char *argv[])
   object_stack_trace = new_keyword("stack-trace");
   object_Class = new_symbol("Class");
   object_Exception = new_symbol("Exception");
-  object_Error = new_symbol("Error");
-  object_SystemExit = new_symbol("SystemExit");
   map_put(object_toplevel, new_symbol("$args"), parse_args(argc, argv));
   map_put(object_toplevel, new_symbol("core.p"), new_string(core_fn));
 #if WINDOWS_P

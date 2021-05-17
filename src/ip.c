@@ -18,6 +18,8 @@ static long cycle;
 
 // interrupt
 
+int ip_trap_code;
+
 #if UNIX_P
 
 static void intr_handler(int signo)
@@ -54,22 +56,83 @@ static void intr_init(void)
 
 // error
 
-int ip_trap_code;
-static char *error_msg;
+static enum error e;
+static enum error_msg em;
 
-int ip_mark_error(char *msg)
+static char *error_name(enum error e) {
+  switch (e) {
+    case Exception: return "Exception";
+    case SystemExit: return "SystemExit";
+    case Error: return "Error";
+    case SyntaxError: return "SyntaxError";
+    case ArgumentError: return "ArgumentError";
+    case RuntimeError: return "RuntimeError";
+    case IOError: return "IOError";
+    default: xassert(FALSE); return NULL;
+  }
+};
+
+static char *error_msg(enum error_msg em) {
+  switch (em) {
+    case expected_array: return "expected_array";
+    case expected_binding_value: return "expected binding value";
+    case expected_bytes: return "expected bytes";
+    case expected_bytes_like: return "expected bytes like object";
+    case expected_cons: return "expected cons";
+    case expected_dict: return "expected dict";
+    case expected_function: return "expected function";
+    case expected_function_macro: return "expected function or macro";
+    case expected_immuatable_bytes_like: return "expected immuatable bytes like object";
+    case expected_instance_of_Class_class: return "expected instance of Class class";
+    case expected_instance_of_Exception_class: return "expected instance of Exception class";
+    case expected_integer: return "expected integer";
+    case expected_keyword: return "expected keyword";
+    case expected_keyword_parameter: return "expected keyword parameter";
+    case expected_keyword_parameter_value: return "expected keyword parameter value";
+    case expected_list: return "expected list";
+    case expected_muatable_bytes_like: return "expected muatable bytes like object";
+    case expected_number: return "expected number";
+    case expected_operator: return "expected operator";
+    case expected_positive_integer: return "expected positive integer";
+    case expected_sequence: return "expected sequence";
+    case expected_string: return "expected string";
+    case expected_symbol: return "expected symbol";
+    case index_out_of_range: return "index out of range";
+    case invalid_args: return "invalid arguments";
+    case invalid_binding_expr: return "invalid binding expression";
+    case invalid_utf8_byte_sequense: return "invalid utf8 byte sequense";
+    case too_few_arguments: return "too few arguments";
+    case too_many_arguments: return "too many arguments";
+    case undeclared_keyword_param: return "undeclared keyword parameter";
+    case assert_failed: return "assert failed";
+    case builtin_failed: return "builtin function failed";
+    case expected_labels_context: return "expected labels context";
+    case stack_over_flow: return "stack over flow";
+    case unbound_symbol: return "unbound symbol";
+    case numeric_overflow: return "numeric overflow";
+    case division_by_zero: return "division by zero";
+    case error_msg_nil: return NULL;
+    default: xassert(FALSE); return NULL;
+  }
+};
+
+int ip_throw(enum error err, enum error_msg msg)
 {
   ip_trap_code = TRAP_ERROR;
-  error_msg = msg;
+  e = err;
+  em = msg;
   return FALSE;
 }
 
-static object new_Error(object cls, char *msg)
+static object new_Error(enum error e, enum error_msg em)
 {
+  char *err, *msg;
   object o;
   o = gc_new_dict();
-  map_put(o, object_class, cls);
-  if (msg != NULL) map_put(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
+  err = error_name(e);
+  map_put(o, object_class, gc_new_mem_from(SYMBOL, err, strlen(err)));
+  if ((msg = error_msg(em)) != NULL)
+    map_put(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
   return o;
 }
 
@@ -213,7 +276,7 @@ static void exit1(void)
 
 static void gen(int frame_type)
 {
-  if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_mark_error("stack over flow");
+  if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_throw(RuntimeError, stack_over_flow);
   fs[sp + 1] = sint(fp);
   fs[sp] = sint(frame_type);
   set_fp(sp);
@@ -275,16 +338,16 @@ static int valid_keyword_args(object params, object args)
   object p;
   while (args != object_nil) {
     if (!object_type_p(args->cons.car, KEYWORD))
-      return ip_mark_error("expected keyword parameter");
+      return ip_throw(ArgumentError, error_msg_nil);
     p = params;
     while (p != object_nil) {
       if (same_symbol_keyword_p(p->cons.car, args->cons.car)) break;
       p = p->cons.cdr;
     }
     if (p == object_nil)
-      return ip_mark_error("undeclared keyword parameter");
+      return ip_throw(ArgumentError, undeclared_keyword_param);
     if ((args = args->cons.cdr) == object_nil)
-      return ip_mark_error("expected keyword parameter value");
+      return ip_throw(ArgumentError, expected_keyword_parameter_value);
     args = args->cons.cdr;
   }
   return TRUE;
@@ -293,21 +356,20 @@ static int valid_keyword_args(object params, object args)
 static int parse_args(void (*f)(object, object, object), object params, object args)
 {
   object o, k, v;
-  if (!list_p(params)) return ip_mark_error("illegal parameters");
-  if (!list_p(args)) return ip_mark_error("illegal arguments");
-  // parse required args
+  if (!list_p(params) || !list_p(args))
+    return ip_throw(ArgumentError, expected_list);
+  // required args
   while (params != object_nil) {
     if (object_type_p(params->cons.car, KEYWORD)) break;
-    if (args == object_nil) {
-      bi_argc_range(0, 1, 1);
-      return FALSE;
-    }
-    if (object_type_p(params->cons.car, SYMBOL)) (*f)(reg[1], params->cons.car, args->cons.car);
+    if (args == object_nil)
+      return ip_throw(ArgumentError, too_few_arguments);
+    if (object_type_p(params->cons.car, SYMBOL))
+      (*f)(reg[1], params->cons.car, args->cons.car);
     else if (!parse_args(f, params->cons.car, args->cons.car)) return FALSE;
     params = params->cons.cdr;
     args = args->cons.cdr;
   }
-  // parse optional args
+  // optional args
   if (params->cons.car == object_opt) {
     params = params->cons.cdr;
     while (params != object_nil) {
@@ -321,13 +383,13 @@ static int parse_args(void (*f)(object, object, object), object params, object a
       params = params->cons.cdr;
     }
   }
-  // parse rest args
+  // rest args
   if (params->cons.car == object_rest) {
     (*f)(reg[1], params->cons.cdr->cons.car, args);
     return TRUE;
   }
-  // parse keyword args
-  if (params->cons.car == object_key) {
+  // keyword args
+  else if (params->cons.car == object_key) {
     params = params->cons.cdr;
     if (!valid_keyword_args(params, args)) return FALSE;
     o = args;
@@ -347,10 +409,8 @@ static int parse_args(void (*f)(object, object, object), object params, object a
     }
     return TRUE;
   }
-  if (args != object_nil) {
-    bi_argc_range(2, 1, 1);
-    return FALSE;
-  }
+  if (args != object_nil)
+    return ip_throw(ArgumentError, too_many_arguments);
   return TRUE;
 }
 
@@ -390,14 +450,17 @@ static void pop_apply_builtin_frame(void)
   function = f->builtin.u.function;
   pop_frame();
   if ((*function)(list_len(args), args, &(reg[0]))) return;
+  if (e == error_nil) {
+    e = RuntimeError;
+    em = builtin_failed;
+  }
   gen2(FUNC_FRAME, reg[1], gc_new_cons(f->builtin.name, args));    // for stack trace
-  if (error_msg == NULL) ip_mark_error("built-in function failed");
 }
 
 static void pop_assert_frame(void)
 {
   if (reg[0] != object_nil) pop_frame();
-  else ip_mark_error("assert failed");
+  else ip_throw(RuntimeError, assert_failed);
 }
 
 static void pop_bind_frame(void)
@@ -415,7 +478,7 @@ static void pop_bind_handler_frame(void)
   object cls_sym, handler, handlers;
   cls_sym = get_frame_var(fp, 0);
   pop_frame();
-  if (!bi_arg_type(reg[0], FUNC, &handler)) return;
+  if (!bi_arg_func(reg[0], &handler)) return;
   for (i = fp; i > -1; i = prev_fp(i)) {
     if (sint_val(fs[i]) != HANDLERS_FRAME) continue;
     handlers = get_frame_var(i, 0);
@@ -445,8 +508,7 @@ static int eval_symbol(object *result)
   o = *result;
   if ((*result = map_get_propagation(reg[1], *result)) == NULL) {
     gen2(FUNC_FRAME, reg[1], o);    // for stack trace
-    ip_mark_error("unbound symbol");
-    return FALSE;
+    return ip_throw(RuntimeError, unbound_symbol);
   }
   return TRUE;
 }
@@ -486,7 +548,7 @@ static void pop_eval_frame(void)
           gen_eval_args_frame(args);
           return;
         default:
-          ip_mark_error("expected operator");
+          ip_throw(RuntimeError, expected_operator);
           return;
       }
       break;
@@ -544,7 +606,7 @@ static void pop_goto_frame(void)
           }
           o = o->cons.cdr;
         }
-        ip_mark_error("undeclared label");
+        ip_throw(ArgumentError, undeclared_keyword_param);
         set_fp(i);
         return;
       case UNWIND_PROTECT_FRAME:
@@ -559,7 +621,7 @@ static void pop_goto_frame(void)
         break;
     }
   }
-  ip_mark_error("expected labels context");
+  ip_throw(RuntimeError, expected_labels_context);
   set_fp(i);
   return;
 }
@@ -683,8 +745,10 @@ static void pop_throw_frame(void)
   object cls_sym, handler, handlers, body;
   i = fp;
   pop_frame();
-  if (!pos_is_a_p(reg[0], object_Exception))
-    reg[0] = new_Error(object_Error, "expected Exception object");
+  if (!pos_is_a_p(reg[0], object_Exception)) {
+    ip_throw(ArgumentError, expected_instance_of_Exception_class);
+    return;
+  }
   if (map_get(reg[0], object_stack_trace) == NULL)
     map_put(reg[0], object_stack_trace, get_call_stack());
   while (fp > -1) {
@@ -741,7 +805,7 @@ DEFUN(apply)
       gen1(APPLY_FRAME, argv->cons.car);
       return TRUE;
     default:
-      return ip_mark_error("expected function");
+      return ip_throw(ArgumentError, expected_function);
   }
 }
 
@@ -766,7 +830,7 @@ DEFUN(bound_3f_)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
+  if (!bi_arg_symbol(argv->cons.car, &o)) return FALSE;
   reg[0] = object_bool(map_get_propagation(reg[1], o) != NULL);
   return TRUE;
 }
@@ -776,17 +840,18 @@ static void trap(void)
   gen0(THROW_FRAME);
   switch (ip_trap_code) {
     case TRAP_ERROR:
-      reg[0] = new_Error(object_Error, error_msg);
+      reg[0] = new_Error(e, em);
       break;
     case TRAP_INTERRUPT:
-      reg[0] = new_Error(object_SystemExit, NULL);
+      reg[0] = new_Error(SystemExit, error_msg_nil);
       break;
     default:
       xassert(FALSE);
       break;
   }
   ip_trap_code = TRAP_NONE;
-  error_msg = NULL;
+  e = error_nil;
+  em = error_msg_nil;
 }
 
 // paren object system.
@@ -848,10 +913,8 @@ DEFUN(is_2d_a_3f_)
   object o, cls;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   o = argv->cons.car;
-  if (!pos_class_p(cls = argv->cons.cdr->cons.car)) {
-    ip_mark_error("require Class instance");
-    return FALSE;
-  }
+  if (!pos_class_p(cls = argv->cons.cdr->cons.car))
+    return ip_throw(ArgumentError, expected_instance_of_Class_class);
   reg[0] = object_bool(pos_is_a_p(o, map_get(cls, object_symbol)));
   return TRUE;
 }
@@ -868,12 +931,12 @@ DEFUN(find_2d_method)
 {
   object cls, cls_sym, mtd_sym, features;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, SYMBOL, &cls_sym)) return FALSE;
-  if (!bi_arg_type(argv->cons.cdr->cons.car, SYMBOL, &mtd_sym)) return FALSE;
+  if (!bi_arg_symbol(argv->cons.car, &cls_sym)) return FALSE;
+  if (!bi_arg_symbol(argv->cons.cdr->cons.car, &mtd_sym)) return FALSE;
   while (TRUE) {
-    // find class method
+    // class method
     if ((*result = find_class_method(cls_sym, mtd_sym)) != NULL) return TRUE;
-    // find feature method
+    // feature method
     if (!find_class(cls_sym, &cls)) return FALSE;
     features = map_get(cls, object_features);
     if (!list_p(features)) return FALSE;
@@ -881,8 +944,9 @@ DEFUN(find_2d_method)
       if ((*result = find_class_method(features->cons.car, mtd_sym)) != NULL) return TRUE;
       features = features->cons.cdr;
     }
-    // super class
-    if (!find_super_class(cls_sym, &cls)) return ip_mark_error("undeclared method");
+    // super class method
+    if (!find_super_class(cls_sym, &cls))
+      return ip_throw(RuntimeError, unbound_symbol);
     cls_sym = map_get(cls, object_symbol);
   }
 }
@@ -988,10 +1052,10 @@ static int gen_bind_frames(int frame_type, object args)
       if (!parse_required_params(o->cons.car)) return FALSE;
       break;
     default:
-      return ip_mark_error("unexpected binding expression");
+      return ip_throw(SyntaxError, invalid_binding_expr);
   }
   if ((args = args->cons.cdr) == object_nil)
-    return ip_mark_error("missing binding value");
+    return ip_throw(ArgumentError, expected_binding_value);
   if (!gen_bind_frames(frame_type, args->cons.cdr)) return FALSE;
   gen1(frame_type, o->cons.car);
   gen0(EVAL_FRAME);
@@ -1034,7 +1098,7 @@ DEFSP(dynamic)
   int i;
   object e, s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, SYMBOL, &s)) return FALSE;
+  if (!bi_arg_symbol(argv->cons.car, &s)) return FALSE;
   i = fp;
   e = reg[1];
   if ((reg[0] = map_get(e, s)) != NULL) return TRUE;
@@ -1069,13 +1133,13 @@ DEFSP(macro)
 {
   object o, params;
   if (!bi_argc_range(argc, 3, FALSE)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, SYMBOL, &o)) return FALSE;
+  if (!bi_arg_symbol(argv->cons.car, &o)) return FALSE;
   gen1(BIND_PROPAGATION_FRAME, o);
   argv = argv->cons.cdr;
   if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
   param_count = 0;
   if (!parse_required_params(params))
-    return ip_mark_error("illegal macro parameter list");
+    return ip_throw(SyntaxError, invalid_args);
   reg[0] = gc_new_macro(reg[1], param_count, params, argv->cons.cdr);
   return TRUE;
 }
@@ -1087,7 +1151,7 @@ DEFSP(f)
   if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
   param_count = 0;
   if (!parse_required_params(params))
-    return ip_mark_error("illegal function parameter list");
+    return ip_throw(ArgumentError, invalid_args);
   reg[0] = gc_new_func(reg[1], param_count, params, argv->cons.cdr);
   return TRUE;
 }
@@ -1125,7 +1189,7 @@ DEFSP(goto)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_type(argv->cons.car, KEYWORD, &o)) return FALSE;
+  if (!bi_arg_keyword(argv->cons.car, &o)) return FALSE;
   gen0(GOTO_FRAME);
   reg[0] = o;
   return TRUE;
@@ -1219,8 +1283,6 @@ void ip_mark_object(void)
   gc_mark(object_stack_trace);
   gc_mark(object_Class);
   gc_mark(object_Exception);
-  gc_mark(object_Error);
-  gc_mark(object_SystemExit);
   gc_mark(object_class);
   gc_mark(object_symbol);
   gc_mark(object_super);

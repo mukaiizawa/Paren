@@ -17,9 +17,6 @@ object object_stack_trace;
 
 object object_Class;
 object object_Exception;
-object object_Error;
-object object_SystemExit;
-
 object object_class;
 object object_symbol;
 object object_super;
@@ -198,15 +195,15 @@ static int dbl_eq(double x, object p)
 {
   int64_t i;
   double d;
-  if (bi_int64(p, &i)) return fabs(x - (double)i) < DBL_EPSILON;
-  if (bi_double(p, &d)) return fabs(x - d) < DBL_EPSILON;
+  if (bi_cint64(p, &i)) return fabs(x - (double)i) < DBL_EPSILON;
+  if (bi_cdouble(p, &d)) return fabs(x - d) < DBL_EPSILON;
   return FALSE;
 }
 
 static int int64eq_p(int64_t x, object p)
 {
   int64_t y;
-  if (bi_int64(p, &y)) return x == y;
+  if (bi_cint64(p, &y)) return x == y;
   return dbl_eq((double)x, p);
 }
 
@@ -214,8 +211,8 @@ static int numeq_p(object o, object p)
 {
   int64_t i;
   double d;
-  if (bi_int64(o, &i)) return int64eq_p(i, p);
-  if (bi_double(o, &d)) return dbl_eq(d, p);
+  if (bi_cint64(o, &i)) return int64eq_p(i, p);
+  if (bi_cdouble(o, &d)) return dbl_eq(d, p);
   return FALSE;
 }
 
@@ -297,7 +294,7 @@ int ch_len(unsigned char ch, int *len)
   else if (ch < 0xe0) (*len) += 2;
   else if (ch < 0xf0) (*len) += 3;
   else if (ch < 0xf8) (*len) += 4;
-  else return ip_mark_error("Illegal byte sequence");
+  else return ip_throw(ArgumentError, invalid_utf8_byte_sequense);
   return TRUE;
 }
 
