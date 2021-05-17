@@ -16,5 +16,5 @@
     (flush)))
 
 (function! main (args)
-  (let ((op args) (.parse (.init (.new OptionParser) "n") args))
+  (let ((op args) (.parse (.init (.new OptionParser) "n:") args))
     (strings (.get op "n"))))
