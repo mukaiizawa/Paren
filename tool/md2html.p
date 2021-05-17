@@ -8,8 +8,7 @@
 Usage: paren md2html.p [OPTION]
 	Convert the markdown file read from the standard input into an html file and output it to the standard output.
 OPTION:
-	c -- Specify charset. If omitted, it is considered that 'UTF-8' is specified.
-	C -- Do not output table of contents.
+	c -- Do not output table of contents.
 	t -- Consider the first line as the title.
 "
     $default-css
@@ -38,7 +37,6 @@ thead { border-bottom:1.2px solid #ccc; }
 th, td { padding:3px; }
 th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 "
-    $default-charset "UTF-8"
     $headers '(h1 h2 h3 h4 h5 h6)
     $contents nil)
 
@@ -80,13 +78,13 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
                node))
          nodes)))
 
-(function make-html (nodes :key title? charset output-contents?)
-  (let (title nil table-of-contents (if output-contents? (parse-contents (reverse! $contents))))
+(function make-html (nodes :key title? charset output-table-of-contents?)
+  (let (title nil table-of-contents (if output-table-of-contents? (parse-contents (reverse! $contents))))
     (if title? (<- title `((title () ,(caddar nodes))) nodes (cdr nodes)))
     `((!DOCTYPE "html")
       (html (:lang "ja")
             (head ()
-                  (meta (:charset ,(|| charset $default-charset)))
+                  (meta (:charset "UTF-8"))
                   ,@title
                   (style () ,$default-css))
             (body ()
@@ -95,9 +93,8 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))
-    (let ((op args) (.parse (.init (.new OptionParser) "tCc:") args) rd (.new MarkdownReader))
+    (let ((op args) (.parse (.init (.new OptionParser) "tc") args) rd (.new MarkdownReader))
       (foreach (f (x) (write-line (xml->str x)))
                (make-html (parse-nodes (collect (f () (.read rd))))
                           :title? (.get op "t")
-                          :charset (.get op "c")
-                          :output-contents? (! (.get op "C")))))))
+                          :output-table-of-contents? (! (.get op "c")))))))
