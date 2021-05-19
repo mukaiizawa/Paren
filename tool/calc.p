@@ -1,4 +1,4 @@
-; arbitrary precision calculator
+; arbitrary precision calculator.
 
 (function parse-factor (rd)
   (if (!= (.next (.skip-space rd)) "(") (.skip-number rd)
