@@ -1,4 +1,4 @@
-; brainfuck
+; Brainfuck interpreter.
 
 (function interpret (code)
   (let (pc 0 mem (bytes 30000) ptr 0 stack nil)
