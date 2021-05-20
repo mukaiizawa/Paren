@@ -1,0 +1,28 @@
+; brainfuck
+
+(function interpret (code)
+  (let (pc 0 mem (bytes 30000) ptr 0 stack nil)
+    (while (< pc (len code))
+      (let (ope (chr ([] code pc)))
+        (<- pc (++ pc))
+        (if (= ope ">") (<- ptr (++ ptr))
+            (= ope "<") (<- ptr (-- ptr))
+            (= ope "+") ([] mem ptr (++ ([] mem ptr)))
+            (= ope "-") ([] mem ptr (-- ([] mem ptr)))
+            (= ope ".") (write-byte ([] mem ptr))
+            (= ope ",") ([] mem ptr (read-byte))
+            (= ope "[")
+            (if (!= ([] mem ptr) 0) (push! (-- pc) stack)
+                (let (depth 0)
+                  (while true
+                    (<- ope (chr ([] code pc))
+                        pc (++ pc))
+                    (if (= ope "[") (<- depth (++ depth))
+                        (= ope "]") (if (= depth 0) (break)
+                                        (<- depth (-- depth)))))))
+            (= ope "]")
+            (if (nil? stack) (error "stack underflow")
+                (<- pc (pop! stack))))))))
+
+(function! main (args)
+  (interpret (read-bytes)))
