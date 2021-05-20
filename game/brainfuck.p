@@ -21,8 +21,13 @@
                         (= ope "]") (if (= depth 0) (break)
                                         (<- depth (-- depth)))))))
             (= ope "]")
-            (if (nil? stack) (error "stack underflow")
+            (if (nil? stack) (error "missing close bracket")
                 (<- pc (pop! stack))))))))
 
+(function load-program (file)
+  (with-open ($in file :read)
+    (return (read-bytes))))
+
 (function! main (args)
-  (interpret (read-bytes)))
+  (if (nil? args) (error "required souce file")
+      (interpret (load-program (car args)))))
