@@ -450,10 +450,7 @@ static void pop_apply_builtin_frame(void)
   function = f->builtin.u.function;
   pop_frame();
   if ((*function)(list_len(args), args, &(reg[0]))) return;
-  if (e == error_nil) {
-    e = RuntimeError;
-    em = builtin_failed;
-  }
+  if (ip_trap_code == TRAP_NONE) ip_throw(RuntimeError, builtin_failed);
   gen2(FUNC_FRAME, reg[1], gc_new_cons(f->builtin.name, args));    // for stack trace
 }
 

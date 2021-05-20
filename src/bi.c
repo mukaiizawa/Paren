@@ -954,9 +954,11 @@ static int mem_to(int argc, object argv, object *result, int type)
 
 DEFUN(bytes)
 {
+  int i;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (object_type_p(argv->cons.car, SINT)) {
-    *result = gc_new_mem(BYTES, sint_val(argv->cons.car));
+    if (!bi_cpint(argv->cons.car, &i)) return FALSE;
+    *result = gc_new_mem(BYTES, i);
     return TRUE;
   }
   return mem_to(argc, argv, result, BYTES);
