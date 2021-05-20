@@ -9,7 +9,6 @@ Usage: paren md2html.p [OPTION]
 	Convert the markdown file read from the standard input into an html file and output it to the standard output.
 OPTION:
 	c -- Do not output table of contents.
-	t -- Consider the first line as the title.
 "
     $default-css
 "
@@ -78,9 +77,10 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
                node))
          nodes)))
 
-(function make-html (nodes :key title? charset output-table-of-contents?)
-  (let (title nil table-of-contents (if output-table-of-contents? (parse-contents (reverse! $contents))))
-    (if title? (<- title `((title () ,(caddar nodes))) nodes (cdr nodes)))
+(function make-html (nodes :key output-table-of-contents?)
+  (let (title? (= (caar nodes) 'p)
+               (title nodes) (if title? (list `((title () ,(caddar nodes))) (cdr nodes)) (list nil nodes))
+               table-of-contents (if output-table-of-contents? (parse-contents (reverse! $contents))))
     `((!DOCTYPE "html")
       (html (:lang "ja")
             (head ()
@@ -93,8 +93,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))
-    (let ((op args) (.parse (.init (.new OptionParser) "tc") args) rd (.new MarkdownReader))
+    (let ((op args) (.parse (.init (.new OptionParser) "c") args) rd (.new MarkdownReader))
       (foreach (f (x) (write-line (xml->str x)))
                (make-html (parse-nodes (collect (f () (.read rd))))
-                          :title? (.get op "t")
                           :output-table-of-contents? (! (.get op "c")))))))
