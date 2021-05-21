@@ -20,6 +20,7 @@ enum error_msg {
   // ArgumentError
   expected_array,
   expected_binding_value,
+  expected_byte,
   expected_bytes,
   expected_bytes_like,
   expected_cons,

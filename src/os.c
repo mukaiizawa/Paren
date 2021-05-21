@@ -66,8 +66,7 @@ DEFUN(fputc)
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   *result = argv->cons.car;
-  if (!bi_cint(argv->cons.car, &byte)) return FALSE;
-  if (!byte_p(byte)) return FALSE;
+  if (!bi_cbyte(argv->cons.car, &byte)) return FALSE;
   if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   if (fputc(byte, fp) == EOF) return FALSE;
   return TRUE;

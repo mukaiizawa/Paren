@@ -44,7 +44,6 @@ typedef union _object *object;
 #define object_type(o) (sint_p(o)? SINT: (o->header & TYPE_MASK)>> TYPE_OFFSET)
 #define object_type_p(o, type) (object_type(o) == type)
 
-#define byte_p(i) (0 <= i && i < 256)
 #define sint_p(o) ((((intptr_t)o) & 1) == 1)
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
 #define sint(i) ((object)((((intptr_t)i) << 1) | 1))

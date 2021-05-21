@@ -98,8 +98,7 @@ DEFUN(dl_2e_store_2d_byte)
   intptr_t addr;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cintptr(argv->cons.car, &addr)) return FALSE;
-  if (!bi_cint(argv->cons.cdr->cons.car, &byte)) return FALSE;
-  if (!byte_p(byte)) return FALSE;
+  if (!bi_cbyte(argv->cons.cdr->cons.car, &byte)) return FALSE;
   SC(addr, byte);
   return TRUE;
 }

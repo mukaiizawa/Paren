@@ -76,6 +76,7 @@ static char *error_msg(enum error_msg em) {
   switch (em) {
     case expected_array: return "expected_array";
     case expected_binding_value: return "expected binding value";
+    case expected_byte: return "expected byte";
     case expected_bytes: return "expected bytes";
     case expected_bytes_like: return "expected bytes like object";
     case expected_cons: return "expected cons";

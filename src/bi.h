@@ -27,6 +27,7 @@ extern int bi_arg_mutable_bytes_like(object o, object *result);
 extern int bi_arg_immutable_bytes_like(object o, object *result);
 extern int bi_arg_proc(object o, object *result);
 extern int bi_arg_list(object o, object *result);
+extern int bi_cbyte(object o, int *p);
 extern int bi_cint(object o, int *p);
 extern int bi_cpint(object o, int *p);
 extern int bi_cint64(object o, int64_t *p);

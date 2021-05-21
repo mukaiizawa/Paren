@@ -73,7 +73,11 @@ static void describe_mem(object o, struct xbarray *x)
   int i;
   xbarray_adds(x, "#[");
   for (i = 0; i < o->mem.size; i++) {
-    xbarray_addf(x, "0x%x ", LC(o->mem.elt + i));
+    if (i == 5) {
+      xbarray_adds(x, "...");
+      break;
+    }
+    xbarray_addf(x, "0x%02x ", LC(o->mem.elt + i));
     if (x->size > MAX_STR_LEN) return;
   }
   xbarray_add(x, ']');
@@ -84,6 +88,10 @@ static void describe_array(object o, struct xbarray *x)
   int i;
   xbarray_adds(x, "#[ ");
   for (i = 0; i < o->array.size; i++) {
+    if (i == 5) {
+      xbarray_adds(x, "...");
+      break;
+    }
     describe_s_expr(o->array.elt[i], x);
     xbarray_add(x, ' ');
     if (x->size > MAX_STR_LEN) return;

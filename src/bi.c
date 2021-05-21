@@ -136,6 +136,13 @@ static int digit_val(char ch)
   return ch - 'a' + 10;
 }
 
+int bi_cbyte(object o, int *p)
+{
+  if (!bi_cint(o, p) || *p < 0 || *p > 0xff) return ip_throw(ArgumentError, expected_byte);
+  *p = sint_val(o);
+  return TRUE;
+}
+
 int bi_cint(object o, int *p)
 {
   if (!sint_p(o)) return ip_throw(ArgumentError, expected_integer);
@@ -257,8 +264,7 @@ DEFUN(_5b__5d_)
       if (i >= o->mem.size) return FALSE;
       if (argc == 2) *result = sint(LC(o->mem.elt + i));
       else {
-        if (!bi_cint((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
-        if (!byte_p(byte)) return FALSE;
+        if (!bi_cbyte((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
         SC(o->mem.elt + i, byte);
       }
       return TRUE;
@@ -1024,8 +1030,7 @@ DEFUN(memmem)
   argv = argv->cons.cdr;
   switch (object_type(argv->cons.car)) {
     case SINT:
-      b = sint_val(argv->cons.car);
-      if (!byte_p(b)) return FALSE;
+      if (!bi_cbyte(argv->cons.car, &b)) return FALSE;
       break;
     case SYMBOL:
     case KEYWORD:
