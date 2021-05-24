@@ -1,4 +1,4 @@
-; echo client
+; echo client.
 
 (import :sock)
 
