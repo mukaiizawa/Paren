@@ -35,7 +35,7 @@
                        put (f (record val) (car! (cddr record) val)))
             (if optval (.raise self "duplicate option " opt)
                 (nil? optarg?) (begin (put record true) (continue))
-                (< (++ i) arglen) (begin (put record (substr arg (++ i))) (break))
+                (< (++ i) arglen) (begin (put record (slice arg (++ i))) (break))
                 (<- args (cdr args)) (begin (put record (car args)) (break))
                 (.raise self "required option argument of " opt))))
         (<- args (cdr args)))))

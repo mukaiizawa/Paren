@@ -11,7 +11,7 @@ Usage: paren cdep.p
     (if (&& (prefix? line "#include")
             (<- open-quote (strstr line "\""))
             (<- close-quote (strlstr line "\""))
-            (<- file-name (substr line (++ open-quote) close-quote))
+            (<- file-name (slice line (++ open-quote) close-quote))
             (! (in? file-name dependencies)))
         (parse-cfile (path file-name) (cons file-name dependencies))
         dependencies)))

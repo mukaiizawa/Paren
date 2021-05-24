@@ -1144,21 +1144,6 @@
       (while (<- c (read-char)) (.add a c)))
     (.to-a a)))
 
-(function substr (s start :opt end)
-  ; Returns a string that is a substring of the specified string s.
-  ; The substring begins at the specified start and extends to the character at index end - 1.
-  ; Thus the length of the substring is `end - start`.
-  (let (ms (.new MemoryStream))
-    (if (< start 0) (error "illegal start " start))
-    (.write-bytes ms s)
-    (dotimes (i start)
-      (if (nil? (.read-char ms)) (error "illegal start " start)))
-    (if (nil? end) (slice s (.tell ms))
-        (let (pos (.tell ms))
-          (dotimes (i (- end start))
-            (if (nil? (.read-char ms)) (error "illegal end " end)))
-          (slice s pos (.tell ms))))))
-
 (function strstr (s pat :opt start)
   ; Returns the position where the substring pat appears first in the string s.
   ; If the string pat is not a substring of the string s, returns nil.
@@ -1732,19 +1717,19 @@
   ; Returns base name (the string up to the first dot).
   ; If not including dot, returns the entire name.
   (let (name (.name self) i (strstr name "."))
-    (if i (substr name 0 i)
+    (if i (slice name 0 i)
         name)))
 
 (method Path .suffix ()
   ; Returns the suffix (the string after the last dot).
   ; If not including dot, returns nil.
   (let (name (.name self) i (strlstr name "."))
-    (if i (substr name (++ i)))))
+    (if i (slice name (++ i)))))
 
 (method Path .but-suffix ()
   ; Returns the name without the suffix.
   (let (name (.name self) i (strlstr name "."))
-    (if i (substr name 0 i)
+    (if i (slice name 0 i)
         name)))
 
 (method Path .root? ()
