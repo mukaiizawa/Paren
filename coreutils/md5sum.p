@@ -1,5 +1,6 @@
 ; compute and check MD5 message digest.
 
+(import :bin)
 (import :md5)
 (import :optparse)
 
@@ -16,7 +17,7 @@
   ; md5sum [OPTION]
   ; Print or check MD5 (128-bit) checksums.
   ;     -c FILE read MD5 sums from the FILEs and check them
-  (hexstr (md5.sum (read-bytes))))
+  (bin.hexstr (md5.sum (read-bytes))))
 
 (function comment? (line)
   (prefix? line "#"))
