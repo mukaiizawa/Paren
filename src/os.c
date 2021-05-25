@@ -96,7 +96,7 @@ DEFUN(fread)
   FILE *fp;
   object o;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
-  if (!bi_arg_bytes(argv->cons.car, &o)) return FALSE;
+  if (!bi_bytes(argv->cons.car, &o)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_cint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (from + size > o->mem.size) return FALSE;
@@ -116,7 +116,7 @@ DEFUN(fwrite)
   FILE *fp;
   object o;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
-  if (!bi_arg_bytes_like(argv->cons.car, &o)) return FALSE;
+  if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (from + size > o->mem.size) return FALSE;

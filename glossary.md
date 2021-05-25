@@ -28,6 +28,3 @@ A sequence is one of the following types.
 - array
 - bytes
 - string
-
-- symbol
-- keyword

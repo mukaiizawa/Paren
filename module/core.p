@@ -600,7 +600,7 @@
   ; If delim is not specified, consider an empty string to be specified.
   (if (nil? l) nil
       (nil? (cdr l)) (string (car l))
-      (nil? delim) (string! (apply memcat l))
+      (nil? delim) (string (apply memcat l))
       (with-memory-stream ($out)
         (write-bytes (car l))
         (dolist (x (cdr l)) (write-bytes delim) (write-bytes x)))))

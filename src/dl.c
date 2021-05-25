@@ -48,7 +48,7 @@ DEFUN(dl_2e_call)
   if (!bi_argc_range(argc, 3, 3)) return FALSE;
   if (!bi_cintptr(argv->cons.car, &func)) return FALSE;
   if (!bi_cint((argv = argv->cons.cdr)->cons.car, &type)) return FALSE;
-  if (!bi_arg_array(argv->cons.cdr->cons.car, &fargs)) return FALSE;
+  if (!bi_array(argv->cons.cdr->cons.car, &fargs)) return FALSE;
   cret = 0;
   for (i = 0; i < type % 100; i++) {
     if (!bi_cintptr(fargs->array.elt[i], &cargs[i])) return FALSE;
@@ -107,7 +107,7 @@ DEFUN(dl_2e_address)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_mutable_bytes_like(argv->cons.car, &o)) return FALSE;
+  if (!bi_bytes(argv->cons.car, &o)) return FALSE;
   *result = gc_new_xint((intptr_t)o->mem.elt);
   return TRUE;
 }

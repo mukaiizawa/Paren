@@ -83,7 +83,6 @@ static char *error_msg(enum error_msg em) {
     case expected_dict: return "expected dict";
     case expected_function: return "expected function";
     case expected_function_macro: return "expected function or macro";
-    case expected_immuatable_bytes_like: return "expected immuatable bytes like object";
     case expected_instance_of_Class_class: return "expected instance of Class class";
     case expected_instance_of_Exception_class: return "expected instance of Exception class";
     case expected_integer: return "expected integer";
@@ -91,7 +90,6 @@ static char *error_msg(enum error_msg em) {
     case expected_keyword_parameter: return "expected keyword parameter";
     case expected_keyword_parameter_value: return "expected keyword parameter value";
     case expected_list: return "expected list";
-    case expected_muatable_bytes_like: return "expected muatable bytes like object";
     case expected_number: return "expected number";
     case expected_operator: return "expected operator";
     case expected_positive_integer: return "expected positive integer";
@@ -99,6 +97,7 @@ static char *error_msg(enum error_msg em) {
     case expected_sequence: return "expected sequence";
     case expected_string: return "expected string";
     case expected_symbol: return "expected symbol";
+    case expected_symbol_keyword: return "expected symbol or keyword";
     case index_out_of_range: return "index out of range";
     case invalid_args: return "invalid arguments";
     case invalid_binding_expr: return "invalid binding expression";
@@ -477,7 +476,7 @@ static void pop_bind_handler_frame(void)
   object cls_sym, handler, handlers;
   cls_sym = get_frame_var(fp, 0);
   pop_frame();
-  if (!bi_arg_func(reg[0], &handler)) return;
+  if (!bi_func(reg[0], &handler)) return;
   for (i = fp; i > -1; i = prev_fp(i)) {
     if (sint_val(fs[i]) != HANDLERS_FRAME) continue;
     handlers = get_frame_var(i, 0);
@@ -794,7 +793,7 @@ DEFUN(apply)
 {
   object args;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_arg_list(argv->cons.cdr->cons.car, &args)) return FALSE;
+  if (!bi_list(argv->cons.cdr->cons.car, &args)) return FALSE;
   reg[0] = args;
   switch (object_type(argv->cons.car)) {
     case BUILTINFUNC:
@@ -829,7 +828,7 @@ DEFUN(bound_3f_)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_symbol(argv->cons.car, &o)) return FALSE;
+  if (!bi_symbol(argv->cons.car, &o)) return FALSE;
   reg[0] = object_bool(map_get_propagation(reg[1], o) != NULL);
   return TRUE;
 }
@@ -930,8 +929,8 @@ DEFUN(find_2d_method)
 {
   object cls, cls_sym, mtd_sym, features;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_arg_symbol(argv->cons.car, &cls_sym)) return FALSE;
-  if (!bi_arg_symbol(argv->cons.cdr->cons.car, &mtd_sym)) return FALSE;
+  if (!bi_symbol(argv->cons.car, &cls_sym)) return FALSE;
+  if (!bi_symbol(argv->cons.cdr->cons.car, &mtd_sym)) return FALSE;
   while (TRUE) {
     // class method
     if ((*result = find_class_method(cls_sym, mtd_sym)) != NULL) return TRUE;
@@ -1080,7 +1079,7 @@ DEFSP(let)
 {
   object args;
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
-  if (!bi_arg_list(argv->cons.car, &args)) return FALSE;
+  if (!bi_list(argv->cons.car, &args)) return FALSE;
   if (args == object_nil) gen_eval_sequential_frame(argv->cons.cdr);
   else {
     gen0(LET_FRAME);
@@ -1097,7 +1096,7 @@ DEFSP(dynamic)
   int i;
   object e, s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_symbol(argv->cons.car, &s)) return FALSE;
+  if (!bi_symbol(argv->cons.car, &s)) return FALSE;
   i = fp;
   e = reg[1];
   if ((reg[0] = map_get(e, s)) != NULL) return TRUE;
@@ -1132,10 +1131,10 @@ DEFSP(macro)
 {
   object o, params;
   if (!bi_argc_range(argc, 3, FALSE)) return FALSE;
-  if (!bi_arg_symbol(argv->cons.car, &o)) return FALSE;
+  if (!bi_symbol(argv->cons.car, &o)) return FALSE;
   gen1(BIND_PROPAGATION_FRAME, o);
   argv = argv->cons.cdr;
-  if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
+  if (!bi_list(argv->cons.car, &params)) return FALSE;
   param_count = 0;
   if (!parse_required_params(params))
     return ip_throw(SyntaxError, invalid_args);
@@ -1147,7 +1146,7 @@ DEFSP(f)
 {
   object params;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
+  if (!bi_list(argv->cons.car, &params)) return FALSE;
   param_count = 0;
   if (!parse_required_params(params))
     return ip_throw(ArgumentError, invalid_args);
@@ -1188,7 +1187,7 @@ DEFSP(goto)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_arg_keyword(argv->cons.car, &o)) return FALSE;
+  if (!bi_keyword(argv->cons.car, &o)) return FALSE;
   gen0(GOTO_FRAME);
   reg[0] = o;
   return TRUE;
@@ -1206,7 +1205,7 @@ DEFSP(catch)
 {
   object params;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_arg_list(argv->cons.car, &params)) return FALSE;
+  if (!bi_list(argv->cons.car, &params)) return FALSE;
   gen1(HANDLERS_FRAME, gc_new_array(list_len(params)));
   gen_eval_sequential_frame(argv->cons.cdr);
   return gen_bind_frames(BIND_HANDLER_FRAME, params);
