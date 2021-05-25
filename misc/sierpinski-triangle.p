@@ -1,7 +1,5 @@
 ; Sierpinski triangle.
 
-
-
 (function init-table (table n)
   (dotimes (i (len table))
     ([] table i (if (= i n) 1 0)))
