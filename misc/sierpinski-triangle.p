@@ -5,7 +5,7 @@
     ([] table i (if (= i n) 1 0)))
   table)
 
-(function show-cells (table)
+(function show-table (table)
   (doarray (x table)
     (write-bytes (if (= x 0) " " "*")))
   (write-line))
@@ -21,7 +21,7 @@
   ; Based on Cellular automaton Rule 90.
   (let (size (++ (* 2 n)) table (init-table (array size) n) work-table (array size))
     (dotimes (i n)
-      (show-cells table)
+      (show-table table)
       (<- (table work-table) (next-generation table work-table)))))
 
 (function! main (args)
