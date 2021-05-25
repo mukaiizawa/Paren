@@ -17,7 +17,7 @@
                       ([] table0 (% (++ i) size)))))
     (list table1 table0)))    ; switch
 
-(function sierpinski (n)
+(function sierpinski-triangle (n)
   ; Based on Cellular automaton Rule 90.
   (let (size (++ (* 2 n)) table (init-table (array size) n) work-table (array size))
     (dotimes (i n)
@@ -25,4 +25,4 @@
       (<- (table work-table) (next-generation table work-table)))))
 
 (function! main (args)
-  (sierpinski 30))
+  (sierpinski-triangle 30))
