@@ -302,7 +302,7 @@ int ch_len(unsigned char ch, int *len)
   else if (ch < 0xe0) (*len) += 2;
   else if (ch < 0xf0) (*len) += 3;
   else if (ch < 0xf8) (*len) += 4;
-  else return ip_throw(ArgumentError, invalid_utf8_byte_sequense);
+  else return ip_throw(ArgumentError, invalid_utf8_byte_sequence);
   return TRUE;
 }
 

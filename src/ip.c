@@ -95,13 +95,14 @@ static char *error_msg(enum error_msg em) {
     case expected_number: return "expected number";
     case expected_operator: return "expected operator";
     case expected_positive_integer: return "expected positive integer";
+    case expected_positive_integer_or_sequence: return "expected positive integer or sequence";
     case expected_sequence: return "expected sequence";
     case expected_string: return "expected string";
     case expected_symbol: return "expected symbol";
     case index_out_of_range: return "index out of range";
     case invalid_args: return "invalid arguments";
     case invalid_binding_expr: return "invalid binding expression";
-    case invalid_utf8_byte_sequense: return "invalid utf8 byte sequense";
+    case invalid_utf8_byte_sequence: return "invalid utf8 byte sequence";
     case too_few_arguments: return "too few arguments";
     case too_many_arguments: return "too many arguments";
     case undeclared_keyword_param: return "undeclared keyword parameter";

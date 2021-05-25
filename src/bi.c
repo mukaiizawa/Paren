@@ -419,7 +419,7 @@ DEFUN(len)
 
 DEFUN(slice)
 {
-  int i, start, stop, len;
+  int i, start, stop;
   object o;
   if (!bi_argc_range(argc, 1, 3)) return FALSE;
   *result = object_nil;
@@ -453,8 +453,7 @@ DEFUN(slice)
     case ARRAY:
       if (stop == -1) stop = o->array.size;
       else if (stop > o->array.size) return FALSE;
-      *result = gc_new_array(len = stop - start);
-      memcpy((*result)->array.elt, o->array.elt + start, sizeof(object) * len);
+      *result = gc_new_array_from(o->array.elt + start, stop - start);
       return TRUE;
     default:
       return ip_throw(ArgumentError, expected_sequence);
@@ -1270,13 +1269,61 @@ DEFUN(upper)
 
 // array.
 
+static int string_to_array(object o, object *result)
+{
+  int i, j, w, size;
+  if (!str_len(o, &size)) return FALSE;
+  *result = gc_new_array(size);
+  i = j = w = 0;
+  while (i < size) {
+    if (!ch_len(LC(o->mem.elt + j), &w)) return FALSE;
+    (*result)->array.elt[i] = gc_new_mem_from(STRING, o->mem.elt + j, w);
+    i++;
+    j += w;
+    w = 0;
+  }
+  xassert(j == o->mem.size);
+  return TRUE;
+}
+
 DEFUN(array)
 {
-  int size;
+  int i, size;
+  object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cint(argv->cons.car, &size)) return FALSE;
-  *result = gc_new_array(size);
-  return TRUE;
+  if ((o = argv->cons.car) == object_nil) {
+    *result = gc_new_array(0);
+    return TRUE;
+  }
+  switch (object_type(o)) {
+    case SINT:
+    case XINT:
+      if (!bi_cpint(o, &size)) return FALSE;
+      *result = gc_new_array(size);
+      return TRUE;
+    case CONS:
+      size = list_len(o);
+      *result = gc_new_array(size);
+      for (i = 0; i < size; i++) {
+        (*result)->array.elt[i] = o->cons.car;
+        o = o->cons.cdr;
+      }
+      xassert(o == object_nil);
+      return TRUE;
+    case STRING:
+      return string_to_array(o, result);
+    case BYTES:
+      size = o->mem.size;
+      *result = gc_new_array(o->mem.size);
+      for (i = 0; i < size; i++)
+        (*result)->array.elt[i] = gc_new_xint(o->mem.elt[i]);
+      return TRUE;
+    case ARRAY:
+      *result = gc_new_array_from(o->array.elt, o->array.size);
+      return TRUE;
+    default:
+      return ip_throw(ArgumentError, expected_positive_integer_or_sequence);
+  }
 }
 
 DEFUN(array_3f_)

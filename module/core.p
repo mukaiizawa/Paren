@@ -255,10 +255,8 @@
   ; Iterates over the characters of the string s.
   ; Supports break, continue macro.
   ; Returns nil.
-  (with-gensyms (ga)
-    (list let (list ga (list str->arr s))
-          (list doarray (list c ga)
-                (cons begin body)))))
+  (list doarray (list c (list array s))
+        (cons begin body)))
 
 (macro doarray ((i a) :rest body)
   ; Iterates over the elements of the specified array a, with index the specified i.
@@ -611,10 +609,10 @@
   ; Returns a list of characters in string s.
   ; If delim is specified, returns a list of strings s delimited by delimiter.
   (if (empty? s) nil
-      (nil? delim) (arr->list (str->arr s))
+      (nil? delim) (arr->list (array s))
       (let (i 0 lis nil chars nil
-              sa (str->arr s) salen (len sa)
-              da (str->arr delim) dalen (len da) end (- salen dalen)
+              sa (array s) salen (len sa)
+              da (array delim) dalen (len da) end (- salen dalen)
               match? (f ()
                        (dotimes (j dalen)
                          (if (!= ([] sa (+ i j)) ([] da j)) (return nil)))
@@ -1137,18 +1135,11 @@
   ; Return a copy of the string with all the cased characters converted to uppercase.
   (assert (= (upper "abc123") "ABC123")))
 
-(function str->arr (s)
-  ; Returns a character array of string s.
-  (let (a (.new Array) c nil)
-    (with-memory-stream ($in s)
-      (while (<- c (read-char)) (.add a c)))
-    (.to-a a)))
-
 (function strstr (s pat :opt start)
   ; Returns the position where the substring pat appears first in the string s.
   ; If the string pat is not a substring of the string s, returns nil.
   ; If start is specified, search for substring pat from start-th of the string s.
-  (let (start (|| start 0) sa (str->arr s) slen (len sa) pa (str->arr pat) plen (len pa))
+  (let (start (|| start 0) sa (array s) slen (len sa) pa (array pat) plen (len pa))
     (if (< (- slen start) 0) (error "illegal start")
         (= plen 0) (return 0))
     (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (i (++ i))
@@ -1162,7 +1153,7 @@
 (function strlstr (s pat)
   ; Returns the position where the substring pat appears last in the string s.
   ; If the string pat is not a substring of the string s, returns nil.
-  (let (sa (str->arr s) slen (len sa) pa (str->arr pat) plen (len pa))
+  (let (sa (array s) slen (len sa) pa (array pat) plen (len pa))
     (if (= plen 0) (return (-- slen)))
     (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (i (-- i))
       (when (= ([] sa i) p0)
@@ -1240,9 +1231,14 @@
 
 ;; array.
 
-(builtin-function array (size)
-  ; Returns an array of length size.
-  (assert (array 1)))
+(builtin-function array (x)
+  ; Returns an array.
+  ; If the argument x is a number, returns an array initialized with nil of size x.
+  ; If the argument x is a sequence, returns the corresponding array.
+  (assert (= ([] (array 1) 0) nil))
+  (assert (= ([] (array (array 1)) 0) nil))
+  (assert (= ([] (array "foo") 1) "o"))
+  (assert (= ([] (array '(foo bar buzz)) 1) 'bar)))
 
 (builtin-function array? (x)
   ; Returns whether the x is an array.
@@ -1617,50 +1613,6 @@
 (method Comparable .eq? (o)
   ; Returns whether the receiver and o is equal.
   (= (.cmp self o) 0))
-
-(class Array ()
-  ; Extensible array class.
-  size elt)
-
-(method Array .init ()
-  (&size! self 0)
-  (&elt! self (array 4)))
-
-(method Array .size ()
-  ; Returns size of the receiver.
-  (&size self))
-
-(method Array .at (i)
-  ; Returns i-th element of the receiver.
-  ([] (&elt self) i))
-
-(method Array .put (i val)
-  ; Update the i-th element of the receiver to val.
-  ; Returns the receiver.
-  ([] (&elt self) i val)
-  self)
-
-(method Array .reserve (size)
-  (let (req (+ (&size self) size) elt-size (len (&elt self)))
-    (when (< elt-size req)
-      (while (< (<- elt-size (* elt-size 2)) req))
-      (let (src (&elt self) dst (array elt-size))
-        (dotimes (i (&size self)) ([] dst i ([] src i)))
-        (&elt! self dst)))
-    self))
-
-(method Array .add (val)
-  ; Add an element to the end of the array.
-  ; Returns the receiver.
-  (let (i (&size self))
-    (.reserve self 1)
-    (&size! self (++ i))
-    ([] (&elt self) i val))
-  self)
-
-(method Array .to-a ()
-  ; Returns an array representation of the receiver.
-  (slice (&elt self) 0 (&size self)))
 
 ;;; Path.
 
@@ -2639,10 +2591,10 @@
 (reader-macro [ (reader)
    ; Define array/bytes literal reader.
    (if (!= (.read reader) '[) (error "missing space in array literal")
-       (let ($G-a (.new Array) $G-v nil)
+       (let ($G-l nil $G-v nil)
          (while (!= (<- $G-v (.read reader)) '])
-             (.add $G-a (eval $G-v)))
-         (.to-a $G-a))))
+             (push! (eval $G-v) $G-l))
+         (array (reverse! $G-l)))))
 
 (reader-macro { (reader)
   ; Define dictionary literal reader.

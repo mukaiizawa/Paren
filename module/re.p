@@ -123,7 +123,7 @@
 
 (method Re .match? (s :opt start)
   (&start! self (|| start (<- start 0)))
-  (&text! self (if (array? s) s (str->arr s)))
+  (&text! self (array s))
   (if (&anchored-start? self)
       (return (&& (= start 0) (.try self (&elements self) 0))))
   (for (i start e (.text-length self)) (<= i e) (i (++ i))

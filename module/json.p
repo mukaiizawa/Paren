@@ -1,5 +1,7 @@
 ; json module.
 
+(import :array)
+
 (function json.obj->str (lis)
   (with-memory-stream ($out)
     (write-bytes "{")

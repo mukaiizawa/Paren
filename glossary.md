@@ -15,18 +15,19 @@ A collection is a sequence or dictionary.
 An immutable sequence is a sequence that is not mutable.
 
 # mutable sequence
-A mutable sequense is one of the following types.
+A mutable sequence is one of the following types.
 
 - list
 - array
 - bytes
 
 # sequence
-A sequense is one of the following types.
+A sequence is one of the following types.
 
 - list
 - array
 - bytes
+- string
+
 - symbol
 - keyword
-- string
