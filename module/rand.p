@@ -11,8 +11,12 @@
   (// (* (rand.val) n)))
 
 (function rand.bool ()
-  ; Randomly returns a boolean value.
+  ; Returns true or nil randomly.
   (= (rand.int 2) 0))
+
+(function rand.choice (seq)
+  ; Returns one random element from the sequence seq.
+  ([] seq (rand.int (len seq))))
 
 (function rand.bytes (bytes)
   ; Returns the specified bytes with a random value.

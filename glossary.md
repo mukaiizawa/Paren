@@ -1,7 +1,7 @@
 Glossary
 
-# bytes-like object
-A bytes-like object is the following type to which the function for bytes can be applied.
+# bytes-like
+A bytes-like object is the following type.
 
 - bytes
 - symbol
@@ -9,17 +9,28 @@ A bytes-like object is the following type to which the function for bytes can be
 - string
 
 # collection
-A collection is a sequence or dictionary.
-
-# immutable sequence
-An immutable sequence is a sequence that is not mutable.
+A collection is a sequence or dictionary type.
 
 # mutable sequence
+A mutable sequence is a sequence that can be changed.
+
 A mutable sequence is one of the following types.
 
 - list
 - array
 - bytes
+
+All sequences other than strings are mutable.
+
+# list
+A list is a cons type or symbol `nil`.
+
+# operator
+An operator is one of the following types.
+
+- special-operator
+- function/builtin-function
+- macro
 
 # sequence
 A sequence is one of the following types.

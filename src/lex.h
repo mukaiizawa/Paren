@@ -10,7 +10,7 @@
 #define LEX_FLOAT 260
 
 extern struct xbarray lex_str;
-extern int lex_ival;
+extern int64_t lex_ival;
 extern double lex_fval;
 
 extern void lex_start(FILE *fp);

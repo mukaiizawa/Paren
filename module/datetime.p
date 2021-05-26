@@ -150,7 +150,7 @@
   (str (.date.to-s self) " " (.time.to-s self)))
 
 (method DateTime .day-week.to-s ()
-  (nth (.day-week self) '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat")))
+  ([] '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat") (.day-week self)))
 
 (method DateTime .to-s ()
   (join (list (.date.to-s self) (.day-week.to-s self) (.time.to-s self)) " "))

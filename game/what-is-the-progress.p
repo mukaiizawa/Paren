@@ -4,10 +4,10 @@
 
 (function! main (args)
   (let (lis0 '("進捗" "どう" "です" "か?")
-             rand-word (f () (nth (rand.int (len lis0)) lis0))
-             rec (f (next lis)
-                   (when lis
-                     (write-bytes next)
-                     (if (= next (car lis)) (rec (rand-word) (cdr lis))
-                         (rec (rand-word)lis0)))))
-    (rec (rand-word) lis0)))
+             rec (f (rest)
+                   (when rest
+                     (let (next (rand.choice lis0))
+                       (write-bytes next)
+                       (if (= next (car rest)) (rec (cdr rest))
+                           (rec lis0))))))
+    (rec lis0)))

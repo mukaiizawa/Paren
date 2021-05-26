@@ -2,7 +2,7 @@
 
 (import :rand)
 
-(<- $choices '(rock paper scissors))
+(<- $choices '("rock" "paper" "scissors"))
 
 (function choice->index (c)
   (find (f (x) (if (prefix? (car x) c) (cadr x)))
@@ -22,7 +22,7 @@
 
 (function rcp ()
   (let (user-choice (user-choice) computer-choice (computer-choice))
-    (write-line (str "computer: " (nth computer-choice $choices)))
+    (write-line (str "computer: " ([] $choices computer-choice)))
     (if (= user-choice computer-choice) (write-line "draw")
         (= (% (++ user-choice) 3) computer-choice) (write-line "lose")
         (write-line "win"))

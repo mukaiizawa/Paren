@@ -263,7 +263,7 @@
   ; Supports break, continue macro.
   ; Returns nil.
   (with-gensyms (ga gi glen)
-    (list for (list gi 0 ga a glen (list len ga)) (list < gi glen) (list gi (list ++ gi))
+    (list for (list gi 0 ga a glen (list len ga)) (list < gi glen) (list gi (list '++ gi))
           (list let (list i (list [] ga gi))
                 (cons begin body)))))
 
@@ -340,52 +340,9 @@
   ; The addresses of symbols or keywords with the same name are always equal.
   (assert (= (address 'x) (address 'x))))
 
-(builtin-function len (x)
-  ; Returns the length of the collection x.
-  (assert (= (len nil) 0))
-  (assert (= (len '(1)) 1))
-  (assert (= (len (array 1)) 1))
-  (assert (= (let (d (dict)) ({} d :x 1)) 1))
-  (assert (= (len "foo") 3)))
-
-(builtin-function slice (x :opt start stop)
-  ; Returns a subsequence of sequence x.
-  ; If start is omitted, it defaults to 0.
-  ; If stop is omitted, it defaults to `(len x)`.
-  (assert (= (slice nil) nil))
-  (assert (= (slice nil 0) nil))
-  (assert (= (slice nil 0 1) nil))
-  (assert (let (lis '(0 1 2))
-            (= (slice lis ) lis)
-            (= (slice lis 0) lis)
-            (= (slice lis 0 2) '(0 1))))
-  (assert (let (s "abc")
-            (= (slice s ) s)
-            (= (slice s 0) "bc")
-            (= (slice s 0 0) "")
-            (= (slice s 0 2) "ab"))))
-
 (function empty? (x)
   ; Returns whether the x is "" or nil.
   (if x (= (len x) 0) true))
-
-(builtin-function [] (x i :opt v)
-  ; Returns the i-th element of the sequence x.
-  ; If v is specified, update the i-th element of mutable sequence x to v, returns v.
-  ; Error if x is an immutable sequence and v is specified.
-  (assert (= ([] (array 1) 0) nil))
-  (assert (= ([] "foo" 0) "f"))
-  (assert (= ([] (bytes 1) 0) 0))
-  (assert (let (a (array 1) b (bytes 1))
-            (&& ([] a 0 true)
-                ([] a 0)
-                ([] b 0 0xff)
-                (= ([] b 0) 0xff)))))
-
-(builtin-function in? (x s)
-  ; Returns whether an item of s is equal to x.
-  (assert (in? 1 '(1 2 3)))
-  (assert (! (in? 0 '(1 2 3)))))
 
 ;; function & macro.
 
@@ -580,8 +537,8 @@
 (builtin-function list (:rest args)
   ; Returns a list whose elements are the specified args.
   ; If args is nil, returns nil.
-  (assert (= (car '(1 2 3)) 1))
-  (assert (nil? (car '()))))
+  (assert (= (list 1 2 3) '(1 2 3)))
+  (assert (nil? (list))))
 
 (function list? (x)
   ; Returns whether the x is a list.
@@ -598,9 +555,9 @@
 (function join (l :opt delim)
   ; Returns a new string of the specified list elements joined together with of the specified delimiter.
   ; If delim is not specified, consider an empty string to be specified.
-  (if (nil? l) nil
-      (nil? (cdr l)) (string (car l))
-      (nil? delim) (string (apply memcat l))
+  (if (nil? l) ""
+      (nil? (cdr l)) (car l)
+      (nil? delim) (apply memcat l)
       (with-memory-stream ($out)
         (write-bytes (car l))
         (dolist (x (cdr l)) (write-bytes delim) (write-bytes x)))))
@@ -635,11 +592,6 @@
   ; Error if x is not cons.
   (assert (= (car (last-cons '(1 2 3))) 3))
   (assert (nil? (last-cons nil))))
-
-(function nth (n x)
-  ; Returns the nth element of the specified list l.
-  ; If n is greater than the length of l, nil is returned.
-  (car (slice x n)))
 
 (function last (x)
   ; Same as `(car (last-cons x))`.
@@ -692,17 +644,6 @@
   ; Generally faster than reverse.
   (assert (nil? (reverse! nil)))
   (assert (= (car (reverse! '(0 1))) 1)))
-
-(builtin-function append (:rest args)
-  ; Returns a new list with each argument element as an element.
-  ; If args is nil, returns nil.
-  ; Error if all arguments are not list.
-  (assert (nil? (append)))
-  (assert (nil? (append nil)))
-  (assert (nil? (append nil nil)))
-  (assert (= (append '(1 2) '(3)) '(1 2 3)))
-  (assert (= (append '(1) '(2)) '(1 2)))
-  (assert (= (append nil '(1) '(2)) '(1 2))))
 
 (macro push! (x sym)
   ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
@@ -856,15 +797,43 @@
   (assert (number? 0x20))
   (assert (! (number? 'x))))
 
+(function byte? (x)
+  ; Returns whether the x is a integer and between 0 and 255.
+  (&& (int? x) (<= 0 x 255)))
+
 (builtin-function int? (x)
   ; Returns whether the x is a integer.
   (assert (int? 1))
   (assert (! (int? 3.14)))
   (assert (! (int? 'x))))
 
-(function byte? (x)
-  ; Returns whether the x is a integer and between 0 and 255.
-  (&& (int? x) (<= 0 x 255)))
+(function int (x)
+  ; Returns whether the x is a integer.
+  (// (float x)))
+
+(function int32 (x)
+  ; Returns whether the x is a integer.
+  (& 0xffffffff (int x)))
+
+(function float (x)
+  ; Returns whether the x is a float.
+  (if (number? x) x
+      (string? x) (with-memory-stream ($in x)
+                    (let (ar (.new AheadReader) val (.skip-unumber ar))
+                      (if (.next ar) (throw (.new ArgumentError))
+                          val)))))
+
+(function bin (x)
+  (str "2x" (int->str x :radix 2)))
+
+(function oct (x)
+  (str "8x" (int->str x :radix 8)))
+
+(function hex (x)
+  (if (bytes? x)
+      (with-memory-stream ($out)
+        (doarray (i x) (write-bytes (int->str i :radix 16 :padding 2))))
+      (str "0x" (int->str x :radix 16))))
 
 (function int->str (i :key radix padding)
   ; Returns string of i.
@@ -1163,7 +1132,7 @@
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
 
-;; bytes.
+;; bytes & bytes-like.
 
 (builtin-function memlen (x)
   ; Returns byte length of bytes-like object x.
@@ -1171,13 +1140,13 @@
 
 (function prefix? (x prefix)
   ; Returns whether the byte sequence x with the specified prefix.
-  (&& (>= (len x) (len prefix))
-      (memmem x prefix 0 (len prefix))))
+  (&& (>= (memlen x) (memlen prefix))
+      (memmem x prefix 0 (memlen prefix))))
 
 (function suffix? (x suffix)
   ; Returns whether the byte sequence x with the specified suffix.
-  (&& (>= (len x) (len suffix))
-      (memmem x suffix (- (len x) (len suffix)))))
+  (&& (>= (memlen x) (memlen suffix))
+      (memmem x suffix (- (memlen x) (memlen suffix)))))
 
 (builtin-function memmem (x b :opt start end)
   ; Returns the position where the byte b appears first in the byte sequence x.
@@ -1279,6 +1248,76 @@
             (&& (nil? ({} d :foo))
                 (= ({} d :foo 'foo) 'foo)
                 (= ({} d :foo) 'foo)))))
+
+;; sequence
+
+(builtin-function [] (x i :opt v)
+  ; Returns the i-th element of the sequence x.
+  ; If v is specified, update the i-th element of mutable sequence x to v, returns v.
+  ; If the argument x is a list and the index i is is out of range, returns nil.
+  ; Error if the argument x is not a list and the index i is out of range.
+  ; Error if x is an immutable sequence and v is specified.
+  (assert (= ([] '(0 1 2) 0) 0))
+  (assert (= ([] (array 1) 0) nil))
+  (assert (= ([] "foo" 0) "f"))
+  (assert (= ([] (bytes 1) 0) 0))
+  (assert (let (a (array 1) b (bytes 1))
+            (&& ([] a 0 true)
+                ([] a 0)
+                ([] b 0 0xff)
+                (= ([] b 0) 0xff)))))
+
+(builtin-function concat (:rest args)
+  ; Returns a sequence of concatenated arguments.
+  (assert (nil? (concat)))
+  (assert (nil? (concat nil)))
+  (assert (nil? (concat nil nil)))
+  (assert (= (concat '(1 2) '(3)) '(1 2 3)))
+  (assert (= (concat '(1) '(2)) '(1 2)))
+  (assert (= (concat nil '(1) '(2)) '(1 2)))
+  (assert (= (concat "0" "1" "2") "012"))
+  (assert (= (concat (bytes 1) (bytes 2)) (bytes 3)))
+  (assert (= (concat (array 1) (array 2)) (array 3))))
+
+(builtin-function slice (x :opt start stop)
+  ; Returns a subsequence of sequence x.
+  ; If start is omitted, it defaults to 0.
+  ; If stop is omitted, it defaults to `(len x)`.
+  (assert (= (slice nil) nil))
+  (assert (= (slice nil 0) nil))
+  (assert (= (slice nil 0 1) nil))
+  (assert (let (lis '(0 1 2))
+            (= (slice lis ) lis)
+            (= (slice lis 0) lis)
+            (= (slice lis 0 2) '(0 1))))
+  (assert (let (s "abc")
+            (= (slice s ) s)
+            (= (slice s 0) "bc")
+            (= (slice s 0 0) "")
+            (= (slice s 0 2) "ab"))))
+
+;; collection
+
+(builtin-function in? (x collection)
+  ; Returns whether element x exists in the collection.
+  (assert (in? 1 '(1 2 3)))
+  (assert (! (in? 0 '(1 2 3))))
+  (assert (in? 0x00 (bytes 1)))
+  (assert (! (in? 0x01 (bytes 1))))
+  (assert (in? "foo" "xfoox"))
+  (assert (! (in? "foo" "xbarx")))
+  (assert (in? nil (array 1)))
+  (assert (! (in? true (array 1))))
+  (assert (let (d (dict)) ({} d nil nil) (in? nil d)))
+  (assert (! (in? nil (dict)))))
+
+(builtin-function len (x)
+  ; Returns the length of the collection x.
+  (assert (= (len nil) 0))
+  (assert (= (len '(1)) 1))
+  (assert (= (len (array 1)) 1))
+  (assert (= (let (d (dict)) ({} d :x 1)) 1))
+  (assert (= (len "foo") 3)))
 
 ;; os.
 
@@ -2425,15 +2464,15 @@
                  (if (= ope 'quasiquote) (list cons ''quasiquote (descend (cdr x) (++ level)))
                      (= ope 'unquote) (if (= level 0) (cadr x) (list cons ''unquote (descend (cdr x) (-- level))))
                      (= ope 'unquote-splicing) (if (= level 0) (cadr x) (list cons ''unquote-splicing (descend (cdr x) (-- level))))
-                     (list append (descend-car (car x) level) (descend (cdr x) level))))))
+                     (list concat (descend-car (car x) level) (descend (cdr x) level))))))
          descend-car
          (f (x level)
            (if (atom? x) (list quote (list x))
                (let (ope (car x))
                  (if (= ope 'quasiquote) (list list (list cons ''quasiquote (descend (cdr x) (++ level))))
                      (= ope 'unquote) (if (= level 0) (cons list (cdr x)) (list list (list cons ''unquote (descend (cdr x) (-- level)))))
-                     (= ope 'unquote-splicing) (if (= level 0) (cons append (cdr x)) (list list (list cons ''unquote-splicing (descend (cdr x) (-- level)))))
-                     (list list (list append (descend-car (car x) level) (descend (cdr x) level))))))))
+                     (= ope 'unquote-splicing) (if (= level 0) (cons concat (cdr x)) (list list (list cons ''unquote-splicing (descend (cdr x) (-- level)))))
+                     (list list (list concat (descend-car (car x) level) (descend (cdr x) level))))))))
     (descend expr 0)))
 
 (method ParenReader .read ()
@@ -2517,7 +2556,7 @@
                                 body))
                 (list if gsym (list '.close gsym))))))
 
-;;; execution.
+;; execution.
 
 (builtin-function eval (expr)
   ; Evaluates the specified expression and returns a value.

@@ -199,7 +199,7 @@ object object_bool(int b)
   return object_nil;
 }
 
-static int dbl_eq(double x, object p)
+static int double_eq_p(double x, object p)
 {
   int64_t i;
   double d;
@@ -208,19 +208,19 @@ static int dbl_eq(double x, object p)
   return FALSE;
 }
 
-static int int64eq_p(int64_t x, object p)
+static int int64_eq_p(int64_t x, object p)
 {
   int64_t y;
   if (bi_cint64(p, &y)) return x == y;
-  return dbl_eq((double)x, p);
+  return double_eq_p((double)x, p);
 }
 
-static int numeq_p(object o, object p)
+static int number_eq_p(object o, object p)
 {
   int64_t i;
   double d;
-  if (bi_cint64(o, &i)) return int64eq_p(i, p);
-  if (bi_cdouble(o, &d)) return dbl_eq(d, p);
+  if (bi_cint64(o, &i)) return int64_eq_p(i, p);
+  if (bi_cdouble(o, &d)) return double_eq_p(d, p);
   return FALSE;
 }
 
@@ -245,7 +245,7 @@ int object_eq_p(object o, object p)
     case SINT:
     case XINT:
     case XFLOAT:
-      return numeq_p(o, p);
+      return number_eq_p(o, p);
     case BYTES:
     case STRING:
       if (object_type(o) != object_type(p)) return FALSE;
@@ -269,6 +269,98 @@ int object_eq_p(object o, object p)
     case DICT:
       if (!object_type_p(p, DICT)) return FALSE;
       return dict_eq_p(o, p);
+    default:
+      return FALSE;
+  }
+}
+
+int int_p(object o)
+{
+  switch (object_type(o)) {
+    case SINT:
+    case XINT:
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
+int number_p(object o)
+{
+  switch (object_type(o)) {
+    case SINT:
+    case XINT:
+    case XFLOAT:
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
+int bytes_like_p(object o)
+{
+  switch (object_type(o)) {
+    case BYTES:
+    case STRING:
+    case SYMBOL:
+    case KEYWORD:
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
+int sequence_p(object o)
+{
+  switch (object_type(o)) {
+    case SYMBOL:
+      return o == object_nil;
+    case CONS:
+    case BYTES:
+    case STRING:
+    case ARRAY:
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
+int mutable_sequence_p(object o)
+{
+  switch (object_type(o)) {
+    case SYMBOL:
+      return o == object_nil;
+    case CONS:
+    case BYTES:
+    case ARRAY:
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
+int collection_p(object o)
+{
+  switch (object_type(o)) {
+    case SYMBOL:
+      return o == object_nil;
+    case CONS:
+    case BYTES:
+    case STRING:
+    case ARRAY:
+    case DICT:
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
+int symbol_keyword_p(object o)
+{
+  switch (object_type(o)) {
+    case SYMBOL:
+    case KEYWORD:
+      return TRUE;
     default:
       return FALSE;
   }
@@ -314,21 +406,6 @@ int str_len(object o, int *len)
     if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
     (*len)++;
   }
-  return TRUE;
-}
-
-int str_slice(object o, int start, int stop, object *result)
-{
-  int i, s, t;
-  for (i = s = 0; i < start; i++)
-    if (!ch_len(LC(o->mem.elt + s), &s)) return FALSE;
-  if (stop == -1) t = o->mem.size;
-  else {
-    for (i = start, t = s; i < stop; i++) {
-      if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
-    }
-  }
-  *result = gc_new_mem_from(STRING, o->mem.elt + s, t - s);
   return TRUE;
 }
 

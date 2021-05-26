@@ -6,7 +6,7 @@
   ; xargs [OPTION] COMMAND [INITIAL-ARGUMENTS]...
   ;     -c Execute a command with the entire standard input as an argument
   (let (run (f (cmd initial-args args)
-              (system (join (cons cmd (append initial-args args)) " "))))
+              (system (join (cons cmd (concat initial-args args)) " "))))
     (if combine? (run cmd initial-args (collect read-line))
         (foreach (f (:rest args) (run cmd initial-args args))
                  (collect read-line)))))

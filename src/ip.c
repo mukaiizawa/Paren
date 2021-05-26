@@ -79,6 +79,7 @@ static char *error_msg(enum error_msg em) {
     case expected_byte: return "expected byte";
     case expected_bytes: return "expected bytes";
     case expected_bytes_like: return "expected bytes like object";
+    case expected_collection: return "expected collection";
     case expected_cons: return "expected cons";
     case expected_dict: return "expected dict";
     case expected_function: return "expected function";
@@ -90,6 +91,7 @@ static char *error_msg(enum error_msg em) {
     case expected_keyword_parameter: return "expected keyword parameter";
     case expected_keyword_parameter_value: return "expected keyword parameter value";
     case expected_list: return "expected list";
+    case expected_mutable_sequence: return "expected mutable sequence";
     case expected_number: return "expected number";
     case expected_operator: return "expected operator";
     case expected_positive_integer: return "expected positive integer";
@@ -125,16 +127,20 @@ int ip_throw(enum error err, enum error_msg msg)
   return FALSE;
 }
 
-static object new_Error(enum error e, enum error_msg em)
+static void exit1(void)
 {
-  char *err, *msg;
+  char buf[MAX_STR_LEN];
   object o;
-  o = gc_new_dict();
-  err = error_name(e);
-  map_put(o, object_class, gc_new_mem_from(SYMBOL, err, strlen(err)));
-  if ((msg = error_msg(em)) != NULL)
-    map_put(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
-  return o;
+  fprintf(stderr, "%s", object_describe(map_get(reg[0], object_class), buf));
+  if ((o = map_get(reg[0], object_message)) != NULL && o != object_nil)
+    fprintf(stderr, " -- %s.", object_describe(o, buf));
+  fprintf(stderr, "\n");
+  o = map_get(reg[0], object_stack_trace);
+  while (o != object_nil) {
+    fprintf(stderr, "	at: %s\n", object_describe(o->cons.car, buf));
+    o = o->cons.cdr;
+  }
+  exit(1);
 }
 
 // stack frame
@@ -215,7 +221,11 @@ static object new_Error(enum error e, enum error_msg em)
   set_frame_var(fp, 1, lv1); \
 }
 
-char *frame_name(int frame_type)
+static int fp;
+static int sp;
+static object fs[FRAME_STACK_SIZE];
+
+static char *frame_name(int frame_type)
 {
   switch (frame_type) {
     case APPLY_FRAME: return "APPLY_FRAME";
@@ -241,10 +251,6 @@ char *frame_name(int frame_type)
   }
 }
 
-static int fp;
-static int sp;
-static object fs[FRAME_STACK_SIZE];
-
 static void dump_fs(void)
 {
   int i, j, frame_type;
@@ -257,22 +263,7 @@ static void dump_fs(void)
     for (j = 0; j < frame_size(frame_type) - 2; j++)
       fprintf(stderr, "|%d: %s\n", i + j + 2, object_describe(get_frame_var(i, j), buf));
   }
-}
-
-static void exit1(void)
-{
-  char buf[MAX_STR_LEN];
-  object o;
-  fprintf(stderr, "%s", object_describe(map_get(reg[0], object_class), buf));
-  if ((o = map_get(reg[0], object_message)) != NULL && o != object_nil)
-    fprintf(stderr, " -- %s.", object_describe(o, buf));
-  fprintf(stderr, "\n");
-  o = map_get(reg[0], object_stack_trace);
-  while (o != object_nil) {
-    fprintf(stderr, "	at: %s\n", object_describe(o->cons.car, buf));
-    o = o->cons.cdr;
-  }
-  exit(1);
+  exit1();
 }
 
 static void gen(int frame_type)
@@ -683,58 +674,6 @@ static void pop_return_frame(void)
   }
 }
 
-static object anonimous_proc;
-static object named_proc;
-
-static void find_named_proc(void *key, void *data)
-{
-  if (anonimous_proc == data) named_proc = key;
-}
-
-static int resolve_anonimous_proc(void)
-{
-  object e;
-  xassert(named_proc == NULL);
-  e = reg[1];
-  while (e != object_nil) {
-    map_foreach(e, find_named_proc);
-    if (named_proc != NULL) return TRUE;
-    e = e->map.top;
-  }
-  return FALSE;
-}
-
-static object get_call_stack(void)
-{
-  int i;
-  object o, p, f, args;
-  o = object_nil;
-  for (i = 0; i <= fp; i = next_fp(i)) {
-    switch (fs_nth(i)) {
-      case ASSERT_FRAME:
-        p = get_frame_var(i, 0);
-        o = gc_new_cons(p, o);
-        break;
-      case FUNC_FRAME:
-        p = get_frame_var(i, 1);
-        if (!object_type_p(p, CONS)) o = gc_new_cons(p, o);
-        else {
-          f = p->cons.car;
-          args = p->cons.cdr;
-          named_proc = NULL;
-          anonimous_proc = f;
-          if (resolve_anonimous_proc()) f = named_proc;
-          else f = anonimous_proc;
-          o = gc_new_cons(gc_new_cons(f, args), o);
-        }
-        break;
-      default:
-        break;
-    }
-  }
-  return o;
-}
-
 static int pos_is_a_p(object o, object cls_sym);
 
 static void pop_throw_frame(void)
@@ -744,11 +683,13 @@ static void pop_throw_frame(void)
   i = fp;
   pop_frame();
   if (!pos_is_a_p(reg[0], object_Exception)) {
+#ifndef NDEBUG
+    if (pos_is_a_p(reg[0], gc_new_mem_from(SYMBOL, error_name(ArgumentError), strlen(error_name(ArgumentError)))))
+      dump_fs();
+#endif
     ip_throw(ArgumentError, expected_instance_of_Exception_class);
     return;
   }
-  if (map_get(reg[0], object_stack_trace) == NULL)
-    map_put(reg[0], object_stack_trace, get_call_stack());
   while (fp > -1) {
     switch (fs_top()) {
       case UNWIND_PROTECT_FRAME:
@@ -831,25 +772,6 @@ DEFUN(bound_3f_)
   if (!bi_symbol(argv->cons.car, &o)) return FALSE;
   reg[0] = object_bool(map_get_propagation(reg[1], o) != NULL);
   return TRUE;
-}
-
-static void trap(void)
-{
-  gen0(THROW_FRAME);
-  switch (ip_trap_code) {
-    case TRAP_ERROR:
-      reg[0] = new_Error(e, em);
-      break;
-    case TRAP_INTERRUPT:
-      reg[0] = new_Error(SystemExit, error_msg_nil);
-      break;
-    default:
-      xassert(FALSE);
-      break;
-  }
-  ip_trap_code = TRAP_NONE;
-  e = error_nil;
-  em = error_msg_nil;
 }
 
 // paren object system.
@@ -952,12 +874,6 @@ DEFUN(find_2d_method)
 DEFUN(cycle)
 {
   reg[0] = gc_new_xint(cycle);
-  return TRUE;
-}
-
-DEFUN(dump)
-{
-  dump_fs();
   return TRUE;
 }
 
@@ -1227,6 +1143,90 @@ DEFSP(assert)
   gen_eval_frame(argv->cons.car);
 #endif
   return TRUE;
+}
+
+static object anonimous_proc;
+static object named_proc;
+
+static void find_named_proc(void *key, void *data)
+{
+  if (anonimous_proc == data) named_proc = key;
+}
+
+static int resolve_anonimous_proc(void)
+{
+  object e;
+  xassert(named_proc == NULL);
+  e = reg[1];
+  while (e != object_nil) {
+    map_foreach(e, find_named_proc);
+    if (named_proc != NULL) return TRUE;
+    e = e->map.top;
+  }
+  return FALSE;
+}
+
+static object get_call_stack(void)
+{
+  int i;
+  object o, p, f, args;
+  o = object_nil;
+  for (i = 0; i <= fp; i = next_fp(i)) {
+    switch (fs_nth(i)) {
+      case ASSERT_FRAME:
+        p = get_frame_var(i, 0);
+        o = gc_new_cons(p, o);
+        break;
+      case FUNC_FRAME:
+        p = get_frame_var(i, 1);
+        if (!object_type_p(p, CONS)) o = gc_new_cons(p, o);
+        else {
+          f = p->cons.car;
+          args = p->cons.cdr;
+          named_proc = NULL;
+          anonimous_proc = f;
+          if (resolve_anonimous_proc()) f = named_proc;
+          else f = anonimous_proc;
+          o = gc_new_cons(gc_new_cons(f, args), o);
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  return o;
+}
+
+static object new_Error(enum error e, enum error_msg em)
+{
+  char *err, *msg;
+  object o;
+  o = gc_new_dict();
+  err = error_name(e);
+  map_put(o, object_class, gc_new_mem_from(SYMBOL, err, strlen(err)));
+  if ((msg = error_msg(em)) != NULL)
+    map_put(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
+  map_put(o, object_stack_trace, get_call_stack());
+  return o;
+}
+
+static void trap(void)
+{
+  gen0(THROW_FRAME);
+  switch (ip_trap_code) {
+    case TRAP_ERROR:
+      reg[0] = new_Error(e, em);
+      break;
+    case TRAP_INTERRUPT:
+      reg[0] = new_Error(SystemExit, error_msg_nil);
+      break;
+    default:
+      xassert(FALSE);
+      break;
+  }
+  ip_trap_code = TRAP_NONE;
+  e = error_nil;
+  em = error_msg_nil;
 }
 
 // main

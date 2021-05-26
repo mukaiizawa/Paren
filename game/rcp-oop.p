@@ -2,7 +2,7 @@
 
 (import :rand)
 
-(<- $choices '(rock paper scissors))
+(<- $choices '("rock" "paper" "scissors"))
 
 (function choice->index (c)
   (find (f (x) (if (prefix? (car x) c) (cadr x)))
@@ -17,7 +17,7 @@
   (error "should be implemented"))
 
 (method Player .show (choice)
-  (write-line (str (.to-s self) ": choose " (nth choice $choices))))
+  (write-line (str (.to-s self) ": choose " ([] $choices choice))))
 
 (class User (Player))
 

@@ -82,28 +82,37 @@ int bi_list(object o, object *result)
 
 int bi_bytes_like(object o, object *result)
 {
-  switch (object_type(o)) {
-    case BYTES:
-    case STRING:
-    case SYMBOL:
-    case KEYWORD:
-      *result = o;
-      return TRUE;
-    default:
-      return ip_throw(ArgumentError, expected_bytes_like);
-  }
+  if (!bytes_like_p(o)) return ip_throw(ArgumentError, expected_bytes_like);
+  *result = o;
+  return TRUE;
+}
+
+int bi_sequence(object o, object *result)
+{
+  if (!sequence_p(o)) return ip_throw(ArgumentError, expected_sequence);
+  *result = o;
+  return TRUE;
+}
+
+int bi_mutable_sequence(object o, object *result)
+{
+  if (!mutable_sequence_p(o)) return ip_throw(ArgumentError, expected_mutable_sequence);
+  *result = o;
+  return TRUE;
+}
+
+int bi_collection(object o, object *result)
+{
+  if (!collection_p(o)) return ip_throw(ArgumentError, expected_collection);
+  *result = o;
+  return TRUE;
 }
 
 int bi_symbol_keyword(object o, object *result)
 {
-  switch (object_type(o)) {
-    case SYMBOL:
-    case KEYWORD:
-      *result = o;
-      return TRUE;
-    default:
-      return ip_throw(ArgumentError, expected_symbol_keyword);
-  }
+  if (!symbol_keyword_p(o)) return ip_throw(ArgumentError, expected_symbol_keyword);
+  *result = o;
+  return TRUE;
 }
 
 int bi_proc(object o, object *result)
@@ -203,6 +212,117 @@ int bi_cstring(object argv, char **ss)
 
 // fundamental functions.
 
+static int bi_type(int type, int argc, object argv, object *result)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  *result = object_bool(object_type_p(argv->cons.car, type));
+  return TRUE;
+}
+
+DEFUN(int_3f_)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  switch (object_type(argv->cons.car)) {
+    case SINT:
+    case XINT:
+      *result = object_true;
+      return TRUE;
+    default:
+      *result = object_nil;
+      return TRUE;
+  }
+  return TRUE;
+}
+
+DEFUN(number_3f_)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  switch (object_type(argv->cons.car)) {
+    case SINT:
+    case XINT:
+    case XFLOAT:
+      *result = object_true;
+      return TRUE;
+    default:
+      *result = object_nil;
+      return TRUE;
+  }
+}
+
+DEFUN(cons_3f_)
+{
+  return bi_type(CONS, argc, argv, result);
+}
+
+DEFUN(symbol_3f_)
+{
+  return bi_type(SYMBOL, argc, argv, result);
+}
+
+DEFUN(keyword_3f_)
+{
+  return bi_type(KEYWORD, argc, argv, result);
+}
+
+DEFUN(string_3f_)
+{
+  return bi_type(STRING, argc, argv, result);
+}
+
+DEFUN(bytes_3f_)
+{
+  return bi_type(BYTES, argc, argv, result);
+}
+
+DEFUN(array_3f_)
+{
+  return bi_type(ARRAY, argc, argv, result);
+}
+
+DEFUN(dict_3f_)
+{
+  return bi_type(DICT, argc, argv, result);
+}
+
+DEFUN(macro_3f_)
+{
+  return bi_type(MACRO, argc, argv, result);
+}
+
+DEFUN(special_2d_operator_3f_)
+{
+  return bi_type(SPECIAL, argc, argv, result);
+}
+
+DEFUN(function_3f_)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  switch (object_type(argv->cons.car)) {
+    case BUILTINFUNC:
+    case FUNC:
+      *result = object_bool(TRUE);
+      break;
+    default:
+      *result = object_bool(FALSE);
+      break;
+  }
+  return TRUE;
+}
+
+DEFUN(builtin_3f_)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  switch (object_type(argv->cons.car)) {
+    case BUILTINFUNC:
+    case SPECIAL:
+      *result = object_true;
+      return TRUE;
+    default:
+      *result = object_nil;
+      return TRUE;
+  }
+}
+
 DEFUN(address)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -228,78 +348,6 @@ DEFUN(_3d__3d_)
 {
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   *result = object_bool(argv->cons.car == argv->cons.cdr->cons.car);
-  return TRUE;
-}
-
-DEFUN(_5b__5d_)
-{
-  int i, byte;
-  object o;
-  if (!bi_argc_range(argc, 2, 3)) return FALSE;
-  o = argv->cons.car;
-  if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
-  switch (object_type(o)) {
-    case STRING:
-      if (argc == 2) return str_slice(o, i, i + 1, result);
-      return FALSE;
-    case BYTES:
-      if (i >= o->mem.size) return FALSE;
-      if (argc == 2) *result = sint(LC(o->mem.elt + i));
-      else {
-        if (!bi_cbyte((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
-        SC(o->mem.elt + i, byte);
-      }
-      return TRUE;
-    case ARRAY:
-      if (i >= o->array.size) return FALSE;
-      if (argc == 2) *result = o->array.elt[i];
-      else *result = o->array.elt[i] = argv->cons.cdr->cons.car;
-      return TRUE;
-    default:
-      return FALSE;
-  }
-}
-
-DEFUN(special_2d_operator_3f_)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(object_type_p(argv->cons.car, SPECIAL));
-  return TRUE;
-}
-
-DEFUN(builtin_3f_)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
-    case BUILTINFUNC:
-    case SPECIAL:
-      *result = object_true;
-      return TRUE;
-    default:
-      *result = object_nil;
-      return TRUE;
-  }
-}
-
-DEFUN(function_3f_)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
-    case BUILTINFUNC:
-    case FUNC:
-      *result = object_bool(TRUE);
-      break;
-    default:
-      *result = object_bool(FALSE);
-      break;
-  }
-  return TRUE;
-}
-
-DEFUN(macro_3f_)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(object_type_p(argv->cons.car, MACRO));
   return TRUE;
 }
 
@@ -334,122 +382,7 @@ DEFUN(procbody)
   return TRUE;
 }
 
-DEFUN(in_3f_)
-{
-  object o, p;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  *result = object_nil;
-  if ((o = argv->cons.cdr->cons.car) == object_nil) return TRUE;
-  switch (object_type(o)) {
-    case CONS:
-      p = argv->cons.car;
-      while (!object_eq_p(o->cons.car, p)) {
-        if ((o = o->cons.cdr) == object_nil) return TRUE;
-      }
-      *result = object_true;
-      return TRUE;
-    case BYTES:
-    case STRING:
-    case ARRAY:
-    case DICT:
-      return FALSE;
-    default:
-      return ip_throw(ArgumentError, expected_sequence);
-  }
-}
-
-static int map_len(object o)
-{
-  int i, len;
-  object *table;
-  xassert(object_type_p(o, DICT));
-  table = o->map.table;
-  for (i = len = 0; i < o->map.half_size; i++)
-    if (table[i] != NULL) len++;
-  return len;
-}
-
-DEFUN(len)
-{
-  int len;
-  object o;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if ((o = argv->cons.car) == object_nil) len = 0;
-  else {
-    switch (object_type(o)) {
-      case CONS:
-        len = list_len(o);
-        break;
-      case BYTES:
-        len = o->mem.size;
-        break;
-      case STRING:
-        if (!str_len(o, &len)) return FALSE;
-        break;
-      case ARRAY:
-        len = o->array.size;
-        break;
-      case DICT:
-        len = map_len(o);
-      default:
-        return ip_throw(ArgumentError, expected_sequence);
-    }
-  }
-  *result = gc_new_xint(len);
-  return TRUE;
-}
-
-DEFUN(slice)
-{
-  int i, start, stop;
-  object o;
-  if (!bi_argc_range(argc, 1, 3)) return FALSE;
-  *result = object_nil;
-  if ((o = argv->cons.car) == object_nil) return TRUE;
-  if (argc < 2) start = 0;
-  else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
-  if (argc < 3) stop = -1;
-  else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &stop)) return FALSE;
-  else if (start > stop) return FALSE;
-  switch (object_type(o)) {
-    case CONS:
-      for (i = 0; i < start; i++) {
-        if ((o = o->cons.cdr) == object_nil) return TRUE;
-      }
-      if (o == object_nil || stop == -1) *result = o;
-      else {
-        for (i = start; i < stop; i++) {
-          *result = gc_new_cons(o->cons.car, *result);
-          if ((o = o->cons.cdr) == object_nil) break;
-        }
-        *result = list_reverse(*result);
-      }
-      return TRUE;
-    case BYTES:
-      if (stop == -1) stop = o->mem.size;
-      else if (stop > o->mem.size) return FALSE;
-      *result = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
-      return TRUE;
-    case STRING:
-      return str_slice(o, start, stop, result);
-    case ARRAY:
-      if (stop == -1) stop = o->array.size;
-      else if (stop > o->array.size) return FALSE;
-      *result = gc_new_array_from(o->array.elt + start, stop - start);
-      return TRUE;
-    default:
-      return ip_throw(ArgumentError, expected_sequence);
-  }
-}
-
 // list.
-
-DEFUN(cons_3f_)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(object_type_p(argv->cons.car, CONS));
-  return TRUE;
-}
 
 DEFUN(cons)
 {
@@ -508,24 +441,6 @@ DEFUN(cdr_21_)
   return TRUE;
 }
 
-DEFUN(append)
-{
-  object o, p, head, tail;
-  head = tail = NULL;
-  while (argv != object_nil) {
-    if (!bi_list(argv->cons.car, &o)) return FALSE;
-    argv = argv->cons.cdr;
-    if (o == object_nil) continue;
-    o = gc_copy_cons(o, &p);
-    if (head == NULL) head = o;
-    if (tail != NULL) tail->cons.cdr = o;
-    tail = p;
-  }
-  if (head == NULL) *result = object_nil;
-  else *result = head;
-  return TRUE;
-}
-
 DEFUN(last_2d_cons)
 {
   object o;
@@ -549,36 +464,6 @@ DEFUN(reverse_21_)
 }
 
 // number.
-
-DEFUN(number_3f_)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
-    case SINT:
-    case XINT:
-    case XFLOAT:
-      *result = object_true;
-      return TRUE;
-    default:
-      *result = object_nil;
-      return TRUE;
-  }
-}
-
-DEFUN(int_3f_)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
-    case SINT:
-    case XINT:
-      *result = object_true;
-      return TRUE;
-    default:
-      *result = object_nil;
-      return TRUE;
-  }
-  return TRUE;
-}
 
 static int double_add(double x, object argv, object *result)
 {
@@ -895,36 +780,9 @@ DEFUN(_3c__3c_)
   return TRUE;
 }
 
-// symbol, keyword, string, bytes.
+// bytes & bytes-like.
 
-static int mem_p(int argc, object argv, object *result, int type)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(object_type_p(argv->cons.car, type));
-  return TRUE;
-}
-
-DEFUN(symbol_3f_)
-{
-  return mem_p(argc, argv, result, SYMBOL);
-}
-
-DEFUN(keyword_3f_)
-{
-  return mem_p(argc, argv, result, KEYWORD);
-}
-
-DEFUN(string_3f_)
-{
-  return mem_p(argc, argv, result, STRING);
-}
-
-DEFUN(bytes_3f_)
-{
-  return mem_p(argc, argv, result, BYTES);
-}
-
-static int mem_to(int argc, object argv, object *result, int type)
+static int bytes_like_to(int type, int argc, object argv, object *result)
 {
   int i, size;
   object o;
@@ -948,7 +806,7 @@ DEFUN(bytes)
     *result = gc_new_mem(BYTES, i);
     return TRUE;
   }
-  return mem_to(argc, argv, result, BYTES);
+  return bytes_like_to(BYTES, argc, argv, result);
 }
 
 DEFUN(symbol)
@@ -960,17 +818,17 @@ DEFUN(symbol)
     *result = gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size);
     return TRUE;
   }
-  return mem_to(argc, argv, result, SYMBOL);
+  return bytes_like_to(SYMBOL, argc, argv, result);
 }
 
 DEFUN(keyword)
 {
-  return mem_to(argc, argv, result, KEYWORD);
+  return bytes_like_to(KEYWORD, argc, argv, result);
 }
 
 DEFUN(string)
 {
-  return mem_to(argc, argv, result, STRING);
+  return bytes_like_to(STRING, argc, argv, result);
 }
 
 DEFUN(string_21_)
@@ -1079,24 +937,31 @@ DEFUN(memcmp)
   return TRUE;
 }
 
-DEFUN(memcat)
+static int bytes_like_concat(object o, object argv, object *result)
 {
+  object p;
   struct xbarray x;
-  object o, p;
-  if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
-  o = argv;
   xbarray_init(&x);
-  while (o != object_nil) {
-    if (!bi_bytes_like(o->cons.car, &p)) {
+  xbarray_copy(&x, o->mem.elt, o->mem.size);
+  while (argv != object_nil) {
+    if (!bi_bytes_like(argv->cons.car, &p)) {
       xbarray_free(&x);
       return FALSE;
     }
     xbarray_copy(&x, p->mem.elt, p->mem.size);
-    o = o->cons.cdr;
+    argv = argv->cons.cdr;
   }
-  *result = gc_new_mem_from(object_type(argv->cons.car), x.elt, x.size);
+  *result = gc_new_mem_from(object_type(o), x.elt, x.size);
   xbarray_free(&x);
   return TRUE;
+}
+
+DEFUN(memcat)
+{
+  object o;
+  if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
+  if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
+  return bytes_like_concat(o, argv->cons.cdr, result);
 }
 
 DEFUN(chr)
@@ -1182,7 +1047,7 @@ static int xctype_p(int argc, object argv, int (*f)(int c), object *result)
   i = 0;
   while (i < o->mem.size) {
     if (!f(LC(o->mem.elt + i))) return TRUE;
-    if (!(ch_len(LC(o->mem.elt + i), &i))) return FALSE;
+    if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
   }
   *result = object_true;
   return TRUE;
@@ -1233,7 +1098,7 @@ static int ch_conv_case(int argc, object argv, int (*f)(int c), int offset, obje
   i = 0;
   while (i < o->mem.size) {
     if (f(ch = LC(o->mem.elt + i))) SC(o->mem.elt + i, ch + offset);
-    if (!(ch_len(ch, &i))) return FALSE;
+    if (!ch_len(ch, &i)) return FALSE;
   }
   *result = o;
   return TRUE;
@@ -1308,26 +1173,12 @@ DEFUN(array)
   }
 }
 
-DEFUN(array_3f_)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(object_type_p(argv->cons.car, ARRAY));
-  return TRUE;
-}
-
 // dictionary.
 
 DEFUN(dict)
 {
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   *result = gc_new_dict();
-  return TRUE;
-}
-
-DEFUN(dict_3f_)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(object_type_p(argv->cons.car, DICT));
   return TRUE;
 }
 
@@ -1352,6 +1203,319 @@ DEFUN(_7b__7d_)
     *result = argv->cons.cdr->cons.car;
     map_put(o, key, *result);
   }
+  return TRUE;
+}
+
+// sequence.
+
+static int cons_slice(object o, int start, int stop, object *result)
+{
+  int i;
+  for (i = 0; i < start; i++)
+    if ((o = o->cons.cdr) == object_nil) break;
+  if (o == object_nil || stop == -1) *result = o;
+  else {
+    *result = object_nil;
+    for (i = start; i < stop; i++) {
+      *result = gc_new_cons(o->cons.car, *result);
+      if ((o = o->cons.cdr) == object_nil) break;
+    }
+    *result = list_reverse(*result);
+  }
+  return TRUE;
+}
+
+static int str_slice(object o, int start, int stop, object *result)
+{
+  int i, s, t;
+  for (i = s = 0; i < start; i++)
+    if (!ch_len(LC(o->mem.elt + s), &s)) return FALSE;
+  if (stop == -1) t = o->mem.size;
+  else {
+    for (i = start, t = s; i < stop; i++) {
+      if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
+    }
+  }
+  *result = gc_new_mem_from(STRING, o->mem.elt + s, t - s);
+  return TRUE;
+}
+
+DEFUN(slice)
+{
+  int start, stop;
+  object o;
+  if (!bi_argc_range(argc, 1, 3)) return FALSE;
+  if (!bi_sequence(argv->cons.car, &o)) return FALSE;
+  if (argc < 2) start = 0;
+  else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
+  if (argc < 3) stop = -1;
+  else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &stop)) return FALSE;
+  else if (start > stop) return ip_throw(ArgumentError, index_out_of_range);
+  *result = object_nil;
+  switch (object_type(o)) {
+    case SYMBOL:
+      *result = object_nil;
+      return TRUE;
+    case CONS:
+      return cons_slice(o, start, stop, result);
+    case BYTES:
+      if (stop == -1) stop = o->mem.size;
+      else if (stop > o->mem.size) return ip_throw(ArgumentError, index_out_of_range);
+      *result = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
+      return TRUE;
+    case STRING:
+      return str_slice(o, start, stop, result);
+    case ARRAY:
+      if (stop == -1) stop = o->array.size;
+      else if (stop > o->array.size) return ip_throw(ArgumentError, index_out_of_range);
+      *result = gc_new_array_from(o->array.elt + start, stop - start);
+      return TRUE;
+    default:
+      xassert(FALSE);
+      return FALSE;
+  }
+}
+
+static int cons_concat(object o, object argv, object *result)
+{
+  object tail;
+  while (o == object_nil) {
+    if (argv == object_nil) {
+      *result = object_nil;
+      return TRUE;
+    }
+    o = argv->cons.car;
+    argv = argv->cons.cdr;
+  }
+  *result = gc_copy_cons(o, &tail);
+  while (argv != object_nil) {
+    if (!bi_list(argv->cons.car, &o)) return FALSE;
+    argv = argv->cons.cdr;
+    if (o == object_nil) continue;
+    tail->cons.cdr = gc_copy_cons(o, &o);
+    tail = o;
+  }
+  return TRUE;
+}
+
+static int array_concat(object o, object argv, object *result)
+{
+  int i, j, size;
+  object p, q;
+  size = o->array.size;
+  p = argv;
+  while (p != object_nil) {
+    if (!bi_array(p->cons.car, &q)) return FALSE;
+    size += q->array.size;
+    p = p->cons.cdr;
+  }
+  *result = gc_new_array(size);
+  for (i = 0, j = 0; j < o->array.size; i++, j++)
+    (*result)->array.elt[i] = o->array.elt[j];
+  while (argv != object_nil) {
+    q = argv->cons.car;
+    argv = argv->cons.cdr;
+    for (j = 0; j < q->array.size; i++, j++)
+      (*result)->array.elt[i] = q->array.elt[j];
+  }
+  return TRUE;
+}
+
+DEFUN(concat)
+{
+  object o;
+  if (argc == 0) {
+    *result = object_nil;
+    return TRUE;
+  }
+  if (!bi_sequence(argv->cons.car, &o)) return FALSE;
+  switch (object_type(o)) {
+    case SYMBOL:
+    case CONS:
+      return cons_concat(o, argv->cons.cdr, result);
+    case BYTES:
+    case STRING:
+      return bytes_like_concat(o, argv->cons.cdr, result);
+    case ARRAY:
+      return array_concat(o, argv->cons.cdr, result);
+    default:
+      xassert(FALSE);
+      return FALSE;
+  }
+}
+
+DEFUN(_5b__5d_)
+{
+  int i, byte;
+  object o;
+  if (!bi_argc_range(argc, 2, 3)) return FALSE;
+  if (!bi_sequence(argv->cons.car, &o)) return FALSE;
+  if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
+  switch (object_type(o)) {
+    case SYMBOL:
+    case CONS:
+      while (o != object_nil) {
+        if (i-- == 0) break;
+        o = o->cons.cdr;
+      }
+      if (argc == 2) {
+        if (o == object_nil) *result = o;
+        else *result = o->cons.car;
+      } else {
+        if (o == object_nil) return ip_throw(ArgumentError, index_out_of_range);
+        *result = argv->cons.cdr->cons.car;
+        o->cons.car = *result;
+      }
+      return TRUE;
+    case STRING:
+      if (argc == 2) return str_slice(o, i, i + 1, result);
+      return ip_throw(ArgumentError, expected_mutable_sequence);
+    case BYTES:
+      if (i >= o->mem.size)
+        return ip_throw(ArgumentError, index_out_of_range);
+      if (argc == 2) *result = sint(LC(o->mem.elt + i));
+      else {
+        if (!bi_cbyte((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
+        SC(o->mem.elt + i, byte);
+      }
+      return TRUE;
+    case ARRAY:
+      if (i >= o->array.size)
+        return ip_throw(ArgumentError, index_out_of_range);
+      if (argc == 2) *result = o->array.elt[i];
+      else *result = o->array.elt[i] = argv->cons.cdr->cons.car;
+      return TRUE;
+    default:
+      xassert(FALSE);
+      return FALSE;
+  }
+}
+
+// collection.
+
+int bytes_in_p(object o, object p, object *result)
+{
+  int i, byte;
+  if (!bi_cbyte(p, &byte)) return FALSE;
+  for (i = 0; i < o->mem.size; i++) {
+    if (LC(o->mem.elt + i) == byte) {
+      *result = object_true;
+      return TRUE;
+    }
+  }
+  *result = object_nil;
+  return TRUE;
+}
+
+int string_in_p(object o, object p, object *result)
+{
+  int i;
+  if (!bi_string(p, &p)) return FALSE;
+  i = 0;
+  while (i < o->mem.size && (o->mem.size - i >= p->mem.size)) {
+    if (memcmp(o->mem.elt + i, p->mem.elt, p->mem.size) == 0) {
+      *result = object_true;
+      return TRUE;
+    }
+    if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
+  }
+  *result = object_nil;
+  return TRUE;
+}
+
+int array_in_p(object o, object p, object *result)
+{
+  int i;
+  for (i = 0; i < o->array.size; i++) {
+    if (object_eq_p(o->array.elt[i], p)) {
+      *result = object_true;
+      return TRUE;
+    }
+  }
+  *result = object_nil;
+  return TRUE;
+}
+
+int dict_in_p(object o, object p, object *result)
+{
+  if (!bi_symbol_keyword(p, &p)) return FALSE;
+  *result = object_bool(map_get(o, p) != NULL);
+  return TRUE;
+}
+
+DEFUN(in_3f_)
+{
+  object o, p;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_collection(argv->cons.cdr->cons.car, &o)) return FALSE;
+  switch (object_type(o)) {
+    case SYMBOL:
+      *result = object_nil;
+      return TRUE;
+    case CONS:
+      p = argv->cons.car;
+      while (!object_eq_p(o->cons.car, p)) {
+        if ((o = o->cons.cdr) == object_nil) {
+          *result = object_nil;
+          return TRUE;
+        }
+      }
+      *result = object_true;
+      return TRUE;
+    case BYTES:
+      return bytes_in_p(o, argv->cons.car, result);
+    case STRING:
+      return string_in_p(o, argv->cons.car, result);
+    case ARRAY:
+      return array_in_p(o, argv->cons.car, result);
+    case DICT:
+      return dict_in_p(o, argv->cons.car, result);
+    default:
+      xassert(FALSE);
+      return FALSE;
+  }
+}
+
+static int map_len(object o)
+{
+  int i, len;
+  object *table;
+  xassert(object_type_p(o, DICT));
+  table = o->map.table;
+  for (i = len = 0; i < o->map.half_size; i++)
+    if (table[i] != NULL) len++;
+  return len;
+}
+
+DEFUN(len)
+{
+  int len;
+  object o;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_collection(argv->cons.car, &o)) return FALSE;
+  switch (object_type(o)) {
+    case SYMBOL:
+      len = 0;
+      break;
+    case CONS:
+      len = list_len(o);
+      break;
+    case BYTES:
+      len = o->mem.size;
+      break;
+    case STRING:
+      if (!str_len(o, &len)) return FALSE;
+      break;
+    case ARRAY:
+      len = o->array.size;
+      break;
+    case DICT:
+      len = map_len(o);
+    default:
+      xassert(FALSE);
+      return FALSE;
+  }
+  *result = gc_new_xint(len);
   return TRUE;
 }
 

@@ -4,7 +4,7 @@
 #include "lex.h"
 
 struct xbarray lex_str;
-int lex_ival;
+int64_t lex_ival;
 double lex_fval;
 
 static FILE *fp;

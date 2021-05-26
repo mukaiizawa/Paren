@@ -22,7 +22,7 @@
   (let (primarykeys (db.select-table-columns table :primarykey?)
                     foreignkeys (db.select-table-columns table :foreignkey))
     (join
-      (append
+      (concat
         (if primarykeys (list (str "alter table " (car table) " "
                                    "add primary key (" (join (map car primarykeys) ", ") ");")))
         (map (f (x)
@@ -37,7 +37,7 @@
 (function db.create-tables (tables)
   ; Returns a list representing a table in the table definition language.
   (join (except nil?
-                (append
+                (concat
                   (map db.table->create-query tables)
                   (map db.table->constraints tables)))
         "\n"))

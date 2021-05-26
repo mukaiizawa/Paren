@@ -120,18 +120,25 @@ extern object object_features;
 extern object object_fields;
 extern object object_message;
 
-// object function.
+// utility functions.
 extern int object_byte_size(object o);
 extern char *object_describe(object o, char *buf);
 extern object object_bool(int b);
 extern int object_eq_p(object o, object p);
+
+extern int int_p(object o);
+extern int number_p(object o);
+extern int bytes_like_p(object o);
+extern int sequence_p(object o);
+extern int mutable_sequence_p(object o);
+extern int collection_p(object o);
+extern int symbol_keyword_p(object o);
 
 extern int list_len(object o);
 extern object list_reverse(object o);
 
 extern int ch_len(unsigned char ch, int *len);
 extern int str_len(object o, int *len);
-extern int str_slice(object o, int start, int stop, object *result);
 
 extern object map_get(object o, object s);
 extern object map_get_propagation(object o, object s);
