@@ -45,14 +45,13 @@
                  working-hours (apply + (map cadr days)))
         (list working-days  working-hours))))
 
-(function format (day hours)
-  (list :day day :h hours :h/day (if (= day 0) 'NaN (/ hours day))))
-
 (function parse-month (expr)
   (let ((year-month scheduled-work-days :rest days) expr
         (working-days working-hours) (parse-days days)
         rest-working-days (- scheduled-work-days working-days)
-        rest-working-hours (- $minimum-operating-time working-hours))
+        rest-working-hours (- $minimum-operating-time working-hours)
+        format (f (day hours)
+                 (list :day day :h hours :h/day (if (= day 0) 'NaN (/ hours day)))))
     (list year-month
           (list :total (format working-days working-hours))
           (list :rest (format rest-working-days rest-working-hours)))))
