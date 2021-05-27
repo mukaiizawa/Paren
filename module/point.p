@@ -7,7 +7,7 @@
 
 (function point (x y)
   ; Returns a point instance corresponding to the coordinates (x, y).
-  (if (! (every? number? (list x y))) (.raise self "illegal arguments."))
+  (if (! (every? number? (list x y))) (raise ArgumentError))
   (let (p (.new Point))
     (&x! p x)
     (&y! p y)))
@@ -30,7 +30,7 @@
 (method Point .add (p)
   ; Returns the instance of Point corresponds to the sum of receiver and p.
   (if (is-a? p Point) (point (+ (&x self) (&x p)) (+ (&y self) (&y p)))
-      (.raise self "illegal arguments." p)))
+      (raise ArgumentError "expected instance of Point")))
 
 (function! main (args)
   (let (p (point 3 4))

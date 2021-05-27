@@ -83,7 +83,7 @@
       (begin
         (dostring (c "null") (.skip self c))
         nil)
-      (.raise self "unexpected token")))
+      (raise SyntaxError "unexpected token")))
 
 (method JSONReader .read ()
   ; Read json. -- specified by RFC 8259.

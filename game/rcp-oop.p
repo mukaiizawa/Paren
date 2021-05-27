@@ -14,7 +14,7 @@
   (&name self))
 
 (method Player .choice ()
-  (error "should be implemented"))
+  (raise NotImplementedError))
 
 (method Player .show (choice)
   (write-line (str (.to-s self) ": choose " ([] $choices choice))))

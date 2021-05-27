@@ -9,7 +9,7 @@
 
 (function math.sqrt (x)
   ; Returns the square root of x.
-  (if (< x 0) (error "required positive number " x)
+  (if (< x 0) (raise ArgumentError "expected positive integer")
       (= x 0) 0
       (let (y (math.max 1.0 x) result y)
         (<- y (/ (+ (/ x y) y) 2))

@@ -7,7 +7,7 @@
 
 (method Matrix .init (p)
   ; Initialize the receiver to a matrix object with width x height y based on a point object that has coordinates (x, y).
-  (if (! (is-a? p Point)) (.raise self "expected instance of Point." p))
+  (if (! (is-a? p Point)) (raise ArgumentError "expected instance of Point"))
   (&width! self (.x p))
   (&height! self (.y p))
   (&contents! self (array (* (&width self) (&height self)))))
@@ -27,7 +27,7 @@
       (<= 0 (.y p) (-- (&height self)))))
 
 (method Matrix .index (p)
-  (if (! (.inside? self p)) (.raise self "index out of bounds " (.to-s p))
+  (if (! (.inside? self p)) (raise IndexError)
       (+ (.x p) (* (.y p) (&width self)))))
 
 (method Matrix .at (p)

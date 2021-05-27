@@ -39,7 +39,7 @@
     (list day (/ (- (hhmm->min end) (hhmm->min start) (* 60 deduction-time)) 60))))
 
 (function parse-days (expr)
-  (if (!= (% (len expr) 4) 0) (error "illegal format " expr)
+  (if (!= (% (len expr) 4) 0) (raise ArgumentError)
       (let (days (map ->working-hours (group expr 4))
                  working-days (len days)
                  working-hours (apply + (map cadr days)))

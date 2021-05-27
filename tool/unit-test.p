@@ -17,5 +17,5 @@
 (function! main (args)
   (let (debug? nil)
     (assert (<- debug? true))
-    (if (! debug?) (error "need to build in debug mode")
+    (if (! debug?) (raise RuntimeError "need to build in debug mode")
         (foreach unit-test (select module-file? (.children (path.getcwd)))))))

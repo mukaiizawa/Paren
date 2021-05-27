@@ -103,6 +103,7 @@
 (special-operator throw
   ; Throw an exception.
   ; The throwing object must be an instance of the Paren object system.
+  ; Generally, the raise function is used, so it is not used directly.
   (throw expr))
 
 (special-operator catch
@@ -301,11 +302,11 @@
   ; The macro in the body is expanded.
   ; Error if name is already bound.
   ; Returns name.
-  (let (expand-body (f (expr)
-                      (if expr (cons (expand-macro-all (car expr)) (expand-body (cdr expr))))))
+  (let (expand-body (f (expr) (if expr (cons (expand-macro-all (car expr)) (expand-body (cdr expr))))))
     (with-gensyms (gname)
       (list let (list gname (list quote name))
-            (list if (list bound? gname) (list 'error gname " already bound")
+            (list if (list bound? gname)
+                  (list 'raise 'ArgumentError (list 'str "function name '" gname "` already bound"))
                   (list <- name (cons f (cons args (expand-body body)))))
             gname))))
 
@@ -621,7 +622,7 @@
                   (reverse! acc))))
     (if (nil? stop) (<- stop start start 0 step 1)
         (nil? step) (<- step 1)
-        (<= step 0) (error "illegal step"))
+        (<= step 0) (raise IndexError "step must be positive integer"))
     (rec 0 start stop step) ))
 
 (function group (l n)
@@ -825,9 +826,9 @@
       (string? x)
       (with-memory-stream ($in x)
         (let (ar (.new AheadReader) val (.skip-unumber ar))
-          (if (.next ar) (throw (.new ArgumentError) "illegal string")
+          (if (.next ar) (raise ArgumentError "illegal string")
               val)))
-      (throw (.message (.new ArgumentError) "expected number or string"))))
+      (raise ArgumentError "expected number or string")))
 
 (builtin-function ~ (x)
   ; Returns bitwise NOT of x.
@@ -1112,7 +1113,7 @@
   ; If the string pat is not a substring of the string s, returns nil.
   ; If start is specified, search for substring pat from start-th of the string s.
   (let (start (|| start 0) sa (array s) slen (len sa) pa (array pat) plen (len pa))
-    (if (< (- slen start) 0) (error "illegal start")
+    (if (< (- slen start) 0) (raise ArgumentError "illegal start")
         (= plen 0) (return 0))
     (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (i (++ i))
       (when (= ([] sa i) p0)
@@ -1176,13 +1177,13 @@
                                      (if (= flag "+") (write-bytes "+")
                                          (= flag " ") (write-bytes " ")))
                                  (.write-int $out arg :radix (conv->radix conv)))
-                               (throw (.message (.new ArgumentError) "unexpected conversion specifier " conv))))))
+                               (raise ArgumentError (str "unexpected conversion specifier " conv))))))
         (while (.next rd)
           (if (!= (.next rd) "%") (write-bytes (.skip rd))
               (begin
                 (.skip rd)
                 (if (= (.next rd) "%") (write-bytes (.skip rd))
-                    (nil? args) (throw (.message (.new ArgumentError) "too few arguments"))
+                    (nil? args) (raise ArgumentError "too few arguments")
                     (begin
                       (<- flag (if (in? (.next rd) "+- 0") (.skip rd))
                           width (if (digit? (.next rd)) (.skip-uint rd) 0)
@@ -1573,32 +1574,48 @@
 (macro class (cls-sym (:opt super :rest features) :rest fields)
   ; Define class.
   ; Returns class symbol.
-  (if (! (every? symbol? fields)) (error "fields must be symbol")
-      (bound? cls-sym) (error cls-sym " already bound"))
-  (list begin
-        (list <- cls-sym '(dict))
-        (cons begin
-              (map (f (k v) (list {} cls-sym k (list quote v)))
-                   '(:class :symbol :super :features :fields) 
-                   (list 'Class
-                         cls-sym
-                         (|| super (if (!= cls-sym 'Object) 'Object))
-                         features
-                         fields)))
-        (cons begin
-              (map (f (field) (list make-accessor field))
-                   fields))
-        (list quote cls-sym)))
+  (with-gensyms (gcls-sym gsuper gfeatures gfields)
+    (list let (list gcls-sym (list quote cls-sym)
+                    gsuper (list quote super)
+                    gfeatures (list quote features)
+                    gfields (list quote fields))
+          (list if
+                (list bound? gcls-sym)
+                (list 'raise 'ArgumentError (list str "class name '" gcls-sym "` already bound"))
+                (list ! (list bound? gsuper))
+                (list 'raise 'ArgumentError (list str "super class '" gsuper "` is not defined"))
+                (list ! (list every? symbol? gfeatures))
+                (list 'raise 'ArgumentError (list str "features classes " gfeatures " must be symbol"))
+                (list ! (list every? bound? gfeatures))
+                (list 'raise 'ArgumentError (list str "some of the features " gfeatures " is not defined"))
+                (list ! (list every? symbol? gfields))
+                (list 'raise (list str "instance variables " gfields " must be symbol")))
+          (list <- cls-sym '(dict))
+          (cons begin
+                (map (f (k v) (list {} cls-sym k v))
+                     '(:class :symbol :super :features :fields)
+                     (list ''Class
+                           gcls-sym
+                           (list || gsuper (list if (list != gcls-sym ''Object) ''Object))
+                           gfeatures
+                           gfields)))
+          (cons begin
+                (map (f (field) (list make-accessor field))
+                     fields))
+          gcls-sym)))
 
 (macro method (cls-sym method-sym args :rest body)
   ; Define method.
   ; Returns method symbol.
-  (let (global-sym (memcat cls-sym method-sym))
-    (if (nil? (find-class cls-sym)) (error "unbound class")
-        (bound? global-sym) (error global-sym " already bound"))
+  (let (global-method-name (memcat cls-sym method-sym))
     (list begin
+          (list if
+                (list ! (list find-class (list quote cls-sym)))
+                (list 'raise 'ArgumentError (list str "class '" (list quote cls-sym) "` is not defined"))
+                (list bound? (list quote global-method-name))
+                (list 'raise 'ArgumentError (list str "method '" (list quote global-method-name) "` already bound")))
           (list make-method-dispatcher method-sym)
-          (cons function (cons global-sym (cons (cons 'self args) body))))))
+          (cons function (cons global-method-name (cons (cons 'self args) body))))))
 
 ;;; fundamental class.
 
@@ -1627,9 +1644,6 @@
 (method Object .to-s ()
   ; Returns a String representing the receiver.
   (str "<" (&symbol (.class self)) ":0x" (address self)  ">"))
-
-(method Object .raise (:rest args)
-  (apply error (cons (.to-s self) (cons " " args))))
 
 (class Class ()
   ; Class of class object.
@@ -1666,8 +1680,7 @@
   ; Do not derive from Exception.
   message stack-trace)
 
-(method Exception .message (message)
-  ; Message accessors.
+(method Exception .init (message)
   (&message! self message))
 
 (method Exception .to-s ()
@@ -1692,14 +1705,17 @@
 
 (class Error (Exception))
 
-(function error (:rest args)
-  ; Throw a instance of the Error, which message is args.
-  (throw (.message (.new Error) (apply str args))))
+(class UnicodeError (Error))
+
+(method UnicodeError .init (args)
+  (&message! self (str "illegal byte sequence " (map hex args))))
 
 (class SyntaxError (Error))
 (class ArgumentError (Error))
-(class RuntimeError (Error))
+(class IndexError (ArgumentError))
 (class IOError (Error))
+(class NotImplementedError (Error))
+(class RuntimeError (Error))
 
 (class Comparable ()
   ; A feature that provides comparison operators.
@@ -1923,32 +1939,29 @@
   ; Must be implemented in the inherited class.
   (assert nil))
 
-(method Stream .raise (:rest seq)
-  (error "illegal byte sequence " (map hex seq)))
-
 (method Stream .read-char ()
   ; Read 1 character from the receiver
   ; Returns nil when the stream reaches the end.
   (let (b1 (.read-byte self) b2 nil b3 nil b4 nil size 0)
     (if (< b1 0) (return nil)
         (< b1 0x80) (<- size 1)
-        (< b1 0xc2) (.raise self b1)
+        (< b1 0xc2) (raise UnicodeError (list b1))
         (< b1 0xe0) (if (|| (= (& b1 0x3e) 0)
                             (!= (& (<- b2 (.read-byte self)) 0xc0) 0x80))
-                        (.raise self b1 b2)
+                        (raise UnicodeError (list b1 b2))
                         (<- size 2))
         (< b1 0xf0) (if (|| (!= (& (<- b2 (.read-byte self)) 0xc0) 0x80)
                             (&& (= b1 0xe0) (= (& b2 0x20) 0))
                             (!= (& (<- b3 (.read-byte self)) 0xc0) 0x80))
-                        (.raise self b1 b2 b3)
+                        (raise UnicodeError (list b1 b2 b3))
                         (<- size 3))
         (< b1 0xf8) (if (|| (!= (& (<- b2 (.read-byte self)) 0xc0) 0x80)
                             (&& (= b1 0xf0) (= (& b2 0x30) 0))
                             (!= (& (<- b3 (.read-byte self)) 0xc0) 0x80)
                             (!= (& (<- b4 (.read-byte self)) 0xc0) 0x80))
-                        (.raise self b1 b2 b3 b4)
+                        (raise UnicodeError (list b1 b2 b3 b4))
                         (<- size 4))
-        (.raise self b1))
+        (raise UnicodeError (list b1)))
     (let (c (bytes size))
       (if (= size 1) ([] c 0 b1)
           (= size 2) (begin ([] c 0 b1) ([] c 1 b2))
@@ -1977,14 +1990,14 @@
   ; Write byte to the receiver.
   ; Returns byte.
   ; Must be implemented in the inherited class.
-  (assert nil))
+  (raise NotImplementedError))
 
 (method Stream .write-bytes (bytes :opt from size)
   ; Write size bytes to the receiver from the from position from the location specified by buf.
   ; Returns the size of bytes written.
   ; If from is omitted, write the entire argument bytes to the stream and returns bytes.
   ; Must be implemented in the inherited class.
-  (assert nil))
+  (raise NotImplementedError))
 
 (method Stream .write-line (:opt string)
   ; Write string to the receiver.
@@ -2187,7 +2200,7 @@
 (method MemoryStream .seek (offset)
   ; Sets the file position indicator of the receiver.
   ; Returns the receiver.
-  (if (! (<= 0 offset (&wrpos self))) (.raise "index outof bound")
+  (if (! (<= 0 offset (&wrpos self))) (raise IndexError)
       (&rdpos! self offset)))
 
 (method MemoryStream .tell ()
@@ -2281,10 +2294,8 @@
   ; Skip next character and returns it.
   ; Error if expected is specified and the next character is not the same as the expected.
   (let (next (&next self))
-    (if (nil? next) (.raise self "unexpected EOF")
-        (&& expected (!= next expected)) (.raise self
-                                                 "unexpected character '" next "'. "
-                                                 "expected '" expected "'")
+    (if (nil? next) (raise IOError "unexpected EOF")
+        (&& expected (!= next expected)) (raise RuntimeError (str "unexpected character '" next "`"))
         (= next "\n") (&lineno! self (++ (&lineno self))))
     (&next! self (.read-char (&stream self)))
     next))
@@ -2298,7 +2309,7 @@
         (= c "a") "\a"
         (= c "b") "\b"
         (= c "c") (if (<= 0x40 (<- c (ord (upper (.skip self)))) 0x5f) (chr (& c 0x1f))
-                      (.raise self "illegal ctrl char"))
+                      (raise RuntimeError "illegal ctrl char"))
         (= c "e") "\e"
         (= c "f") "\f"
         (= c "v") "\v"
@@ -2335,11 +2346,12 @@
 (method AheadReader .skip-digit (:opt radix)
   (let (ch (.skip self) val (if (digit? ch) (- (ord ch) 0x30)
                                 (alpha? ch) (+ (- (ord (lower ch)) 0x61) 10)))
-    (if (|| (nil? val) (>= val (|| radix 10))) (.raise self "illegal digit.")
+    (if (|| (nil? val) (>= val (|| radix 10)))
+        (raise RuntimeError "illegal digit")
         val)))
 
 (method AheadReader .skip-uint ()
-  (if (! (.next? self digit?)) (.raise self "missing digits")
+  (if (! (.next? self digit?)) (raise RuntimeError "missing digits")
       (let (val 0)
         (while (.next? self digit?)
           (<- val (+ (* val 10) (.skip-digit self))))
@@ -2356,7 +2368,7 @@
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
           (.skip self)
-          (if (! (.next? self alnum?)) (.raise self "missing lower or digits")
+          (if (! (.next? self alnum?)) (raise RuntimeError "missing lower or digits")
               (while (.next? self alnum?)
                 (<- val (+ (* val radix) (.skip-digit self radix))))))
         (= (&next self) ".")
@@ -2438,7 +2450,7 @@
         (while (.identifier-trail? self)
           (.get self))
         self)
-      (.raise self "illegal identifier")))
+      (raise SyntaxError "illegal identifier")))
 
 (method ParenLexer .lex-sign ()
   (let (sign (.skip self))
@@ -2494,7 +2506,7 @@
   (let (parse-cdr (f (acc)
                     (.scan self)
                     (if (== (&token-type self) :close-paren) (reverse! acc)
-                        (== (&token-type self) :EOF) (.raise self "missing close-paren")
+                        (== (&token-type self) :EOF) (raise SyntaxError "missing close-paren")
                         (parse-cdr (cons (.parse self) acc)))))
     (parse-cdr nil)))
 
@@ -2508,13 +2520,13 @@
         (== type :unquote) (list 'unquote (.parse (.scan self)))
         (== type :unquote-splicing) (list 'unquote-splicing (.parse (.scan self)))
         (== type :read-macro) (apply ({} $read-table (&token self)) (list self))
-        (.raise self "syntax error"))))
+        (raise SyntaxError))))
 
 (macro unquote (expr)
-  (list 'error "unexpected unquote -- ," expr))
+  (list 'raise 'SyntaxError (str "unexpected unquote -- ," expr)))
 
 (macro unquote-splicing (expr)
-  (list 'error "unexpected unquote-splicing -- ,@" expr))
+  (list 'raise 'SyntaxError (str "unexpected unquote-splicing -- ,@" expr)))
 
 (macro quasiquote (expr)
   (let (descend
@@ -2637,9 +2649,15 @@
         (if (<- $G-expr (read)) (write (eval (expand-macro-all $G-expr)))
             (break))))))
 
+(function raise (cls :opt args)
+  ; Throw the cls Class instance which initialized with argument args.
+  (let (e (.new cls))
+    (if (is-a? e Exception) (throw (.init e args))
+        (raise ArgumentError "Instances of the Excepion class cannot be raised"))))
+
 (function quit ()
   ; Quit the system.
-  (throw (.new SystemExit)))
+  (raise SystemExit))
 
 (function load (path)
   ; Load the specified file.
@@ -2654,10 +2672,11 @@
   ; Bind main to nil after processing.
   ; Returns true if successfully loaded.
   ; Module file to read must be UTF-8.
-  (if (some? (f (x) (== x key)) $import) true
+  (if (in? key $import) true
       (let ($G-module (.resolve (if import-dir (path import-dir) (.resolve $paren-home "module"))
                                 (memcat (string key) ".p")))
-        (if (! (.readable? $G-module)) (error "unreadable module " (.to-s $G-module))
+        (if (! (.readable? $G-module))
+            (raise RuntimeError (str "unreadable module " (.to-s $G-module)))
             (begin
               (load $G-module)
               (<- main nil)
@@ -2674,7 +2693,7 @@
                              (let (full-path (.resolve dir (car args)))
                                (if (.readable? full-path) full-path)))
                            (cons (path.getcwd) $script-path)))
-          (if (nil? script) (error "unreadable file " (car args))
+          (if (nil? script) (raise RuntimeError (str "unreadable file " (car args)))
               (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 
 (<- $import '(:core)
@@ -2689,7 +2708,7 @@
 
 (reader-macro [ (reader)
    ; Define array/bytes literal reader.
-   (if (!= (.read reader) '[) (error "missing space in array literal")
+   (if (!= (.read reader) '[) (raise SyntaxError "missing space in array literal")
        (let ($G-l nil $G-v nil)
          (while (!= (<- $G-v (.read reader)) '])
              (push! (eval $G-v) $G-l))
@@ -2697,7 +2716,7 @@
 
 (reader-macro { (reader)
   ; Define dictionary literal reader.
-  (if (!= (.read reader) '{) (error "missing space in dictionary literal")
+  (if (!= (.read reader) '{) (raise SyntaxError "missing space in dictionary literal")
       (let ($G-d (dict) $G-k nil)
         (while (!= (<- $G-k (.read reader)) '})
           ({} $G-d $G-k (eval (.read reader))))

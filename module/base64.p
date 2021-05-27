@@ -38,7 +38,7 @@
       (|| (= b 0x2d) (= b 0x2b)) 62
       (|| (= b 0x5f) (= b 0x2f)) 63
       (&& (= b 0x3d) accept-padding?) nil
-      (error "illegal base64")))
+      (raise IOError "illegal base64")))
 
 (function base64.decode (src)
   ; base64 decoding as specified by RFC 4648.

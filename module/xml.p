@@ -138,7 +138,7 @@
                (if (! stag?) tag    ; make sense
                    (let (name (car tag) child nil children nil)
                      (while (!= name (<- child (XMLReader.read self)))
-                       (if (symbol? child) (.raise self "unexpected close tag " child " expected " name)
+                       (if (symbol? child) (raise RuntimeError (str "unexpected close tag " child " expected " name))
                            (push! child children)))
                      (cons (car tag)
                            (cons (cadr tag)

@@ -21,7 +21,7 @@
                         (= op "]") (if (= depth 0) (break)
                                        (<- depth (-- depth)))))))
             (= op "]")
-            (if (nil? cs) (error "missing close bracket")
+            (if (nil? cs) (raise SyntaxError "missing close bracket")
                 (<- pc (pop! cs))))))))
 
 (function load-program (file)
@@ -29,5 +29,5 @@
     (return (read-bytes))))
 
 (function! main (args)
-  (if (nil? args) (error "required souce file")
+  (if (nil? args) (raise RuntimeError "required souce file")
       (interpret (load-program (car args)))))

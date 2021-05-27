@@ -17,7 +17,7 @@
       (.skip self)
       (<- level (++ level)))
     (if (<= 1 level  6) (list (symbol (str 'h level)) () (.skip-line (.skip-space self)))
-        (.raise self "illegal header level " level))))
+        (raise SyntaxError (str "illegal header level " level)))))
 
 (method MarkdownReader .parse-code ()
   (.skip self)
@@ -79,7 +79,7 @@
                              (while (= (.next self) ">")
                                (.skip self)
                                (<- next-depth (++ next-depth)))
-                             (if (= next-depth 0) (.raise self "missing >"))
+                             (if (= next-depth 0) (raise SyntaxError "missing >"))
                              (.skip-space self)
                              (push! (.skip-line (.skip-space self)) node-stack)))
                    rec (f (depth nodes)
@@ -110,18 +110,18 @@
                                 (begin
                                   (.skip-uint self) (.skip self ".")    ; 1. xxx
                                   (push! 'ol next-root))
-                                (.raise self "missing list"))
+                                (raise SyntaxError "missing list"))
                             (.skip-space self)
                             (push! (list 'li () (.skip-line (.skip-space self))) node-stack)))
                   rec (f (root depth nodes)
                         (while (fetch)
                           (if (< next-depth depth) (break)
-                              (= next-depth depth) (if (!= root (pop! next-root)) (.raise self "mixed list type")
+                              (= next-depth depth) (if (!= root (pop! next-root)) (raise SyntaxError "mixed list type")
                                                        (push! (pop! node-stack) nodes))
                               (begin
                                 (push! (rec (pop! next-root) next-depth (list (pop! node-stack))) nodes)
                                 (when node-stack
-                                  (if (!= (pop! next-root) root) (.raise self "mixed list type")
+                                  (if (!= (pop! next-root) root) (raise SyntaxError "mixed list type")
                                       (push! (pop! node-stack) nodes))))))
                         (cons root (cons nil (reverse! nodes)))))
     (rec (if (= (.next self) "-") 'ul 'ol) 1 nil)))

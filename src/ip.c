@@ -225,7 +225,6 @@ static int fp;
 static int sp;
 static object fs[FRAME_STACK_SIZE];
 
-#ifndef NDEBUG
 static char *frame_name(int frame_type)
 {
   switch (frame_type) {
@@ -251,10 +250,8 @@ static char *frame_name(int frame_type)
     default: xassert(FALSE); return NULL;
   }
 }
-#endif
 
-#ifndef NDEBUG
-static void dump_fs(void)
+void dump_fs(void)
 {
   int i, j, frame_type;
   char buf[MAX_STR_LEN];
@@ -268,7 +265,6 @@ static void dump_fs(void)
   }
   exit1();
 }
-#endif
 
 static void gen(int frame_type)
 {
@@ -688,11 +684,8 @@ static void pop_throw_frame(void)
   i = fp;
   pop_frame();
   if (!pos_is_a_p(reg[0], object_Exception)) {
-#ifndef NDEBUG
-    if (pos_is_a_p(reg[0], gc_new_mem_from(SYMBOL, error_name(ArgumentError), strlen(error_name(ArgumentError)))))
-      dump_fs();
-#endif
     ip_throw(ArgumentError, expected_instance_of_Exception_class);
+    // dump_fs();
     return;
   }
   if (map_get(reg[0], object_stack_trace) == object_nil)

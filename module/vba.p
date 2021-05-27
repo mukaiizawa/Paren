@@ -133,7 +133,7 @@
       (== alignment :right) "xlRight"
       (== alignment :top) "xlTop"
       (== alignment :default) "xlGeneral"
-      (error "unexpected alignment.")))
+      (raise ArgumentError "unexpected alignment")))
 
 (method VBASheet .horizontal-align (r :opt alignment)
   ; Returns vba that sets the specified range to the specified horizontal alignment.
