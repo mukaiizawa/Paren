@@ -6,7 +6,7 @@
   ; strings [OPTION]
   ; Strings prints the printable character sequences that are at least 4 characters long and are followed by an unprintable character.
   ;     -n print sequences of characters that are at least min-len characters long.
-  (let (n (if n (str->num n) 4) byte 0 ms (.new MemoryStream)
+  (let (n (if n (int n) 4) byte 0 ms (.new MemoryStream)
           flush (f ()
                   (if (>= (.size ms) n) (write-line (.to-s ms)))
                   (.reset ms)))

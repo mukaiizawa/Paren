@@ -808,33 +808,26 @@
   (assert (! (int? 'x))))
 
 (function int (x)
-  ; Returns whether the x is a integer.
+  ; Return a integer constructed from a number or string x.
+  ; If argument x is nil, returns 0.
   (// (float x)))
 
 (function int32 (x)
-  ; Returns whether the x is a integer.
+  ; Return a 32 bit integer constructed from a number or string x.
+  ; If argument x is nil, returns 0.
   (& 0xffffffff (int x)))
 
 (function float (x)
-  ; Returns whether the x is a float.
+  ; Return a floating point number constructed from a number or string x.
+  ; If argument x is nil, returns 0.
   (if (nil? x) 0
       (number? x) x
-      (string? x) (with-memory-stream ($in x)
-                    (let (ar (.new AheadReader) val (.skip-unumber ar))
-                      (if (.next ar) (throw (.new ArgumentError))
-                          val)))))
-
-(function bin (x)
-  (format "2x%b" x))
-
-(function oct (x)
-  (format "8x%o" x))
-
-(function hex (x)
-  (if (bytes? x)
-      (with-memory-stream ($out)
-        (doarray (i x) (write-bytes (format "0x%2x" x))))
-      (format "0x%x" x)))
+      (string? x)
+      (with-memory-stream ($in x)
+        (let (ar (.new AheadReader) val (.skip-unumber ar))
+          (if (.next ar) (throw (.new ArgumentError) "illegal string")
+              val)))
+      (throw (.message (.new ArgumentError) "expected number or string"))))
 
 (builtin-function ~ (x)
   ; Returns bitwise NOT of x.
@@ -1007,16 +1000,27 @@
           (|| (symbol? arg) (keyword? arg) (string? arg) (bytes? arg)) (write-bytes arg)
           (write arg :end "")))))
 
+(function bin (x)
+  ; Returns a binary representation string of argument.
+  (format "2x%b" x))
+
+(function oct (x)
+  ; Returns a octal representation string of argument.
+  (format "8x%o" x))
+
+(function hex (x)
+  ; Returns a hexdecimal representation string of argument.
+  ; If argument is bytes, returns hexdecimal dump.
+  (if (bytes? x)
+      (with-memory-stream ($out)
+        (doarray (i x) (write-bytes (format "0x%2x" x))))
+      (format "0x%x" x)))
+
 (builtin-function string? (x)
   ; Returns whether the x is a string.
   (assert (string? ""))
   (assert (string? "aaa"))
   (assert (! (string? (bytes 1)))))
-
-(function str->num (s)
-  ; Returns a string as a number.
-  (with-memory-stream ($in s)
-    (.skip-number (.new AheadReader))))
 
 (builtin-function chr (i)
   ; Returns an integer representing the Unicode code point of that character.
@@ -1188,7 +1192,6 @@
                       (if (padding-left?) (write-padding (if (= flag "0") "0" " ")))
                       (write-bytes val)
                       (if (! (padding-left?)) (write-padding " ")))))))))))
-
 
 ;; bytes & bytes-like.
 

@@ -18,6 +18,6 @@
 
 (function! main (args)
   (let (argc (len args) now (datetime.now))
-    (if (= argc 2) (cal (str->num (car args)) (str->num (cadr args)))
-        (= argc 1) (cal (.year now) (str->num (car args)))
+    (if (= argc 2) (cal (int (car args)) (int (cadr args)))
+        (= argc 1) (cal (.year now) (int (car args)))
         (cal (.year now) (.month now)))))

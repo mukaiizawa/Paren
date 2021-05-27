@@ -14,4 +14,4 @@
       (write-bytes ch))))
 
 (function! main (args)
-  (fold (if args (str->num (car args)) 100)))
+  (fold (if args (int (car args)) 100)))

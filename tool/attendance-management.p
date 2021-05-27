@@ -29,7 +29,7 @@
 (<- $minimum-operating-time 140)
 
 (function hhmm->min (hhmm)
-  (let ((hh mm) (map str->num (split hhmm ":")))
+  (let ((hh mm) (map int (split hhmm ":")))
     (+ (* 60 hh) mm)))
 
 (function ->working-hours (expr)

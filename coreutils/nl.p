@@ -7,7 +7,7 @@
   ; Write standard input to standard output, with line numbers starting from START added.
   ; If the START is omitted, it is considered that the 1 is specified.
   ;     -n consider the input as CSV
-  (let (n (if start (str->num start) 1))
+  (let (n (if start (int start) 1))
     (dolist (line (collect read-line))
       (if csv?
           (write-line (str n "," line))

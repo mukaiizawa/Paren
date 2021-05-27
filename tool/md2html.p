@@ -62,7 +62,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
       (write-bytes (str x ".")))))
 
 (function parse-header (contents-index node)
-  (let ((hx hx-attr :rest hx-text) node x (str->num ([] (str hx) 1)))
+  (let ((hx hx-attr :rest hx-text) node x (int ([] (str hx) 1)))
     (dotimes (i 6)
       (if (= i (-- x)) ([] contents-index i (++ ([] contents-index i)))
           (> i (-- x)) ([] contents-index i 0)))

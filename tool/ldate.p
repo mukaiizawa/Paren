@@ -20,6 +20,6 @@
                   long? (.get op "l")
                   argc (len args)
                   now (datetime.now))
-    (if (= argc 2) (ldate (str->num (car args)) (str->num (cadr args)) :long? long?)
-        (= argc 1) (ldate (.year now) (str->num (car args)) :long? long?)
+    (if (= argc 2) (ldate (int (car args)) (int (cadr args)) :long? long?)
+        (= argc 1) (ldate (.year now) (int (car args)) :long? long?)
         (ldate (.year now) (.month now) :long? long?))))

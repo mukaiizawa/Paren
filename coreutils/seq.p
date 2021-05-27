@@ -14,7 +14,7 @@
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "w:") args)
-                  (arg1 :opt arg2 arg3) (map str->num args)
+                  (arg1 :opt arg2 arg3) (map int args)
                   width (int (.get op "w")))
     (if arg3 (seq arg1 arg2 arg3 :width width)
         arg2 (seq arg1 1 arg2 :width width)

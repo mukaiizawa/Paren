@@ -30,6 +30,6 @@
             (.put board p nil))))))
 
 (function! main (args)
-  (let (size (if args (str->num (car args)) 8)
+  (let (size (if args (int (car args)) 8)
              board (.init (.new Matrix) (point size size)))
     (timeit (put-queen board 0))))
