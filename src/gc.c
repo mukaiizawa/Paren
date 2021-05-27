@@ -238,7 +238,7 @@ object gc_new_dict(void)
 static object new_proc(int type, object env, int param_count, object params, object body)
 {
   object o;
-  xassert(object_type_p(env, ENV));
+  xassert(object_type(env) == ENV);
   o = gc_alloc(sizeof(struct proc));
   o->proc.env = env;
   o->proc.param_count = param_count;

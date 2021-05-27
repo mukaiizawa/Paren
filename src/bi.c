@@ -19,108 +19,108 @@ int bi_argc_range(int argc, int min, int max)
 
 int bi_cons(object o, object *result)
 {
-  if (!object_type_p(o, CONS)) return ip_throw(ArgumentError, expected_cons);
-  *result = o;
+  if (object_type(*result = o) != CONS)
+    return ip_throw(ArgumentError, expected_cons);
   return TRUE;
 }
 
 int bi_string(object o, object *result)
 {
-  if (!object_type_p(o, STRING)) return ip_throw(ArgumentError, expected_string);
-  *result = o;
+  if (object_type(*result = o) != STRING)
+    return ip_throw(ArgumentError, expected_string);
   return TRUE;
 }
 
 int bi_symbol(object o, object *result)
 {
-  if (!object_type_p(o, SYMBOL)) return ip_throw(ArgumentError, expected_symbol);
-  *result = o;
+  if (object_type(*result = o) != SYMBOL)
+    return ip_throw(ArgumentError, expected_symbol);
   return TRUE;
 }
 
 int bi_keyword(object o, object *result)
 {
-  if (!object_type_p(o, KEYWORD)) return ip_throw(ArgumentError, expected_keyword);
-  *result = o;
+  if (object_type(*result = o) != KEYWORD)
+    return ip_throw(ArgumentError, expected_keyword);
   return TRUE;
 }
 
 int bi_bytes(object o, object *result)
 {
-  if (!object_type_p(o, BYTES)) return ip_throw(ArgumentError, expected_bytes);
-  *result = o;
+  if (object_type(*result = o) != BYTES)
+    return ip_throw(ArgumentError, expected_bytes);
   return TRUE;
 }
 
 int bi_array(object o, object *result)
 {
-  if (!object_type_p(o, ARRAY)) return ip_throw(ArgumentError, expected_array);
-  *result = o;
+  if (object_type(*result = o) != ARRAY)
+    return ip_throw(ArgumentError, expected_array);
   return TRUE;
 }
 
 int bi_dict(object o, object *result)
 {
-  if (!object_type_p(o, DICT)) return ip_throw(ArgumentError, expected_dict);
-  *result = o;
+  if (object_type(*result = o) != DICT)
+    return ip_throw(ArgumentError, expected_dict);
   return TRUE;
 }
 
 int bi_func(object o, object *result)
 {
-  if (!object_type_p(o, FUNC)) return ip_throw(ArgumentError, expected_function);
-  *result = o;
+  if (object_type(*result = o) != FUNC)
+    return ip_throw(ArgumentError, expected_function);
   return TRUE;
 }
 
 int bi_list(object o, object *result)
 {
-  if (!list_p(o)) return ip_throw(ArgumentError, expected_list);
   *result = o;
+  if (!list_p(o))
+    return ip_throw(ArgumentError, expected_list);
   return TRUE;
 }
 
 int bi_bytes_like(object o, object *result)
 {
-  if (!bytes_like_p(o)) return ip_throw(ArgumentError, expected_bytes_like);
-  *result = o;
+  if (!bytes_like_p(*result = o))
+    return ip_throw(ArgumentError, expected_bytes_like);
   return TRUE;
 }
 
 int bi_sequence(object o, object *result)
 {
-  if (!sequence_p(o)) return ip_throw(ArgumentError, expected_sequence);
-  *result = o;
+  if (!sequence_p(*result = o))
+    return ip_throw(ArgumentError, expected_sequence);
   return TRUE;
 }
 
 int bi_mutable_sequence(object o, object *result)
 {
-  if (!mutable_sequence_p(o)) return ip_throw(ArgumentError, expected_mutable_sequence);
-  *result = o;
+  if (!mutable_sequence_p(*result = o))
+    return ip_throw(ArgumentError, expected_mutable_sequence);
   return TRUE;
 }
 
 int bi_collection(object o, object *result)
 {
-  if (!collection_p(o)) return ip_throw(ArgumentError, expected_collection);
-  *result = o;
+  if (!collection_p(*result = o))
+    return ip_throw(ArgumentError, expected_collection);
   return TRUE;
 }
 
 int bi_symbol_keyword(object o, object *result)
 {
-  if (!symbol_keyword_p(o)) return ip_throw(ArgumentError, expected_symbol_keyword);
-  *result = o;
+  if (!symbol_keyword_p(*result = o))
+    return ip_throw(ArgumentError, expected_symbol_keyword);
   return TRUE;
 }
 
 int bi_proc(object o, object *result)
 {
-  switch (object_type(o)) {
+  switch (object_type(*result = o)) {
     case FUNC:
     case MACRO:
-      *result = o;
       return TRUE;
     default:
       return ip_throw(ArgumentError, expected_function_macro);
@@ -129,28 +129,30 @@ int bi_proc(object o, object *result)
 
 int bi_cbyte(object o, int *p)
 {
-  if (!bi_cint(o, p) || *p < 0 || *p > 0xff) return ip_throw(ArgumentError, expected_byte);
-  *p = sint_val(o);
+  if (!bi_cint(o, p) || *p < 0 || *p > 0xff)
+    return ip_throw(ArgumentError, expected_byte);
   return TRUE;
 }
 
 int bi_cint(object o, int *p)
 {
-  if (!sint_p(o)) return ip_throw(ArgumentError, expected_integer);
   *p = sint_val(o);
+  if (!sint_p(o))
+    return ip_throw(ArgumentError, expected_integer);
   return TRUE;
 }
 
 int bi_cpint(object o, int *p)
 {
-  if (!bi_cint(o, p) || *p < 0) return ip_throw(ArgumentError, expected_positive_integer);
+  if (!bi_cint(o, p) || *p < 0)
+    return ip_throw(ArgumentError, expected_positive_integer);
   return TRUE;
 }
 
 int bi_cint64(object o, int64_t *p)
 {
   if (sint_p(o)) *p = sint_val(o);
-  else if (object_type_p(o, XINT)) *p = o->xint.val;
+  else if (object_type(o) == XINT) *p = o->xint.val;
   else return FALSE;
   return TRUE;
 }
@@ -174,7 +176,7 @@ int bi_cdouble(object o, double *p)
     *p = (double)i;
     return TRUE;
   }
-  if (object_type_p(o, XFLOAT)) {
+  if (object_type(o) == XFLOAT) {
     *p = o->xfloat.val;
     return TRUE;
   }
@@ -189,7 +191,7 @@ int bi_cstrings(int n, object argv, char **ss)
   int offset[MAX_STRINGS]; // xbarray use realloc.
   object o;
   xassert(n <= MAX_STRINGS);
-  xassert(object_type_p(argv, CONS));
+  xassert(object_type(argv) == CONS);
   xbarray_reset(&bi_buf);
   for (i = 0; i < n; i++) {
     if (!bi_string(argv->cons.car, &o)) return FALSE;
@@ -215,7 +217,7 @@ int bi_cstring(object argv, char **ss)
 static int bi_type(int type, int argc, object argv, object *result)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(object_type_p(argv->cons.car, type));
+  *result = object_bool(object_type(argv->cons.car) == type);
   return TRUE;
 }
 
@@ -801,7 +803,7 @@ DEFUN(bytes)
 {
   int i;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (object_type_p(argv->cons.car, SINT)) {
+  if (object_type(argv->cons.car) == SINT) {
     if (!bi_cpint(argv->cons.car, &i)) return FALSE;
     *result = gc_new_mem(BYTES, i);
     return TRUE;
@@ -1480,7 +1482,7 @@ static int map_len(object o)
 {
   int i, len;
   object *table;
-  xassert(object_type_p(o, DICT));
+  xassert(object_type(o) == DICT);
   table = o->map.table;
   for (i = len = 0; i < o->map.half_size; i++)
     if (table[i] != NULL) len++;

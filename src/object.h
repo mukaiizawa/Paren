@@ -35,19 +35,15 @@ typedef union _object *object;
 
 #define object_hash(o) ((o)->header & HASH_MASK)
 #define object_set_hash(o, v) {(o)->header &= ~HASH_MASK; (o)->header |= v;}
-
 #define object_set_alive(o) ((o)->header |= ALIVE_BIT)
 #define object_set_dead(o) ((o)->header &= ~ALIVE_BIT)
 #define object_alive_p(o) ((o)->header & ALIVE_BIT)
-
 #define object_set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= (type << TYPE_OFFSET);}
-#define object_type(o) (sint_p(o)? SINT: (o->header & TYPE_MASK)>> TYPE_OFFSET)
-#define object_type_p(o, type) (object_type(o) == type)
 
 #define sint_p(o) ((((intptr_t)o) & 1) == 1)
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
 #define sint(i) ((object)((((intptr_t)i) << 1) | 1))
-#define list_p(o) (o == object_nil || object_type_p(o, CONS))
+#define list_p(o) (o == object_nil || (object_type(o) == CONS))
 
 union _object {
   int header;
@@ -121,6 +117,7 @@ extern object object_fields;
 extern object object_message;
 
 // utility functions.
+extern int object_type(object o);
 extern int object_byte_size(object o);
 extern char *object_describe(object o, char *buf);
 extern object object_bool(int b);

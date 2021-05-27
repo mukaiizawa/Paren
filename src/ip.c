@@ -225,6 +225,7 @@ static int fp;
 static int sp;
 static object fs[FRAME_STACK_SIZE];
 
+#ifndef NDEBUG
 static char *frame_name(int frame_type)
 {
   switch (frame_type) {
@@ -250,7 +251,9 @@ static char *frame_name(int frame_type)
     default: xassert(FALSE); return NULL;
   }
 }
+#endif
 
+#ifndef NDEBUG
 static void dump_fs(void)
 {
   int i, j, frame_type;
@@ -265,6 +268,7 @@ static void dump_fs(void)
   }
   exit1();
 }
+#endif
 
 static void gen(int frame_type)
 {
@@ -319,8 +323,8 @@ static void gen_if_frame(object args)
 
 static int same_symbol_keyword_p(object sym, object key)
 {
-  xassert(object_type_p(sym, SYMBOL));
-  xassert(object_type_p(key, KEYWORD));
+  xassert(object_type(sym) == SYMBOL);
+  xassert(object_type(key) == KEYWORD);
   if (sym->mem.size != key->mem.size) return FALSE;
   return memcmp(sym->mem.elt, key->mem.elt, sym->mem.size) == 0;
 }
@@ -329,7 +333,7 @@ static int valid_keyword_args(object params, object args)
 {
   object p;
   while (args != object_nil) {
-    if (!object_type_p(args->cons.car, KEYWORD))
+    if (object_type(args->cons.car) != KEYWORD)
       return ip_throw(ArgumentError, error_msg_nil);
     p = params;
     while (p != object_nil) {
@@ -352,10 +356,10 @@ static int parse_args(void (*f)(object, object, object), object params, object a
     return ip_throw(ArgumentError, expected_list);
   // required args
   while (params != object_nil) {
-    if (object_type_p(params->cons.car, KEYWORD)) break;
+    if (object_type(params->cons.car) == KEYWORD) break;
     if (args == object_nil)
       return ip_throw(ArgumentError, too_few_arguments);
-    if (object_type_p(params->cons.car, SYMBOL))
+    if (object_type(params->cons.car) == SYMBOL)
       (*f)(reg[1], params->cons.car, args->cons.car);
     else if (!parse_args(f, params->cons.car, args->cons.car)) return FALSE;
     params = params->cons.cdr;
@@ -365,7 +369,7 @@ static int parse_args(void (*f)(object, object, object), object params, object a
   if (params->cons.car == object_opt) {
     params = params->cons.cdr;
     while (params != object_nil) {
-      if (object_type_p(params->cons.car, KEYWORD)) break;
+      if (object_type(params->cons.car) == KEYWORD) break;
       k = params->cons.car;
       if (args == object_nil) (*f)(reg[1], k, object_nil);
       else {
@@ -456,7 +460,7 @@ static void pop_bind_frame(void)
 {
   object o;
   o = get_frame_var(fp, 0);
-  if (object_type_p(o, SYMBOL)) map_put(reg[1], o, reg[0]);
+  if (object_type(o) == SYMBOL) map_put(reg[1], o, reg[0]);
   else parse_args(&map_put, o, reg[0]);
   pop_frame();
 }
@@ -486,7 +490,7 @@ static void pop_bind_propagation_frame(void)
 {
   object o;
   o = get_frame_var(fp, 0);
-  if (object_type_p(o, SYMBOL)) map_put_propagation(reg[1], o, reg[0]);
+  if (object_type(o) == SYMBOL) map_put_propagation(reg[1], o, reg[0]);
   else parse_args(&map_put_propagation, o, reg[0]);
   pop_frame();
 }
@@ -514,7 +518,7 @@ static void pop_eval_frame(void)
     case CONS:
       operator = reg[0]->cons.car;
       args = reg[0]->cons.cdr;
-      if (object_type_p(operator, SYMBOL)) {
+      if (object_type(operator) == SYMBOL) {
         if (!eval_symbol(&operator)) return;
       }
       switch (object_type(operator)) {
@@ -704,7 +708,7 @@ static void pop_throw_frame(void)
         return;
       case HANDLERS_FRAME:
         handlers = get_frame_var(fp, 0);
-        xassert(object_type_p(handlers, ARRAY));
+        xassert(object_type(handlers) == ARRAY);
         pop_frame();
         for (j = 0; j < handlers->array.size; j += 2) {
           cls_sym = handlers->array.elt[j];
@@ -756,13 +760,13 @@ DEFUN(expand_2d_macro)
   object f, args;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   reg[0] = argv->cons.car;
-  if (!object_type_p(reg[0], CONS)) return TRUE;
+  if (object_type(reg[0]) != CONS) return TRUE;
   f = reg[0]->cons.car;
   args = reg[0]->cons.cdr;
-  if (object_type_p(f, SYMBOL)) {
+  if (object_type(f) == SYMBOL) {
     if ((f = map_get_propagation(reg[1], f)) == NULL) return TRUE;
   }
-  if (!object_type_p(f, MACRO)) return TRUE;
+  if (object_type(f) != MACRO) return TRUE;
   gen1(APPLY_FRAME, f);
   reg[0] = args;
   return TRUE;
@@ -781,12 +785,12 @@ DEFUN(bound_3f_)
 
 static int pos_object_p(object o)
 {
-  return object_type_p(o, DICT) && map_get(o, object_class) != NULL;
+  return object_type(o) == DICT && map_get(o, object_class) != NULL;
 }
 
 static int pos_class_p(object o)
 {
-  return object_type_p(o, DICT)
+  return object_type(o) == DICT
     && map_get(o, object_class) == object_Class
     && map_get(o, object_symbol) != NULL
     && map_get(o, object_super) != NULL
@@ -796,7 +800,7 @@ static int pos_class_p(object o)
 
 static int find_class(object cls_sym, object *result)
 {
-  if (!object_type_p(cls_sym, SYMBOL)) return FALSE;
+  if (object_type(cls_sym) != SYMBOL) return FALSE;
   if ((*result = map_get_propagation(reg[1], cls_sym)) == NULL) return FALSE;
   return pos_class_p(*result);
 }
@@ -811,7 +815,7 @@ static int find_super_class(object cls_sym, object *result)
 
 static int pos_is_a_p(object o, object cls_sym) {
   object o_cls_sym;
-  xassert(object_type_p(cls_sym, SYMBOL));
+  xassert(object_type(cls_sym) == SYMBOL);
   if (!pos_object_p(o)) return FALSE;
   o_cls_sym = map_get(o, object_class);
   while (o_cls_sym != cls_sym) {
@@ -823,8 +827,8 @@ static int pos_is_a_p(object o, object cls_sym) {
 
 static object find_class_method(object cls_sym, object mtd_sym)
 {
-  xassert(object_type_p(cls_sym, SYMBOL));
-  xassert(object_type_p(mtd_sym, SYMBOL));
+  xassert(object_type(cls_sym) == SYMBOL);
+  xassert(object_type(mtd_sym) == SYMBOL);
   xbarray_reset(&bi_buf);
   xbarray_copy(&bi_buf, cls_sym->mem.elt, cls_sym->mem.size);
   xbarray_copy(&bi_buf, mtd_sym->mem.elt, mtd_sym->mem.size);
@@ -844,9 +848,10 @@ DEFUN(is_2d_a_3f_)
 
 DEFUN(find_2d_class)
 {
+  object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!object_type_p(argv->cons.car, SYMBOL)) return FALSE;
-  if (!find_class(argv->cons.car, result)) *result = object_nil;
+  if (!bi_symbol(argv->cons.car, &o)) return FALSE;
+  if (!find_class(o, result)) *result = object_nil;
   return TRUE;
 }
 
@@ -1182,7 +1187,7 @@ static object get_call_stack(void)
         break;
       case FUNC_FRAME:
         p = get_frame_var(i, 1);
-        if (!object_type_p(p, CONS)) o = gc_new_cons(p, o);
+        if (object_type(p) != CONS) o = gc_new_cons(p, o);
         else {
           f = p->cons.car;
           args = p->cons.cdr;

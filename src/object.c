@@ -24,6 +24,12 @@ object object_features;
 object object_fields;
 object object_message;
 
+int object_type(object o)
+{
+  if (sint_p(o)) return SINT;
+  return (o->header & TYPE_MASK) >> TYPE_OFFSET;
+}
+
 int object_byte_size(object o)
 {
   switch (object_type(o)) {
@@ -159,7 +165,7 @@ static void describe_s_expr(object o, struct xbarray *x)
       break;
     case MACRO:
     case FUNC:
-      if (object_type_p(o, MACRO)) xbarray_adds(x, "(macro ");
+      if (object_type(o) == MACRO) xbarray_adds(x, "(macro ");
       else xbarray_adds(x, "(f ");
       if (o->proc.params == object_nil) xbarray_adds(x, "()");
       else describe_s_expr(o->proc.params, x);
@@ -252,7 +258,7 @@ int object_eq_p(object o, object p)
       if (o->mem.size != p->mem.size) return FALSE;
       return memcmp(o->mem.elt, p->mem.elt, o->mem.size) == 0;
     case CONS:
-      if (!object_type_p(p, CONS)) return FALSE;
+      if (object_type(p) != CONS) return FALSE;
       while (o != object_nil) {
         if (p == object_nil) return FALSE;
         if (!object_eq_p(o->cons.car, p->cons.car)) return FALSE;
@@ -261,13 +267,13 @@ int object_eq_p(object o, object p)
       }
       return TRUE;
     case ARRAY:
-      if (!object_type_p(p, ARRAY)) return FALSE;
+      if (object_type(p) != ARRAY) return FALSE;
       if (o->array.size != p->array.size) return FALSE;
       for (i = 0; i < o->array.size; i++)
         if (!object_eq_p(o->cons.car, p->cons.car)) return FALSE;
       return TRUE;
     case DICT:
-      if (!object_type_p(p, DICT)) return FALSE;
+      if (object_type(p) != DICT) return FALSE;
       return dict_eq_p(o, p);
     default:
       return FALSE;
@@ -370,7 +376,7 @@ int list_len(object o)
 {
   int i;
   xassert(list_p(o));
-  for (i = 0; object_type_p(o, CONS); i++) o = o->cons.cdr;
+  for (i = 0; object_type(o) == CONS; i++) o = o->cons.cdr;
   return i;
 }
 
@@ -474,7 +480,7 @@ object map_keys(object o)
 {
   int i;
   object keys, *table;
-  xassert(object_type_p(o, DICT));
+  xassert(object_type(o) == DICT);
   table = o->map.table;
   keys = object_nil;
   for (i = 0; i < o->map.half_size; i++)

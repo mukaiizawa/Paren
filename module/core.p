@@ -1013,7 +1013,7 @@
   ; If argument is bytes, returns hexdecimal dump.
   (if (bytes? x)
       (with-memory-stream ($out)
-        (doarray (i x) (write-bytes (format "0x%2x" x))))
+        (doarray (i x) (write-bytes (format "%02x" i))))
       (format "0x%x" x)))
 
 (builtin-function string? (x)
