@@ -108,7 +108,7 @@
 
 (special-operator catch
   ; Special operator catch evaluate expr in order.
-  ; If an error is thrown by the throw operator during expr evaluation, 
+  ; If an error is thrown by the throw operator during expr evaluation,
   ; Determine if the objects thrown in order from the left to right are instances of the specified class.
   ; Transfer control to the corresponding handler if there is a matching class.
   ; If not, the exception is propagated to the higher context.
@@ -1171,7 +1171,7 @@
                            (if (= conv "v") (write arg :end "")
                                (= conv "c") (write-bytes (chr arg))
                                (= conv "s") (write-bytes arg)
-                               (in? conv "bodx") 
+                               (in? conv "bodx")
                                (begin
                                  (if (> arg 0)
                                      (if (= flag "+") (write-bytes "+")
@@ -1408,7 +1408,7 @@
   )
 
 (builtin-function fputc (c fp)
-  ; Write the byte specified by c to the output stream pointed to by fp. 
+  ; Write the byte specified by c to the output stream pointed to by fp.
   ; Returns written byte.
   )
 
@@ -1690,9 +1690,12 @@
         class-name)))
 
 (method Exception .stack-trace ()
+  ; Returns stack trace.
   (&stack-trace self))
 
 (method Exception .print-stack-trace ()
+  ; Display stack trace.
+  ; Returns nil.
   (write-bytes (.to-s self))
   (write-line)
   (dolist (x (.stack-trace self))
@@ -1703,19 +1706,41 @@
   ; In principle, this exception is not caught.
   )
 
-(class Error (Exception))
+(class Error (Exception)
+  ; All built-in, non-system-exiting exceptions are derived from this class.
+  ; All user-defined exceptions should also be derived from this class.
+  )
 
-(class UnicodeError (Error))
+(class UnicodeError (Error)
+  ; Raised when a Unicode-related encoding or decoding error occurs.
+  )
 
 (method UnicodeError .init (args)
   (&message! self (str "illegal byte sequence " (map hex args))))
 
-(class SyntaxError (Error))
-(class ArgumentError (Error))
-(class IndexError (ArgumentError))
-(class IOError (Error))
-(class NotImplementedError (Error))
-(class RuntimeError (Error))
+(class SyntaxError (Error)
+  ; Raised when the parser encounters a syntax error.
+  )
+
+(class ArgumentError (Error)
+  ; Raised when an operation or function is applied to an object of inappropriate argument.
+  )
+
+(class IndexError (ArgumentError)
+  ; Raised when a sequence subscript is out of range.
+  )
+
+(class IOError (Error)
+  ; Raised when a system function returns a system-related error, including I/O failures.
+  )
+
+(class NotImplementedError (Error)
+   ; In user defined base classes, abstract methods should raise this exception when they require derived classes to override the method, or while the class is being developed to indicate that the real implementation still needs to be added.
+  )
+
+(class RuntimeError (Error)
+  ; Raised when an error is detected that doesn’t fall in any of the other categories.
+  )
 
 (class Comparable ()
   ; A feature that provides comparison operators.
