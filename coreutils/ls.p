@@ -22,13 +22,12 @@
            (if recur? (ls.d path)))
          write1
          (f (path)
-           (if long? (write-bytes
-                       (str (if (.dir? path) "d" (.other? path) "?" "-")
-                            (if (.readable? path) "r" "-")
-                            (if (.writable? path) "w" "-")
-                            " " (int->str (.size path) :padding 11)
-                            " " (.to-s (.init (.new DateTime) (.mtime path)))
-                            " ")))
+           (if long? (write-bytes (format "%s%s%s %-11d %s "
+                                          (if (.dir? path) "d" (.other? path) "?" "-")
+                                          (if (.readable? path) "r" "-")
+                                          (if (.writable? path) "w" "-")
+                                          (.size path)
+                                          (.to-s (.init (.new DateTime) (.mtime path))))))
            (write-line (if full-path? (.to-s path) (.name path)))))
     (ls.d path)))
 

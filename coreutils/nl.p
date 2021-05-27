@@ -11,7 +11,7 @@
     (dolist (line (collect read-line))
       (if csv?
           (write-line (str n "," line))
-          (write-line (str (int->str n :padding 7) " " line)))
+          (write-line (format "%-7d %s" n line)))
       (<- n (++ n)))))
 
 (function! main (args)

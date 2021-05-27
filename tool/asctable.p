@@ -44,6 +44,6 @@
   (write-line "   0 1 2 3 4 5 6 7 8 9 a b c d e f")
   (for (i 0 ch (chr i)) (<= i 0x7f) (i (++ i) ch (chr i))
     (when (= (% i 0x10) 0)
-      (write-bytes (int->str i :radix 16 :padding 2)) (write-bytes " "))
+      (write-bytes (format "%02x " i)))
     (write-bytes (if (print? ch) ch "."))
     (write-bytes (if (= (% i 0x10) 0x0f) "\n" " "))))

@@ -817,28 +817,24 @@
 
 (function float (x)
   ; Returns whether the x is a float.
-  (if (number? x) x
+  (if (nil? x) 0
+      (number? x) x
       (string? x) (with-memory-stream ($in x)
                     (let (ar (.new AheadReader) val (.skip-unumber ar))
                       (if (.next ar) (throw (.new ArgumentError))
                           val)))))
 
 (function bin (x)
-  (str "2x" (int->str x :radix 2)))
+  (format "2x%b" x))
 
 (function oct (x)
-  (str "8x" (int->str x :radix 8)))
+  (format "8x%o" x))
 
 (function hex (x)
   (if (bytes? x)
       (with-memory-stream ($out)
-        (doarray (i x) (write-bytes (int->str i :radix 16 :padding 2))))
-      (str "0x" (int->str x :radix 16))))
-
-(function int->str (i :key radix padding)
-  ; Returns string of i.
-  (with-memory-stream (out)
-    (.write-int out i :radix radix :padding padding)))
+        (doarray (i x) (write-bytes (format "0x%2x" x))))
+      (format "0x%x" x)))
 
 (builtin-function ~ (x)
   ; Returns bitwise NOT of x.
@@ -1040,13 +1036,16 @@
   (assert (= (ord "愛") 0x611b))
   (assert (= (ord "𡈽") 0x2123d)))
 
-(function wcwidth (ch)
-  ; Returns character width assigned to the character chr as string.
-  (if (print? ch) 1
-      (let (cp (ord ch))
-        (if (<= 0xff61 cp 0xffdf) 1    ; Halfwidth Katakana
-            (<= 0x3000 cp 0xffe6) 2    ; Fullwidth characters
-            0))))
+(function wcwidth (s)
+  ; Returns the number of columns needed to represent the string.
+  (let (width 0)
+    (dostring (ch s)
+      (<- width (+ width (if (print? ch) 1
+                             (let (cp (ord ch))
+                               (if (<= 0xff61 cp 0xffdf) 1    ; Halfwidth Katakana
+                                   (<= 0x3000 cp 0xffe6) 2    ; Fullwidth characters
+                                   0))))))
+    width))
 
 (builtin-function ascii? (s)
   ; Returns whether all characters in the string are ASCII.
@@ -1131,6 +1130,65 @@
           (while (= ([] sa si) ([] pa pi))
             (<- si (++ si) pi (++ pi))
             (if (= pi plen) (return i))))))))
+
+(function format (fmt :rest args)
+  ; Returns formatted string whitch the string in the same way as C `sprintf`.
+  ;     %[FLAG][WIDTH]CONV
+  ;         FLAG -- The character % is followed by zero or more of the following flags
+  ;             + -- always print a sign for numeric values
+  ;             - -- pad with spaces on the right rather than the left (left-justify the field)
+  ;             <space> -- leave a space for elided sign in numbers
+  ;             0 -- pad with leading zeros rather than spaces
+  ;         WIDTH -- An optional decimal digit string (with nonzero first digit) specifying a minimum field width
+  ;         CONV -- A character that specifies the type of conversion
+  ;             v -- readable format
+  ;             b -- base 2
+  ;             o -- base 8
+  ;             d -- base 10
+  ;             x -- base 16
+  ;             c -- the character represented by the corresponding Unicode code point
+  ;             s -- string
+  (with-memory-stream ($out)
+    (with-memory-stream ($in fmt)
+      (let (rd (.new AheadReader) flag nil width nil conv nil val nil
+               conv->radix (f (conv)
+                             (if (= conv "b") 2
+                                 (= conv "o") 8
+                                 (= conv "d") 10
+                                 (= conv "x") 16
+                                 (assert nil)))
+               padding-left? (f () (&& flag (in? flag "-0")))
+               write-padding (f (ch)
+                               (dotimes (i (- width (wcwidth val)))
+                                 (write-bytes ch)))
+               convert (f (flag conv arg)
+                         (with-memory-stream ($out)
+                           (if (= conv "v") (write arg :end "")
+                               (= conv "c") (write-bytes (chr arg))
+                               (= conv "s") (write-bytes arg)
+                               (in? conv "bodx") 
+                               (begin
+                                 (if (> arg 0)
+                                     (if (= flag "+") (write-bytes "+")
+                                         (= flag " ") (write-bytes " ")))
+                                 (.write-int $out arg :radix (conv->radix conv)))
+                               (throw (.message (.new ArgumentError) "unexpected conversion specifier " conv))))))
+        (while (.next rd)
+          (if (!= (.next rd) "%") (write-bytes (.skip rd))
+              (begin
+                (.skip rd)
+                (if (= (.next rd) "%") (write-bytes (.skip rd))
+                    (nil? args) (throw (.message (.new ArgumentError) "too few arguments"))
+                    (begin
+                      (<- flag (if (in? (.next rd) "+- 0") (.skip rd))
+                          width (if (digit? (.next rd)) (.skip-uint rd) 0)
+                          conv (.skip rd)
+                          val (convert flag conv (car args))
+                          args (cdr args))
+                      (if (padding-left?) (write-padding (if (= flag "0") "0" " ")))
+                      (write-bytes val)
+                      (if (! (padding-left?)) (write-padding " ")))))))))))
+
 
 ;; bytes & bytes-like.
 
@@ -1863,8 +1921,7 @@
   (assert nil))
 
 (method Stream .raise (:rest seq)
-  (error "illegal byte sequence "
-         (map (f (x) (str "0x" (int->str x :radix 16))) seq)))
+  (error "illegal byte sequence " (map hex seq)))
 
 (method Stream .read-char ()
   ; Read 1 character from the receiver

@@ -675,6 +675,7 @@ static void pop_return_frame(void)
 }
 
 static int pos_is_a_p(object o, object cls_sym);
+static object get_call_stack(void);
 
 static void pop_throw_frame(void)
 {
@@ -690,6 +691,8 @@ static void pop_throw_frame(void)
     ip_throw(ArgumentError, expected_instance_of_Exception_class);
     return;
   }
+  if (map_get(reg[0], object_stack_trace) == object_nil)
+    map_put(reg[0], object_stack_trace, get_call_stack());
   while (fp > -1) {
     switch (fs_top()) {
       case UNWIND_PROTECT_FRAME:
@@ -1206,7 +1209,7 @@ static object new_Error(enum error e, enum error_msg em)
   map_put(o, object_class, gc_new_mem_from(SYMBOL, err, strlen(err)));
   if ((msg = error_msg(em)) != NULL)
     map_put(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
-  map_put(o, object_stack_trace, get_call_stack());
+  map_put(o, object_stack_trace, object_nil);
   return o;
 }
 

@@ -13,9 +13,7 @@
                           (when (|| (&& (! uniq?) (! duplicate?))
                                     (&& uniq? (= c 1))
                                     (&& duplicate? (!= c 1)))
-                            (when count?
-                              (write-bytes (int->str count :padding 7))
-                              (write-bytes " "))
+                            (if count? (write-bytes (format "%-7d " count)))
                             (write-line line))))
     (when prev
       (dolist (line (collect read-line))

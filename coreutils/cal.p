@@ -7,12 +7,12 @@
   ; Display the calendar for the specified year and month.
   ; If the year and month are omitted, it is considered that the current year and month are specified.
   (let (dt (datetime y m 1) dw (.day-week dt))
-    (write-line (str y "-" (int->str m :padding 2)))
+    (write-line (format "%d-%02d" y m))
     (write-line  "Su Mo Tu We Th Fr Sa")
     (dotimes (i (-- (* dw 3))) (write-bytes " "))
     (dotimes (i (.monthlen dt))
       (if (!= dw 0) (write-bytes " "))
-      (write-bytes (int->str (++ i) :padding 2))
+      (write-bytes (format "%-2d" (++ i)))
       (if (= (<- dw (% (++ dw) 7)) 0)
           (write-line)))))
 

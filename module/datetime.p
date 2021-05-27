@@ -139,12 +139,10 @@
         (&& monday? (.public-holiday? (.offset self :days -1))))))
 
 (method DateTime .date.to-s ()
-  (join (map (f (x) (int->str x :padding 2))
-             (list (&year self) (&month self) (&day self))) "-"))
+  (format "%d-%02d-%02d" (&year self) (&month self) (&day self)))
 
 (method DateTime .time.to-s ()
-  (join (map (f (x) (int->str x :padding 2))
-             (list (&hour self) (&minute self) (&second self))) ":"))
+  (format "%02d:%02d:%02d" (&hour self) (&minute self) (&second self)))
 
 (method DateTime .datetime.to-s ()
   (str (.date.to-s self) " " (.time.to-s self)))
