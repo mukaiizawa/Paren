@@ -1,4 +1,4 @@
-; n queen problem.
+; N-Queens problem.
 
 (import :point)
 (import :matrix)
@@ -6,8 +6,7 @@
 (function show (board)
   (domatrix (p board)
     (if (= (.y p) 0) (write-line))
-    (if (.at board p) (write-bytes "X")
-        (write-bytes "-")))
+    (write-bytes (if (.at board p) "Q" "*")))
   (write-line))
 
 (function putable? (board p)
@@ -32,4 +31,4 @@
 (function! main (args)
   (let (size (if args (int (car args)) 8)
              board (.init (.new Matrix) (point size size)))
-    (timeit (put-queen board 0))))
+    (put-queen board 0)))
