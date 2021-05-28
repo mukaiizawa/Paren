@@ -29,7 +29,6 @@
 #ifdef __MINGW32__
 #define OS_CODE OS_WINDOWS
 #define __MSVCRT_VERSION__ 0x800
-#define WINVER 0x500
 #endif
 
 #define UNIX_P (OS_CODE / 10 == 0)
@@ -38,6 +37,8 @@
 #if WINDOWS_P
 #ifndef WSTAT64_P
 #define WSTAT64_P TRUE
+#define WINVER 0x0501
+#define _WIN32_WINNT 0x0501
 #endif
 #endif
 
