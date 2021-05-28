@@ -29,5 +29,5 @@
     (return (read-bytes))))
 
 (function! main (args)
-  (if (nil? args) (raise RuntimeError "required souce file")
+  (if (nil? args) (raise ArgumentError "required souce file")
       (interpret (load-program (car args)))))

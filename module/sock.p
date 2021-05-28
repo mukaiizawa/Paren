@@ -1,7 +1,7 @@
 ; socket module.
 
 (if (! (bound? 'client-socket))
-    (raise RuntimeError "Requires sock option at compile time"))
+    (raise StateError "Requires sock option at compile time"))
 
 (builtin-function client-socket (host port)
   ; Create a new socket and connect it to terminal corresponding to host and port.

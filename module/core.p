@@ -1711,17 +1711,6 @@
   ; All user-defined exceptions should also be derived from this class.
   )
 
-(class UnicodeError (Error)
-  ; Raised when a Unicode-related encoding or decoding error occurs.
-  )
-
-(method UnicodeError .init (args)
-  (&message! self (str "illegal byte sequence " (map hex args))))
-
-(class SyntaxError (Error)
-  ; Raised when the parser encounters a syntax error.
-  )
-
 (class ArgumentError (Error)
   ; Raised when an operation or function is applied to an object of inappropriate argument.
   )
@@ -1730,16 +1719,35 @@
   ; Raised when a sequence subscript is out of range.
   )
 
-(class IOError (Error)
-  ; Raised when a system function returns a system-related error, including I/O failures.
+(class ArithmeticError (ArgumentError)
+  ; Raised when an error occurs in an arithmetic operation.
   )
 
-(class NotImplementedError (Error)
+(class StateError (Error)
+  ; Raised when a function has been invoked at an illegal or inappropriate time. 
+  )
+
+(class NotImplementedError (StateError)
    ; In user defined base classes, abstract methods should raise this exception when they require derived classes to override the method, or while the class is being developed to indicate that the real implementation still needs to be added.
   )
 
-(class RuntimeError (Error)
-  ; Raised when an error is detected that doesn’t fall in any of the other categories.
+(class SyntaxError (StateError)
+  ; Raised when the parser encounters a syntax error.
+  )
+
+(class UnicodeError (StateError)
+  ; Raised when a Unicode-related encoding or decoding error occurs.
+  )
+
+(method UnicodeError .init (args)
+  (&message! self (str "illegal byte sequence " (map hex args))))
+
+(class EOFError (StateError)
+  ; Raised when reached EOF unexpectedly.
+  )
+
+(class OSError (StateError)
+  ; Raised when a system function returns a system-related error, including I/O failures.
   )
 
 (class Comparable ()
@@ -2319,8 +2327,8 @@
   ; Skip next character and returns it.
   ; Error if expected is specified and the next character is not the same as the expected.
   (let (next (&next self))
-    (if (nil? next) (raise IOError "unexpected EOF")
-        (&& expected (!= next expected)) (raise RuntimeError (str "unexpected character '" next "`"))
+    (if (nil? next) (raise EOFError "unexpected EOF")
+        (&& expected (!= next expected)) (raise StateError (str "unexpected character '" next "`"))
         (= next "\n") (&lineno! self (++ (&lineno self))))
     (&next! self (.read-char (&stream self)))
     next))
@@ -2334,7 +2342,7 @@
         (= c "a") "\a"
         (= c "b") "\b"
         (= c "c") (if (<= 0x40 (<- c (ord (upper (.skip self)))) 0x5f) (chr (& c 0x1f))
-                      (raise RuntimeError "illegal ctrl char"))
+                      (raise StateError "illegal ctrl char"))
         (= c "e") "\e"
         (= c "f") "\f"
         (= c "v") "\v"
@@ -2372,11 +2380,11 @@
   (let (ch (.skip self) val (if (digit? ch) (- (ord ch) 0x30)
                                 (alpha? ch) (+ (- (ord (lower ch)) 0x61) 10)))
     (if (|| (nil? val) (>= val (|| radix 10)))
-        (raise RuntimeError "illegal digit")
+        (raise StateError "illegal digit")
         val)))
 
 (method AheadReader .skip-uint ()
-  (if (! (.next? self digit?)) (raise RuntimeError "missing digits")
+  (if (! (.next? self digit?)) (raise StateError "missing digits")
       (let (val 0)
         (while (.next? self digit?)
           (<- val (+ (* val 10) (.skip-digit self))))
@@ -2393,7 +2401,7 @@
         (let (radix (if (= val 0) 16 val))
           (<- val 0)
           (.skip self)
-          (if (! (.next? self alnum?)) (raise RuntimeError "missing lower or digits")
+          (if (! (.next? self alnum?)) (raise StateError "missing lower or digits")
               (while (.next? self alnum?)
                 (<- val (+ (* val radix) (.skip-digit self radix))))))
         (= (&next self) ".")
@@ -2701,7 +2709,7 @@
       (let ($G-module (.resolve (if import-dir (path import-dir) (.resolve $paren-home "module"))
                                 (memcat (string key) ".p")))
         (if (! (.readable? $G-module))
-            (raise RuntimeError (str "unreadable module " (.to-s $G-module)))
+            (raise OSError (str "unreadable module " (.to-s $G-module)))
             (begin
               (load $G-module)
               (<- main nil)
@@ -2718,7 +2726,7 @@
                              (let (full-path (.resolve dir (car args)))
                                (if (.readable? full-path) full-path)))
                            (cons (path.getcwd) $script-path)))
-          (if (nil? script) (raise RuntimeError (str "unreadable file " (car args)))
+          (if (nil? script) (raise OSError (str "unreadable file " (car args)))
               (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 
 (<- $import '(:core)

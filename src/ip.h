@@ -9,10 +9,12 @@ enum error {
   Exception,
     SystemExit,
     Error,
-      SyntaxError,
       ArgumentError,
-      RuntimeError,
-      IOError,
+        IndexError,
+        ArithmeticError,
+      StateError,
+        OSError,
+        SyntaxError,
   error_nil
 };
 
@@ -51,14 +53,14 @@ enum error_msg {
   too_few_arguments,
   too_many_arguments,
   undeclared_keyword_param,
-  // RuntimeError
+  numeric_overflow,
+  division_by_zero,
+  // StateError
   assert_failed,
   builtin_failed,
   expected_labels_context,
   stack_over_flow,
   unbound_symbol,
-  numeric_overflow,
-  division_by_zero,
   // none
   error_msg_nil
 };

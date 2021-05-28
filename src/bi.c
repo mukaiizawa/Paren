@@ -472,7 +472,7 @@ static int double_add(double x, object argv, object *result)
   int64_t i;
   double d;
   if (!isfinite(x))
-    return ip_throw(RuntimeError, numeric_overflow);
+    return ip_throw(ArithmeticError, numeric_overflow);
   if (argv == object_nil) {
     *result = gc_new_xfloat(x);
     return TRUE;
@@ -493,7 +493,7 @@ static int int64_add(int64_t x, object argv, object *result)
   }
   if (bi_cint64(argv->cons.car, &y)) {
     if ((y > 0 && x > INT64_MAX - y) || (y < 0 && x < INT64_MIN - y))
-      return ip_throw(RuntimeError, numeric_overflow);
+      return ip_throw(ArithmeticError, numeric_overflow);
     return int64_add(x + y, argv->cons.cdr, result);
   }
   return double_add((double)x, argv, result);
@@ -513,7 +513,7 @@ static int double_multiply(double dx, object argv, object *result)
   int64_t iy;
   double dy;
   if (!isfinite(dx))
-    return ip_throw(RuntimeError, numeric_overflow);
+    return ip_throw(ArithmeticError, numeric_overflow);
   if (argv == object_nil) {
     *result = gc_new_xfloat(dx);
     return TRUE;
@@ -536,18 +536,18 @@ static int int64_multiply(int64_t ix, object argv, object *result)
     if (ix > 0) {
       if (iy > 0) {
         if (ix > INT64_MAX / iy)
-          return ip_throw(RuntimeError, numeric_overflow);
+          return ip_throw(ArithmeticError, numeric_overflow);
       } else {
         if (iy < INT64_MIN / ix)
-          return ip_throw(RuntimeError, numeric_overflow);
+          return ip_throw(ArithmeticError, numeric_overflow);
       }
     } else {
       if (iy > 0) {
         if (ix < INT64_MIN / iy)
-          return ip_throw(RuntimeError, numeric_overflow);
+          return ip_throw(ArithmeticError, numeric_overflow);
       } else {
         if (ix != 0 && iy < INT64_MAX / ix)
-          return ip_throw(RuntimeError, numeric_overflow);
+          return ip_throw(ArithmeticError, numeric_overflow);
       }
     }
     return int64_multiply(ix * iy, argv->cons.cdr, result);
@@ -566,7 +566,7 @@ static int double_divide(double dx, object argv, object *result)
   int64_t iy;
   double dy;
   if (!isfinite(dx))
-    return ip_throw(RuntimeError, numeric_overflow);
+    return ip_throw(ArithmeticError, numeric_overflow);
   if (argv == object_nil) {
     *result = gc_new_xfloat(dx);
     return TRUE;
@@ -575,7 +575,7 @@ static int double_divide(double dx, object argv, object *result)
   else if (!bi_cdouble(argv->cons.car, &dy))
     return ip_throw(ArgumentError, expected_number);
   if (dy == 0)
-    return ip_throw(RuntimeError, division_by_zero);
+    return ip_throw(ArithmeticError, division_by_zero);
   return double_divide(dx / dy, argv->cons.cdr, result);
 }
 
@@ -588,9 +588,9 @@ static int int64_divide(int64_t ix, object argv, object *result)
   }
   if (bi_cint64(argv->cons.car, &iy)) {
     if (iy == 0)
-      return ip_throw(RuntimeError, division_by_zero);
+      return ip_throw(ArithmeticError, division_by_zero);
     if (ix == INT64_MIN && iy == -1)
-      return ip_throw(RuntimeError, numeric_overflow);
+      return ip_throw(ArithmeticError, numeric_overflow);
     if (ix % iy == 0)
       return int64_divide(ix / iy, argv->cons.cdr, result);
     return double_divide((double)ix/iy, argv->cons.cdr, result);
@@ -627,14 +627,14 @@ DEFUN(_2f__2f_)
         return TRUE;
       }
     }
-    return ip_throw(RuntimeError, numeric_overflow);
+    return ip_throw(ArithmeticError, numeric_overflow);
   } else {
     if (!bi_cint64(argv->cons.car, &ix))
       return ip_throw(ArgumentError, expected_integer);
     if (!bi_cint64(argv->cons.cdr->cons.car, &iy))
       return ip_throw(ArgumentError, expected_integer);
     if (iy == 0)
-      return ip_throw(RuntimeError, division_by_zero);
+      return ip_throw(ArithmeticError, division_by_zero);
     *result = gc_new_xint(ix / iy);
     return TRUE;
   }
@@ -649,7 +649,7 @@ DEFUN(_25_)
   if (!bi_cint64(argv->cons.cdr->cons.car, &y))
     return ip_throw(ArgumentError, expected_integer);
   if (y == 0)
-    return ip_throw(RuntimeError, division_by_zero);
+    return ip_throw(ArithmeticError, division_by_zero);
   *result = gc_new_xint(x % y);
   return TRUE;
 }
@@ -774,7 +774,7 @@ DEFUN(_3c__3c_)
   if (x != 0) {
     if (y > 0) {
       if ((bits(x) + y) > XINT_BITS)
-        return ip_throw(RuntimeError, numeric_overflow);
+        return ip_throw(ArithmeticError, numeric_overflow);
       x <<= y;
     } else x >>= -y;
   }
@@ -1252,7 +1252,7 @@ DEFUN(slice)
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
   if (argc < 3) stop = -1;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &stop)) return FALSE;
-  else if (start > stop) return ip_throw(ArgumentError, index_out_of_range);
+  else if (start > stop) return ip_throw(IndexError, index_out_of_range);
   *result = object_nil;
   switch (object_type(o)) {
     case SYMBOL:
@@ -1262,14 +1262,14 @@ DEFUN(slice)
       return cons_slice(o, start, stop, result);
     case BYTES:
       if (stop == -1) stop = o->mem.size;
-      else if (stop > o->mem.size) return ip_throw(ArgumentError, index_out_of_range);
+      else if (stop > o->mem.size) return ip_throw(IndexError, index_out_of_range);
       *result = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
       return TRUE;
     case STRING:
       return str_slice(o, start, stop, result);
     case ARRAY:
       if (stop == -1) stop = o->array.size;
-      else if (stop > o->array.size) return ip_throw(ArgumentError, index_out_of_range);
+      else if (stop > o->array.size) return ip_throw(IndexError, index_out_of_range);
       *result = gc_new_array_from(o->array.elt + start, stop - start);
       return TRUE;
     default:
@@ -1364,7 +1364,7 @@ DEFUN(_5b__5d_)
         if (o == object_nil) *result = o;
         else *result = o->cons.car;
       } else {
-        if (o == object_nil) return ip_throw(ArgumentError, index_out_of_range);
+        if (o == object_nil) return ip_throw(IndexError, index_out_of_range);
         *result = argv->cons.cdr->cons.car;
         o->cons.car = *result;
       }
@@ -1374,7 +1374,7 @@ DEFUN(_5b__5d_)
       return ip_throw(ArgumentError, expected_mutable_sequence);
     case BYTES:
       if (i >= o->mem.size)
-        return ip_throw(ArgumentError, index_out_of_range);
+        return ip_throw(IndexError, index_out_of_range);
       if (argc == 2) *result = sint(LC(o->mem.elt + i));
       else {
         if (!bi_cbyte((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
@@ -1383,7 +1383,7 @@ DEFUN(_5b__5d_)
       return TRUE;
     case ARRAY:
       if (i >= o->array.size)
-        return ip_throw(ArgumentError, index_out_of_range);
+        return ip_throw(IndexError, index_out_of_range);
       if (argc == 2) *result = o->array.elt[i];
       else *result = o->array.elt[i] = argv->cons.cdr->cons.car;
       return TRUE;

@@ -64,10 +64,11 @@ static char *error_name(enum error e) {
     case Exception: return "Exception";
     case SystemExit: return "SystemExit";
     case Error: return "Error";
-    case SyntaxError: return "SyntaxError";
     case ArgumentError: return "ArgumentError";
-    case RuntimeError: return "RuntimeError";
-    case IOError: return "IOError";
+    case ArithmeticError: return "ArithmeticError";
+    case StateError: return "StateError";
+    case OSError: return "OSError";
+    case SyntaxError: return "SyntaxError";
     default: xassert(FALSE); return NULL;
   }
 };
@@ -268,7 +269,7 @@ void dump_fs(void)
 
 static void gen(int frame_type)
 {
-  if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_throw(RuntimeError, stack_over_flow);
+  if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_throw(StateError, stack_over_flow);
   fs[sp + 1] = sint(fp);
   fs[sp] = sint(frame_type);
   set_fp(sp);
@@ -442,14 +443,14 @@ static void pop_apply_builtin_frame(void)
   function = f->builtin.u.function;
   pop_frame();
   if ((*function)(list_len(args), args, &(reg[0]))) return;
-  if (ip_trap_code == TRAP_NONE) ip_throw(RuntimeError, builtin_failed);
+  if (ip_trap_code == TRAP_NONE) ip_throw(Error, builtin_failed);
   gen2(FUNC_FRAME, reg[1], gc_new_cons(f->builtin.name, args));    // for stack trace
 }
 
 static void pop_assert_frame(void)
 {
   if (reg[0] != object_nil) pop_frame();
-  else ip_throw(RuntimeError, assert_failed);
+  else ip_throw(StateError, assert_failed);
 }
 
 static void pop_bind_frame(void)
@@ -497,7 +498,7 @@ static int eval_symbol(object *result)
   o = *result;
   if ((*result = map_get_propagation(reg[1], *result)) == NULL) {
     gen2(FUNC_FRAME, reg[1], o);    // for stack trace
-    return ip_throw(RuntimeError, unbound_symbol);
+    return ip_throw(StateError, unbound_symbol);
   }
   return TRUE;
 }
@@ -537,7 +538,7 @@ static void pop_eval_frame(void)
           gen_eval_args_frame(args);
           return;
         default:
-          ip_throw(RuntimeError, expected_operator);
+          ip_throw(StateError, expected_operator);
           return;
       }
       break;
@@ -610,7 +611,7 @@ static void pop_goto_frame(void)
         break;
     }
   }
-  ip_throw(RuntimeError, expected_labels_context);
+  ip_throw(StateError, expected_labels_context);
   set_fp(i);
   return;
 }
@@ -867,7 +868,7 @@ DEFUN(find_2d_method)
     }
     // super class method
     if (!find_super_class(cls_sym, &cls))
-      return ip_throw(RuntimeError, unbound_symbol);
+      return ip_throw(StateError, unbound_symbol);
     cls_sym = map_get(cls, object_symbol);
   }
 }
