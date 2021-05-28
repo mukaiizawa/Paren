@@ -130,6 +130,7 @@ extern int sequence_p(object o);
 extern int mutable_sequence_p(object o);
 extern int collection_p(object o);
 extern int symbol_keyword_p(object o);
+extern int builtin_p(object o);
 
 extern int list_len(object o);
 extern object list_reverse(object o);

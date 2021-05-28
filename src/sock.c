@@ -21,7 +21,8 @@
 { \
   int st; \
   WSADATA data; \
-  if ((st = WSAStartup(MAKEWORD(2, 0), &data)) != 0) return FALSE; \
+  if ((st = WSAStartup(MAKEWORD(2, 0), &data)) != 0) \
+    return ip_throw(OSError, socket_startup_failed); \
 }
 #define xcleanup() WSACleanup()
 #endif
@@ -41,7 +42,8 @@ DEFUN(client_2d_socket)
   hints.ai_flags = 0;
   hints.ai_protocol = 0;
   xstartup();
-  if (getaddrinfo(host, sport, &hints, &p) != 0) return FALSE;
+  if (getaddrinfo(host, sport, &hints, &p) != 0)
+    return ip_throw(OSError, connection_failed);
   for (q = p; q != NULL; q = q->ai_next) {
     fd = xsocket(q->ai_family, q->ai_socktype, q->ai_protocol);
     if (fd == -1) continue;
@@ -49,7 +51,7 @@ DEFUN(client_2d_socket)
     xclose(fd);
   }
   freeaddrinfo(p);
-  if (q == NULL) return FALSE;
+  if (q == NULL) return ip_throw(OSError, connection_failed);
   *result = gc_new_xint(fd);
   return TRUE;
 }
@@ -65,9 +67,10 @@ DEFUN(server_2d_socket)
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
   xstartup();
-  if ((fd = xsocket(AF_INET, SOCK_STREAM, 0)) == -1) return FALSE;
-  if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) return FALSE;
-  if (listen(fd, 1) == -1) return FALSE;
+  if ((fd = xsocket(AF_INET, SOCK_STREAM, 0)) == -1
+      || bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1
+      || listen(fd, 1) == -1)
+    return ip_throw(OSError, connection_failed);
   *result = gc_new_xint(fd);
   return TRUE;
 }
@@ -79,7 +82,8 @@ DEFUN(accept)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cint(argv->cons.car, &sfd)) return FALSE;
   size = sizeof(addr);
-  if ((cfd = accept(sfd, (struct sockaddr *) &addr, &size)) == -1) return FALSE;
+  if ((cfd = accept(sfd, (struct sockaddr *) &addr, &size)) == -1)
+    return ip_throw(OSError, connection_failed);
   *result = gc_new_xint(cfd);
   return TRUE;
 }
@@ -90,11 +94,12 @@ DEFUN(recv)
   object o;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
   if (!bi_bytes(argv->cons.car, &o)) return FALSE;
-  if (!bi_cint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
-  if (!bi_cint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (!(0 <= from && from + size <= o->mem.size)) return FALSE;
+  if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_cint(argv->cons.cdr->cons.car, &fd)) return FALSE;
-  if ((size = recv(fd, o->mem.elt + from, size, 0)) < 0) return FALSE;
+  if ((size = recv(fd, o->mem.elt + from, size, 0)) < 0)
+    return ip_throw(OSError, recv_failed);
   *result = gc_new_xint(size);
   return TRUE;
 }
@@ -105,11 +110,12 @@ DEFUN(send)
   object o;
   if (!bi_argc_range(argc, 4, 4)) return FALSE;
   if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
-  if (!bi_cint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
-  if (!bi_cint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (!(0 <= from && from + size <= o->mem.size)) return FALSE;
+  if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
+  if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
+  if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_cint(argv->cons.cdr->cons.car, &fd)) return FALSE;
-  if ((size = send(fd, o->mem.elt + from, size, 0)) < 0) return FALSE;
+  if ((size = send(fd, o->mem.elt + from, size, 0)) < 0)
+    return ip_throw(OSError, send_failed);
   *result = gc_new_xint(size);
   return TRUE;
 }

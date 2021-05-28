@@ -14,6 +14,7 @@ extern int (*function_table[])(int argc, object argv, object *result);
 extern char *bi_as_symbol_name(char *name, char *buf);
 
 extern int bi_argc_range(int argc, int min, int max);
+extern int bi_range(int min, int x, int max);
 extern int bi_array(object o, object *result);
 extern int bi_bytes(object o, object *result);
 extern int bi_bytes_like(object o, object *result);

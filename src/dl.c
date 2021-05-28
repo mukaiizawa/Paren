@@ -4,6 +4,7 @@
 #include "object.h"
 #include "gc.h"
 #include "bi.h"
+#include "ip.h"
 
 #if UNIX_P
 #define DLOPEN(n) ((intptr_t)dlopen(n, RTLD_LAZY))
@@ -21,7 +22,7 @@ DEFUN(dl_2e_fopen)
   intptr_t h;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv, &n)) return FALSE;
-  if ((h = DLOPEN(n)) == 0) return FALSE;
+  if ((h = DLOPEN(n)) == 0) return ip_throw(OSError, builtin_failed);
   *result = gc_new_xint(h);
   return TRUE;
 }
@@ -33,7 +34,7 @@ DEFUN(dl_2e_sym)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cintptr(argv->cons.car, &h)) return FALSE;
   if (!bi_cstring(argv->cons.cdr, &n)) return FALSE;
-  if ((sym = DLSYM(h, n)) == 0) return FALSE;	
+  if ((sym = DLSYM(h, n)) == 0) return ip_throw(OSError, builtin_failed);
   *result = gc_new_xint(sym);
   return TRUE;
 }
@@ -77,7 +78,7 @@ DEFUN(dl_2e_call)
     case 107: cret = F(A(0), A(1), A(2), A(3), A(4), A(5), A(6)); break;
 #undef F
 #endif
-    default: return FALSE;
+    default: ip_throw(ArgumentError,  invalid_args);
   }
   *result = gc_new_xint(cret);
   return TRUE;

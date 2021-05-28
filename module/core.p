@@ -1546,6 +1546,7 @@
 
 (builtin-function find-method (cls-sym method-sym)
   ; Returns the method by which an instance of the class name cls-sym is dispatched.
+  ; Error If the class or method is undefined.
   )
 
 (macro make-accessor (field)

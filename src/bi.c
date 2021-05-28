@@ -17,6 +17,13 @@ int bi_argc_range(int argc, int min, int max)
   return TRUE;
 }
 
+int bi_range(int min, int x, int max)
+{
+  if (x < min || x > max)
+    return ip_throw(IndexError, index_out_of_range);
+  return TRUE;
+}
+
 int bi_cons(object o, object *result)
 {
   if (object_type(*result = o) != CONS)
@@ -113,6 +120,13 @@ int bi_symbol_keyword(object o, object *result)
 {
   if (!symbol_keyword_p(*result = o))
     return ip_throw(ArgumentError, expected_symbol_keyword);
+  return TRUE;
+}
+
+int bi_builtin(object o, object *result)
+{
+  if (!builtin_p(*result = o))
+    return ip_throw(ArgumentError, expected_builtin_operator);
   return TRUE;
 }
 
@@ -314,15 +328,8 @@ DEFUN(function_3f_)
 DEFUN(builtin_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
-    case BUILTINFUNC:
-    case SPECIAL:
-      *result = object_true;
-      return TRUE;
-    default:
-      *result = object_nil;
-      return TRUE;
-  }
+  *result = object_bool(builtin_p(argv->cons.car));
+  return TRUE;
 }
 
 DEFUN(address)
@@ -355,15 +362,11 @@ DEFUN(_3d__3d_)
 
 DEFUN(builtin_2d_name)
 {
+  object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
-    case BUILTINFUNC:
-    case SPECIAL:
-      *result = argv->cons.car->builtin.name;
-      return TRUE;
-    default:
-      return FALSE;
-  }
+  if (!bi_builtin(argv->cons.car, &o)) return FALSE;
+  *result = o->builtin.name;
+  return TRUE;
 }
 
 DEFUN(procparams)
@@ -794,7 +797,7 @@ static int bytes_like_to(int type, int argc, object argv, object *result)
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
   if (argc < 3) size = o->mem.size - i;
   else if (!bi_cint(argv->cons.cdr->cons.car, &size)) return FALSE;
-  if (i + size > o->mem.size) return FALSE;
+  if (!bi_range(0, i + size, o->mem.size)) return FALSE;
   *result = gc_new_mem_from(type, o->mem.elt + i, size);
   return TRUE;
 }
@@ -802,8 +805,7 @@ static int bytes_like_to(int type, int argc, object argv, object *result)
 DEFUN(bytes)
 {
   int i;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (object_type(argv->cons.car) == SINT) {
+  if (argc == 1 && object_type(argv->cons.car) == SINT) {
     if (!bi_cpint(argv->cons.car, &i)) return FALSE;
     *result = gc_new_mem(BYTES, i);
     return TRUE;
@@ -853,8 +855,8 @@ DEFUN(memcpy)
   if (!bi_bytes((argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if ((oi + size) > o->mem.size) return FALSE;
-  if ((pi + size) > p->mem.size) return FALSE;
+  if (!bi_range(0, oi + size, o->mem.size)) return FALSE;
+  if (!bi_range(0, pi + size, p->mem.size)) return FALSE;
   memmove(p->mem.elt + pi, o->mem.elt + oi, size);
   *result = p;
   return TRUE;
@@ -890,7 +892,8 @@ DEFUN(memmem)
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
   if (argc < 4) e = o->mem.size;
   else if (!bi_cpint(argv->cons.cdr->cons.car, &e)) return FALSE;
-  if (s > e || s > o->mem.size || e > o->mem.size) return FALSE;
+  if (!bi_range(0, s, e)) return FALSE;
+  if (!bi_range(0, e, o->mem.size)) return FALSE;
   if (p == NULL) {
     while (s < e) {
       if (LC(o->mem.elt + s) == b) {
@@ -990,7 +993,7 @@ DEFUN(chr)
     buf[1] = 0x80 | ((x >> 12) & 0x3f);
     buf[2] = 0x80 | ((x >> 6) & 0x3f);
     buf[3] = 0x80 | (x & 0x3f);
-  } else return FALSE;
+  } else return ip_throw(IndexError, index_out_of_range);
   *result = gc_new_mem_from(STRING, buf, size);
   return TRUE;
 }
@@ -1021,7 +1024,7 @@ DEFUN(ord)
         | (LC(o->mem.elt + 3) & 0x3f);
       break;
     default:
-      return FALSE;
+      return ip_throw(ArgumentError, invalid_utf8_byte_sequence);
   }
   *result = gc_new_xint(x);
   return TRUE;
@@ -1252,7 +1255,7 @@ DEFUN(slice)
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
   if (argc < 3) stop = -1;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &stop)) return FALSE;
-  else if (start > stop) return ip_throw(IndexError, index_out_of_range);
+  else if (!bi_range(0, start, stop)) return FALSE;
   *result = object_nil;
   switch (object_type(o)) {
     case SYMBOL:
@@ -1262,14 +1265,14 @@ DEFUN(slice)
       return cons_slice(o, start, stop, result);
     case BYTES:
       if (stop == -1) stop = o->mem.size;
-      else if (stop > o->mem.size) return ip_throw(IndexError, index_out_of_range);
+      else if (!bi_range(0, stop, o->mem.size)) return FALSE;
       *result = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
       return TRUE;
     case STRING:
       return str_slice(o, start, stop, result);
     case ARRAY:
       if (stop == -1) stop = o->array.size;
-      else if (stop > o->array.size) return ip_throw(IndexError, index_out_of_range);
+      else if (!bi_range(0, stop, o->array.size)) return FALSE;
       *result = gc_new_array_from(o->array.elt + start, stop - start);
       return TRUE;
     default:
@@ -1364,7 +1367,8 @@ DEFUN(_5b__5d_)
         if (o == object_nil) *result = o;
         else *result = o->cons.car;
       } else {
-        if (o == object_nil) return ip_throw(IndexError, index_out_of_range);
+        if (o == object_nil)
+          return ip_throw(IndexError, index_out_of_range);
         *result = argv->cons.cdr->cons.car;
         o->cons.car = *result;
       }
@@ -1373,8 +1377,7 @@ DEFUN(_5b__5d_)
       if (argc == 2) return str_slice(o, i, i + 1, result);
       return ip_throw(ArgumentError, expected_mutable_sequence);
     case BYTES:
-      if (i >= o->mem.size)
-        return ip_throw(IndexError, index_out_of_range);
+      if (!bi_range(0, i, o->mem.size - 1)) return FALSE;
       if (argc == 2) *result = sint(LC(o->mem.elt + i));
       else {
         if (!bi_cbyte((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
@@ -1382,8 +1385,7 @@ DEFUN(_5b__5d_)
       }
       return TRUE;
     case ARRAY:
-      if (i >= o->array.size)
-        return ip_throw(IndexError, index_out_of_range);
+      if (!bi_range(0, i, o->array.size - 1)) return FALSE;
       if (argc == 2) *result = o->array.elt[i];
       else *result = o->array.elt[i] = argv->cons.cdr->cons.car;
       return TRUE;

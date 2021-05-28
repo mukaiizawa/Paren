@@ -13,15 +13,16 @@ enum error {
         IndexError,
         ArithmeticError,
       StateError,
+        UnicodeError,
         OSError,
         SyntaxError,
   error_nil
 };
 
 enum error_msg {
-  // ArgumentError
   expected_array,
   expected_binding_value,
+  expected_builtin_operator,
   expected_byte,
   expected_bytes,
   expected_bytes_like,
@@ -53,15 +54,29 @@ enum error_msg {
   too_few_arguments,
   too_many_arguments,
   undeclared_keyword_param,
+  undeclared_class,
   numeric_overflow,
   division_by_zero,
-  // StateError
   assert_failed,
   builtin_failed,
   expected_labels_context,
   stack_over_flow,
+  socket_startup_failed,
+  connection_failed,
+  recv_failed,
+  send_failed,
+  fp_failed,
+  fopen_failed,
+  fgetc_failed,
+  fputc_failed,
+  fread_failed,
+  fwrite_failed,
+  fseek_failed,
+  ftell_failed,
+  stat_failed,
+  readdir_failed,
+  unexpected_mode,
   unbound_symbol,
-  // none
   error_msg_nil
 };
 

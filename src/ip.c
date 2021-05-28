@@ -75,8 +75,13 @@ static char *error_name(enum error e) {
 
 static char *error_msg(enum error_msg em) {
   switch (em) {
+    case assert_failed: return "assert failed";
+    case builtin_failed: return "builtin function failed";
+    case connection_failed: return "connection failed";
+    case division_by_zero: return "division by zero";
     case expected_array: return "expected_array";
     case expected_binding_value: return "expected binding value";
+    case expected_builtin_operator: return "expected builtin operator";
     case expected_byte: return "expected byte";
     case expected_bytes: return "expected bytes";
     case expected_bytes_like: return "expected bytes like object";
@@ -91,6 +96,7 @@ static char *error_msg(enum error_msg em) {
     case expected_keyword: return "expected keyword";
     case expected_keyword_parameter: return "expected keyword parameter";
     case expected_keyword_parameter_value: return "expected keyword parameter value";
+    case expected_labels_context: return "expected labels context";
     case expected_list: return "expected list";
     case expected_mutable_sequence: return "expected mutable sequence";
     case expected_number: return "expected number";
@@ -101,20 +107,29 @@ static char *error_msg(enum error_msg em) {
     case expected_string: return "expected string";
     case expected_symbol: return "expected symbol";
     case expected_symbol_keyword: return "expected symbol or keyword";
+    case fgetc_failed: return "fgetc failed";
+    case fopen_failed: return "fopen failed";
+    case fp_failed: return "fp failed";
+    case fputc_failed: return "fputc failed";
+    case fread_failed: return "fread failed";
+    case fseek_failed: return "fseek failed";
+    case ftell_failed: return "ftell failed";
+    case fwrite_failed: return "fwrite failed";
     case index_out_of_range: return "index out of range";
     case invalid_args: return "invalid arguments";
     case invalid_binding_expr: return "invalid binding expression";
     case invalid_utf8_byte_sequence: return "invalid utf8 byte sequence";
+    case numeric_overflow: return "numeric overflow";
+    case readdir_failed: return "readdir failed";
+    case recv_failed: return "recv failed";
+    case send_failed: return "send failed";
+    case stack_over_flow: return "stack over flow";
+    case stat_failed: return "stat failed";
     case too_few_arguments: return "too few arguments";
     case too_many_arguments: return "too many arguments";
-    case undeclared_keyword_param: return "undeclared keyword parameter";
-    case assert_failed: return "assert failed";
-    case builtin_failed: return "builtin function failed";
-    case expected_labels_context: return "expected labels context";
-    case stack_over_flow: return "stack over flow";
     case unbound_symbol: return "unbound symbol";
-    case numeric_overflow: return "numeric overflow";
-    case division_by_zero: return "division by zero";
+    case undeclared_class: return "undeclared class";
+    case undeclared_keyword_param: return "undeclared keyword parameter";
     case error_msg_nil: return NULL;
     default: xassert(FALSE); return NULL;
   }
@@ -784,12 +799,17 @@ static int pos_object_p(object o)
 
 static int pos_class_p(object o)
 {
+  object p;
   return object_type(o) == DICT
     && map_get(o, object_class) == object_Class
-    && map_get(o, object_symbol) != NULL
-    && map_get(o, object_super) != NULL
-    && map_get(o, object_features) != NULL
-    && map_get(o, object_fields) != NULL;
+    && (p = map_get(o, object_symbol)) != NULL
+    && object_type(p) == SYMBOL
+    && (p = map_get(o, object_super)) != NULL
+    && object_type(p) == SYMBOL
+    && (p = map_get(o, object_features)) != NULL
+    && list_p(p)
+    && (p = map_get(o, object_fields)) != NULL
+    && list_p(p);
 }
 
 static int find_class(object cls_sym, object *result)
@@ -859,9 +879,8 @@ DEFUN(find_2d_method)
     // class method
     if ((*result = find_class_method(cls_sym, mtd_sym)) != NULL) return TRUE;
     // feature method
-    if (!find_class(cls_sym, &cls)) return FALSE;
+    if (!find_class(cls_sym, &cls)) return ip_throw(ArgumentError, undeclared_class);
     features = map_get(cls, object_features);
-    if (!list_p(features)) return FALSE;
     while (features != object_nil) {
       if ((*result = find_class_method(features->cons.car, mtd_sym)) != NULL) return TRUE;
       features = features->cons.cdr;
@@ -1020,18 +1039,14 @@ DEFSP(dynamic)
   if ((reg[0] = map_get(e, s)) != NULL) return TRUE;
   while ((i = prev_fp(i)) != -1) {
     switch (fs_nth(i)) {
-      case LET_FRAME:
-        e = e->map.top;
-        break;
-      case FUNC_FRAME:
-        e = get_frame_var(i, 0);
-        break;
-      default:
-        continue;
+      case LET_FRAME: e = e->map.top; break;
+      case FUNC_FRAME: e = get_frame_var(i, 0); break;
+      default: continue;
     }
     if ((reg[0] = map_get(e, s)) != NULL) return TRUE;
   }
-  return FALSE;
+  reg[0] = object_nil;
+  return ip_throw(ArgumentError, unbound_symbol);
 }
 
 DEFSP(_3c__2d_)

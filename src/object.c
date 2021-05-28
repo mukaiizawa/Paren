@@ -372,6 +372,17 @@ int symbol_keyword_p(object o)
   }
 }
 
+int builtin_p(object o)
+{
+  switch (object_type(o)) {
+    case BUILTINFUNC:
+    case SPECIAL:
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
 int list_len(object o)
 {
   int i;

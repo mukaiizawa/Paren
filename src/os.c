@@ -18,7 +18,7 @@ DEFUN(fp)
     case 0: fp = stdin; break;
     case 1: fp = stdout; break;
     case 2: fp = stderr; break;
-    default: return ip_throw(ArgumentError, index_out_of_range);
+    default: return ip_throw(OSError, fp_failed);
   }
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;
@@ -39,8 +39,10 @@ DEFUN(fopen)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cstring(argv, &fn)) return FALSE;
   if (!bi_cpint(argv->cons.cdr->cons.car, &mode)) return FALSE;
-  if (mode >= sizeof(mode_table) / sizeof(char *)) return FALSE;
-  if ((fp = pf_fopen(fn, mode_table[mode])) == NULL) return FALSE;
+  if (mode >= sizeof(mode_table) / sizeof(char *))
+    return ip_throw(ArgumentError, invalid_args);
+  if ((fp = pf_fopen(fn, mode_table[mode])) == NULL)
+    return ip_throw(OSError, fopen_failed);
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;
 }
@@ -54,7 +56,7 @@ DEFUN(fgetc)
   ch = fgetc(fp);
   if (ch == EOF && ferror(fp)) {
     clearerr(fp);
-    return FALSE;
+    return ip_throw(OSError, fgetc_failed);
   }
   *result = gc_new_xint(ch);
   return TRUE;
@@ -68,7 +70,8 @@ DEFUN(fputc)
   *result = argv->cons.car;
   if (!bi_cbyte(argv->cons.car, &byte)) return FALSE;
   if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
-  if (fputc(byte, fp) == EOF) return FALSE;
+  if (fputc(byte, fp) == EOF)
+    return ip_throw(OSError, fputc_failed);
   return TRUE;
 }
 
@@ -99,12 +102,12 @@ DEFUN(fread)
   if (!bi_bytes(argv->cons.car, &o)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_cint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (from + size > o->mem.size) return FALSE;
+  if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   size = fread(o->mem.elt + from, 1, size, fp);
   if (size == 0 && ferror(fp)) {
     clearerr(fp);
-    return FALSE;
+    return ip_throw(OSError, fread_failed);
   }
   *result = gc_new_xint(size);
   return TRUE;
@@ -119,12 +122,12 @@ DEFUN(fwrite)
   if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
-  if (from + size > o->mem.size) return FALSE;
+  if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   size = fwrite(o->mem.elt + from, 1, size, fp);
   if (size == 0 && ferror(fp)) {
     clearerr(fp);
-    return FALSE;
+    return ip_throw(OSError, fwrite_failed);
   }
   *result = gc_new_xint(size);
   return TRUE;
@@ -132,14 +135,16 @@ DEFUN(fwrite)
 
 DEFUN(fseek)
 {
-  int off;
+  int st, off;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   if (!bi_cint((argv = argv->cons.cdr)->cons.car, &off)) return FALSE;
   *result = object_nil;
-  if (off == -1) return fseek(fp, 0, SEEK_END) == 0;
-  return fseek(fp, off, SEEK_SET) == 0;
+  if (off == -1) st = fseek(fp, 0, SEEK_END);
+  else st = fseek(fp, off, SEEK_SET);
+  if (st != 0) return ip_throw(OSError, fseek_failed);
+  return TRUE;
 }
 
 DEFUN(ftell)
@@ -148,7 +153,7 @@ DEFUN(ftell)
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
-  if ((pos = ftell(fp)) == -1) return FALSE;
+  if ((pos = ftell(fp)) == -1) return ip_throw(OSError, ftell_failed);
   *result = gc_new_xint(pos);
   return TRUE;
 }
@@ -171,7 +176,7 @@ DEFUN(stat)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv, &fn)) return FALSE;
   mode = pf_stat(fn, &statbuf);
-  if (mode == PF_ERROR) return FALSE;
+  if (mode == PF_ERROR) return ip_throw(OSError, stat_failed);
   if (mode == PF_NONE) {
     *result = object_nil;
     return TRUE;
@@ -189,7 +194,8 @@ DEFUN(utime)
   int64_t tv;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cstring(argv, &fn)) return FALSE;
-  if (!bi_cint64(argv->cons.cdr->cons.car, &tv)) return FALSE;
+  if (!bi_cint64(argv->cons.cdr->cons.car, &tv))
+    return ip_throw(ArgumentError, expected_integer);
   *result = object_nil;
   return pf_utime(fn, tv);
 }
@@ -219,7 +225,8 @@ DEFUN(readdir)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv, &path)) return FALSE;
   xbarray_init(&dirs);
-  if (!pf_readdir(path, &dirs)) return FALSE;
+  if (!pf_readdir(path, &dirs))
+    return ip_throw(OSError, readdir_failed);
   *result = gc_new_mem_from(STRING, dirs.elt, dirs.size);
   xbarray_free(&dirs);
   return TRUE;
