@@ -567,7 +567,7 @@
   ; Returns a list of characters in string s.
   ; If delim is specified, returns a list of strings s delimited by delimiter.
   (if (empty? s) nil
-      (nil? delim) (arr->list (array s))
+      (nil? delim) (array->list (array s))
       (let (i 0 lis nil chars nil
               sa (array s) salen (len sa)
               da (array delim) dalen (len da) end (- salen dalen)
@@ -1277,7 +1277,7 @@
   (assert (array? (array 3)))
   (assert (! (array? (bytes 3)))))
 
-(function arr->list (x)
+(function array->list (x)
   ; Returns a list containing all of the elements in x.
   (let (rec (f (i acc)
               (if (< i 0) acc
