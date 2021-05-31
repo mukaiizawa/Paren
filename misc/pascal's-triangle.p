@@ -9,5 +9,5 @@
   (map (f (y) (pascal-x-y x y))
        (.. 0 (++ x))))
 
-(function! main (n)
+(function! main (args)
   (foreach write (map pascal-line (.. 0 10))))
