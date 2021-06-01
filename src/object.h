@@ -53,7 +53,7 @@ union _object {
   } xint;
   struct xfloat {
     int header;
-    double val; 
+    double val;
   } xfloat;
   struct cons {
     int header;

@@ -11,7 +11,7 @@
   (let (table nil i 0 len (len option))
     (while (< i len)
       (let (opt ([] option i) optarg? (&& (< (<- i (++ i)) len) (= ([] option i) ":")))
-        (if optarg? (<- i (++ i))) 
+        (if optarg? (<- i (++ i)))
         (push! (list opt optarg? nil) table)))
     (&table! self table)))
 

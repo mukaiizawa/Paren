@@ -1759,7 +1759,7 @@
   )
 
 (class StateError (Error)
-  ; Raised when a function has been invoked at an illegal or inappropriate time. 
+  ; Raised when a function has been invoked at an illegal or inappropriate time.
   )
 
 (class NotImplementedError (StateError)

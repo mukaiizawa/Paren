@@ -31,7 +31,7 @@
     (&month! self (++ (// (- t offset) 31)))
     (<- offset (datetime.offset-0001-01-01 y (&month self) 1))
     (let (mlen (.monthlen self))
-      (when (<= (+ offset mlen) t) 
+      (when (<= (+ offset mlen) t)
         (&month! self (++ (&month self)))
         (<- offset (+ offset mlen)))
       (&day! self (+ t (- offset) 1)))
@@ -88,7 +88,7 @@
   (&unix-time self))
 
 (method DateTime .cmp (o)
-  (let (x (&unix-time self) y (&unix-time o)) 
+  (let (x (&unix-time self) y (&unix-time o))
     (if (= x y) 0
         (< x y) -1
         1)))
