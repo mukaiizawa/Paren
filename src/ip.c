@@ -117,6 +117,7 @@ static char *error_msg(enum error_msg em) {
     case fseek_failed: return "fseek failed";
     case ftell_failed: return "ftell failed";
     case fwrite_failed: return "fwrite failed";
+    case gethostname_failed: return "gethostname failed";
     case index_out_of_range: return "index out of range";
     case invalid_args: return "invalid arguments";
     case invalid_binding_expr: return "invalid binding expression";
@@ -678,7 +679,7 @@ static void pop_return_frame(void)
       case FUNC_FRAME:
         pop_func_frame();
         return;
-      case UNWIND_PROTECT_FRAME: 
+      case UNWIND_PROTECT_FRAME:
         args = get_frame_var(fp, 0);
         pop_frame();
         gen0(RETURN_FRAME);

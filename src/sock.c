@@ -27,6 +27,17 @@
 #define xcleanup() WSACleanup()
 #endif
 
+DEFUN(gethostname)
+{
+  char buf[MAX_STR_LEN];
+  if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
+  xstartup();
+  if (gethostname(buf, MAX_STR_LEN) != 0)
+    return ip_throw(OSError, gethostname_failed);
+  *result = gc_new_mem_from(STRING, buf, strlen(buf));
+  return TRUE;
+}
+
 DEFUN(client_2d_socket)
 {
   int port, fd;

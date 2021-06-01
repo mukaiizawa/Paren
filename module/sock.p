@@ -3,6 +3,10 @@
 (if (! (bound? 'client-socket))
     (raise StateError "Requires sock option at compile time"))
 
+(builtin-function gethostname ()
+  ; Returns the local host name.
+  )
+
 (builtin-function client-socket (host port)
   ; Create a new socket and connect it to terminal corresponding to host and port.
   ; host must be a string that getaddrinfo(3) can resolve.
