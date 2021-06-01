@@ -1216,16 +1216,21 @@ DEFUN(_7b__7d_)
 static int cons_slice(object o, int start, int stop, object *result)
 {
   int i;
+  object tail;
   for (i = 0; i < start; i++)
     if ((o = o->cons.cdr) == object_nil) break;
-  if (o == object_nil || stop == -1) *result = o;
-  else {
+  if (o == object_nil) {
     *result = object_nil;
-    for (i = start; i < stop; i++) {
-      *result = gc_new_cons(o->cons.car, *result);
-      if ((o = o->cons.cdr) == object_nil) break;
+    return TRUE;
+  }
+  *result = tail = gc_copy_cons(o, &tail);
+  if (stop != -1) {
+    if (start == stop) *result = object_nil;
+    else {
+      for (i = start + 1; i < stop; i++)
+        if ((tail = tail->cons.cdr) == object_nil) return TRUE;
+      tail->cons.cdr = object_nil;
     }
-    *result = list_reverse(*result);
   }
   return TRUE;
 }
@@ -1237,9 +1242,8 @@ static int str_slice(object o, int start, int stop, object *result)
     if (!ch_len(LC(o->mem.elt + s), &s)) return FALSE;
   if (stop == -1) t = o->mem.size;
   else {
-    for (i = start, t = s; i < stop; i++) {
+    for (i = start, t = s; i < stop; i++)
       if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
-    }
   }
   *result = gc_new_mem_from(STRING, o->mem.elt + s, t - s);
   return TRUE;
@@ -1281,25 +1285,19 @@ DEFUN(slice)
   }
 }
 
-static int cons_concat(object o, object argv, object *result)
+static int cons_concat(object argv, object *result)
 {
-  object tail;
-  while (o == object_nil) {
-    if (argv == object_nil) {
-      *result = object_nil;
-      return TRUE;
-    }
-    o = argv->cons.car;
-    argv = argv->cons.cdr;
-  }
-  *result = gc_copy_cons(o, &tail);
+  object o;
+  *result = object_nil;
   while (argv != object_nil) {
     if (!bi_list(argv->cons.car, &o)) return FALSE;
+    while (o != object_nil) {
+      *result = gc_new_cons(o->cons.car, *result);
+      o = o->cons.cdr;
+    }
     argv = argv->cons.cdr;
-    if (o == object_nil) continue;
-    tail->cons.cdr = gc_copy_cons(o, &o);
-    tail = o;
   }
+  *result = list_reverse(*result);
   return TRUE;
 }
 
@@ -1337,7 +1335,7 @@ DEFUN(concat)
   switch (object_type(o)) {
     case SYMBOL:
     case CONS:
-      return cons_concat(o, argv->cons.cdr, result);
+      return cons_concat(argv, result);
     case BYTES:
     case STRING:
       return bytes_like_concat(o, argv->cons.cdr, result);

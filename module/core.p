@@ -336,6 +336,10 @@
   ; Same as `(! (= x y)))`.
   (! (= x y)))
 
+(function !== (x y)
+  ; Same as `(! (== x y)))`.
+  (! (== x y)))
+
 (builtin-function address (x)
   ; Returns address of the specified x.
   ; The addresses of symbols or keywords with the same name are always equal.
@@ -1313,12 +1317,12 @@
 
 ;; sequence
 
-(builtin-function [] (x i :opt v)
+(builtin-function [] (seq i :opt v)
   ; Returns the i-th element of the sequence x.
-  ; If v is specified, update the i-th element of mutable sequence x to v, returns v.
-  ; If the argument x is a list and the index i is is out of range, returns nil.
-  ; Error if the argument x is not a list and the index i is out of range.
-  ; Error if x is an immutable sequence and v is specified.
+  ; If v is specified, update the i-th element of mutable sequence seq to v, returns v.
+  ; If the argument seq is a list and the index i is is out of range, returns nil.
+  ; Error if the argument seq is not a list and the index i is out of range.
+  ; Error if seq is an immutable sequence and v is specified.
   (assert (= ([] '(0 1 2) 0) 0))
   (assert (= ([] (array 1) 0) nil))
   (assert (= ([] "foo" 0) "f"))
@@ -1341,22 +1345,52 @@
   (assert (= (concat (bytes 1) (bytes 2)) (bytes 3)))
   (assert (= (concat (array 1) (array 2)) (array 3))))
 
-(builtin-function slice (x :opt start stop)
+(builtin-function slice (seq :opt start stop)
   ; Returns a subsequence of sequence x.
   ; If start is omitted, it defaults to 0.
-  ; If stop is omitted, it defaults to `(len x)`.
+  ; If stop is omitted, it defaults to `(len seq)`.
   (assert (= (slice nil) nil))
   (assert (= (slice nil 0) nil))
   (assert (= (slice nil 0 1) nil))
   (assert (let (lis '(0 1 2))
-            (= (slice lis ) lis)
+            (= (slice lis) lis)
+            (!== (slice lis) lis) ; guarantee to be copied.
             (= (slice lis 0) lis)
+            (= (slice lis 2) '(2))
+            (= (slice lis 2 2) nil)
+            (= (slice lis 4) nil)
             (= (slice lis 0 2) '(0 1))))
   (assert (let (s "abc")
             (= (slice s ) s)
             (= (slice s 0) "bc")
             (= (slice s 0 0) "")
             (= (slice s 0 2) "ab"))))
+
+(function sort! (seq :key sorter key start end)
+  ; Sort the sequence seq.
+  ; Argument sequence changes destructively.
+  ; If you want to keep the original sequence, copy it like `(sort! (slice seq))`.
+  ; Returns sorted sequence.
+  (let (swap!
+         (f (seq i j)
+           (let (t ([] seq i))
+             ([] seq i ([] seq j))
+             ([] seq j t)))
+         sort-range!
+         (f (seq start end)
+           (let (i start j end x (key ([] seq start)))
+             (while (< i j)
+               (while (&& (< i (len seq)) (sorter (key ([] seq i)) x)) (<- i (++ i)))
+               (while (&& (>= j 0) (sorter x (key ([] seq j)))) (<- j (-- j)))
+               (when (< i j)
+                 (swap! seq i j)
+                 (<- i (++ i) j (-- j))))
+             (if (< start (<- i (-- i))) (sort-range! seq start i))
+             (if (< (<- j (++ j)) end) (sort-range! seq j end)))))
+    (if (nil? sorter) (<- sorter <))
+    (if (nil? key) (<- key (f (x) x)))
+    (sort-range! seq 0 (-- (len seq)))
+    seq))
 
 ;; collection
 

@@ -65,8 +65,10 @@ static char *error_name(enum error e) {
     case SystemExit: return "SystemExit";
     case Error: return "Error";
     case ArgumentError: return "ArgumentError";
+    case IndexError: return "IndexError";
     case ArithmeticError: return "ArithmeticError";
     case StateError: return "StateError";
+    case UnicodeError: return "UnicodeError";
     case OSError: return "OSError";
     case SyntaxError: return "SyntaxError";
     default: xassert(FALSE); return NULL;
@@ -701,7 +703,10 @@ static void pop_throw_frame(void)
   pop_frame();
   if (!pos_is_a_p(reg[0], object_Exception)) {
     ip_throw(ArgumentError, expected_instance_of_Exception_class);
-    // dump_fs();
+#ifndef NDEBUG
+    if (map_get(object_toplevel, gc_new_mem_from(SYMBOL, "boot", 4)) == NULL)
+      dump_fs();
+#endif
     return;
   }
   if (map_get(reg[0], object_stack_trace) == object_nil)
