@@ -23,7 +23,7 @@
 (method Point .to-s ()
   (str "(" (&x self) ", " (&y self) ")"))
 
-(method Point .eq (p)
+(method Point .eq? (p)
   (&& (is-a? p Point)
       (= (&x self) (&x p)) (= (&y self) (&y p))))
 
@@ -34,9 +34,9 @@
 
 (function! main (args)
   (let (p (point 3 4))
-    (assert (.eq p (point 3 4)))
-    (assert (! (.eq p (point 2 4))))
-    (assert (! (.eq p (point 3 5))))
-    (assert (! (.eq p (point 2 5))))
-    (assert (.eq p (.add (point 1 1) (point 2 3))))
+    (assert (.eq? p (point 3 4)))
+    (assert (! (.eq? p (point 2 4))))
+    (assert (! (.eq? p (point 3 5))))
+    (assert (! (.eq? p (point 2 5))))
+    (assert (.eq? p (.add (point 1 1) (point 2 3))))
     (assert (= (.to-s p) "(3, 4)"))))
