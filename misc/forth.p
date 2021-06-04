@@ -1,6 +1,8 @@
 ; forth interpreter.
 
-(<- $stack nil
+(<- $forth-nil 0
+    $forth-true 1
+    $stack nil
     $dictionary (dict))
 
 (class ForthError (Error))
@@ -53,9 +55,8 @@
     (while (! (in? (<- x (.parse (.scan self))) '(:then :else)))
       (push! x then))
     (when (= x :else)
-      (<- else then then nil)
       (while (!= (<- x (.parse (.scan self))) :then)
-        (push! x then)))
+        (push! x else)))
     (list :if (reverse! then) (reverse! else))))
 
 (method ForthReader .parse ()
@@ -89,6 +90,9 @@
 (function forth-if? (x)
   (&& (list? x) (== (car x) :if)))
 
+(function forth-bool (x)
+  (if (nil? x) $forth-nil $forth-true))
+
 (function forth-apply-builtin (x)
   (apply ({} $dictionary x) '()))
 
@@ -104,7 +108,7 @@
 (function forth-if (x)
   (let ((key then :opt else) x)
     (assert (== key :if))
-    (foreach forth-eval (if (forth-pop) then else))))
+    (foreach forth-eval (if (= (forth-pop) $forth-nil) else then))))
 
 (function forth-top ()
   (car $stack))
@@ -121,25 +125,31 @@
 (macro forth-builtin (name :rest body)
   `({} $dictionary ',name (f () ,@body)))
 
-(forth-builtin .s
-  (dolist (x (reverse $stack)) (write x :end " "))
-  (write-line "ok"))
+(macro forth-binary-builtin (name :opt fn)
+  (with-gensyms (x1 x2)
+  `(forth-builtin ,name
+    (let (,x1 (forth-pop) ,x2 (forth-pop))
+      (forth-push (apply (eval ,(|| fn name)) (list ,x2 ,x1)))))))
 
-(forth-builtin . (write (forth-top)))
+(macro forth-binary-comparator (name :opt fn)
+  `(forth-binary-builtin ,name
+     ,(eval `(f (:rest args) (forth-bool (apply ,(|| fn name) args))))))
+
+(function ok () (write-line "ok"))
+(function write1 (x) (write x :end " "))
+
+(forth-builtin .s (foreach write1 (reverse $stack)) (ok))
+(forth-builtin . (write1 (forth-pop)) (ok))
 (forth-builtin bye (raise SystemExit))
 
-;; Arithmetics.
-(macro forth-binary-builtin (name sym)
-  `(forth-builtin ,name (forth-push (,sym (forth-pop) (forth-pop)))))
-
-(forth-binary-builtin + +)
-(forth-binary-builtin * *)
-(forth-binary-builtin / /)
-(forth-binary-builtin < <)
-(forth-binary-builtin > >)
-(forth-binary-builtin = =)
-(forth-binary-builtin <> !=)
-(forth-builtin negate (forth-push (- (forth-pop))))
+;; Arithmetic functions.
+(forth-binary-builtin +)
+(forth-binary-builtin *)
+(forth-binary-builtin /)
+(forth-binary-comparator <)
+(forth-binary-comparator >)
+(forth-binary-comparator =)
+(forth-binary-comparator <> !=)
 
 ;; Stack Manipulation.
 (forth-builtin dup (forth-push (forth-top)))
