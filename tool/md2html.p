@@ -28,6 +28,7 @@ h2 { font-size:1.2em; }
 h1, h2, h3 { border-bottom:solid 1px #ccc; }
 h3, h4, h5, h6 { font-size:1.0em; }
 h1, h2, h3, h4, h5, h6 { display:block; margin-top:0.75em; font-weight:bold; }
+small { display:block }
 p { text-indent:1em; }
 pre { border:solid 1px #ccc; box-sizing:border-box; overflow-x:auto; }
 blockquote { padding-left:1em; border-left:1.2px solid #ccc; }
