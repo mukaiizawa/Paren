@@ -1,5 +1,6 @@
 ; 15-puzzle game.
 
+(import :console)
 (import :matrix)
 (import :optparse)
 (import :point)
@@ -13,7 +14,7 @@
           :left  'l (point  0  1)))
 
 (function show (board p)
-  (if (= $hostname :windows) (system "cls"))
+  (console.clear)
   (domatrix (q board)
     (write-bytes (if (.eq? p q) "[  ]" (format "[%-2d]" (.at board q))))
     (if (= (++ (.y q)) (.width board)) (write-line))))

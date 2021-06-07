@@ -1,5 +1,6 @@
 ; Conway's Game of Life.
 
+(import :console)
 (import :math)
 (import :matrix)
 (import :optparse)
@@ -71,7 +72,7 @@
 
 (function show (universe)
   (sleep 1)
-  (if (= $hostname :windows) (system "cls"))
+  (console.clear)
   (domatrix (p universe)
     (if (= (.y p) 0) (write-line))
     (write-bytes (if (.at universe p) "#" " "))))
