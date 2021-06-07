@@ -197,14 +197,25 @@ static void make_initial_objects(int argc, char *argv[])
   make_builtin();
 }
 
+static void init_stream()
+{
+#if WINDOWS_P
+  HANDLE h;
+  DWORD mode;
+  _setmode(_fileno(stdin), _O_BINARY);
+  _setmode(_fileno(stdout), _O_BINARY);
+  h = GetStdHandle(STD_OUTPUT_HANDLE);
+  GetConsoleMode(h, &mode);
+  mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+  SetConsoleMode(h, mode);
+#endif
+  setbuf(stdout, NULL);
+}
+
 int main(int argc, char *argv[])
 {
   char buf[MAX_STR_LEN];
-  setbuf(stdout, NULL);
-#if WINDOWS_P
-  _setmode(_fileno(stdin), _O_BINARY);
-  _setmode(_fileno(stdout), _O_BINARY);
-#endif
+  init_stream();
   pf_exepath(argv[0], buf);
 #if !UNIX_P
   *strrchr(buf, '.') = '\0';
