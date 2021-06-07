@@ -197,7 +197,7 @@ static void make_initial_objects(int argc, char *argv[])
   make_builtin();
 }
 
-static void init_stream()
+static void init_console()
 {
 #if WINDOWS_P
   HANDLE h;
@@ -215,7 +215,7 @@ static void init_stream()
 int main(int argc, char *argv[])
 {
   char buf[MAX_STR_LEN];
-  init_stream();
+  init_console();
   pf_exepath(argv[0], buf);
 #if !UNIX_P
   *strrchr(buf, '.') = '\0';
