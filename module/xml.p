@@ -130,19 +130,20 @@
   ;     <etag> ::= '</' <name>   '>'
   ;     <attr> ::= <key> ['=' '"' <value> '"']
   ;     <text> -- a text node.
-  (if (nil? (.next self)) (return nil))
   (while (.next? self space?) (.get self))
-  (if (!= (.next self) "<") (.parse-text self)
-      (begin (.token self)    ; cleanup spaces
-             (let ((stag? tag) (.parse-tag self))
-               (if (! stag?) tag    ; make sense
-                   (let (name (car tag) child nil children nil)
-                     (while (!= name (<- child (XMLReader.read self)))
-                       (if (symbol? child) (raise StateError (str "unexpected close tag " child " expected " name))
-                           (push! child children)))
-                     (cons (car tag)
-                           (cons (cadr tag)
-                                 (reverse! children)))))))))
+  (if (nil? (.next self)) (return nil)
+      (!= (.next self) "<") (.parse-text self)
+      (begin
+        (.token self)    ; cleanup spaces
+        (let ((stag? tag) (.parse-tag self))
+          (if (! stag?) tag    ; make sense
+              (let (name (car tag) child nil children nil)
+                (while (!= name (<- child (XMLReader.read self)))
+                  (if (symbol? child) (raise StateError (str "unexpected close tag " child " expected " name))
+                      (push! child children)))
+                (cons (car tag)
+                      (cons (cadr tag)
+                            (reverse! children)))))))))
 
 (function! main (args)
   (assert (= (xml->str '(html (:lang "ja") "foo")) "<html lang='ja'>foo</html>"))
