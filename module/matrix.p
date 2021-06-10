@@ -20,6 +20,10 @@
   ; Returns height of the receiver.
   (&height self))
 
+(method Matrix .shape ()
+  ; Returns the elements of the shape list give the lengths of the corresponding the receiver dimensions.
+  (list (&width self) (&height self)))
+
 (method Matrix .inside? (p)
   ; Returns whether the position corresponding to the point object p is within the receiver.
   (assert (is-a? p Point))
@@ -51,7 +55,8 @@
 
 (function! main (args)
   (let (m (.init (.new Matrix) (point 2 3)))
-    (assert (= (&width m) 2))
-    (assert (= (&height m) 3))
+    (assert (= (.width m) 2))
+    (assert (= (.height m) 3))
+    (assert (= (.shape m) '(2 3)))
     (domatrix (p m) (.put m p (.x p)))
     (domatrix (p m) (assert (= (.at m p) (.x p))))))
