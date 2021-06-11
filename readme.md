@@ -2,7 +2,8 @@ Programming Language Paren
 
 # What is Paren
 
-    Programs that write programs? When would you ever want to do that? Not very often, if you think in Cobol.
+    Programs that write programs?
+    When would you ever want to do that? Not very often, if you think in Cobol.
     All the time, if you think in Lisp.
     -- Paul Graham, Beating the Averages
 
