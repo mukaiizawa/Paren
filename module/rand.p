@@ -14,6 +14,15 @@
   ; Returns true or nil randomly.
   (= (rand.int 2) 0))
 
+(function rand.shuffle! (seq :key seed)
+  ; Randomly permutes the specified sequence using a default source of randomness.
+  ; Returns seq.
+  (if seed (rand.seed seed))
+  (let (rec (f (seq n)
+              (if (= n 0) seq
+                  (rec (swap! seq (rand.int n) n) (-- n)))))
+    (rec seq (-- (len seq)))))
+
 (function rand.choice (seq)
   ; Returns one random element from the sequence seq.
   ([] seq (rand.int (len seq))))
@@ -39,5 +48,5 @@
   ; Returns the next random floating point number in the range [0.0, 1.0).
   (/ (<- $rand.seed (^ $rand.seed (<< $rand.seed 13))
          $rand.seed (^ $rand.seed (>> $rand.seed 17))
-         $rand.seed (& (^ $rand.seed (<< $rand.seed 5)) 0xffffffff))
+         $rand.seed (int32 (^ $rand.seed (<< $rand.seed 5))))
      0x100000000))

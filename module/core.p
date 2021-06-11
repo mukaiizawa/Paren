@@ -1366,17 +1366,21 @@
             (= (slice s 0 0) "")
             (= (slice s 0 2) "ab"))))
 
+(function swap! (seq i j)
+  ; Swap the i-th and j-th elements of the sequence seq.
+  ; Argument sequence changes destructively.
+  ; Returns seq.
+  (let (t ([] seq i))
+    ([] seq i ([] seq j))
+    ([] seq j t)
+    seq))
+
 (function sort! (seq :key sorter key start end)
   ; Sort the sequence seq.
   ; Argument sequence changes destructively.
   ; If you want to keep the original sequence, copy it like `(sort! (slice seq))`.
   ; Returns sorted sequence.
-  (let (swap!
-         (f (seq i j)
-           (let (t ([] seq i))
-             ([] seq i ([] seq j))
-             ([] seq j t)))
-         sort-range!
+  (let (sort-range!
          (f (seq start end)
            (let (i start j end x (key ([] seq start)))
              (while (< i j)
