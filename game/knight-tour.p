@@ -1,6 +1,5 @@
 ; Knight tour problem.
 
-(import :point)
 (import :matrix)
 
 (<- $size 5
@@ -8,23 +7,23 @@
 
 (function show (board)
   (domatrix (p board)
-    (if (= (.y p) 0) (write-line))
+    (if (= (cadr p) 0) (write-line))
     (write-bytes (format "%-3d" (.at board p))))
   (quit))    ; only the first one solution.
 
-(function next-points (p)
-  (map (f (xy) (.add p (apply point xy)))
+(function neighbors (p)
+  (map (f (q) (map + p q))
        '((-2 1) (-2 -1) (2 1) (2 -1)
                 (-1 2) (-1 -2) (1 2) (1 -2))))
 
 (function move (board p n)
   (.put board p n)
   (if (= n $size^2) (show board)
-      (dolist (q (next-points p))
+      (dolist (q (neighbors p))
         (if (&& (.inside? board q) (nil? (.at board q))) (move board q (++ n)))))
   (.put board p nil))
 
 (function! main (args)
-  (let (board (.init (.new Matrix) (point $size $size)))
+  (let (board (matrix (list $size $size)))
     (domatrix (p board)
       (move board p 1))))

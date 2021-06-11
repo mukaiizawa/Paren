@@ -2,7 +2,6 @@
 
 (import :matrix)
 (import :optparse)
-(import :point)
 
 (<- $p nil
     $unit-size 3
@@ -11,7 +10,7 @@
 
 (function show (canvas)
   (domatrix (p canvas)
-    (if (= (.y p) 0) (write-line))
+    (if (= (cadr p) 0) (write-line))
     (write-bytes (|| (.at canvas p) "　")))
   (write-line))
 
@@ -19,19 +18,19 @@
   (if (= dir :up)
       (dotimes (i $unit-size)
         (.put $canvas $p "｜")
-        (<- $p (.add $p (point -1 0))))
+        (<- $p (map + $p '(-1 0))))
       (= dir :down)
       (dotimes (i $unit-size)
         (.put $canvas $p "｜")
-        (<- $p (.add $p (point 1 0))))
+        (<- $p (map + $p '(1 0))))
       (= dir :right)
       (dotimes (i $unit-size)
         (.put $canvas $p "―")
-        (<- $p (.add $p (point 0 1))))
+        (<- $p (map + $p '(0 1))))
       (= dir :left)
       (dotimes (i $unit-size)
         (.put $canvas $p "―")
-        (<- $p (.add $p (point 0 -1))))
+        (<- $p (map + $p '(0 -1))))
       (assert nil)))
 
 (function urd (n)
@@ -76,8 +75,8 @@
 
 (function hirbert-curve (n)
   (<- $size (int (* (- (exp 2 n) (/ (exp 2 n))) $unit-size))
-      $p (point (-- $size) 0)
-      $canvas (.init (.new Matrix) (point $size $size)))
+      $p (list (-- $size) 0)
+      $canvas (matrix (list $size $size)))
   (urd n)
   (show $canvas))
 
