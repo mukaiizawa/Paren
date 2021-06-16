@@ -7,7 +7,7 @@
     $width/2 (// $width 2) $height/2 (// $height 2))
 
 (function draw (x y ch)
-  (console.cursor :x (++ y) :y (++ x))
+  (console.cursor :x x :y y)
   (write-bytes ch))
 
 (function! main (args)
