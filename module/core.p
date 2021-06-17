@@ -2217,6 +2217,10 @@
   ; Returns the number of bytes written to the stream.
   (&wrpos self))
 
+(method MemoryStream .buf ()
+  ; Returns the buffer of the receiver.
+  (slice (&buf self) (&rdpos self) (&wrpos self)))
+
 (method MemoryStream .reserve (size)
   (let (req (+ (&wrpos self) size) buf-size (len (&buf self)))
     (when (< buf-size req)
@@ -2293,11 +2297,11 @@
 
 (method FileStream .read-bytes (:opt buf from size)
   ; Implementation of the Stream.read-bytes.
-  (if (nil? buf) (bytes
-                   (with-memory-stream (out)
-                     (<- buf (bytes 1024))
-                     (while (> (<- size (.read-bytes self buf 0 1024)) 0)
-                       (.write-bytes out buf 0 size))))
+  (if (nil? buf)
+      (let (out (.new MemoryStream) buf (bytes 1024))
+        (while (> (<- size (fread buf 0 1024 (&fp self))) 0)
+          (.write-bytes out buf 0 size))
+        (.buf out))
       (fread buf from size (&fp self))))
 
 (method FileStream .read-line ()
@@ -2666,11 +2670,11 @@
   ;        (if s (.write-bytes ms s))
   ;        expr1 expr2 ...
   ;        (if s (.to-s ms)))
-  (with-gensyms (g)
-    (list let (list ms '(.new MemoryStream) g s)
-          (list if g
+  (with-gensyms (gs)
+    (list let (list gs s ms '(.new MemoryStream))
+          (list if gs
                 (list begin
-                      (list if g (list '.write-bytes ms g))
+                      (list '.write-bytes ms gs)
                       (cons begin body))
                 (list begin
                       (cons begin body)
