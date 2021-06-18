@@ -212,8 +212,7 @@
   (list let binding
         (list labels
               :start
-              (list if (list ! test) '(goto :break))
-              (cons begin body)
+              (list if (list ! test) '(goto :break) (cons begin body))
               :continue
               (cons <- update)
               '(goto :start)
@@ -227,8 +226,7 @@
   ; Returns nil.
   (list labels
         :start
-        (list if (list ! test) '(goto :break))
-        (cons begin body)
+        (list if (list ! test) '(goto :break) (cons begin body))
         :continue
         '(goto :start)
         :break
