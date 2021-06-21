@@ -1665,6 +1665,18 @@
           (list make-method-dispatcher method-sym)
           (cons function (cons global-method-name (cons (cons 'self args) body))))))
 
+(macro overload (sym method-sym)
+  ; Overload operator.
+  (with-gensyms (gsym gargs garg)
+    (list let (list gsym sym)
+          (list function! sym (list :rest gargs)
+                (list let (list garg (list car gargs))
+                      (list if (list object? garg)
+                            (list apply (list find-method (list {} garg :class) (list quote method-sym)) gargs)
+                            (list apply gsym gargs)))))))
+
+(overload = .eq?)
+
 ;;; fundamental class.
 
 (class Object ()
