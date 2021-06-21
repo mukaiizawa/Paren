@@ -31,19 +31,6 @@ typedef union _object *object;
 #define LC(p) (*(unsigned char *)(p))
 #define SC(p,v) (*(unsigned char *)(p) = (unsigned char)(v))
 
-#define object_hash(o) ((o)->header & HASH_MASK)
-#define object_set_hash(o, v) {xassert(object_hash(o) == 0); xassert((v & ~HASH_MASK) == 0); (o)->header |= v;}
-#define object_set_alive(o) ((o)->header |= ALIVE_BIT)
-#define object_set_dead(o) ((o)->header &= ~ALIVE_BIT)
-#define object_alive_p(o) ((o)->header & ALIVE_BIT)
-#define object_set_type(o, type) {xassert(((o)->header & TYPE_MASK) == 0); (o)->header |= type;}
-#define object_reset_type(o, type) {(o)->header &= ~TYPE_MASK; object_set_type(o, type);}
-
-#define sint_p(o) ((((intptr_t)o) & 1) == 1)
-#define sint_val(o) ((int)(((intptr_t)o) >> 1))
-#define sint(i) ((object)((((intptr_t)i) << 1) | 1))
-#define list_p(o) (o == object_nil || (object_type(o) == CONS))
-
 union _object {
   int header;
   struct xint {
@@ -95,7 +82,6 @@ union _object {
   object next;
 };
 
-// symbol & keyword.
 extern object object_toplevel;
 extern object object_nil;
 extern object object_true;
@@ -104,8 +90,6 @@ extern object object_opt;
 extern object object_rest;
 extern object object_quote;
 extern object object_stack_trace;
-
-// paren object system.
 extern object object_Class;
 extern object object_Exception;
 extern object object_class;
@@ -115,13 +99,24 @@ extern object object_features;
 extern object object_fields;
 extern object object_message;
 
-// utility functions.
+extern void object_set_alive(object o);
+extern void object_set_dead(object o);
+extern int object_alive_p(object o);
+extern int object_hash(object o);
+extern void object_set_hash(object o, int hval);
 extern int object_type(object o);
+extern void object_set_type(object o, int type);
+extern void object_reset_type(object o, int type);
+
 extern int object_byte_size(object o);
 extern char *object_describe(object o, char *buf);
 extern object object_bool(int b);
 extern int object_eq_p(object o, object p);
 
+#define sint_p(o) ((((intptr_t)o) & 1) == 1)
+#define sint_val(o) ((int)(((intptr_t)o) >> 1))
+#define sint(i) ((object)((((intptr_t)i) << 1) | 1))
+#define list_p(o) (o == object_nil || (object_type(o) == CONS))
 extern int int_p(object o);
 extern int number_p(object o);
 extern int bytes_like_p(object o);

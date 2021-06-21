@@ -1414,8 +1414,8 @@
   (assert (= (len nil) 0))
   (assert (= (len '(1)) 1))
   (assert (= (len (array 1)) 1))
-  (assert (= (let (d (dict)) ({} d :x 1)) 1))
-  (assert (= (len "foo") 3)))
+  (assert (= (len (let (d (dict)) ({} d :x 1) d)) 1))
+  (assert (= (len "αβγ") 3)))
 
 ;; os.
 

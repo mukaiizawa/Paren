@@ -24,10 +24,50 @@ object object_features;
 object object_fields;
 object object_message;
 
+int object_hash(object o)
+{
+  if (sint_p(o)) return sint_val(o) & HASH_MASK;
+  return o->header & HASH_MASK;
+}
+
+void object_set_hash(object o, int hval)
+{
+  xassert(object_hash(o) == 0);
+  xassert((hval & ~HASH_MASK) == 0);
+  o->header |= hval;
+}
+
 int object_type(object o)
 {
   if (sint_p(o)) return SINT;
   return o->header & TYPE_MASK;
+}
+
+void object_set_alive(object o)
+{
+  o->header |= ALIVE_BIT;
+}
+
+void object_set_dead(object o)
+{
+  o->header &= ~ALIVE_BIT;
+}
+
+int object_alive_p(object o)
+{
+  return o->header & ALIVE_BIT;
+}
+
+void object_set_type(object o, int type)
+{
+  xassert((o->header & TYPE_MASK) == 0);
+  o->header |= type;
+}
+
+void object_reset_type(object o, int type)
+{
+  o->header &= ~TYPE_MASK;
+  object_set_type(o, type);
 }
 
 int object_byte_size(object o)
@@ -432,7 +472,7 @@ object map_get(object o, object s)
   object p;
   i = object_hash(s) % o->map.half_size;
   while ((p = o->map.table[i]) != NULL) {
-    if (p == s) return o->map.table[i + o->map.half_size];
+    if (object_eq_p(p, s)) return o->map.table[i + o->map.half_size];
     if (++i == o->map.half_size) i = 0;
   }
   return NULL;
@@ -454,7 +494,7 @@ void map_put(object o, object s, object v)
   object p;
   i = object_hash(s) % o->map.half_size;
   while ((p = o->map.table[i]) != NULL) {
-    if (p == s) {
+    if (object_eq_p(p, s)) {
       o->map.table[i + o->map.half_size] = v;
       return;
     }

@@ -116,13 +116,6 @@ int bi_collection(object o, object *result)
   return TRUE;
 }
 
-int bi_symbol_keyword(object o, object *result)
-{
-  if (!symbol_keyword_p(*result = o))
-    return ip_throw(ArgumentError, expected_symbol_keyword);
-  return TRUE;
-}
-
 int bi_builtin(object o, object *result)
 {
   if (!builtin_p(*result = o))
@@ -1201,7 +1194,7 @@ DEFUN(_7b__7d_)
   object o, key;
   if (!bi_argc_range(argc, 2, 3)) return FALSE;
   if (!bi_dict(argv->cons.car, &o)) return FALSE;
-  if (!bi_symbol_keyword((argv = argv->cons.cdr)->cons.car, &key)) return FALSE;
+  key = (argv = argv->cons.cdr)->cons.car;
   if (argc == 2) {
     if ((*result = map_get(o, key)) == NULL) *result = object_nil;
   } else {
@@ -1395,6 +1388,18 @@ DEFUN(_5b__5d_)
 
 // collection.
 
+int cons_in_p(object o, object p, object *result)
+{
+  while (!object_eq_p(o->cons.car, p)) {
+    if ((o = o->cons.cdr) == object_nil) {
+      *result = object_nil;
+      return TRUE;
+    }
+  }
+  *result = object_true;
+  return TRUE;
+}
+
 int bytes_in_p(object o, object p, object *result)
 {
   int i, byte;
@@ -1440,53 +1445,24 @@ int array_in_p(object o, object p, object *result)
 
 int dict_in_p(object o, object p, object *result)
 {
-  if (!bi_symbol_keyword(p, &p)) return FALSE;
   *result = object_bool(map_get(o, p) != NULL);
   return TRUE;
 }
 
 DEFUN(in_3f_)
 {
-  object o, p;
+  object o;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_collection(argv->cons.cdr->cons.car, &o)) return FALSE;
   switch (object_type(o)) {
-    case SYMBOL:
-      *result = object_nil;
-      return TRUE;
-    case CONS:
-      p = argv->cons.car;
-      while (!object_eq_p(o->cons.car, p)) {
-        if ((o = o->cons.cdr) == object_nil) {
-          *result = object_nil;
-          return TRUE;
-        }
-      }
-      *result = object_true;
-      return TRUE;
-    case BYTES:
-      return bytes_in_p(o, argv->cons.car, result);
-    case STRING:
-      return string_in_p(o, argv->cons.car, result);
-    case ARRAY:
-      return array_in_p(o, argv->cons.car, result);
-    case DICT:
-      return dict_in_p(o, argv->cons.car, result);
-    default:
-      xassert(FALSE);
-      return FALSE;
+    case SYMBOL: *result = object_nil; return TRUE;
+    case CONS: return cons_in_p(o, argv->cons.car, result);
+    case BYTES: return bytes_in_p(o, argv->cons.car, result);
+    case STRING: return string_in_p(o, argv->cons.car, result);
+    case ARRAY: return array_in_p(o, argv->cons.car, result);
+    case DICT: return dict_in_p(o, argv->cons.car, result);
+    default: xassert(FALSE); return FALSE;
   }
-}
-
-static int map_len(object o)
-{
-  int i, len;
-  object *table;
-  xassert(object_type(o) == DICT);
-  table = o->map.table;
-  for (i = len = 0; i < o->map.half_size; i++)
-    if (table[i] != NULL) len++;
-  return len;
 }
 
 DEFUN(len)
@@ -1496,26 +1472,13 @@ DEFUN(len)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_collection(argv->cons.car, &o)) return FALSE;
   switch (object_type(o)) {
-    case SYMBOL:
-      len = 0;
-      break;
-    case CONS:
-      len = list_len(o);
-      break;
-    case BYTES:
-      len = o->mem.size;
-      break;
-    case STRING:
-      if (!str_len(o, &len)) return FALSE;
-      break;
-    case ARRAY:
-      len = o->array.size;
-      break;
-    case DICT:
-      len = map_len(o);
-    default:
-      xassert(FALSE);
-      return FALSE;
+    case SYMBOL: len = 0; break;
+    case CONS: len = list_len(o); break;
+    case BYTES: len = o->mem.size; break;
+    case STRING: if (!str_len(o, &len)) return FALSE; break;
+    case ARRAY: len = o->array.size; break;
+    case DICT: len = o->map.entry_count; break;
+    default: xassert(FALSE); return FALSE;
   }
   *result = gc_new_xint(len);
   return TRUE;
