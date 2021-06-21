@@ -354,10 +354,6 @@
   ; The addresses of symbols or keywords with the same name are always equal.
   (assert (= (address 'x) (address 'x))))
 
-(function empty? (x)
-  ; Returns whether the x is zero-length or nil.
-  (if x (= (len x) 0) true))
-
 ;; function & macro.
 
 (builtin-function function? (x)
@@ -1427,6 +1423,10 @@
   (assert (= (len (array 1)) 1))
   (assert (= (len (let (d (dict)) ({} d :x 1) d)) 1))
   (assert (= (len "αβγ") 3)))
+
+(function empty? (x)
+  ; Returns whether the x is zero-length or nil.
+  (if x (= (len x) 0) true))
 
 ;; os.
 
