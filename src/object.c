@@ -27,7 +27,7 @@ object object_message;
 int object_type(object o)
 {
   if (sint_p(o)) return SINT;
-  return (o->header & TYPE_MASK) >> TYPE_OFFSET;
+  return o->header & TYPE_MASK;
 }
 
 int object_byte_size(object o)

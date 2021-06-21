@@ -840,7 +840,7 @@ DEFUN(string_21_)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_bytes(argv->cons.car, &o)) return FALSE;
-  object_set_type(o, STRING);
+  object_reset_type(o, STRING);
   *result = o;
   return TRUE;
 }

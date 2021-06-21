@@ -2,26 +2,24 @@
 
 typedef union _object *object;
 
-#define ALIVE_BIT 0x01000000
-#define TYPE_MASK 0x00f00000
-#define HASH_MASK 0x000fffff
-
-#define TYPE_OFFSET 20
-#define SINT        0x0
-#define XINT        0x1
-#define XFLOAT      0x2
-#define CONS        0x3
-#define SYMBOL      0x4
-#define KEYWORD     0x5
-#define STRING      0x6
-#define BYTES       0x7
-#define ARRAY       0x8
-#define DICT        0x9
-#define MACRO       0xa
-#define FUNC        0xb
-#define SPECIAL     0xc
-#define BUILTINFUNC 0xd
-#define ENV         0xe
+#define ALIVE_BIT 0x80000000
+#define HASH_MASK 0x0ffffff0
+#define TYPE_MASK 0x0000000f
+#define     SINT         0x0
+#define     XINT         0x1
+#define     XFLOAT       0x2
+#define     CONS         0x3
+#define     SYMBOL       0x4
+#define     KEYWORD      0x5
+#define     STRING       0x6
+#define     BYTES        0x7
+#define     ARRAY        0x8
+#define     DICT         0x9
+#define     MACRO        0xa
+#define     FUNC         0xb
+#define     SPECIAL      0xc
+#define     BUILTINFUNC  0xd
+#define     ENV          0xe
 
 #define SINT_BITS 30
 #define SINT_MAX 0x3fffffff
@@ -34,11 +32,12 @@ typedef union _object *object;
 #define SC(p,v) (*(unsigned char *)(p) = (unsigned char)(v))
 
 #define object_hash(o) ((o)->header & HASH_MASK)
-#define object_set_hash(o, v) {(o)->header &= ~HASH_MASK; (o)->header |= v;}
+#define object_set_hash(o, v) {xassert(object_hash(o) == 0); xassert((v & ~HASH_MASK) == 0); (o)->header |= v;}
 #define object_set_alive(o) ((o)->header |= ALIVE_BIT)
 #define object_set_dead(o) ((o)->header &= ~ALIVE_BIT)
 #define object_alive_p(o) ((o)->header & ALIVE_BIT)
-#define object_set_type(o, type) {(o)->header &= ~TYPE_MASK; (o)->header |= (type << TYPE_OFFSET);}
+#define object_set_type(o, type) {xassert(((o)->header & TYPE_MASK) == 0); (o)->header |= type;}
+#define object_reset_type(o, type) {(o)->header &= ~TYPE_MASK; object_set_type(o, type);}
 
 #define sint_p(o) ((((intptr_t)o) & 1) == 1)
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
