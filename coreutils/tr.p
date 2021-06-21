@@ -1,7 +1,5 @@
 ; translate or delete characters.
 
-(import :hashtable)
-
 (function expand-hyphen (s)
   (with-memory-stream ($out)
     (with-memory-stream ($in s)
@@ -21,12 +19,12 @@
   ;     CHAR1-CHAR2 -- all characters from CHAR1 to CHAR2 in ascending order
   (let (src (expand-hyphen src)
             dst (if dst (expand-hyphen dst) "")
-            ht (.init (.new HashTable) memhash =))
+            table (dict))
     (dotimes (i (len src))
-      (.put ht ([] src i) (if (< i (len dst)) ([] dst i) "")))
+      ({} table ([] src i) (if (< i (len dst)) ([] dst i) "")))
     (let (ch nil)
       (while (<- ch (read-char))
-        (write-bytes (|| (.get ht ch) ch))))))
+        (write-bytes (|| ({} table ch) ch))))))
 
 (function! main (args)
   (let ((src :opt dst) args)

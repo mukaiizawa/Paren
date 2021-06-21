@@ -29,7 +29,6 @@ extern int bi_proc(object o, object *result);
 extern int bi_sequence(object o, object *result);
 extern int bi_string(object o, object *result);
 extern int bi_symbol(object o, object *result);
-extern int bi_symbol_keyword(object o, object *result);
 
 extern int bi_cbyte(object o, int *p);
 extern int bi_cdouble(object o, double *p);

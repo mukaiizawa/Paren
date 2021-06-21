@@ -37,6 +37,23 @@ void object_set_hash(object o, int hval)
   o->header |= hval;
 }
 
+int object_mem_hash(char *p, int size)
+{
+  int i, hval;
+  for (i = hval = 0; i < size; i++) hval = hval * 137 + LC(p + i);
+  return hval & HASH_MASK;
+}
+
+int object_number_hash(double val)
+{
+  int i;
+  if (SINT_MIN <= val && val <= SINT_MAX) {
+    i = (int)val;
+    if (i == val) return i & HASH_MASK;
+  }
+  return object_mem_hash((char *)&val, sizeof(double));
+}
+
 int object_type(object o)
 {
   if (sint_p(o)) return SINT;

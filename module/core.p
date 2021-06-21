@@ -338,6 +338,17 @@
   ; Same as `(! (== x y)))`.
   (! (== x y)))
 
+(builtin-function hash (x)
+  ; Returns hash value of the specified x.
+  ; If x is a mutable built-in types, returns 0.
+  (assert (= (hash 10.0) (hash 10)))
+  (assert (= (hash "foo") (hash :foo)))
+  (assert (= (hash :foo) (hash 'foo)))
+  (assert (= (hash (array 1)) 0))
+  (assert (= (hash (bytes 1)) 0))
+  (assert (= (hash (dict)) 0))
+  (assert (= (hash (cons nil nil)) 0)))
+
 (builtin-function address (x)
   ; Returns address of the specified x.
   ; The addresses of symbols or keywords with the same name are always equal.

@@ -103,6 +103,8 @@ extern void object_set_alive(object o);
 extern void object_set_dead(object o);
 extern int object_alive_p(object o);
 extern int object_hash(object o);
+extern int object_mem_hash(char *p, int size);
+extern int object_number_hash(double val);
 extern void object_set_hash(object o, int hval);
 extern int object_type(object o);
 extern void object_set_type(object o, int type);

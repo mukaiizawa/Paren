@@ -23,13 +23,6 @@ static struct xarray *table, *work_table, table0, table1;
 static struct st symbol_table;
 static struct st keyword_table;
 
-static int mem_hash(char *val, int size)
-{
-  int i, hval;
-  for (i = hval = 0; i < size; i++) hval = hval * 137 + LC(val + i);
-  return hval & HASH_MASK;
-}
-
 static void *gc_alloc(int size)
 {
   object o;
@@ -89,6 +82,7 @@ object gc_new_xint(int64_t val)
   if (SINT_MIN <= val && val <= SINT_MAX) return sint((int)val);
   o = gc_alloc(sizeof(struct xint));
   object_set_type(o, XINT);
+  object_set_hash(o, object_number_hash((double)val));
   o->xint.val = val;
   regist(o);
   return o;
@@ -99,6 +93,7 @@ object gc_new_xfloat(double val)
   object o;
   o = gc_alloc(sizeof(struct xfloat));
   object_set_type(o, XFLOAT);
+  object_set_hash(o, object_number_hash(val));
   o->xfloat.val = val;
   regist(o);
   return o;
@@ -173,14 +168,18 @@ object gc_new_mem_from(int type, char *val, int size)
     case KEYWORD:
       if (type == SYMBOL) s = &symbol_table;
       else s = &keyword_table;
-      hval = mem_hash(val, size);
+      hval = object_mem_hash(val, size);
       if ((o = st_get(s, val, size, hval)) != NULL) return o;
       o = new_mem_from(type, val, size);
       object_set_hash(o, hval);
       return st_put(s, o);
     case STRING:
+      o = new_mem_from(type, val, size);
+      object_set_hash(o, object_mem_hash(val, size));
+      return o;
     case BYTES:
-      return new_mem_from(type, val, size);
+      o = new_mem_from(type, val, size);
+      return o;
     default:
       xassert(FALSE);
       return NULL;

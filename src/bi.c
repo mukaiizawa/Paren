@@ -325,6 +325,13 @@ DEFUN(builtin_3f_)
   return TRUE;
 }
 
+DEFUN(hash)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  *result = gc_new_xint(object_hash(argv->cons.car));
+  return TRUE;
+}
+
 DEFUN(address)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -834,6 +841,7 @@ DEFUN(string_21_)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_bytes(argv->cons.car, &o)) return FALSE;
   object_reset_type(o, STRING);
+  object_set_hash(o, object_mem_hash(o->mem.elt, o->mem.size));
   *result = o;
   return TRUE;
 }
