@@ -1665,7 +1665,7 @@
           (list make-method-dispatcher method-sym)
           (cons function (cons global-method-name (cons (cons 'self args) body))))))
 
-(macro overload (sym method-sym)
+(macro overload (method-sym sym)
   ; Overload operator.
   (with-gensyms (gsym gargs garg)
     (list let (list gsym sym)
@@ -1675,7 +1675,8 @@
                             (list apply (list find-method (list {} garg :class) (list quote method-sym)) gargs)
                             (list apply gsym gargs)))))))
 
-(overload = .eq?)
+(overload .eq? =)
+(overload .hash hash)
 
 ;;; fundamental class.
 
@@ -1699,7 +1700,12 @@
 (method Object .eq? (o)
   ; Returns whether the o is equals of the receiver.
   ; Overwrite this method if there is class-specific comparisons.
-  (= self o))
+  (== self o))
+
+(method Object .hash (o)
+  ; Returns hash value of the receiver.
+  ; Overwrite this method if there is class-specific comparisons.
+  0)
 
 (method Object .to-s ()
   ; Returns a String representing the receiver.
