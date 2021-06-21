@@ -1,13 +1,13 @@
 ; bubble sort.
 
 (function bubble-sort (seq)
-  (let (changed? true)
-    (while changed?
-      (<- changed? nil)
+  (let (sorted? nil)
+    (while (! sorted?)
+      (<- sorted? true)
       (dotimes (i (-- (len seq)))
         (if (< ([] seq (++ i)) ([] seq i))
             (begin
-              (<- changed? true)
+              (<- sorted? nil)
               (swap! seq i (++ i))))))
     seq))
 
