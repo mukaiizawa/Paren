@@ -123,7 +123,7 @@
   ; If there is no corresponding value for the key, do nothing.
   ; Returns the receiver.
   (let (top (.balance self key))
-    (if (!= top (&sentinel self)) (&size! self (-- (&size self))))
+    (if (!== top (&sentinel self)) (&size! self (-- (&size self))))
     (.resume self)
     self))
 
@@ -131,7 +131,7 @@
   ; Call a function fn that takes a key and a value as arguments for each node in splay.
   (let (sentinel (&sentinel self)
                  rec (f (node)
-                       (when (!= sentinel node)
+                       (when (!== sentinel node)
                          (rec (&left node))
                          (fn (&key node) (&val node))
                          (rec (&right node)))))
