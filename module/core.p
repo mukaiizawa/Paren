@@ -355,7 +355,7 @@
   (assert (= (address 'x) (address 'x))))
 
 (function empty? (x)
-  ; Returns whether the x is "" or nil.
+  ; Returns whether the x is zero-length or nil.
   (if x (= (len x) 0) true))
 
 ;; function & macro.
