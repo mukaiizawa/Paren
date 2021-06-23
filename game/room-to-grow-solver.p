@@ -92,7 +92,7 @@
   ;; required state context.
   `(let (unit-dir (midpoint dir '(0 0)))
      (if (== (.at $board next-head) :thick-path)
-         (let ((heads bodies) (neighbor-tchick next-head))
+         (let ((heads bodies) (branch next-head))
            (<- $head-vertexes heads
                $body-vertexes (concat $body-vertexes
                                       bodies
@@ -107,7 +107,7 @@
      (let (P (concat $head-vertexes $body-vertexes))
        (if (|| (collided? P) (collided? $cuctus-vertexes P)) (return nil)))))
 
-(function neighbor-tchick (p)
+(function branch (p)
   (let (collect (f (p acc)
                   (let (Q (select (f (q) (== (.at $board q) :thick-path))
                                   (except (f (q) (in? q acc))
