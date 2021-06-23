@@ -3,13 +3,10 @@
 (import :matrix)
 (import :optparse)
 
-(<- $show-all? nil
-    $debug? nil
+(<- $show-all? nil    ;; option -a
+    $debug? nil    ;; option -d
     $board nil
-    $result nil
-    $player-vertexes nil
-    $cuctus-vertexes nil
-    $cuctus-coods nil
+    $state '($result $head-vertexes $body-vertexes $cuctus-vertexes $cuctus-coods)
     $vectors '((0 -2) (2 0) (0 2) (-2 0)))
 
 (function even? (x)
@@ -24,19 +21,12 @@
 (function negate (p)
   (map (f (x) (* x -1)) p))
 
-(function show ()
-  (let ((x y) (.shape $board))
-    (dotimes (i x)
-      (dotimes (j y)
-        (let (p (list i j) val (.at $board p))
-          (write-bytes (if (== val :wall) "#"
-                           (in? p $player-vertexes) "P"
-                           (in? p (concat $cuctus-vertexes $cuctus-coods)) "C"
-                           (in? p (concat $goal-vertexes $goal-coods)) "G"
-                           (== val :path) (if (vertex? p) "+" (even? i) "-" "|")
-                           " "))))
-      (write-line))
-    (write-line)))
+(macro make-state ()
+  (cons list $state))
+
+(macro with-state ((state) :rest body)
+  (with-gensyms (gstate)
+    `(let (,gstate ,state ,$state ,gstate) ,@body)))
 
 (function vector->symbol (p)
   (if (= p '(0 -2)) 'a
@@ -45,50 +35,100 @@
       (= p '(-2 0)) 'w
       (assert nil)))
 
+(function symbol->vector (x)
+  (if (== x 'a) '(0 -2)
+      (== x 's) '(2 0)
+      (== x 'd) '(0 2)
+      (== x 'w) '(-2 0)
+      (== x 'x) '(0 0)
+      (assert nil)))
+
 (function neighbor-coods (p)
   (map (f (q) (map + p q)) $vectors))
 
 (function midpoint (p q)
   (map (f (pi qi) (/ (+ pi qi) 2)) p q))
 
-(function copy (x)
-  (map slice x))
+(function collided? (P)
+  (let (collided? (f (p P)
+                    (if (nil? p) nil
+                        (|| (! (.inside? $board p))
+                            (== (.at $board p) :wall)
+                            (in? p P)
+                            (collided? (car P) (cdr P))))))
+    (collided? (car P) (cdr P))))
 
-(function solved? ()
-  (every? (f (p) (in? p (concat $goal-vertexes $goal-coods)))
-          (concat $cuctus-vertexes $cuctus-coods)))
+(macro solved? ()
+  ;; required state context.
+  `(&& (every? (f (p) (in? p $goal-vertexes)) $cuctus-vertexes)
+       (every? (f (p) (in? p $goal-coods)) $cuctus-coods)))
 
-(macro restore (state)
-  `(<- ($result $player-vertexes $cuctus-vertexes $cuctus-coods) ,state))
+(macro show ()
+  ;; required state context.
+  `(let ((x y) (.shape $board))
+     (dotimes (i x)
+       (dotimes (j y)
+         (let (p (list i j) val (.at $board p))
+           (write-bytes (if (== val :wall) "#"
+                            (in? p $head-vertexes) "@"
+                            (in? p $body-vertexes) "*"
+                            (|| (in? p $cuctus-vertexes) (in? p $cuctus-coods)) "C"
+                            (|| (in? p $goal-vertexes) (in? p $goal-coods)) "G"
+                            (== val :thick-path) "^"
+                            (== val :path) (if (vertex? p) "+" (even? i) "-" "|")
+                            " "))))
+       (write-line))
+     (write-line)))
 
-(function step (dir)
-  (let (head (car $player-vertexes) next (map + head dir) mid (midpoint head next)
-             inside-and-not-wall? (f (p) (&& (.inside? $board p) (!== (.at $board p) :wall)))
-             state (map copy (list $result $player-vertexes $cuctus-vertexes $cuctus-coods)))
-    (push! dir $result)
-    (if (! (.inside? $board next)) (return (restore state))
-        (== (.at $board mid) :stop) (return (restore state))
-        (== (.at $board mid) :wall)
-        ;; opposite
-        (let (dir (negate dir) unit-dir (midpoint dir '(0 0)))
-          (<- $player-vertexes (cons head
-                                     (cons (map + head unit-dir)
-                                           (map (f (p) (map + p dir)) $player-vertexes)))
-              $cuctus-coods (map (f (p) (if (in? (map + p unit-dir) $player-vertexes) (map + p dir) p))
-                                 $cuctus-coods))
-          (if (! (every? inside-and-not-wall? (concat $player-vertexes $cuctus-coods))) (return (restore state))))
-        ;; forward
-        (begin
-          (if (in? next $player-vertexes) (return (restore state))
-              (<- $player-vertexes (cons next (cons mid $player-vertexes))))))
-    (if $debug? (show))
-    (if (solved?)
-        (begin
-          (write (map vector->symbol (reverse $result)))
-          (if (! $show-all?) (quit)))
-        (begin
-          (dolist (dir $vectors) (step dir))
-          (restore state)))))
+(macro move-forward ()
+  ;; required state context.
+  `(let (unit-dir (midpoint dir '(0 0)))
+     (<- $head-vertexes (map (f (p) (if (= p head) (map + p dir) head))
+                             $head-vertexes)
+         $body-vertexes (cons head
+                              (cons (map + head unit-dir)
+                                    $body-vertexes))
+         $cuctus-vertexes (map (f (p) (if (= p next-head) (map + p dir) p))
+                               $cuctus-vertexes))
+     (if (|| (collided? (concat $head-vertexes $body-vertexes))
+             (collided? $cuctus-vertexes))
+         (return nil))))
+
+(macro move-opposite ()
+  ;; required state context.
+  `(let (dir (negate dir) unit-dir (midpoint dir '(0 0)))
+     (<- $head-vertexes (map (f (p) (if (= p head) head (map + p dir)))
+                             $head-vertexes)
+         $body-vertexes (cons (map + head dir)
+                              (cons (map + head unit-dir)
+                                    (map (f (p) (map + p dir)) $body-vertexes)))
+         $cuctus-coods (map (f (p) (if (in? (map + p unit-dir) $body-vertexes) (map + p dir) p))
+                            $cuctus-coods))
+     (if (|| (collided? $head-vertexes)    ; for other head.
+             (collided? $body-vertexes)
+             (collided? $cuctus-coods))
+         (return nil))))
+
+(function step (dir state :opt hint)
+  (with-state (state)
+    (dolist (head $head-vertexes)
+      (if (!= dir '(0 0))    ; hint 'x
+        (let (next-head (map + head dir))
+          (if (.inside? $board next-head)
+              (let (v (.at $board (midpoint head next-head)))
+                (if (== v :wall) (move-opposite)
+                    (!== v :stop) (move-forward)
+                    (return nil))
+                (push! (vector->symbol dir) $result)
+                (if $debug? (show))
+                (if (solved?)
+                    (begin
+                      (write (reverse $result))
+                      (if (! $show-all?) (quit)))
+                    (begin
+                      (if (nil? hint) (dolist (dir $vectors) (step dir (make-state)))
+                          (step (car hint) (make-state) (cdr hint)))))))))
+      (push! 'x $result))))
 
 (function load-map (file-name)
   (with-open ($in file-name :read)
@@ -100,22 +140,28 @@
 (function transform-vertex (p)
   (map (f (x) (* x 2)) p))
 
+(function init-edges (edges type)
+  (dolist (edge edges)
+    (let ((p q) (map transform-vertex edge))
+      (.put $board (midpoint p q) type))))
+
 (function init (expr)
-  (let ((:key shape
-              player-vertex cuctus-vertexes goal-vertexes
-              cuctus-coods goal-coods wall-coods
-              stop-edges) expr)
+  (let ((:key shape player-vertex
+              cuctus-vertexes goal-vertexes
+              cuctus-coods goal-coods
+              wall-coods
+              stop-edges thick-edges) expr)
     (<- $board (matrix (transform-coods shape))
-        $player-vertexes (list (transform-vertex player-vertex))
-        $cuctus-vertexes (map transform-vertex cuctus-vertexes)
+        $result nil
+        $head-vertexes (list (transform-vertex player-vertex))
+        $body-vertexes nil
         $goal-vertexes (map transform-vertex goal-vertexes)
-        $cuctus-coods (map transform-coods cuctus-coods)
         $goal-coods (map transform-coods goal-coods)
+        $cuctus-vertexes (map transform-vertex cuctus-vertexes)
+        $cuctus-coods (map transform-coods cuctus-coods)
         wall-coods (map transform-coods wall-coods))
-    (dolist (edge stop-edges)
-      (let ((p q) (map transform-vertex edge))
-        (if (&& (.inside? $board p) (.inside? $board q))
-            (.put $board (midpoint p q) :stop))))
+    (init-edges stop-edges :stop)
+    (init-edges thick-edges :thick-path)
     (dolist (p wall-coods)
       (when (.inside? $board p)
         (.put $board p :wall)
@@ -123,22 +169,38 @@
           (if (in? q wall-coods)
               (let (r (midpoint p q))
                 (if (.inside? $board r) (.put $board r :wall)))))))
-    (domatrix (p $board) (if (&& (nil? (.at $board p)) (! (coods? p))) (.put $board p :path)))))
+    (domatrix (p $board)
+      (if (&& (nil? (.at $board p)) (! (coods? p))) (.put $board p :path)))
+    (make-state)))
 
 (function! main (args)
-  ; room-to-graw-solver FILE
+  ; room-to-graw-solver FILE [HINT]
   ; Read the game problem from FILE and display the solution.
   ;     -d debug mode
   ;     -a show all solution
+  ;
   ; The FILE is described by an S-expression.
+  ; vertex represents the position (starting from 0) on the line.
+  ; cood represents the position (starting from 0) of the square.
   ;     :shape -- The shape of the problem.
-  ;     :player-vertex -- Player initial coordinates. ((0, 0) <= x < shape)
-  ;     :goal-coods -- Goal coordinates. ((0, 0) <= x < shape)
-  ;     :cuctus-coods -- Cuctus initial coordinates. ((0, 0) <= x < shape)
-  ;     :wall-coods -- Wall coordinates. ((0, 0) <= x < shape)
+  ;     :player-vertex -- Player position.
+  ;     :goal-vertexes -- Goal positions.
+  ;     :cuctus-vertexes -- Cuctus positions.
+  ;     :goal-coods -- Goal positions.
+  ;     :cuctus-coods -- Cuctus positions.
+  ;     :wall-coods -- Wall position.
   ;     :stop-edges -- Line segments that cannot pass.
   ;
+  ; If HINT is specified, perform the first step according to the hint.
+  ; Therefore, if the solution is known, the transition of the state from the beginning to the end can be confirmed by specifying the solution in HINT.
+  ;
   ; Example of file contents.
+  ;
+  ;     +-+-+-+-+-+
+  ;     |G| | | | |
+  ;     +-+-+-+-+-+
+  ;     ##|G|C|C|##
+  ;     +#+-@-+-+#+
   ;
   ;     (:shape (2 5)
   ;      :player-vertex (2 2)
@@ -146,13 +208,18 @@
   ;      :cuctus-coods ((1 2) (1 3))
   ;      :wall-coods ((1 0) (1 4)
   ;                   (1 -1) (2 0) (1 5) (2 4)))
-  ;     +-+-+-+-+-+
-  ;     |G| | | | |
-  ;     +-+-+-+-+-+
-  ;     ##|G|C|C|## 
-  ;     +#+-P-+-+#+
   ;
-  ;     -> (d w d d s a s d d)
+  ;     +-+-+-+-+-+-+-+
+  ;     |#############|
+  ;     +#+#+-+-+-+-+#+
+  ;     |###|G|C  | |#|
+  ;     +#+#+-+-+-+-+#+
+  ;     |###| | | | |#|
+  ;     +#+-@-+-+-+-+#+
+  ;     |#| | | | | |#|
+  ;     +#+-+-+-+-+-+#+
+  ;     |#############|
+  ;     +-+-+-+-+-+-+-+
   ;
   ;     (:shape (5 7)
   ;      :player-vertex (3 2)
@@ -165,19 +232,13 @@
   ;                   (3 0)                               (3 6)
   ;                   (4 0) (4 1) (4 2) (4 3) (4 4) (4 5) (4 6)))
   ;
-  ;     +-+-+-+-+-+-+-+
-  ;     |#############|
-  ;     +#+#+-+-+-+-+#+
-  ;     |###|G|C  | |#|
-  ;     +#+#+-+-+-+-+#+
-  ;     |###| | | | |#|
-  ;     +#+-P-+-+-+-+#+
-  ;     |#| | | | | |#|
-  ;     +#+-+-+-+-+-+#+
-  ;     |#############|
-  ;     +-+-+-+-+-+-+-+
-  ;
-  ;     -> (d d d d w a w a w d d s d)
+  ;    +-+-+-+-+-+-+-+
+  ;    | | | | | |####
+  ;    +-+-+-+-+-+#+-+
+  ;    | |G| |C| |#| |
+  ;    +-+-+-+-+-+#+-+
+  ;    | | | | | |####
+  ;    +-+-@-+-+-+-+-+
   ;
   ;    (:shape (3 7)
   ;     :player-vertex (3 2)
@@ -187,44 +248,216 @@
   ;                  (1 5)
   ;                  (2 5) (2 6) (2 7)))
   ;
-  ;    +-+-+-+-+-+-+-+
-  ;    | | | | | |####
-  ;    +-+-+-+-+-+#+-+
-  ;    | |G| |C| |#| |
-  ;    +-+-+-+-+-+#+-+
-  ;    | | | | | |####
-  ;    +-+-P-+-+-+-+-+
+  ; Example of usage.
   ;
-  ;    -> (d d d w a w a a w d d d s d s d)
+  ; $ cat args.p
   ;
-  ;    (:shape (6 7)
-  ;     :player-vertex (2 2)
-  ;     :goal-coods ((3 1) (3 5))
-  ;     :cuctus-coods ((1 1) (2 2))
-  ;     :wall-coods ((0 0) (0 1) (0 2) (0 3) (0 4) (0 5) (0 6)
-  ;                  (1 0)                               (1 6)
-  ;                  (2 0)                               (2 6)
-  ;                  (3 0)       (3 2) (3 3) (3 4)       (3 6)
-  ;                  (4 0) (4 1) (4 2)       (4 4)       (4 6)
-  ;                  (5 0)       (5 2)       (5 4) (5 5) (5 6)))
+  ; (:shape (6 7)
+  ;  :player-vertex (2 2)
+  ;  :goal-coods ((3 1) (3 5))
+  ;  :cuctus-coods ((1 1) (2 2))
+  ;  :wall-coods ((0 0) (0 1) (0 2) (0 3) (0 4) (0 5) (0 6)
+  ;               (1 0)                               (1 6)
+  ;               (2 0)                               (2 6)
+  ;               (3 0)       (3 2) (3 3) (3 4)       (3 6)
+  ;               (4 0) (4 1) (4 2)       (4 4)       (4 6)
+  ;                                       (5 4) (5 5) (5 6)))
   ;
-  ;    +-+-+-+-+-+-+-+
-  ;    |#############|
-  ;    +#+-+-+-+-+-+#+
-  ;    |#|C| | | | |#|
-  ;    +#+-P-+-+-+-+#+
-  ;    |#| |C| | | |#|
-  ;    +#+-+-+-+-+-+#+
-  ;    |#|G|#####|G|#|
-  ;    +#+-+#+-+#+-+#+
-  ;    |#####| |#| |#|
-  ;    +#+-+#+-+#+-+#+
-  ;    |#| |#| |#####|
-  ;    +-+-+-+-+-+-+-+
-  (let ((op args) (.parse (.init (.new OptionParser) "ad") args))
-    (if (nil? args) (raise ArgumentError)
+  ; $ paren room-to-grow-solver.p args.p
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#+-+-+-+-+-+#+
+  ; |#|C| | | | |#|
+  ; +#+-@-+-+-+-+#+
+  ; |#| |C| | | |#|
+  ; +#+-+-+-+-+-+#+
+  ; |#|G|#####|G|#|
+  ; +#+-+#+-+#+-+#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; (s d w w a a a a a w d d d d w)
+  ;
+  ; $ paren room-to-grow-solver.p args.p sdwwaaaaww
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#+-+-+-+-+-+#+
+  ; |#|C| | | | |#|
+  ; +#+-@-+-+-+-+#+
+  ; |#| |C| | | |#|
+  ; +#+-+-+-+-+-+#+
+  ; |#|G|#####|G|#|
+  ; +#+-+#+-+#+-+#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#+-+-+-+-+-+#+
+  ; |#|C| | | | |#|
+  ; +#+-*-+-+-+-+#+
+  ; |#| *C| | | |#|
+  ; +#+-@-+-+-+-+#+
+  ; |#|G|#####|G|#|
+  ; +#+-+#+-+#+-+#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#+-+-+-+-+-+#+
+  ; |#|C| | | | |#|
+  ; +#+-*-+-+-+-+#+
+  ; |#| *C| | | |#|
+  ; +#+-**@-+-+-+#+
+  ; |#|G|#####|G|#|
+  ; +#+-+#+-+#+-+#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#+-+-+-+-+-+#+
+  ; |#|C| | | | |#|
+  ; +#+-*-@-+-+-+#+
+  ; |#| *C* | | |#|
+  ; +#+-***-+-+-+#+
+  ; |#|G|#####|G|#|
+  ; +#+-+#+-+#+-+#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#+-+-@-+-+-+#+
+  ; |#|C| * | | |#|
+  ; +#+-*-*-+-+-+#+
+  ; |#| *C* | | |#|
+  ; +#+-***-+-+-+#+
+  ; |#|G|#####|G|#|
+  ; +#+-+#+-+#+-+#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#+-@**-+-+-+#+
+  ; |#|C| * | | |#|
+  ; +#+-*-*-+-+-+#+
+  ; |#| *C* | | |#|
+  ; +#+-***-+-+-+#+
+  ; |#|G|#####|G|#|
+  ; +#+-+#+-+#+-+#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#@****-+-+-+#+
+  ; |#|C| * | | |#|
+  ; +#+-*-*-+-+-+#+
+  ; |#| *C* | | |#|
+  ; +#+-***-+-+-+#+
+  ; |#|G|#####|G|#|
+  ; +#+-+#+-+#+-+#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#@******-+-+#+
+  ; |#|C| | * | |#|
+  ; +#+-+-*-*-+-+#+
+  ; |#| | *C* | |#|
+  ; +#+-+-***-+-+#+
+  ; |#|G|#####|G|#|
+  ; +#+-+#+-+#+-+#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#@********-+#+
+  ; |#|C| | | * |#|
+  ; +#+-+-+-*-*-+#+
+  ; |#| | | *C* |#|
+  ; +#+-+-+-***-+#+
+  ; |#|G|#####|G|#|
+  ; +#+-+#+-+#+-+#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#@**********#+
+  ; |#|C| | | | *#|
+  ; +#+-+-+-+-*-*#+
+  ; |#| | | | *C*#|
+  ; +#+-+-+-+-***#+
+  ; |#|G|#####|G|#|
+  ; +#+-+#+-+#+-+#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#@-+-+-+-+-+#+
+  ; |#* | | | | |#|
+  ; +#***********#+
+  ; |#|C| | | |C*#|
+  ; +#+-+-+-+-*-*#+
+  ; |#|G|#####*G*#|
+  ; +#+-+#+-+#***#+
+  ; |#####| |#| |#|
+  ; +-+-+-+-+#+-+#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; +-+-+-+-+-+-+-+
+  ; |#############|
+  ; +#@-+-+-+-+-+#+
+  ; |#* | | | | |#|
+  ; +#*-+-+-+-+-+#+
+  ; |#* | | | | |#|
+  ; +#***********#+
+  ; |#|C|#####|C*#|
+  ; +#+-+#+-+#*-*#+
+  ; |#####| |#* *#|
+  ; +-+-+-+-+#***#+
+  ; | | | | |#####|
+  ; +-+-+-+-+-+-+-+
+  ;
+  ; (s d w w a a a a a w w)
+  ;
+  (let ((op args) (.parse (.init (.new OptionParser) "ad") args)
+                  file (car args) hint (map symbol->vector (map symbol (split (cadr args)))))
+    (if (nil? file) (raise ArgumentError)
         (<- $show-all? (.get op "a")
             $debug? (.get op "d")))
-    (init (load-map (car args)))
-    (show)
-    (foreach step $vectors)))
+    (let (state (init (load-map file)))
+      (show)
+      (if (nil? hint) (dolist (dir $vectors) (step dir state))
+          (step (car hint) state (cdr hint))))))
