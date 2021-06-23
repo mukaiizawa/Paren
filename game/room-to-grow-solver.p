@@ -7,6 +7,7 @@
     $debug? nil    ;; option -d
     $board nil
     $state '($result $head-vertexes $body-vertexes $cuctus-vertexes $cuctus-coods)
+    $unit-vectors '((0 -1) (1 0) (0 1) (-1 0))
     $vectors '((0 -2) (2 0) (0 2) (-2 0)))
 
 (function even? (x)
@@ -20,6 +21,9 @@
 
 (function negate (p)
   (map (f (x) (* x -1)) p))
+
+(function rotate (l)
+  (if l (concat (cdr l) (list (car l)))))
 
 (macro make-state ()
   (cons list $state))
@@ -46,15 +50,19 @@
 (function neighbor-coods (p)
   (map (f (q) (map + p q)) $vectors))
 
+(function neighbor (p)
+  (map (f (q) (map + p q)) $unit-vectors))
+
 (function midpoint (p q)
   (map (f (pi qi) (/ (+ pi qi) 2)) p q))
 
-(function collided? (P)
+(function collided? (P :opt Q)
   (let (collided? (f (p P)
                     (if (nil? p) nil
                         (|| (! (.inside? $board p))
                             (== (.at $board p) :wall)
                             (in? p P)
+                            (&& Q (in? p Q))
                             (collided? (car P) (cdr P))))))
     (collided? (car P) (cdr P))))
 
@@ -74,7 +82,7 @@
                             (in? p $body-vertexes) "*"
                             (|| (in? p $cuctus-vertexes) (in? p $cuctus-coods)) "C"
                             (|| (in? p $goal-vertexes) (in? p $goal-coods)) "G"
-                            (== val :thick-path) "^"
+                            (== val :thick-path) "%"
                             (== val :path) (if (vertex? p) "+" (even? i) "-" "|")
                             " "))))
        (write-line))
@@ -83,16 +91,41 @@
 (macro move-forward ()
   ;; required state context.
   `(let (unit-dir (midpoint dir '(0 0)))
-     (<- $head-vertexes (map (f (p) (if (= p head) (map + p dir) head))
-                             $head-vertexes)
-         $body-vertexes (cons head
-                              (cons (map + head unit-dir)
-                                    $body-vertexes))
-         $cuctus-vertexes (map (f (p) (if (= p next-head) (map + p dir) p))
+     (if (== (.at $board next-head) :thick-path)
+         (let ((heads bodies) (neighbor-tchick next-head))
+           (<- $head-vertexes heads
+               $body-vertexes (concat $body-vertexes
+                                      bodies
+                                      (list head (map + head unit-dir)))))
+         (<- $head-vertexes (map (f (p) (if (= p head) next-head p))
+                                 $head-vertexes)
+             $body-vertexes (cons head
+                                  (cons (map + head unit-dir)
+                                        $body-vertexes))))
+     (<- $cuctus-vertexes (map (f (p) (if (= p next-head) (map + p dir) p))
                                $cuctus-vertexes))
-     (if (|| (collided? (concat $head-vertexes $body-vertexes))
-             (collided? $cuctus-vertexes))
-         (return nil))))
+     (let (P (concat $head-vertexes $body-vertexes))
+       (if (|| (collided? P) (collided? $cuctus-vertexes P)) (return nil)))))
+
+(function neighbor-tchick (p)
+  (let (collect (f (p acc)
+                  (let (Q (select (f (q) (== (.at $board q) :thick-path))
+                                  (except (f (q) (in? q acc))
+                                          (neighbor p))))
+                    (<- acc (concat acc Q))
+                    (dolist (q Q)
+                      (<- acc (collect q acc)))
+                    acc))
+                divide (f (Q)
+                         (let (head nil body nil)
+                           (dolist (q Q)
+                             (let (neighbor (neighbor q))
+                               (if (&& (!= p q)
+                                       (= (len (select (f (r) (in? r neighbor)) Q)) 1))
+                                   (push! q head)
+                                   (push! q body))))
+                           (list head body))))
+    (divide (collect p nil))))
 
 (macro move-opposite ()
   ;; required state context.
@@ -111,24 +144,30 @@
 
 (function step (dir state :opt hint)
   (with-state (state)
-    (dolist (head $head-vertexes)
-      (if (!= dir '(0 0))    ; hint 'x
-        (let (next-head (map + head dir))
-          (if (.inside? $board next-head)
-              (let (v (.at $board (midpoint head next-head)))
-                (if (== v :wall) (move-opposite)
-                    (!== v :stop) (move-forward)
-                    (return nil))
-                (push! (vector->symbol dir) $result)
-                (if $debug? (show))
-                (if (solved?)
-                    (begin
-                      (write (reverse $result))
-                      (if (! $show-all?) (quit)))
-                    (begin
-                      (if (nil? hint) (dolist (dir $vectors) (step dir (make-state)))
-                          (step (car hint) (make-state) (cdr hint)))))))))
-      (push! 'x $result))))
+    (if (= dir '(0 0))
+        (begin
+          ;; hint 'x
+          (<- $head-vertexes (rotate $head-vertexes))
+          (push! 'x $result)
+          (step (car hint) (make-state) (cdr hint)))
+        (dolist (head $head-vertexes)
+          (let (next-head (map + head dir))
+            (if (.inside? $board next-head)
+                (let (v (.at $board (midpoint head next-head)))
+                  (if (== v :wall) (move-opposite)
+                      (!== v :stop) (move-forward)
+                      (return nil))
+                  (push! (vector->symbol dir) $result)
+                  (if $debug? (show))
+                  (if (solved?)
+                      (begin
+                        (write (reverse $result))
+                        (if (! $show-all?) (quit)))
+                      (begin
+                        (if (nil? hint) (dolist (dir $vectors) (step dir (make-state)))
+                            (step (car hint) (make-state) (cdr hint)))))))
+            (<- $head-vertexes (rotate $head-vertexes))
+            (push! 'x $result))))))
 
 (function load-map (file-name)
   (with-open ($in file-name :read)
@@ -143,6 +182,8 @@
 (function init-edges (edges type)
   (dolist (edge edges)
     (let ((p q) (map transform-vertex edge))
+      (when (== type :thick-path)
+        (.put $board p type) (.put $board q type))
       (.put $board (midpoint p q) type))))
 
 (function init (expr)
@@ -247,6 +288,19 @@
   ;     :wall-coods ((0 5) (0 6) (0 7)
   ;                  (1 5)
   ;                  (2 5) (2 6) (2 7)))
+  ;     +-G-+-G-+
+  ;     | | | | |
+  ;     +-C-+-C-+
+  ;     | | | | |
+  ;     +-%%%%%-+
+  ;     | | | | |
+  ;     +-+-@-+-+
+  ;
+  ;     (:shape (3 4)
+  ;      :player-vertex (3 2)
+  ;      :goal-vertexes ((0 1) (0 3))
+  ;      :cuctus-vertexes ((1 1) (1 3))
+  ;      :thick-edges (((2 1) (2 2)) ((2 2) (2 3))))
   ;
   ; Example of usage.
   ;
@@ -280,7 +334,7 @@
   ;
   ; (s d w w a a a a a w d d d d w)
   ;
-  ; $ paren room-to-grow-solver.p args.p sdwwaaaaww
+  ; $ paren room-to-grow-solver.p -d args.p sdwwaaaaww
   ;
   ; +-+-+-+-+-+-+-+
   ; |#############|
