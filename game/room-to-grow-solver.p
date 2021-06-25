@@ -216,8 +216,9 @@
     (init-edges no-reaction-wall-edges :no-reaction-wall)
     (domatrix (p $board)
       (if (! (coods? p))
-          (if (nil? (.at $board p)) (.put $board p :path)
-              (push! p $branches))))
+          (let (v (.at $board p))
+            (if (nil? v) (.put $board p :path)
+                (== v :path) (push! p $branches)))))
     (make-state)))
 
 (function! main (args)
