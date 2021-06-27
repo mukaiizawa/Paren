@@ -243,6 +243,9 @@
   ; If HINT is specified, perform the first step according to the hint.
   ; Therefore, if the solution is known, the transition of the state from the beginning to the end can be confirmed by specifying the solution in HINT.
   ;
+  ; TODO
+  ; Implement desert area rules.
+  ;
   ; Example of the S-expression.
   ;
   ;     +-+-+-+-+-+-+-+
