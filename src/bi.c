@@ -1358,10 +1358,7 @@ DEFUN(_5b__5d_)
   switch (object_type(o)) {
     case SYMBOL:
     case CONS:
-      while (o != object_nil) {
-        if (i-- == 0) break;
-        o = o->cons.cdr;
-      }
+      while (i-- > 0 && o != object_nil) o = o->cons.cdr;
       if (argc == 2) {
         if (o == object_nil) *result = o;
         else *result = o->cons.car;
