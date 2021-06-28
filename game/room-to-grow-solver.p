@@ -243,8 +243,10 @@
   ; If HINT is specified, perform the first step according to the hint.
   ; Therefore, if the solution is known, the transition of the state from the beginning to the end can be confirmed by specifying the solution in HINT.
   ;
-  ; TODO
-  ; Implement desert area rules.
+  ; The following functions are not supported.
+  ; - desert area rules
+  ;     - oblique coordinates
+  ;     - coordinate with a mixture of different widths
   ;
   ; Example of the S-expression.
   ;
