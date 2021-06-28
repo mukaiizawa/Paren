@@ -58,8 +58,7 @@
       (while (< n $size)
         (let (line (read-line))
           (if (nil? line) (raise EOFError)
-              (empty? line) (continue)
-              (! (prefix? line "+"))
+              (&& (! (empty? line)) (! (prefix? line "+")))
               (begin
                 (push! line lines)
                 (<- n (++ n))))))
