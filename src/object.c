@@ -327,7 +327,7 @@ int object_eq_p(object o, object p)
       if (object_type(p) != ARRAY) return FALSE;
       if (o->array.size != p->array.size) return FALSE;
       for (i = 0; i < o->array.size; i++)
-        if (!object_eq_p(o->cons.car, p->cons.car)) return FALSE;
+        if (!object_eq_p(o->array.elt[i], p->array.elt[i])) return FALSE;
       return TRUE;
     case DICT:
       if (object_type(p) != DICT) return FALSE;
