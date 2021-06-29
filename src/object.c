@@ -287,9 +287,39 @@ static int number_eq_p(object o, object p)
   return FALSE;
 }
 
+static int cons_eq_p(object o, object p)
+{
+  if (object_type(p) != CONS) return FALSE;
+  while (TRUE) {
+    if (o == object_nil) return p == object_nil;
+    if (p == object_nil) return o == object_nil;
+    if (!object_eq_p(o->cons.car, p->cons.car)) return FALSE;
+    o = o->cons.cdr;
+    p = p->cons.cdr;
+  }
+}
+
+static int bytes_eq_p(object o, object p)
+{
+  if (object_type(o) != object_type(p)) return FALSE;
+  if (o->mem.size != p->mem.size) return FALSE;
+  return memcmp(o->mem.elt, p->mem.elt, o->mem.size) == 0;
+}
+
+static int array_eq_p(object o, object p)
+{
+  int i;
+  if (object_type(p) != ARRAY) return FALSE;
+  if (o->array.size != p->array.size) return FALSE;
+  for (i = 0; i < o->array.size; i++)
+    if (!object_eq_p(o->array.elt[i], p->array.elt[i])) return FALSE;
+  return TRUE;
+}
+
 static int dict_eq_p(object o, object p)
 {
   object v, keys;
+  if (object_type(p) != DICT) return FALSE;
   if (o->map.entry_count != p->map.entry_count) return FALSE;
   keys = map_keys(o);
   while (keys != object_nil) {
@@ -302,7 +332,6 @@ static int dict_eq_p(object o, object p)
 
 int object_eq_p(object o, object p)
 {
-  int i;
   if (o == p) return TRUE;
   switch (object_type(o)) {
     case SINT:
@@ -311,29 +340,11 @@ int object_eq_p(object o, object p)
       return number_eq_p(o, p);
     case BYTES:
     case STRING:
-      if (object_type(o) != object_type(p)) return FALSE;
-      if (o->mem.size != p->mem.size) return FALSE;
-      return memcmp(o->mem.elt, p->mem.elt, o->mem.size) == 0;
-    case CONS:
-      if (object_type(p) != CONS) return FALSE;
-      while (o != object_nil) {
-        if (p == object_nil) return FALSE;
-        if (!object_eq_p(o->cons.car, p->cons.car)) return FALSE;
-        o = o->cons.cdr;
-        p = p->cons.cdr;
-      }
-      return TRUE;
-    case ARRAY:
-      if (object_type(p) != ARRAY) return FALSE;
-      if (o->array.size != p->array.size) return FALSE;
-      for (i = 0; i < o->array.size; i++)
-        if (!object_eq_p(o->array.elt[i], p->array.elt[i])) return FALSE;
-      return TRUE;
-    case DICT:
-      if (object_type(p) != DICT) return FALSE;
-      return dict_eq_p(o, p);
-    default:
-      return FALSE;
+      return bytes_eq_p(o, p);
+    case CONS: return cons_eq_p(o, p);
+    case ARRAY: return array_eq_p(o, p);
+    case DICT: return dict_eq_p(o, p);
+    default: return FALSE;
   }
 }
 
