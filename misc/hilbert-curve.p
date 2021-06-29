@@ -74,7 +74,7 @@
     (dlu (-- n))))
 
 (function hirbert-curve (n)
-  (<- $size (int (* (- (exp 2 n) (/ (exp 2 n))) $unit-size))
+  (<- $size (int (* (- (pow 2 n) (/ (pow 2 n))) $unit-size))
       $p (list (-- $size) 0)
       $canvas (matrix (list $size $size)))
   (urd n)

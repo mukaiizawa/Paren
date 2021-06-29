@@ -839,38 +839,6 @@
               val)))
       (raise ArgumentError "expected number or string")))
 
-(builtin-function ~ (x)
-  ; Returns bitwise NOT of x.
-  ; x must be positive integer.
-  (assert (= (~ (~ 2x1010)) 2x1010))
-  (assert (= (& (~ 2x1010) 2x1111) 2x0101)))
-
-(builtin-function & (x y)
-  ; Returns bitwise AND of x and y.
-  ; x and y must be positive integer.
-  (assert (= (& 0x333333333 0x555555555) 0x111111111)))
-
-(builtin-function | (x y)
-  ; Returns bitwise OR of x and y.
-  ; x and y must be positive integer.
-  (assert (= (| 0x333333333 0x555555555) 0x777777777)))
-
-(builtin-function ^ (x y)
-  ; Returns bitwise XOR of x and y.
-  ; x and y must be positive integer.
-  (assert (= (^ 3 0x500000000) 0x500000003))
-  (assert (= (^ 0x500000000 0x500000003) 3)))
-
-(builtin-function << (x y)
-  ; bitwise left shift.
-  ; x must be positive integer.
-  (assert (= (<< 3 2) 12)))
-
-(function >> (x y)
-  ; bitwise right shift.
-  ; x must be positive integer.
-  (<< x (- y)))
-
 (builtin-function + (x :rest args)
   ; Returns the sum of the args.
   (assert (= (+) 0))
@@ -938,18 +906,106 @@
   ; Same as `(- x 1)`.
   (- x 1))
 
+;;;; bitwise operates.
+
+(builtin-function ~ (x)
+  ; Returns bitwise NOT of x.
+  ; x must be positive integer.
+  (assert (= (~ (~ 2x1010)) 2x1010))
+  (assert (= (& (~ 2x1010) 2x1111) 2x0101)))
+
+(builtin-function & (x y)
+  ; Returns bitwise AND of x and y.
+  ; x and y must be positive integer.
+  (assert (= (& 0x333333333 0x555555555) 0x111111111)))
+
+(builtin-function | (x y)
+  ; Returns bitwise OR of x and y.
+  ; x and y must be positive integer.
+  (assert (= (| 0x333333333 0x555555555) 0x777777777)))
+
+(builtin-function ^ (x y)
+  ; Returns bitwise XOR of x and y.
+  ; x and y must be positive integer.
+  (assert (= (^ 3 0x500000000) 0x500000003))
+  (assert (= (^ 0x500000000 0x500000003) 3)))
+
+(builtin-function << (x y)
+  ; bitwise left shift.
+  ; x must be positive integer.
+  (assert (= (<< 3 2) 12)))
+
+(function >> (x y)
+  ; bitwise right shift.
+  ; x must be positive integer.
+  (<< x (- y)))
+
 (function abs (x)
   ; Returns the absolute value of the specified number x.
   (if (< x 0) (- x)
       x))
 
-(function exp (base power)
-  ; Returns base-number raised to the power power-number.
-  (let (val 1)
-    (dotimes (i (abs power))
-      (<- val (* val base)))
-    (if (> power 0) val
-        (/ val))))
+(function max (:rest args)
+  ; Returns maximum value from argument.
+  (reduce (f (x y) (if (> x y) x y)) args))
+
+(function min (:rest args)
+  ; Returns minimum value from argument.
+  (reduce (f (x y) (if (< x y) x y)) args))
+
+;;;; mathematical functions.
+
+(builtin-function sin (x)
+  ; Returns the trigonometric sine of an angle.
+  (assert (= (sin 0) 0)))
+
+(builtin-function cos (x)
+  ; Returns the trigonometric cosine of an angle.
+  (assert (= (cos 0) 1.0)))
+
+(builtin-function tan (x)
+  ; Returns the trigonometric tangent of an angle.
+  (assert (= (tan 0) (/ (sin 0) (cos 0)))))
+
+(builtin-function asin (x)
+  ; Returns the arc sine of a value.
+  (assert (= (sin (asin 0.0)) 0)))
+
+(builtin-function acos (x)
+  ; Returns the arc cosine of a value.
+  (assert (= (cos (acos 0.0)) 0)))
+
+(builtin-function atan (x)
+  ; Returns the arc tangent of an angle.
+  (assert (= (tan (atan 0.0)) 0.0)))
+
+(builtin-function sinh (x)
+  ; Returns the hyperbolic sine of a value.
+  (assert (= (sinh 1) (/ (- (exp 1) (exp -1)) 2))))
+
+(builtin-function cosh (x)
+  ; Returns the hyperbolic cosine of a value.
+  (assert (= (cosh 1) (/ (+ (exp 1) (exp -1)) 2))))
+
+(builtin-function tanh (x)
+  ; Returns the hyperbolic tangent of an angle.
+  (assert (= (tanh 1) (/ (sinh 1) (cosh 1)))))
+
+(builtin-function exp (x)
+  ; Returns Euler's number e raised to the power of x.
+  (assert (= (log (exp 10)) 10)))
+
+(builtin-function log (x)
+  ; Returns the natural logarithm of x value.
+  (assert (= (log (pow 2 10)) (* 10 (log 2)))))
+
+(builtin-function log10 (x)
+  ; Returns the base 10 logarithm of x value.
+  (assert (= (log10 100) (/ (log 100) (log 10)))))
+
+(builtin-function sqrt (x)
+  ; Returns the rounded positive square root of a value.
+  (assert (= (sqrt (pow 25 2)) 25)))
 
 ;; symbol & keyword.
 
@@ -2469,7 +2525,7 @@
                 factor (/ factor 10)))
           (when (= (&next self) 0x65)
             (.skip self)
-            (<- val (* val (exp 10 (.skip-int self)))))))
+            (<- val (* val (pow 10 (.skip-int self)))))))
     val))
 
 (method AheadReader .skip-number ()

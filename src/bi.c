@@ -703,6 +703,8 @@ DEFUN(_3c_)
   return ip_throw(ArgumentError, expected_number);
 }
 
+// bitwise operator.
+
 DEFUN(_7e_)
 {
   int64_t x;
@@ -782,6 +784,94 @@ DEFUN(_3c__3c_)
     } else x >>= -y;
   }
   *result = gc_new_xint(x);
+  return TRUE;
+}
+
+// mathematical functions.
+
+static int xmath(int argc, object argv, double (*f)(double c), object *result)
+{
+  double x;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_cdouble(argv->cons.car, &x)) return ip_throw(ArgumentError, expected_number);
+  if (!isfinite(x = f(x))) return ip_throw(ArithmeticError, numeric_overflow);
+  *result = gc_new_xfloat(x);
+  return TRUE;
+}
+
+DEFUN(sin)
+{
+  return xmath(argc, argv, sin, result);
+}
+
+DEFUN(cos)
+{
+  return xmath(argc, argv, cos, result);
+}
+
+DEFUN(tan)
+{
+  return xmath(argc, argv, tan, result);
+}
+
+DEFUN(asin)
+{
+  return xmath(argc, argv, asin, result);
+}
+
+DEFUN(acos)
+{
+  return xmath(argc, argv, acos, result);
+}
+
+DEFUN(atan)
+{
+  return xmath(argc, argv, atan, result);
+}
+
+DEFUN(sinh)
+{
+  return xmath(argc, argv, sinh, result);
+}
+
+DEFUN(cosh)
+{
+  return xmath(argc, argv, cosh, result);
+}
+
+DEFUN(tanh)
+{
+  return xmath(argc, argv, tanh, result);
+}
+
+DEFUN(exp)
+{
+  return xmath(argc, argv, exp, result);
+}
+
+DEFUN(log)
+{
+  return xmath(argc, argv, log, result);
+}
+
+DEFUN(log10)
+{
+  return xmath(argc, argv, log10, result);
+}
+
+DEFUN(sqrt)
+{
+  return xmath(argc, argv, sqrt, result);
+}
+
+DEFUN(pow)
+{
+  double x, y;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_cdouble(argv->cons.car, &x)) return ip_throw(ArgumentError, expected_number);
+  if (!bi_cdouble(argv->cons.cdr->cons.car, &y)) return ip_throw(ArgumentError, expected_number);
+  if (!isfinite(x = pow(x, y))) return ip_throw(ArithmeticError, numeric_overflow);
+  *result = gc_new_xfloat(x);
   return TRUE;
 }
 

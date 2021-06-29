@@ -1,7 +1,6 @@
 ; Conway's Game of Life.
 
 (import :console)
-(import :math)
 (import :matrix)
 (import :optparse)
 (import :rand)
@@ -121,6 +120,6 @@
         (begin
           (if (nil? (<- seed ({} $seeds (symbol (car args)))))
               (raise ArgumentError "unknown seed"))
-          (<- size (int (math.sqrt (len seed))))))
+          (<- size (int (sqrt (len seed))))))
     (next-generation (first-generation (matrix (list size size)) seed)
                      (matrix (list size size)))))

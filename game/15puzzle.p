@@ -25,7 +25,7 @@
     (if (.inside? board q)
         (begin
           (.put board p (.at board q))
-          (.put board q (exp (car (.shape board)) 2))
+          (.put board q (int (pow (car (.shape board)) 2)))
           (list board q))
         (list board p))))
 
