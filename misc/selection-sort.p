@@ -1,5 +1,7 @@
 ; selection sort.
 
+(import :rand)
+
 (function min-index (seq)
   (let (index 0)
     (dotimes (i (-- (len seq)))
@@ -15,4 +17,5 @@
 (function! main (args)
   (assert (= (selection-sort '(1 2 3 4 5)) '(1 2 3 4 5)))
   (assert (= (selection-sort '(1 1 3 3 5)) '(1 1 3 3 5)))
-  (assert (= (selection-sort '(5 4 1 2 3)) '(1 2 3 4 5))))
+  (assert (= (selection-sort '(5 4 1 2 3)) '(1 2 3 4 5)))
+  (assert (= (selection-sort (rand.shuffle! (.. 100))) (.. 100))))

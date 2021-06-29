@@ -1,5 +1,7 @@
 ; heap sort.
 
+(import :rand)
+
 (function heap-sort (seq)
   (let (n (len seq))
     (for (s (// (- n 2) 2)) (>= s 0) (s (-- s))
@@ -24,4 +26,5 @@
 (function! main (args)
   (assert (= (heap-sort '(1 2 3 4 5)) '(1 2 3 4 5)))
   (assert (= (heap-sort '(1 1 3 3 5)) '(1 1 3 3 5)))
-  (assert (= (heap-sort '(5 4 1 2 3)) '(1 2 3 4 5))))
+  (assert (= (heap-sort '(5 4 1 2 3)) '(1 2 3 4 5)))
+  (assert (= (heap-sort (rand.shuffle! (.. 100))) (.. 100))))

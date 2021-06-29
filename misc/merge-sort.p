@@ -1,5 +1,7 @@
 ; merge sort.
 
+(import :rand)
+
 (function merge (left right)
   (if (nil? left) right
       (nil? right) left
@@ -15,4 +17,5 @@
 (function! main (args)
   (assert (= (merge-sort '(1 2 3 4 5)) '(1 2 3 4 5)))
   (assert (= (merge-sort '(1 1 3 3 5)) '(1 1 3 3 5)))
-  (assert (= (merge-sort '(5 4 1 2 3)) '(1 2 3 4 5))))
+  (assert (= (merge-sort '(5 4 1 2 3)) '(1 2 3 4 5)))
+  (assert (= (merge-sort (rand.shuffle! (.. 100))) (.. 100))))
