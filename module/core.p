@@ -741,6 +741,14 @@
                   (rec (cdr l) (cons (car l) acc)))))
     (rec l nil)))
 
+(function position (fn l)
+  ; Returns the position of the elements for which the result of applying the function fn is true.
+  (let (rec (f (l n)
+              (if (nil? l) nil
+                  (fn (car l)) n
+                  (rec (cdr l) (++ n)))))
+    (rec l 0)))
+
 (function every? (fn l)
   ; Returns whether the result of the function fn applied to all the elements of the list is true.
   ; If x is nil, returns true.
