@@ -851,12 +851,14 @@ DEFUN(exp)
 
 DEFUN(log)
 {
-  return xmath(argc, argv, log, result);
-}
-
-DEFUN(log10)
-{
-  return xmath(argc, argv, log10, result);
+  double x, y;
+  if (!bi_argc_range(argc, 1, 2)) return FALSE;
+  if (argc == 1) return xmath(argc, argv, log, result);
+  if (!bi_cdouble(argv->cons.car, &x)) return ip_throw(ArgumentError, expected_number);
+  if (!bi_cdouble(argv->cons.cdr->cons.car, &y)) return ip_throw(ArgumentError, expected_number);
+  if (!isfinite(x = log(y) / log(x))) return ip_throw(ArithmeticError, numeric_overflow);
+  *result = gc_new_xfloat(x);
+  return TRUE;
 }
 
 DEFUN(sqrt)

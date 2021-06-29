@@ -995,13 +995,11 @@
   ; Returns Euler's number e raised to the power of x.
   (assert (= (log (exp 10)) 10)))
 
-(builtin-function log (x)
+(builtin-function log (x :opt y)
   ; Returns the natural logarithm of x value.
-  (assert (= (log (pow 2 10)) (* 10 (log 2)))))
-
-(builtin-function log10 (x)
-  ; Returns the base 10 logarithm of x value.
-  (assert (= (log10 100) (/ (log 100) (log 10)))))
+  ; If y is supplied, returns the base x logarithm of y value.
+  (assert (= (log (pow 2 10)) (* 10 (log 2))))
+  (assert (= (log 10 100) (/ (log 100) (log 10)))))
 
 (builtin-function sqrt (x)
   ; Returns the rounded positive square root of a value.
