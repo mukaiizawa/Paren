@@ -152,7 +152,7 @@ static void exit1(void)
   object o;
   fprintf(stderr, "%s", object_describe(map_get(reg[0], object_class), buf));
   if ((o = map_get(reg[0], object_message)) != NULL && o != object_nil)
-    fprintf(stderr, " -- %s.", object_describe(o, buf));
+    fprintf(stderr, " -- %s", object_describe(o, buf));
   fprintf(stderr, "\n");
   o = map_get(reg[0], object_stack_trace);
   while (o != object_nil) {
