@@ -2839,7 +2839,8 @@
   ; Executed when paren is executed.
   ; Invoke repl if there are no command line arguments that bound to the symbol $args.
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
-  (catch (SystemExit (f (e) (return true)))
+  (catch (SystemExit (f (e) (return true))
+                     Exception (f (e) (.print-stack-trace e)))
     (if (nil? args) (repl)
         (let (script (find (f (dir)
                              (let (full-path (.resolve dir (car args)))
@@ -2854,6 +2855,7 @@
     $stdout (.init (.new FileStream) (fp 1))
     $in $stdin
     $out $stdout
+    $debug? (== (assert true) true)
     $paren-home (.parent (.parent (.resolve (path.getcwd) core.p)))
     $script-path (map (f (p) (.resolve $paren-home p))
                       '("coreutils" "tool")))
