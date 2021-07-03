@@ -49,7 +49,7 @@
       (end-game
         "The Wumpus has eaten you!")
       (in? $player $bats) 
-      (end-game
+      (write-line
         (str "Argh! A Giant Bat has carried you to room " (random-move) "."))
       (in? $player $pits)
       (end-game
