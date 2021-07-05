@@ -1,4 +1,4 @@
-; Hunt the Wumpus.
+; Gregory Yob's Hunt the Wumpus.
 
 (import :rand)
 
@@ -13,66 +13,118 @@
     $player nil
     $wumpus nil
     $bats nil
-    $pits nil)
+    $pits nil
+    $instructions 
+"
+WELCOME TO 'HUNT THE WUMPUS'
+THE WUMPUS LIVES IN A CAVE OF 20 ROOMS.
+EACH ROOM HAS 3 TUNNELS LEADING TO OTHER ROOMS.
+(LOOK AT A DODECAHEDRON TO SEE HOW THIS WORKS-IF YOU DON'T KNOW WHAT A DODECAHEDRON IS, ASK SOMEONE)
+
+HAZARDS:
+BOTTOMLESS PITS - TWO ROOMS HAVE BOTTOMLESS PITS IN THEM IF YOU GO THERE, YOU FALL INTO THE PIT (& LOSE!)
+SUPER BATS - TWO OTHER ROOMS HAVE SUPER BATS. IF YOU GO THERE, A BAT GRABS YOU AND TAKES YOU TO SOME OTHER ROOM AT RANDOM. (WHICH MAY BE TROUBLESOME)
+
+WUMPUS:
+THE WUMPUS IS NOT BOTHERED BY HAZARDS (HE HAS SUCKER FEET AND IS TOO BIG FOR A BAT TO LIFT).
+USUALLY HE IS ASLEEP.
+TWO THINGS WAKE HIM UP:
+YOU SHOOTING AN ARROW OR YOU ENTERING HIS ROOM.
+IF THE WUMPUS WAKES HE MOVES (P=.75) ONE ROOM OR STAYS STILL (P=.25).
+AFTER THAT, IF HE IS WHERE YOU ARE, HE EATS YOU UP AND YOU LOSE!
+
+YOU:
+EACH TURN YOU MAY MOVE OR SHOOT A CROOKED ARROW
+MOVING: YOU CAN MOVE ONE ROOM (THRU ONE TUNNEL)
+ARROWS: YOU HAVE 5 ARROWS.
+YOU LOSE WHEN YOU RUN OUT EACH ARROW CAN GO FROM 1 TO 5 ROOMS.
+YOU AIM BY TELLING THE COMPUTER THE ROOM#S YOU WANT THE ARROW TO GO TO.
+IF THE ARROW CAN'T GO THAT WAY (IF NO TUNNEL) IT MOVES
+AT RANDOM TO THE NEXT ROOM.
+IF THE ARROW HITS THE WUMPUS, YOU WIN.
+IF THE ARROW HITS YOU, YOU LOSE.
+ 
+WARNINGS:
+WHEN YOU ARE ONE ROOM AWAY FROM A WUMPUS OR HAZARD,
+THE COMPUTER SAYS:
+WUMPUS:  'I SMELL A WUMPUS'
+BAT   :  'BATS NEARBY'
+PIT   :  'I FEEL A DRAFT'
+")
+
+; Numbering of the caves in Hunt the Wumpus
+; The caves are in complete darkness, so the player cannot see into adjacent caves
+; ; instead, upon moving to a new empty cave, the game describes if they can smell a Wumpus, hear a bat, or feel a draft from a pit in one of the connected caves.
+; Entering a cave with a pit ends the game due to the player falling in, while entering the cave with the Wumpus startles it
+; ; the Wumpus will either move to another cave or remain and kill the player.
+; If the player chooses to fire an arrow, they first select how many caves, up to five, that the arrow will travel through, and then enters each cave that the arrow moves through.
+; If the player enters a cave number that is not connected to where the arrow is, the game picks a valid option at random.
+; If the arrow hits the player while it is travelling, the player loses; if it hits the Wumpus, they win.
+; If the arrow does not hit anything, then the Wumpus is startled and may move to a new cave; unlike the player, the Wumpus is not affected by super bats or pits.
+; If the Wumpus moves to the player's location, they lose.[1]
 
 (function neighbours (room)
   ([] $neigbor-rooms room))
 
-(function end-game (s :opt win?)
+(function input-int (s choices)
+  (int (input s (map str choices))))
+
+(function input (s choices)
+  (catch (Error (f (e)
+                  (output "NOT POSSIBLE")
+                  (input s choices)))
+    (write-bytes s)
+    (let (text (read-line))
+      (if (in? text choices) text
+          (raise Error)))))
+
+(function output (s :opt end?)
   (write-line s)
-  (if (! win?) (write-line "Game Over!"))
-  (quit))
+  (when end?
+    (write-line (if (== end? :win) "HEE HEE HEE - THE WUMPUS'LL GET YOU NEXT TIME!!" "HA HA HA - YOU LOSE!"))
+    (quit)))
 
-(function shoot (room)
-  (if (= room $wumpus)
-      (end-game
-        "Congratulations, you have slain the Wumpus!" :win)
-      (= (<- $arrow-count (-- $arrow-count)) 0)
-      (end-game
-        "You have run out of arrows.")
-      (begin
-        (write-line "Miss!")
-        (if (<= (rand.val) $wumpus-chance)
-            (begin
-              (write-line "The Wumpus moves to a nearby cavern.")
-              (if (= $player (<- $wumpus (rand.choice (neighbours $wumpus))))
-                  (end-game
-                    "The Wumpus attacked you! You've been killed.")))))))
+(function shoot ()
+  (let (pos $player n (input-int "NO. OF ROOMS (1-5)" (.. 1 (++ 5))) dirs nil)
+    (dotimes (i n)
+      (push! (input-int "ROOM >" (.. $room-count)) dirs))
+    (dotimes (next-pos n)
+      (let (neighbours (neighbours pos))
+        (<- pos (if (in? next-pos neighbours) next-pos (rand.choice neighbours)))
+        (if (= pos $wumpus) (output "AHA! YOU GOT THE WUMPUS!" :win)
+            (= pos $player) (output "OUCH! ARROW GOT YOU!" :lose))))
+    (output "MISSED")
+    (move-wumpus)
+    (if (= (<- $arrow-count (-- $arrow-count)) 0)
+        (output "You have run out of arrows." :lose))))
 
-(function random-move ()
-  (let (next-room (rand.int $room-count))
-    (if (in? next-room (concat (list $player $wumpus) $bats $pits)) (random-move)
-        (<- $player next-room))))
+(function move-wumpus ()
+  (if (<= (rand.val) $wumpus-chance) (<- $wumpus (rand.choice (neighbours $wumpus))))
+  (if (= $player $wumpus) (output "TSK TSK TSK- WUMPUS GOT YOU!" :lose)))
 
 (function move (next-room)
   (if (= (<- $player next-room) $wumpus)
-      (end-game
-        "The Wumpus has eaten you!")
-      (in? $player $bats) 
-      (write-line
-        (str "Argh! A Giant Bat has carried you to room " (random-move) "."))
+      (begin
+        (output "...OOPS! BUMPED A WUMPUS!")
+        (move-wumpus))
+      (in? $player $bats)
+      (begin
+        (output "ZAP--SUPER BAT SNATCH! ELSEWHEREVILLE FOR YOU!")
+        (move (rand.int $room-count)))
       (in? $player $pits)
-      (end-game
-        "You have fallen down a pit!")))
-
-(function input ()
-  (catch (Error (f (e) (write-line (.to-s e)) (input)))
-    (write-bytes "> ")
-    (let ((cmd room) (split (read-line) " "))
-      (if (! (in? cmd '("w" "s"))) (raise Error "Unknown command")
-          (! (in? (<- room (int room)) (neighbours $player))) (raise Error "You cannot move or shoot there!")
-          (list (symbol cmd) room)))))
+      (begin
+        (end-game "YYYIIIIEEEE . . . FELL IN PIT"))))
 
 (function game-loop ()
   (let (neighbours (neighbours $player))
-    (write (list :room $player :neigbor-rooms neighbours :arrow-count $arrow-count))
-    (write-line "You can (w)alk or (s)hoot to rooms ")
-    (if (in? $wumpus neighbours) (write-line "You smell something nearby."))
-    (if (intersection $bats neighbours) (write-line "You hear a rustling."))
-    (if (intersection $pits neighbours) (write-line "You feel a cold wind blowing from a nearby cavern."))
-    (let ((cmd room) (input))
-      (if (== cmd 'w) (move room)
-          (== cmd 's) (shoot room)
+    (output (str "YOU ARE IN ROOM " $player))
+    (output (str "TUNNELS LEAD TO " neighbours))
+    (if (in? $wumpus neighbours) (output "I SMELL A WUMPUS."))
+    (if (intersection $bats neighbours) (output "BATS NEARBY."))
+    (if (intersection $pits neighbours) (output "I FEEL A DRAFT."))
+    (let (cmd (input "SHOOT OR MOVE (s-m) >" '("s" "m")))
+      (if (= cmd "m") (move (input-int "WHERE TO >" neighbours))
+          (= cmd "s") (shoot)
           (assert nil))
       (game-loop))))
 
@@ -82,4 +134,5 @@
         $wumpus ([] rooms 0)
         $bats (list ([] rooms 1) ([] rooms 2))
         $pits (list ([] rooms 3) ([] rooms 4)))
+    (output $instructions)
     (game-loop)))
