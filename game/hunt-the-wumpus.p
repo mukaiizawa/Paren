@@ -94,9 +94,9 @@ PIT   :  'I FEEL A DRAFT'
         (if (= pos $wumpus) (output "AHA! YOU GOT THE WUMPUS!" :win)
             (= pos $player) (output "OUCH! ARROW GOT YOU!" :lose))))
     (output "MISSED")
-    (move-wumpus)
     (if (= (<- $arrow-count (-- $arrow-count)) 0)
-        (output "You have run out of arrows." :lose))))
+        (output "YOU HAVE RUN OUT OF ARROWS." :lose))
+    (move-wumpus)))
 
 (function move-wumpus ()
   (if (<= (rand.val) $wumpus-chance) (<- $wumpus (rand.choice (neighbours $wumpus))))
@@ -113,7 +113,7 @@ PIT   :  'I FEEL A DRAFT'
         (move (rand.int $room-count)))
       (in? $player $pits)
       (begin
-        (end-game "YYYIIIIEEEE . . . FELL IN PIT"))))
+        (output "YYYIIIIEEEE . . . FELL IN PIT" :lose))))
 
 (function game-loop ()
   (let (neighbours (neighbours $player))
