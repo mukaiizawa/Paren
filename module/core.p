@@ -293,20 +293,20 @@
                expand-cdr (f (x acc)
                             (if x (expand-cdr (cdr x) (cons (expand (car x)) acc))
                                 (reverse! acc))))
-    (expand expr)))
+    (if (cons? expr) (cons (expand (car expr)) (expand-macro-all (cdr expr)))
+        expr)))
 
 (macro function (name args :rest body)
   ; Bind a symbol the specified name on an anonimous function whose parametes are args and whose body is body.
   ; The macro in the body is expanded.
   ; Error if name is already bound.
   ; Returns name.
-  (let (expand-body (f (expr) (if expr (cons (expand-macro-all (car expr)) (expand-body (cdr expr))))))
-    (with-gensyms (gname)
-      (list let (list gname (list quote name))
-            (list if (list bound? gname)
-                  (list 'raise 'ArgumentError (list 'str "function name '" gname "` already bound"))
-                  (list <- name (cons f (cons args (expand-body body)))))
-            gname))))
+  (with-gensyms (gname)
+    (list let (list gname (list quote name))
+          (list if (list bound? gname)
+                (list 'raise 'ArgumentError (list 'str "function name '" gname "` already bound"))
+                (list <- name (cons f (cons args (expand-macro-all body)))))
+          gname)))
 
 ;; fundamental function.
 
