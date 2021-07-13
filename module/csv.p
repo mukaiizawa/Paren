@@ -4,7 +4,7 @@
 
 (method CSVReader .get-quoted ()
   (.skip self)
-  (while true
+  (loop
     (if (!= (.next self) "\"") (.get self)
         (begin
           (.skip self)

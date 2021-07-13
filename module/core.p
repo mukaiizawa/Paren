@@ -89,16 +89,20 @@
                   cleanup-expr2
                   ...))
 
-(special-operator labels
-  ; Create a context for jumping with goto expressions.
-  ; When a goto is evaluated in the labels context, transfer control to the location of the specified expr that matches the specified keyword.
-  (labels expr1
-          expr2
-          ...))
+(special-operator loop
+  ; Create a loop context and iteratively evaluate the arguments in sequence.
+  ; Returns nil.
+  (loop expr1 expr2 ...))
 
-(special-operator goto
-  ; Jump to the specified label in the most recent labels context.
-  (goto label))
+(special-operator break
+  ; Exit the most recent loop context.
+  ; Returns nil.
+  (break))
+
+(special-operator continue
+  ; Go to the most recent loop context.
+  ; Returns nil.
+  (continue))
 
 (special-operator throw
   ; Throw an exception.
@@ -194,43 +198,22 @@
                       (car l))))
         (rec args))))
 
-(macro break ()
-  ; The break macro is expected evaluated in the iteration context like a for, while.
-  ; Jump to :break label which causes the inner-most loop to be terminated immediately when executed.
-  ; If you create new iteration macro, desirable to support it.
-  '(goto :break))
-
-(macro continue ()
-  ; The continue macro is expected evaluated in the iteration context like a for, while.
-  ; Jump to :continue label which will move at once to the next iteration without further progress through the loop body for the current iteration.
-  ; If you create new iteration macro, desirable to support it.
-  '(goto :continue))
-
-(macro for (binding test update :rest body)
-  ; The for macro creates a general-purpose iteration context and evaluates the specified body.
-  ; Returns nil.
-  (list let binding
-        (list labels
-              :start
-              (list if (list ! test) '(goto :break) (cons begin body))
-              :continue
-              (cons <- update)
-              '(goto :start)
-              :break)
-        nil))
-
 (macro while (test :rest body)
   ; The specified test is evaluated, and if the specified test is true, each of the specified body is evaluated.
   ; This repeats until the test becomes nil.
   ; Supports break, continue macro.
   ; Returns nil.
-  (list labels
-        :start
-        (list if (list ! test) '(goto :break) (cons begin body))
-        :continue
-        '(goto :start)
-        :break
-        nil))
+  (list loop (list if (list ! test) '(break) (cons begin body))))
+
+(macro for (binding test update :rest body)
+  ; The for macro creates a general-purpose iteration context and evaluates the specified body.
+  ; Returns nil.
+  (with-gensyms (gupdate?)
+    (list let (cons gupdate? (cons nil binding))
+          (list loop
+                (list if gupdate? (cons <- update) (list <- gupdate? true))
+                (list if (list ! test) '(break))
+                (cons begin body)))))
 
 (macro dolist ((i l) :rest body)
   ; Iterates over the elements of the specified list l, with index the specified i.
@@ -2117,7 +2100,7 @@
   ; If stream reached eof, returns nil.
   (with-memory-stream (out)
     (let (c nil)
-      (while true
+      (loop
         (if (= (<- c (.read-byte self)) -1) (return nil)
             (= c 0x0a) (break)
             (.write-byte out c))))))
@@ -2783,7 +2766,7 @@
   ; Enter repl(read eval print loop) mode.
   ; Executed when there is no command line argument when paren starts.
   (let ($G-expr nil)
-    (while true
+    (loop
       (catch (Error (f (e) (.print-stack-trace e)))
         (write-bytes ") ")
         (if (<- $G-expr (read)) (write (eval (expand-macro-all $G-expr)))

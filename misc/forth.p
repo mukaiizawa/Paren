@@ -168,7 +168,7 @@
       (raise ForthError "illegal syntax")))
 
 (function interpret ()
-  (while true
+  (loop
     (catch (ForthError (f (e) (write-line (.to-s e))))
       (forth-eval (forth-read)))))
 

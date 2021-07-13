@@ -72,7 +72,7 @@
 (method XMLReader .parse-comment ()
   (.skip self "-")
   (.skip self "-")
-  (while true
+  (loop
     (while (!= (.next self) "-")
       (.get self))
     (.skip self)

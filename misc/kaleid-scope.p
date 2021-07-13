@@ -11,7 +11,7 @@
   (write-bytes ch))
 
 (function! main (args)
-  (while true
+  (loop
     (let (x (rand.int (++ $width/2)) y (rand.int (++ $height/2)) ch (rand.choice '(" " "*")))
       (draw x y ch)
       (draw (- $width x) y ch)

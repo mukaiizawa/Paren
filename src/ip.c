@@ -98,8 +98,8 @@ static char *error_msg(enum error_msg em) {
     case expected_keyword: return "expected keyword";
     case expected_keyword_parameter: return "expected keyword parameter";
     case expected_keyword_parameter_value: return "expected keyword parameter value";
-    case expected_labels_context: return "expected labels context";
     case expected_list: return "expected list";
+    case expected_loop_context: return "expected loop context";
     case expected_mutable_sequence: return "expected mutable sequence";
     case expected_number: return "expected number";
     case expected_operator: return "expected operator";
@@ -199,25 +199,26 @@ static void exit1(void)
 
 #define FRAME_STACK_SIZE 10000
 #define FRAME_SIZE_MASK          0x00f
-#define   APPLY_FRAME            0x003
-#define   APPLY_BUILTIN_FRAME    0x013
+#define   APPLY_BUILTIN_FRAME    0x003
+#define   APPLY_FRAME            0x013
 #define   ASSERT_FRAME           0x023
-#define   BIND_HANDLER_FRAME     0x033
-#define   BIND_FRAME             0x043
+#define   BIND_FRAME             0x033
+#define   BIND_HANDLER_FRAME     0x043
 #define   BIND_PROPAGATION_FRAME 0x053
-#define   EVAL_FRAME             0x062
-#define   EVAL_ARGS_FRAME        0x074
-#define   EVAL_SEQUENTIAL_FRAME  0x083
-#define   GOTO_FRAME             0x092
-#define   HANDLERS_FRAME         0x0a3
-#define   IF_FRAME               0x0b3
-#define   LABELS_FRAME           0x0c3
-#define   FUNC_FRAME             0x0d4
+#define   BREAK_FRAME            0x062
+#define   CONTINUE_FRAME         0x072
+#define   EVAL_ARGS_FRAME        0x084
+#define   EVAL_FRAME             0x092
+#define   EVAL_SEQUENTIAL_FRAME  0x0a3
+#define   FUNC_FRAME             0x0b4
+#define   HANDLERS_FRAME         0x0c3
+#define   IF_FRAME               0x0d3
 #define   LET_FRAME              0x0e2
-#define   QUOTE_FRAME            0x0f3
-#define   RETURN_FRAME           0x102
-#define   THROW_FRAME            0x112
-#define   UNWIND_PROTECT_FRAME   0x123
+#define   LOOP_FRAME             0x0f3
+#define   QUOTE_FRAME            0x103
+#define   RETURN_FRAME           0x112
+#define   THROW_FRAME            0x122
+#define   UNWIND_PROTECT_FRAME   0x133
 
 #define fs_top() (sint_val(fs[fp]))
 #define fs_nth(i) (sint_val(fs[i]))
@@ -247,21 +248,22 @@ static object fs[FRAME_STACK_SIZE];
 static char *frame_name(int frame_type)
 {
   switch (frame_type) {
-    case APPLY_FRAME: return "APPLY_FRAME";
     case APPLY_BUILTIN_FRAME: return "APPLY_BUILTIN_FRAME";
+    case APPLY_FRAME: return "APPLY_FRAME";
     case ASSERT_FRAME: return "ASSERT_FRAME";
-    case BIND_HANDLER_FRAME: return "BIND_HANDLER_FRAME";
     case BIND_FRAME: return "BIND_FRAME";
+    case BIND_HANDLER_FRAME: return "BIND_HANDLER_FRAME";
     case BIND_PROPAGATION_FRAME: return "BIND_PROPAGATION_FRAME";
-    case EVAL_FRAME: return "EVAL_FRAME";
+    case BREAK_FRAME: return "BREAK_FRAME";
+    case CONTINUE_FRAME: return "CONTINUE_FRAME";
     case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
+    case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
-    case GOTO_FRAME: return "GOTO_FRAME";
+    case FUNC_FRAME: return "FUNC_FRAME";
     case HANDLERS_FRAME: return "HANDLERS_FRAME";
     case IF_FRAME: return "IF_FRAME";
-    case LABELS_FRAME: return "LABELS_FRAME";
-    case FUNC_FRAME: return "FUNC_FRAME";
     case LET_FRAME: return "LET_FRAME";
+    case LOOP_FRAME: return "LOOP_FRAME";
     case QUOTE_FRAME: return "QUOTE_FRAME";
     case RETURN_FRAME: return "RETURN_FRAME";
     case THROW_FRAME: return "THROW_FRAME";
@@ -594,39 +596,22 @@ static void pop_rewinding(void)
   }
 }
 
-static void pop_unwind_protect_frame(void)
-{
-  object body;
-  body = get_frame_var(fp, 0);
-  pop_frame();
-  gen_eval_sequential_frame(body);
-}
-
-static void pop_goto_frame(void)
+static void pop_break_continue_frame(int exit_p)
 {
   int i;
-  object o, label;
+  object o;
   i = fp;
-  label = reg[0];
-  while (fp > -1) {
+  while (fp != -1) {
     switch (fs_top()) {
-      case LABELS_FRAME:
-        o = get_frame_var(fp, 0);
-        while (o != object_nil) {
-          if (o->cons.car == label) {
-            gen_eval_sequential_frame(o->cons.cdr);
-            return;
-          }
-          o = o->cons.cdr;
-        }
-        ip_throw(ArgumentError, undeclared_keyword_param);
-        set_fp(i);
+      case LOOP_FRAME:
+        reg[0] = object_nil;
+        if (exit_p) pop_frame();
         return;
       case UNWIND_PROTECT_FRAME:
         o = get_frame_var(fp, 0);
         pop_frame();
-        gen0(GOTO_FRAME);
-        gen1(QUOTE_FRAME, label);
+        if (exit_p) gen(BREAK_FRAME);
+        else gen(CONTINUE_FRAME);
         gen_eval_sequential_frame(o);
         return;
       default:
@@ -634,9 +619,17 @@ static void pop_goto_frame(void)
         break;
     }
   }
-  ip_throw(StateError, expected_labels_context);
+  ip_throw(StateError, expected_loop_context);
   set_fp(i);
   return;
+}
+
+static void pop_unwind_protect_frame(void)
+{
+  object body;
+  body = get_frame_var(fp, 0);
+  pop_frame();
+  gen_eval_sequential_frame(body);
 }
 
 static void pop_eval_args_frame(void)
@@ -678,18 +671,18 @@ static void pop_if_frame(void)
 
 static void pop_return_frame(void)
 {
-  object args;
+  object o;
   while (fp != -1) {
     switch (fs_top()) {
       case FUNC_FRAME:
         pop_func_frame();
         return;
       case UNWIND_PROTECT_FRAME:
-        args = get_frame_var(fp, 0);
+        o = get_frame_var(fp, 0);
         pop_frame();
         gen0(RETURN_FRAME);
         gen1(QUOTE_FRAME, reg[0]);
-        gen_eval_sequential_frame(args);
+        gen_eval_sequential_frame(o);
         return;
       default:
         pop_rewinding();
@@ -704,7 +697,7 @@ static object get_call_stack(void);
 static void pop_throw_frame(void)
 {
   int i, j;
-  object cls_sym, handler, handlers, body;
+  object o, cls_sym, handler, handlers;
   i = fp;
   pop_frame();
   if (!pos_is_a_p(reg[0], object_Exception)) {
@@ -717,14 +710,14 @@ static void pop_throw_frame(void)
   }
   if (map_get(reg[0], object_stack_trace) == object_nil)
     map_put(reg[0], object_stack_trace, get_call_stack());
-  while (fp > -1) {
+  while (fp != -1) {
     switch (fs_top()) {
       case UNWIND_PROTECT_FRAME:
-        body = get_frame_var(fp, 0);
+        o = get_frame_var(fp, 0);
         pop_frame();
         gen0(THROW_FRAME);
         gen1(QUOTE_FRAME, reg[0]);
-        gen_eval_sequential_frame(body);
+        gen_eval_sequential_frame(o);
         return;
       case HANDLERS_FRAME:
         handlers = get_frame_var(fp, 0);
@@ -1120,20 +1113,24 @@ DEFSP(unwind_2d_protect)
   return TRUE;
 }
 
-DEFSP(labels)
+DEFSP(break)
 {
-  gen1(LABELS_FRAME, argv);
-  gen_eval_sequential_frame(argv);
+  if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
+  gen0(BREAK_FRAME);
   return TRUE;
 }
 
-DEFSP(goto)
+DEFSP(continue)
 {
-  object o;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_keyword(argv->cons.car, &o)) return FALSE;
-  gen0(GOTO_FRAME);
-  reg[0] = o;
+  if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
+  gen0(CONTINUE_FRAME);
+  return TRUE;
+}
+
+DEFSP(loop)
+{
+  gen1(LOOP_FRAME, argv);
+  gen_eval_sequential_frame(argv);
   return TRUE;
 }
 
@@ -1269,21 +1266,22 @@ static void ip_main(object args)
     if (ip_trap_code != TRAP_NONE) trap();
     if (cycle % IP_POLLING_INTERVAL == 0) gc_chance();
     switch (fs_top()) {
-      case APPLY_FRAME: pop_apply_frame(); break;
       case APPLY_BUILTIN_FRAME: pop_apply_builtin_frame(); break;
+      case APPLY_FRAME: pop_apply_frame(); break;
       case ASSERT_FRAME: pop_assert_frame(); break;
       case BIND_FRAME: pop_bind_frame(); break;
       case BIND_HANDLER_FRAME: pop_bind_handler_frame(); break;
       case BIND_PROPAGATION_FRAME: pop_bind_propagation_frame(); break;
-      case EVAL_FRAME: pop_eval_frame(); break;
+      case BREAK_FRAME: pop_break_continue_frame(TRUE); break;
+      case CONTINUE_FRAME: pop_break_continue_frame(FALSE); break;
       case EVAL_ARGS_FRAME: pop_eval_args_frame(); break;
+      case EVAL_FRAME: pop_eval_frame(); break;
       case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
-      case GOTO_FRAME: pop_goto_frame(); break;
+      case FUNC_FRAME: pop_func_frame(); break;
       case HANDLERS_FRAME: pop_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
-      case LABELS_FRAME: pop_frame(); break;
-      case FUNC_FRAME: pop_func_frame(); break;
       case LET_FRAME: pop_let_frame(); break;
+      case LOOP_FRAME: gen_eval_sequential_frame(get_frame_var(fp, 0)); break;
       case QUOTE_FRAME: reg[0] = get_frame_var(fp, 0); pop_frame(); break;
       case RETURN_FRAME: pop_return_frame(); break;
       case THROW_FRAME: pop_throw_frame(); break;

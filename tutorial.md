@@ -719,12 +719,21 @@ Parenでは`nil`を偽として扱い、それ以外の値は真と見做され�
 # 反復
 Parenには反復のための演算子が複数用意されている。また、必要であればマクロで反復のための演算子を追加することもできる。
 
+- loop
 - while
 - for
 - dolist
 - dotimes
 
-ただし、一般的には再帰を用いる方が望ましい。
+## loop
+`loop`は引数を順に繰り返し評価スペシャルオペレータである。
+
+    (loop expr ...)
+    expr -- 評価する式
+
+スペシャルオペレータ`break`を利用することにより繰り返し処理を抜ける。
+
+スペシャルオペレーター`continue`を利用すると、繰り返しの先頭にジャンプする。
 
 ## while
 `while`は条件を満たす間反復するマクロである。
@@ -786,7 +795,7 @@ forは次の手順で評価される。
 - f
 - quote
 - if
-- labels/goto
+- loop/break/continue
 - throw/catch
 - return
 - unwind-protect
@@ -841,10 +850,8 @@ forは次の手順で評価される。
 ## if
 `if`は条件分岐の章で述べた。
 
-## labels/goto
-`labels`及び`goto`はセットで使われるジャンプ機構である。
-
-直接使うような演算子ではないため、この文書では説明しない。
+## loop/break/continue
+反復の章で述べた。
 
 ## throw/catch
 これらのスペシャルオペレーターは例外処理の章で述べる。

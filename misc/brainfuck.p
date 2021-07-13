@@ -14,7 +14,7 @@
             (= op "[")
             (if (!= ([] cells cp) 0) (push! (-- pc) cs)
                 (let (depth 0)
-                  (while true
+                  (loop
                     (<- op (chr ([] code pc))
                         pc (++ pc))
                     (if (= op "[") (<- depth (++ depth))
