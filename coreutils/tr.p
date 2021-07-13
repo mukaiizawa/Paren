@@ -21,10 +21,10 @@
             dst (if dst (expand-hyphen dst) "")
             table (dict))
     (dotimes (i (len src))
-      ({} table ([] src i) (if (< i (len dst)) ([] dst i) "")))
+      ([] table ([] src i) (if (< i (len dst)) ([] dst i) "")))
     (let (ch nil)
       (while (<- ch (read-char))
-        (write-bytes (|| ({} table ch) ch))))))
+        (write-bytes (|| ([] table ch) ch))))))
 
 (function! main (args)
   (let ((src :opt dst) args)

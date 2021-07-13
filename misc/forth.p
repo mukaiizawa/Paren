@@ -79,10 +79,10 @@
   (number? x))
 
 (function forth-builtin? (x)
-  (&& (symbol? x) (function? ({} $dictionary x))))
+  (&& (symbol? x) (function? ([] $dictionary x))))
 
 (function forth-function? (x)
-  (&& (symbol? x) (list? ({} $dictionary x))))
+  (&& (symbol? x) (list? ([] $dictionary x))))
 
 (function forth-definition? (x)
   (&& (list? x) (== (car x) :definition)))
@@ -94,16 +94,16 @@
   (if (nil? x) $forth-nil $forth-true))
 
 (function forth-apply-builtin (x)
-  (apply ({} $dictionary x) '()))
+  (apply ([] $dictionary x) '()))
 
 (function forth-apply (x)
-  (foreach forth-eval ({} $dictionary x)))
+  (foreach forth-eval ([] $dictionary x)))
 
 (function forth-define (x)
   (let ((key (name :rest body)) x)
     (assert (== key :definition))
     (if (! (symbol? name)) (raise ForthError "illegal function name") 
-        ({} $dictionary name body))))
+        ([] $dictionary name body))))
 
 (function forth-if (x)
   (let ((key then :opt else) x)
@@ -123,7 +123,7 @@
 ; Builtin-functions.
 
 (macro forth-builtin (name :rest body)
-  `({} $dictionary ',name (f () ,@body)))
+  `([] $dictionary ',name (f () ,@body)))
 
 (macro forth-binary-builtin (name :opt fn)
   (with-gensyms (x1 x2)

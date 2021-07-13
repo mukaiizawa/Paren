@@ -1370,35 +1370,10 @@
   ; Returns a list of keys contained in this dictionary.
   (assert (let (d (dict))
             (&& (nil? (keys d))
-                (= ({} d :foo 'foo) 'foo)
+                (= ([] d :foo 'foo) 'foo)
                 (= (keys d) '(:foo))))))
 
-(builtin-function {} (d key :opt val)
-  ; Returns the value associated key.
-  ; If key is not associated, returns nil.
-  ; If val is specified, associate key with val and returns val.
-  (assert (let (d (dict))
-            (&& (nil? ({} d :foo))
-                (= ({} d :foo 'foo) 'foo)
-                (= ({} d :foo) 'foo)))))
-
 ;; sequence
-
-(builtin-function [] (seq i :opt v)
-  ; Returns the i-th element of the sequence x.
-  ; If v is specified, update the i-th element of mutable sequence seq to v, returns v.
-  ; If the argument seq is a list and the index i is is out of range, returns nil.
-  ; Error if the argument seq is not a list and the index i is out of range.
-  ; Error if seq is an immutable sequence and v is specified.
-  (assert (= ([] '(0 1 2) 0) 0))
-  (assert (= ([] (array 1) 0) nil))
-  (assert (= ([] "foo" 0) "f"))
-  (assert (= ([] (bytes 1) 0) 0))
-  (assert (let (a (array 1) b (bytes 1))
-            (&& ([] a 0 true)
-                ([] a 0)
-                ([] b 0 0xff)
-                (= ([] b 0) 0xff)))))
 
 (builtin-function concat (:rest args)
   ; Returns a sequence of concatenated arguments.
@@ -1465,6 +1440,22 @@
 
 ;; collection
 
+(builtin-function [] (collection key :opt val)
+  ; Returns the value corresponding to key of the collection.
+  ; If val is specified, update the value corresponding to key.
+  ; If the argument collection is a list and the index key is is out of range, returns nil.
+  ; Error if the argument collection is not a list and the index key is out of range.
+  ; Error if collection is an immutable collection and val is specified.
+  (assert (= ([] '(0 1 2) 0) 0))
+  (assert (= ([] (array 1) 0) nil))
+  (assert (= ([] "foo" 0) "f"))
+  (assert (= ([] (bytes 1) 0) 0))
+  (assert (let (a (array 1) b (bytes 1))
+            (&& ([] a 0 true)
+                ([] a 0)
+                ([] b 0 0xff)
+                (= ([] b 0) 0xff)))))
+
 (builtin-function in? (x collection)
   ; Returns whether element x exists in the collection.
   (assert (in? 1 '(1 2 3)))
@@ -1475,7 +1466,7 @@
   (assert (! (in? "foo" "xbarx")))
   (assert (in? nil (array 1)))
   (assert (! (in? true (array 1))))
-  (assert (let (d (dict)) ({} d nil nil) (in? nil d)))
+  (assert (let (d (dict)) ([] d nil nil) (in? nil d)))
   (assert (! (in? nil (dict)))))
 
 (builtin-function len (x)
@@ -1483,7 +1474,7 @@
   (assert (= (len nil) 0))
   (assert (= (len '(1)) 1))
   (assert (= (len (array 1)) 1))
-  (assert (= (len (let (d (dict)) ({} d :x 1) d)) 1))
+  (assert (= (len (let (d (dict)) ([] d :x 1) d)) 1))
   (assert (= (len "αβγ") 3)))
 
 (function empty? (x)
@@ -1641,8 +1632,8 @@
 
 (function object? (x)
   ; Returns whether x is an object in the Paren object system.
-  ; Same as `(&& (dict? x) ({} x :class))`.
-  (&& (dict? x) ({} x :class)))
+  ; Same as `(&& (dict? x) ([] x :class))`.
+  (&& (dict? x) ([] x :class)))
 
 (builtin-function is-a? (o cls)
   ; Returns whether the specified object o regarded as the specified class cls's instance.
@@ -1667,10 +1658,10 @@
       (list begin
             (list if (list ! (list bound? (list quote getter)))
                   (list function getter (list receiver)
-                        (list {} receiver key)))
+                        (list [] receiver key)))
             (list if (list ! (list bound? (list quote setter)))
                   (list function setter (list receiver val)
-                        (list {} receiver key val)
+                        (list [] receiver key val)
                         receiver))))))
 
 (macro make-method-dispatcher (method-sym)
@@ -1678,7 +1669,7 @@
     (with-gensyms (receiver args)
       (list function method-sym (list receiver :rest args)
             (list apply
-                  (list find-method (list {} receiver :class) (list quote method-sym))
+                  (list find-method (list [] receiver :class) (list quote method-sym))
                   (list cons receiver args))))))
 
 (macro class (cls-sym (:opt super :rest features) :rest fields)
@@ -1702,7 +1693,7 @@
                 (list 'raise (list str "instance variables " gfields " must be symbol")))
           (list <- cls-sym '(dict))
           (cons begin
-                (map (f (k v) (list {} cls-sym k v))
+                (map (f (k v) (list [] cls-sym k v))
                      '(:class :symbol :super :features :fields)
                      (list ''Class
                            gcls-sym
@@ -1734,11 +1725,8 @@
           (list function! sym (list :rest gargs)
                 (list let (list garg (list car gargs))
                       (list if (list object? garg)
-                            (list apply (list find-method (list {} garg :class) (list quote method-sym)) gargs)
+                            (list apply (list find-method (list [] garg :class) (list quote method-sym)) gargs)
                             (list apply gsym gargs)))))))
-
-(overload .eq? =)
-(overload .hash hash)
 
 ;;; fundamental class.
 
@@ -1783,11 +1771,11 @@
   ; If .init method has argument, must invoke after create an instance.
   ; Otherwise automatically invoke .init method.
   (let (o (dict))
-    (for (cls self) cls (cls (find-class ({} cls :super)))
-      (foreach (f (x) ({} o (keyword x) nil))
-               ({} cls :fields)))
-    ({} o :class ({} self :symbol))
-    (if (= (procparams (find-method ({} o :class) '.init)) '(self)) (.init o)
+    (for (cls self) cls (cls (find-class ([] cls :super)))
+      (foreach (f (x) ([] o (keyword x) nil))
+               ([] cls :fields)))
+    ([] o :class ([] self :symbol))
+    (if (= (procparams (find-method ([] o :class) '.init)) '(self)) (.init o)
         o)))
 
 (method Class .symbol ()
@@ -2264,7 +2252,7 @@
         (.write-bytes self "#{ ")
         (dolist (key (keys x))
           (.write self key :end " ")
-          (.write self ({} x key) :end " "))
+          (.write self ([] x key) :end " "))
         (.write-bytes self "}"))
       (bytes? x)
       (begin
@@ -2671,7 +2659,7 @@
         (== type :backquote) (list 'quasiquote (.parse (.scan self)))
         (== type :unquote) (list 'unquote (.parse (.scan self)))
         (== type :unquote-splicing) (list 'unquote-splicing (.parse (.scan self)))
-        (== type :read-macro) (apply ({} $read-table (&token self)) (list self))
+        (== type :read-macro) (apply ([] $read-table (&token self)) (list self))
         (raise SyntaxError))))
 
 (macro unquote (expr)
@@ -2709,7 +2697,7 @@
   ; Returns nil.
   (with-gensyms (g)
     (list let (list g (cons f (cons params body)))
-          (list {} $read-table (list quote next) g))))
+          (list [] $read-table (list quote next) g))))
 
 (function read-byte ()
   ; Same as `(.read-byte (dynamic $in))`.
@@ -2873,7 +2861,7 @@
   (if (!= (.read reader) '{) (raise SyntaxError "missing space in dictionary literal")
       (let ($G-d (dict) $G-k nil)
         (while (!= (<- $G-k (.read reader)) '})
-          ({} $G-d $G-k (eval (.read reader))))
+          ([] $G-d $G-k (eval (.read reader))))
         $G-d)))
 
 (reader-macro p (reader)

@@ -118,7 +118,7 @@
                   n (.get op "n") size 10 seed nil)
     (if (nil? args) (if n (<- size (int n)))
         (begin
-          (if (nil? (<- seed ({} $seeds (symbol (car args)))))
+          (if (nil? (<- seed ([] $seeds (symbol (car args)))))
               (raise ArgumentError "unknown seed"))
           (<- size (int (sqrt (len seed))))))
     (next-generation (first-generation (matrix (list size size)) seed)

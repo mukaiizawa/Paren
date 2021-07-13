@@ -1289,21 +1289,6 @@ DEFUN(keys)
   return TRUE;
 }
 
-DEFUN(_7b__7d_)
-{
-  object o, key;
-  if (!bi_argc_range(argc, 2, 3)) return FALSE;
-  if (!bi_dict(argv->cons.car, &o)) return FALSE;
-  key = (argv = argv->cons.cdr)->cons.car;
-  if (argc == 2) {
-    if ((*result = map_get(o, key)) == NULL) *result = object_nil;
-  } else {
-    *result = argv->cons.cdr->cons.car;
-    map_put(o, key, *result);
-  }
-  return TRUE;
-}
-
 // sequence.
 
 static int cons_slice(object o, int start, int stop, object *result)
@@ -1440,50 +1425,90 @@ DEFUN(concat)
   }
 }
 
-DEFUN(_5b__5d_)
+// collection.
+
+static int cons_access(int argc, object argv, object o, object *result)
+{
+  int i;
+  if (!bi_cpint(argv->cons.car, &i)) return FALSE;
+  while (i-- > 0 && o != object_nil) o = o->cons.cdr;
+  if (argc == 2) {
+    if (o == object_nil) *result = o;
+    else *result = o->cons.car;
+  } else {
+    if (o == object_nil) return ip_throw(IndexError, index_out_of_range);
+    *result = argv->cons.cdr->cons.car;
+    o->cons.car = *result;
+  }
+  return TRUE;
+}
+
+static int string_access(int argc, object argv, object o, object *result)
+{
+  int i;
+  if (!bi_cpint(argv->cons.car, &i)) return FALSE;
+  if (argc == 2) return str_slice(o, i, i + 1, result);
+  return ip_throw(ArgumentError, expected_mutable_sequence);
+}
+
+static int bytes_access(int argc, object argv, object o, object *result)
 {
   int i, byte;
+  if (!bi_cpint(argv->cons.car, &i)) return FALSE;
+  if (!bi_range(0, i, o->mem.size - 1)) return FALSE;
+  if (argc == 2) *result = sint(LC(o->mem.elt + i));
+  else {
+    if (!bi_cbyte((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
+    SC(o->mem.elt + i, byte);
+  }
+  return TRUE;
+}
+
+static int array_access(int argc, object argv, object o, object *result)
+{
+  int i;
+  if (!bi_cpint(argv->cons.car, &i)) return FALSE;
+  if (!bi_range(0, i, o->array.size - 1)) return FALSE;
+  if (argc == 2) *result = o->array.elt[i];
+  else *result = o->array.elt[i] = argv->cons.cdr->cons.car;
+  return TRUE;
+}
+
+static int dict_access(int argc, object argv, object o, object *result)
+{
+  object key;
+  key = argv->cons.car;
+  if (argc == 2) {
+    if ((*result = map_get(o, key)) == NULL) *result = object_nil;
+  } else {
+    *result = argv->cons.cdr->cons.car;
+    map_put(o, key, *result);
+  }
+  return TRUE;
+}
+
+DEFUN(_5b__5d_)
+{
   object o;
   if (!bi_argc_range(argc, 2, 3)) return FALSE;
-  if (!bi_sequence(argv->cons.car, &o)) return FALSE;
-  if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
+  if (!bi_collection(argv->cons.car, &o)) return FALSE;
   switch (object_type(o)) {
     case SYMBOL:
     case CONS:
-      while (i-- > 0 && o != object_nil) o = o->cons.cdr;
-      if (argc == 2) {
-        if (o == object_nil) *result = o;
-        else *result = o->cons.car;
-      } else {
-        if (o == object_nil)
-          return ip_throw(IndexError, index_out_of_range);
-        *result = argv->cons.cdr->cons.car;
-        o->cons.car = *result;
-      }
-      return TRUE;
+      return cons_access(argc, argv->cons.cdr, o, result);
     case STRING:
-      if (argc == 2) return str_slice(o, i, i + 1, result);
-      return ip_throw(ArgumentError, expected_mutable_sequence);
+      return string_access(argc, argv->cons.cdr, o, result);
     case BYTES:
-      if (!bi_range(0, i, o->mem.size - 1)) return FALSE;
-      if (argc == 2) *result = sint(LC(o->mem.elt + i));
-      else {
-        if (!bi_cbyte((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
-        SC(o->mem.elt + i, byte);
-      }
-      return TRUE;
+      return bytes_access(argc, argv->cons.cdr, o, result);
     case ARRAY:
-      if (!bi_range(0, i, o->array.size - 1)) return FALSE;
-      if (argc == 2) *result = o->array.elt[i];
-      else *result = o->array.elt[i] = argv->cons.cdr->cons.car;
-      return TRUE;
+      return array_access(argc, argv->cons.cdr, o, result);
+    case DICT:
+      return dict_access(argc, argv->cons.cdr, o, result);
     default:
       xassert(FALSE);
       return FALSE;
   }
 }
-
-// collection.
 
 int cons_in_p(object o, object p, object *result)
 {
