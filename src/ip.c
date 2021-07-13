@@ -462,7 +462,8 @@ static void pop_apply_builtin_frame(void)
   pop_frame();
   if ((*function)(list_len(args), args, &(reg[0]))) return;
   if (ip_trap_code == TRAP_NONE) ip_throw(Error, builtin_failed);
-  gen2(FUNC_FRAME, reg[1], gc_new_cons(f->builtin.name, args));    // for stack trace
+  // trace
+  gen2(FUNC_FRAME, reg[1], gc_new_cons(f->builtin.name, args));
 }
 
 static void pop_assert_frame(void)
@@ -515,7 +516,8 @@ static int eval_symbol(object *result)
   object o;
   o = *result;
   if ((*result = map_get_propagation(reg[1], *result)) == NULL) {
-    gen2(FUNC_FRAME, reg[1], o);    // for stack trace
+    // trace
+    gen2(FUNC_FRAME, reg[1], o);
     return ip_throw(StateError, unbound_symbol);
   }
   return TRUE;
@@ -540,7 +542,8 @@ static void pop_eval_frame(void)
         case SPECIAL:
           special = operator->builtin.u.special;
           if ((*special)(list_len(args), args)) return;
-          gen2(FUNC_FRAME, reg[1], gc_new_cons(operator->builtin.name, args));    // for stack trace
+          // tarace
+          gen2(FUNC_FRAME, reg[1], gc_new_cons(operator->builtin.name, args));
           return;
         case BUILTINFUNC:
           gen1(APPLY_BUILTIN_FRAME, operator);
@@ -557,6 +560,8 @@ static void pop_eval_frame(void)
           return;
         default:
           ip_throw(StateError, expected_operator);
+          // trace
+          gen2(FUNC_FRAME, reg[1], reg[0]);
           return;
       }
       break;
