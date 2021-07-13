@@ -123,14 +123,14 @@
 (function solved? ()
   (= $covered-count $mine-count))
 
-(function loop ()
+(function step ()
   (show)
   (if (solved?) (write-line "win")
       (let ((cmd p) (input))
         (if (= cmd :sweep) (sweep p)
             (= cmd :mark) (mark p)
             (assert nil))
-        (loop))))
+        (step))))
 
 (function init ()
   (let (fill-mine (f (n)
@@ -147,4 +147,4 @@
 
 (function! main (args)
   (init)
-  (loop))
+  (step))

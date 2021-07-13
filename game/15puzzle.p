@@ -41,10 +41,10 @@
     (domatrix (q board)
       (if (!= (.at board q) (<- i (++ i))) (return true)))))
 
-(function loop (board p)
+(function step (board p)
   (show board p)
   (when (in-game? board)
-    (apply loop (move board p (input)))))
+    (apply step (move board p (input)))))
 
 (function init (n)
   (let (i 0 n (if (> n 0) n 4) board (matrix (list n n)) p (list (-- n) (-- n)))
@@ -56,4 +56,4 @@
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "n:") args))
-    (apply loop (init (int (.get op "n"))))))
+    (apply step (init (int (.get op "n"))))))
