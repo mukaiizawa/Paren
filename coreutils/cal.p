@@ -12,7 +12,7 @@
     (dotimes (i (-- (* dw 3))) (write-bytes " "))
     (dotimes (i (.monthlen dt))
       (if (!= dw 0) (write-bytes " "))
-      (write-bytes (format "%-2d" (++ i)))
+      (write-bytes (format "%2d" (++ i)))
       (if (= (<- dw (% (++ dw) 7)) 0)
           (write-line)))))
 

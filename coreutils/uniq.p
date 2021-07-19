@@ -13,7 +13,7 @@
                           (when (|| (&& (! uniq?) (! duplicate?))
                                     (&& uniq? (= c 1))
                                     (&& duplicate? (!= c 1)))
-                            (if count? (write-bytes (format "%-7d " count)))
+                            (if count? (write-bytes (format "%7d " count)))
                             (write-line line))))
     (when prev
       (dolist (line (collect read-line))

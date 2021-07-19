@@ -992,6 +992,10 @@
   (assert (= (log (pow 2 10)) (* 10 (log 2))))
   (assert (= (log 10 100) (/ (log 100) (log 10)))))
 
+(builtin-function pow (x y)
+  ; Returns the value of x raised to the power y.
+  (assert (= (// (pow 2 10)) 1024)))
+
 (builtin-function sqrt (x)
   ; Returns the rounded positive square root of a value.
   (assert (= (sqrt (pow 25 2)) 25)))
@@ -1192,61 +1196,67 @@
 
 (function format (fmt :rest args)
   ; Returns formatted string whitch the string in the same way as C `sprintf`.
-  ;     %[FLAG][WIDTH]CONV
-  ;         FLAG -- The character % is followed by zero or more of the following flags
+  ;     %[FLAG...][WIDTH][.[PRECISION]]CONV
+  ;         FLAG -- an character, which modify the meaning of the conversion specification.
   ;             + -- always print a sign for numeric values
   ;             - -- pad with spaces on the right rather than the left (left-justify the field)
   ;             <space> -- leave a space for elided sign in numbers
   ;             0 -- pad with leading zeros rather than spaces
-  ;         WIDTH -- An optional decimal digit string (with nonzero first digit) specifying a minimum field width
-  ;         CONV -- A character that specifies the type of conversion
-  ;             v -- readable format
-  ;             b -- base 2
-  ;             o -- base 8
-  ;             d -- base 10
-  ;             x -- base 16
-  ;             c -- the character represented by the corresponding Unicode code point
-  ;             s -- string
+  ;         WIDTH -- an unsigned integer, which gives the minimum field width.
+  ;         PRECISION -- an unsigned integer, which modifies the field width.
+  ;             d, o, x -- gives the minimum number of digits.
+  ;             e, f, g -- gives the number of digits to output after the radix.
+  ;             v, s -- gives the maximum number of bytes to be printed from a string in the s conversion specifiers.
+  ;         CONV -- the type of conversion
+  ;             v -- converts any argument to readable format.
+  ;             b -- converts an unsigned integers to unsigned binary format.
+  ;             o -- converts an unsigned integers to unsigned octal format.
+  ;             d -- converts a number to integer format.
+  ;             x -- converts an unsigned integers to unsigned hexadecimal format.
+  ;             f -- converts float to decimal notation.
+  ;             c -- converts an unsigned integer to a character represented by the corresponding Unicode code point.
+  ;             s -- converts bytes-like object to string.
+  ;             % -- print a '%' character; no argument is converted.
   (with-memory-stream ($out)
     (with-memory-stream ($in fmt)
-      (let (rd (.new AheadReader) flag nil width nil conv nil val nil
-               conv->radix (f (conv)
-                             (if (= conv "b") 2
-                                 (= conv "o") 8
-                                 (= conv "d") 10
-                                 (= conv "x") 16
-                                 (assert nil)))
-               padding-left? (f () (&& flag (in? flag "-0")))
-               write-padding (f (ch)
-                               (dotimes (i (- width (wcwidth val)))
-                                 (write-bytes ch)))
-               convert (f (flag conv arg)
-                         (with-memory-stream ($out)
-                           (if (= conv "v") (write arg :end "")
-                               (= conv "c") (write-bytes (chr arg))
-                               (= conv "s") (write-bytes arg)
-                               (in? conv "bodx")
+      (let (rd (.new AheadReader)
+               write-times (f (ch n) (dotimes (_ n) (write-bytes ch)))
+               substr (f (x n) (if (|| (nil? n) (<= n (len x))) x (slice x n)))
+               format1 (f (flags width sign val)
+                         (let (padding-width (- width (wcwidth val) (wcwidth sign)))
+                           (if (in? "-" flags)
                                (begin
-                                 (if (> arg 0)
-                                     (if (= flag "+") (write-bytes "+")
-                                         (= flag " ") (write-bytes " ")))
-                                 (.write-int $out arg :radix (conv->radix conv)))
-                               (raise ArgumentError (str "unexpected conversion specifier " conv))))))
+                                 (write-bytes sign) (write-bytes val) (write-times " " padding-width))
+                               (in? "0" flags)
+                               (begin
+                                 (write-bytes sign) (write-times "0" padding-width) (write-bytes val))
+                               (begin
+                                 (write-times " " padding-width) (write-bytes sign) (write-bytes val))))))
         (while (.next rd)
           (if (!= (.next rd) "%") (write-bytes (.skip rd))
               (begin
                 (.skip rd)
                 (if (= (.next rd) "%") (write-bytes (.skip rd))
                     (nil? args) (raise ArgumentError "too few arguments")
-                    (begin
-                      (<- flag (if (in? (.next rd) "+- 0") (.skip rd))
-                          width (if (digit? (.next rd)) (.skip-uint rd) 0)
-                          conv (.skip rd)
-                          val (convert flag conv (car args))
-                          args (cdr args))
-                      (if (padding-left?) (write-padding (if (= flag "0") "0" " ")))
-                      (write-bytes val)
-                      (if (! (padding-left?)) (write-padding " ")))))))))))
+                    (let (flags (collect (f () (if (in? (.next rd) '("+" "-" " " "0")) (.skip rd))))
+                                width (if (digit? (.next rd)) (.skip-uint rd) 0)
+                                precision (if (= (.next rd) ".") (begin (.skip rd) (if (digit? (.next rd)) (.skip-uint rd) 0)))
+                                conv (.skip rd)
+                                x (car args))
+                      (if (= conv "s") (format1 flags width "" (substr x precision))
+                          (= conv "v") (format1 flags width "" (substr (with-memory-stream ($out) (write x :end "")) precision))
+                          (= conv "c") (format1 flags width "" (chr x))
+                          (in? conv '("b" "o" "d" "x" "f" "e" "g"))
+                          (let (sign (if (< x 0) (begin (<- x (- x)) "-")
+                                         (in? "+" flags) "+"
+                                         (in? " " flags) " "
+                                         "")
+                                     val (with-memory-stream ($out)
+                                           (if (in? conv '("e" "f" "g")) (.write-float $out x :precision precision :style (keyword conv))
+                                               (.write-int $out x :radix (assoc '("b" 2 "o" 8 "d" 10 "x" 16) conv) :padding precision))))
+                            (format1 flags width sign val))
+                          (raise ArgumentError (str "unexpected conversion specifier " conv)))))
+                (<- args (cdr args)))))))))
 
 ;; bytes & bytes-like.
 
@@ -2143,12 +2153,69 @@
     (write1 n (-- padding)))
   n)
 
+(method Stream .write-float (x :key style precision)
+  ; Write float.
+  ; Returns x.
+  (let (exponent 0 fraction x precision (|| precision 6) fcount 0 fmax (int (pow 10 precision))
+                 write-fraction1 (f ()
+                                   (<- fraction (* fraction 10))
+                                   (.write-int self (// fraction fmax))
+                                   (<- fraction (% fraction fmax)
+                                       fcount (++ fcount)))
+                 write-fraction (f (remove-zero?)
+                                  (while (< fcount precision)
+                                    (if (&& remove-zero? (= fraction 0)) (break)
+                                        (write-fraction1))))
+                 style-f (f (:opt remove-zero?)
+                           (if (>= exponent 0)
+                               (begin
+                                 (dotimes (_ (++ exponent))
+                                   (write-fraction1))
+                                 (.write-bytes self "."))
+                               (begin
+                                 (.write-bytes self "0.")
+                                 (dotimes (_ (-- (- exponent)))
+                                   (.write-bytes self "0"))))
+                           (if (>= exponent -1) (write-fraction1))
+                           (write-fraction remove-zero?))
+                 style-e (f (:opt remove-zero?)
+                           (write-fraction1)
+                           (.write-bytes self ".")
+                           (write-fraction1)
+                           (write-fraction remove-zero?)
+                           (if (!= exponent 0)
+                               (begin
+                                 (.write-bytes self "e")
+                                 (.write-int self exponent :padding 2)))))
+    (if (= x 0.0) (.write-bytes self "0.0")
+        (begin
+          (when (< x 0.0)
+            (.write-byte self 0x2d) (<- x (- x)))
+          (if (>= x 10.0)
+              (while (>= x 10.0)
+                (<- x (/ x 10.0) exponent (++ exponent)))
+              (while (< x 1.0)
+                (<- x (* x 10.0) exponent (-- exponent))))
+          (<- fraction (int (+ (/ (* x fmax) 10) 0.5)))
+          (if (>= fraction fmax)
+              (<- fraction (// fraction 10) exponent (++ exponent)))
+          (if (== style :f) (style-f)
+              (== style :e) (style-e)
+              (|| (nil? style) (== style :g))
+              (if (< -4 exponent 6) (style-f true)
+                  (style-e true))
+              (raise ArgumentError "invalid style"))))
+    x))
+
 (method Stream .write (x :key start end)
   ; Write the specified x as a readable format.
   ; Returns x.
   (if start (.write-bytes self start))
-  (if (nil? x)
-      (.write-bytes self :nil)
+  (if (nil? x) (.write-bytes self :nil)
+      (builtin? x) (.write-bytes self (builtin-name x))
+      (symbol? x) (.write-bytes self x)
+      (int? x) (.write-int self x)
+      (number? x) (.write-float self x)
       (cons? x)
       (let (ope (car x))
         (if (&& (== ope 'quote) (nil? (cddr x)))
@@ -2168,8 +2235,6 @@
               (.write self (car x) :end "")
               (dolist (x (cdr x)) (.write self x :start " " :end ""))
               (.write-byte self 0x29))))
-      (builtin? x)
-      (.write-bytes self (builtin-name x))
       (string? x)
       (begin
         (.write-byte self 0x22)
@@ -2186,50 +2251,10 @@
               (= c "\"") (.write-bytes self "\\\"")
               (.write-bytes self c)))
         (.write-byte self 0x22))
-      (symbol? x)
-      (.write-bytes self x)
       (keyword? x)
       (begin
         (.write-byte self 0x3a)
         (.write-bytes self x))
-      (number? x)
-      (if (int? x) (.write-int self x)
-          (= x 0.0) (.write-byte self 0x30)
-          (let (mant x exp 8)
-            (let (write-mant1 (f ()
-                                (let (upper (// (// mant) 100000000))
-                                  (.write-int self upper)
-                                  (<- mant (* (- mant (* upper 100000000)) 10))))
-                              write-fraction (f (x)
-                                               (write-mant1)
-                                               (dotimes (i (-- x))
-                                                 (if (= mant 0) (break)
-                                                     (write-mant1)))))
-              (when (< mant 0)
-                (.write-byte self 0x2d)
-                (<- mant (- mant)))
-              (while (>= mant 1000000000)
-                (<- mant (/ mant 10) exp (++ exp)))
-              (while (< mant 100000000)
-                (<- mant (* mant 10) exp (-- exp)))
-              (if (<= 0 exp 6)
-                  (begin
-                    (dotimes (i (++ exp))
-                      (write-mant1))
-                    (.write-byte self 0x2e)
-                    (write-fraction (- 16 exp 1)))
-                  (<= -3 exp -1)
-                  (begin
-                    (.write-bytes self "0.")
-                    (dotimes (i (- (- exp) 1))
-                      (.write-byte self 0x30))
-                    (write-fraction 16))
-                  (begin
-                    (write-mant1)
-                    (.write-byte self 0x2e)
-                    (write-fraction 15)
-                    (.write-byte self 0x65)
-                    (.write-int self exp))))))
       (dict? x)
       (begin
         (.write-bytes self "#{ ")
@@ -2250,13 +2275,15 @@
         (.write-bytes self "#[ ")
         (dotimes (i (len x)) (.write self ([] x i) :end " "))
         (.write-byte self 0x5d))
-      (|| (macro? x)
-          (function? x))
+      (function? x)
       (begin
-        (if (macro? x) (.write-bytes self "(macro")
-            (.write-bytes self "(f"))
-        (.write-byte self 0x20)
-        (.write self (procparams x) :end "")
+        (.write-bytes self "(f ") (.write self (procparams x) :end "")
+        (dolist (body (procbody x))
+          (.write self body :start " " :end ""))
+        (.write-byte self 0x29))
+      (macro? x)
+      (begin
+        (.write-bytes self "(macro ") (.write self (procparams x) :end "")
         (dolist (body (procbody x))
           (.write self body :start " " :end ""))
         (.write-byte self 0x29))
@@ -2486,24 +2513,26 @@
         val)))
 
 (method AheadReader .skip-unumber ()
-  (let (val (.skip-uint self))
-    (if (= (&next self) "x")
-        (let (radix (if (= val 0) 16 val))
-          (<- val 0)
+  (let (val (.skip-uint self) next (&next self))
+    (if (= next "x")
+        (let (radix (if (= val 0) 16 val) val 0)
           (.skip self)
           (if (! (.next? self alnum?)) (raise StateError "missing lower or digits")
               (while (.next? self alnum?)
-                (<- val (+ (* val radix) (.skip-digit self radix))))))
-        (= (&next self) ".")
+                (<- val (+ (* val radix) (.skip-digit self radix)))))
+          val)
+        (= next ".")
         (let (factor 0.1)
           (.skip self)
           (while (.next? self digit?)
             (<- val (+ val (* factor (.skip-digit self)))
                 factor (/ factor 10)))
-          (when (= (&next self) 0x65)
+          (when (= (lower (&next self)) "e")
             (.skip self)
-            (<- val (* val (pow 10 (.skip-int self)))))))
-    val))
+            (<- val (* val (pow 10 (.skip-int self)))))
+          val)
+        ;; integer
+        val)))
 
 (method AheadReader .skip-number ()
   (let (minus? (.skip-sign (.skip-space self)) val (.skip-unumber self))
@@ -2657,16 +2686,20 @@
            (if (atom? x) (list quote x)
                (let (ope (car x))
                  (if (= ope 'quasiquote) (list cons ''quasiquote (descend (cdr x) (++ level)))
-                     (= ope 'unquote) (if (= level 0) (cadr x) (list cons ''unquote (descend (cdr x) (-- level))))
-                     (= ope 'unquote-splicing) (if (= level 0) (cadr x) (list cons ''unquote-splicing (descend (cdr x) (-- level))))
+                     (= ope 'unquote) (if (= level 0) (cadr x)
+                                          (list cons ''unquote (descend (cdr x) (-- level))))
+                     (= ope 'unquote-splicing) (if (= level 0)
+                                                   (cadr x) (list cons ''unquote-splicing (descend (cdr x) (-- level))))
                      (list concat (descend-car (car x) level) (descend (cdr x) level))))))
          descend-car
          (f (x level)
            (if (atom? x) (list quote (list x))
                (let (ope (car x))
                  (if (= ope 'quasiquote) (list list (list cons ''quasiquote (descend (cdr x) (++ level))))
-                     (= ope 'unquote) (if (= level 0) (cons list (cdr x)) (list list (list cons ''unquote (descend (cdr x) (-- level)))))
-                     (= ope 'unquote-splicing) (if (= level 0) (cons concat (cdr x)) (list list (list cons ''unquote-splicing (descend (cdr x) (-- level)))))
+                     (= ope 'unquote) (if (= level 0) (cons list (cdr x))
+                                          (list list (list cons ''unquote (descend (cdr x) (-- level)))))
+                     (= ope 'unquote-splicing) (if (= level 0)
+                                                   (cons concat (cdr x)) (list list (list cons ''unquote-splicing (descend (cdr x) (-- level)))))
                      (list list (list concat (descend-car (car x) level) (descend (cdr x) level))))))))
     (descend expr 0)))
 

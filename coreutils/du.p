@@ -20,7 +20,7 @@
               print (f (file size level)
                       ;; Returns size.
                       (if (! (&& summary? (!= level 0)))
-                          (write-line (format "%-11d %s" size (.to-s file))))
+                          (write-line (format "%11d %s" size (.to-s file))))
                       size))
     (print dir (sweep (.children dir) 0) 0)))
 
