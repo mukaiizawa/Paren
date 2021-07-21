@@ -491,7 +491,8 @@ int str_len(object o, int *len)
     if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
     (*len)++;
   }
-  return TRUE;
+  if (o->mem.size == i) return TRUE;
+  return ip_throw(ArgumentError, invalid_utf8_byte_sequence);
 }
 
 object map_get(object o, object s)

@@ -1227,7 +1227,6 @@ static int string_to_array(object o, object *result)
     j += w;
     w = 0;
   }
-  xassert(j == o->mem.size);
   return TRUE;
 }
 
