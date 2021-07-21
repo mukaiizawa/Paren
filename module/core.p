@@ -931,19 +931,6 @@
   ; x must be positive integer.
   (<< x (- y)))
 
-(function abs (x)
-  ; Returns the absolute value of the specified number x.
-  (if (< x 0) (- x)
-      x))
-
-(function max (:rest args)
-  ; Returns maximum value from argument.
-  (reduce (f (x y) (if (> x y) x y)) args))
-
-(function min (:rest args)
-  ; Returns minimum value from argument.
-  (reduce (f (x y) (if (< x y) x y)) args))
-
 ;;;; mathematical functions.
 
 (builtin-function sin (x)
@@ -999,6 +986,23 @@
 (builtin-function sqrt (x)
   ; Returns the rounded positive square root of a value.
   (assert (= (sqrt (pow 25 2)) 25)))
+
+(function abs (x)
+  ; Returns the absolute value of the specified number x.
+  (if (< x 0) (- x)
+      x))
+
+(function average (:rest args)
+  ; Returns the average value of the arguments.
+  (/ (apply + args) (len args)))
+
+(function max (:rest args)
+  ; Returns maximum value from argument.
+  (reduce (f (x y) (if (> x y) x y)) args))
+
+(function min (:rest args)
+  ; Returns minimum value from argument.
+  (reduce (f (x y) (if (< x y) x y)) args))
 
 ;; symbol & keyword.
 
