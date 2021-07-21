@@ -2532,7 +2532,7 @@
           (while (.next? self digit?)
             (<- val (+ val (* factor (.skip-digit self)))
                 factor (/ factor 10)))
-          (when (= (lower (&next self)) "e")
+          (when (.next? self (f (x) (= (lower x) "e")))
             (.skip self)
             (<- val (* val (pow 10 (.skip-int self)))))
           val)
