@@ -1,4 +1,4 @@
-; ASCII code table.
+; ASCII table.
 
 ; DEC HEX CTR ESC SYM
 ; --------------------------------
@@ -37,6 +37,11 @@
 ; 127 7F   -   -  DEL delete
 
 (function! main (args)
+  ; # NAME
+  ; asctable
+  ;
+  ; # DESCRIPTION
+  ; Display ASCII codes.
   (foreach write-line
            (select (f (x) (prefix? x ";"))
                    (.to-l (.resolve $paren-home "tool/asctable.p"))))
