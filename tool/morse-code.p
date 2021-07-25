@@ -79,13 +79,13 @@
                       (decode line))))))
 
 (function! main (args)
-  ; # NAME
+  ; # Synopsis
   ; morse-code [OPTION]
   ;
-  ; # DESCRIPTION
+  ; # Description
   ; Encode and decode standard input with Morse code.
   ;
-  ; # OPTION
+  ; # Options
   ;     -d -- Decode standard input.
   (let ((op args) (.parse (.init (.new OptionParser) "d") args))
     (morse-code (.get op "d"))))
