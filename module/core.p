@@ -1809,7 +1809,7 @@
 (method Exception .print-stack-trace ()
   ; Display stack trace.
   ; Returns nil.
-  (let ($out $err)
+  (let ($out $stderr)
     (write-bytes (.to-s self))
     (write-line)
     (dolist (x (.stack-trace self))
@@ -2866,7 +2866,6 @@
     $stderr (.init (.new FileStream) (fp 2))
     $in $stdin
     $out $stdout
-    $err $stderr
     $debug? (== (assert true) true)
     $paren-home (.parent (.parent (.resolve (path.getcwd) core.p)))
     $script-path (map (f (p) (.resolve $paren-home p))
