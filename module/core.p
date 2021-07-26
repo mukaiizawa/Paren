@@ -789,6 +789,12 @@
                       subtrahends))
             minuend)))
 
+(function product (X Y)
+  ; Return the product of args.
+  (apply concat
+         (map (f (x) (map (f (y) (list x y)) Y))
+              X)))
+
 ;; number.
 
 (builtin-function number? (x)
@@ -2849,27 +2855,26 @@
   ; Executed when paren is executed.
   ; Invoke repl if there are no command line arguments that bound to the symbol $args.
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
+  ; Can be omitted if the script file has a `p` extension.
   (catch (SystemExit (f (e) (return true))
                      Exception (f (e) (.print-stack-trace e)))
     (if (nil? args) (repl)
-        (let (script (find (f (dir)
-                             (let (full-path (.resolve dir (car args)))
-                               (if (.readable? full-path) full-path)))
-                           (cons (path.getcwd) $script-path)))
-          (if (nil? script) (raise OSError (str "unreadable file " (car args)))
+        (let (file-name (car args)
+                        script (find (f (x) (if (.readable? x) x))
+                                     (map (f (x) (apply .resolve x))
+                                          (product (cons (path.getcwd) $runtime-path)
+                                                   (list file-name (str file-name ".p"))))))
+          (if (nil? script) (raise OSError (str "unreadable file " file-name))
               (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 
 (<- $import '(:core)
     $read-table (dict)
-    $stdin (.init (.new FileStream) (fp 0))
-    $stdout (.init (.new FileStream) (fp 1))
-    $stderr (.init (.new FileStream) (fp 2))
-    $in $stdin
-    $out $stdout
+    ($stdin $stdout $stderr) (map (f (x) (.init (.new FileStream) (fp x))) (.. 3))
+    ($in $out) (list $stdin $stdout)
     $debug? (== (assert true) true)
     $paren-home (.parent (.parent (.resolve (path.getcwd) core.p)))
-    $script-path (map (f (p) (.resolve $paren-home p))
-                      '("coreutils" "tool")))
+    $runtime-path (map (f (p) (.resolve $paren-home p))
+                       '("coreutils" "tool")))
 
 (reader-macro [ (reader)
    ; Define array/bytes literal reader.
