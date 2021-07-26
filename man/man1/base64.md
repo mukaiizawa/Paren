@@ -1,0 +1,16 @@
+# NAME
+base64 - encode/decode data and print to standard output.
+
+# SYNOPSIS
+
+    base64 [OPTION]
+
+# DESCRIPTION
+Base64 encode or decode standard input.
+
+# OPTIONS
+
+    -d - decode data.
+
+# SEE ALSO
+- base64(3)

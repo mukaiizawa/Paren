@@ -1,12 +1,10 @@
-; encode and decode using Base64 representation.
+; base64.
 
 (import :optparse)
 (import :base64)
 
 (function base64 (:key decode?)
-  ; base64 [OPTION]...
-  ; encode / decode binary file as RFC 1341 MIME base64.
-  ;     -d decodes the standard input, previously created by base64, to recover the original input.
+  ; RFC 1341 MIME base64.
   (let (bytes (read-bytes))
     (write-bytes (if (nil? decode?) (base64.encode bytes)
                      (base64.decode bytes)))))
