@@ -16,18 +16,9 @@ Paren is a the programmable programming language.
 - concise syntax
 
 # Compiling
-## Unix
 
     $ git clone https://github.com/mukaiizawa/Paren
-    $ cd Paren/src & make os=unix
-    $ ../paren
-    ) "hello world"
-    "hello world"
-
-## Windows
-
-    $ git clone https://github.com/mukaiizawa/Paren
-    $ cd Paren/src & make os=windows
+    $ cd Paren/src & make os=unix # or os=windows
     $ ../paren
     ) "hello world"
     "hello world"
@@ -36,6 +27,7 @@ Paren is a the programmable programming language.
 
     + coreutils -- Paren implementation of like the GNU coreutils programs
     + game -- games and toy-like programs
+    + man -- manuals
     + misc -- miscellaneous programs
     + module -- importable Paren module files
     + src -- implementation of Paren itself
@@ -44,6 +36,15 @@ Paren is a the programmable programming language.
     lang.md  -- Paren language specification
     license.txt -- Paren license file
     tutorial.md -- tutorial of Paren
+
+# Documentation
+Paren comes with a UNIX-like manual page system.
+
+You might want to start by running the following command.
+
+    $ paren man
+    $ paren man man-pages
+    $ paren man whatis
 
 # Special Thanks
 
