@@ -1,8 +1,9 @@
 # NAME
-man - paren reference manuals.
+man - Paren reference manuals.
 
 # SYNOPSIS
 
+    man PAGE(SECTION)
     man [[SECTION] PAGE]
 
 # DESCRIPTION
@@ -20,11 +21,13 @@ Display the manual page for the man(1).
     paren man
     paren man man
     paren man 1 man
+    paren man man(1)
 
 Display the manual page for the man-pages(7).
 
     paren man man-pages
     paren man 7 man-pages
+    paren man man-pages(7)
 
 # See Also
 - man-pages(7)
