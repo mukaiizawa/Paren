@@ -3,9 +3,6 @@
 (import :datetime)
 
 (function cal (y m)
-  ; cal [[YEAR] MONTH]
-  ; Display the calendar for the specified year and month.
-  ; If the year and month are omitted, it is considered that the current year and month are specified.
   (let (dt (datetime y m 1) dw (.day-week dt))
     (write-line (format "%d-%02d" y m))
     (write-line  "Su Mo Tu We Th Fr Sa")
