@@ -1,8 +1,6 @@
 ; concatenate files and output.
 
 (function cat ()
-  ; cat [FILE]...
-  ; Concatenate FILE(s) to standard output.
   (write-bytes (read-bytes)))
 
 (function! main (args)
