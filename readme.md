@@ -40,11 +40,14 @@ Paren is a the programmable programming language.
 # Documentation
 Paren comes with a UNIX-like manual page system.
 
-You might want to start by running the following command.
+    $ paren man [PAGE]
 
-    $ paren man
-    $ paren man man-pages
-    $ paren man whatis
+You might want to start by running the following manual pages.
+
+- man-pages
+- whatis
+- lang
+- tutor
 
 # Special Thanks
 

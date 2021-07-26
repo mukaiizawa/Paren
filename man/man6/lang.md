@@ -1,12 +1,14 @@
-Paren language specification
+# NAME
+lang - Paren language specification.
 
-# Paren
+# DESCRIPTION
+## Paren
 Paren is a programming languages that written by S-expression and evaluates S-expressions.
 
-# S-expressions
+## S-expressions
 S-expressions is a list or atom.
 
-## Lists
+### Lists
 A cons is a data structure with two components called car and cdr.
 
 All cdrs refer to nil or cons.
@@ -17,7 +19,7 @@ The entire car is called a list element.
 
 A list without elements is called an empty list and is represented by symbol nil.
 
-## Atom
+### Atom
 An atom is the following data types.
 
 - symbol
@@ -30,20 +32,20 @@ An atom is the following data types.
 - number
 - string
 
-## Symbols
+#### Symbols
 A symbol is a data type for holding a reference to an S-expression.
 
 A symbol is an object representing a string, the symbol's name.
 
 Unlike strings, two symbols whose names are spelled the same way are never distinguishable.
 
-### Keywords
+#### Keywords
 Keywords are the same as symbols, except that they cannot hold references to other S-expression.
 
-### Arrays
+#### Arrays
 An array is a data type in which any S-expression is placed in continuous memory.
 
-### Dictionary
+#### Dictionary
 A dictionary is an data type composed of a collection of (key, value) pairs, such that each possible key appears at most once in the collection.
 
 Operations associated with this data type allow.
@@ -58,22 +60,22 @@ Only symbols or keywords can be specified for key.
 
 Any value can be entered in value.
 
-### Bytes
+#### Bytes
 A bytes is an array that specializes in handling only numbers from 0 to 255.
 
-### Functions
+#### Functions
 A function is a data type that receives an argument of zero or more and evaluates an S-expression of zero or more.
 
-### Macros
+#### Macros
 A macro is a data type that has a mechanism to expand its arguments into another S-expression.
 
-### Numbers
+#### Numbers
 A number is a data type that represents a number.
 
-### Strings
+#### Strings
 A string is a data type that represents a string.
 
-# Meta language
+## Meta language
 The grammar is defined by the following EBNF notation.
 
     x? -- x can be omitted.
@@ -89,7 +91,7 @@ If '\' is described in a fixed phrase or a character group, it means the followi
 
 Exceptions are '\t' for tab characters, '\n' for newline characters.
 
-# Lexical rules
+## Lexical rules
 The lexical rules determines how a character sequence is split into a sequence of lexemes.
 
 This rule is the minimum rule required to read core.p. This is because paren can overwrite the reader by paren itself.
@@ -113,7 +115,7 @@ This rule is the minimum rule required to read core.p. This is because paren can
     digit = [0-9]
     sign = [+\-]
 
-# Syntax rules
+## Syntax rules
 The syntax rules describes the syntax of syntactic datain terms of a sequence of lexemes.
 
 It is possible to write a comment or a space arbitrarily at a break point in the syntax rules.
