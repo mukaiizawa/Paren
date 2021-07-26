@@ -1809,10 +1809,11 @@
 (method Exception .print-stack-trace ()
   ; Display stack trace.
   ; Returns nil.
-  (write-bytes (.to-s self))
-  (write-line)
-  (dolist (x (.stack-trace self))
-    (write-bytes "\tat: ") (write x)))
+  (let ($out $err)
+    (write-bytes (.to-s self))
+    (write-line)
+    (dolist (x (.stack-trace self))
+      (write-bytes "\tat: ") (write x))))
 
 (class SystemExit (Exception)
   ; Dispatched to shut down the Paren system.
@@ -2862,8 +2863,10 @@
     $read-table (dict)
     $stdin (.init (.new FileStream) (fp 0))
     $stdout (.init (.new FileStream) (fp 1))
+    $stderr (.init (.new FileStream) (fp 2))
     $in $stdin
     $out $stdout
+    $err $stderr
     $debug? (== (assert true) true)
     $paren-home (.parent (.parent (.resolve (path.getcwd) core.p)))
     $script-path (map (f (p) (.resolve $paren-home p))
