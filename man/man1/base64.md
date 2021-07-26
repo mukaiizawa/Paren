@@ -10,7 +10,8 @@ Base64 encode or decode standard input.
 
 # OPTIONS
 
-    -d - decode data.
+    -d
+        Decode data.
 
 # SEE ALSO
 - base64(3)

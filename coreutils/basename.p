@@ -1,11 +1,8 @@
-; strip directory and suffix from filenames.
+; basename.
 
 (import :optparse)
 
 (function basename (remove-suffix?)
-  ; basename [OPTION]
-  ; Write standard input to standard output, with any leading directory components removed.
-  ;     -s remove suffix
   (foreach write-line
            (map (f (x)
                   (if (! remove-suffix?) (.name (path x))
