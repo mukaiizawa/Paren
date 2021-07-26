@@ -2860,7 +2860,7 @@
                      Exception (f (e) (.print-stack-trace e)))
     (if (nil? args) (repl)
         (let (file-name (car args)
-                        script (find (f (x) (if (.readable? x) x))
+                        script (find (f (x) (if (.file? x) x))
                                      (map (f (x) (apply .resolve x))
                                           (product (cons (path.getcwd) $runtime-path)
                                                    (list file-name (str file-name ".p"))))))
