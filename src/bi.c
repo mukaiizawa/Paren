@@ -1322,6 +1322,7 @@ static int str_slice(object o, int start, int stop, object *result)
     for (i = start, t = s; i < stop; i++)
       if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
   }
+  if (!bi_range(0, s, t)) return FALSE;
   *result = gc_new_mem_from(STRING, o->mem.elt + s, t - s);
   return TRUE;
 }
