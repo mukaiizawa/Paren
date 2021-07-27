@@ -3,18 +3,17 @@
 (<- $search-path (map ++ (.. 7)))
 
 (function display (section page file)
-  (catch (Error (f (e) (.print-stack-trace e) nil))
-    (with-open ($in file :read)
-      (let (line (read-line))
-        (if (prefix? line "# NAME")
-            (begin
-              (write-line (str page "(" section ")"))
-              (write-line)
-              (write-line line)
-              (write-bytes (read-bytes)))
-            (prefix? line "[")
-            (let (url (slice line (++ (strstr line "(")) (-- (len line))))
-              (display section page (.resolve (.parent file) url))))))))
+  (with-open ($in file :read)
+    (let (line (read-line))
+      (if (prefix? line "# NAME")
+          (begin
+            (write-line (str page "(" section ")"))
+            (write-line)
+            (write-line line)
+            (write-bytes (read-bytes)))
+          (prefix? line "[")
+          (let (url (slice line (++ (strstr line "(")) (-- (len line))))
+            (display section page (.resolve (.parent file) url)))))))
 
 (function man (section page)
   (let (root (.resolve $paren-home "man"))
@@ -33,4 +32,5 @@
         (list (int (slice arg1 (+ i 1) (+ i 2))) (slice arg1 0 i)))))
 
 (function! main (args)
-  (apply man (parse-args args)))
+  (catch (OSError (f (e) nil))
+    (apply man (parse-args args))))
