@@ -3,9 +3,6 @@
 (import :optparse)
 
 (function echo (newline? args)
-  ; echo [OPTION] [STRING]...
-  ; Echo the STRING(s) to standard output.
-  ;     -n do not output the trailing newline
   (if args (write-bytes (join args " ")))
   (if newline? (write-line)))
 
