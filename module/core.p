@@ -586,16 +586,6 @@
   (assert (= (car (last-cons '(1 2 3))) 3))
   (assert (nil? (last-cons nil))))
 
-(function last (x)
-  ; Same as `(car (last-cons x))`.
-  (car (last-cons x)))
-
-(function butlast (l)
-  ; Returns a list excluding the last element of the specified list l.
-  (let (rec (f (rest)
-              (if (cdr rest) (cons (car rest) (rec (cdr rest))))))
-    (rec l)))
-
 (function assoc (alist key)
   ; Returns the value corresponding to the key in the associative list.
   ; If there is no corresponding value, returns nil.
@@ -1440,6 +1430,15 @@
     (if (nil? key) (<- key (f (x) x)))
     (sort-range! seq 0 (-- (len seq)))
     seq))
+
+(function last (x)
+  ; Same as `(car (last-cons x))`.
+  (if (list? x) (car (last-cons x))
+      (slice x (-- (len x)))))
+
+(function butlast (x)
+  ; Returns a list excluding the last element of the specified list l.
+  (slice x 0 (-- (len x))))
 
 ;; collection
 
