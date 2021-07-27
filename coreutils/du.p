@@ -1,13 +1,8 @@
-; estimate file space usage.
+; summarize disk usage.
 
 (import :optparse)
 
-(function du (dir :key all? summary? kilo?)
-  ; du [OPTION] [DIRECTORY]
-  ; Displays the disk usage under the specified DIRECTORY.
-  ; If the DIRECTORY is omitted, the usage below the current directory is displayed.
-  ;     -a display for all elements, including files.
-  ;     -s limit the display to one level below the specified directory.
+(function du (dir :key all? summary?)
   (let (sweep (f (files level)
                 ;; Returns files size.
                 (apply + (map (f (file)
