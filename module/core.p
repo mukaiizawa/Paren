@@ -2863,7 +2863,7 @@
                                      (map (f (x) (apply .resolve x))
                                           (product (cons (path.getcwd) $runtime-path)
                                                    (list file-name (str file-name ".p"))))))
-          (if (nil? script) (raise OSError (str "unreadable file " file-name))
+          (if (nil? script) (raise ArgumentError (str "unreadable file " file-name))
               (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 
 (<- $import '(:core)
