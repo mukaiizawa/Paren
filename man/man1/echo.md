@@ -11,4 +11,4 @@ Echo the STRING(s) to standard output.
 # OPTIONS
 
     -n
-        Do not output the trailing newline
+        Do not output the trailing newline.

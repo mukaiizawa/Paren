@@ -1,11 +1,8 @@
-; output the first part of standard input.
+; head.
 
 (import :optparse)
 
 (function head (n)
-  ; head [OPTION]
-  ; Print the first 10 lines of standard input.
-  ;     -n print the first n lines.
   (dotimes (i n)
     (write-line (read-line))))
 
