@@ -18,7 +18,6 @@ The manual Sections are traditionally defined as follows:
 1. File formats and configuration files
 1. Games
 1. Overview, conventions, and miscellaneous
-1. System management commands
 
 ### User commands
 Commands that can be executed by the user from within a shell.
@@ -40,9 +39,6 @@ Games and funny little programs available on the system.
 
 ### Overview, conventions, and miscellaneous
 Overviews or descriptions of various topics, conventions, and protocols, character set standards, the standard filesystem layout, and miscellaneous other things.
-
-### System management commands
-Commands like mount(8), Many of which only root can execute.
 
 ## Sections within a manual page
 The list below shows conventional or suggested sections.

@@ -44,3 +44,4 @@ These programs is included in Paren's runtime path, so it can be executed anywhe
 - uniq(1)
 - wc(1)
 - yes(1)
+- $paren-home(3)
