@@ -12,3 +12,6 @@ Write standard input to standard output, with any leading directory components r
 
     -s
         Remove suffix.
+
+# SEE ALSO
+- dirname(1)
