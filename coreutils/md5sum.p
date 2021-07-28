@@ -6,11 +6,7 @@
 (function check (checksum path)
   (let (sum nil)
     (with-open ($in path :read) (<- sum (md5sum)))
-    (str path ": " (if (= sum checksum) "OK" "FAILED"))))
-
-(function check-line (line)
-  (let ((checksum path) (split line " "))
-    (check checksum path)))
+    (format "%-20s: %s" path (if (= sum checksum) "OK" "FAILED"))))
 
 (function md5sum ()
   (hex (md5.sum (read-bytes))))
@@ -22,6 +18,5 @@
   (let ((op args) (.parse (.init (.new OptionParser) "c:") args)
                   check-file (.get op "c"))
     (if (nil? check-file) (write-line (md5sum))
-        (foreach write-line
-                 (map check-line
-                      (except comment? (.to-l (path check-file))))))))
+        (foreach (f (x) (write-line (apply check (split x " "))))
+                 (except comment? (.to-l (path check-file)))))))
