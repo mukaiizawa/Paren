@@ -9,3 +9,6 @@ fold - wrap each input line to fit in specified width.
 Wrap each standard input line to in specified WIDTH.
 
 If WIDTH is omitted, it is considered that 100 is specified.
+
+# SEE ALSO
+- coreutils(7)

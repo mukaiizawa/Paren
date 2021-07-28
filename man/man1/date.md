@@ -10,3 +10,4 @@ Display the current time.
 
 # SEE ALSO
 - cal(1)
+- coreutils(7)

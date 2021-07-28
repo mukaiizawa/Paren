@@ -22,5 +22,4 @@ List information about the PATH (the current directory by default).
         Use full path format.
 
 # SEE ALSO
-- man(1)
-- man-pages(7)
+- coreutils(7)

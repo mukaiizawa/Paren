@@ -10,4 +10,4 @@ Concatenate FILE(s) to standard output.
 
 # SEE ALSO
 - tac(1)
-- coreutils(6)
+- coreutils(7)

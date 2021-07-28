@@ -16,3 +16,6 @@ If the DIRECTORY is omitted, the usage below the current directory is displayed.
         Display for all elements, including files.
     -s
         Limit the display to one level below the specified directory.
+
+# SEE ALSO
+- coreutils(7)

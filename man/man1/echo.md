@@ -12,3 +12,6 @@ Echo the STRING(s) to standard output.
 
     -n
         Do not output the trailing newline.
+
+# SEE ALSO
+- coreutils(7)

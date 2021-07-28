@@ -15,3 +15,4 @@ Write standard input to standard output, with any leading directory components r
 
 # SEE ALSO
 - dirname(1)
+- coreutils(7)
