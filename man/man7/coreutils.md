@@ -2,7 +2,7 @@
 coreutils - Paren implementation of like the GNU coreutils programs.
 
 # DESCRIPTION
-This `$paren-home/coreutils` holds gnu coreutils implemented by Paren.
+This `$paren-home/coreutils` holds GNU coreutils implemented by Paren.
 
 This is not a practical tool, it is intended to show you how to use Paren based on the well-known features of coreutils.
 
