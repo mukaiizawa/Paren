@@ -11,7 +11,7 @@ Print the first 10 lines of standard input.
 # OPTIONS
 
     -n N
-        Print the first n lines.
+        Print the first N lines.
 
 # SEE ALSO
 - tail(1)
