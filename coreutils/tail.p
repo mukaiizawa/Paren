@@ -1,11 +1,8 @@
-; output the last part of files
+; tail.
 
 (import :optparse)
 
-(function tail (:opt n)
-  ; tail [OPTION]
-  ; Print the last 10 lines of standard input to standard output.
-  ;     -n print the last n lines.
+(function tail (n)
   (let (i 0 buf (array n) line nil)
     (while (<- line (read-line))
       ([] buf (% i n) line)
