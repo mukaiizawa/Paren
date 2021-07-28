@@ -1,24 +1,29 @@
-; print newline, word, and byte counts of standard input.
+; word count.
 
 (import :optparse)
 
-(function wc ()
-  ; wc [OPTION]...
-  ; Print newline, word, and byte counts.
-  ;     -b print the byte counts
-  ;     -w print the word counts
-  ;     -l print the line counts
-  (let (c nil bytec 0 wordc 0 linec 0)
-    (while (<- c (read-char))
-      (if (= c "\n") (<- linec (++ linec))
-          (= c " ") (<- wordc (++ wordc)))
-      (<- bytec (+ bytec (len c))))
-    (list bytec wordc linec)))
+(function ++? (test n)
+  (if (! test) n (++ n)))
+
+(function count ()
+  (let (ch (read-char) in-space? (&& ch (space? ch)) (lc wc cc bc) '(0 0 0 0))
+    (while ch
+      (<- bc (+ bc (memlen ch))
+          cc (++ cc)
+          wc (++? (&& (space? ch) (! in-space?)) wc)
+          lc (++? (= ch "\n") lc)
+          in-space? (space? ch)
+          ch (read-char)))
+    (list lc (++? (! in-space?) wc) cc bc)))
 
 (function! main (args)
-  (let ((op args) (.parse (.init (.new OptionParser) "bwl") args)
-                  (bytec wordc linec) (wc))
-    (if (.get op "b") (write bytec)
-        (.get op "w") (write wordc)
-        (.get op "l") (write linec)
-        (write-line (join (map str (list bytec wordc linec)) " ")))))
+  (let ((op args) (.parse (.init (.new OptionParser) "bclw") args)
+                  (lc? wc? cc? bc?) (list (.get op "l") (.get op "w") (.get op "c") (.get op "b"))
+                  (lc wc cc bc) (count))
+    (if (|| lc? wc? cc? bc?)
+        (begin
+          (if lc? (write lc :end " "))
+          (if wc? (write wc :end " "))
+          (if cc? (write cc :end " "))
+          (if bc? (write bc :end " ")))
+        (write-line (format "%d %d %d" lc wc bc)))))
