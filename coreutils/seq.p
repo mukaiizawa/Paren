@@ -1,12 +1,8 @@
-; print a sequence of numbers.
+; seq.
 
 (import :optparse)
 
 (function seq (first inc last :key width)
-  ; seq [OPTION] [[FIRST [INCREMENT]] LAST]
-  ; Print numbers from FIRST to LAST, in steps of INCREMENT.
-  ; If FIRST or INCREMENT is omitted, it defaults to 1. 
-  ;     -w equalize width by padding with leading zeroes
   (let (fmt (str "%0" width "d"))
     (foreach write-line 
              (map (f (x) (format fmt x))
