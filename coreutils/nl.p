@@ -1,4 +1,4 @@
-; number lines of files.
+; nl.
 
 (import :optparse)
 

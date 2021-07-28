@@ -1,4 +1,4 @@
-; list directory contents.
+; ls.
 
 (import :optparse)
 (import :datetime)

@@ -1,4 +1,4 @@
-; summarize disk usage.
+; du.
 
 (import :optparse)
 

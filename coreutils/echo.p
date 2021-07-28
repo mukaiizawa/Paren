@@ -1,4 +1,4 @@
-; echo the string to standard output.
+; echo.
 
 (import :optparse)
 

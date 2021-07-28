@@ -1,4 +1,4 @@
-; word count.
+; wc.
 
 (import :optparse)
 

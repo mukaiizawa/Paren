@@ -1,4 +1,4 @@
-; print the system date and time.
+; date.
 
 (import :datetime)
 

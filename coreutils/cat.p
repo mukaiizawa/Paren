@@ -1,4 +1,4 @@
-; concatenate files and output.
+; cat.
 
 (function cat ()
   (write-bytes (read-bytes)))
