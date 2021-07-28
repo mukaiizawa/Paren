@@ -4,13 +4,6 @@
 (import :datetime)
 
 (function ls (path :key long? recur? only-file? only-dir? full-path?)
-  ; ls [OPTION]... [PATH]
-  ; List information about the PATH (the current directory by default).
-  ;     -l use long listing format
-  ;     -r list subdirectories recursively
-  ;     -f list only file
-  ;     -d list only directories
-  ;     -F use full path format
   (let (ls.d
          (f (path)
            (if (.dir? path) (foreach ls.f (.children path))))
