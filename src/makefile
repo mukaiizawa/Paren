@@ -13,6 +13,7 @@ endif
 ifeq ($(os), unix)
 extobj+=pf.u.o xsleep.u.o
 lib+=-lm
+lib+=-ldl
 ifeq ($(sock),on)
 defun+=sock.c
 endif
