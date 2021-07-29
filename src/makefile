@@ -12,6 +12,7 @@ $(error illegal os)
 endif
 ifeq ($(os), unix)
 extobj+=pf.u.o xsleep.u.o
+lib+=-lm
 ifeq ($(sock),on)
 defun+=sock.c
 endif
@@ -57,7 +58,8 @@ xc.a: std.o xarray.o xbarray.o heap.o object.o gc.o lex.o st.o \
 	$(defsp:%.c=%.o) \
 	$(defun:%.c=%.o) \
 	$(extobj)
-	ar -ru xc.a $+
+	rm -f $@
+	ar -r $@ $+
 
 $(paren): paren.o xc.a
 	$(link)
