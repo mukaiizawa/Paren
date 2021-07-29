@@ -1,7 +1,8 @@
+.vscode/
+wk/
+paren
 *.o
 *.a
 *.wk
 *.exe
 *.out
-wk/
-.vscode/
