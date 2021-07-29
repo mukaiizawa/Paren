@@ -31,7 +31,7 @@ int pf_stat(char *fn, struct pf_stat *pf_statbuf)
   }
   result = 0;
   type = statbuf.st_mode & S_IFMT;
-  if (type == S_IFREG) result = PF_FILE;
+  if (type == S_IFREG) result = PF_REGF;
   else if (type == S_IFDIR) result = PF_DIR;
   else result = PF_OTHER;
   if (statbuf.st_uid == getuid()) {
