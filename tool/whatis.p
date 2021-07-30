@@ -1,29 +1,21 @@
 ; whatis.
 
 (import :optparse)
-
-(function display (section page file)
-  (with-open ($in file :read)
-    (let (line (read-line))
-      (if (prefix? line "# NAME")
-          (write-line
-            (format "%-20s %s" (str page "(" section ")") (slice (read-line) (len (.base-name file)))))
-          (prefix? line "[")
-          (let (url (slice line (++ (strstr line "(")) (-- (len line))))
-            (display section page (.resolve (.parent file) url)))))))
+(import :man (.resolve $paren-home "tool"))
 
 (function whatis (matcher)
-  (dolist (dir (.children (.resolve $paren-home "man")))
-    (if (.dir? dir)
-        (let (section (last (.name dir)))
-          (dolist (file (.children dir))
-            (let (page (.base-name file))
-              (if (matcher section page) (display section page file))))))))
+  (dolist (indexes (man-indexes))
+    (let (section (car indexes))
+      (dolist (index (cdr indexes))
+        (let ((pages one-line-desc hash-value) index)
+          (if (matcher section pages)
+              (write-line
+                (format "%-20s %s" (str (join pages ", ") "(" section ")") one-line-desc))))))))
 
 (function! main (args)
   (catch (OSError (f (e) nil))
     (let ((op args) (.parse (.init (.new OptionParser) "s:") args)
                     page (car args) sections (split (.get op "s") ","))
-      (whatis (f (s p)
-                (&& (|| (nil? sections) (in? s sections))
-                    (|| (nil? page) (in? page p))))))))
+      (whatis (f (section pages)
+                (&& (|| (nil? sections) (in? section sections))
+                    (|| (nil? page) (in? page pages))))))))
