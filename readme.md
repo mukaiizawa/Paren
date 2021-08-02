@@ -40,14 +40,20 @@ Paren is a the programmable programming language.
 # Documentation
 Paren comes with a UNIX-like manual page system.
 
+First, you need to generate an index file with the following command.
+
+    $ paren mandb
+
+After creating the index file, you can refer to the manual with the man command as follows.
+
     $ paren man [PAGE]
 
-You might want to start by running the following manual pages.
+You may want to check the following manuals as a starting point.
 
-- man-pages
-- whatis
-- lang
-- tutor
+- intro(7)
+- whatis(1)
+- man-pages(7)
+- lang(7)
 
 # Special Thanks
 
