@@ -35,3 +35,4 @@ Or When the return value of `BINDING-EXPR` does not match `BOUND-EXPR`.
 
 # SEE ALSO
 - environment(7)
+- special-operator(7)
