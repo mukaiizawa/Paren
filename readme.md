@@ -12,7 +12,7 @@ Paren is a the programmable programming language.
 - dynamic type checking
 - lexical scope
 - unlimited extent
-- multi-paradigm
+- multi-paradigm(expression oriented, functional, object oriented, ...)
 - concise syntax
 
 # Compiling
@@ -32,10 +32,7 @@ Paren is a the programmable programming language.
     + module/ -- importable Paren module files
     + src/ -- implementation of Paren itself
     + tool/ -- implementation of tool by Paren
-    glossary.md  -- glossary
-    lang.md  -- Paren language specification
     license.txt -- Paren license file
-    tutorial.md -- tutorial of Paren
 
 # Documentation
 Paren comes with a UNIX-like manual page system.
@@ -48,9 +45,16 @@ After creating the index file, you can refer to the manual with the man command 
 
     $ paren man [PAGE]
 
-You may want to check the following manuals as a starting point.
+The manual has a `paren-tutorial(7)` page, which may be a good starting point.
 
-- intro(7)
+You can connect it to a pipe with your favorite pager, or you can format it into an html file as follows.
+
+    $ paren man paren-tutorial | paren md2html > tutorial.html
+
+Paren is a tinny language, so it should be fully usable after the tutorial.
+
+In addition, the following pages may be helpful.
+
 - whatis(1)
 - man-pages(7)
 - lang(7)
