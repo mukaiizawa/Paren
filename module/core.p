@@ -1418,17 +1418,19 @@
   (let (sort-range!
          (f (seq start end)
            (let (i start j end x (key ([] seq start)))
-             (while (< i j)
-               (while (&& (< i (len seq)) (sorter (key ([] seq i)) x)) (<- i (++ i)))
-               (while (&& (>= j 0) (sorter x (key ([] seq j)))) (<- j (-- j)))
-               (when (< i j)
-                 (swap! seq i j)
-                 (<- i (++ i) j (-- j))))
+             (loop
+               (while (&& (< i end) (sorter (key ([] seq i)) x)) (<- i (++ i)))
+               (while (&& (>= j start) (sorter x (key ([] seq j)))) (<- j (-- j)))
+               (if (< i j)
+                   (begin
+                     (swap! seq i j)
+                     (<- i (++ i) j (-- j)))
+                   (break)))
              (if (< start (<- i (-- i))) (sort-range! seq start i))
              (if (< (<- j (++ j)) end) (sort-range! seq j end)))))
     (if (nil? sorter) (<- sorter <))
     (if (nil? key) (<- key (f (x) x)))
-    (sort-range! seq 0 (-- (len seq)))
+    (sort-range! seq (|| start 0) (-- (|| end (len seq))))
     seq))
 
 (function last (x)
