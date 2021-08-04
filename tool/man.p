@@ -6,18 +6,6 @@
     $man-indexes (.resolve $man-root "indexes.wk")
     $man-sections (map ++ (.. 7)))
 
-(function man-dir? (dir)
-  (&& (.dir? dir) (prefix? (.name dir) "man")))
-
-(function man-dir->section (dir)
-  (slice (.name dir) 3))
-
-(function man-file? (file)
-  (&& (.file? file) (= (.suffix file) "md")))
-
-(function man-header? (line)
-  (prefix? line "# NAME"))
-
 (function man-indexes ()
   (with-open ($in $man-indexes :read)
     (return (collect read))))

@@ -2,6 +2,18 @@
 
 (import :man (.resolve $paren-home "tool"))
 
+(function man-dir? (dir)
+  (&& (.dir? dir) (prefix? (.name dir) "man")))
+
+(function man-dir->section (dir)
+  (slice (.name dir) 3))
+
+(function man-file? (file)
+  (&& (.file? file) (= (.suffix file) "md")))
+
+(function man-header? (line)
+  (prefix? line "# NAME"))
+
 (function make-index (dir file)
   ;; page [', ' page]... ' - ' one-line-desc
   (with-open ($in file :read)
