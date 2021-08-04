@@ -2487,11 +2487,11 @@
     (if (nil? next) (.skip self)    ; raise error.
         (= next "\n") (begin (.skip self) "")
         (let (line (.read-line (&stream self)))
-          (if line (begin
-                     (<- line (memcat next line))
-                     (&lineno! self (++ (&lineno self)))
-                     (&next! self (.read-char (&stream self))))
-              (&next! self nil))
+          (if (nil? line) (&next! self nil)
+              (begin
+                (<- line (memcat next line))
+                (&lineno! self (++ (&lineno self)))
+                (&next! self (.read-char (&stream self)))))
           line))))
 
 (method AheadReader .skip-space ()
