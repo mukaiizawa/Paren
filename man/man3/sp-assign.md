@@ -1,5 +1,5 @@
 # NAME
--> - valiable assignment statement.
+<- - valiable assignment statement.
 
 # SYNOPSIS
 
