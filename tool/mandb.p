@@ -33,7 +33,8 @@
   (let (indexes nil)
     (dolist (file (.children dir))
       (if (man-file? file) (push! (make-index dir file) indexes)))
-    (cons (man-dir->section dir) indexes)))
+    (cons (man-dir->section dir)
+          (sort! indexes :sorter (f (x y) (< (memcmp x y) 0)) :key caar))))
 
 (function! main (args)
   (with-open ($out $man-indexes :write)
