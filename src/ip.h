@@ -39,7 +39,6 @@ enum error_msg {
   expected_instance_of_Exception_class,
   expected_integer,
   expected_keyword,
-  expected_keyword_parameter,
   expected_keyword_parameter_value,
   expected_list,
   expected_loop_context,
@@ -77,6 +76,7 @@ enum error_msg {
   unbound_symbol,
   undeclared_class,
   undeclared_keyword_param,
+  unexpected_keyword_parameter,
   unexpected_mode,
   error_msg_nil
 };

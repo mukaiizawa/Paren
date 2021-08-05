@@ -96,7 +96,6 @@ static char *error_msg(enum error_msg em) {
     case expected_instance_of_Exception_class: return "expected instance of Exception class";
     case expected_integer: return "expected integer";
     case expected_keyword: return "expected keyword";
-    case expected_keyword_parameter: return "expected keyword parameter";
     case expected_keyword_parameter_value: return "expected keyword parameter value";
     case expected_list: return "expected list";
     case expected_loop_context: return "expected loop context";
@@ -133,6 +132,7 @@ static char *error_msg(enum error_msg em) {
     case unbound_symbol: return "unbound symbol";
     case undeclared_class: return "undeclared class";
     case undeclared_keyword_param: return "undeclared keyword parameter";
+    case unexpected_keyword_parameter: return "unexpected keyword parameter";
     case error_msg_nil: return NULL;
     default: xassert(FALSE); return NULL;
   }
@@ -911,11 +911,12 @@ static int parse_rest_param(object params)
   switch (object_type(params->cons.car)) {
     case SYMBOL:
       param_count++;
+      if (params->cons.cdr == object_nil) return TRUE;
       break;
     default:
-      return FALSE;
+      break;
   }
-  return params->cons.cdr == object_nil;
+  return ip_throw(SyntaxError, invalid_binding_expr);
 }
 
 static int parse_keyword_params(object params)
@@ -927,7 +928,7 @@ static int parse_keyword_params(object params)
         param_count++;
         break;
       default:
-        return FALSE;
+        return ip_throw(SyntaxError, invalid_binding_expr);
     }
   }
   return TRUE;
@@ -942,13 +943,13 @@ static int parse_optional_params(object params)
       case KEYWORD:
         if (p == object_key) return parse_keyword_params(params->cons.cdr);
         if (p == object_rest) return parse_rest_param(params->cons.cdr);
-        return FALSE;
+        return ip_throw(SyntaxError, unexpected_keyword_parameter);
       case SYMBOL:
         params = params->cons.cdr;
         param_count++;
         break;
       default:
-        return FALSE;
+        return ip_throw(SyntaxError, invalid_binding_expr);
     }
   }
   return TRUE;
@@ -964,7 +965,7 @@ static int parse_required_params(object params)
         if (p == object_opt) return parse_optional_params(params->cons.cdr);
         if (p == object_key) return parse_keyword_params(params->cons.cdr);
         if (p == object_rest) return parse_rest_param(params->cons.cdr);
-        return FALSE;
+        return ip_throw(SyntaxError, unexpected_keyword_parameter);
       case CONS:
         if (!parse_required_params(params->cons.car)) return FALSE;
         params = params->cons.cdr;
@@ -974,7 +975,7 @@ static int parse_required_params(object params)
         param_count++;
         break;
       default:
-        return FALSE;
+        return ip_throw(SyntaxError, invalid_binding_expr);
     }
   }
   return TRUE;
@@ -986,6 +987,7 @@ static int gen_bind_frames(int frame_type, object args)
   if ((o = args) == object_nil) return TRUE;
   switch (object_type(o->cons.car)) {
     case SYMBOL:
+      param_count++;
       break;
     case CONS:
       if (!parse_required_params(o->cons.car)) return FALSE;
@@ -1002,20 +1004,6 @@ static int gen_bind_frames(int frame_type, object args)
   return TRUE;
 }
 
-static int count_let_sym(object params)
-{
-  while (params != object_nil) {
-    switch (object_type(params->cons.car)) {
-      case CONS: parse_required_params(params->cons.car); break;
-      case SYMBOL: param_count++; break;
-      case KEYWORD: break;
-      default: xassert(FALSE);
-    }
-    params = params->cons.cdr->cons.cdr;
-  }
-  return param_count;
-}
-
 DEFSP(let)
 {
   object args;
@@ -1025,9 +1013,9 @@ DEFSP(let)
   else {
     gen0(LET_FRAME);
     gen_eval_sequential_frame(argv->cons.cdr);
-    if (!gen_bind_frames(BIND_FRAME, args)) return FALSE;
     param_count = 0;
-    reg[1] = gc_new_env(reg[1], count_let_sym(args) * 2);
+    if (!gen_bind_frames(BIND_FRAME, args)) return FALSE;
+    reg[1] = gc_new_env(reg[1], param_count * 2);
   }
   return TRUE;
 }
@@ -1073,8 +1061,7 @@ DEFSP(macro)
   argv = argv->cons.cdr;
   if (!bi_list(argv->cons.car, &params)) return FALSE;
   param_count = 0;
-  if (!parse_required_params(params))
-    return ip_throw(SyntaxError, invalid_args);
+  if (!parse_required_params(params)) return FALSE;
   reg[0] = gc_new_macro(reg[1], param_count, params, argv->cons.cdr);
   return TRUE;
 }
@@ -1085,8 +1072,7 @@ DEFSP(f)
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_list(argv->cons.car, &params)) return FALSE;
   param_count = 0;
-  if (!parse_required_params(params))
-    return ip_throw(ArgumentError, invalid_args);
+  if (!parse_required_params(params)) return FALSE;
   reg[0] = gc_new_func(reg[1], param_count, params, argv->cons.cdr);
   return TRUE;
 }
