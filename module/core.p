@@ -134,7 +134,7 @@
 ;; fundamental macro.
 
 (macro function! (name args :rest body)
-  ; Bind an anonimous function to a specified symbol name.
+  ; Bind an anonymous function to a specified symbol name.
   ; Same as function macro except for the following points.
   ; - No error even if the symbol is already bound.
   ; - Macros are not expanded.
@@ -280,7 +280,7 @@
         expr)))
 
 (macro function (name args :rest body)
-  ; Bind a symbol the specified name on an anonimous function whose parametes are args and whose body is body.
+  ; Bind a symbol the specified name on an anonymous function whose parametes are args and whose body is body.
   ; The macro in the body is expanded.
   ; Error if name is already bound.
   ; Returns name.
