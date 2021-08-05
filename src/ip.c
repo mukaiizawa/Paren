@@ -326,9 +326,7 @@ static void gen_eval_args_frame(object args)
 static void gen_eval_sequential_frame(object args)
 {
   if (args == object_nil) reg[0] = object_nil;
-  else {
-    gen1(EVAL_SEQUENTIAL_FRAME, args);
-  }
+  else gen1(EVAL_SEQUENTIAL_FRAME, args);
 }
 
 static void gen_if_frame(object args)
@@ -651,10 +649,7 @@ static void pop_eval_sequential_frame(void)
 {
   object args;
   args = get_frame_var(fp, 0);
-  if (args == object_nil) {
-    pop_frame();
-    return;
-  }
+  xassert(args != object_nil);
   if (args->cons.cdr == object_nil) pop_frame();
   else set_frame_var(fp, 0, args->cons.cdr);
   gen_eval_frame(args->cons.car);
