@@ -2811,12 +2811,12 @@
 (function repl ()
   ; Enter repl(read eval print loop) mode.
   ; Executed when there is no command line argument when paren starts.
-  (let ($G-expr nil)
-    (loop
-      (catch (Error (f (e) (.print-stack-trace e)))
-        (write-bytes ") ")
-        (if (<- $G-expr (read)) (write (eval (expand-macro-all $G-expr)))
-            (break))))))
+  (<- (:opt $_ $1 $2 $3 $4 $5) nil)
+  (loop
+    (catch (Error (f (e) (.print-stack-trace e)))
+      (write-bytes ") ")
+      (if (<- $_ (read)) (<- $_ (write (eval (expand-macro-all $_))) $5 $4 $4 $3 $3 $2 $2 $1 $1 $_)
+          (break)))))
 
 (function raise (cls :opt args)
   ; Throw the cls Class instance which initialized with argument args.
