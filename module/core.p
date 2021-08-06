@@ -1,144 +1,28 @@
 ; Paren core library.
 
-;; special operator.
+;; special-operator(7).
 
-(macro special-operator (name syntax)
-  ; A special operator is a operator with special evaluation rules, possibly manipulating the evaluation environment, control flow, or both.
-  name)
-
-(special-operator <-
-  ; Bind the bound-expr with the result of evaluating the binding-expr in order from the left to right.
-  ; The symbol is bound to the already bound environment closest to the current environment.
-  ; If it is not bound to the global environment, bind to the global environment.
-  ; If bound-expr is a tree rather than symbol, binds the symbols specified in tree to the corresponding values in the tree structure resulting from the evaluation of expression.
-  ; Returns the last evaluation result.
-  (<- bound-expr1 binding-expr1 bound-expr2 binding-expr2 ...))
-
-(special-operator let
-  ; Create new environment and bind symbol then execute a series of expression in that environment.
-  ; The binding mechanism is the same as special-operator '<-' except that it unconditionally binds the symbol to the newly created environment.
-  ; Returns the last evaluation result.
-  (let (bound-expr1 binding-expr1 bound-expr2 binding-expr2 ...)
-    expr1
-    expr2
-    ...))
-
-(special-operator begin
-  ; Evaluate expressions in order from left to right.
-  ; Returns the last evaluation result.
-  (begin
-    expr1
-    expr2
-    ...))
-
-(special-operator quote
-  ; Returns just expr.
-  (quote expr))
-
-(special-operator if
-  ; Evaluate statements in order from the left to right, then evaluate the expression corresponding to the statement that returned true first.
-  ; If none of the statemnet returns true, evaluate default-expr.
-  ; If default-expr is omitted, it is considered to be specified by nil.
-  ; Returns the last evaluation result.
-  (if stmt1 expr1
-      stmt2 expr2
-      ...
-      [default-expr]))
-
-(special-operator f
-  ; Returns an anonymous function.
-  ; There are the following types of parameters.
-  ; - required parameter
-  ; - optional parameter
-  ; - keyword parameter
-  ; - rest parameter
-  ; Required parameters are a parameter that results in an error if not specified when calling the function.
-  ; Optional parameters are parameters that need not be specified when calling the function.
-  ; Keyword parameters are specified with names without regard to order when calling the function.
-  ; Rest parameters implement variable length arguments.
-  ; Returns the anonymous function.
-  (f ([required_param] ...
-                       [:opt optional_param ...]
-                       [{ :rest rest_param | :key keyword_param ... }] )
-    expr1
-    expr2
-    ...))
-
-(special-operator return
-  ; Special operator return escapes from current procedure(function/macro) context.
-  ; Returns the result of evaluating the argument val.
-  (return val))
-
-(special-operator macro
-  ; Special operator macro creates macro named the specified name.
-  ; Macro expands without evaluating its arguments.
-  ; The macro-parameters that can be specified for macros differ in that macro-parameters can be specified recursively instead of required parameters.
-  ; Returns the macro.
-  (macro name ([{ param | required_param } ...]
-               [:opt optional_param ...]
-               [{ :rest rest_param | :key keyword_param ... }])
-    expr1
-    expr2
-    ...))
-
-(special-operator unwind-protect
-  ; Evaluates protected-expr and guarantees that cleanup-exprs are executed before unwind-protect exits, whether it terminates normally or is aborted by a control transfer of some kind.
-  ; Returns the last expressions result of cleanup-expr.
-  (unwind-protect protected-expr
-                  cleanup-expr1
-                  cleanup-expr2
-                  ...))
-
-(special-operator loop
-  ; Create a loop context and iteratively evaluate the arguments in sequence.
-  ; Returns nil.
-  (loop expr1 expr2 ...))
-
-(special-operator break
-  ; Exit the most recent loop context.
-  ; Returns nil.
-  (break))
-
-(special-operator continue
-  ; Go to the most recent loop context.
-  ; Returns nil.
-  (continue))
-
-(special-operator throw
-  ; Throw an exception.
-  ; The throwing object must be an instance of the Paren object system.
-  ; Generally, the raise function is used, so it is not used directly.
-  (throw expr))
-
-(special-operator catch
-  ; Special operator catch evaluate expr in order.
-  ; If an error is thrown by the throw operator during expr evaluation,
-  ; Determine if the objects thrown in order from the left to right are instances of the specified class.
-  ; Transfer control to the corresponding handler if there is a matching class.
-  ; If not, the exception is propagated to the higher context.
-  ; Handler must be a function with only one required parameter to receive the thrown object.
-  (catch (Error1 handler1 Error2 handler2 ...)
-    expr1
-    expr2
-    ...))
-
-(special-operator assert
-  ; Evaluates the specified expression and kill the system if the results is nil.
-  ; If compiling with the debug option off, Returns nil and the expression is not evaluated.
-  (assert expr))
-
-(special-operator dynamic
-  ; Evaluate symbols with a dynamic scope.
-  (dynamic sym))
+(macro special-operator (name) name)
+(special-operator <-)
+(special-operator assert)
+(special-operator begin)
+(special-operator break)
+(special-operator catch)
+(special-operator continue)
+(special-operator dynamic)
+(special-operator f)
+(special-operator if)
+(special-operator let)
+(special-operator loop)
+(special-operator macro)
+(special-operator quote)
+(special-operator return)
+(special-operator throw)
+(special-operator unwind-protect)
 
 ;; fundamental macro.
 
 (macro function! (name args :rest body)
-  ; Bind an anonymous function to a specified symbol name.
-  ; Same as function macro except for the following points.
-  ; - No error even if the symbol is already bound.
-  ; - Macros are not expanded.
-  ; Returns name.
   (list <- name (cons f (cons args body))))
 
 (macro builtin-function (name args :rest body)
