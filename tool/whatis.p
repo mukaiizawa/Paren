@@ -10,7 +10,9 @@
         (let ((pages one-line-desc hash-value) index)
           (if (matcher section pages)
               (write-line
-                (format "%-20s - %s" (str (join pages ", ") "(" section ")") one-line-desc))))))))
+                (format "%-20s - %s"
+                        (str (car pages) "(" section ")" (if (cdr pages) ", ..."))
+                        one-line-desc))))))))
 
 (function! main (args)
   (catch (OSError (f (e) nil))
