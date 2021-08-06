@@ -5,13 +5,13 @@ f, function, function! - create a function.
 
     (f (PARAMS)
         EXPR ...)
-
+    
     (function NAME (PARAMS)
         EXPR ...)
-
+    
     (function! NAME (PARAMS)
         EXPR ...)
-
+    
     PARAMS = [REQUIRED-PARAM ...]
              [:opt OPTIONAL-PARAM ...]
              [:key KEYWORD-PARAM ... | :rest REST-PARAM]
