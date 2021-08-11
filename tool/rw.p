@@ -5,7 +5,7 @@
        macro
        function
        function!
-       builtin-function))
+       built-in-function))
 
 (function! main (args)
   (with-open ($in (.resolve (.resolve $paren-home "module") core.p) :read)

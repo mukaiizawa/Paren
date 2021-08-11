@@ -21,12 +21,12 @@ enum error {
 
 enum error_msg {
   assert_failed,
-  builtin_failed,
+  built_in_failed,
   connection_failed,
   division_by_zero,
   expected_array,
   expected_binding_value,
-  expected_builtin_operator,
+  expected_built_in_operator,
   expected_byte,
   expected_bytes,
   expected_bytes_like,

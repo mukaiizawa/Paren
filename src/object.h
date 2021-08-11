@@ -18,7 +18,7 @@ typedef union _object *object;
 #define     MACRO        0xa
 #define     FUNC         0xb
 #define     SPECIAL      0xc
-#define     BUILTINFUNC  0xd
+#define     BFUNC        0xd
 #define     ENV          0xe
 
 #define SINT_BITS 30
@@ -70,7 +70,7 @@ union _object {
     object params;
     object body;
   } proc;
-  struct builtin {
+  struct native {
     int header;
     object name;
     union {
@@ -78,7 +78,7 @@ union _object {
       int (*special)(int, object);
       int (*function)(int, object, object *);
     } u;
-  } builtin;
+  } native;
   object next;
 };
 
@@ -126,7 +126,7 @@ extern int sequence_p(object o);
 extern int mutable_sequence_p(object o);
 extern int collection_p(object o);
 extern int symbol_keyword_p(object o);
-extern int builtin_p(object o);
+extern int built_in_p(object o);
 
 extern int list_len(object o);
 extern object list_reverse(object o);

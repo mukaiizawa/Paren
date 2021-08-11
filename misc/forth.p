@@ -78,7 +78,7 @@
 (function forth-number? (x)
   (number? x))
 
-(function forth-builtin? (x)
+(function forth-built-in? (x)
   (&& (symbol? x) (function? ([] $dictionary x))))
 
 (function forth-function? (x)
@@ -93,7 +93,7 @@
 (function forth-bool (x)
   (if (nil? x) $forth-nil $forth-true))
 
-(function forth-apply-builtin (x)
+(function forth-apply-built-in (x)
   (apply ([] $dictionary x) '()))
 
 (function forth-apply (x)
@@ -120,48 +120,48 @@
 (function forth-push (x)
   (push! x $stack))
 
-; Builtin-functions.
+; Built-in-functions.
 
-(macro forth-builtin (name :rest body)
+(macro forth-built-in (name :rest body)
   `([] $dictionary ',name (f () ,@body)))
 
-(macro forth-binary-builtin (name :opt fn)
+(macro forth-binary-built-in (name :opt fn)
   (with-gensyms (x1 x2)
-  `(forth-builtin ,name
-    (let (,x1 (forth-pop) ,x2 (forth-pop))
-      (forth-push (apply (eval ,(|| fn name)) (list ,x2 ,x1)))))))
+    `(forth-built-in ,name
+                     (let (,x1 (forth-pop) ,x2 (forth-pop))
+                       (forth-push (apply (eval ,(|| fn name)) (list ,x2 ,x1)))))))
 
 (macro forth-binary-comparator (name :opt fn)
-  `(forth-binary-builtin ,name
-     ,(eval `(f (:rest args) (forth-bool (apply ,(|| fn name) args))))))
+  `(forth-binary-built-in ,name
+      ,(eval `(f (:rest args) (forth-bool (apply ,(|| fn name) args))))))
 
 (function ok () (write-line "ok"))
 (function write1 (x) (write x :end " "))
 
-(forth-builtin .s (foreach write1 (reverse $stack)) (ok))
-(forth-builtin . (write1 (forth-pop)) (ok))
-(forth-builtin bye (raise SystemExit))
+(forth-built-in .s (foreach write1 (reverse $stack)) (ok))
+(forth-built-in . (write1 (forth-pop)) (ok))
+(forth-built-in bye (raise SystemExit))
 
 ;; Arithmetic functions.
-(forth-binary-builtin +)
-(forth-binary-builtin *)
-(forth-binary-builtin /)
+(forth-binary-built-in +)
+(forth-binary-built-in *)
+(forth-binary-built-in /)
 (forth-binary-comparator <)
 (forth-binary-comparator >)
 (forth-binary-comparator =)
 (forth-binary-comparator <> !=)
 
 ;; Stack Manipulation.
-(forth-builtin dup (forth-push (forth-top)))
-(forth-builtin drop (forth-pop))
-(forth-builtin swap (let (x (forth-pop) y (forth-pop)) (forth-push x) (forth-push y)))
-(forth-builtin rot (let (x (forth-pop) y (forth-pop) z (forth-pop)) (forth-push y) (forth-push x) (forth-push z)))
-(forth-builtin nip (swap) (drop))
-(forth-builtin tuck (swap) (over))
+(forth-built-in dup (forth-push (forth-top)))
+(forth-built-in drop (forth-pop))
+(forth-built-in swap (let (x (forth-pop) y (forth-pop)) (forth-push x) (forth-push y)))
+(forth-built-in rot (let (x (forth-pop) y (forth-pop) z (forth-pop)) (forth-push y) (forth-push x) (forth-push z)))
+(forth-built-in nip (swap) (drop))
+(forth-built-in tuck (swap) (over))
 
 (function forth-eval (x)
   (if (forth-number? x) (push! x $stack)
-      (forth-builtin? x) (forth-apply-builtin x)
+      (forth-built-in? x) (forth-apply-built-in x)
       (forth-function? x) (forth-apply x)
       (forth-definition? x) (forth-define x)
       (forth-if? x) (forth-if x)

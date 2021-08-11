@@ -22,7 +22,7 @@ DEFUN(dl_2e_fopen)
   intptr_t h;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv, &n)) return FALSE;
-  if ((h = DLOPEN(n)) == 0) return ip_throw(OSError, builtin_failed);
+  if ((h = DLOPEN(n)) == 0) return ip_throw(OSError, built_in_failed);
   *result = gc_new_xint(h);
   return TRUE;
 }
@@ -34,7 +34,7 @@ DEFUN(dl_2e_sym)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cintptr(argv->cons.car, &h)) return FALSE;
   if (!bi_cstring(argv->cons.cdr, &n)) return FALSE;
-  if ((sym = DLSYM(h, n)) == 0) return ip_throw(OSError, builtin_failed);
+  if ((sym = DLSYM(h, n)) == 0) return ip_throw(OSError, built_in_failed);
   *result = gc_new_xint(sym);
   return TRUE;
 }

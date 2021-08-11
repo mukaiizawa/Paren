@@ -120,18 +120,18 @@ static object new_string(char *name)
   return gc_new_mem_from(STRING, name, strlen(name));
 }
 
-static void make_builtin(void)
+static void make_built_in(void)
 {
   int i;
   char buf[MAX_STR_LEN];
   object o;
   for (i = 0; bi_as_symbol_name(special_name_table[i], buf) != NULL; i++) {
-    o = gc_new_builtin(SPECIAL, new_symbol(buf), special_table[i]);
-    map_put(object_toplevel, o->builtin.name, o);
+    o = gc_new_native(SPECIAL, new_symbol(buf), special_table[i]);
+    map_put(object_toplevel, o->native.name, o);
   }
   for (i = 0; bi_as_symbol_name(function_name_table[i], buf) != NULL; i++) {
-    o = gc_new_builtin(BUILTINFUNC, new_symbol(buf), function_table[i]);
-    map_put(object_toplevel, o->builtin.name, o);
+    o = gc_new_native(BFUNC, new_symbol(buf), function_table[i]);
+    map_put(object_toplevel, o->native.name, o);
   }
 }
 
@@ -194,7 +194,7 @@ static void make_initial_objects(int argc, char *argv[])
   xassert(FALSE);
 #endif
   map_put(object_toplevel, new_symbol("$hostname"), new_keyword(host_name));
-  make_builtin();
+  make_built_in();
 }
 
 static void init_console()

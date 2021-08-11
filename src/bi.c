@@ -116,10 +116,10 @@ int bi_collection(object o, object *result)
   return TRUE;
 }
 
-int bi_builtin(object o, object *result)
+int bi_built_in(object o, object *result)
 {
-  if (!builtin_p(*result = o))
-    return ip_throw(ArgumentError, expected_builtin_operator);
+  if (!built_in_p(*result = o))
+    return ip_throw(ArgumentError, expected_built_in_operator);
   return TRUE;
 }
 
@@ -307,7 +307,7 @@ DEFUN(function_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   switch (object_type(argv->cons.car)) {
-    case BUILTINFUNC:
+    case BFUNC:
     case FUNC:
       *result = object_bool(TRUE);
       break;
@@ -318,10 +318,10 @@ DEFUN(function_3f_)
   return TRUE;
 }
 
-DEFUN(builtin_3f_)
+DEFUN(built_2d_in_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(builtin_p(argv->cons.car));
+  *result = object_bool(built_in_p(argv->cons.car));
   return TRUE;
 }
 
@@ -360,12 +360,12 @@ DEFUN(_3d__3d_)
   return TRUE;
 }
 
-DEFUN(builtin_2d_name)
+DEFUN(built_2d_in_2d_name)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_builtin(argv->cons.car, &o)) return FALSE;
-  *result = o->builtin.name;
+  if (!bi_built_in(argv->cons.car, &o)) return FALSE;
+  *result = o->native.name;
   return TRUE;
 }
 

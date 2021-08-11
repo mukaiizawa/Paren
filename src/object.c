@@ -205,9 +205,9 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_add(x, ':');
       xbarray_add_mem(x, o);
       break;
-    case BUILTINFUNC:
+    case BFUNC:
     case SPECIAL:
-      o = o->builtin.name;
+      o = o->native.name;
     case SYMBOL:
       xbarray_add_mem(x, o);
       break;
@@ -440,10 +440,10 @@ int symbol_keyword_p(object o)
   }
 }
 
-int builtin_p(object o)
+int built_in_p(object o)
 {
   switch (object_type(o)) {
-    case BUILTINFUNC:
+    case BFUNC:
     case SPECIAL:
       return TRUE;
     default:

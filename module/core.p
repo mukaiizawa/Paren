@@ -22,9 +22,7 @@
 
 ;; fundamental macro.
 
-(macro builtin-function (name args :rest body)
-  ; Describes the specification of a built-in function and is used to describe unit tests.
-  ; Built-in function is no different from user-defined function.
+(macro built-in-function (name args :rest body)
   (cons begin body))
 
 (macro function! (name args :rest body)
@@ -137,7 +135,7 @@
                                    :time (list '- '(clock) clock-offset)
                                    :cycle (list '- '(cycle) cycle-offset)))))))
 
-(builtin-function expand-macro (expr)
+(built-in-function expand-macro (expr)
   ; Returns the result of expanding the macro when expr is a list and car is a macro.
   ; Otherwise returns expr.
   (assert (== (car (expand-macro '(begin0 1 2 3))) let)))
@@ -170,7 +168,7 @@
 
 ;; fundamental function.
 
-(builtin-function = (x y)
+(built-in-function = (x y)
   ; Returns whether x and y are same type and equal.
   (assert (= 1 1))
   (assert (= 1.0 1))
@@ -179,12 +177,12 @@
   (assert (= 'x 'x))
   (assert (! (= 'x 'y))))
 
-(builtin-function == (x y)
+(built-in-function == (x y)
   ; Returns whether x and y are same.
   (assert (== :x :x))
   (assert (! (== "x" "x"))))
 
-(builtin-function ! (x)
+(built-in-function ! (x)
   ; Returns whether the x is nil.
   (assert (! (== 'x 'y)))
   (assert (! nil))
@@ -198,7 +196,7 @@
   ; Same as `(! (== x y)))`.
   (! (== x y)))
 
-(builtin-function hash (x)
+(built-in-function hash (x)
   ; Returns hash value of the specified x.
   ; If x is a mutable built-in types, returns 0.
   (assert (= (hash 10.0) (hash 10)))
@@ -209,39 +207,39 @@
   (assert (= (hash (dict)) 0))
   (assert (= (hash (cons nil nil)) 0)))
 
-(builtin-function address (x)
+(built-in-function address (x)
   ; Returns address of the specified x.
   ; The addresses of symbols or keywords with the same name are always equal.
   (assert (= (address 'x) (address 'x))))
 
 ;; function & macro.
 
-(builtin-function function? (x)
+(built-in-function function? (x)
   ; Returns whether the x is a function.
   (assert (function? (f (x) x)))
   (assert (! (function? begin0))))
 
-(builtin-function builtin? (x)
-  ; Returns whether the x is a builtin-operator.
-  (assert (builtin? f))
-  (assert (builtin? +))
-  (assert (! (builtin? builtin-function))))
+(built-in-function built-in? (x)
+  ; Returns whether the x is a built-in operater.
+  (assert (built-in? f))
+  (assert (built-in? +))
+  (assert (! (built-in? built-in-function))))
 
-(builtin-function special-operator? (x)
+(built-in-function special-operator? (x)
   ; Returns whether the x is a special-operator.
   (assert (special-operator? <-))
   (assert (! (special-operator? special-operator?))))
 
-(builtin-function macro? (x)
+(built-in-function macro? (x)
   ; Returns whether the x is a macro.
   (assert (macro? begin0))
   (assert (! (macro? begin))))
 
-(builtin-function procparams (proc)
+(built-in-function procparams (proc)
   ; Returns the parameter of the function or macro.
   )
 
-(builtin-function procbody (proc)
+(built-in-function procbody (proc)
   ; Returns the body of the function or macro.
   )
 
@@ -251,7 +249,7 @@
   ; Same as `(! x)`.
   (! x))
 
-(builtin-function cons? (x)
+(built-in-function cons? (x)
   ; Returns whether the x is a cons.
   (assert (cons? '(1)))
   (assert (! (cons? nil))))
@@ -261,32 +259,32 @@
   ; It means x is cons or not.
   (! (cons? x)))
 
-(builtin-function cons (x y)
+(built-in-function cons (x y)
   ; Returns a cons such that the specified x is the car part and y is the cdr part.
   ; Error if y is not cons.
   (assert (= (cons 'x nil) '(x))))
 
-(builtin-function car (x)
+(built-in-function car (x)
   ; Returns car of the specified cons x.
   ; If x is nil, returns nil.
   ; Error if x is not list.
   (assert (= (car '(1 2 3)) 1))
   (assert (nil? (car '()))))
 
-(builtin-function car! (x v)
+(built-in-function car! (x v)
   ; Destructively change the car of the specified cons x to the specified v.
   ; Returns v.
   ; Error if x is not cons.
   (assert (let (x '(1 2 3)) (&& (== (car! x :one) :one) (= x '(:one 2 3))))))
 
-(builtin-function cdr (x)
+(built-in-function cdr (x)
   ; Returns cdr of the specified cons x.
   ; If x is nil, returns nil.
   ; Error if x is not list.
   (assert (= (cdr '(1 2 3)) '(2 3)))
   (assert (nil? (cdr '()))))
 
-(builtin-function cdr! (x v)
+(built-in-function cdr! (x v)
   ; Destructively changes the cdr of the specified cons to the specified v.
   ; Returns v.
   ; Error if x is not cons or v is not list.
@@ -404,7 +402,7 @@
   ; Same as `(cdr (cdddr x))`.
   (cdr (cdddr x)))
 
-(builtin-function list (:rest args)
+(built-in-function list (:rest args)
   ; Returns a list whose elements are the specified args.
   ; If args is nil, returns nil.
   (assert (= (list 1 2 3) '(1 2 3)))
@@ -456,7 +454,7 @@
               i (++ i)))
         (reverse! (cons (join-chars) lis)))))
 
-(builtin-function last-cons (x)
+(built-in-function last-cons (x)
   ; Returns the terminal cons.
   ; If x is nil, returns nil.
   ; Error if x is not cons.
@@ -499,7 +497,7 @@
                   (rec (cdr l) (cons (car l) acc)))))
     (rec l nil)))
 
-(builtin-function reverse! (l)
+(built-in-function reverse! (l)
   ; Same as reverse except that it destructively modifies the argument list.
   ; Generally faster than reverse.
   (assert (nil? (reverse! nil)))
@@ -664,7 +662,7 @@
 
 ;; number.
 
-(builtin-function number? (x)
+(built-in-function number? (x)
   ; Returns whether the x is a number.
   (assert (number? 1))
   (assert (number? 3.14))
@@ -675,7 +673,7 @@
   ; Returns whether the x is a integer and between 0 and 255.
   (&& (int? x) (<= 0 x 255)))
 
-(builtin-function int? (x)
+(built-in-function int? (x)
   ; Returns whether the x is a integer.
   (assert (int? 1))
   (assert (! (int? 3.14)))
@@ -703,7 +701,7 @@
               val)))
       (raise ArgumentError "expected number or string")))
 
-(builtin-function + (x :rest args)
+(built-in-function + (x :rest args)
   ; Returns the sum of the args.
   (assert (= (+) 0))
   (assert (= (+ 1) 1))
@@ -716,20 +714,20 @@
   (if (nil? args) (* x -1)
       (+ x (- (apply + args)))))
 
-(builtin-function * (x :rest args)
+(built-in-function * (x :rest args)
   ; Returns the product of the arguments.
   (assert (= (* 1 2 3) 6))
   (assert (= (* 1.0 2.0 3.0) 6))
   (assert (= (* 1 2.0 3.0) 6)))
 
-(builtin-function / (x :rest args)
+(built-in-function / (x :rest args)
   ; Returns the quotient of the x divided by the each args.
   ; If args is nil, returns the reciprocal of x.
   (assert (= (/ 2) 0.5))
   (assert (= (/ 12 2 3) 2))
   (assert (= (/ 3 2 5) 0.3)))
 
-(builtin-function // (x :opt y)
+(built-in-function // (x :opt y)
   ; Returns an integer value of the number x.
   ; If y is specified, returns the quotient of the x divided by the y.
   (assert (= (// 3) 3))
@@ -738,13 +736,13 @@
   (assert (= (// 2 2) 1))
   (assert (= (// 2 3) 0)))
 
-(builtin-function % (x y)
+(built-in-function % (x y)
   ; Returns the remainder of dividing x by y.
   (assert (= (% 4 5) 4))
   (assert (= (% 4 3) 1))
   (assert (= (% 4 2) 0)))
 
-(builtin-function < (:rest args)
+(built-in-function < (:rest args)
   ; Returns whether the each of the specified args are in monotonically decreasing order.
   (assert (< 0 1 2))
   (assert (< 0 1.0 2))
@@ -772,29 +770,29 @@
 
 ;;;; bitwise operates.
 
-(builtin-function ~ (x)
+(built-in-function ~ (x)
   ; Returns bitwise NOT of x.
   ; x must be positive integer.
   (assert (= (~ (~ 2x1010)) 2x1010))
   (assert (= (& (~ 2x1010) 2x1111) 2x0101)))
 
-(builtin-function & (x y)
+(built-in-function & (x y)
   ; Returns bitwise AND of x and y.
   ; x and y must be positive integer.
   (assert (= (& 0x333333333 0x555555555) 0x111111111)))
 
-(builtin-function | (x y)
+(built-in-function | (x y)
   ; Returns bitwise OR of x and y.
   ; x and y must be positive integer.
   (assert (= (| 0x333333333 0x555555555) 0x777777777)))
 
-(builtin-function ^ (x y)
+(built-in-function ^ (x y)
   ; Returns bitwise XOR of x and y.
   ; x and y must be positive integer.
   (assert (= (^ 3 0x500000000) 0x500000003))
   (assert (= (^ 0x500000000 0x500000003) 3)))
 
-(builtin-function << (x y)
+(built-in-function << (x y)
   ; bitwise left shift.
   ; x must be positive integer.
   (assert (= (<< 3 2) 12)))
@@ -806,57 +804,57 @@
 
 ;;;; mathematical functions.
 
-(builtin-function sin (x)
+(built-in-function sin (x)
   ; Returns the trigonometric sine of an angle.
   (assert (= (sin 0) 0)))
 
-(builtin-function cos (x)
+(built-in-function cos (x)
   ; Returns the trigonometric cosine of an angle.
   (assert (= (cos 0) 1.0)))
 
-(builtin-function tan (x)
+(built-in-function tan (x)
   ; Returns the trigonometric tangent of an angle.
   (assert (= (tan 0) (/ (sin 0) (cos 0)))))
 
-(builtin-function asin (x)
+(built-in-function asin (x)
   ; Returns the arc sine of a value.
   (assert (= (sin (asin 0.0)) 0)))
 
-(builtin-function acos (x)
+(built-in-function acos (x)
   ; Returns the arc cosine of a value.
   (assert (= (cos (acos 0.0)) 0)))
 
-(builtin-function atan (x)
+(built-in-function atan (x)
   ; Returns the arc tangent of an angle.
   (assert (= (tan (atan 0.0)) 0.0)))
 
-(builtin-function sinh (x)
+(built-in-function sinh (x)
   ; Returns the hyperbolic sine of a value.
   (assert (= (sinh 1) (/ (- (exp 1) (exp -1)) 2))))
 
-(builtin-function cosh (x)
+(built-in-function cosh (x)
   ; Returns the hyperbolic cosine of a value.
   (assert (= (cosh 1) (/ (+ (exp 1) (exp -1)) 2))))
 
-(builtin-function tanh (x)
+(built-in-function tanh (x)
   ; Returns the hyperbolic tangent of an angle.
   (assert (= (tanh 1) (/ (sinh 1) (cosh 1)))))
 
-(builtin-function exp (x)
+(built-in-function exp (x)
   ; Returns Euler's number e raised to the power of x.
   (assert (= (log (exp 10)) 10)))
 
-(builtin-function log (x :opt y)
+(built-in-function log (x :opt y)
   ; Returns the natural logarithm of x value.
   ; If y is supplied, returns the base x logarithm of y value.
   (assert (= (log (pow 2 10)) (* 10 (log 2))))
   (assert (= (log 10 100) (/ (log 100) (log 10)))))
 
-(builtin-function pow (x y)
+(built-in-function pow (x y)
   ; Returns the value of x raised to the power y.
   (assert (= (// (pow 2 10)) 1024)))
 
-(builtin-function sqrt (x)
+(built-in-function sqrt (x)
   ; Returns the rounded positive square root of a value.
   (assert (= (sqrt (pow 25 2)) 25)))
 
@@ -879,22 +877,22 @@
 
 ;; symbol & keyword.
 
-(builtin-function symbol (:opt x i size)
+(built-in-function symbol (:opt x i size)
   ; If there are no arguments, returns numbered symbol starting with `$G-`.
   ; If x is supplied, Same as `(bytes x i size)` except returns symbol.
   (assert (== (symbol "foo") 'foo)))
 
-(builtin-function keyword (x :opt i size)
+(built-in-function keyword (x :opt i size)
   ; Same as `(bytes x i size)` except returns keyword.
   (assert (== (keyword "foo") :foo)))
 
-(builtin-function symbol? (x)
+(built-in-function symbol? (x)
   ; Returns whether the x is symbol.
   (assert (symbol? 'foo))
   (assert (! (symbol? :foo)))
   (assert (! (symbol? (bytes 3)))))
 
-(builtin-function keyword? (x)
+(built-in-function keyword? (x)
   ; Returns whether the x is keyword.
   (assert (keyword? :foo))
   (assert (! (keyword? 'foo)))
@@ -907,20 +905,20 @@
   (if (== x y) 0
       (- (address x) (address y))))
 
-(builtin-function bound? (sym)
+(built-in-function bound? (sym)
   ; Returns whether the x is bound.
   (assert (bound? 'bound?))
   (assert (bound? 'nil)))
 
 ;; string.
 
-(builtin-function string (x :opt i size)
+(built-in-function string (x :opt i size)
   ; Same as `(bytes x i size)` except returns string.
   (assert (= (string 'foo) "foo"))
   (assert (= (string 'foo 1) "oo"))
   (assert (= (string 'foo 1 1) "o")))
 
-(builtin-function string! (x)
+(built-in-function string! (x)
   ; Same as `(string x)` except that it destructively modifies the specified bytes x.
   ; Generally faster than mem->str.
   (assert (let (x (bytes 1))
@@ -952,13 +950,13 @@
         (doarray (i x) (write-bytes (format "%02x" i))))
       (format "0x%x" x)))
 
-(builtin-function string? (x)
+(built-in-function string? (x)
   ; Returns whether the x is a string.
   (assert (string? ""))
   (assert (string? "aaa"))
   (assert (! (string? (bytes 1)))))
 
-(builtin-function chr (i)
+(built-in-function chr (i)
   ; Returns an integer representing the Unicode code point of that character.
   (assert (= (chr 0x20) " "))
   (assert (= (chr 0x61) "a"))
@@ -967,7 +965,7 @@
   (assert (= (chr 0x611b) "愛"))
   (assert (= (chr 0x2123d) "𡈽")))
 
-(builtin-function ord (ch)
+(built-in-function ord (ch)
   ; Returns the string representing a character whose Unicode code point is the integer i.
   (assert (= (ord " ") 0x20))
   (assert (= (ord "a") 0x61))
@@ -987,59 +985,59 @@
                                    0))))))
     width))
 
-(builtin-function ascii? (s)
+(built-in-function ascii? (s)
   ; Returns whether all characters in the string are ASCII.
   ; If s is empty, returns nil.
   (assert (ascii? "abc"))
   (assert (! (ascii? "あいう"))))
 
-(builtin-function alnum? (s)
+(built-in-function alnum? (s)
   ; Returns whether all characters in the string are alphanumeric.
   ; If s is empty, returns nil.
   (assert (alnum? "abc123"))
   (assert (! (alnum? " "))))
 
-(builtin-function alpha? (s)
+(built-in-function alpha? (s)
   ; Returns whether all characters in the string are alphabetic ASCII characters.
   ; If s is empty, returns nil.
   (assert (alpha? "abc"))
   (assert (! (alpha? "123"))))
 
-(builtin-function digit? (s)
+(built-in-function digit? (s)
   ; Returns whether all characters in the string are ASCII decimal digits.
   ; If s is empty, returns nil.
   (assert (digit? "0123456789"))
   (assert (! (digit? "abc"))))
 
-(builtin-function space? (s)
+(built-in-function space? (s)
   ; Returns whether all characters in the string are whitespace.
   ; If s is empty, returns nil.
   (assert (space? " \t\r\n"))
   (assert (! (space? ""))))
 
-(builtin-function print? (s)
+(built-in-function print? (s)
   ; Returns whether all characters in the string are printable.
   ; If s is empty, returns nil.
   (assert (print? " "))
   (assert (! (print? "\e"))))
 
-(builtin-function lower? (s)
+(built-in-function lower? (s)
   ; Returns whether all characters in the string are ASCII lowercase.
   ; If s is empty, returns nil.
   (assert (lower? "abc"))
   (assert (! (lower? "ABC"))))
 
-(builtin-function upper? (s)
+(built-in-function upper? (s)
   ; Returns whether all characters in the string are ASCII uppercase.
   ; If s is empty, returns nil.
   (assert (upper? "ABC"))
   (assert (! (upper? "abc"))))
 
-(builtin-function lower (s)
+(built-in-function lower (s)
   ; Return a copy of the string with all the cased characters converted to lowercase.
   (assert (= (lower "ABC123") "abc123")))
 
-(builtin-function upper (b)
+(built-in-function upper (b)
   ; Return a copy of the string with all the cased characters converted to uppercase.
   (assert (= (upper "abc123") "ABC123")))
 
@@ -1137,7 +1135,7 @@
 
 ;; bytes & bytes-like.
 
-(builtin-function memlen (x)
+(built-in-function memlen (x)
   ; Returns byte length of bytes-like object x.
   (assert (= (memlen "foo") 3)))
 
@@ -1151,7 +1149,7 @@
   (&& (>= (memlen x) (memlen suffix))
       (memmem x suffix (- (memlen x) (memlen suffix)))))
 
-(builtin-function memmem (x b :opt start end)
+(built-in-function memmem (x b :opt start end)
   ; Returns the position where the byte b appears first in the byte sequence x.
   ; If the b is not appeared, returns nil.
   ; If b is byte sequence, returns the position where the partial byte sequence appears first in the byte sequence x.
@@ -1162,18 +1160,18 @@
   (assert (= (memmem "012" 0x31 0 3) 1))
   (assert (= (memmem "012" "12" 0 3) 1)))
 
-(builtin-function memcpy (src src-i dst dst-i size)
+(built-in-function memcpy (src src-i dst dst-i size)
   ; Copy size elements from the `src-i`th element of the src byte sequence to the dst byte sequence `dst-i`th element and beyond.
   ; Even if the areas to be copied overlap, it operates correctly.
   ; Returns dst.
   (assert (let (s (bytes "foo") d (bytes "bar"))
             (= (string (memcpy s 1 d 1 2)) "boo"))))
 
-(builtin-function memcat (x :rest args)
+(built-in-function memcat (x :rest args)
   ; Returns the result of combining each args with x.
   (assert (= (memcat "0" "1" "2") "012")))
 
-(builtin-function memcmp (x y)
+(built-in-function memcmp (x y)
   ; If x is equals to y, returns 0.
   ; If x is lexicographically less than y, returns -1.
   ; If x is lexicographically greater than y, returns 1.
@@ -1183,7 +1181,7 @@
   (assert (= (memcmp "fo" "foo") -1))
   (assert (= (memcmp "foo" "fo") 1)))
 
-(builtin-function bytes (bytes/size :opt i size)
+(built-in-function bytes (bytes/size :opt i size)
   ; If the first argument is an integer, returns a bytes of size the specified size.
   ; The element is cleared to 0.
   ; If the first argument is a byte sequence object, returns bytes corresponding to byte sequence x.
@@ -1192,7 +1190,7 @@
   (assert (= (len (bytes 1)) 1))
   (assert (= ([] (bytes 1) 0) 0)))
 
-(builtin-function bytes? (x)
+(built-in-function bytes? (x)
   ; Returns whether the x is bytes.
   ; symbols, keywords, and strings are acceptable as arguments for some bytes api, but this function returns nil.
   (assert (bytes? (bytes 3)))
@@ -1203,7 +1201,7 @@
 
 ;; array.
 
-(builtin-function array (x)
+(built-in-function array (x)
   ; Returns an array.
   ; If the argument x is a number, returns an array initialized with nil of size x.
   ; If the argument x is a sequence, returns the corresponding array.
@@ -1212,7 +1210,7 @@
   (assert (= ([] (array "foo") 1) "o"))
   (assert (= ([] (array '(foo bar buzz)) 1) 'bar)))
 
-(builtin-function array? (x)
+(built-in-function array? (x)
   ; Returns whether the x is an array.
   ; However, bytes are not considered as arrays.
   (assert (array? (array 3)))
@@ -1227,16 +1225,16 @@
 
 ;; dictionary.
 
-(builtin-function dict ()
+(built-in-function dict ()
   ; Returns an empty dictionary.
   )
 
-(builtin-function dict? (x)
+(built-in-function dict? (x)
   ; Returns whether the x is a dictionary.
   (assert (dict? (dict)))
   (assert (! (dict? (array 1)))))
 
-(builtin-function keys (d)
+(built-in-function keys (d)
   ; Returns a list of keys contained in this dictionary.
   (assert (let (d (dict))
             (&& (nil? (keys d))
@@ -1245,7 +1243,7 @@
 
 ;; sequence
 
-(builtin-function concat (:rest args)
+(built-in-function concat (:rest args)
   ; Returns a sequence of concatenated arguments.
   (assert (nil? (concat)))
   (assert (nil? (concat nil)))
@@ -1257,7 +1255,7 @@
   (assert (= (concat (bytes 1) (bytes 2)) (bytes 3)))
   (assert (= (concat (array 1) (array 2)) (array 3))))
 
-(builtin-function slice (seq :opt start stop)
+(built-in-function slice (seq :opt start stop)
   ; Returns a subsequence of sequence x.
   ; If start is omitted, it defaults to 0.
   ; If stop is omitted, it defaults to `(len seq)`.
@@ -1321,7 +1319,7 @@
 
 ;; collection
 
-(builtin-function [] (collection key :opt val)
+(built-in-function [] (collection key :opt val)
   ; Returns the value corresponding to key of the collection.
   ; If val is specified, update the value corresponding to key.
   ; If the argument collection is a list and the index key is is out of range, returns nil.
@@ -1337,7 +1335,7 @@
                 ([] b 0 0xff)
                 (= ([] b 0) 0xff)))))
 
-(builtin-function in? (x collection)
+(built-in-function in? (x collection)
   ; Returns whether element x exists in the collection.
   (assert (in? 1 '(1 2 3)))
   (assert (! (in? 0 '(1 2 3))))
@@ -1350,7 +1348,7 @@
   (assert (let (d (dict)) ([] d nil nil) (in? nil d)))
   (assert (! (in? nil (dict)))))
 
-(builtin-function len (x)
+(built-in-function len (x)
   ; Returns the length of the collection x.
   (assert (= (len nil) 0))
   (assert (= (len '(1)) 1))
@@ -1364,7 +1362,7 @@
 
 ;; os.
 
-(builtin-function fp (fd)
+(built-in-function fp (fd)
   ; Returns the file pointer associated with the file descriptor.
   ; The argument fd can specify bellow value.
   ;      0 -- stdin
@@ -1372,7 +1370,7 @@
   ;      2 -- stderr
   )
 
-(builtin-function fopen (filename mode)
+(built-in-function fopen (filename mode)
   ; Opens the file whose name is the string pointed to by filename and associates a stream with it.
   ; Returns file poiner for the opened file.
   ; The argument mode can specify bellow value.
@@ -1382,48 +1380,48 @@
   ;      3 -- Open file for reading and writing.
   )
 
-(builtin-function fgetc (fp)
+(built-in-function fgetc (fp)
   ; Read byte from the stream associated with the file pointer fp.
   ; Returns read byte.
   ; If stream reached EOF, returns -1.
   )
 
-(builtin-function fputc (c fp)
+(built-in-function fputc (c fp)
   ; Write the byte specified by c to the output stream pointed to by fp.
   ; Returns written byte.
   )
 
-(builtin-function fgets (fp)
+(built-in-function fgets (fp)
   ; Read a line from the steream pointed to by fp and return it.
   ; Do not include newline characters.
   ; Returns nil if EOF.
   )
 
-(builtin-function fread (buf from size fp)
+(built-in-function fread (buf from size fp)
   ; Reads size bytes of data from the stream pointed to by fp, storing them at the location given by bytes buf offset from.
   ; Returns size;
   )
 
-(builtin-function fwrite (buf from size fp)
+(built-in-function fwrite (buf from size fp)
   ; Writes size bytes of data to the stream pointed to by fp, obtaining them at the location given by bytes buf offset from.
   ; Returns size;
   )
 
-(builtin-function fseek (fp)
+(built-in-function fseek (fp)
   ; Sets the file position indicator for the stream pointed to by fp
   ; Returns nil.
   )
 
-(builtin-function ftell (fp)
+(built-in-function ftell (fp)
   ; Returns the current value of the file position indicator for the stream pointed to by fp.
   )
 
-(builtin-function fclose (fp)
+(built-in-function fclose (fp)
   ; Flushes the stream pointed to by fp (writing any buffered output data) and closes the underlying file descriptor.
   ; Returns nil.
   )
 
-(builtin-function stat (filename)
+(built-in-function stat (filename)
   ; Returns the file status indicated filename.
   ; The return value is an array of length 3.
   ;     0 -- file type and mode.
@@ -1437,72 +1435,72 @@
   ;     2 -- modification timestamp
   )
 
-(builtin-function utime (filename unix-time)
+(built-in-function utime (filename unix-time)
   ; Change the access time and modification time of the file indicated filename to the specified unix-time in times.
   ; Returns nil.
   )
 
-(builtin-function getcwd ()
+(built-in-function getcwd ()
   ; Returns a string containing the absolute filename of the current working directory.
   )
 
-(builtin-function chdir (filename)
+(built-in-function chdir (filename)
   ; Change the current working directory to the directory specified in filename
   ; Returns nil.
   )
 
-(builtin-function readdir (filename)
+(built-in-function readdir (filename)
   ; Return the contents of the directory indicated by filename as a character string delimited by a newline character.
   )
 
-(builtin-function remove (filename)
+(built-in-function remove (filename)
   ; Attempts to remove a file whose name is pathname.
   ; Returns nil.
   )
 
-(builtin-function mkdir (filename)
+(built-in-function mkdir (filename)
   ; Attempts to create a directory whose name is pathname.
   ; Error if filename already exists.
   ; Returns nil.
   )
 
-(builtin-function rename (src dst)
+(built-in-function rename (src dst)
   ; Rename the file and move between directories if necessary.
   ; Returns nil.
   )
 
-(builtin-function time ()
+(built-in-function time ()
   ; Returns the number of seconds relative to the unix epoch (January 1, 1970, 00:00:00 UTC).
   )
 
-(builtin-function clock ()
+(built-in-function clock ()
   ; Returns the approximate processor time[sec] used by the program.
   )
 
-(builtin-function cycle ()
+(built-in-function cycle ()
   ; Returns the cycle of the internal virtual machine.
   )
 
-(builtin-function utcoffset ()
+(built-in-function utcoffset ()
   ; Returns the difference in hours and minutes from Coordinated Universal Time (UTC) for time zone set in the host system.
   )
 
-(builtin-function sleep (sec)
+(built-in-function sleep (sec)
   ; Sleep for a specified number of seconds.
   ; Returns nil.
   )
 
-(builtin-function system (command)
+(built-in-function system (command)
   ; Execute host system commands.
   ; Returns the termination status of the child shell used to execute command.
   )
 
-(builtin-function getenv (name)
+(built-in-function getenv (name)
   ; Looks up the environment variable named name in the environment list and returns value string.
   ; Returns nil if not found.
   )
 
-(builtin-function putenv (name value)
+(built-in-function putenv (name value)
   ; Add environment variables or change values.
   ; If name does not exist in the environment, name-value is added to the environment.
   ; If name exists in the environment, the value of name is changed to value.
@@ -1516,16 +1514,16 @@
   ; Same as `(&& (dict? x) ([] x :class))`.
   (&& (dict? x) ([] x :class)))
 
-(builtin-function is-a? (o cls)
+(built-in-function is-a? (o cls)
   ; Returns whether the specified object o regarded as the specified class cls's instance.
   )
 
-(builtin-function find-class (cls-sym)
+(built-in-function find-class (cls-sym)
   ; Returns the class corresponding to the specified symbol cls-sym.
   ; If cls-sym is not bound or cls-sym is not a class instance, returns nil.
   )
 
-(builtin-function find-method (cls-sym method-sym)
+(built-in-function find-method (cls-sym method-sym)
   ; Returns the method by which an instance of the class name cls-sym is dispatched.
   ; Error If the class or method is undefined.
   )
@@ -2112,7 +2110,7 @@
   ; Returns x.
   (if start (.write-bytes self start))
   (if (nil? x) (.write-bytes self :nil)
-      (builtin? x) (.write-bytes self (builtin-name x))
+      (built-in? x) (.write-bytes self (built-in-name x))
       (symbol? x) (.write-bytes self x)
       (int? x) (.write-int self x)
       (number? x) (.write-float self x)
@@ -2676,11 +2674,11 @@
 
 ;; execution.
 
-(builtin-function eval (expr)
+(built-in-function eval (expr)
   ; Evaluates the specified expression and returns a value.
   (assert (nil? (eval 'nil))))
 
-(builtin-function apply (fn args)
+(built-in-function apply (fn args)
   ; Evaluates the specified expression and returns a value.
   ; Applies the function to the args.
   (assert (= (apply car '((1))) 1)))

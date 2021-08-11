@@ -3,33 +3,33 @@
 (if (! (bound? 'client-socket))
     (raise StateError "Requires sock option at compile time"))
 
-(builtin-function gethostname ()
+(built-in-function gethostname ()
   ; Returns the local host name.
   )
 
-(builtin-function client-socket (host port)
+(built-in-function client-socket (host port)
   ; Create a new socket and connect it to terminal corresponding to host and port.
   ; host must be a string that getaddrinfo(3) can resolve.
   ; Returns the file descriptor corresponding to the created socket.
   )
 
-(builtin-function server-socket (port)
+(built-in-function server-socket (port)
   ; Create a new socket and bind it to port.
   ; Returns the file descriptor corresponding to the created socket.
   )
 
-(builtin-function accept (sock)
+(built-in-function accept (sock)
   ; Extracts the first connection request on the queue of pending connections for the listening socket sock and creates a new connected socket.
   ; Only one can be connected at the same time.
   ; Returns a socket.
   )
 
-(builtin-function recv (buf from size sock)
+(built-in-function recv (buf from size sock)
   ; Reads size bytes of data from socket stream, storing them at the location given by bytes buf offset from.
   ; Returns size;
   )
 
-(builtin-function send (buf from size sock)
+(built-in-function send (buf from size sock)
   ; Writes size bytes of data to the the socket stream, obtaining them at the location given by bytes buf offset from.
   ; Returns size;
   )
@@ -42,7 +42,7 @@
   ; Same as (send buf 0 (len buf) sock)).
   (send buf 0 (len buf) sock))
 
-(builtin-function closesocket (sock)
+(built-in-function closesocket (sock)
   ; Closes the socket.
   ; Returns nil.
   )

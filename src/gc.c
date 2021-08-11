@@ -258,12 +258,12 @@ object gc_new_func(object env, int param_count, object params, object body)
   return new_proc(FUNC, env, param_count, params, body);
 }
 
-object gc_new_builtin(int type, object name, void *p)
+object gc_new_native(int type, object name, void *p)
 {
   object o;
-  o = gc_alloc(sizeof(struct builtin));
-  o->builtin.name = name;
-  o->builtin.u.p = p;
+  o = gc_alloc(sizeof(struct native));
+  o->native.name = name;
+  o->native.u.p = p;
   object_set_type(o, type);
   regist(o);
   return o;
@@ -316,8 +316,8 @@ void gc_mark(object o)
       map_foreach(o, mark_binding);
       break;
     case SPECIAL:
-    case BUILTINFUNC:
-      gc_mark(o->builtin.name);
+    case BFUNC:
+      gc_mark(o->native.name);
       break;
     case MACRO:
     case FUNC:

@@ -78,12 +78,12 @@ static char *error_name(enum error e) {
 static char *error_msg(enum error_msg em) {
   switch (em) {
     case assert_failed: return "assert failed";
-    case builtin_failed: return "builtin function failed";
+    case built_in_failed: return "built-in function failed";
     case connection_failed: return "connection failed";
     case division_by_zero: return "division by zero";
     case expected_array: return "expected_array";
     case expected_binding_value: return "expected binding value";
-    case expected_builtin_operator: return "expected builtin operator";
+    case expected_built_in_operator: return "expected built-in operator";
     case expected_byte: return "expected byte";
     case expected_bytes: return "expected bytes";
     case expected_bytes_like: return "expected bytes like object";
@@ -199,7 +199,7 @@ static void exit1(void)
 
 #define FRAME_STACK_SIZE 10000
 #define FRAME_SIZE_MASK          0x00f
-#define   APPLY_BUILTIN_FRAME    0x003
+#define   APPLY_BUILT_IN_FRAME   0x003
 #define   APPLY_FRAME            0x013
 #define   ASSERT_FRAME           0x023
 #define   BIND_FRAME             0x033
@@ -248,7 +248,7 @@ static object fs[FRAME_STACK_SIZE];
 static char *frame_name(int frame_type)
 {
   switch (frame_type) {
-    case APPLY_BUILTIN_FRAME: return "APPLY_BUILTIN_FRAME";
+    case APPLY_BUILT_IN_FRAME: return "APPLY_BUILT_IN_FRAME";
     case APPLY_FRAME: return "APPLY_FRAME";
     case ASSERT_FRAME: return "ASSERT_FRAME";
     case BIND_FRAME: return "BIND_FRAME";
@@ -452,18 +452,18 @@ static void pop_apply_frame(void)
   parse_args(&map_put, func->proc.params, reg[0]);
 }
 
-static void pop_apply_builtin_frame(void)
+static void pop_apply_built_in_frame(void)
 {
   object f, args;
   int (*function)(int, object, object *);
   f = get_frame_var(fp, 0);
   args = reg[0];
-  function = f->builtin.u.function;
+  function = f->native.u.function;
   pop_frame();
   if ((*function)(list_len(args), args, &(reg[0]))) return;
-  if (ip_trap_code == TRAP_NONE) ip_throw(Error, builtin_failed);
+  if (ip_trap_code == TRAP_NONE) ip_throw(Error, built_in_failed);
   // trace
-  gen2(FUNC_FRAME, reg[1], gc_new_cons(f->builtin.name, args));
+  gen2(FUNC_FRAME, reg[1], gc_new_cons(f->native.name, args));
 }
 
 static void pop_assert_frame(void)
@@ -540,13 +540,13 @@ static void pop_eval_frame(void)
       }
       switch (object_type(operator)) {
         case SPECIAL:
-          special = operator->builtin.u.special;
+          special = operator->native.u.special;
           if ((*special)(list_len(args), args)) return;
           // tarace
-          gen2(FUNC_FRAME, reg[1], gc_new_cons(operator->builtin.name, args));
+          gen2(FUNC_FRAME, reg[1], gc_new_cons(operator->native.name, args));
           return;
-        case BUILTINFUNC:
-          gen1(APPLY_BUILTIN_FRAME, operator);
+        case BFUNC:
+          gen1(APPLY_BUILT_IN_FRAME, operator);
           gen_eval_args_frame(args);
           return;
         case MACRO:
@@ -575,7 +575,7 @@ static void pop_eval_frame(void)
     case DICT:
     case MACRO:
     case FUNC:
-    case BUILTINFUNC:
+    case BFUNC:
     case SPECIAL:
       return;
     default:
@@ -752,8 +752,8 @@ DEFUN(apply)
   if (!bi_list(argv->cons.cdr->cons.car, &args)) return FALSE;
   reg[0] = args;
   switch (object_type(argv->cons.car)) {
-    case BUILTINFUNC:
-      gen1(APPLY_BUILTIN_FRAME, argv->cons.car);
+    case BFUNC:
+      gen1(APPLY_BUILT_IN_FRAME, argv->cons.car);
       return TRUE;
     case FUNC:
       gen1(APPLY_FRAME, argv->cons.car);
@@ -1247,7 +1247,7 @@ static void ip_main(object args)
     if (ip_trap_code != TRAP_NONE) trap();
     if (cycle % IP_POLLING_INTERVAL == 0) gc_chance();
     switch (fs_top()) {
-      case APPLY_BUILTIN_FRAME: pop_apply_builtin_frame(); break;
+      case APPLY_BUILT_IN_FRAME: pop_apply_built_in_frame(); break;
       case APPLY_FRAME: pop_apply_frame(); break;
       case ASSERT_FRAME: pop_assert_frame(); break;
       case BIND_FRAME: pop_bind_frame(); break;
