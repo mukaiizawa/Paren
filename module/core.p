@@ -2048,7 +2048,7 @@
                             (f (ope :key init-val offset decimal-point remove-zero?)
                               (if (== ope :init)
                                   (begin
-                                    (<- zero-padding (if (&& offset (< exponent 0)) exponent 0)
+                                    (<- zero-padding (if (&& offset (< exponent 0)) (abs exponent) 0)
                                         max-val-len (++ (if offset (+ precision exponent) precision))
                                         max-val (// (pow 10 max-val-len))
                                         val (// (+ (/ (* init-val max-val) 10) 0.5)))
