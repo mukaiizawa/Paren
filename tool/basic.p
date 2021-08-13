@@ -166,7 +166,7 @@
           (push! (get-token-value rd) vars)
           (if (== (peek-token rd) :comma) (get-token rd)
               (break))))
-    `(NEXT ,@vars)))
+    `(NEXT ,@(reverse! vars))))
 
 (function parse-stmt (rd)
   (let (stmt (get-token rd))
@@ -261,9 +261,9 @@
   (loop
     (catch (BasicJump (f (e) (<- $ip (&ip e) $sp (&sp e))))
       (let ((line-no :rest stmts) ([] code $ip))
-        (dolist (stmt stmts)
-          (if (> $sp 0) (begin (<- $sp (-- $sp)) (continue))
-              (apply ([] $vars (car stmt)) (cdr stmt))))
+        (dolist (stmt (slice stmts $sp))
+          (apply ([] $vars (car stmt)) (cdr stmt))
+          (<- $sp (++ $sp)))
         (<- $ip (++ $ip) $sp 0)))))
 
 ;; Loader.
