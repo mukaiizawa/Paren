@@ -328,6 +328,15 @@
 (basic-built-in DEF (:key NAME PARAMS BODY)
   ([] $vars NAME (eval (list f PARAMS BODY))))
 
+(basic-built-in DIM (:rest args)
+  (dolist (arg args)
+    (let ((:key NAME DIM) arg
+              size (apply * (map ++ (map basic-eval DIM)))
+              init-val (if (= (last (str NAME)) "$") "" 0)
+              arr (array size))
+      (dotimes (i size) ([] arr i init-val))
+      ([] $vars NAME arr))))
+
 (basic-built-in END () (quit))
 
 (basic-built-in FOR (:key VAR FROM TO STEP)
@@ -421,7 +430,6 @@
 
 (function interpret (code)
   (foreach write (array->list code))
-  (quit)
   (loop
     (catch (BasicJump (f (e) (<- $ip (&ip e) $sp (&sp e))))
       (let ((line-no :rest stmts) ([] code $ip))
