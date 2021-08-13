@@ -6,10 +6,13 @@
                      SGN SIN SPC SQR STR$ TAN TAB VAL)
     $operators '(^ * / + - = < > <> <= >= AND OR)
     $built-in (concat $statements $functions $operators)
-    $code nil
-    $ip 0
-    $vars (dict)
     $token nil
+    ;; runtime
+    $code nil
+    $ip 0    ; instruction pointer.
+    $sp 0    ; statement pointer.
+    $sc 0    ; screen cursor.
+    $vars (dict)
     $for-stack nil)
 
 ;; Lexer.
@@ -55,7 +58,8 @@
         (= next "\"") (list :string (.lex-string self))
         (.next? self digit?) (list :number (.skip-number self))
         (.next? self alpha?) (.lex-identifier self)
-        (raise SyntaxError "illegal token"))))
+        (in? (symbol next) $operators) (symbol (.skip self))
+        (raise SyntaxError (str "illegal token " next)))))
 
 (method BasicLexer .lex ()
   (let ((key :opt val) (->list (.lex0 self)))
@@ -65,7 +69,7 @@
 
 (function get-token (rd :opt expected)
   (let (token (if (nil? $token) (.lex rd) (pop! $token)))
-    (if (&& expected (!= token expected)) (raise SyntaxError "unexpected token")
+    (if (&& expected (!= token expected)) (raise SyntaxError (str "unexpected token " token " expected " expected))
         token)))
 
 (function get-token-value (rd)
@@ -140,41 +144,36 @@
           (push! (parse-expr rd) exprs)))
     `(PRINT ,@(reverse! exprs))))
 
-; (function parse-for (rd)
-;   (let ((:opt var from to step) nil)
-;     (<- var (.get-identifier (.skip-space rd)))
-;     (.skip rd "=")
-;     (<- from (.skip-number (.skip-space rd)))
-;     `(let (var ,var from ,from to ,to step ,step)
-;        ([] $vars var from)
-;        (push! (list :ip $ip :var var :to to :step step) $for-stack))))
+(function parse-for (rd)
+  (let ((:opt var from to step) nil)
+    (get-token rd :identifier)
+    (<- var (get-token-value rd))
+    (get-token rd '=)
+    (<- from (parse-expr rd))
+    (get-token rd 'TO)
+    (<- to (parse-expr rd))
+    (if (!= (peek-token rd) 'STEP) (<- step 1)
+        (begin
+          (get-token rd 'STEP)
+          (<- step (parse-expr rd))))
+    `(FOR :VAR ,var :FROM ,from :TO ,to :STEP ,step)))
 
-; (function parse-next (rd)
-;   (let (vars nil)
-;     (push! (.get-identifier (.skip-space rd)) vars)
-;     (while (= (.next (.skip-space rd)) ",") (push! (.get-identifier rd) vars))
-;     (map (f (x)
-;            `(let ((:key ip var to step) (car $for-stack))
-;               (if (!= var ,x) (raise SyntaxError (str "unexpected NEXT " x))
-;                   (let (val ([] $vars var))
-;                     ([] $vars var (<- val (+ step val)))
-;                     (if (|| (&& (> step 0) (> val to)) (&& (< step 0) (< val to))) (pop! $for-stack)
-;                         (<- $ip ip))))))
-;          (reverse! vars))))
-
-(function parse-goto (rd)
-  (let (line-no (.skip-uint (.skip-space rd)))
-    `(begin
-       (<- $ip (find (f (i) (if (= (car ([] $code i)) ,line-no) i))
-                     (.. (len $code))))
-       (continue))))
+(function parse-next (rd)
+  (let (vars nil)
+    (if (== (peek-token rd) :identifier)
+        (loop
+          (get-token rd :identifier)
+          (push! (get-token-value rd) vars)
+          (if (== (peek-token rd) :comma) (get-token rd)
+              (break))))
+    `(NEXT ,@vars)))
 
 (function parse-stmt (rd)
   (let (stmt (get-token rd))
     (if (== stmt 'PRINT) (parse-print rd)
         (== stmt 'END) '(END)
-        (== stmt 'FOR) :for
-        (== stmt 'NEXT) :next
+        (== stmt 'FOR) (parse-for rd)
+        (== stmt 'NEXT) (parse-next rd)
         (raise SyntaxError (str "unknown statement " stmt)))))
 
 (function parse-line (x)
@@ -192,9 +191,12 @@
 ;; Evaluater.
 
 (macro basic-built-in (name args :rest body)
-  `(begin
-     (function ,name ,args ,@body)
-     ([] $vars ',name ,name)))
+  `([] $vars ',name (f ,args ,@body)))
+
+(basic-built-in + (x y) (+ x y))
+(basic-built-in - (x y) (- x y))
+(basic-built-in * (x y) (* x y))
+(basic-built-in / (x y) (/ x y))
 
 (basic-built-in TAB (width)
   (with-memory-stream ($out)
@@ -203,29 +205,66 @@
 (basic-built-in END ()
   (quit))
 
+(basic-built-in FOR (:key VAR FROM TO STEP)
+  ([] $vars VAR (basic-eval FROM))
+  (push! (list $ip $sp :VAR VAR :TO (basic-eval TO) :STEP (basic-eval STEP)) $for-stack))
+
+(basic-built-in NEXT (:rest vars)
+  (dolist (var (|| vars (list (assoc (car $for-stack) :VAR))))
+    (let ((ip sp :key VAR TO STEP) (car $for-stack) val nil)
+      (if (!= VAR var) (raise SyntaxError (str "missing FOR of NEXT " var))
+          (begin
+            ([] $vars VAR (<- val (+ ([] $vars VAR) STEP)))
+            (if (|| (&& (> STEP 0) (> val TO))
+                    (&& (< STEP 0) (< val TO)))
+                (pop! $for-stack)
+                (basic-jump ip (++ sp))))))))
+
 (basic-built-in PRINT (:rest args)
   (let (newline? true)
     (dolist (x args)
       (if (== x :semicolon) (<- newline? nil)
-          (== x :comma) (begin (write-bytes " todo comma ") (<- newline? nil))
-          (write-bytes (str (basic-eval x)))))
-    (if newline? (write-line))
-    (<- $ip (++ $ip))))
+          (== x :comma)
+          (begin
+            (loop (basic-write " ") (if (= (% $sc 14) 0) (break)))
+            (<- newline? nil))
+          (begin
+            (basic-write (basic-eval x))
+            (<- newline? true))))
+    (if newline? (basic-write "\n"))))
+
+(function basic-write (x)
+  (dostring (ch (str x))
+    (if (= ch "\n") (<- $sc 0)
+        (<- $sc (+ $sc (wcwidth ch))))
+    (write-bytes ch)))
 
 (function basic-eval (x)
-  (if (atom? x) x
+  (if (symbol? x)
+      (let (val ([] $vars x))
+        (if (nil? val) ([] $vars x 0)
+            val))
+      (atom? x) x
       (let ((operator :rest args) x)
         (basic-apply operator (map basic-eval args)))))
 
 (function basic-apply (operator args)
   (apply ([] $vars operator) args))
 
+(class BasicJump (Exception) ip sp)
+
+(function basic-jump (ip :opt sp)
+  (throw (&sp! (&ip! (.new BasicJump) ip) (|| sp 0))))
+
 (function interpret (code)
   (foreach write (array->list code))
-  ; (quit)
   (loop
-    (let ((line-no :rest stmts) ([] code $ip))
-      (foreach eval stmts))))
+    (catch (BasicJump (f (e) (<- $ip (&ip e) $sp (&sp e))))
+      (let ((line-no :rest stmts) ([] code $ip))
+        (dolist (stmt stmts)
+          (if (> $sp 0) (begin (<- $sp (-- $sp)) (continue))
+              (apply ([] $vars (car stmt)) (cdr stmt))))
+        (<- $ip (++ $ip) $sp 0)))))
 
 ;; Loader.
 
