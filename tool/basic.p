@@ -88,6 +88,39 @@
 
 ;; Parser.
 
+;;; Expression.
+
+(function parse-number (rd)
+  (get-token rd :number)
+  (get-token-value rd))
+
+(function parse-identifier (rd)
+  (get-token rd :identifier)
+  (get-token-value rd))
+
+(function parse-string (rd)
+  (get-token rd :string)
+  (get-token-value rd))
+
+(function parse-var (rd)
+  (let (var (parse-identifier rd))
+    (if (!= (peek-token rd) :open-paren) var
+        (cons var (parse-paren rd (f (rd) (parse-csv rd parse-expr)))))))
+
+(function parse-csv (rd parse1)
+  (let (acc nil)
+    (push! (parse1 rd) acc)
+    (while (== (peek-token rd) :comma)
+      (get-token rd :comma)
+      (push! (parse1 rd) acc))
+    (reverse! acc)))
+
+(function parse-paren (rd parse1)
+  (get-token rd :open-paren)
+  (begin0
+    (parse1 rd)
+    (get-token rd :close-paren)))
+
 (macro parse-binary (level :rest syms)
   (let (parse-n (symbol (str 'parse- level)) parse-n+1 (symbol (str 'parse- (++ level))))
     `(function! ,parse-n (rd)
@@ -113,43 +146,51 @@
           (parse-7 rd)))))
 
 (function parse-7 (rd)
-  (let (token (get-token rd))
-    (if (== token :open-paren) (begin0 (parse-expr rd) (get-token rd :close-paren))
-        (== token :identifier) (parse-identifier rd)
-        (in? token '(:string :number)) (get-token-value rd)
-        (in? token $functions) (cons token (parse-paren rd))
+  (let (token (peek-token rd))
+    (if (== token :open-paren) (parse-paren rd parse-expr)
+        (== token :identifier) (parse-var rd)
+        (== token :number) (parse-number rd)
+        (== token :string) (parse-string rd)
+        (in? token $functions) (cons (get-token rd) (parse-paren rd (f (rd) (parse-csv rd parse-expr))))
         (raise SyntaxError (str "unknown token " token)))))
-
-(function parse-identifier (rd)
-  (let (identifier (get-token-value rd))
-    (if (== (peek-token rd) :open-paren) (cons identifier (parse-paren rd))
-        identifier)))
-
-(function parse-paren (rd)
-  (let (exprs nil)
-    (get-token rd :open-paren)
-    (push! (parse-expr rd) exprs)
-    (while (== (peek-token rd) :comma)
-      (get-token rd)
-      (push! (parse-expr rd) exprs))
-    (get-token rd :close-paren)
-    (reverse! exprs)))
 
 (function parse-expr (rd)
   (parse-0 rd))
 
-(function parse-print (rd)
-  (let (exprs nil token nil)
-    (loop
-      (if (in? (<- token (peek-token rd)) '(:EOL :colon)) (break)
-          (in? token '(:semicolon :comma)) (push! (get-token rd) exprs)
-          (push! (parse-expr rd) exprs)))
-    `(PRINT ,@(reverse! exprs))))
+;;; Statement.
+
+(function parse-data (rd)
+  ;; DATA expr [, expr] ...
+  ;; expr = number | identifier | string
+  `(DATA ,@(parse-csv rd
+                      (f (rd)
+                        (let (token (peek-token rd))
+                          (if (== token :identifier) (str (parse-identifier rd))
+                              (== token :number) (parse-number rd)
+                              (== token :string) (parse-string rd)
+                              (raise SyntaxError "invalid DATA statement")))))))
+
+(function parse-def (rd)
+  ;; DEF name(params)=body
+  ;; params = [param] ...
+  (let (name (parse-identifier rd)
+             params (parse-paren rd (f (rd) (parse-csv rd parse-var))))
+    (get-token rd '=)
+    `(DEF :NAME ,name :PARAMS ,params :BODY ,(parse-expr rd))))
+
+(function parse-dim (rd)
+  ;; DIM declaration [, declaration] ...
+  ;; declaration = identifier(dimension)
+  ;; dimension = expr [, expr] ...
+  `(DIM ,@(parse-csv rd
+                     (f (rd)
+                       (list :NAME (parse-identifier rd)
+                             :DIM (parse-paren rd (f (rd) (parse-csv rd parse-expr))))))))
 
 (function parse-for (rd)
+  ;; FOR identifier = expr TO expr [STEP expr]
   (let ((:opt var from to step) nil)
-    (get-token rd :identifier)
-    (<- var (get-token-value rd))
+    (<- var (parse-identifier rd))
     (get-token rd '=)
     (<- from (parse-expr rd))
     (get-token rd 'TO)
@@ -160,23 +201,87 @@
           (<- step (parse-expr rd))))
     `(FOR :VAR ,var :FROM ,from :TO ,to :STEP ,step)))
 
+(function parse-goxx (rd name)
+  ;; GOTO addr
+  ;; GOSUB addr
+  `(,name ,(parse-number rd)))
+
+(function parse-if (rd)
+  ;; IF test [THEN] { line-no | statement }
+  (let (test (parse-expr rd) then nil)
+    (if (== (peek-token rd) 'THEN) (get-token rd))
+    (if (!= (peek-token rd) :number) (<- then (parse-stmt rd))
+        (begin
+          (get-token rd)
+          (<- then (get-token-value rd))))
+    `(IF :TEST ,test :THEN ,then)))
+
+(function parse-input (rd)
+  ;; INPUT [prompt ;] var [,var]...
+  (let (prompt nil)
+    (when (== (peek-token rd) :string)
+      (get-token rd)
+      (<- prompt (get-token-value rd))
+      (get-token rd :semicolon))
+    `(INPUT :PROMPT ,prompt :VARS ,(parse-csv rd parse-var))))
+
+(function parse-let (rd)
+  ;; LET var=expr
+  `(LET :VAR ,(parse-var rd)
+        :VAL ,(begin (get-token rd '=) (parse-expr rd))))
+
+(function parse-on (rd)
+  ;; ON expr stmt addr [, addr] ...
+  ;; stmt = GOTO | GOSUB
+  (let (expr (parse-expr rd) stmt (get-token rd))
+    (if (! (in? stmt '(GOTO GOSUB))) (raise SyntaxError "require GOTO or GOSUB")
+        `(ON :EXPR ,expr :STMT ,stmt :ADDRESSES ,(parse-csv rd parse-number)))))
+
 (function parse-next (rd)
-  (let (vars nil)
-    (if (== (peek-token rd) :identifier)
-        (loop
-          (get-token rd :identifier)
-          (push! (get-token-value rd) vars)
-          (if (== (peek-token rd) :comma) (get-token rd)
-              (break))))
-    `(NEXT ,@(reverse! vars))))
+  ;; NEXT [identifier [, identifier] ...]
+  `(NEXT ,@(if (== (peek-token rd) :identifier) (parse-csv rd parse-identifier))))
+
+(function parse-print (rd)
+  ;; PRINT [expr | , | ;] ...
+  (let (exprs nil token nil)
+    (loop
+      (if (in? (<- token (peek-token rd)) '(:EOL :colon)) (break)
+          (in? token '(:semicolon :comma)) (push! (get-token rd) exprs)
+          (push! (parse-expr rd) exprs)))
+    `(PRINT ,@(reverse! exprs))))
+
+(function parse-read (rd)
+  ;; PRINT [expr | , | ;] ...
+  `(READ ,(parse-var rd)))
+
+(function parse-rem (rd)
+  ;; REM char ...
+  (while (.next rd) (.skip rd))
+  '(REM))
+
+(function parse-restore (rd)
+  ;; RESTORE [addr]
+  `(RESTORE ,(if (== (peek-token rd) :number) (parse-number rd))))
 
 (function parse-stmt (rd)
   (let (stmt (get-token rd))
-    (if (== stmt 'PRINT) (parse-print rd)
-        (== stmt 'END) '(END)
+    (if (== stmt 'DATA) (parse-data rd)
+        (== stmt 'DEF) (parse-def rd)
+        (== stmt 'DIM) (parse-dim rd)
         (== stmt 'FOR) (parse-for rd)
+        (== stmt 'IF) (parse-if rd)
+        (== stmt 'INPUT) (parse-input rd)
+        (== stmt 'LET) (parse-let rd)
         (== stmt 'NEXT) (parse-next rd)
-        (raise SyntaxError (str "unknown statement " stmt)))))
+        (== stmt 'ON) (parse-on rd)
+        (== stmt 'PRINT) (parse-print rd)
+        (== stmt 'READ) (parse-read rd)
+        (== stmt 'REM) (parse-rem rd)
+        (== stmt 'RESTORE) (parse-restore rd)
+        (in? stmt '(GOTO GOSUB)) (parse-goxx rd stmt)
+        (in? stmt '(END RETURN STOP)) (list stmt)
+        (== stmt :identifier) (begin (unget-token stmt) (parse-let rd))    ; implicit let.
+        (raise SyntaxError (str "unknown statement " stmt (get-token-value rd))))))
 
 (function parse-line (x)
   (let ((line-no line) x)
@@ -202,6 +307,10 @@
 (function bmtonum (x)
   (if (>= x 0x80000000) (- x 0x100000000)
       x))
+
+(function make-space (x)
+  (with-memory-stream ($out)
+    (dotimes (_ x) (write-bytes " "))))
 
 (basic-built-in ^ (x y) (int (pow x y)))
 (basic-built-in * (x y) (* x y))
@@ -233,14 +342,15 @@
 (basic-built-in RND (x) (rand.val))
 (basic-built-in SGN (x) (if (= x 0) 0 (> x 0) 1 -1))
 (basic-built-in SIN (x) (sin x))
-(basic-built-in SPC (x) (with-memory-stream ($out) (dotimes (_ x) (write-bytes " "))))
+(basic-built-in SPC (x) (make-space x))
 (basic-built-in SQR (x) (sqrt x))
 (basic-built-in STR$ (x) (str x))
 (basic-built-in TAN (x) (tan x))
-(basic-built-in TAB (x) (with-memory-stream ($out) (dotimes (_ (- x $sc)) (write-bytes " "))))
+(basic-built-in TAB (x) (make-space (- x $sc)))
 (basic-built-in VAL (x) (catch (Error (f (e) 0)) (float x)))
 
 (basic-built-in END () (quit))
+(basic-built-in STOP () (quit))
 
 (basic-built-in FOR (:key VAR FROM TO STEP)
   ([] $vars VAR (basic-eval FROM))
@@ -248,14 +358,15 @@
 
 (basic-built-in NEXT (:rest vars)
   (dolist (var (|| vars (list (assoc (car $for-stack) :VAR))))
-    (let ((ip sp :key VAR TO STEP) (car $for-stack) val nil)
-      (if (!= VAR var) (raise SyntaxError (str "missing FOR of NEXT " var))
-          (begin
-            ([] $vars VAR (<- val (+ ([] $vars VAR) STEP)))
-            (if (|| (&& (> STEP 0) (> val TO))
-                    (&& (< STEP 0) (< val TO)))
-                (pop! $for-stack)
-                (basic-jump ip (++ sp))))))))
+    (if (nil? $for-stack) (raise SyntaxError (str "invalid NEXT statement"))
+        (let ((ip sp :key VAR TO STEP) (car $for-stack) val nil)
+          (if (!= VAR var) (raise SyntaxError (str "missing FOR of NEXT " var))
+              (begin
+                ([] $vars VAR (<- val (+ ([] $vars VAR) STEP)))
+                (if (|| (&& (> STEP 0) (> val TO))
+                        (&& (< STEP 0) (< val TO)))
+                    (pop! $for-stack)
+                    (basic-jump ip (++ sp)))))))))
 
 (basic-built-in PRINT (:rest args)
   (let (newline? true)
