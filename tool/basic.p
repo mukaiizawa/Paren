@@ -297,60 +297,38 @@
 
 ;; Evaluater.
 
+(function basic-write (x)
+  (dostring (ch (str x))
+    (if (= ch "\n") (<- $sc 0)
+        (<- $sc (+ $sc (wcwidth ch))))
+    (write-bytes ch)))
+
+(function basic-bool (x)
+  (if x -1 0))
+
+(function basic-eval (x)
+  (if (symbol? x)
+      (let (val ([] $vars x))
+        (if (nil? val) ([] $vars x 0)
+            val))
+      (atom? x) x
+      (let ((operator :rest args) x)
+        (basic-apply operator (map basic-eval args)))))
+
+(function basic-apply (operator args)
+  (apply ([] $vars operator) args))
+
 (macro basic-built-in (name args :rest body)
   `([] $vars ',name (f ,args ,@body)))
 
-(function numtobm (x)
-  (if (< (<- x (int x)) 0) (+ 0x100000000 x)
-      x))
+;;; Statements.
 
-(function bmtonum (x)
-  (if (>= x 0x80000000) (- x 0x100000000)
-      x))
+(basic-built-in DATA () nil)
 
-(function make-space (x)
-  (with-memory-stream ($out)
-    (dotimes (_ x) (write-bytes " "))))
-
-(basic-built-in ^ (x y) (int (pow x y)))
-(basic-built-in * (x y) (* x y))
-(basic-built-in / (x y) (/ x y))
-(basic-built-in + (x y) (+ x y))
-(basic-built-in - (x :opt y) (if (nil? y) (- x) (- x y)))
-(basic-built-in = (x y) (basic-bool (= x y)))
-(basic-built-in < (x y) (basic-bool (< x y)))
-(basic-built-in > (x y) (basic-bool (> x y)))
-(basic-built-in <> (x y) (basic-bool (!= x y)))
-(basic-built-in <= (x y) (basic-bool (<= x y)))
-(basic-built-in >= (x y) (basic-bool (>= x y)))
-(basic-built-in AND (x y) (bmtonum (apply & (map numtobm (list x y)))))
-(basic-built-in OR (x y) (bmtonum (apply | (map numtobm (list x y)))))
-
-(basic-built-in ABS (x) (abs x))
-(basic-built-in ASC (x) (ord x))
-(basic-built-in ATN (x) (atan x))
-(basic-built-in CHR$ (x) (chr x))
-(basic-built-in COS (x) (cos x))
-(basic-built-in EXP (x) (exp x))
-(basic-built-in INT (x) (if (int? x) x (< x 0) (int (-- x)) (int x)))
-(basic-built-in LEFT$ (x y) (slice x 0 y))
-(basic-built-in LEN (x) (len x))
-(basic-built-in LOG (x) (log x))
-(basic-built-in MID$ (x y z) (slice x y z))
-(basic-built-in NOT (x) (basic-bool (= x 0)))
-(basic-built-in RIGHT$ (x y) (slice x (- (len x) y) (len x)))
-(basic-built-in RND (x) (rand.val))
-(basic-built-in SGN (x) (if (= x 0) 0 (> x 0) 1 -1))
-(basic-built-in SIN (x) (sin x))
-(basic-built-in SPC (x) (make-space x))
-(basic-built-in SQR (x) (sqrt x))
-(basic-built-in STR$ (x) (str x))
-(basic-built-in TAN (x) (tan x))
-(basic-built-in TAB (x) (make-space (- x $sc)))
-(basic-built-in VAL (x) (catch (Error (f (e) 0)) (float x)))
+(basic-built-in DEF (:key NAME PARAMS BODY)
+  ([] $vars NAME (eval (list f PARAMS BODY))))
 
 (basic-built-in END () (quit))
-(basic-built-in STOP () (quit))
 
 (basic-built-in FOR (:key VAR FROM TO STEP)
   ([] $vars VAR (basic-eval FROM))
@@ -381,26 +359,60 @@
             (<- newline? true))))
     (if newline? (basic-write "\n"))))
 
-(function basic-write (x)
-  (dostring (ch (str x))
-    (if (= ch "\n") (<- $sc 0)
-        (<- $sc (+ $sc (wcwidth ch))))
-    (write-bytes ch)))
+(basic-built-in STOP () (quit))
 
-(function basic-bool (x)
-  (if x -1 0))
+;;; Functions.
 
-(function basic-eval (x)
-  (if (symbol? x)
-      (let (val ([] $vars x))
-        (if (nil? val) ([] $vars x 0)
-            val))
-      (atom? x) x
-      (let ((operator :rest args) x)
-        (basic-apply operator (map basic-eval args)))))
+(function make-space (x)
+  (with-memory-stream ($out)
+    (dotimes (_ x) (write-bytes " "))))
 
-(function basic-apply (operator args)
-  (apply ([] $vars operator) args))
+(basic-built-in ABS (x) (abs x))
+(basic-built-in ASC (x) (ord x))
+(basic-built-in ATN (x) (atan x))
+(basic-built-in CHR$ (x) (chr x))
+(basic-built-in COS (x) (cos x))
+(basic-built-in EXP (x) (exp x))
+(basic-built-in INT (x) (if (int? x) x (< x 0) (int (-- x)) (int x)))
+(basic-built-in LEFT$ (x y) (slice x 0 y))
+(basic-built-in LEN (x) (len x))
+(basic-built-in LOG (x) (log x))
+(basic-built-in MID$ (x y z) (slice x y z))
+(basic-built-in NOT (x) (basic-bool (= x 0)))
+(basic-built-in RIGHT$ (x y) (slice x (- (len x) y) (len x)))
+(basic-built-in RND (x) (rand.val))
+(basic-built-in SGN (x) (if (= x 0) 0 (> x 0) 1 -1))
+(basic-built-in SIN (x) (sin x))
+(basic-built-in SPC (x) (make-space x))
+(basic-built-in SQR (x) (sqrt x))
+(basic-built-in STR$ (x) (str x))
+(basic-built-in TAN (x) (tan x))
+(basic-built-in TAB (x) (make-space (- x $sc)))
+(basic-built-in VAL (x) (catch (Error (f (e) 0)) (float x)))
+
+;;; Operators.
+
+(function numtobm (x)
+  (if (< (<- x (int x)) 0) (+ 0x100000000 x)
+      x))
+
+(function bmtonum (x)
+  (if (>= x 0x80000000) (- x 0x100000000)
+      x))
+
+(basic-built-in ^ (x y) (int (pow x y)))
+(basic-built-in * (x y) (* x y))
+(basic-built-in / (x y) (/ x y))
+(basic-built-in + (x y) (+ x y))
+(basic-built-in - (x :opt y) (if (nil? y) (- x) (- x y)))
+(basic-built-in = (x y) (basic-bool (= x y)))
+(basic-built-in < (x y) (basic-bool (< x y)))
+(basic-built-in > (x y) (basic-bool (> x y)))
+(basic-built-in <> (x y) (basic-bool (!= x y)))
+(basic-built-in <= (x y) (basic-bool (<= x y)))
+(basic-built-in >= (x y) (basic-bool (>= x y)))
+(basic-built-in AND (x y) (bmtonum (apply & (map numtobm (list x y)))))
+(basic-built-in OR (x y) (bmtonum (apply | (map numtobm (list x y)))))
 
 (class BasicJump (Exception) ip sp)
 
@@ -409,6 +421,7 @@
 
 (function interpret (code)
   (foreach write (array->list code))
+  (quit)
   (loop
     (catch (BasicJump (f (e) (<- $ip (&ip e) $sp (&sp e))))
       (let ((line-no :rest stmts) ([] code $ip))
