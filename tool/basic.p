@@ -1,5 +1,7 @@
 ; basic interpreter.
 
+(import :rand)
+
 (<- $statements '(DEF DIM END FOR TO STEP NEXT GOSUB RETURN GOTO IF THEN INPUT
                       LET ON GOTO ON GOSUB PRINT READ DATA RESTORE REM STOP)
     $functions '(ABS ASC ATN CHR$ COS EXP INT LEFT$ LEN LOG MID$ NOT RIGHT$ RND
@@ -26,7 +28,7 @@
       (= (.next self) ">") (begin (.skip self) '<>)
       '<))
 
-(method BasicLexer .let-gt ()
+(method BasicLexer .lex-gt ()
   (.skip self)
   (if (= (.next self) "=") (begin (.skip self) '>=)
       '>))
@@ -54,7 +56,7 @@
         (= next "(") (begin (.skip self) :open-paren)
         (= next ")") (begin (.skip self) :close-paren)
         (= next "<") (.lex-lt self)
-        (= next ">") (.let-gt self)
+        (= next ">") (.lex-gt self)
         (= next "\"") (list :string (.lex-string self))
         (.next? self digit?) (list :number (.skip-number self))
         (.next? self alpha?) (.lex-identifier self)
@@ -193,17 +195,52 @@
 (macro basic-built-in (name args :rest body)
   `([] $vars ',name (f ,args ,@body)))
 
-(basic-built-in + (x y) (+ x y))
-(basic-built-in - (x y) (- x y))
+(function numtobm (x)
+  (if (< (<- x (int x)) 0) (+ 0x100000000 x)
+      x))
+
+(function bmtonum (x)
+  (if (>= x 0x80000000) (- x 0x100000000)
+      x))
+
+(basic-built-in ^ (x y) (int (pow x y)))
 (basic-built-in * (x y) (* x y))
 (basic-built-in / (x y) (/ x y))
+(basic-built-in + (x y) (+ x y))
+(basic-built-in - (x :opt y) (if (nil? y) (- x) (- x y)))
+(basic-built-in = (x y) (basic-bool (= x y)))
+(basic-built-in < (x y) (basic-bool (< x y)))
+(basic-built-in > (x y) (basic-bool (> x y)))
+(basic-built-in <> (x y) (basic-bool (!= x y)))
+(basic-built-in <= (x y) (basic-bool (<= x y)))
+(basic-built-in >= (x y) (basic-bool (>= x y)))
+(basic-built-in AND (x y) (bmtonum (apply & (map numtobm (list x y)))))
+(basic-built-in OR (x y) (bmtonum (apply | (map numtobm (list x y)))))
 
-(basic-built-in TAB (width)
-  (with-memory-stream ($out)
-    (dotimes (_ width) (write-bytes " "))))
+(basic-built-in ABS (x) (abs x))
+(basic-built-in ASC (x) (ord x))
+(basic-built-in ATN (x) (atan x))
+(basic-built-in CHR$ (x) (chr x))
+(basic-built-in COS (x) (cos x))
+(basic-built-in EXP (x) (exp x))
+(basic-built-in INT (x) (if (int? x) x (< x 0) (int (-- x)) (int x)))
+(basic-built-in LEFT$ (x y) (slice x 0 y))
+(basic-built-in LEN (x) (len x))
+(basic-built-in LOG (x) (log x))
+(basic-built-in MID$ (x y z) (slice x y z))
+(basic-built-in NOT (x) (basic-bool (= x 0)))
+(basic-built-in RIGHT$ (x y) (slice x (- (len x) y) (len x)))
+(basic-built-in RND (x) (rand.val))
+(basic-built-in SGN (x) (if (= x 0) 0 (> x 0) 1 -1))
+(basic-built-in SIN (x) (sin x))
+(basic-built-in SPC (x) (with-memory-stream ($out) (dotimes (_ x) (write-bytes " "))))
+(basic-built-in SQR (x) (sqrt x))
+(basic-built-in STR$ (x) (str x))
+(basic-built-in TAN (x) (tan x))
+(basic-built-in TAB (x) (with-memory-stream ($out) (dotimes (_ (- x $sc)) (write-bytes " "))))
+(basic-built-in VAL (x) (catch (Error (f (e) 0)) (float x)))
 
-(basic-built-in END ()
-  (quit))
+(basic-built-in END () (quit))
 
 (basic-built-in FOR (:key VAR FROM TO STEP)
   ([] $vars VAR (basic-eval FROM))
@@ -238,6 +275,9 @@
     (if (= ch "\n") (<- $sc 0)
         (<- $sc (+ $sc (wcwidth ch))))
     (write-bytes ch)))
+
+(function basic-bool (x)
+  (if x -1 0))
 
 (function basic-eval (x)
   (if (symbol? x)
