@@ -16,7 +16,7 @@ Reads the program from a FILE and runs it with classic Microsoft BASIC compatibi
 - FOR
 - GOSUB
 - GOTO
-- IF THEN
+- IF
 - INPUT
 - LET
 - NEXT
