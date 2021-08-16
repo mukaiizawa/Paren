@@ -33,17 +33,10 @@
     (cons let (cons (rec syms) body))))
 
 (macro begin0 (:rest body)
-  ; Evaluate each of the specified body and return the first evaluated value.
-  ; Macro expansion image is as follows.
-  ;     (begin0 expr1 expr2 ...)
-  ;     (let (x expr1)
-  ;         (begin expr2
-  ;                 ...)
-  ;         x)
-  (with-gensyms (val)
-    (list let (list val (car body))
+  (with-gensyms (x)
+    (list let (list x (car body))
           (cons begin (cdr body))
-          val)))
+          x)))
 
 (macro when (test :rest body)
   ; Evaluate the specified test and if it is not nil then evaluate each of the specified body.
