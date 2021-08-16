@@ -6,7 +6,7 @@ begin - evaluates expressions.
     (begin EXPR...)
 
 # DESCRIPTION
-`begin` evaluates EXPR, in the order in which they are given.
+`begin` evaluates EXPRs, in the order in which they are given.
 
 The values of each form but the last are discarded.
 
