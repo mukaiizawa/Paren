@@ -12,10 +12,14 @@
     ;; runtime
     $code nil
     $ip 0    ; instruction pointer.
-    $dp nil  ; data pointer. (line-no i)
+    $dp nil  ; data pointer. (line-no :rest data)
     $sp 0    ; statement pointer.
     $sc 0    ; screen cursor.
+    $stmts (dict)
     $vars (dict)
+    $basic-true -1
+    $basic-nil 0
+    $call-stack nil
     $for-stack nil)
 
 ;; Lexer.
@@ -258,8 +262,8 @@
 
 (function parse-rem (rd)
   ;; REM char ...
-  (while (.next rd) (.skip rd))
-  '(REM))
+  (while (.next rd) (.get rd))
+  `(REM ,(.token rd)))
 
 (function parse-restore (rd)
   ;; RESTORE [addr]
@@ -295,36 +299,33 @@
               (begin
                 (get-token rd :EOL)
                 (break))))
-        (if (&& (nil? $dp) (some? (f (x) (== 'DATA (car x))) stmts)) (<- $dp (list line-no 0)))
+        (if (nil? $dp)
+            (<- $dp (find (f (x) (if (== 'DATA (car x)) (cdr x)))
+                          stmts)))
         (cons line-no (reverse! stmts))))))
 
 ;; Evaluater.
 
-(function line-no->code (line-no)
-  (dolist (code $code)
-    (if (= (car code) line-no) (return (cdr code))))
-  (raise ArgumentError (str "missing code:" line-no)))
+(function line-no->ip (x)
+  (dotimes (i (len $code))
+    (let ((line-no :rest stmts) ([] $code i))
+      (if (= x line-no) (return i))))
+  (raise ArgumentError (str "missing code:" x)))
 
 (function basic-get (var)
-  ;; var | (var indices ...)
-  (if (atom? var)
-      (let (val ([] $vars var))
-        (if (nil? val) (basic-set var 0)
-            val))
-      (let ((var :rest indices) var val (basic-get var))
-        (if (! (array? val)) (raise SyntaxError (str "is not a array" var indices))
-            ([] var (basic-array-index indices))))))
+  (let (val ([] $vars var))
+    (if (nil? val) (basic-set var 0)
+        val)))
 
 (function basic-set (var val)
-  ;; var val | (var indices ...) val
-  (if (atom? var) ([] $vars var val)
-      (let ((var :rest indices) var arr (basic-get var))
-        (if (nil? arr) (basic-new-array var '(255)))
-        ([] arr (basic-array-index indices) val))))
+  ([] $vars var val))
+
+(function basic-string-var? (name)
+  (= (last (str name)) "$"))
 
 (function basic-new-array (name dim)
   (let (size (apply * (map ++ dim))
-             init-val (if (= (last (str name)) "$") "" 0)
+             init-val (if (basic-string-var? name) "" 0)
              arr (array size))
     (dotimes (i size) ([] arr i init-val))
     (basic-set name arr)))
@@ -332,26 +333,30 @@
 (function basic-array-index (indices)
   (let (index 0)
     (dotimes (i (len indices))
-      (<- index (+ index (* i ([] indices i)))))))
+      (<- index (+ index (* i ([] indices i)))))
+    index))
 
-(function basic-next-dp ()
+(function basic-next-data ()
   (if (nil? $dp) nil
-      (let ((line-no i) $dp data (cdar (line-no->code line-no)))
-        (if ([] data (++ i)) (<- $dp (list line-no (++ i)))
-            (begin
-              (<- $dp nil)
-              (dolist (code $code)
-                (let ((lno (stms :rest data) :rest stmts) code)
-                  (if (|| (!== stmt 'DATA) (< lno line-no)) (continue)
-                      (begin
-                        (<- $dp (list lno 0))
-                        (return nil))))))))))
+      (let (cur-line-no (car $dp))
+        (<- $dp nil)
+        (doarray (code $code)
+          (let ((line-no (stms :rest data) :rest stmts) code)
+            (if (|| (!== stmt 'DATA) (< line-no cur-line-no)) (continue)
+                (begin
+                  (<- $dp (list line-no data))
+                  (return nil))))))))
 
 (function basic-read ()
   (if (nil? $dp) (raise "data pointer reached EOF")
-      (let ((line-no i) $dp val ([] (car (line-no->code line-no)) i))
-        (if (nil? val) (begin (next-dp) (basic-read))
-            (begin0 val (next-dp))))))
+      (let ((line-no :rest data) $dp)
+        (if (nil? data)
+            (begin
+              (basic-next-data)
+              (basic-read))
+            (begin0
+              (car data)
+              (<- $dp (list line-no (cdr data))))))))
 
 (function basic-write (x)
   (dostring (ch (str x))
@@ -360,46 +365,74 @@
     (write-bytes ch)))
 
 (function basic-bool (x)
-  (if x -1 0))
+  (if x $basic-true $basic-nil))
 
-(function basic-eval (x)
+(function basic-eval-expr (x)
   (if (symbol? x) (basic-get x)
       (atom? x) x
-      (let ((operator :rest args) x)
-        (basic-apply operator (map basic-eval args)))))
+      (let ((operator :rest args) (map basic-eval-expr x))
+        (if (array? operator) ([] operator (basic-array-index args))
+            (apply operator args)))))
 
-(function basic-apply (operator args)
-  (apply (basic-get operator) args))
-
-(macro basic-built-in (name args :rest body)
-  `(basic-set ',name (f ,args ,@body)))
+(function basic-eval-stmt (x)
+  (apply ([] $stmts (car x)) (cdr x)))
 
 ;;; Statements.
 
-(basic-built-in DATA (:rest vars) nil)
+(macro basic-stmt (name args :rest body)
+  `([] $stmts ',name (f ,args ,@body)))
 
-(basic-built-in DEF (:key name params body)
+(basic-stmt DATA (:rest vars)
+  nil)
+
+(basic-stmt DEF (:key name params body)
   (basic-set name (eval (list f params body))))
 
-(basic-built-in DIM (:rest args)
-  (foreach (f (:key name dim) (basic-new-array name (map basic-eval dim)))
+(basic-stmt DIM (:rest args)
+  (foreach (f (x)
+             (let ((:key name dim) x)
+               (basic-new-array name (map basic-eval-expr dim))))
            args))
 
-(basic-built-in END () (quit))
+(basic-stmt END ()
+  (quit))
 
-(basic-built-in FOR (:key var from to step)
-  (basic-set var (basic-eval from))
-  (push! (list $ip $sp :var var :to (basic-eval to) :step (basic-eval step)) $for-stack))
+(basic-stmt FOR (:key var from to step)
+  (basic-set var (basic-eval-expr from))
+  (push! (list $ip $sp :var var :to (basic-eval-expr to) :step (basic-eval-expr step)) $for-stack))
 
-(basic-built-in GOSUB () (quit))
+(basic-stmt GOSUB (addr)
+  (push! (list $ip $sp) $call-stack)
+  (basic-jump (line-no->ip addr) 0))
 
-(basic-built-in GOTO () (quit))
+(basic-stmt GOTO (addr)
+  (basic-jump (line-no->ip addr) 0))
 
-(basic-built-in IF () (quit))
+(basic-stmt IF (:key test then)
+  (if (= (basic-eval-expr test) $basic-true)
+      (if (number? then) (basic-jump (line-no->ip then))
+          (basic-eval-stmt then))))
 
-(basic-built-in INPUT () (quit))
+(basic-stmt INPUT (:key prompt vars)
+  (loop
+    (catch (Error (f (e) (basic-write (.to-s e)) (<- $sc 0)))
+      (if prompt (basic-write prompt))
+      (basic-write "\nINPUT> ")
+      (let (vals (split (read-line) ",") vlen (len vals))
+        (if (!= (len vars) vlen)
+            (raise Error (str "require " (len vars) " arguments, given " vlen " arguments")))
+        (dotimes (i vlen)
+          (let (var ([] vars i))
+            (basic-set ([] vars i) (if (basic-string-var? var) ([] vals i)
+                                       (float ([] vals i)))))))
+      (return nil))))
 
-(basic-built-in NEXT (:rest vars)
+(basic-stmt LET (:key var val)
+  (if (atom? var) (basic-set var (basic-eval-expr val))
+      (let ((var :rest indices) var)
+        ([] (basic-get var) (basic-array-index indices) (basic-eval-expr val)))))
+
+(basic-stmt NEXT (:rest vars)
   (dolist (next (|| vars (list (assoc (car $for-stack) :var))))
     (if (nil? $for-stack) (raise SyntaxError (str "invalid NEXT statement"))
         (let ((ip sp :key var to step) (car $for-stack) val nil)
@@ -411,32 +444,46 @@
                     (pop! $for-stack)
                     (basic-jump ip (++ sp)))))))))
 
-(basic-built-in ON () (quit))
+(basic-stmt ON () (quit))
 
-(basic-built-in PRINT (:rest args)
+(basic-stmt PRINT (:rest args)
   (let (newline? true)
     (dolist (x args)
-      (if (== x :semicolon) (<- newline? nil)
+      (if (== x :semicolon)
+          (begin
+            (basic-write " ")
+            (<- newline? nil))
           (== x :comma)
           (begin
             (loop (basic-write " ") (if (= (% $sc 14) 0) (break)))
             (<- newline? nil))
           (begin
-            (basic-write (basic-eval x))
+            (basic-write (basic-eval-expr x))
             (<- newline? true))))
     (if newline? (basic-write "\n"))))
 
-(basic-built-in READ () (quit))
+(basic-stmt READ (:rest vars)
+  (dolist (var vars)
+    (basic-set var (basic-read))))
 
-(basic-built-in REM () (quit))
+(basic-stmt REM (str)
+  nil)
 
-(basic-built-in RESTORE () (quit))
+(basic-stmt RESTORE () (quit))
 
-(basic-built-in RETURN () (quit))
+(basic-stmt RETURN ()
+  (if (nil? $call-stack) (raise StateError "invalid RETURN statement")
+      (let ((ip sp) (pop! $call-stack))
+        (basic-jump ip (++ sp)))))
 
-(basic-built-in STOP () (quit))
+(basic-stmt STOP ()
+  (write :vars $vars :call-stack $call-stack :for-stack $for-stack)
+  (quit))
 
 ;;; Functions.
+
+(macro basic-built-in (name args :rest body)
+  `(basic-set ',name (f ,args ,@body)))
 
 (function make-space (x)
   (with-memory-stream ($out)
@@ -496,12 +543,11 @@
 
 (function interpret (code)
   (foreach write (array->list code))
-  (quit)
   (loop
     (catch (BasicJump (f (e) (<- $ip (&ip e) $sp (&sp e))))
       (let ((line-no :rest stmts) ([] code $ip))
         (dolist (stmt (slice stmts $sp))
-          (apply ([] $vars (car stmt)) (cdr stmt))
+          (basic-eval-stmt stmt)
           (<- $sp (++ $sp)))
         (<- $ip (++ $ip) $sp 0)))))
 
