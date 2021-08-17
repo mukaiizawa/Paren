@@ -12,6 +12,7 @@
     ;; runtime
     $code nil
     $ip 0    ; instruction pointer.
+    $dp nil  ; data pointer. (line-no i)
     $sp 0    ; statement pointer.
     $sc 0    ; screen cursor.
     $vars (dict)
@@ -177,7 +178,7 @@
   (let (name (parse-identifier rd)
              params (parse-paren rd (f (rd) (parse-csv rd parse-var))))
     (get-token rd '=)
-    `(DEF :NAME ,name :PARAMS ,params :BODY ,(parse-expr rd))))
+    `(DEF :name ,name :params ,params :body ,(parse-expr rd))))
 
 (function parse-dim (rd)
   ;; DIM declaration [, declaration] ...
@@ -185,8 +186,8 @@
   ;; dimension = expr [, expr] ...
   `(DIM ,@(parse-csv rd
                      (f (rd)
-                       (list :NAME (parse-identifier rd)
-                             :DIM (parse-paren rd (f (rd) (parse-csv rd parse-expr))))))))
+                       (list :name (parse-identifier rd)
+                             :dim (parse-paren rd (f (rd) (parse-csv rd parse-expr))))))))
 
 (function parse-for (rd)
   ;; FOR identifier = expr TO expr [STEP expr]
@@ -200,7 +201,7 @@
         (begin
           (get-token rd 'STEP)
           (<- step (parse-expr rd))))
-    `(FOR :VAR ,var :FROM ,from :TO ,to :STEP ,step)))
+    `(FOR :var ,var :from ,from :to ,to :step ,step)))
 
 (function parse-goxx (rd name)
   ;; GOTO addr
@@ -215,7 +216,7 @@
         (begin
           (get-token rd)
           (<- then (get-token-value rd))))
-    `(IF :TEST ,test :THEN ,then)))
+    `(IF :test ,test :then ,then)))
 
 (function parse-input (rd)
   ;; INPUT [prompt ;] var [,var]...
@@ -224,19 +225,19 @@
       (get-token rd)
       (<- prompt (get-token-value rd))
       (get-token rd :semicolon))
-    `(INPUT :PROMPT ,prompt :VARS ,(parse-csv rd parse-var))))
+    `(INPUT :prompt ,prompt :vars ,(parse-csv rd parse-var))))
 
 (function parse-let (rd)
   ;; LET var=expr
-  `(LET :VAR ,(parse-var rd)
-        :VAL ,(begin (get-token rd '=) (parse-expr rd))))
+  `(LET :var ,(parse-var rd)
+        :val ,(begin (get-token rd '=) (parse-expr rd))))
 
 (function parse-on (rd)
   ;; ON expr stmt addr [, addr] ...
   ;; stmt = GOTO | GOSUB
   (let (expr (parse-expr rd) stmt (get-token rd))
     (if (! (in? stmt '(GOTO GOSUB))) (raise SyntaxError "require GOTO or GOSUB")
-        `(ON :EXPR ,expr :STMT ,stmt :ADDRESSES ,(parse-csv rd parse-number)))))
+        `(ON :expr ,expr :stmt ,stmt :addresses ,(parse-csv rd parse-number)))))
 
 (function parse-next (rd)
   ;; NEXT [identifier [, identifier] ...]
@@ -294,9 +295,63 @@
               (begin
                 (get-token rd :EOL)
                 (break))))
+        (if (&& (nil? $dp) (some? (f (x) (== 'DATA (car x))) stmts)) (<- $dp (list line-no 0)))
         (cons line-no (reverse! stmts))))))
 
 ;; Evaluater.
+
+(function line-no->code (line-no)
+  (dolist (code $code)
+    (if (= (car code) line-no) (return (cdr code))))
+  (raise ArgumentError (str "missing code:" line-no)))
+
+(function basic-get (var)
+  ;; var | (var indices ...)
+  (if (atom? var)
+      (let (val ([] $vars var))
+        (if (nil? val) (basic-set var 0)
+            val))
+      (let ((var :rest indices) var val (basic-get var))
+        (if (! (array? val)) (raise SyntaxError (str "is not a array" var indices))
+            ([] var (basic-array-index indices))))))
+
+(function basic-set (var val)
+  ;; var val | (var indices ...) val
+  (if (atom? var) ([] $vars var val)
+      (let ((var :rest indices) var arr (basic-get var))
+        (if (nil? arr) (basic-new-array var '(255)))
+        ([] arr (basic-array-index indices) val))))
+
+(function basic-new-array (name dim)
+  (let (size (apply * (map ++ dim))
+             init-val (if (= (last (str name)) "$") "" 0)
+             arr (array size))
+    (dotimes (i size) ([] arr i init-val))
+    (basic-set name arr)))
+
+(function basic-array-index (indices)
+  (let (index 0)
+    (dotimes (i (len indices))
+      (<- index (+ index (* i ([] indices i)))))))
+
+(function basic-next-dp ()
+  (if (nil? $dp) nil
+      (let ((line-no i) $dp data (cdar (line-no->code line-no)))
+        (if ([] data (++ i)) (<- $dp (list line-no (++ i)))
+            (begin
+              (<- $dp nil)
+              (dolist (code $code)
+                (let ((lno (stms :rest data) :rest stmts) code)
+                  (if (|| (!== stmt 'DATA) (< lno line-no)) (continue)
+                      (begin
+                        (<- $dp (list lno 0))
+                        (return nil))))))))))
+
+(function basic-read ()
+  (if (nil? $dp) (raise "data pointer reached EOF")
+      (let ((line-no i) $dp val ([] (car (line-no->code line-no)) i))
+        (if (nil? val) (begin (next-dp) (basic-read))
+            (begin0 val (next-dp))))))
 
 (function basic-write (x)
   (dostring (ch (str x))
@@ -308,41 +363,33 @@
   (if x -1 0))
 
 (function basic-eval (x)
-  (if (symbol? x)
-      (let (val ([] $vars x))
-        (if (nil? val) ([] $vars x 0)
-            val))
+  (if (symbol? x) (basic-get x)
       (atom? x) x
       (let ((operator :rest args) x)
         (basic-apply operator (map basic-eval args)))))
 
 (function basic-apply (operator args)
-  (apply ([] $vars operator) args))
+  (apply (basic-get operator) args))
 
 (macro basic-built-in (name args :rest body)
-  `([] $vars ',name (f ,args ,@body)))
+  `(basic-set ',name (f ,args ,@body)))
 
 ;;; Statements.
 
-(basic-built-in DATA () nil)
+(basic-built-in DATA (:rest vars) nil)
 
-(basic-built-in DEF (:key NAME PARAMS BODY)
-  ([] $vars NAME (eval (list f PARAMS BODY))))
+(basic-built-in DEF (:key name params body)
+  (basic-set name (eval (list f params body))))
 
 (basic-built-in DIM (:rest args)
-  (dolist (arg args)
-    (let ((:key NAME DIM) arg
-              size (apply * (map ++ (map basic-eval DIM)))
-              init-val (if (= (last (str NAME)) "$") "" 0)
-              arr (array size))
-      (dotimes (i size) ([] arr i init-val))
-      ([] $vars NAME arr))))
+  (foreach (f (:key name dim) (basic-new-array name (map basic-eval dim)))
+           args))
 
 (basic-built-in END () (quit))
 
-(basic-built-in FOR (:key VAR FROM TO STEP)
-  ([] $vars VAR (basic-eval FROM))
-  (push! (list $ip $sp :VAR VAR :TO (basic-eval TO) :STEP (basic-eval STEP)) $for-stack))
+(basic-built-in FOR (:key var from to step)
+  (basic-set var (basic-eval from))
+  (push! (list $ip $sp :var var :to (basic-eval to) :step (basic-eval step)) $for-stack))
 
 (basic-built-in GOSUB () (quit))
 
@@ -353,14 +400,14 @@
 (basic-built-in INPUT () (quit))
 
 (basic-built-in NEXT (:rest vars)
-  (dolist (var (|| vars (list (assoc (car $for-stack) :VAR))))
+  (dolist (next (|| vars (list (assoc (car $for-stack) :var))))
     (if (nil? $for-stack) (raise SyntaxError (str "invalid NEXT statement"))
-        (let ((ip sp :key VAR TO STEP) (car $for-stack) val nil)
-          (if (!= VAR var) (raise SyntaxError (str "missing FOR of NEXT " var))
+        (let ((ip sp :key var to step) (car $for-stack) val nil)
+          (if (!= next var) (raise SyntaxError (str "missing FOR of NEXT " next))
               (begin
-                ([] $vars VAR (<- val (+ ([] $vars VAR) STEP)))
-                (if (|| (&& (> STEP 0) (> val TO))
-                        (&& (< STEP 0) (< val TO)))
+                (basic-set var (<- val (+ (basic-get var) step)))
+                (if (|| (&& (> step 0) (> val to))
+                        (&& (< step 0) (< val to)))
                     (pop! $for-stack)
                     (basic-jump ip (++ sp)))))))))
 
