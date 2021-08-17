@@ -168,6 +168,7 @@
                           (if (== token :identifier) (str (parse-identifier rd))
                               (== token :number) (parse-number rd)
                               (== token :string) (parse-string rd)
+                              (== token '-) (begin (get-token rd) (- (parse-number rd)))
                               (raise SyntaxError "invalid DATA statement")))))))
 
 (function parse-def (rd)
@@ -251,8 +252,8 @@
     `(PRINT ,@(reverse! exprs))))
 
 (function parse-read (rd)
-  ;; PRINT [expr | , | ;] ...
-  `(READ ,(parse-var rd)))
+  ;; READ var [, var] ...
+  `(READ ,@(parse-csv rd parse-var)))
 
 (function parse-rem (rd)
   ;; REM char ...
@@ -343,6 +344,14 @@
   ([] $vars VAR (basic-eval FROM))
   (push! (list $ip $sp :VAR VAR :TO (basic-eval TO) :STEP (basic-eval STEP)) $for-stack))
 
+(basic-built-in GOSUB () (quit))
+
+(basic-built-in GOTO () (quit))
+
+(basic-built-in IF () (quit))
+
+(basic-built-in INPUT () (quit))
+
 (basic-built-in NEXT (:rest vars)
   (dolist (var (|| vars (list (assoc (car $for-stack) :VAR))))
     (if (nil? $for-stack) (raise SyntaxError (str "invalid NEXT statement"))
@@ -354,6 +363,8 @@
                         (&& (< STEP 0) (< val TO)))
                     (pop! $for-stack)
                     (basic-jump ip (++ sp)))))))))
+
+(basic-built-in ON () (quit))
 
 (basic-built-in PRINT (:rest args)
   (let (newline? true)
@@ -367,6 +378,14 @@
             (basic-write (basic-eval x))
             (<- newline? true))))
     (if newline? (basic-write "\n"))))
+
+(basic-built-in READ () (quit))
+
+(basic-built-in REM () (quit))
+
+(basic-built-in RESTORE () (quit))
+
+(basic-built-in RETURN () (quit))
 
 (basic-built-in STOP () (quit))
 
@@ -430,6 +449,7 @@
 
 (function interpret (code)
   (foreach write (array->list code))
+  (quit)
   (loop
     (catch (BasicJump (f (e) (<- $ip (&ip e) $sp (&sp e))))
       (let ((line-no :rest stmts) ([] code $ip))
