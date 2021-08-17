@@ -1,6 +1,7 @@
 ; basic interpreter.
 
 (import :rand)
+(import :matrix)
 
 (<- $statements '(DEF DIM END FOR TO STEP NEXT GOSUB RETURN GOTO IF THEN INPUT
                       LET ON GOTO ON GOSUB PRINT READ DATA RESTORE REM STOP)
@@ -300,7 +301,7 @@
                 (get-token rd :EOL)
                 (break))))
         (if (nil? $dp)
-            (<- $dp (find (f (x) (if (== 'DATA (car x)) (cdr x)))
+            (<- $dp (find (f (x) (if (== 'DATA (car x)) (cons line-no (cdr x))))
                           stmts)))
         (cons line-no (reverse! stmts))))))
 
@@ -320,31 +321,42 @@
 (function basic-set (var val)
   ([] $vars var val))
 
+(function basic-assign (expr val)
+  (if (atom? expr) (basic-set expr val)
+      (let ((var :rest indices) (map basic-eval-expr expr))
+        (basic-array-put var indices val))))
+
 (function basic-string-var? (name)
   (= (last (str name)) "$"))
 
 (function basic-new-array (name dim)
-  (let (size (apply * (map ++ dim))
-             init-val (if (basic-string-var? name) "" 0)
-             arr (array size))
-    (dotimes (i size) ([] arr i init-val))
-    (basic-set name arr)))
+  (let (x (matrix (map ++ (basic-array-index dim)))
+          init-val (if (basic-string-var? name) "" 0))
+    (domatrix (p x) (basic-array-put x p init-val))
+    (basic-set name x)))
+
+(function basic-array? (x)
+  (is-a? x Matrix))
 
 (function basic-array-index (indices)
-  (let (index 0)
-    (dotimes (i (len indices))
-      (<- index (+ index (* i ([] indices i)))))
-    index))
+  (if (= (len indices) 1) (cons 1 indices)
+      indices))
+
+(function basic-array-get (x indices)
+  (.at x (basic-array-index indices))))
+
+(function basic-array-put (x indices val)
+  (.put x (basic-array-index indices) val))
 
 (function basic-next-data ()
   (if (nil? $dp) nil
       (let (cur-line-no (car $dp))
         (<- $dp nil)
         (doarray (code $code)
-          (let ((line-no (stms :rest data) :rest stmts) code)
-            (if (|| (!== stmt 'DATA) (< line-no cur-line-no)) (continue)
+          (let ((line-no (stmt :rest data) :rest stmts) code)
+            (if (|| (!== stmt 'DATA) (<= line-no cur-line-no)) (continue)
                 (begin
-                  (<- $dp (list line-no data))
+                  (<- $dp (cons line-no data))
                   (return nil))))))))
 
 (function basic-read ()
@@ -356,7 +368,7 @@
               (basic-read))
             (begin0
               (car data)
-              (<- $dp (list line-no (cdr data))))))))
+              (<- $dp (cons line-no (cdr data))))))))
 
 (function basic-write (x)
   (dostring (ch (str x))
@@ -371,7 +383,7 @@
   (if (symbol? x) (basic-get x)
       (atom? x) x
       (let ((operator :rest args) (map basic-eval-expr x))
-        (if (array? operator) ([] operator (basic-array-index args))
+        (if (basic-array? operator) (basic-array-get operator args)
             (apply operator args)))))
 
 (function basic-eval-stmt (x)
@@ -389,9 +401,7 @@
   (basic-set name (eval (list f params body))))
 
 (basic-stmt DIM (:rest args)
-  (foreach (f (x)
-             (let ((:key name dim) x)
-               (basic-new-array name (map basic-eval-expr dim))))
+  (foreach (f ((:key name dim)) (basic-new-array name (map basic-eval-expr dim)))
            args))
 
 (basic-stmt END ()
@@ -428,9 +438,7 @@
       (return nil))))
 
 (basic-stmt LET (:key var val)
-  (if (atom? var) (basic-set var (basic-eval-expr val))
-      (let ((var :rest indices) var)
-        ([] (basic-get var) (basic-array-index indices) (basic-eval-expr val)))))
+  (basic-assign var (basic-eval-expr val)))
 
 (basic-stmt NEXT (:rest vars)
   (dolist (next (|| vars (list (assoc (car $for-stack) :var))))
@@ -449,10 +457,7 @@
 (basic-stmt PRINT (:rest args)
   (let (newline? true)
     (dolist (x args)
-      (if (== x :semicolon)
-          (begin
-            (basic-write " ")
-            (<- newline? nil))
+      (if (== x :semicolon) (<- newline? nil)
           (== x :comma)
           (begin
             (loop (basic-write " ") (if (= (% $sc 14) 0) (break)))
@@ -464,7 +469,7 @@
 
 (basic-stmt READ (:rest vars)
   (dolist (var vars)
-    (basic-set var (basic-read))))
+    (basic-assign var (basic-read))))
 
 (basic-stmt REM (str)
   nil)
@@ -477,7 +482,8 @@
         (basic-jump ip (++ sp)))))
 
 (basic-stmt STOP ()
-  (write :vars $vars :call-stack $call-stack :for-stack $for-stack)
+  (write-line "STOP")
+  (write (list :vars $vars :call-stack $call-stack :for-stack $for-stack))
   (quit))
 
 ;;; Functions.
@@ -495,7 +501,7 @@
 (basic-built-in CHR$ (x) (chr x))
 (basic-built-in COS (x) (cos x))
 (basic-built-in EXP (x) (exp x))
-(basic-built-in INT (x) (if (int? x) x (< x 0) (int (-- x)) (int x)))
+(basic-built-in INT (x) (int (if (< x 0) (-- x) x)))
 (basic-built-in LEFT$ (x y) (slice x 0 y))
 (basic-built-in LEN (x) (len x))
 (basic-built-in LOG (x) (log x))
