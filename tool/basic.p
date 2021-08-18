@@ -1,5 +1,6 @@
 ; basic interpreter.
 
+(import :optparse)
 (import :rand)
 
 (<- $statements '(DEF DIM END FOR TO STEP NEXT GOSUB RETURN GOTO IF THEN INPUT
@@ -562,11 +563,10 @@
 (basic-built-in AND (x y) (bmtonum (apply & (map numtobm (list x y)))))
 (basic-built-in OR (x y) (bmtonum (apply | (map numtobm (list x y)))))
 
-(function interpret (code)
-  (foreach write (array->list code))
+(function interpret ()
   (loop
     (catch (BasicJump (f (e) (<- $ip (&ip e) $sp (&sp e))))
-      (let ((line-no :rest stmts) ([] code $ip))
+      (let ((line-no :rest stmts) ([] $code $ip))
         (dolist (stmt (slice stmts $sp))
           (basic-eval-stmt stmt)
           (<- $sp (++ $sp)))
@@ -580,11 +580,14 @@
 
 (function load-code (file)
   (with-open ($in file :read)
-    (return (<- $code
-                (array (map parse-line
-                            (sort! (map split-line (collect read-line))
-                                   :key car)))))))
+    (<- $code (array (map parse-line
+                          (sort! (map split-line (collect read-line))
+                                 :key car))))))
 
 (function! main (args)
-  (if (nil? args) (raise ArgumentError "require basic source code")
-      (interpret (load-code (car args)))))
+  (let ((op args) (.parse (.init (.new OptionParser) "i") args))
+    (if (nil? args) (raise ArgumentError "require basic source code")
+        (begin
+          (load-code (car args))
+          (if (.get op "i") (foreach write (array->list $code))
+              (interpret))))))

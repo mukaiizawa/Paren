@@ -61,6 +61,11 @@ Reads the program from a FILE and runs it with classic Microsoft BASIC compatibi
 - AND
 - OR
 
+# OPTIONS
+
+    -i
+        Display the conversion result to the intermediate format and exit.
+
 # EXAMPLES
 
     $ cat hello.bas
