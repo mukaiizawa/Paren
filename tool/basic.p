@@ -1,23 +1,24 @@
 ; basic interpreter.
 
 (import :rand)
-(import :matrix)
 
 (<- $statements '(DEF DIM END FOR TO STEP NEXT GOSUB RETURN GOTO IF THEN INPUT
                       LET ON GOTO ON GOSUB PRINT READ DATA RESTORE REM STOP)
     $functions '(ABS ASC ATN CHR$ COS EXP INT LEFT$ LEN LOG MID$ NOT RIGHT$ RND
                      SGN SIN SPC SQR STR$ TAN TAB VAL)
     $operators '(^ * / + - = < > <> <= >= AND OR)
-    $built-in (concat $statements $functions $operators)
+    $reserved-words (concat $statements $functions $operators)
     $token nil
     ;; runtime
     $code nil
     $ip 0    ; instruction pointer.
-    $dp nil  ; data pointer. (line-no :rest data)
     $sp 0    ; statement pointer.
+    $dp '(0) ; data pointer. (line-no :rest data)
     $sc 0    ; screen cursor.
-    $stmts (dict)
+    $built-ins (dict)
     $vars (dict)
+    $arrays (dict)
+    $procs (dict)
     $basic-true -1
     $basic-nil 0
     $call-stack nil
@@ -50,7 +51,7 @@
   (while (|| (.next? self alpha?) (.next? self digit?)) (.get self))
   (if (= (.next self) "$") (.get self))
   (let (value (symbol (upper (.token self))))
-    (if (in? value $built-in) value
+    (if (in? value $reserved-words) value
         (list :identifier value))))
 
 (method BasicLexer .lex0 ()
@@ -242,7 +243,7 @@
   ;; stmt = GOTO | GOSUB
   (let (expr (parse-expr rd) stmt (get-token rd))
     (if (! (in? stmt '(GOTO GOSUB))) (raise SyntaxError "require GOTO or GOSUB")
-        `(ON :expr ,expr :stmt ,stmt :addresses ,(parse-csv rd parse-number)))))
+        `(ON :expr ,expr :stmt ,stmt :addrs ,(parse-csv rd parse-number)))))
 
 (function parse-next (rd)
   ;; NEXT [identifier [, identifier] ...]
@@ -300,71 +301,71 @@
               (begin
                 (get-token rd :EOL)
                 (break))))
-        (if (nil? $dp)
-            (<- $dp (find (f (x) (if (== 'DATA (car x)) (cons line-no (cdr x))))
-                          stmts)))
         (cons line-no (reverse! stmts))))))
 
 ;; Evaluater.
 
-(function line-no->ip (x)
+(function ->ip (lno)
   (dotimes (i (len $code))
     (let ((line-no :rest stmts) ([] $code i))
-      (if (= x line-no) (return i))))
-  (raise ArgumentError (str "missing code:" x)))
-
-(function basic-get (var)
-  (let (val ([] $vars var))
-    (if (nil? val) (basic-set var 0)
-        val)))
-
-(function basic-set (var val)
-  ([] $vars var val))
-
-(function basic-assign (expr val)
-  (if (atom? expr) (basic-set expr val)
-      (let ((var :rest indices) (map basic-eval-expr expr))
-        (basic-array-put var indices val))))
+      (if (= lno line-no) (return i))))
+  (raise ArgumentError (str "missing code:" lno)))
 
 (function basic-string-var? (name)
   (= (last (str name)) "$"))
 
-(function basic-new-array (name dim)
-  (let (x (matrix (map ++ (basic-array-index dim)))
-          init-val (if (basic-string-var? name) "" 0))
-    (domatrix (p x) (basic-array-put x p init-val))
-    (basic-set name x)))
+(function basic-default-value (var)
+  (if (basic-string-var? var) "" 0))
 
-(function basic-array? (x)
-  (is-a? x Matrix))
+(function basic-coerce (var val)
+  (catch (Exception (f (e) (return (basic-default-value var))))
+    (if (basic-string-var? var) (str val) (float val))))
 
-(function basic-array-index (indices)
-  (if (= (len indices) 1) (cons 1 indices)
-      indices))
+(function basic-get-var (var)
+  (let (val ([] $vars var))
+    (if (nil? val) (basic-set-var var (basic-default-value var))
+        val)))
 
-(function basic-array-get (x indices)
-  (.at x (basic-array-index indices))))
+(function basic-set-var (var val)
+  ([] $vars var (basic-coerce var val)))
 
-(function basic-array-put (x indices val)
-  (.put x (basic-array-index indices) val))
+(function basic-array (name :opt message indices val)
+  (if (== message :at)
+      (let (val ([] (basic-array name) indices))
+        (if (nil? val) (basic-array name :put (basic-default-value name))
+            val))
+      (== message :put)
+      ([] (basic-array name) indices (basic-coerce name val))
+      :defualt
+      (let (arr ([] $arrays name))
+        (if (nil? arr) ([] $arrays name (dict))
+            arr))))
 
-(function basic-next-data ()
-  (if (nil? $dp) nil
-      (let (cur-line-no (car $dp))
-        (<- $dp nil)
-        (doarray (code $code)
-          (let ((line-no (stmt :rest data) :rest stmts) code)
-            (if (|| (!== stmt 'DATA) (<= line-no cur-line-no)) (continue)
-                (begin
-                  (<- $dp (cons line-no data))
-                  (return nil))))))))
+(function basic-proc (name :opt val)
+  (if (nil? val)
+      (let (proc ([] $procs name))
+        (if (nil? proc) (raise StateError (str "undefined procedure " name))
+            proc))
+      ([] $procs name val)))
+
+(function basic-assign (expr val)
+  (if (atom? expr) (basic-set-var expr val)
+      (basic-array (car expr) :put (map basic-eval-expr (cdr expr)) val)))
+
+(function basic-seek (:opt start)
+  (let (lno (|| start (car $dp)))
+    (<- $dp nil)
+    (doarray (code $code)
+      (let ((line-no (stmt :rest data) :rest stmts) code)
+        (if (&& (== stmt 'DATA) (> line-no lno))
+            (return (<- $dp (cons line-no data))))))))
 
 (function basic-read ()
-  (if (nil? $dp) (raise "data pointer reached EOF")
+  (if (nil? $dp) 0
       (let ((line-no :rest data) $dp)
         (if (nil? data)
             (begin
-              (basic-next-data)
+              (basic-seek)
               (basic-read))
             (begin0
               (car data)
@@ -379,82 +380,100 @@
 (function basic-bool (x)
   (if x $basic-true $basic-nil))
 
+(class BasicJump (Exception) ip sp)
+
+(function basic-jump (ip :opt sp)
+  (throw (&sp! (&ip! (.new BasicJump) ip) (|| sp 0))))
+
+(function basic-goto (addr)
+  (basic-jump (->ip addr) 0))
+
+(function basic-gosub (addr)
+  (push! (list $ip $sp) $call-stack)
+  (basic-goto addr))
+
+(function basic-apply (proc args)
+  (let ((params body) proc)
+    (eval `(let (,params ',args) (basic-eval-expr ',body)))))
+
 (function basic-eval-expr (x)
-  (if (symbol? x) (basic-get x)
+  (if (symbol? x) (basic-get-var x)
       (atom? x) x
-      (let ((operator :rest args) (map basic-eval-expr x))
-        (if (basic-array? operator) (basic-array-get operator args)
-            (apply operator args)))))
+      (let (ope (car x) args (map basic-eval-expr (cdr x)))
+        (if (in? ope $built-ins) (apply ([] $built-ins ope) args)
+            (in? ope $procs) (basic-apply ([] $procs ope) args)
+            (basic-array ope :at args)))))
 
 (function basic-eval-stmt (x)
-  (apply ([] $stmts (car x)) (cdr x)))
+  (apply ([] $built-ins (car x)) (cdr x)))
 
 ;;; Statements.
 
-(macro basic-stmt (name args :rest body)
-  `([] $stmts ',name (f ,args ,@body)))
+(macro basic-built-in (name args :rest body)
+  `([] $built-ins ',name (f ,args ,@body)))
 
-(basic-stmt DATA (:rest vars)
+(basic-built-in DATA (:rest vars)
   nil)
 
-(basic-stmt DEF (:key name params body)
-  (basic-set name (eval (list f params body))))
+(basic-built-in DEF (:key name params body)
+  (basic-proc name (list params body)))
 
-(basic-stmt DIM (:rest args)
-  (foreach (f ((:key name dim)) (basic-new-array name (map basic-eval-expr dim)))
-           args))
+(basic-built-in DIM (:rest args)
+  nil)    ; dynamically allocate memory.
 
-(basic-stmt END ()
+(basic-built-in END ()
   (quit))
 
-(basic-stmt FOR (:key var from to step)
-  (basic-set var (basic-eval-expr from))
+(basic-built-in FOR (:key var from to step)
+  (basic-set-var var (basic-eval-expr from))
   (push! (list $ip $sp :var var :to (basic-eval-expr to) :step (basic-eval-expr step)) $for-stack))
 
-(basic-stmt GOSUB (addr)
-  (push! (list $ip $sp) $call-stack)
-  (basic-jump (line-no->ip addr) 0))
+(basic-built-in GOSUB (addr)
+  (basic-gosub addr))
 
-(basic-stmt GOTO (addr)
-  (basic-jump (line-no->ip addr) 0))
+(basic-built-in GOTO (addr)
+  (basic-goto addr))
 
-(basic-stmt IF (:key test then)
-  (if (= (basic-eval-expr test) $basic-true)
-      (if (number? then) (basic-jump (line-no->ip then))
+(basic-built-in IF (:key test then)
+  (if (= (basic-eval-expr test) $basic-nil) (basic-jump (++ $ip))
+      (if (number? then) (basic-jump (->ip then))
           (basic-eval-stmt then))))
 
-(basic-stmt INPUT (:key prompt vars)
+(basic-built-in INPUT (:key prompt vars)
   (loop
     (catch (Error (f (e) (basic-write (.to-s e)) (<- $sc 0)))
       (if prompt (basic-write prompt))
       (basic-write "\nINPUT> ")
-      (let (vals (split (read-line) ",") vlen (len vals))
+      (let (vals (split (upper (read-line)) ",") vlen (len vals))
         (if (!= (len vars) vlen)
             (raise Error (str "require " (len vars) " arguments, given " vlen " arguments")))
         (dotimes (i vlen)
           (let (var ([] vars i))
-            (basic-set ([] vars i) (if (basic-string-var? var) ([] vals i)
-                                       (float ([] vals i)))))))
+            (basic-assign ([] vars i) ([] vals i)))))
       (return nil))))
 
-(basic-stmt LET (:key var val)
+(basic-built-in LET (:key var val)
   (basic-assign var (basic-eval-expr val)))
 
-(basic-stmt NEXT (:rest vars)
+(basic-built-in NEXT (:rest vars)
   (dolist (next (|| vars (list (assoc (car $for-stack) :var))))
     (if (nil? $for-stack) (raise SyntaxError (str "invalid NEXT statement"))
         (let ((ip sp :key var to step) (car $for-stack) val nil)
-          (if (!= next var) (raise SyntaxError (str "missing FOR of NEXT " next))
+          (if (!= next var) (raise SyntaxError (str "missing FOR of NEXT " next $for-stack))
               (begin
-                (basic-set var (<- val (+ (basic-get var) step)))
+                (basic-set-var var (<- val (+ (basic-get-var var) step)))
                 (if (|| (&& (> step 0) (> val to))
                         (&& (< step 0) (< val to)))
                     (pop! $for-stack)
                     (basic-jump ip (++ sp)))))))))
 
-(basic-stmt ON () (quit))
+(basic-built-in ON (:key expr stmt addrs)
+  (let (val (basic-eval-expr expr) addr ([] addrs (-- val)))
+    (if addr
+        (if (== stmt 'GOTO) (basic-goto addr)
+            (basic-gosub addr)))))
 
-(basic-stmt PRINT (:rest args)
+(basic-built-in PRINT (:rest args)
   (let (newline? true)
     (dolist (x args)
       (if (== x :semicolon) (<- newline? nil)
@@ -467,29 +486,30 @@
             (<- newline? true))))
     (if newline? (basic-write "\n"))))
 
-(basic-stmt READ (:rest vars)
+(basic-built-in READ (:rest vars)
   (dolist (var vars)
     (basic-assign var (basic-read))))
 
-(basic-stmt REM (str)
-  nil)
+(basic-built-in REM (str) nil)
 
-(basic-stmt RESTORE () (quit))
+(basic-built-in RESTORE (:opt addr)
+  (basic-seek addr))
 
-(basic-stmt RETURN ()
+(basic-built-in RETURN ()
   (if (nil? $call-stack) (raise StateError "invalid RETURN statement")
       (let ((ip sp) (pop! $call-stack))
         (basic-jump ip (++ sp)))))
 
-(basic-stmt STOP ()
+(basic-built-in STOP ()
   (write-line "STOP")
-  (write (list :vars $vars :call-stack $call-stack :for-stack $for-stack))
+  (write (list :vars $vars
+               :arrays $arrays
+               :procs $procs
+               :call-stack $call-stack
+               :for-stack $for-stack))
   (quit))
 
 ;;; Functions.
-
-(macro basic-built-in (name args :rest body)
-  `(basic-set ',name (f ,args ,@body)))
 
 (function make-space (x)
   (with-memory-stream ($out)
@@ -502,12 +522,12 @@
 (basic-built-in COS (x) (cos x))
 (basic-built-in EXP (x) (exp x))
 (basic-built-in INT (x) (int (if (< x 0) (-- x) x)))
-(basic-built-in LEFT$ (x y) (slice x 0 y))
+(basic-built-in LEFT$ (x y) (slice x 0 (min (len x) y)))
 (basic-built-in LEN (x) (len x))
 (basic-built-in LOG (x) (log x))
-(basic-built-in MID$ (x y z) (slice x y z))
+(basic-built-in MID$ (x y :opt z) (slice x (-- y) (if (nil? z) (len x) (min (+ y z) (len x)))))
 (basic-built-in NOT (x) (basic-bool (= x 0)))
-(basic-built-in RIGHT$ (x y) (slice x (- (len x) y) (len x)))
+(basic-built-in RIGHT$ (x y) (slice x (max 0 (- (len x) y))))
 (basic-built-in RND (x) (rand.val))
 (basic-built-in SGN (x) (if (= x 0) 0 (> x 0) 1 -1))
 (basic-built-in SIN (x) (sin x))
@@ -531,7 +551,7 @@
 (basic-built-in ^ (x y) (int (pow x y)))
 (basic-built-in * (x y) (* x y))
 (basic-built-in / (x y) (/ x y))
-(basic-built-in + (x y) (+ x y))
+(basic-built-in + (x y) (if (string? x) (str x y) (+ x y)))
 (basic-built-in - (x :opt y) (if (nil? y) (- x) (- x y)))
 (basic-built-in = (x y) (basic-bool (= x y)))
 (basic-built-in < (x y) (basic-bool (< x y)))
@@ -541,11 +561,6 @@
 (basic-built-in >= (x y) (basic-bool (>= x y)))
 (basic-built-in AND (x y) (bmtonum (apply & (map numtobm (list x y)))))
 (basic-built-in OR (x y) (bmtonum (apply | (map numtobm (list x y)))))
-
-(class BasicJump (Exception) ip sp)
-
-(function basic-jump (ip :opt sp)
-  (throw (&sp! (&ip! (.new BasicJump) ip) (|| sp 0))))
 
 (function interpret (code)
   (foreach write (array->list code))
