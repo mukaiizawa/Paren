@@ -43,7 +43,7 @@
 
 (method BasicLexer .lex-string ()
   (.skip self)
-  (while (!= (&next self) "\"") (.get-escape self))
+  (while (!= (&next self) "\"") (.get self))
   (.skip self "\"")
   (.token self))
 
@@ -66,6 +66,7 @@
         (= next "<") (.lex-lt self)
         (= next ">") (.lex-gt self)
         (= next "\"") (list :string (.lex-string self))
+        (= next ".") (raise SyntaxError "numeric literals with zeros omitted are not supported.")
         (.next? self digit?) (list :number (.skip-number self))
         (.next? self alpha?) (.lex-identifier self)
         (in? (symbol next) $operators) (symbol (.skip self))
@@ -394,8 +395,15 @@
   (basic-goto addr))
 
 (function basic-apply (proc args)
-  (let ((params body) proc)
-    (eval `(let (,params ',args) (basic-eval-expr ',body)))))
+  (let ((params body) proc context (dict))
+    (dotimes (i (min (len params) (len args)))
+      (let (param ([] params i))
+        ([] context param (basic-get-var param))
+        (basic-set-var param ([] args i))))
+    (begin0
+      (basic-eval-expr body)
+      (dolist (key (keys context))
+        (basic-set-var key ([] context key))))))
 
 (function basic-eval-expr (x)
   (if (symbol? x) (basic-get-var x)
