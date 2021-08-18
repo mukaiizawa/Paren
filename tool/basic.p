@@ -343,13 +343,6 @@
         (if (nil? arr) ([] $arrays name (dict))
             arr))))
 
-(function basic-proc (name :opt val)
-  (if (nil? val)
-      (let (proc ([] $procs name))
-        (if (nil? proc) (raise StateError (str "undefined procedure " name))
-            proc))
-      ([] $procs name val)))
-
 (function basic-assign (expr val)
   (if (atom? expr) (basic-set-var expr val)
       (basic-array (car expr) :put (map basic-eval-expr (cdr expr)) val)))
@@ -425,7 +418,7 @@
   nil)
 
 (basic-built-in DEF (:key name params body)
-  (basic-proc name (list params body)))
+  ([] $procs name (list params body)))
 
 (basic-built-in DIM (:rest args)
   nil)    ; dynamically allocate memory.
