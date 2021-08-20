@@ -41,29 +41,21 @@
 (macro when (test :rest body)
   (list if test (cons begin body)))
 
-(macro || (:rest args)
-  ; Evaluate each of the specified args, one at a time, from left to right.
-  ; The evaluation of all args terminates when a args evaluates to true.
-  ; Return last evaluated value.
-  ; If args is nil, returns nil.
-  (if (! args) nil
-      (! (cdr args)) (car args)
-      (with-gensyms (g)
-        (let (rec (f (l) (if l (cons (list <- g (car l)) (cons g (rec (cdr l)))))))
-          (list let (list g nil)
-                (cons if (rec args)))))))
-
 (macro && (:rest args)
-  ; Evaluate each of the specified args, one at a time, from left to right.
-  ; As soon as any form evaluates to nil, and returns nil without evaluating the remaining forms.
-  ; If all args but the last evaluate to true values, and returns the results produced by evaluating the last args.
-  ; If no args are supplied, returns true.
   (if (! args) true
       (! (cdr args)) (car args)
       (let (rec (f (l)
                   (if (cdr l) (list if (car l) (rec (cdr l)))
                       (car l))))
         (rec args))))
+
+(macro || (:rest args)
+  (if (! args) nil
+      (! (cdr args)) (car args)
+      (with-gensyms (g)
+        (let (rec (f (l) (if l (cons (list <- g (car l)) (cons g (rec (cdr l)))))))
+          (list let (list g nil)
+                (cons if (rec args)))))))
 
 (macro while (test :rest body)
   ; The specified test is evaluated, and if the specified test is true, each of the specified body is evaluated.
@@ -175,7 +167,6 @@
   (assert (! (== "x" "x"))))
 
 (built-in-function ! (x)
-  ; Returns whether the x is nil.
   (assert (! (== 'x 'y)))
   (assert (! nil))
   (assert (== (! true) nil)))
