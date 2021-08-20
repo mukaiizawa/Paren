@@ -39,7 +39,6 @@
           x)))
 
 (macro when (test :rest body)
-  ; Evaluate the specified test and if it is not nil then evaluate each of the specified body.
   (list if test (cons begin body)))
 
 (macro || (:rest args)
