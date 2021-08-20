@@ -9,6 +9,9 @@ when - evaluate expressions when condition is not nil.
 # DESCRIPTION
 `when` evaluates EXPRs, only if TEST is not nil.
 
+# RETURN VALUE
+Returns the evaluation result of the last EXPRs.
+
 # NOTES
 
     (when TEST EXPR ...)
