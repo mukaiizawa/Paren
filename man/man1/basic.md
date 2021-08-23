@@ -3,7 +3,7 @@ basic - basic interpreter.
 
 # SYNOPSIS
 
-    basic FILE
+    basic [OPTION] FILE
 
 # DESCRIPTION
 Reads the program from a FILE and runs it with classic Microsoft BASIC compatibility.
