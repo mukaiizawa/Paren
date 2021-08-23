@@ -63,6 +63,7 @@
         (= next ",") (begin (.skip self) :comma)
         (= next "(") (begin (.skip self) :open-paren)
         (= next ")") (begin (.skip self) :close-paren)
+        (= next "'") (begin (.skip self) 'REM)
         (= next "<") (.lex-lt self)
         (= next ">") (.lex-gt self)
         (= next "\"") (list :string (.lex-string self))
@@ -587,7 +588,7 @@
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "i") args))
-    (if (nil? args) (raise ArgumentError "require basic source code")
+    (if (nil? args) (raise ArgumentError "require basic source file")
         (begin
           (load-code (car args))
           (if (.get op "i") (foreach write (array->list $code))
