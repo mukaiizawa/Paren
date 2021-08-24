@@ -443,8 +443,8 @@
       (<- ip (++ ip) sp 0))))
 
 (basic-built-in FOR (:key var from to step)
-  (basic-set-var var (basic-eval-expr from))
-  (let (to (basic-eval-expr to) step (basic-eval-expr step))
+  (let (from (basic-eval-expr from) to (basic-eval-expr to) step (basic-eval-expr step))
+    (basic-set-var var from)
     (if (|| (&& (< from to) (< step 0))
             (&& (> from to) (> step 0)))
         (apply basic-jump (next-next $ip $sp))    ; skip
