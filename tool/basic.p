@@ -210,6 +210,7 @@
         (begin
           (get-token rd 'STEP)
           (<- step (parse-expr rd))))
+    (push! var $for-stack)
     `(FOR :var ,var :from ,from :to ,to :step ,step)))
 
 (function parse-goxx (rd name)
@@ -250,7 +251,12 @@
 
 (function parse-next (rd)
   ;; NEXT [identifier [, identifier] ...]
-  `(NEXT ,@(if (== (peek-token rd) :identifier) (parse-csv rd parse-identifier))))
+  (let (vars (if (== (peek-token rd) :identifier) (parse-csv rd parse-identifier)
+                 (list (car $for-stack))))
+    (dolist (var vars)
+      (let (expected (pop! $for-stack))
+        (if (|| (nil? expected) (!= var expected)) (raise SyntaxError "missing FOR of NEXT"))))
+    `(NEXT ,@vars)))
 
 (function parse-print (rd)
   ;; PRINT [expr | , | ;] ...
@@ -427,9 +433,22 @@
 (basic-built-in END ()
   (quit))
 
+(function next-next (ip sp)
+  (loop
+    (let ((line-no :rest stmts) ([] $code ip))
+      (dolist (stmt (slice stmts sp))
+        (if (== stmt FOR) (<- (ip sp) (next-next ip sp))
+            (== stmt NEXT) (return (list ip (++ sp)))
+            (<- sp (++ sp))))
+      (<- ip (++ ip) sp 0))))
+
 (basic-built-in FOR (:key var from to step)
   (basic-set-var var (basic-eval-expr from))
-  (push! (list $ip $sp :var var :to (basic-eval-expr to) :step (basic-eval-expr step)) $for-stack))
+  (let (to (basic-eval-expr to) step (basic-eval-expr step))
+    (if (|| (&& (< from to) (< step 0))
+            (&& (> from to) (> step 0)))
+        (apply basic-jump (next-next $ip $sp))    ; skip
+        (push! (list $ip $sp :var var :to to :step step) $for-stack))))
 
 (basic-built-in GOSUB (addr)
   (basic-gosub addr))
@@ -459,16 +478,17 @@
   (basic-assign var (basic-eval-expr val)))
 
 (basic-built-in NEXT (:rest vars)
-  (dolist (next (|| vars (list (assoc (car $for-stack) :var))))
-    (if (nil? $for-stack) (raise SyntaxError (str "invalid NEXT statement"))
+  (dolist (next vars)
+    (while $for-stack
+      (if (= next (assoc (car $for-stack) :var)) (break)
+          (pop! $for-stack)))
+    (if (nil? $for-stack) (return nil)
         (let ((ip sp :key var to step) (car $for-stack) val nil)
-          (if (!= next var) (raise SyntaxError (str "missing FOR of NEXT " next $for-stack))
-              (begin
-                (basic-set-var var (<- val (+ (basic-get-var var) step)))
-                (if (|| (&& (> step 0) (> val to))
-                        (&& (< step 0) (< val to)))
-                    (pop! $for-stack)
-                    (basic-jump ip (++ sp)))))))))
+          (basic-set-var var (<- val (+ (basic-get-var var) step)))
+          (if (|| (&& (> step 0) (> val to))
+                  (&& (< step 0) (< val to)))
+              (pop! $for-stack)
+              (basic-jump ip (++ sp)))))))
 
 (basic-built-in ON (:key expr stmt addrs)
   (let (val (basic-eval-expr expr) addr ([] addrs (-- val)))
@@ -584,7 +604,8 @@
   (with-open ($in file :read)
     (<- $code (array (map parse-line
                           (sort! (map split-line (collect read-line))
-                                 :key car))))))
+                                 :key car))))
+    (if $for-stack (raise SyntaxError "missing NEXT of FOR"))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "i") args))
