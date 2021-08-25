@@ -1291,10 +1291,14 @@
     (sort-range! seq (|| start 0) (-- (|| end (len seq))))
     seq))
 
+(function first (x)
+  ; Same as `(car (last-cons x))`.
+  ([] x 0))
+
 (function last (x)
   ; Same as `(car (last-cons x))`.
   (if (list? x) (car (last-cons x))
-      (slice x (-- (len x)))))
+      ([] x (-- (len x)))))
 
 (function butlast (x)
   ; Returns a list excluding the last element of the specified list l.
