@@ -1,5 +1,5 @@
 # NAME
-if - conditional statements are used to perform different actions based on different conditions.
+if - conditional statements.
 
 # SYNOPSIS
 
