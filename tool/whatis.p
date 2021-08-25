@@ -3,6 +3,11 @@
 (import :optparse)
 (import :man (.resolve $paren-home "tool"))
 
+(function lhs (pages :opt ommit)
+  (let (val (join (concat pages (->list ommit)) ", "))
+    (if (&& (cdr pages) (> (len val) 20)) (lhs (butlast pages) "...")
+        val)))
+
 (function whatis (matcher)
   (dolist (indexes (man-indexes))
     (let (section (car indexes))
@@ -11,7 +16,7 @@
           (if (matcher section pages)
               (write-line
                 (format "%-20s - %s"
-                        (str (car pages) "(" section ")" (if (cdr pages) ", ..."))
+                        (lhs (map (f (x) (str x "(" section ")")) pages))
                         one-line-desc))))))))
 
 (function! main (args)
