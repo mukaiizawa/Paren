@@ -15,6 +15,9 @@ See man-pages(7) for sections.
 
 If the section number is omitted, the search is performed in a smaller order.
 
+# NOTES
+There is no `f` option, so use whatis(1) instead.
+
 # EXAMPLES
 Display the manual page for the man(1).
 
@@ -30,4 +33,5 @@ Display the manual page for the man-pages(7).
     paren man man-pages(7)
 
 # See Also
+- whatis(1)
 - man-pages(7)
