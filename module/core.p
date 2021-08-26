@@ -1824,6 +1824,14 @@
   (if (.absolute? p) p
       (path (memcat (.to-s self) "/" (.to-s p)))))
 
+(method Path .relativize (p)
+  ; Returns a relative path between the receiver and a given path.
+  (let (relative nil src (&path self) dst (&path p))
+    (while src
+      (if (= (pop! src) (car dst)) (pop! dst)
+          (push! ".." relative)))
+    (&path! (.new Path) (concat relative dst))))
+
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
   (let (first (car (&path self)))
