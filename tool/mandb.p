@@ -6,7 +6,7 @@
   ;; page [', ' page] ... ' - ' one-line-desc
   (with-open ($in file :read)
     (if (! (prefix? (read-line) "# NAME")) (raise ArgumentError "illegal manual file")
-        (return (concat (man-parse-one-line-desc (read-line)) (list (.to-s file)))))))
+        (return `(,@(man-parse-one-line-desc (read-line)) ,(.to-s (.relativize $man-root file)))))))
 
 (function make-indexes (dir)
   ;; indexes = section-index ...
@@ -20,5 +20,6 @@
 
 (function! main (args)
   (with-open ($out $man-indexes :write)
+    (write-line "; following indexes are generated automatically.")
     (dolist (dir (.children $man-root))
       (if (man-dir? dir) (write (make-indexes dir))))))

@@ -3,7 +3,7 @@
 ;; man, mandb, whatis.
 
 (<- $man-root (.resolve $paren-home "man")
-    $man-indexes (.resolve $man-root "indexes.wk")
+    $man-indexes (.resolve $man-root "indexes.p")
     $man-sections (map ++ (.. 7)))
 
 (function man-indexes ()
@@ -64,7 +64,7 @@
                 (let (section (car indexes))
                   (write-line (man-merge-section-page section page))
                   (write-line)
-                  (with-open ($in file-name :read)
+                  (with-open ($in (.resolve $man-root file-name) :read)
                     (write-bytes (read-bytes))))))))))
 
 (function parse-args (args)
