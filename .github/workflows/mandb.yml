@@ -8,6 +8,9 @@ jobs:
       - run: make os=unix
         working-directory: ./src
       - run: ./paren mandb
+      - run: |
+        git config --local user.email "shintaro@mukai.systems"
+        git config --local user.name "mukaiizawa"
       - run: git add .
       - run: git commit -m "Update by GitHub Action"
       - run: git push

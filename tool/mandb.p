@@ -1,5 +1,6 @@
 ; mandb.
 
+(import :datetime)
 (import :man (.resolve $paren-home "tool"))
 
 (function make-index (file)
@@ -20,6 +21,8 @@
 
 (function! main (args)
   (with-open ($out $man-indexes :write)
-    (write-line "; following indexes are generated automatically.")
+    (write-line "; indexes for man.")
+    (write-line (str ";; " (.to-s (datetime.now))))
+    (write-line ";; following indexes are generated automatically.")
     (dolist (dir (.children $man-root))
       (if (man-dir? dir) (write (make-indexes dir))))))
