@@ -5,10 +5,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: |
-        cd  ./src 
-        make os=unix
-        ../paren mandb
-        git add .
-        git commit -m "Update by GitHub Action"
-        git push
+      - run: make os=unix
+        working-directory: ./src
+      - run: ./paren mandb
+        working-directory: ../
+      - run: git add .
+      - run: git commit -m "Update by GitHub Action"
+      - run: git push
