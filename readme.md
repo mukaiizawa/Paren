@@ -35,13 +35,7 @@ Paren is a the programmable programming language.
     license.txt -- Paren license file
 
 # Documentation
-Paren comes with a UNIX-like manual page system.
-
-First, you need to generate an index file with the following command.
-
-    $ paren mandb
-
-After creating the index file, you can refer to the manual with the man command as follows.
+Paren comes with a UNIX-like manual page system. You can refer to the manual with the man command as follows.
 
     $ paren man [PAGE]
 
