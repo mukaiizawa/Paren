@@ -11,6 +11,4 @@ jobs:
       - run: |
           git config --local user.email "shintaro@mukai.systems"
           git config --local user.name "mukaiizawa"
-          git add .
-          git commit -m "Update by GitHub Action"
-          git push
+          git add . && git diff --quiet --cached && git commit -am "Update by GitHub Action" && git push
