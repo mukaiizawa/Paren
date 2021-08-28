@@ -40,9 +40,9 @@
       (<- args (cdr args))))
   (list self args))
 
-(method OptionParser .get (opt)
+(method OptionParser .get (opt :opt default-value)
   ; Returns option value specified opt.
-  (caddr (.lookup self opt)))
+  (|| (caddr (.lookup self opt)) default-value))
 
 (function! main (args)
   (let (option "abc:d:")
