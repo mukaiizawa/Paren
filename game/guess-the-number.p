@@ -1,19 +1,20 @@
 ; Guess the number.
 
-(<- $lower 0
-    $upper 100)
+(<- $min 0
+    $max 100
+    $selection '(h l e))
 
 (function input (n)
-  (write-line (str "Is the number " n "? (l/h/y)"))
+  (write-line (str "Is the number " n "? "  $selection))
   (let (x (read))
-    (if (in? x '(l h y)) x
+    (if (in? x $selection) x
         (input n))))
 
-(function guess (lower upper)
-  (let (middle (// (+ lower upper) 2) x (input middle))
-    (if (= x 'h) (guess middle upper)
-        (= x 'l) (guess lower middle))))
+(function guess (l h)
+  (let (m (// (+ l h) 2) x (input m))
+    (if (= x 'h) (guess (++ m) h)
+        (= x 'l) (guess l (-- m)))))
 
 (function! main (args)
-  (write-line (str "Choose a number between " $lower " and " $upper "."))
+  (write-line (str "Choose a number between " $min " and " $max "."))
   (guess 0 100))
