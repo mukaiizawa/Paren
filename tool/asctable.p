@@ -39,11 +39,6 @@
 ;; -----------------------------
 
 (function! main (args)
-  ; # Synopsis
-  ; asctable
-  ;
-  ; # Description
-  ; Display ASCII codes.
   (foreach write-line
            (map (f (x) (slice x 3))
                 (select (f (x) (prefix? x ";;"))
