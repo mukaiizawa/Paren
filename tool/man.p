@@ -65,7 +65,7 @@
                   (write-line (man-merge-section-page section page))
                   (write-line)
                   (with-open ($in (.resolve $man-root file-name) :read)
-                    (write-bytes (read-bytes))))))))))
+                    (return (write-bytes (read-bytes)))))))))))
 
 (function parse-args (args)
   ;; Returns '(section page).
