@@ -125,6 +125,7 @@ extern int bytes_like_p(object o);
 extern int sequence_p(object o);
 extern int mutable_sequence_p(object o);
 extern int collection_p(object o);
+extern int comparable_p(object o);
 extern int symbol_keyword_p(object o);
 extern int built_in_p(object o);
 

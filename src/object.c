@@ -429,6 +429,22 @@ int collection_p(object o)
   }
 }
 
+int comparable_p(object o)
+{
+  switch (object_type(o)) {
+    case SINT:
+    case XINT:
+    case XFLOAT:
+    case SYMBOL:
+    case KEYWORD:
+    case BYTES:
+    case STRING:
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
 int symbol_keyword_p(object o)
 {
   switch (object_type(o)) {

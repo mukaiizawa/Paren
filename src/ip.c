@@ -88,6 +88,7 @@ static char *error_msg(enum error_msg em) {
     case expected_bytes: return "expected bytes";
     case expected_bytes_like: return "expected bytes like object";
     case expected_collection: return "expected collection";
+    case expected_comparable: return "expected comparable";
     case expected_cons: return "expected cons";
     case expected_dict: return "expected dict";
     case expected_function: return "expected function";

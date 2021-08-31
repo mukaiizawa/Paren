@@ -31,6 +31,7 @@ enum error_msg {
   expected_bytes,
   expected_bytes_like,
   expected_collection,
+  expected_comparable,
   expected_cons,
   expected_dict,
   expected_function,

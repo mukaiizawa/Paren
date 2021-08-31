@@ -116,6 +116,13 @@ int bi_collection(object o, object *result)
   return TRUE;
 }
 
+int bi_comparable(object o, object *result)
+{
+  if (!comparable_p(*result = o))
+    return ip_throw(ArgumentError, expected_comparable);
+  return TRUE;
+}
+
 int bi_built_in(object o, object *result)
 {
   if (!built_in_p(*result = o))
@@ -655,52 +662,6 @@ DEFUN(_25_)
     return ip_throw(ArithmeticError, division_by_zero);
   *result = gc_new_xint(x % y);
   return TRUE;
-}
-
-static int double_lt(double x, object argv, object *result)
-{
-  int64_t i;
-  double d;
-  if (argv == object_nil) {
-    *result = object_true;
-    return TRUE;
-  }
-  if (bi_cint64(argv->cons.car, &i)) {
-    if (x >= (double)i) return TRUE;
-    return double_lt((double)i, argv->cons.cdr, result);
-  }
-  if (bi_cdouble(argv->cons.car, &d)) {
-    if (x >= d) return TRUE;
-    return double_lt(d, argv->cons.cdr, result);
-  }
-  return ip_throw(ArgumentError, expected_number);
-}
-
-static int int64_lt(int64_t x, object argv, object *result)
-{
-  int64_t y;
-  if (argv == object_nil) {
-    *result = object_true;
-    return TRUE;
-  }
-  if (bi_cint64(argv->cons.car, &y)) {
-    if (x >= y) return TRUE;
-    return int64_lt(y, argv->cons.cdr, result);
-  }
-  return double_lt((double)x, argv, result);
-}
-
-DEFUN(_3c_)
-{
-  int64_t i;
-  double d;
-  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  *result = object_nil;
-  if (bi_cint64(argv->cons.car, &i))
-    return int64_lt(i, argv->cons.cdr, result);
-  if (bi_cdouble(argv->cons.car, &d))
-    return double_lt(d, argv->cons.cdr, result);
-  return ip_throw(ArgumentError, expected_number);
 }
 
 // bitwise operator.
@@ -1604,6 +1565,68 @@ DEFUN(len)
   }
   *result = gc_new_xint(len);
   return TRUE;
+}
+
+// comparable.
+
+static int double_lt(double x, object argv, object *result)
+{
+  int64_t i;
+  double d;
+  if (argv == object_nil) {
+    *result = object_true;
+    return TRUE;
+  }
+  if (bi_cint64(argv->cons.car, &i)) {
+    if (x >= (double)i) return TRUE;
+    return double_lt((double)i, argv->cons.cdr, result);
+  }
+  if (bi_cdouble(argv->cons.car, &d)) {
+    if (x >= d) return TRUE;
+    return double_lt(d, argv->cons.cdr, result);
+  }
+  return ip_throw(ArgumentError, expected_number);
+}
+
+static int int64_lt(int64_t x, object argv, object *result)
+{
+  int64_t y;
+  if (argv == object_nil) {
+    *result = object_true;
+    return TRUE;
+  }
+  if (bi_cint64(argv->cons.car, &y)) {
+    if (x >= y) return TRUE;
+    return int64_lt(y, argv->cons.cdr, result);
+  }
+  return double_lt((double)x, argv, result);
+}
+
+static int number_lt(object o, object argv, object *result)
+{
+  int64_t i;
+  double d;
+  if (bi_cint64(o, &i)) return int64_lt(i, argv, result);
+  if (bi_cdouble(o, &d)) return double_lt(d, argv, result);
+  xassert(FALSE);
+  return FALSE;
+}
+
+DEFUN(_3c_)
+{
+  object o;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
+  if (!bi_comparable(argv->cons.car, &o)) return FALSE;
+  *result = object_nil;
+  switch (object_type(o)) {
+    case SINT:
+    case XINT:
+    case XFLOAT:
+      return number_lt(o, argv->cons.cdr, result);
+    default:
+      xassert(FALSE);
+      return FALSE;
+  }
 }
 
 #undef DEFSP
