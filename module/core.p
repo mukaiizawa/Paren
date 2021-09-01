@@ -1937,7 +1937,7 @@
 (method Path .children ()
   ; Returns a list of the contents of the directory corresponding to the receiver.
   (map (f (x) (.resolve self x))
-       (split (readdir (.to-s self)) "\n")))
+       (sort! (split (readdir (.to-s self)) "\n"))))
 
 ;;; I/O.
 
