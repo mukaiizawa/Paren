@@ -602,9 +602,7 @@
 
 (function load-code (file)
   (with-open ($in file :read)
-    (<- $code (array (map parse-line
-                          (sort! (map split-line (collect read-line))
-                                 :key car))))
+    (<- $code (array (map parse-line (sort! (map split-line (collect read-line)) :key car))))
     (if $for-stack (raise SyntaxError "missing NEXT of FOR"))))
 
 (function! main (args)
