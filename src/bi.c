@@ -1052,34 +1052,41 @@ DEFUN(chr)
   return TRUE;
 }
 
+static int ord(object o, int from, int len, int *val)
+{
+  xassert(object_type(o) == STRING);
+  xassert((from + len) <= o->mem.size);
+  switch (len) {
+    case 1:
+      *val = LC(o->mem.elt + from);
+      return TRUE;
+    case 2:
+      *val = ((LC(o->mem.elt + from) & 0x3f) << 6)
+        | (LC(o->mem.elt + from + 1) & 0x3f);
+      return TRUE;
+    case 3:
+      *val = ((LC(o->mem.elt + from) & 0xf) << 12)
+        | ((LC(o->mem.elt + from + 1) & 0x3f) << 6)
+        | (LC(o->mem.elt + from + 2) & 0x3f);
+      return TRUE;
+    case 4:
+      *val = ((LC(o->mem.elt + from) & 0x3) << 18)
+        | ((LC(o->mem.elt + from + 1) & 0x3f) << 12)
+        | ((LC(o->mem.elt + from + 2) & 0x3f) << 6)
+        | (LC(o->mem.elt + from + 3) & 0x3f);
+      return TRUE;
+    default:
+      return ip_throw(ArgumentError, invalid_utf8_byte_sequence);
+  }
+}
+
 DEFUN(ord)
 {
   int x;
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_string(argv->cons.car, &o)) return FALSE;
-  switch (o->mem.size) {
-    case 1:
-      x = LC(o->mem.elt);
-      break;
-    case 2:
-      x = ((LC(o->mem.elt) & 0x3f) << 6)
-        | (LC(o->mem.elt + 1) & 0x3f);
-      break;
-    case 3:
-      x = ((LC(o->mem.elt) & 0xf) << 12)
-        | ((LC(o->mem.elt + 1) & 0x3f) << 6)
-        | (LC(o->mem.elt + 2) & 0x3f);
-      break;
-    case 4:
-      x = ((LC(o->mem.elt) & 0x3) << 18)
-        | ((LC(o->mem.elt + 1) & 0x3f) << 12)
-        | ((LC(o->mem.elt + 2) & 0x3f) << 6)
-        | (LC(o->mem.elt + 3) & 0x3f);
-      break;
-    default:
-      return ip_throw(ArgumentError, invalid_utf8_byte_sequence);
-  }
+  if (!ord(o, 0, o->mem.size, &x)) return FALSE;
   *result = gc_new_xint(x);
   return TRUE;
 }
@@ -1602,7 +1609,7 @@ static int int64_lt(int64_t x, object argv, object *result)
   return double_lt((double)x, argv, result);
 }
 
-static int number_lt(object o, object argv, object *result)
+static int num_lt(object o, object argv, object *result)
 {
   int64_t i;
   double d;
@@ -1610,6 +1617,57 @@ static int number_lt(object o, object argv, object *result)
   if (bi_cdouble(o, &d)) return double_lt(d, argv, result);
   xassert(FALSE);
   return FALSE;
+}
+
+static int bytes_lt(object o, object argv, object *result)
+{
+  int i, x;
+  object p;
+  if (argv == object_nil) {
+    *result = object_true;
+    return TRUE;
+  }
+  if (!bi_bytes_like(argv->cons.car, &p)) return FALSE;
+  for (i = 0; i < p->mem.size; i++) {
+    if (i == o->mem.size) x = -1;
+    else x = LC(o->mem.elt + i) - LC(p->mem.elt + i);
+    if (x < 0) return bytes_lt(p, argv->cons.cdr, result);
+    if (x > 0) break;
+  }
+  return  TRUE;
+}
+
+static int chcmp(object o, int *oi, object p, int *pi, int *x)
+{
+  int olen, plen, oord, pord;
+  olen = plen = 0;
+  if (!ch_len(LC(o->mem.elt + *oi), &olen)) return FALSE;
+  if (!ch_len(LC(p->mem.elt + *pi), &plen)) return FALSE;
+  if (!ord(o, *oi, olen, &oord)) return FALSE;
+  if (!ord(p, *pi, plen, &pord)) return FALSE;
+  *oi += olen;
+  *pi += plen;
+  *x = oord - pord;
+  return TRUE;
+}
+
+static int str_lt(object o, object argv, object *result)
+{
+  int oi, pi, x;
+  object p;
+  if (argv == object_nil) {
+    *result = object_true;
+    return TRUE;
+  }
+  if (!bi_string(argv->cons.car, &p)) return FALSE;
+  oi = pi = 0;
+  while (pi < p->mem.size) {
+    if (oi == o->mem.size) x = -1;
+    else if (!chcmp(o, &oi, p, &pi, &x)) return FALSE;
+    if (x < 0) return str_lt(p, argv->cons.cdr, result);
+    if (x > 0) break;
+  }
+  return  TRUE;
 }
 
 DEFUN(_3c_)
@@ -1622,7 +1680,13 @@ DEFUN(_3c_)
     case SINT:
     case XINT:
     case XFLOAT:
-      return number_lt(o, argv->cons.cdr, result);
+      return num_lt(o, argv->cons.cdr, result);
+    case SYMBOL:
+    case KEYWORD:
+    case BYTES:
+      return bytes_lt(o, argv->cons.cdr, result);
+    case STRING:
+      return str_lt(o, argv->cons.cdr, result);
     default:
       xassert(FALSE);
       return FALSE;

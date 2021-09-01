@@ -725,24 +725,6 @@
   (assert (= (% 4 3) 1))
   (assert (= (% 4 2) 0)))
 
-(built-in-function < (:rest args)
-  ; Returns whether the each of the specified args are in monotonically decreasing order.
-  (assert (< 0 1 2))
-  (assert (< 0 1.0 2))
-  (assert (nil? (< 0 0 1))))
-
-(function > (:rest args)
-  ; Returns whether the each of the specified args are in monotonically increasing order.
-  (every-adjacent? (f (x y) (< y x)) args))
-
-(function <= (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
-  (every-adjacent? (f (x y) (! (< y x))) args))
-
-(function >= (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
-  (every-adjacent? (f (x y) (! (< x y))) args))
-
 (function ++ (x)
   ; Same as `(+ x 1)`.
   (+ x 1))
@@ -1346,6 +1328,32 @@
 (function empty? (x)
   ; Returns whether the x is zero-length or nil.
   (if x (= (len x) 0) true))
+
+;; comparable.
+
+(built-in-function < (:rest args)
+  ; Returns whether the each of the specified args are in monotonically decreasing order.
+  (assert (< 0 1 2))
+  (assert (< 0 1.0 2))
+  (assert (! (< 0 0 1)))
+  (assert (! (< :foo :foo)))
+  (assert (< :f :fo :foo))
+  (assert (! (< :foo :fo :f)))
+  (assert (< "あ" "い" "う"))
+  (assert (< "abcあ" "abcい" "abcいい"))
+  (assert (! (< "あいう" "あい" "あ"))))
+
+(function > (:rest args)
+  ; Returns whether the each of the specified args are in monotonically increasing order.
+  (every-adjacent? (f (x y) (< y x)) args))
+
+(function <= (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
+  (every-adjacent? (f (x y) (! (< y x))) args))
+
+(function >= (:rest args)
+  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
+  (every-adjacent? (f (x y) (! (< x y))) args))
 
 ;; os.
 
