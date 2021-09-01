@@ -6,10 +6,14 @@
     $man-indexes (.resolve $man-root "indexes.p")
     $man-sections (map ++ (.. 7)))
 
-(function man-indexes ()
+(function man-indexes (:opt section)
   ; Returns a read list of manual index files.
-  (with-open ($in $man-indexes :read)
-    (return (collect read))))
+  (if (nil? (.file? $man-indexes)) (raise StateError "missing indexes file. First run the program `paren mandb`")
+      (with-open ($in $man-indexes :read)
+        (let (indexes (collect read))
+          (return (if (nil? section) indexes
+                      (find (f (x) (if (= (car x) section) (list x)))
+                            indexes)))))))
 
 (function man-dir? (dir)
   ; Returns whether dir is a manual directory.
@@ -53,19 +57,49 @@
   ; Returns a string that uniquely identifies the manual.
   (str page "(" section ")"))
 
+(function man-walk (fn indexes)
+  ;; walk indexes with fn until fn returns true.
+  ;; Returns whether fn returned true.
+  ;; (fn section pages one-line-desc file-name)
+  (dolist (index indexes)
+    (let ((section :rest nodes) index)
+      (dolist (node nodes)
+        (if (apply fn (cons section node)) (return true))))))
+
 ;; man.
 
-(function man (section page)
-  (dolist (indexes (man-indexes))
-    (if (&& section (!= section (car indexes))) (continue)
-        (dolist (index (cdr indexes))
-          (let ((pages one-line-desc file-name) index)
-            (if (in? page pages)
-                (let (section (car indexes))
-                  (write-line (man-merge-section-page section page))
-                  (write-line)
-                  (with-open ($in (.resolve $man-root file-name) :read)
-                    (return (write-bytes (read-bytes)))))))))))
+(function similar? (s t)
+  (let (threefold 4 distance (f (s t d)
+                               (if (= d threefold) threefold
+                                   (empty? s) (+ (len t) d)
+                                   (empty? t) (+ (len s) d)
+                                   (= ([] s 0) ([] t 0)) (distance (slice s 1) (slice t 1) d)
+                                   (min (distance s (slice t 1) (++ d))
+                                        (distance (slice s 1) t (++ d))
+                                        (distance (slice s 1) (slice t 1) (++ d))))))
+    (< (distance s t 0) threefold)))
+
+(function fuzzy-man (indexes section page)
+  (let (similar-pages nil)
+    (man-walk (f (section pages one-line-desc file-name)
+                (foreach (f (x) (if (similar? page x) (push! (man-merge-section-page section x) similar-pages)))
+                         pages))
+              indexes)
+    (write-line "Not Found.")
+    (write-line)
+    (write-line "The similar pages are")
+    (foreach (f (x) (write-line (format "  - %s" x)))
+             (reverse! similar-pages))))
+
+(function man (indexes section page)
+  (man-walk (f (section pages one-line-desc file-name)
+              (when (in? page pages)
+                (write-line (man-merge-section-page section page))
+                (write-line)
+                (with-open ($in (.resolve $man-root file-name) :read)
+                  (write-bytes (read-bytes)))
+                (return true)))
+            indexes))
 
 (function parse-args (args)
   ;; Returns '(section page).
@@ -76,5 +110,5 @@
 
 (function! main (args)
   (catch (OSError (f (e) nil))
-    (if (.file? $man-indexes) (apply man (parse-args args))
-        (raise StateError "missing indexes file. First run the program `paren mandb`"))))
+    (let ((section page) (parse-args args) indexes (man-indexes section))
+      (if (nil? (man indexes section page)) (fuzzy-man indexes section page)))))
