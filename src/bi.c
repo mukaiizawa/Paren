@@ -1076,6 +1076,7 @@ static int ord(object o, int from, int len, int *val)
         | (LC(o->mem.elt + from + 3) & 0x3f);
       return TRUE;
     default:
+      *val = -1;
       return ip_throw(ArgumentError, invalid_utf8_byte_sequence);
   }
 }
