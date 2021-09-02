@@ -24,16 +24,19 @@ Paren is a the programmable programming language.
     "hello world"
 
 # Structure
+The main project structures are shown below.
 
-    + coreutils/ -- Paren implementation of like the GNU coreutils programs.
     + game/ -- games and toy-like programs.
     + interpreter/ -- implementation of language processing system.
-    + man/ -- manuals.
+    + man/ -- manual files for man(1).
     + misc/ -- miscellaneous programs.
     + module/ -- importable Paren module files.
     + src/ -- implementation of Paren itself.
-    + tool/ -- implementation of tool by Paren.
+    + tools/ -- implementation of tools by Paren.
+     |+ coreutils/ -- Paren implementation of like the GNU coreutils programs.
     license.txt -- Paren license file.
+
+Since `tools` and` tools/coreutils` are included in `$runtime-path(3)`, the files in these folders can be executed as script files anywhere.
 
 # Documentation
 Paren comes with a UNIX-like manual page system. You can refer to the manual with the man command as follows.

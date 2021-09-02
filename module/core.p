@@ -2737,6 +2737,7 @@
   ; Can be omitted if the script file has a `p` extension.
   (catch (SystemExit (f (e) (return true))
                      Exception (f (e) (.print-stack-trace e)))
+    (if (.file? $parenrc) (load $parenrc))
     (if (nil? args) (repl)
         (let (file-name (car args)
                         script (find (f (x) (if (.file? x) x))
@@ -2752,8 +2753,9 @@
     ($in $out) (list $stdin $stdout)
     $debug? (== (assert true) true)
     $paren-home (.parent (.parent (.resolve (path.getcwd) core.p)))
+    $parenrc (path "~/.parenrc")
     $runtime-path (map (f (p) (.resolve $paren-home p))
-                       '("coreutils" "tool")))
+                       '("tools/coreutils" "tools")))
 
 (reader-macro [ (reader)
    ; Define array/bytes literal reader.
