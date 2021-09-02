@@ -1,7 +1,7 @@
 ; whatis.
 
 (import :optparse)
-(import :man (.resolve $paren-home "tool"))
+(import :man (.resolve $paren-home "tools"))
 
 (function lhs (pages :opt ommit)
   (let (val (join (concat pages (->list ommit)) ", "))

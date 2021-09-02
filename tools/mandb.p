@@ -1,7 +1,7 @@
 ; mandb.
 
 (import :datetime)
-(import :man (.resolve $paren-home "tool"))
+(import :man (.resolve $paren-home "tools"))
 
 (function make-index (file)
   ;; page [', ' page] ... ' - ' one-line-desc

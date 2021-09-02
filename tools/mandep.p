@@ -1,7 +1,7 @@
 ; manual dependency.
 
 (import :optparse)
-(import :man (.resolve $paren-home "tool"))
+(import :man (.resolve $paren-home "tools"))
 
 (function parse-see-also (file)
   ;; Returns the list like a `(page dst ...)`.
