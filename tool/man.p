@@ -6,14 +6,14 @@
     $man-indexes (.resolve $man-root "indexes.p")
     $man-sections (map ++ (.. 7)))
 
-(function man-indexes (:opt section)
+(function man-indexes (:opt sections)
   ; Returns a read list of manual index files.
   (if (nil? (.file? $man-indexes)) (raise StateError "missing indexes file. First run the program `paren mandb`")
       (with-open ($in $man-indexes :read)
         (let (indexes (collect read))
-          (return (if (nil? section) indexes
-                      (find (f (x) (if (= (car x) section) (list x)))
-                            indexes)))))))
+          (return (if (nil? sections) indexes
+                      (select (f (x) (in? (car x) (->list sections)))
+                              indexes)))))))
 
 (function man-dir? (dir)
   ; Returns whether dir is a manual directory.
