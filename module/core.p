@@ -1315,6 +1315,18 @@
   (assert (let (d (dict)) ([] d nil nil) (in? nil d)))
   (assert (! (in? nil (dict)))))
 
+(function index (collection x)
+  (if (dict? collection)
+      (dolist (key (keys collection))
+        (if (= ([] collection key) x) (return key)))
+      (list? collection)
+      (position (f (y) (= x y)) collection)
+      (|| (string? collection) (array? collection))
+      (dotimes (i (len collection))
+        (if (= ([] collection i) x) (return i)))
+      (bytes? collection) (memmem collection x)
+      (raise ArgumentError "expected collection")))
+
 (built-in-function len (collection)
   ; Returns the length of the collection.
   (assert (= (len nil) 0))
