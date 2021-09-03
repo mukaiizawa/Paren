@@ -8,7 +8,10 @@ begin0 - evaluate expressions and return the first evaluated result.
 # DESCRIPTION
 `begin0` evaluates EXPRs, in the order in which they are given.
 
-Same as special-operater `begin(3)` except that it returns the evaluation result of the first equation.
+Same as special-operater `begin(3)` except that it returns the evaluation result of the first EXPRs.
+
+# RETURN VALUE
+Returns the evaluation result of the first EXPRs.
 
 # NOTES
 begin0 are typically used to evaluate one or more expressions with side effects and return a value that must be computed before some or all of the side effects happen.

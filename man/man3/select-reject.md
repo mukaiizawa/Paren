@@ -10,11 +10,12 @@ select, reject - create a sublist that meets the conditions.
 # DESCRIPTION
 These functions return a sublist of the LIST elements based on the result of applying the FN function.
 
+For all these functions, elements not removed occur in the same order in the result as they did in sequence.
+
+# RETURN VALUE
 The function select(3) returns a list of elements for which FN returned not-nil.
 
 The function reject(3) returns a list of elements for which FN returned nil.
-
-For all these functions, elements not removed occur in the same order in the result as they did in sequence.
 
 # NOTES
 
