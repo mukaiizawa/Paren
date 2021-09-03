@@ -52,17 +52,6 @@ BAT   :  'BATS NEARBY'
 PIT   :  'I FEEL A DRAFT'
 ")
 
-; Numbering of the caves in Hunt the Wumpus
-; The caves are in complete darkness, so the player cannot see into adjacent caves
-; ; instead, upon moving to a new empty cave, the game describes if they can smell a Wumpus, hear a bat, or feel a draft from a pit in one of the connected caves.
-; Entering a cave with a pit ends the game due to the player falling in, while entering the cave with the Wumpus startles it
-; ; the Wumpus will either move to another cave or remain and kill the player.
-; If the player chooses to fire an arrow, they first select how many caves, up to five, that the arrow will travel through, and then enters each cave that the arrow moves through.
-; If the player enters a cave number that is not connected to where the arrow is, the game picks a valid option at random.
-; If the arrow hits the player while it is travelling, the player loses; if it hits the Wumpus, they win.
-; If the arrow does not hit anything, then the Wumpus is startled and may move to a new cave; unlike the player, the Wumpus is not affected by super bats or pits.
-; If the Wumpus moves to the player's location, they lose.[1]
-
 (function neighbours (room)
   ([] $neigbor-rooms room))
 
@@ -81,7 +70,9 @@ PIT   :  'I FEEL A DRAFT'
 (function output (s :opt end?)
   (write-line s)
   (when end?
-    (write-line (if (== end? :win) "HEE HEE HEE - THE WUMPUS'LL GET YOU NEXT TIME!!" "HA HA HA - YOU LOSE!"))
+    (write-line (if (== end? :win)
+                    "HEE HEE HEE - THE WUMPUS'LL GET YOU NEXT TIME!!"
+                    "HA HA HA - YOU LOSE!"))
     (quit)))
 
 (function shoot ()
