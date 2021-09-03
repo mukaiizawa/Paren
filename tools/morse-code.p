@@ -58,7 +58,7 @@
         $letter-space))
 
 (function encode (line)
-  (join (map encode-word (except empty? (split line " ")))
+  (join (map encode-word (reject empty? (split line " ")))
         $word-space))
 
 (function decode-ch (ch)
@@ -66,7 +66,7 @@
         $table))
 
 (function decode-word (word)
-  (join (map decode-ch (except empty? (split word " ")))))
+  (join (map decode-ch (reject empty? (split word " ")))))
 
 (function decode (line)
   (join (map decode-word (split line $word-space))

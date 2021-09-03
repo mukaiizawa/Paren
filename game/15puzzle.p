@@ -30,7 +30,7 @@
         (list board p))))
 
 (function input ()
-  (write (except list? $vector))
+  (write (reject list? $vector))
   (let (selection (read))
     (|| (find (f (x) (if (= (cadr x) selection) (caddr x)))
               (group $vector 3))

@@ -107,8 +107,8 @@
       (let (p (map + branch-dir curr-head))
         (if (in? p branches)
             (<- (head-vertexes body-vertexes cuctus-vertexes branches)
-                (move-forward1 branch-dir curr-head (except (f (p) (= p curr-head)) head-vertexes)
-                               body-vertexes cuctus-vertexes (except (f (q) (= p q)) branches))))))
+                (move-forward1 branch-dir curr-head (reject (f (p) (= p curr-head)) head-vertexes)
+                               body-vertexes cuctus-vertexes (reject (f (q) (= p q)) branches))))))
     (list head-vertexes body-vertexes cuctus-vertexes branches)))
 
 (macro move-opposite ()

@@ -564,7 +564,7 @@
                   (rec (cdr l) acc))))
     (rec l nil)))
 
-(function except (fn l)
+(function reject (fn l)
   ; Returns a list with the elements for which the result of applying the function fn is true removed.
   (let (rec (f (l acc)
               (if (nil? l) (reverse! acc)
@@ -1317,17 +1317,17 @@
   (assert (let (d (dict)) ([] d nil nil) (in? nil d)))
   (assert (! (in? nil (dict)))))
 
-(built-in-function len (x)
-  ; Returns the length of the collection x.
+(built-in-function len (collection)
+  ; Returns the length of the collection.
   (assert (= (len nil) 0))
   (assert (= (len '(1)) 1))
   (assert (= (len (array 1)) 1))
   (assert (= (len (let (d (dict)) ([] d :x 1) d)) 1))
   (assert (= (len "αβγ") 3)))
 
-(function empty? (x)
-  ; Returns whether the x is zero-length or nil.
-  (if x (= (len x) 0) true))
+(function empty? (collection)
+  ; Returns whether the collection is zero-length or nil.
+  (|| (nil? collection) (= (len collection) 0)))
 
 ;; comparable.
 
@@ -1773,7 +1773,7 @@
             (prefix? path-name "~") (<- path-name (memcat (if (!= $hostname :windows) (getenv "HOME")
                                                               (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH")))
                                                           "/" (slice path-name 1))))
-        (<- path (except empty?
+        (<- path (reject empty?
                          (split
                            (with-memory-stream ($out)
                              (with-memory-stream ($in path-name)

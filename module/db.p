@@ -36,7 +36,7 @@
 
 (function db.create-tables (tables)
   ; Returns a list representing a table in the table definition language.
-  (join (except nil?
+  (join (reject nil?
                 (concat
                   (map db.table->create-query tables)
                   (map db.table->constraints tables)))

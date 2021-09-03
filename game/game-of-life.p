@@ -76,7 +76,7 @@
     (write-bytes (if (.at universe p) "#" " "))))
 
 (function neighbor-count (universe p)
-  (len (except nil? (map (f (q)
+  (len (reject nil? (map (f (q)
                            (let (r (map + p q))
                              (&& (.inside? universe r) (.at universe r))))
                          '((-1 -1) (-1  0) (-1  1)

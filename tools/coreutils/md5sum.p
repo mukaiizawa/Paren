@@ -19,4 +19,4 @@
                   check-file (.get op "c"))
     (if (nil? check-file) (write-line (md5sum))
         (foreach (f (x) (write-line (apply check (split x " "))))
-                 (except comment? (.to-l (path check-file)))))))
+                 (reject comment? (.to-l (path check-file)))))))
