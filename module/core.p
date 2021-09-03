@@ -557,7 +557,6 @@
     (rec l)))
 
 (function select (fn l)
-  ; Returns a list with the elements for which the result of applying the function fn is true.
   (let (rec (f (l acc)
               (if (nil? l) (reverse! acc)
                   (fn (car l)) (rec (cdr l) (cons (car l) acc))
@@ -565,7 +564,6 @@
     (rec l nil)))
 
 (function reject (fn l)
-  ; Returns a list with the elements for which the result of applying the function fn is true removed.
   (let (rec (f (l acc)
               (if (nil? l) (reverse! acc)
                   (fn (car l)) (rec (cdr l) acc)
