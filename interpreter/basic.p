@@ -597,8 +597,9 @@
 ;; Loader.
 
 (function split-line (line)
-  (let (i (memmem line " "))
-    (list (int (slice line 0 i)) (slice line (++ i)))))
+  (catch (Error (f (e) (list 0 (format "REM %s" line))))
+    (let (i (memmem line " "))
+      (list (int (slice line 0 i)) (slice line (++ i))))))
 
 (function load-code (file)
   (with-open ($in file :read)
