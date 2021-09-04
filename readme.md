@@ -26,11 +26,12 @@ Paren is a the programmable programming language.
 # Structure
 The main project structures are shown below.
 
-    + game/ -- games and toy-like programs.
-    + interpreter/ -- implementation of language processing system.
+    + algorithm/ -- implementation of various algorithms by Paren.
+    + games/ -- games and toy-like programs.
+    + interpreters/ -- implementation of language processing system.
     + man/ -- manual files for man(1).
     + misc/ -- miscellaneous programs.
-    + module/ -- importable Paren module files.
+    + modules/ -- importable Paren module files.
     + src/ -- implementation of Paren itself.
     + tools/ -- implementation of tools by Paren.
      |+ coreutils/ -- Paren implementation of like the GNU coreutils programs.

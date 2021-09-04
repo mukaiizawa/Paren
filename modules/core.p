@@ -2730,7 +2730,7 @@
   ; Returns true if successfully loaded.
   ; Module file to read must be UTF-8.
   (if (in? key $import) true
-      (let ($G-module (.resolve (if import-dir (path import-dir) (.resolve $paren-home "module"))
+      (let ($G-module (.resolve (if import-dir (path import-dir) (.resolve $paren-home "modules"))
                                 (memcat (string key) ".p")))
         (if (! (.readable? $G-module))
             (raise OSError (str "unreadable module " (.to-s $G-module)))
