@@ -5,7 +5,7 @@ $stdin, $stdout, $stderr -- standard I/O streams.
 The symbols `$stdin`, `$stdout`, and `$stderr` holds standard I/O streams.
 
     $stdin -- standard input.
-    $stdout -- standard input.
+    $stdout -- standard output.
     $stderr -- standard error.
 
 These symbols values should not be updated.
