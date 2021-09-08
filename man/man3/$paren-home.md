@@ -2,7 +2,7 @@
 $paren-home - paren home directly.
 
 # DESCRIPTION
-Symbol `$paren-home` holds paren's home directory.
+The symbol `$paren-home` holds paren's home directory.
 
 It is mainly used to determine the relative path from built-in tools.
 

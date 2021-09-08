@@ -2,7 +2,7 @@
 $runtime-path - list of directories which will be searched for runtime.
 
 # DESCRIPTION
-`$runtime-path` holds a list of directories to search for scripts to run at runtime.
+The symbol `$runtime-path` holds a list of directories to search for scripts to run at runtime.
 
 By default, the following directories are searched at runtime.
 
