@@ -58,21 +58,14 @@
                 (cons if (rec args)))))))
 
 (macro while (test :rest body)
-  ; The specified test is evaluated, and if the specified test is true, each of the specified body is evaluated.
-  ; This repeats until the test becomes nil.
-  ; Supports break, continue macro.
-  ; Returns nil.
-  (list loop (list if (list ! test) '(break) (cons begin body))))
+  (list loop (list if test (cons begin body) '(break))))
 
 (macro for (binding test update :rest body)
-  ; The for macro creates a general-purpose iteration context and evaluates the specified body.
-  ; Returns nil.
-  (with-gensyms (gupdate?)
-    (list let (cons gupdate? (cons nil binding))
-          (list loop
-                (list if gupdate? (cons <- update) (list <- gupdate? true))
-                (list if (list ! test) '(break))
-                (cons begin body)))))
+  (list let binding
+        (list loop
+              (list if (list ! test) '(break))
+              (cons begin body)
+              (cons <- update))))
 
 (macro dolist ((i l) :rest body)
   ; Iterates over the elements of the specified list l, with index the specified i.
