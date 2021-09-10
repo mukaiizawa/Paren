@@ -25,18 +25,18 @@
   ; Parse command line arguments.
   ; Returns list. -- (self parsed-args)
   (while args
-    (let (arg (car args) arglen (len arg))
-      (if (= arg "--") (return (list self (cdr args))))
-      (if (!= ([] arg 0) "-") (break))    ; end of option.
-      (for (i 1) (< i arglen) (i (++ i))
-        (let (record (.lookup self ([] arg i))
-                     (opt optarg? optval) record
-                     put (f (record val) (car! (cddr record) val)))
-          (if optval (raise SyntaxError (str "duplicate option " opt))
-              (nil? optarg?) (begin (put record true) (continue))
-              (< (++ i) arglen) (begin (put record (slice arg (++ i))) (break))
-              (<- args (cdr args)) (begin (put record (car args)) (break))
-              (raise SyntaxError (str "required option argument of " opt)))))
+    (let (arg (car args))
+      (if (= arg "--") (return (list self (cdr args)))
+          (!= ([] arg 0) "-") (break)    ; end of option.
+          (for (i 1 end (len arg)) (< i end) (i (++ i))
+            (let (record (.lookup self ([] arg i))
+                         (opt optarg? optval) record
+                         put (f (record val) (car! (cddr record) val)))
+              (if optval (raise SyntaxError (str "duplicate option " opt))
+                  (nil? optarg?) (begin (put record true) (continue))
+                  (< (++ i) end) (begin (put record (slice arg (++ i))) (break))
+                  (<- args (cdr args)) (begin (put record (car args)) (break))
+                  (raise SyntaxError (str "required option argument of " opt))))))
       (<- args (cdr args))))
   (list self args))
 
