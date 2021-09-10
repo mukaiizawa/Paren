@@ -22,4 +22,5 @@ mandb(1) rarely confirms manual's legitimacy.
 The behavior when reading an unexpected manual is undefined.
 
 # See Also
+- mandep(1)
 - $paren-home(3)

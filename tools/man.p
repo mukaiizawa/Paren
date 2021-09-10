@@ -27,7 +27,7 @@
   ; Returns whether the file is manual.
   (&& (.file? file) (= (.suffix file) "md")))
 
-(function man-parse-one-line-desc (line)
+(function man-parse-name (line)
   ; Returns the list like a `((page ...) one-line-desc)`.
   (with-memory-stream ($in line)
     (let (pages nil rd (.new AheadReader))
