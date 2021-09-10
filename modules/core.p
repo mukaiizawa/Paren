@@ -61,11 +61,12 @@
   (list loop (list if test (cons begin body) '(break))))
 
 (macro for (binding test update :rest body)
-  (list let binding
-        (list loop
-              (list if (list ! test) '(break))
-              (cons begin body)
-              (cons <- update))))
+  (with-gensyms (gupdate?)
+    (list let (cons gupdate? (cons nil binding))
+          (list loop
+                (list if gupdate? (cons <- update) (list <- gupdate? true))    ; for continue(3).
+                (list if (list ! test) '(break))
+                (cons begin body)))))
 
 (macro dolist ((i l) :rest body)
   ; Iterates over the elements of the specified list l, with index the specified i.
