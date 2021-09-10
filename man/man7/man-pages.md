@@ -63,8 +63,7 @@ Where a traditional heading would apply, please use it; this kind of consistency
 
 If you must, you can create your own headings if they make things easier to understand (this can be especially useful for pages in Sections 4 and 5).
 
-The following list elaborates on the contents of each of the
-above sections.
+The following list elaborates on the contents of each of the above sections.
 
 ### NAME
 The name of this manual page.
@@ -97,8 +96,7 @@ Describe the usual case; for information on command-line options of a program us
 ### OPTIONS
 A description of the command-line options accepted by a program and how they change its behavior.
 
-This section should appear only for Section 1 and 8 manual
-pages.
+This section should appear only for Section 1 and 8 manual pages.
 
 ### RETURN VALUE
 For Section 2 and 3 pages, this section gives a list of the values the library routine will return to the caller and the conditions that cause these values to be returned.
@@ -110,8 +108,7 @@ For Section 2 and 3 manual pages, this is a list of the values that may be place
 A list of all environment variables that affect the program or function and how they affect it.
 
 ### FILES
-A list of the files the program or function uses, such as configuration files, startup files, and files the program
-directly operates on.
+A list of the files the program or function uses, such as configuration files, startup files, and files the program directly operates on.
 
 ### NOTES
 Miscellaneous notes.
