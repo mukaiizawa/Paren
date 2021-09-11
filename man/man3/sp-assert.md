@@ -1,23 +1,22 @@
 # NAME
-assert - provide assertion for debug environment.
+assert - abort the program if assertion is false.
 
 # SYNOPSIS
 
-    (assert TEST)
+    (assert TEST-EXPR)
 
 # DESCRIPTION
-Evaluates the specified expression and raise error if the results is nil.
+The special-operator assert(3) evaluates `TEST-EXPR` and aborts if the result is `nil`.
+
+If the symbol `$debug?(3)` is true, the special-operator assert(3) is not evaluate `TEST-EXPR`, and hence does nothing at all.
 
 # RETURN VALUE
-Returns the last evaluation result.
+Undefined.
 
-If compiling with the debug option off, returns nil and the expression is not evaluated.
+Do not use the return value as the internal processing will be different depending on whether you compile in debug mode.
 
 # ERRORS
-Error if, `TEST` is nil.
-
-# NOTES
-Whether it was compiled in debug mode is held by the global symbol `$debug?(3)`.
+Error if, `TEST-EXPR` is evaluated to nil.
 
 # SEE ALSO
 - $debug?(3)
