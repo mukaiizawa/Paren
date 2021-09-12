@@ -237,8 +237,6 @@
   (! (cons? x)))
 
 (built-in-function cons (x y)
-  ; Returns a cons such that the specified x is the car part and y is the cdr part.
-  ; Error if y is not cons.
   (assert (= (cons 'x nil) '(x))))
 
 (built-in-function car (x)
