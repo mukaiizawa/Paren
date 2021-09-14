@@ -2708,29 +2708,22 @@
   ; Quit the system.
   (raise SystemExit))
 
-(function load (path)
+(function load (file)
   ; Load the specified file.
   ; Returns true if successfully loaded.
-  (with-open ($in path :read)
+  (with-open ($in file :read)
     (foreach eval (collect read)))
   true)
 
-(function import (key :opt import-dir)
-  ; Load the module file corresponding to the specified keyword from the specified directory.
-  ; If import-dir is omitted, it is considered to be specified $paren-home directory.
-  ; Bind main to nil after processing.
-  ; Returns true if successfully loaded.
-  ; Module file to read must be UTF-8.
-  (if (in? key $import) true
-      (let ($G-module (.resolve (if import-dir (path import-dir) (.resolve $paren-home "modules"))
+(function import (key :opt dir)
+  (if (in? key $import) key
+      (let ($G-module (.resolve (if dir (path dir) (.resolve $paren-home "modules"))
                                 (memcat (string key) ".p")))
-        (if (! (.readable? $G-module))
-            (raise OSError (str "unreadable module " (.to-s $G-module)))
+        (if (! (.file? $G-module)) (raise OSError (str "unreadable module " (.to-s $G-module)))
             (begin
               (load $G-module)
               (<- main nil)
-              (push! key $import)
-              true)))))
+              (push! key $import))))))
 
 (function boot (args)
   ; Executed when paren is executed.
