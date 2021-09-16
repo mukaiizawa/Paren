@@ -240,11 +240,12 @@
   (assert (= (cons 'x nil) '(x))))
 
 (built-in-function car (x)
-  ; Returns car of the specified cons x.
-  ; If x is nil, returns nil.
-  ; Error if x is not list.
   (assert (= (car '(1 2 3)) 1))
   (assert (nil? (car '()))))
+
+(built-in-function cdr (x)
+  (assert (= (cdr '(1 2 3)) '(2 3)))
+  (assert (nil? (cdr '()))))
 
 (built-in-function car! (x v)
   ; Destructively change the car of the specified cons x to the specified v.
@@ -252,130 +253,41 @@
   ; Error if x is not cons.
   (assert (let (x '(1 2 3)) (&& (== (car! x :one) :one) (= x '(:one 2 3))))))
 
-(built-in-function cdr (x)
-  ; Returns cdr of the specified cons x.
-  ; If x is nil, returns nil.
-  ; Error if x is not list.
-  (assert (= (cdr '(1 2 3)) '(2 3)))
-  (assert (nil? (cdr '()))))
-
 (built-in-function cdr! (x v)
   ; Destructively changes the cdr of the specified cons to the specified v.
   ; Returns v.
   ; Error if x is not cons or v is not list.
   (assert (let (x '(1 2 3)) (&& (= (cdr! x '(two)) '(two)) (= x '(1 two))))))
 
-(function caar (x)
-  ; Same as `(car (car x))`.
-  (car (car x)))
-
-(function cadr (x)
-  ; Same as `(car (cdr x))`.
-  (car (cdr x)))
-
-(function cdar (x)
-  ; Same as `(cdr (car x))`.
-  (cdr (car x)))
-
-(function cddr (x)
-  ; Same as `(cdr (cdr x))`.
-  (cdr (cdr x)))
-
-(function caaar (x)
-  ; Same as `(car (caar x))`.
-  (car (caar x)))
-
-(function caadr (x)
-  ; Same as `(car (cadr x))`.
-  (car (cadr x)))
-
-(function cadar (x)
-  ; Same as `(car (cdar x))`.
-  (car (cdar x)))
-
-(function caddr (x)
-  ; Same as `(car (cddr x))`.
-  (car (cddr x)))
-
-(function cdaar (x)
-  ; Same as `(cdr (caar x))`.
-  (cdr (caar x)))
-
-(function cdadr (x)
-  ; Same as `(cdr (cadr x))`.
-  (cdr (cadr x)))
-
-(function cddar (x)
-  ; Same as `(cdr (cdar x))`.
-  (cdr (cdar x)))
-
-(function cdddr (x)
-  ; Same as `(cdr (cddr x))`.
-  (cdr (cddr x)))
-
-(function caaaar (x)
-  ; Same as `(car (caaar x))`.
-  (car (caaar x)))
-
-(function caaadr (x)
-  ; Same as `(car (caadr x))`.
-  (car (caadr x)))
-
-(function caadar (x)
-  ; Same as `(car (cadar x))`.
-  (car (cadar x)))
-
-(function caaddr (x)
-  ; Same as `(car (caddr x))`.
-  (car (caddr x)))
-
-(function cadaar (x)
-  ; Same as `(car (cdaar x))`.
-  (car (cdaar x)))
-
-(function cadadr (x)
-  ; Same as `(car (cdadr x))`.
-  (car (cdadr x)))
-
-(function caddar (x)
-  ; Same as `(car (cddar x))`.
-  (car (cddar x)))
-
-(function cadddr (x)
-  ; Same as `(car (cdddr x))`.
-  (car (cdddr x)))
-
-(function cdaaar (x)
-  ; Same as `(cdr (caaar x))`.
-  (cdr (caaar x)))
-
-(function cdaadr (x)
-  ; Same as `(cdr (caadr x))`.
-  (cdr (caadr x)))
-
-(function cdadar (x)
-  ; Same as `(cdr (cadar x))`.
-  (cdr (cadar x)))
-
-(function cdaddr (x)
-  ; Same as `(cdr (caddr x))`.
-  (cdr (caddr x)))
-
-(function cddaar (x)
-  ; Same as `(cdr (cdaar x))`.
-  (cdr (cdaar x)))
-
-(function cddadr (x)
-  ; Same as `(cdr (cdadr x))`.
-  (cdr (cdadr x)))
-
-(function cdddar (x)
-  ; Same as `(cdr (cddar x))`.
-  (cdr (cddar x)))
-
-(function cddddr (x)
-  ; Same as `(cdr (cdddr x))`.
-  (cdr (cdddr x)))
+;; cxr.
+(function caar (x) (car (car x)))
+(function cadr (x) (car (cdr x)))
+(function cdar (x) (cdr (car x)))
+(function cddr (x) (cdr (cdr x)))
+(function caaar (x) (car (caar x)))
+(function caadr (x) (car (cadr x)))
+(function cadar (x) (car (cdar x)))
+(function caddr (x) (car (cddr x)))
+(function cdaar (x) (cdr (caar x)))
+(function cdadr (x) (cdr (cadr x)))
+(function cddar (x) (cdr (cdar x)))
+(function cdddr (x) (cdr (cddr x)))
+(function caaaar (x) (car (caaar x)))
+(function caaadr (x) (car (caadr x)))
+(function caadar (x) (car (cadar x)))
+(function caaddr (x) (car (caddr x)))
+(function cadaar (x) (car (cdaar x)))
+(function cadadr (x) (car (cdadr x)))
+(function caddar (x) (car (cddar x)))
+(function cadddr (x) (car (cdddr x)))
+(function cdaaar (x) (cdr (caaar x)))
+(function cdaadr (x) (cdr (caadr x)))
+(function cdadar (x) (cdr (cadar x)))
+(function cdaddr (x) (cdr (caddr x)))
+(function cddaar (x) (cdr (cdaar x)))
+(function cddadr (x) (cdr (cdadr x)))
+(function cdddar (x) (cdr (cddar x)))
+(function cddddr (x) (cdr (cdddr x)))
 
 (built-in-function list (:rest args)
   ; Returns a list whose elements are the specified args.
