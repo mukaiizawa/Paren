@@ -1,5 +1,5 @@
 # NAME
-guess-the-number -- number guessing game.
+guess-the-number - number guessing game.
 
 # SYNOPSIS
 

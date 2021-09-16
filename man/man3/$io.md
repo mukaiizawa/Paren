@@ -1,5 +1,5 @@
 # NAME
-$in, $out -- I/O streams.
+$in, $out - I/O streams.
 
 # DESCRIPTION
 The symbols $in and $out hold the stream that the functions listed below implicitly reference when reading and writing.

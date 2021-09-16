@@ -1,5 +1,5 @@
 # NAME
-$stdin, $stdout, $stderr -- standard I/O streams.
+$stdin, $stdout, $stderr - standard I/O streams.
 
 # DESCRIPTION
 The symbols `$stdin`, `$stdout`, and `$stderr` holds standard I/O streams.

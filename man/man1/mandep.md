@@ -1,5 +1,5 @@
 # NAME
-mandep -- manual dependency.
+mandep - manual dependency.
 
 # SYNOPSIS
 

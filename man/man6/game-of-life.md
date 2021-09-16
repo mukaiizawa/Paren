@@ -1,5 +1,5 @@
 # NAME
-game-of-life -- Conway's Game of Life simulator.
+game-of-life - Conway's Game of Life simulator.
 
 # SYNOPSIS
 

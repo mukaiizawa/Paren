@@ -1,5 +1,5 @@
 # NAME
-hunt-the-wumpus -- Gregory Yob's Hunt the Wumpus.
+hunt-the-wumpus - Gregory Yob's Hunt the Wumpus.
 
 # SYNOPSIS
 
