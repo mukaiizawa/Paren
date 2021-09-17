@@ -69,10 +69,6 @@
                 (cons begin body)))))
 
 (macro dolist ((i l) :rest body)
-  ; Iterates over the elements of the specified list l, with index the specified i.
-  ; Evaluate each of the specified body once for each element in list l, with index i bound to the element.
-  ; Supports break, continue macro.
-  ; Returns nil.
   (with-gensyms (gl)
     (list for (list gl l i (list car gl)) gl (list gl (list cdr gl) i (list car gl))
           (cons begin body))))
