@@ -1,13 +1,14 @@
 ; Caesar's cipher.
 
 (function shift (byte n)
-  (let (base (ord (if (upper? (chr byte)) "A" "a")))
-    (+ (% (+ (- byte base) n) 26) base)))
+  (if (! (alpha? (chr byte))) byte
+      (let (base (ord (if (upper? (chr byte)) "A" "a")))
+        (+ (% (+ (- byte base) n) 26) base))))
 
-(function caesar-cipher (n)
-  (let (byte nil)
-    (while (!= (<- byte (read-byte)) -1)
-      (write-byte (if (alpha? (chr byte)) (shift byte n) byte)))))
+(function caesar-cipher (n text)
+  (with-memory-stream ($out)
+    (dotimes (i (len text))
+      (write-byte (shift ([] text i) n)))))
 
 (function! main (args)
-  (caesar-cipher (int (car args))))
+  (write-bytes (caesar-cipher (int (car args)) (read-bytes))))

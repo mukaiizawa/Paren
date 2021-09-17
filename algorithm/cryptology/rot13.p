@@ -3,4 +3,4 @@
 (import :caesar-cipher "./")
 
 (function! main (args)
-  (caesar-cipher 13))
+  (write-bytes (caesar-cipher 13 (read-bytes))))
