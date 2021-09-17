@@ -10,4 +10,4 @@
       (write-byte (if (alpha? (chr byte)) (shift byte n) byte)))))
 
 (function! main (args)
-  (caesar-cipher 13))
+  (caesar-cipher (int (car args))))
