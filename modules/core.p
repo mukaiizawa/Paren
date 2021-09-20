@@ -83,16 +83,10 @@
           (cons begin body))))
 
 (macro dostring ((c s) :rest body)
-  ; Iterates over the characters of the string s.
-  ; Supports break, continue macro.
-  ; Returns nil.
   (list doarray (list c (list array s))
         (cons begin body)))
 
 (macro doarray ((i a) :rest body)
-  ; Iterates over the elements of the specified array a, with index the specified i.
-  ; Supports break, continue macro.
-  ; Returns nil.
   (with-gensyms (ga gi glen)
     (list for (list gi 0 ga a glen (list len ga)) (list < gi glen) (list gi (list '++ gi))
           (list let (list i (list [] ga gi))
