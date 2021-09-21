@@ -20,13 +20,13 @@ The manual Sections are traditionally defined as follows:
 1. Overview, conventions, and miscellaneous
 
 ### User commands
-Commands that can be executed by the user from within a shell.
+Script file that can be executed in the shell.
 
 ### System calls
-Functions which wrap operations performed by the kernel.
+Unused.
 
 ### Library calls
-All library functions excluding the system call wrappers.
+All library functions.
 
 ### Special files
 Unused.
@@ -61,7 +61,7 @@ Arrange a new manual page so that sections are placed in the order shown in the 
 
 Where a traditional heading would apply, please use it; this kind of consistency can make the information easier to understand.
 
-If you must, you can create your own headings if they make things easier to understand (this can be especially useful for pages in Sections 4 and 5).
+If you must, you can create your own headings if they make things easier to understand.
 
 The following list elaborates on the contents of each of the above sections.
 
@@ -96,13 +96,13 @@ Describe the usual case; for information on command-line options of a program us
 ### OPTIONS
 A description of the command-line options accepted by a program and how they change its behavior.
 
-This section should appear only for Section 1 and 8 manual pages.
+This section should appear only for Section 1 and 7 manual pages.
 
 ### RETURN VALUE
-For Section 2 and 3 pages, this section gives a list of the values the library routine will return to the caller and the conditions that cause these values to be returned.
+For Section 3 pages, this section gives a list of the values the library routine will return to the caller and the conditions that cause these values to be returned.
 
 ### ERRORS
-For Section 2 and 3 manual pages, this is a list of the values that may be placed in errno in the event of an error, along with information about the cause of the errors.
+For Section 3 manual pages, this is a list of the values that may be placed in errno in the event of an error, along with information about the cause of the errors.
 
 ### ENVIRONMENT
 A list of all environment variables that affect the program or function and how they affect it.
@@ -125,4 +125,4 @@ For details on writing example programs, see Example programs below.
 A list of related man pages, possibly followed by other related pages or documents.
 
 # SEE ALSO
-- md2html(1)
+- man(1)

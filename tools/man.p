@@ -86,10 +86,11 @@
                          pages))
               indexes)
     (write-line "Not Found.")
-    (write-line)
-    (write-line "The similar pages are")
-    (foreach (f (x) (write-line (format "  - %s" x)))
-             (reverse! similar-pages))))
+    (when similar-pages
+      (write-line)
+      (write-line "The similar pages are")
+      (foreach (f (x) (write-line (format "  - %s" x)))
+               (reverse! similar-pages)))))
 
 (function man (indexes section page)
   (man-walk (f (section pages one-line-desc file-name)
