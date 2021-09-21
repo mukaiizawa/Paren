@@ -74,10 +74,6 @@
           (cons begin body))))
 
 (macro dotimes ((i n) :rest body)
-  ; Iterates over a series of integers, from 0 to the specified n.
-  ; The specified body once for each integer from 0 up to but not including the value of n, with the specified i bound to each integer.
-  ; Supports break, continue macro.
-  ; Returns nil.
   (with-gensyms (gn)
     (list for (list i 0 gn n) (list < i gn) (list i (list '++ i))
           (cons begin body))))
