@@ -1,16 +1,24 @@
 # NAME
-manage-attendance - attendance infourmation for manage-attendance.
+manage-attendance - attendance infourmation for manage-attendance(1).
 
 # DESCRIPTION
 The data is the following S-expressions.
 
     INPUT = EXPR ...
-    EXPR = ((year month [scheduled-working-days]) DAY-EXPR ...)
-    DAY-EXPR = (day start-time-of-work end-time-of-work [deduction-time])
+    EXPR = ((YEAR MONTH [SCHEDULED-WORKING-DAYS]) DAY-EXPR ...)
+    DAY-EXPR = (DAY START-TIME-OF-WORK END-TIME-OF-WORK [DEDUCTION-TIME])
+    
+    YEAR -- year of work.
+    MONTH -- month of work.
+    SCHEDULED-WORKING-DAYS -- scheduled working days for the month.
+    DAY -- day of work.
+    START-TIME-OF-WORK -- work start time.
+    END-TIME-OF-WORK -- work end time.
+    DEDUCTION-TIME -- deduction time.
 
-If scheduled-working-days is omitted, the rest working time is not displayed.
+If `SCHEDULED-WORKING-DAYS` is omitted, the rest working time is not displayed.
 
-If deduction-time is omitted, 1 is assumed.
+If `DEDUCTION-TIME` is omitted, `1` is assumed.
 
 # EXAMPLES
 
