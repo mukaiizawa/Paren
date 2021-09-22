@@ -276,8 +276,6 @@
 (function cddddr (x) (cdr (cdddr x)))
 
 (built-in-function list (:rest args)
-  ; Returns a list whose elements are the specified args.
-  ; If args is nil, returns nil.
   (assert (= (list 1 2 3) '(1 2 3)))
   (assert (nil? (list))))
 
