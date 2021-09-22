@@ -20,7 +20,6 @@ aside ul { padding-left:0px; list-style:none; }
 aside ul span { margin-left:1em; }
 aside ul a { color:#000; text-decoration:none; margin:2px; white-space:nowrap; }
 article { width:75vw; margin-left:1em; }
-pre, blockquote, table { margin-left:1em; margin-right:1em; padding:0.5em; }
 h1 { margin-top:0.25em; }
 h1, h2, h3, h4, h5, h6, p, pre, blockquote, table { margin-bottom:0.75em; }
 h1 { font-size:1.6em; }
@@ -28,14 +27,22 @@ h2 { font-size:1.2em; }
 h1, h2, h3 { border-bottom:solid 1px #ccc; }
 h3, h4, h5, h6 { font-size:1.0em; }
 h1, h2, h3, h4, h5, h6 { display:block; margin-top:0.75em; font-weight:bold; }
+pre, code, th, td { padding:0.2em 0.5em; }
 small { display:block }
 p { text-indent:1em; }
-pre { border:solid 1px #ccc; box-sizing:border-box; overflow-x:auto; }
+pre, blockquote, table { margin-left:1em; margin-right:1em; }
+pre, code { font-family:monospace; background-color:rgba(110, 118, 129, 0.1); border-radius:6px; }
+pre { overflow-x:auto; }
 blockquote { padding-left:1em; border-left:1.2px solid #ccc; }
 table { border-collapse:collapse; }
 thead { border-bottom:1.2px solid #ccc; }
-th, td { padding:3px; }
 th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
+"
+    $default-script
+"
+document.querySelectorAll('pre').forEach(x => {
+  x.onclick = (e => navigator.clipboard.writeText(e.target.innerHTML));
+});
 "
     $headers '(h1 h2 h3 h4 h5 h6)
     $contents nil)
@@ -90,7 +97,8 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
                   (style () ,$default-css))
             (body ()
                   ,@table-of-contents
-                  (article ,@nodes))))))
+                  (article ,@nodes))
+            (script ,$default-script)))))
 
 (function! main (args)
   (catch (Error (f (e) (write-line $usage) (throw e)))
