@@ -89,8 +89,6 @@
                 (cons begin body)))))
 
 (macro timeit (:rest body)
-  ; Clock the time it takes to evaluate the specified body.
-  ; Returns evaluation result of the last element of body.
   (with-gensyms (clock-offset cycle-offset)
     (list let (list clock-offset '(clock) cycle-offset '(cycle))
           (list 'begin0
