@@ -97,36 +97,32 @@
                                    :time (list '- '(clock) clock-offset)
                                    :cycle (list '- '(cycle) cycle-offset)))))))
 
-(built-in-function expand-macro (expr)
-  ; Returns the result of expanding the macro when expr is a list and car is a macro.
-  ; Otherwise returns expr.
-  (assert (== (car (expand-macro '(begin0 1 2 3))) let)))
+(built-in-function macroexpand-1 (expr)
+  (assert (== (car (macroexpand-1 '(begin0 1 2 3))) let)))
 
-(function! expand-macro-all (expr)
-  ; Same as expand-macro except that it executes recursively.
-  (let (expand (f (x)
-                 (if (cons? x)
-                     (let (y (expand-macro x))
-                       (if (= x y) (expand-cdr (cdr x) (cons (car x) nil))
-                           (expand y)))
-                     x))
-               expand-cdr (f (x acc)
-                            (if x (expand-cdr (cdr x) (cons (expand (car x)) acc))
-                                (reverse! acc))))
-    (if (cons? expr) (cons (expand (car expr)) (expand-macro-all (cdr expr)))
-        expr)))
+(function! macroexpand (expr)
+  (let (expand1 (f (x) (if x (cons (macroexpand (car x)) (expand1 (cdr x)))))
+                expand2 (f (x) (if x (cons (car x) (cons (macroexpand (cadr x)) (expand2 (cddr x))))))
+                expr (macroexpand-1 expr))
+    (if (! (cons? expr)) expr
+        (let ((ope :rest args) expr)
+          (if (|| (macro? ope) (&& (symbol? ope) (bound? ope) (macro? (eval ope)))) (macroexpand expr)
+              (cons ope
+                    (if (== ope 'quote) args
+                        (== ope '<-) (expand2 args)
+                        (== ope 'f) (cons (car args) (expand1 (cdr args)))
+                        (== ope 'macro) (cons (car args) (cons (cadr args) (expand1 (cddr args))))
+                        (|| (== ope 'let) (== ope 'catch)) (cons (expand2 (car args)) (expand1 (cdr args)))
+                        (expand1 args))))))))
 
 (macro function (name args :rest body)
-  ; Bind a symbol the specified name on an anonymous function whose parametes are args and whose body is body.
-  ; The macro in the body is expanded.
-  ; Error if name is already bound.
-  ; Returns name.
   (with-gensyms (gname)
-    (list let (list gname (list quote name))
-          (list if (list bound? gname)
-                (list 'raise 'ArgumentError (list 'str "function name '" gname "` already bound"))
-                (list <- name (cons f (cons args (expand-macro-all body)))))
-          gname)))
+    (let (expand-body (f (x) (if x (cons (macroexpand (car x)) (expand-body (cdr x))))))
+      (list let (list gname (list quote name))
+            (list if (list bound? gname)
+                  (list 'raise 'ArgumentError (list 'str "function name '" gname "` already bound"))
+                  (list <- name (cons f (cons args (expand-body body)))))
+            gname))))
 
 ;; fundamental function.
 
@@ -2589,7 +2585,7 @@
   (loop
     (catch (Error (f (e) (.print-stack-trace e)))
       (write-bytes ") ")
-      (if (<- $_ (read)) (<- $_ (write (eval (expand-macro-all $_))) $5 $4 $4 $3 $3 $2 $2 $1 $1 $_)
+      (if (<- $_ (read)) (<- $_ (write (eval $_)) $5 $4 $4 $3 $3 $2 $2 $1 $1 $_)
           (break)))))
 
 (function raise (cls :opt args)

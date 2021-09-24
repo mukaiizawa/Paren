@@ -764,7 +764,7 @@ DEFUN(apply)
   }
 }
 
-DEFUN(expand_2d_macro)
+DEFUN(macroexpand_2d_1)
 {
   object f, args;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
