@@ -127,7 +127,6 @@
 ;; fundamental function.
 
 (built-in-function = (x y)
-  ; Returns whether x and y are same type and equal.
   (assert (= 1 1))
   (assert (= 1.0 1))
   (assert (= 1 1.0))
@@ -136,7 +135,6 @@
   (assert (! (= 'x 'y))))
 
 (built-in-function == (x y)
-  ; Returns whether x and y are same.
   (assert (== :x :x))
   (assert (! (== "x" "x"))))
 
@@ -146,11 +144,9 @@
   (assert (== (! true) nil)))
 
 (function != (x y)
-  ; Same as `(! (= x y)))`.
   (! (= x y)))
 
 (function !== (x y)
-  ; Same as `(! (== x y)))`.
   (! (== x y)))
 
 (built-in-function hash (x)
