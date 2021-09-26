@@ -161,8 +161,6 @@
   (assert (= (hash (cons nil nil)) 0)))
 
 (built-in-function address (x)
-  ; Returns address of the specified x.
-  ; The addresses of symbols or keywords with the same name are always equal.
   (assert (= (address 'x) (address 'x))))
 
 ;; function & macro.
