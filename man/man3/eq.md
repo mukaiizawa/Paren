@@ -24,21 +24,21 @@ Therefore, `same` is `equal`, but `equal` is not necessarily `same`.
 ### number
 If two numbers are mathematically the same, they are considered to be the same.
 
-## bytes & string
+### bytes & string
 If the two bytes (string) are the same in length and content, they are considered the same.
 
-## cons
+### cons
 If the two conses car and cdr are the same, they are considered to be the same.
 
-## arrray
+### arrray
 If two arrays have the same size and the corresponding elements, they are considered the same.
 
-## keyword & symbol
+### keyword & symbol
 If two symbols (keywords) are the same, they are considered equal.
 
 This is because there is only one symbol (keyword) with the same name in the system.
 
-## dictionary
+### dictionary
 If the two dictionaries have the same number of entries and the respective keys and corresponding values are the same, then the two dictionaries are considered to be the same.
 
 # RETURN VALUE
