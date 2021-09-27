@@ -150,8 +150,6 @@
   (! (== x y)))
 
 (built-in-function hash (x)
-  ; Returns hash value of the specified x.
-  ; If x is a mutable built-in types, returns 0.
   (assert (= (hash 10.0) (hash 10)))
   (assert (= (hash "foo") (hash :foo)))
   (assert (= (hash :foo) (hash 'foo)))

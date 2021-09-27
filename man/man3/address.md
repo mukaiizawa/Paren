@@ -12,7 +12,8 @@ The function `address` returns a address of `X`.
 Returns a address.
 
 # NOTES
-The fact that the two objects `X` and `Y` have the same address is a necessary and sufficient condition for `(== X Y)` to evaluate to true.
+
+    (== X Y) <=> (= (address X) (address Y))
 
 # SEE ALSO
 - ==(3)
