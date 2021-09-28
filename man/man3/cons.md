@@ -6,7 +6,7 @@ cons - create a cons.
     (cons X Y)
 
 # DESCRIPTION
-The function cons creates a cons.
+The function `cons` creates a cons.
 
 # RETURN VALUE
 Returns a cons, the car of which is `X` and the cdr of which is `Y`.
