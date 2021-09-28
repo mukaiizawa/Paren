@@ -164,7 +164,6 @@
 ;; function & macro.
 
 (built-in-function function? (x)
-  ; Returns whether the x is a function.
   (assert (function? (f (x) x)))
   (assert (! (function? begin0))))
 
@@ -175,12 +174,10 @@
   (assert (! (built-in? built-in-function))))
 
 (built-in-function special-operator? (x)
-  ; Returns whether the x is a special-operator.
   (assert (special-operator? <-))
   (assert (! (special-operator? special-operator?))))
 
 (built-in-function macro? (x)
-  ; Returns whether the x is a macro.
   (assert (macro? begin0))
   (assert (! (macro? begin))))
 
@@ -198,7 +195,6 @@
   (! x))
 
 (built-in-function cons? (x)
-  ; Returns whether the x is a cons.
   (assert (cons? '(1)))
   (assert (! (cons? nil))))
 
@@ -517,7 +513,6 @@
 ;; number.
 
 (built-in-function number? (x)
-  ; Returns whether the x is a number.
   (assert (number? 1))
   (assert (number? 3.14))
   (assert (number? 0x20))
@@ -723,13 +718,11 @@
   (assert (== (keyword "foo") :foo)))
 
 (built-in-function symbol? (x)
-  ; Returns whether the x is symbol.
   (assert (symbol? 'foo))
   (assert (! (symbol? :foo)))
   (assert (! (symbol? (bytes 3)))))
 
 (built-in-function keyword? (x)
-  ; Returns whether the x is keyword.
   (assert (keyword? :foo))
   (assert (! (keyword? 'foo)))
   (assert (! (keyword? (bytes 3)))))
@@ -787,7 +780,6 @@
       (format "0x%x" x)))
 
 (built-in-function string? (x)
-  ; Returns whether the x is a string.
   (assert (string? ""))
   (assert (string? "aaa"))
   (assert (! (string? (bytes 1)))))
@@ -1027,8 +1019,6 @@
   (assert (= ([] (bytes 1) 0) 0)))
 
 (built-in-function bytes? (x)
-  ; Returns whether the x is bytes.
-  ; symbols, keywords, and strings are acceptable as arguments for some bytes api, but this function returns nil.
   (assert (bytes? (bytes 3)))
   (assert (! (bytes? 'foo)))
   (assert (! (bytes? :foo)))
@@ -1047,8 +1037,6 @@
   (assert (= ([] (array '(foo bar buzz)) 1) 'bar)))
 
 (built-in-function array? (x)
-  ; Returns whether the x is an array.
-  ; However, bytes are not considered as arrays.
   (assert (array? (array 3)))
   (assert (! (array? (bytes 3)))))
 
@@ -1066,7 +1054,6 @@
   )
 
 (built-in-function dict? (x)
-  ; Returns whether the x is a dictionary.
   (assert (dict? (dict)))
   (assert (! (dict? (array 1)))))
 
