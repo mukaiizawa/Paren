@@ -195,7 +195,6 @@
 ;; list.
 
 (function nil? (x)
-  ; Same as `(! x)`.
   (! x))
 
 (built-in-function cons? (x)
