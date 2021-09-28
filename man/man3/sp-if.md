@@ -8,14 +8,14 @@ if - conditional statements.
         [ELSE])
 
 # DESCRIPTION
-`if` evaluates TEST in order from the top and executes THEN of the clause that returned true.
+The special-operator `if` evaluates `TEST` in order from the top and executes `THEN` of the clause that returned true.
 
-If none of the TESTs return true, evaluate the ELSE clause.
+If none of the `TESTs` return true, evaluate the `ELSE` clause.
 
 # RETURN VALUE
-Returns a evaluation result of THEN or ELSE evaluated.
+Returns a evaluation result of `THEN` or `ELSE` evaluated.
 
-If ELSE is undefined and any TEST is nil, returns nil.
+If `ELSE` is undefined and any `TEST` is `nil`, returns `nil`.
 
 # EXAMPLES
 

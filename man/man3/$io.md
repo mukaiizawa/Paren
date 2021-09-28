@@ -2,7 +2,7 @@
 $in, $out - I/O streams.
 
 # DESCRIPTION
-The symbols $in and $out hold the stream that the functions listed below implicitly reference when reading and writing.
+The symbols `$in` and `$out` hold the stream that the functions listed below implicitly reference when reading and writing.
 
     $in
         read(3) -- read S-expression.
@@ -17,9 +17,9 @@ The symbols $in and $out hold the stream that the functions listed below implici
         write-bytes(3) -- write bytes-like object.
         write-line(3) -- write bytes-like object and new line.
 
-Immediately after execution, they are connected to $stdin(3) and $stdout(3).
+Immediately after execution, they are connected to `$stdin(3)` and `$stdout(3)`.
 
-Macro with-memory-stream(3) allows you to connect to a string I/O stream.
+The macro `with-memory-stream(3)` allows you to connect to a string I/O stream.
 
 # SEE ALSO
 - read(3)

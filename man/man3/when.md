@@ -7,15 +7,14 @@ when - evaluate expressions when condition is not nil.
         EXPR ...)
 
 # DESCRIPTION
-The macro `when` evaluates EXPRs, only if TEST is not nil.
+The macro `when` evaluates `EXPRs`, only if `TEST` is not `nil`.
 
 # RETURN VALUE
-Returns the evaluation result of the last EXPRs.
+Returns the evaluation result of the last `EXPRs`.
 
 # NOTES
 
-    (when TEST EXPR ...)
-    <=> (if TEST (begin EXPR ...))
+    (when TEST EXPR ...) <=> (if TEST (begin EXPR ...))
 
 # EXAMPLES
 

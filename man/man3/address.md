@@ -6,10 +6,10 @@ address - object address.
     (address X)
 
 # DESCRIPTION
-The function `address` returns a address of `X`.
+The function `address` returns the address of the argument.
 
 # RETURN VALUE
-Returns a address.
+Returns a address of `X`.
 
 # NOTES
 

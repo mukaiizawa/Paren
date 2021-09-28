@@ -3,34 +3,26 @@
 
 # SYNOPSIS
 
-    (! EXPR)
+    (! X)
     
     (&& [EXPR ...])
     
     (|| [EXPR ...])
 
 # DESCRIPTION
-Function `!` inverts the truth value of EXPR.
+The function `!` inverts the logical value.
 
-Macro `&&` and `||` evaluates each EXPR one at a time from left to right.
-
-`&&` finishes the evaluation as soon as any EXPR evaluates to nil.
-
-`|| finishes the evaluation as soon as any EXPR evaluates to not nil.
+The macros `&&` and || combine logical values.
 
 # RETURN VALUE
-`!` returns whether EXPR is nil or not.
+The function `!` returns whether `X` is `nil`.
 
-`&&` returns last evaluated value.
+The macro `&&` evaluates each `EXPR` one at a time from left to right. As soon as any `EXPR` evaluates to `nil`, returns `nil` without evaluating the remaining `EXPRs`. If all `EXPRs` but the last evaluate to `non-nil`, returns the results produced by evaluating the last `EXPR`. If no `EXPRs` are supplied, returns `true`.
 
-If there are no arguments, returns true.
-
-`||` returns the first non-nil evaluation result.
-
-If there are no arguments, returns nil.
+The macro `||` evaluates each `EXPR`, one at a time, from left to right. The evaluation of all `EXPRs` terminates when a `EXPR` evaluates to `non-nil`. If the evaluation of any `EXPR` other than the last returns `non-nil`, immediately returns that value  without evaluating the remaining `EXPRs`. If every `EXPR` but the last returns `nil`, returns all values returned by the last `EXPR`. If no `EXPRs` are supplied, returns `nil`.
 
 # NOTES
-`&&` and `||` are so-called Short-circuit evaluation.
+The macros `&&` and `||` are so-called Short-circuit evaluation.
 
 # EXAMPLES
 
@@ -62,7 +54,6 @@ If there are no arguments, returns nil.
     0
     ) i
     0
-    )
 
 # SEE ALSO
 - if(3)

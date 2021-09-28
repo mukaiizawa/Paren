@@ -10,15 +10,15 @@ while, for - conditional iteration of evaluation.
         EXPR ...)
 
 # DESCRIPTION
-Macros while(3) and for(3) create a context for conditional iteration.
+The macros `while` and `for` create a context for conditional iteration.
 
-The macro while(3) first evaluates TEST-EXPR.
+The macro `while` first evaluates `TEST-EXPR`.
 
-If TEST-EXPR evaluates to not-nil, evaluates EXPRs in order, and then TEST-EXPR is evaluated again.
+If `TEST-EXPR` evaluates to `non-nil`, evaluates `EXPRs` in order, and then `TEST-EXPR` is evaluated again.
 
-Repeat the above steps as long as TEST-EXPR evaluates to not-nil.
+Repeat the above steps as long as `TEST-EXPR` evaluates to `non-nil`.
 
-Macro for(3) is the same as macro while(3) except that it first builds an environment with INIT-EXPR, evaluates EXPRs under that environment, and executes binding with UPDATE-EXPR at the end of each loop.
+The macro `for` is the same as macro `while` except that it first builds an environment with `INIT-EXPR`, evaluates `EXPRs` under that environment, and executes binding with `UPDATE-EXPR` at the end of each loop.
 
 # RETURN VALUE
 These macros are always returns nil.
@@ -30,7 +30,7 @@ Since these macros are expanded into a special-operator loop(3), break(3) and co
     <=> (loop
             (if (nil? test) (break)
                 (begin expr ...)))
-    
+
     (for binding test update expr ...)
     <=> (let binding
             (while test
@@ -45,6 +45,7 @@ Since these macros are expanded into a special-operator loop(3), break(3) and co
     nil
     ) i
     10
+
     ) (<- l nil)
     nil
     ) (for (i 0 j 0) (< i 5) (i (++ i) j (% (++ j) 2))

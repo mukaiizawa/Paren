@@ -6,9 +6,9 @@ assert - abort the program if assertion is false.
     (assert TEST-EXPR)
 
 # DESCRIPTION
-The special-operator assert(3) evaluates `TEST-EXPR` and aborts if the result is `nil`.
+The special-operator `assert` evaluates `TEST-EXPR` and aborts if the result is `nil`.
 
-If the symbol `$debug?(3)` is true, the special-operator assert(3) is not evaluate `TEST-EXPR`, and hence does nothing at all.
+If the symbol `$debug?(3)` is true, the special-operator `assert` is not evaluate `TEST-EXPR`, and hence does nothing at all.
 
 # RETURN VALUE
 Undefined.

@@ -6,7 +6,7 @@
     (<- BOUND-EXPR BINDING-EXPR [BOUND-EXPR BINDING-EXPR] ...)
 
 # DESCRIPTION
-Bind the `BOUND-EXPR` with the result of evaluating the `BINDING-EXPR` in order from the left to right.
+The special-operator `<-` bind the `BOUND-EXPR` with the result of evaluating the `BINDING-EXPR` in order from the left to right.
 
 The symbol is bound to the already bound environment closest to the current environment.
 
@@ -28,6 +28,7 @@ Or When the return value of `BINDING-EXPR` does not match `BOUND-EXPR`.
     1
     ) a
     1
+
     ) (<- (a b c) (list 1 2 3))
     3
     ) (list a b c)

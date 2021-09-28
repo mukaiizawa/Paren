@@ -7,9 +7,12 @@ with-gensyms - create a context for unbound symbols.
         EXPR ...)
 
 # DESCRIPTION
-Create an environment in which SYMBOLs are bound by the symbols created by `gensyms(3)`, and evaluate EXPRs in left to right.
+The macro `with-gensyms` create an environment in which `SYMBOLs` are bound by the symbols created by `gensyms`, and evaluate `EXPRs` in left to right.
 
 Generally used in macro definitions to avoid unintended symbol binding.
+
+# RETURN VALUE
+Returns evaluation result of last `EXPRs`.
 
 # NOTES
 

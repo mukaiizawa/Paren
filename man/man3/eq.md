@@ -12,7 +12,7 @@
     (!== X Y)
 
 # DESCRIPTION
-These functions indicate if the objects are same or equal.
+These functions indicate if the objects are `same` or `equal`.
 
 `same` means that they are allocated in the same memory.
 
@@ -58,15 +58,18 @@ The function `!=` and `!==` return the result of inverting the boolean values of
     ) (= 1 1)
     true
     ) (== 1 1)
+
     true
     ) (= 1.0 1)
     true
     ) (== 1.0 1)
     nil
+
     ) (= '(1 2 3) '(1 2 3))
     true
     ) (== '(1 2 3) '(1 2 3))
     nil
+
     ) (= 'foo 'foo)
     true
     ) (== 'foo 'foo)

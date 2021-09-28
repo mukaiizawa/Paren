@@ -3,26 +3,21 @@ quote - just returns the value.
 
 # SYNOPSIS
 
-    (quote VALUE)
+    (quote X)
 
 # DESCRIPTION
-The `quote` special operator just returns VALUE.
+The special-operator `quote` just returns the argument.
 
 # RETURN VALUE
-Returns the VALUE.
+Returns the `X`.
 
 # NOTES
 Since quote is used frequently, the reader macro is defined.
 
-    'VALUE <=> (quote VALUE)
+    'X <=> (quote X)
 
 # EXAMPLES
 
-    ) foo
-    StateError -- unbound symbol
-            at: foo
-            at: (repl)
-            at: (boot nil)
     ) 'foo
     foo
     ) (quote foo)

@@ -13,7 +13,7 @@ If `DIR` is omitted, read from `$paren-home/modules`.
 If the `MODULE` has already been loaded, nothing is done, so calling the `MODULE` with the same name multiple times will work properly.
 
 # RETURN VALUE
-Returns the MODULE.
+Returns the `MODULE`.
 
 # NOTES
 The symbol `main(3)` is bound to `nil` so that the `main` function is not executed when started in script mode.

@@ -6,10 +6,10 @@ return - exits the closest function context.
     (return VALUE)
 
 # DESCRIPTION
-The special operator `return` terminates the current function context and returns VALUE.
+The special-operator `return` terminates the current function context and returns `VALUE`.
 
 # RETURN VALUE
-Returns the VALUE.
+Returns the `VALUE`.
 
 # EXAMPLES
 

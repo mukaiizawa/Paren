@@ -6,16 +6,16 @@ index - locate a element.
     (index COLLECTION VAL)
 
 # DESCRIPTION
-The function index(3) returns the key of the COLLECTION corresponding to VAL.
+The function `index` returns the key of the `COLLECTION` corresponding to `VAL`.
 
 # RETURN VALUE
-Returns the key of the COLLECTION corresponding to VAL.
+Returns the key of the `COLLECTION` corresponding to `VAL`.
 
-If VAL is not associated, returns nil.
+If `VAL` is not associated, returns `nil`.
 
 # EXAMPLES
 
-    ) (<- d #{ :foo 1 :bar 2 }) ; dictionary.
+    ) (<- d #{ :foo 1 :bar 2 })
     #{ :bar 2 :foo 1 }
     ) (index d 1)
     :foo
@@ -23,7 +23,8 @@ If VAL is not associated, returns nil.
     :bar
     ) (index d 3)
     nil
-    ) (<- l (.. 3)) ; list.
+
+    ) (<- l (.. 3))
     (0 1 2)
     ) (index l 1)
     1
@@ -31,7 +32,8 @@ If VAL is not associated, returns nil.
     2
     ) (index l 3)
     nil
-    ) (<- a (array (.. 3))) ; array.
+
+    ) (<- a (array (.. 3)))
     #[ 0 1 2 ]
     ) (index a 1)
     1
@@ -39,6 +41,7 @@ If VAL is not associated, returns nil.
     2
     ) (index a 3)
     nil
+
     ) (<- s "abc") ; string.
     "abc"
     ) (index s "a")

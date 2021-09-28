@@ -69,11 +69,11 @@ These functions are for accessing elements at specific locations in cons `X`.
 Functions are provided which perform compositions of up to four car and cdr operations. 
 
 # RETURN VALUE
-The function car returns the car of that cons `X`.
+The function `car` returns the car of that cons `X`.
 
-The function cdr returns the cdr of that cons `X`.
+The function `cdr` returns the cdr of that cons `X`.
 
-If `X` is nil, `car` and `cdr` returns nil.
+If `X` is nil, `car` and `cdr` returns `nil`.
 
 # ERRORS
 Error if `X` is not a list.
@@ -115,6 +115,7 @@ Error if `X` is not a list.
     nil
     ) (car '(1 2))
     1
+
     ) (cdr nil)
     nil
     ) (cdr '(1 2))

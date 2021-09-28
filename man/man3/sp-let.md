@@ -7,14 +7,14 @@ let - create new envirionment.
         EXPR ...)
 
 # DESCRIPTION
-`let` create new variable bindings and execute a series of EXPRs that use these bindings.
+The `let` create new variable bindings and execute a series of `EXPRs` that use these bindings.
 
-From left to right, bind the evaluation result of BINDING-EXPR to BOUND-EXPR.
+From left to right, bind the evaluation result of `BINDING-EXPR` to `BOUND-EXPR`.
 
-After all the bindings are done, EXPR is evaluated in order from the left.
+After all the bindings are done, `EXPR` is evaluated in order from the left.
 
 # RETURN VALUE
-Returns the evaluation result of the last EXPR.
+Returns the evaluation result of the last `EXPR`.
 
 # NOTES
 Like `let*` in Common Lisp, symbols bound to a newly created environment affect the evaluation of subsequent bindings.

@@ -2,7 +2,7 @@
 true - representative value of true.
 
 # DESCRIPTION
-The symbol true(3) is a representative value of true.
+The symbol `true` is a representative value of true.
 
 The ture is bound itself.
 

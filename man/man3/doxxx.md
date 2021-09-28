@@ -33,20 +33,20 @@ Supports break(3) and  continue(3).
     nil
     ) sum
     45
+
     ) (<- l nil)
     nil
     ) (dostring (ch "foo") (push! ch l))
     nil
     ) (reverse! l)
     ("f" "o" "o")
-    )
-    (<- sum 0)
+
+    ) (<- sum 0)
     0
     ) (doarray (i (array (.. 10))) (<- sum (+ sum i)))
     nil
     ) sum
     45
-    )
 
 # SEE ALSO
 - break(3)

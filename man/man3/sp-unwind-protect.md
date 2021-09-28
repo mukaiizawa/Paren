@@ -6,7 +6,7 @@ unwind-protect - guarantee of evaluation.
     (unwind-protect EXPR CLEANUP-EXPR)
 
 # DESCRIPTION
-`unwind-protect` evaluates EXPR and guarantees that CLEANUP-FORMS are executed before `unwind-protect` exits, whether it terminates normally or not.
+The special-operator `unwind-protect` evaluates `EXPR` and guarantees that `CLEANUP-FORMS` are executed before `unwind-protect` exits, whether it terminates normally or not.
 
 # RETURN VALUE
 undefined.
