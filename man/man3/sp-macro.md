@@ -11,7 +11,7 @@ macro - create a macro.
              [:key KEYWORD-PARAM ... | :rest REST-PARAM]
 
 # DESCRIPTION
-The special-operator `macro` create a macro.
+The special operator `macro` create a macro.
 
 In addition to the fact that formal arguments can be specified in the same way as `f(3)`, a nested structure can be defined.
 

@@ -6,7 +6,7 @@ quote - just returns the value.
     (quote X)
 
 # DESCRIPTION
-The special-operator `quote` just returns the argument.
+The special operator `quote` just returns the argument.
 
 # RETURN VALUE
 Returns the `X`.

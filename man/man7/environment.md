@@ -4,7 +4,7 @@ environment - set of bindings.
 # DESCRIPTION
 A binding is an association between a symbol and that which the symbol denotes.
 
-Bindings are established by particular special-operators.
+Bindings are established by particular special operators.
 
 A single name can simultaneously have more than one associated binding per environment.
 
@@ -15,3 +15,4 @@ When a symbol is evaluated, it is resolved by following the bindings of the pare
 # SEE ALSO
 - <-(3)
 - let(3)
+- special-operator(7)

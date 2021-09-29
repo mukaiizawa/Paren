@@ -8,7 +8,7 @@ if - conditional statements.
         [ELSE])
 
 # DESCRIPTION
-The special-operator `if` evaluates `TEST` in order from the top and executes `THEN` of the clause that returned true.
+The special operator `if` evaluates `TEST` in order from the top and executes `THEN` of the clause that returned true.
 
 If none of the `TESTs` return true, evaluate the `ELSE` clause.
 

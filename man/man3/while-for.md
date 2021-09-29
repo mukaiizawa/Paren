@@ -24,7 +24,7 @@ The macro `for` is the same as macro `while` except that it first builds an envi
 These macros are always returns nil.
 
 # NOTES
-Since these macros are expanded into a special-operator loop(3), break(3) and continue(3) can be used.
+Since these macros are expanded into a special operator `loop(3)`, `break(3)` and `continue(3)` can be used.
 
     (while test expr ...)
     <=> (loop

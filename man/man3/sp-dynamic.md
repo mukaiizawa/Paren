@@ -6,7 +6,7 @@ dynamic - dynamic symbol resolution.
     (dynamic SYMBOL)
 
 # DESCRIPTION
-Dynamically resolve the `SYMBOL`.
+The special operator `dynamic` dynamically resolve the `SYMBOL`.
 
 # RETURN VALUE
 Returns the result of dynamically resolving the `SYMBOL.`

@@ -21,7 +21,7 @@ These macros do not expand `EXPR` that are not evaluable.
     ) (macroexpand '((&& 1 (&& 2 (&& 3))))))
     ((&& 1 (&& 2 (&& 3))))
 
-Also, macro expansion works properly even if it contains special-operators.
+Also, macro expansion works properly even if it contains special operators.
 
 # EXAMPLES
 

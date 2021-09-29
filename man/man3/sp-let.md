@@ -7,7 +7,7 @@ let - create new envirionment.
         EXPR ...)
 
 # DESCRIPTION
-The `let` create new variable bindings and execute a series of `EXPRs` that use these bindings.
+The special operator `let` create new variable bindings and execute a series of `EXPRs` that use these bindings.
 
 From left to right, bind the evaluation result of `BINDING-EXPR` to `BOUND-EXPR`.
 

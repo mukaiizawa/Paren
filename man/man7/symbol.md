@@ -4,7 +4,7 @@ symbol - symbol type.
 # DESCRIPTION
 Symbols are used for their object identity to name various entities in Paren.
 
-Use special-operator(7) `<-(3)` to bind the symbol.
+Use special operator `<-(3)` to bind the symbol.
 
 There is only one symbol with the same name in the system, so identity verification can be done by address comparison.
 

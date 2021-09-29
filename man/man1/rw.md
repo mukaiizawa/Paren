@@ -8,13 +8,13 @@ rw - print reserved word.
 # DESCRIPTION
 Print reserved words of Paren.
 
-In addition to special-operator(7) and built-in-function(7), it targets functions and macros defined in core.p.
+The reserved word here is one of the following.
 
-Those defined by the following operator.
-
-- macro(3)
-- function(3)
-- function!(3)
+- defined by macro(3)
+- defined by function(3)
+- defined by function!(3)
+- special operators
+- built-in functions
 
 # NOTES
 Commonly used to register in a text editor dictionary for highlighting and word completion.

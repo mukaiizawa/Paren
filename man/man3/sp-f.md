@@ -17,7 +17,7 @@ f, function, function! - create a function.
              [:key KEYWORD-PARAM ... | :rest REST-PARAM]
 
 # DESCRIPTION
-The special-operator `f` and macros `function`, and `function!` each create a function.
+The special operator `f` and macros `function`, and `function!` each create a function.
 
 ## Parameter
 There are the following types of parameters.
@@ -46,7 +46,7 @@ If you specify `KEYWORD-PARAMs` or `REST-PARAM` with `OPTIONAL-PARAMs`, you cann
 `REST-PARAM` is a rest parameter implement variable length arguments.
 
 # RETURN VALUE
-The special-operator `f` returns a anonymous functions.
+The special operator `f` returns a anonymous functions.
 
 The macros `function!` create and returns named function whether `NAME` is already bound.
 

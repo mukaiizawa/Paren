@@ -9,11 +9,11 @@ throw, catch - throw exceptions and catch exceptions.
         EXPR ...)
 
 # DESCRIPTION
-The special-operator throw throws a `EXCEPTION`.
+The special operator throw throws a `EXCEPTION`.
 
 When `EXCEPTION` is thrown, execution of the current function stops and control is passed to the first `HANDLER` in the first matching catch expression.
 
-The special-operator `catch` evaluates `EXPRs` in order from the left.
+The special operator `catch` evaluates `EXPRs` in order from the left.
 
 If an `EXCEPTION` is thrown by throw while evaluating `EXPRs`, control is first transferred to a `HANDLER` that matches the `EXCEPTION` type regarded as `EXCEPTION-CLASS`.
 

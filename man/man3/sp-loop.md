@@ -10,9 +10,9 @@ loop, break, continue - iteration of evaluation.
     (continue)
 
 # DESCRIPTION
-The special-operators `loop`, `break` and `continue` supports the iterative evaluation.
+These special operators `loop`, `break` and `continue` supports the iterative evaluation.
 
-The special-operator `loop` is evaluate `EXPRs` in order from the left, and when the last `EXPR` is evaluated, evaluation is performed again in order from the beginning.
+The special operator `loop` is evaluate `EXPRs` in order from the left, and when the last `EXPR` is evaluated, evaluation is performed again in order from the beginning.
 
 When `break` is evaluated, the nearest loop is terminated.
 
@@ -21,7 +21,7 @@ When `continue` is evaluated, terminates a current iteration and execute next it
 In contrast to the `break` expression, `continue` does not terminate the execution of the loop entirely.
 
 # RETURN VALUE
-The special-operator `loop` returns the `nil`.
+The special operator `loop` returns the `nil`.
 
 # EXAMPLES
 
