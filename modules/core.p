@@ -168,7 +168,6 @@
   (assert (! (function? begin0))))
 
 (built-in-function built-in? (x)
-  ; Returns whether the x is a built-in operater.
   (assert (built-in? f))
   (assert (built-in? +))
   (assert (! (built-in? built-in-function))))
