@@ -2576,8 +2576,6 @@
   (raise SystemExit))
 
 (function load (file)
-  ; Load the specified file.
-  ; Returns true if successfully loaded.
   (with-open ($in file :read)
     (foreach eval (collect read)))
   true)
