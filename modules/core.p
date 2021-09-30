@@ -2572,7 +2572,6 @@
         (raise ArgumentError "Instances of the Excepion class cannot be raised"))))
 
 (function quit ()
-  ; Quit the system.
   (raise SystemExit))
 
 (function load (file)
