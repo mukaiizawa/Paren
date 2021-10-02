@@ -180,13 +180,12 @@
   (assert (macro? begin0))
   (assert (! (macro? begin))))
 
-(built-in-function procparams (proc)
-  ; Returns the parameter of the function or macro.
-  )
+(built-in-function params (proc)
+  (assert (= (params (f (x y z) nil)) '(x y z)))
+  (assert (= (params (f (x :opt y :rest z) nil)) '(x :opt y :rest z))))
 
-(built-in-function procbody (proc)
-  ; Returns the body of the function or macro.
-  )
+(built-in-function body (proc)
+  (assert (= (body (f () (list 1 2 3))) '((list 1 2 3)))))
 
 ;; list.
 
@@ -1518,7 +1517,7 @@
       (foreach (f (x) ([] o (keyword x) nil))
                ([] cls :fields)))
     ([] o :class ([] self :symbol))
-    (if (= (procparams (find-method ([] o :class) '.init)) '(self)) (.init o)
+    (if (= (params (find-method ([] o :class) '.init)) '(self)) (.init o)
         o)))
 
 (method Class .symbol ()
@@ -2045,8 +2044,8 @@
         (.write-bytes self "#[ ")
         (dotimes (i (len x)) (.write self ([] x i) :end " "))
         (.write-byte self 0x5d))
-      (function? x) (.write self (cons 'f (cons (procparams x) (procbody x))))
-      (macro? x) (.write self (cons 'macro (cons (procparams x) (procbody x))))
+      (function? x) (.write self (cons 'f (cons (params x) (body x))))
+      (macro? x) (.write self (cons 'macro (cons (params x) (body x))))
       (assert nil))
   (.write-bytes self (|| end "\n"))
   x)

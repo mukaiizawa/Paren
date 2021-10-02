@@ -376,7 +376,7 @@ DEFUN(built_2d_in_2d_name)
   return TRUE;
 }
 
-DEFUN(procparams)
+DEFUN(params)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -385,7 +385,7 @@ DEFUN(procparams)
   return TRUE;
 }
 
-DEFUN(procbody)
+DEFUN(body)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
