@@ -251,8 +251,6 @@
   (assert (nil? (list))))
 
 (function list? (x)
-  ; Returns whether the x is a list.
-  ; Same as `(|| (nil? x) (cons? x))`.
   (if (cons? x) true
       (nil? x)))
 
