@@ -197,8 +197,6 @@
   (assert (! (cons? nil))))
 
 (function atom? (x)
-  ; Returns whether the x is an atom.
-  ; It means x is cons or not.
   (! (cons? x)))
 
 (built-in-function cons (x y)
