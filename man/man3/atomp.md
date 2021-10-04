@@ -1,15 +1,15 @@
 # NAME
-atom? - determines whether argument is atom.
+atom? - determines whether argument is an atom.
 
 # SYNOPSIS
 
     (atom? X)
 
 # DESCRIPTION
-The function `atom?` returns whether argument is atom.
+The function `atom?` returns whether argument is an atom.
 
 # RETURN VALUE
-Returns whether `X` is atom.
+Returns whether `X` is an atom.
 
 # NOTES
 
@@ -25,5 +25,5 @@ Returns whether `X` is atom.
     nil
 
 # SEE ALSO
-- list?(3)
 - cons?(3)
+- list?(3)
