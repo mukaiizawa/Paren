@@ -213,15 +213,9 @@
   (assert (nil? (cdr '()))))
 
 (built-in-function car! (x v)
-  ; Destructively change the car of the specified cons x to the specified v.
-  ; Returns v.
-  ; Error if x is not cons.
   (assert (let (x '(1 2 3)) (&& (== (car! x :one) :one) (= x '(:one 2 3))))))
 
 (built-in-function cdr! (x v)
-  ; Destructively changes the cdr of the specified cons to the specified v.
-  ; Returns v.
-  ; Error if x is not cons or v is not list.
   (assert (let (x '(1 2 3)) (&& (= (cdr! x '(two)) '(two)) (= x '(1 two))))))
 
 ;; cxr.
