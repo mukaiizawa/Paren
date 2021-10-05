@@ -255,8 +255,6 @@
       (nil? x)))
 
 (function ->list (x)
-  ; Returns a list with x as the only element.
-  ; If x is a list, returns x.
   (if (list? x) x
       (list x)))
 
