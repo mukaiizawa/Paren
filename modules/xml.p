@@ -147,6 +147,7 @@
 
 (function! main (args)
   (assert (= (xml->str '(html (:lang "ja") "foo")) "<html lang='ja'>foo</html>"))
+  (assert (= (xml->str '(script (:async :src "foo"))) "<script async src='foo'></script>"))
   (assert (= (xml->str '(title ())) "<title></title>"))
   (with-memory-stream ($in "<!DOCTYPE html>")
     (assert (= (.read (.new XMLReader)) '(!DOCTYPE "html"))))
@@ -156,6 +157,8 @@
     (assert (= (.read (.new XMLReader)) '(div ()))))
   (with-memory-stream ($in "<input type='hidden'/>")
     (assert (= (.read (.new XMLReader)) '(input (:type "hidden")))))
+  (with-memory-stream ($in "<script async src='foo'/>")
+    (assert (= #p(.read (.new XMLReader)) '(script (:async :src "foo")))))
   (with-memory-stream ($in (str "<ul>"
                                 "    <li>foo</li>"
                                 "    <li>bar</li>"
