@@ -266,14 +266,12 @@
         (write-bytes (car l))
         (dolist (x (cdr l)) (write-bytes separator) (write-bytes x)))))
 
-(function split (s :opt delim)
-  ; Returns a list of characters in string s.
-  ; If delim is specified, returns a list of strings s delimited by delimiter.
+(function split (s :opt separator)
   (if (empty? s) nil
-      (nil? delim) (array->list (array s))
+      (nil? separator) (array->list (array s))
       (let (i 0 lis nil chars nil
               sa (array s) salen (len sa)
-              da (array delim) dalen (len da) end (- salen dalen)
+              da (array separator) dalen (len da) end (- salen dalen)
               match? (f ()
                        (dotimes (j dalen)
                          (if (!= ([] sa (+ i j)) ([] da j)) (return nil)))
