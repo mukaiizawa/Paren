@@ -258,15 +258,13 @@
   (if (list? x) x
       (list x)))
 
-(function join (l :opt delim)
-  ; Returns a new string of the specified list elements joined together with of the specified delimiter.
-  ; If delim is not specified, consider an empty string to be specified.
+(function join (l :opt separator)
   (if (nil? l) ""
       (nil? (cdr l)) (car l)
-      (nil? delim) (apply memcat l)
+      (nil? separator) (apply memcat l)
       (with-memory-stream ($out)
         (write-bytes (car l))
-        (dolist (x (cdr l)) (write-bytes delim) (write-bytes x)))))
+        (dolist (x (cdr l)) (write-bytes separator) (write-bytes x)))))
 
 (function split (s :opt delim)
   ; Returns a list of characters in string s.
