@@ -322,15 +322,12 @@
     (rec l nil)))
 
 (function reverse (l)
-  ; Returns a list with the elements of list l reversed.
   (let (rec (f (l acc)
               (if (nil? l) acc
                   (rec (cdr l) (cons (car l) acc)))))
     (rec l nil)))
 
 (built-in-function reverse! (l)
-  ; Same as reverse except that it destructively modifies the argument list.
-  ; Generally faster than reverse.
   (assert (nil? (reverse! nil)))
   (assert (= (car (reverse! '(0 1))) 1)))
 
