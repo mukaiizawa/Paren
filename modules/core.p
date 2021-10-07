@@ -289,9 +289,6 @@
         (reverse! (cons (join-chars) lis)))))
 
 (built-in-function last-cons (x)
-  ; Returns the terminal cons.
-  ; If x is nil, returns nil.
-  ; Error if x is not cons.
   (assert (= (car (last-cons '(1 2 3))) 3))
   (assert (nil? (last-cons nil))))
 

@@ -9,7 +9,7 @@ last-cons - returns last cons.
 The function `last-cons` returns the last cons (not last element).
 
 # RETURN VALUE
-Return a list of the words in the `STRING`, using `SEPARATOR` as the delimiter string.
+Returns the last cons of the `LIST`.
 
 If `LIST` is `nil`, returns `nil`.
 
@@ -17,6 +17,11 @@ If `LIST` is `nil`, returns `nil`.
 Error if `LIST` is not a list.
 
 # EXAMPLES
+
+    ) (last-cons nil)
+    nil
+    ) (last-cons (.. 3))
+    (2)
 
 # SEE ALSO
 - last(3)
