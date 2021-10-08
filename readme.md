@@ -1,19 +1,29 @@
 Programming Language Paren
 
 # What is Paren
-
-    Programs that write programs?
-    When would you ever want to do that? Not very often, if you think in Cobol.
-    All the time, if you think in Lisp.
-    -- Paul Graham, Beating the Averages
-
-Paren is a the programmable programming language.
+Paren is a dialect of the Lisp programming languages:
 
 - dynamic type checking
 - lexical scope
 - unlimited extent
 - multi-paradigm(expression oriented, functional, object oriented, ...)
 - concise syntax
+
+    It's difficult to convey the essence of a programminglanguage in one sentence,
+    but John Foderaro has come close:
+    
+        Lisp is a programmable programming language
+    
+    -- Paul Graham, On Lisp
+
+Lisp is a programmable programming language and Paren is also.
+
+    Programs that write programs?
+    When would you ever want to do that?
+    Not very often, if you think in Cobol.
+    All the time, if you think in Lisp.
+    
+    -- Paul Graham, Beating the Averages
 
 # Compiling
 
