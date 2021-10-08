@@ -314,12 +314,11 @@
     (rec 0 start stop step) ))
 
 (function group (l n)
-  ; Returns a list in which the elements of l are grouped into sublists of length n.
   (let (rec (f (l acc)
               (if (nil? l) (reverse! acc)
                   (rec (slice l n) (cons (slice l 0 n) acc)))))
-    (assert (> n 0))
-    (rec l nil)))
+    (if (<= n 0) (raise IndexError "sublists length must be positive integer")
+        (rec l nil))))
 
 (function reverse (l)
   (let (rec (f (l acc)
