@@ -300,18 +300,13 @@
       (assoc (cddr alist) key)))
 
 (function .. (start :opt stop step)
-  ; Returns a list of numbers that increase step by step from start for which start < stop holds.
-  ; The contents of the list is determined by the formula.
-  ;     { x | start + step * i, i >= 0, x < stop }
-  ; If stop and step are omitted, consider the same as `(.. 0 start 1)`.
-  ; If step is omitted, consider the same as `(.. start stop 1)`.
-  (let (rec (f (i next stop step :opt acc)
-              (if (< next stop) (rec (++ i) (+ next step) stop step (cons next acc))
+  (let (rec (f (next stop step :opt acc)
+              (if (< next stop) (rec (+ next step) stop step (cons next acc))
                   (reverse! acc))))
     (if (nil? stop) (<- stop start start 0 step 1)
         (nil? step) (<- step 1)
         (<= step 0) (raise IndexError "step must be positive integer"))
-    (rec 0 start stop step) ))
+    (rec start stop step)))
 
 (function group (l n)
   (let (rec (f (l acc)
