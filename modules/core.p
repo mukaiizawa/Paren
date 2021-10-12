@@ -106,13 +106,14 @@
                 expr (macroexpand-1 expr))
     (if (! (cons? expr)) expr
         (let ((ope :rest args) expr)
-          (if (|| (macro? ope) (&& (symbol? ope) (bound? ope) (macro? (eval ope)))) (macroexpand expr)
+          (if (&& (symbol? ope) (bound? ope)) (<- ope (dynamic ope)))
+          (if (macro? ope) (macroexpand expr)
               (cons ope
-                    (if (== ope 'quote) args
-                        (== ope '<-) (expand2 args)
-                        (== ope 'f) (cons (car args) (expand1 (cdr args)))
-                        (== ope 'macro) (cons (car args) (cons (cadr args) (expand1 (cddr args))))
-                        (|| (== ope 'let) (== ope 'catch)) (cons (expand2 (car args)) (expand1 (cdr args)))
+                    (if (== ope quote) args
+                        (== ope <-) (expand2 args)
+                        (== ope f) (cons (car args) (expand1 (cdr args)))
+                        (== ope macro) (cons (car args) (cons (cadr args) (expand1 (cddr args))))
+                        (|| (== ope let) (== ope catch)) (cons (expand2 (car args)) (expand1 (cdr args)))
                         (expand1 args))))))))
 
 (macro function (name args :rest body)
