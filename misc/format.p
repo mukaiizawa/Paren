@@ -37,7 +37,7 @@
   (assert (= (format "%d" -1) "-1"))
   (assert (= (format "%d" 3.1) "3"))
   (assert (= (format "%d" 2x1010) "10"))
-  ;;; f
+  ;;; f, e, g
   (assert (= (format "%f" 1.0) "1.000000"))
   (assert (= (format "%e" 1.0) "1.000000e+00"))
   (assert (= (format "%g" 1.0) "1"))
