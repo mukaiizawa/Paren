@@ -293,8 +293,6 @@
   (assert (nil? (last-cons nil))))
 
 (function assoc (alist key)
-  ; Returns the value corresponding to the key in the associative list.
-  ; If there is no corresponding value, returns nil.
   (if (nil? alist) nil
       (= (car alist) key) (cadr alist)
       (assoc (cddr alist) key)))
