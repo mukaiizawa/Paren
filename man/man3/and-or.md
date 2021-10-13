@@ -4,9 +4,7 @@
 # SYNOPSIS
 
     (! X)
-    
     (&& [EXPR ...])
-    
     (|| [EXPR ...])
 
 # DESCRIPTION

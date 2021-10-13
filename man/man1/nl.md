@@ -6,9 +6,9 @@ nl - number lines.
     nl [OPTION] [START]
 
 # DESCRIPTION
-Write standard input to standard output, with line numbers starting from START.
+Write standard input to standard output, with line numbers starting from `START`.
 
-If A is omitted, it is considered that B is specified.
+If `START` is omitted, it is considered that `1` is specified.
 
 # OPTIONS
 

@@ -4,63 +4,34 @@ car, cdr, caar, cadr, cdar, cddr, caaar, caadr, cadar, caddr, cdaar, cdadr, cdda
 # SYNOPSIS
 
     (car X)
-    
     (cdr X)
-    
     (caar X)
-    
     (cadr X)
-    
     (cdar X)
-    
     (cddr X)
-    
     (caaar X)
-    
     (caadr X)
-    
     (cadar X)
-    
     (caddr X)
-    
     (cdaar X)
-    
     (cdadr X)
-    
     (cddar X)
-    
     (cdddr X)
-    
     (caaaar X)
-    
     (caaadr X)
-    
     (caadar X)
-    
     (caaddr X)
-    
     (cadaar X)
-    
     (cadadr X)
-    
     (caddar X)
-    
     (cadddr X)
-    
     (cdaaar X)
-    
     (cdaadr X)
-    
     (cdadar X)
-    
     (cdaddr X)
-    
     (cddaar X)
-    
     (cddadr X)
-    
     (cdddar X)
-    
     (cddddr X)
 
 # DESCRIPTION

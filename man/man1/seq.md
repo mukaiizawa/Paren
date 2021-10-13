@@ -6,9 +6,9 @@ seq - print a sequence of numbers.
     seq [OPTION] [FIRST [INCREMENT]] LAST
 
 # DESCRIPTION
-Print numbers from FIRST to LAST, in steps of INCREMENT.
+Print numbers from `FIRST` to `LAST`, in steps of `INCREMENT`.
 
-If FIRST or INCREMENT is omitted, it defaults to 1. 
+If `FIRST` or `INCREMENT` is omitted, it defaults to `1`.
 
 # OPTIONS
 

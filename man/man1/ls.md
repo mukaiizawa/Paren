@@ -6,7 +6,9 @@ ls - list directory contents.
     ls [OPTION]... [PATH]
 
 # DESCRIPTION
-List information about the PATH (the current directory by default).
+List information about the `PATH`.
+
+If the `PATH` is omitted, it is considered that the current directory is specified.
 
 # OPTIONS
 

@@ -8,7 +8,7 @@ whatis - display one-line manual page descriptions.
 # DESCRIPTION
 Each manual page has a short description available within it.
 
-whatis searches the manual page names and displays the manual page descriptions of any name matched.
+`whatis` searches the manual page names and displays the manual page descriptions of any `NAME` matched.
 
 # OPTIONS
 

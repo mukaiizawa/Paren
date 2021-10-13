@@ -6,7 +6,7 @@ head - output the first part of standard input.
     head [OPTION]
 
 # DESCRIPTION
-Print the first 10 lines of standard input.
+Print the first `10` lines of standard input.
 
 # OPTIONS
 

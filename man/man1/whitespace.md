@@ -6,7 +6,7 @@ whitespace - whitespace interpreter.
     whitespace [OPTION] ... FILE
 
 # DESCRIPTION
-Reads the whitespace program from a FILE and interpret.
+Reads the whitespace program from a `FILE` and interpret.
 
 # OPTIONS
 

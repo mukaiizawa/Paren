@@ -6,7 +6,7 @@ cat - concatenate files and output.
     cat [FILE]...
 
 # DESCRIPTION
-Concatenate FILE(s) to standard output.
+Concatenate `FILEs` to standard output.
 
 # SEE ALSO
 - tac(1)

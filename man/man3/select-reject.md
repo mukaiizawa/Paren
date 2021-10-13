@@ -4,7 +4,6 @@ select, reject - create a sublist that meets the conditions.
 # SYNOPSIS
 
     (select FX LIST)
-    
     (reject FX LIST)
 
 # DESCRIPTION

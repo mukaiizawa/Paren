@@ -6,7 +6,7 @@ echo - echo the string to standard output.
     echo [OPTION] [STRING]...
 
 # DESCRIPTION
-Echo the STRING(s) to standard output.
+Echo the `STRING` to standard output.
 
 # OPTIONS
 

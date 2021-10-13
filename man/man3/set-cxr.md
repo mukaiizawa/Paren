@@ -4,7 +4,6 @@ car!, cdr! - replace the car or cdr of cons.
 # SYNOPSIS
 
     (car! CONS X)
-    
     (cdr! CONS Y)
 
 # DESCRIPTION

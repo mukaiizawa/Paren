@@ -4,9 +4,7 @@ loop, break, continue - iteration of evaluation.
 # SYNOPSIS
 
     (loop [EXPR] ...)
-    
     (break)
-    
     (continue)
 
 # DESCRIPTION

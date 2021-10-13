@@ -11,13 +11,13 @@ S-expressions is a list or atom.
 ### Lists
 A cons is a data structure with two components called car and cdr.
 
-All cdrs refer to nil or cons.
+All cdrs refer to `nil` or cons.
 
 A list is the entire cons that can be traced from a cons.
 
 The entire car is called a list element.
 
-A list without elements is called an empty list and is represented by symbol nil.
+A list without elements is called an empty list and is represented by symbol `nil`.
 
 ### Atom
 An atom is the following data types.
@@ -46,7 +46,7 @@ Keywords are the same as symbols, except that they cannot hold references to oth
 An array is a data type in which any S-expression is placed in continuous memory.
 
 #### Dictionary
-A dictionary is an data type composed of a collection of (key, value) pairs, such that each possible key appears at most once in the collection.
+A dictionary is an data type composed of a collection of key-value pairs, such that each possible key appears at most once in the collection.
 
 Operations associated with this data type allow.
 
@@ -61,7 +61,7 @@ Only symbols or keywords can be specified for key.
 Any value can be entered in value.
 
 #### Bytes
-A bytes is an array that specializes in handling only numbers from 0 to 255.
+A bytes is an array that specializes in handling only numbers from `0` to `255`.
 
 #### Functions
 A function is a data type that receives an argument of zero or more and evaluates an S-expression of zero or more.
@@ -89,7 +89,7 @@ The grammar is defined by the following EBNF notation.
 
 If '\' is described in a fixed phrase or a character group, it means the following character itself.
 
-Exceptions are '\t' for tab characters, '\n' for newline characters.
+Exceptions are `\t` for tab characters, `\n` for newline characters.
 
 ## Lexical rules
 The lexical rules determines how a character sequence is split into a sequence of lexemes.

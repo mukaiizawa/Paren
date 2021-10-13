@@ -6,9 +6,9 @@ sleep - delay for a specified amount of time.
     sleep SEC
 
 # DESCRIPTION
-Pause for SEC seconds.
+Pause for `SEC` seconds.
 
-SEC can specify any numeric literal in Paren.
+`SEC` can specify any numeric literal in Paren.
 
 # SEE ALSO
 - coreutils(7)

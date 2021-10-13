@@ -6,16 +6,16 @@ du - estimate file space usage.
     du [OPTION] [DIRECTORY]
 
 # DESCRIPTION
-Displays the disk usage under the specified DIRECTORY.
+Displays the disk usage under the specified `DIRECTORY`.
 
-If the DIRECTORY is omitted, the usage below the current directory is displayed.
+If the `DIRECTORY` is omitted, the usage below the current directory is displayed.
 
 # OPTIONS
 
     -a
         Display for all elements, including files.
     -s
-        Limit the display to one level below the specified directory.
+        Limit the display to one level below the specified `DIRECTORY`.
 
 # SEE ALSO
 - coreutils(7)

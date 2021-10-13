@@ -4,7 +4,6 @@
 # SYNOPSIS
 
     (.. STOP)
-    
     (.. START STOP [STEP])
 
 # DESCRIPTION

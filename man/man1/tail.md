@@ -6,7 +6,7 @@ tail - output the last part of files.
     tail [OPTION]
 
 # DESCRIPTION
-Print the last 10 lines of standard input to standard output.
+Print the last `10` lines of standard input to standard output.
 
 # OPTIONS
 

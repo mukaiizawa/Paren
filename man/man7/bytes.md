@@ -2,9 +2,9 @@
 bytes - bytes type.
 
 # DESCRIPTION
-A bytes is array(7) that specializes in dealing with bytes.
+A bytes is array that specializes in dealing with bytes.
 
-Unlike array, it can only handle bytes.
+Unlike `array` type, it can only handle bytes.
 
 # SEE ALSO
 - [](3)

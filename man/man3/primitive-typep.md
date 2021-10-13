@@ -4,25 +4,15 @@ number?, cons?, symbol?, keyword?, string?, bytes?, array?, dict?, special-opera
 # SYNOPSIS
 
     (number? X)
-    
     (cons? X)
-    
     (symbol? X)
-    
     (keyword? X)
-    
     (string? X)
-    
     (bytes? X)
-    
     (array? X)
-    
     (dict? X)
-    
     (special-operator? X)
-    
     (macro? X)
-    
     (function? X)
 
 # DESCRIPTION

@@ -8,7 +8,7 @@ manage-attendance - manage attendance and summarize.
 # DESCRIPTION
 Read attendance information from standard input and output summary to standard output.
 
-See manage-attendance(5) for attendance information format specifications.
+See `manage-attendance(5)` for attendance information format specifications.
 
 # SEE ALSO
 - cal(1)

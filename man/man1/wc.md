@@ -22,7 +22,7 @@ Print newline, word, and byte counts.
 # NOTES
 Options do not undo others previously given.
 
-Therefore, by specifying a plurality of options as in the EXAMPLES, only a specific item can be output.
+Therefore, by specifying a plurality of options as in the `EXAMPLES`, only a specific item can be output.
 
 Regardless of the number or order of options, the output always follows the following order:
 

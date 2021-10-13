@@ -4,7 +4,6 @@ macroexpand-1, macroexpand - expand a macro.
 # SYNOPSIS
 
     (macroexpand-1 EXPR)
-    
     (macroexpand EXPR)
 
 # DESCRIPTION

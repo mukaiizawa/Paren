@@ -6,7 +6,9 @@ yes - output a string repeatedly until killed.
     yes [STRING]
 
 # DESCRIPTION
-Repeatedly output a line with all specified STRING, or `y`.
+Repeatedly output a line with all specified `STRING`.
+
+If `STRING` is omitted, it is considered that the `y` is specified.
 
 # SEE ALSO
 - coreutils(7)

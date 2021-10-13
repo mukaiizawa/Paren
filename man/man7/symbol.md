@@ -11,7 +11,7 @@ There is only one symbol with the same name in the system, so identity verificat
 # NOTES
 Unlike Common Lisp, there is no concept of packaging, so symbols in the system are in only one namespace.
 
-See lang(7) for names that can be used for symbols.
+See `lang(7)` for names that can be used for symbols.
 
 # SEE ALSO
 - symbol(3)

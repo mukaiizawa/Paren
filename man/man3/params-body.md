@@ -4,7 +4,6 @@ params, body - accessor of the procedure.
 # SYNOPSIS
 
     (params PROC)
-    
     (body PROC)
 
 # DESCRIPTION

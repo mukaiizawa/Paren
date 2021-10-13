@@ -3,7 +3,7 @@ tac - output standard input in reverse order.
 
 # SYNOPSIS
 
-    sleep SEC
+    tac
 
 # DESCRIPTION
 Output standard input in reverse order.

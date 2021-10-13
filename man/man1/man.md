@@ -4,7 +4,6 @@ man - Paren reference manuals.
 # SYNOPSIS
 
     man PAGE(SECTION)
-    
     man [[SECTION] PAGE]
 
 # DESCRIPTION
@@ -19,7 +18,7 @@ If `SECTION` is provided, will direct man to look only in that `SECTION` of the 
 If the corresponding `PAGE` does not exist, list the pages with a Levenshtein distance of 3 or less.
 
 # NOTES
-There is no `f` option, so use whatis(1) instead.
+There is no `f` option, so use `whatis(1)` instead.
 
 See `man-pages(7)` for concept of the section number.
 

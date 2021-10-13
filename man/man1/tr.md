@@ -8,7 +8,7 @@ tr - translate or delete characters.
 # DESCRIPTION
 Translate, squeeze, and/or delete characters from standard input, writing to standard output.
 
-SETs are specified as strings of characters.
+`SET1` and `SET2` are specified as strings of characters.
 
 Most represent themselves.
 

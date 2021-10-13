@@ -6,7 +6,7 @@ A special operator is a operator with special syntax, special evaluation rules, 
 
 The set of special operator is fixed in Paren; no way is provided for the user to define a special operator.
 
-The complete list of the special operator is listed in SEE ALSO.
+The complete list of the special operator is listed in `SEE ALSO`.
 
 # SEE ALSO
 - <-(3)

@@ -4,7 +4,6 @@ reverse, reverse! - reverses a list in place.
 # SYNOPSIS
 
     (reverse LIST)
-    
     (reverse! LIST)
 
 # DESCRIPTION

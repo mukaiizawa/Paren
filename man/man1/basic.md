@@ -6,7 +6,7 @@ basic - basic interpreter.
     basic [OPTION] FILE
 
 # DESCRIPTION
-Reads the program from a FILE and runs it with classic Microsoft BASIC compatibility.
+Reads the program from a `FILE` and runs it with classic Microsoft BASIC compatibility.
 
 ### Statements
 - DATA

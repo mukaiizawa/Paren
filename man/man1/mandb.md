@@ -6,7 +6,7 @@ mandb - create the manual page index caches.
     mandb
 
 # DESCRIPTION
-Create a manual page index caches for use by manual-related commands such as man(1) and whatis(1).
+Create a manual page index caches for use by manual-related commands such as `man(1)` and `whatis(1)`.
 
 # FILES
 
@@ -17,7 +17,7 @@ Create a manual page index caches for use by manual-related commands such as man
 Generally, it is automatically executed by GitHub Actions at the time of push, so there is no need to execute it manually.
 
 # BUGS
-mandb(1) rarely confirms manual's legitimacy.
+`mandb` rarely confirms manual's legitimacy.
 
 The behavior when reading an unexpected manual is undefined.
 

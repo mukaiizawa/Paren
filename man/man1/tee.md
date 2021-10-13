@@ -6,12 +6,12 @@ tee - read from standard input and write to standard output and file.
     tee [OPTION] FILE
 
 # DESCRIPTION
-Copy standard input to FILE, and also to standard output.
+Copy standard input to `FILE`, and also to standard output.
 
 # OPTIONS
 
     -a
-        Append to FILE.
+        Append to `FILE`.
 
 # SEE ALSO
 - coreutils(7)
