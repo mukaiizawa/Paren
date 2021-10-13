@@ -100,14 +100,24 @@
 (built-in-function macroexpand-1 (expr)
   (assert (== (car (macroexpand-1 '(begin0 1 2 3))) let)))
 
-(function! macroexpand (expr)
-  (let (expand1 (f (x) (if x (cons (macroexpand (car x)) (expand1 (cdr x)))))
-                expand2 (f (x) (if x (cons (car x) (cons (macroexpand (cadr x)) (expand2 (cddr x))))))
-                expr (macroexpand-1 expr))
+(function! macroexpand (expr :opt ignore-list)
+  (let (%find (f (x l) (if l (if (== x (car l)) true (%find x (cdr l)))))
+              ignore? (f (x) (%find x ignore-list))
+              add-ignore (f (x)
+                           (if (cons? x) (begin (add-ignore (car x)) (add-ignore (cdr x)))
+                               (<- ignore-list (cons x ignore-list)) x)
+                           x)
+              expand1 (f (x)
+                        (if x (cons (macroexpand (car x) ignore-list)
+                                    (expand1 (cdr x)))))
+              expand2 (f (x) (if x (cons (add-ignore (car x))
+                                         (cons (macroexpand (cadr x) ignore-list)
+                                               (expand2 (cddr x)))))))
     (if (! (cons? expr)) expr
         (let ((ope :rest args) expr)
-          (if (&& (symbol? ope) (bound? ope)) (<- ope (dynamic ope)))
-          (if (macro? ope) (macroexpand expr)
+          (if (symbol? ope) (if (&& (! (ignore? ope)) (bound? ope)) (<- ope (eval ope))
+                                (return (cons ope (expand1 args)))))    ; do not expand.
+          (if (macro? ope) (macroexpand (macroexpand-1 expr) ignore-list)
               (cons ope
                     (if (== ope quote) args
                         (== ope <-) (expand2 args)
@@ -324,19 +334,19 @@
   (assert (nil? (reverse! nil)))
   (assert (= (car (reverse! '(0 1))) 1)))
 
-(macro push! (x sym)
+(macro push! (x l)
   ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
   ; Returns x.
-  (with-gensyms (y)
-    (list let (list y x)
-          (list <- sym (list cons y sym))
-          y)))
+  (with-gensyms (gx)
+    (list let (list gx x)
+          (list <- l (list cons gx l))
+          gx)))
 
-(macro pop! (sym)
+(macro pop! (l)
   ; Returns the head of the list that binds the specified symbol sym and rebinds sym with the cdr of the list.
   (list begin0
-        (list car sym)
-        (list <- sym (list cdr sym))))
+        (list car l)
+        (list <- l (list cdr l))))
 
 (function flatten (l)
   ; Returns a list in which the car parts of all cons that make up the specified list l are elements.
