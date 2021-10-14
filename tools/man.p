@@ -102,12 +102,19 @@
                 (return true)))
             indexes))
 
+(function xint? (s)
+  (catch (Error (f (e) nil))
+    (int s)))
+
 (function parse-args (args)
   ;; Returns '(section page).
-  (if (nil? args) (list "1" "man")
-      (cdr args) args
-      (suffix? (car args) ")") (man-split-section-page (car args))
-      (list nil (car args))))
+  (let ((:opt arg1 arg2 :rest rest-args) args)
+    (if (nil? args) (list "1" "man")
+        (nil? arg2) (if (suffix? arg1 ")") (man-split-section-page arg1) (list nil arg1))
+        (let (section nil page-names )
+          (if (xint? arg1) (<- section arg1 page-names (cons arg2 rest-args))
+              (<- page-names (cons arg1 (cons arg2 rest-args))))
+          (list section (join page-names "-"))))))
 
 (function! main (args)
   (catch (OSError (f (e) nil))

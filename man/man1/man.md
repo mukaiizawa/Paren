@@ -4,7 +4,7 @@ man - Paren reference manuals.
 # SYNOPSIS
 
     man PAGE(SECTION)
-    man [[SECTION] PAGE]
+    man [[SECTION] PAGE ...]
 
 # DESCRIPTION
 Display the specified `PAGE` manual.
@@ -14,6 +14,8 @@ If both `PAGE` and `SECTION` are omitted, display this manual.
 If `SECTION` is omitted, the `PAGE` with the lowest section number is displayed.
 
 If `SECTION` is provided, will direct man to look only in that `SECTION` of the manual.
+
+If more than one `PAGEs` are specified, it is considered that the character string combined with `-` is specified.
 
 If the corresponding `PAGE` does not exist, list the pages with a Levenshtein distance of 3 or less.
 
@@ -35,6 +37,14 @@ Display the manual page `man` for section number `1`.
 
     paren man 1 man
     paren man man(1)
+
+Display the manual page `man-pages`.
+
+    paren man man pages
+
+Display the manual page `man-pages` for section number `7`.
+
+    paren man 7 man pages
 
 # See Also
 - whatis(1)
