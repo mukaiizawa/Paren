@@ -19,15 +19,15 @@ Each manual page has a short description available within it.
 # EXAMPLES
 Search for all manuals.
 
-    paren whatis
+    $ paren whatis
 
 Search the manual containing the string `ca`.
 
-    paren whatis ca
+    $ paren whatis ca
 
 Search for manuals containing the string `ca` from section 1 and 3.
 
-    paren whatis -s1,3 ca
+    $ paren whatis -s1,3 ca
 
 # SEE ALSO
 - man(1)
