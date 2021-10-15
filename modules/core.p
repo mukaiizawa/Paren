@@ -100,24 +100,24 @@
 (built-in-function macroexpand-1 (expr)
   (assert (== (car (macroexpand-1 '(begin0 1 2 3))) let)))
 
-(function! macroexpand (expr :opt ignore-list)
+(function! macroexpand (expr :key ignore)
   (let (%find (f (x l) (if l (if (== x (car l)) true (%find x (cdr l)))))
-              ignore? (f (x) (%find x ignore-list))
+              ignore? (f (x) (%find x ignore))
               add-ignore (f (x)
                            (if (cons? x) (begin (add-ignore (car x)) (add-ignore (cdr x)))
-                               (<- ignore-list (cons x ignore-list)) x)
+                               (<- ignore (cons x ignore)) x)
                            x)
               expand1 (f (x)
-                        (if x (cons (macroexpand (car x) ignore-list)
+                        (if x (cons (macroexpand (car x) :ignore ignore)
                                     (expand1 (cdr x)))))
               expand2 (f (x) (if x (cons (add-ignore (car x))
-                                         (cons (macroexpand (cadr x) ignore-list)
+                                         (cons (macroexpand (cadr x) :ignore ignore)
                                                (expand2 (cddr x)))))))
     (if (! (cons? expr)) expr
         (let ((ope :rest args) expr)
           (if (symbol? ope) (if (&& (! (ignore? ope)) (bound? ope)) (<- ope (eval ope))
                                 (return (cons ope (expand1 args)))))    ; do not expand.
-          (if (macro? ope) (macroexpand (macroexpand-1 expr) ignore-list)
+          (if (macro? ope) (macroexpand (macroexpand-1 expr) :ignore ignore)
               (cons ope
                     (if (== ope quote) args
                         (== ope <-) (expand2 args)
