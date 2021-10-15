@@ -8,12 +8,12 @@
 
 (function man-indexes (:opt sections)
   ; Returns a read list of manual index files.
-  (if (nil? (.file? $man-indexes)) (raise StateError "missing indexes file. First run the program `paren mandb`")
-      (with-open ($in $man-indexes :read)
-        (let (indexes (collect read))
-          (return (if (nil? sections) indexes
-                      (select (f (x) (in? (car x) (->list sections)))
-                              indexes)))))))
+  (assert (.file? $man-indexes))
+  (with-open ($in $man-indexes :read)
+    (let (indexes (collect read))
+      (return (if (nil? sections) indexes
+                  (select (f (x) (in? (car x) (->list sections)))
+                          indexes))))))
 
 (function man-dir? (dir)
   ; Returns whether dir is a manual directory.
@@ -99,6 +99,9 @@
                 (write-line)
                 (with-open ($in (.resolve $man-root file-name) :read)
                   (write-bytes (read-bytes)))
+                (write-line)
+                (write-line "--")
+                (write-line file-name)
                 (return true)))
             indexes))
 
@@ -111,7 +114,7 @@
   (let ((:opt arg1 arg2 :rest rest-args) args)
     (if (nil? args) (list "1" "man")
         (nil? arg2) (if (suffix? arg1 ")") (man-split-section-page arg1) (list nil arg1))
-        (let (section nil page-names )
+        (let (section nil page-names nil)
           (if (xint? arg1) (<- section arg1 page-names (cons arg2 rest-args))
               (<- page-names (cons arg1 (cons arg2 rest-args))))
           (list section (join page-names "-"))))))

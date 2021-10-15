@@ -9,6 +9,8 @@ man - Paren reference manuals.
 # DESCRIPTION
 Display the specified `PAGE` manual.
 
+After outputting the manual, output the manual relative path. The absolute path is equal to the root of the evaluation result of the expression `(.resolve $paren-home "man")`.
+
 If both `PAGE` and `SECTION` are omitted, display this manual.
 
 If `SECTION` is omitted, the `PAGE` with the lowest section number is displayed.
@@ -27,24 +29,25 @@ See `man-pages(7)` for concept of the section number.
 # EXAMPLES
 Display the manual page for the `man(1)`.
 
-    paren man
+    $ paren man
 
 Search for the first page that matches `man` in ascending order of section number (hence `man(1)`) and display it.
 
-    paren man man
+    $ paren man man
 
 Display the manual page `man` for section number `1`.
 
-    paren man 1 man
-    paren man man(1)
+    $ paren man 1 man
+    $ paren man man(1)
 
 Display the manual page `man-pages`.
 
-    paren man man pages
+    $ paren man man pages
+    $ paren man man-pages
 
 Display the manual page `man-pages` for section number `7`.
 
-    paren man 7 man pages
+    $ paren man 7 man pages
 
 # See Also
 - whatis(1)
