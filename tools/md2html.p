@@ -31,7 +31,7 @@ pre, code, th, td { padding:0.2em 0.5em; }
 small { display:block }
 p { text-indent:1em; }
 pre, blockquote, table { margin-left:1em; margin-right:1em; }
-pre, code { font-family:monospace; background-color:rgba(110, 118, 129, 0.1); border-radius:6px; }
+pre, code { font-size:1rem; font-family:monospace; background-color:rgba(110, 118, 129, 0.1); border-radius:6px; }
 pre { overflow-x:auto; }
 blockquote { padding-left:1em; border-left:1.2px solid #ccc; }
 table { border-collapse:collapse; }
