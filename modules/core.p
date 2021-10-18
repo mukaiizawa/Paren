@@ -335,15 +335,12 @@
   (assert (= (car (reverse! '(0 1))) 1)))
 
 (macro push! (x l)
-  ; Destructively add the specified element x to the top of the specified list that binds the specified symbol sym.
-  ; Returns x.
   (with-gensyms (gx)
     (list let (list gx x)
           (list <- l (list cons gx l))
           gx)))
 
 (macro pop! (l)
-  ; Returns the head of the list that binds the specified symbol sym and rebinds sym with the cdr of the list.
   (list begin0
         (list car l)
         (list <- l (list cdr l))))
