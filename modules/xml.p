@@ -1,17 +1,16 @@
 ; xml module.
 
-(function xml.attrs->str (l)
-  (if l
-      (with-memory-stream ($out)
-        (while l
-          (assert (keyword? (car l)))
-          (write-bytes " ")
-          (write-bytes (car l))
-          (if (keyword? (car (<- l (cdr l)))) (continue)
-              (string? (car l)) (begin
-                                  (write-bytes (str "='" (car l) "'"))
-                                  (<- l (cdr l)))
-              (assert nil))))))
+(function xml.attrs->str (attrs)
+  (with-memory-stream ($out)
+    (while attrs
+      (assert (keyword? (car attrs)))
+      (write-bytes " ")
+      (write-bytes (car attrs))
+      (let (next (car (<- attrs (cdr attrs))))
+        (if (nil? next) (break)
+            (keyword? next) (continue)
+            (string? next) (begin (write-bytes (str "='" next "'")) (<- attrs (cdr attrs)))
+            (assert nil))))))
 
 (function xml->str (l)
   ; Returns a list representation of xml as a string.
@@ -38,13 +37,17 @@
 
 (method XMLReader .parse-attrs ()
   (let (attrs nil q nil)
-    (while (! (memmem  "/>" (.next (.skip-space self))))
-      (while (!= (.next self) "=") (.get self))
+    (while (! (in? (.next (.skip-space self)) '("/" ">")))
+      (while (! (in? (.next self) '("=" " " "/" ">")))
+        (.get self))
       (push! (keyword (.token self)) attrs)
-      (.skip self "=")
-      (if (! (memmem "'\"" (<- q (.skip (.skip-space self))))) (continue))    ; single attribute
-      (while (!= (.next self) q) (.get-escape self))
-      (.skip self)
+      (if (!= (.next (.skip-space self)) "=") (continue)    ; single attribute
+          (.skip self "="))
+      (if (! (in? (<- q (.skip (.skip-space self))) '("'" "\"")))
+          (raise StateError "missing attribute value"))
+      (while (!= (.next self) q)
+        (.get-escape self))
+      (.skip self q)
       (push! (.token self) attrs))
     (reverse! attrs)))
 
@@ -148,6 +151,7 @@
 (function! main (args)
   (assert (= (xml->str '(html (:lang "ja") "foo")) "<html lang='ja'>foo</html>"))
   (assert (= (xml->str '(script (:async :src "foo"))) "<script async src='foo'></script>"))
+  (assert (= (xml->str '(script (:src "foo" :async))) "<script src='foo' async></script>"))
   (assert (= (xml->str '(title ())) "<title></title>"))
   (with-memory-stream ($in "<!DOCTYPE html>")
     (assert (= (.read (.new XMLReader)) '(!DOCTYPE "html"))))
@@ -158,7 +162,9 @@
   (with-memory-stream ($in "<input type='hidden'/>")
     (assert (= (.read (.new XMLReader)) '(input (:type "hidden")))))
   (with-memory-stream ($in "<script async src='foo'/>")
-    (assert (= #p(.read (.new XMLReader)) '(script (:async :src "foo")))))
+    (assert (= (.read (.new XMLReader)) '(script (:async :src "foo")))))
+  (with-memory-stream ($in "<script src='foo'async/>")
+    (assert (= (.read (.new XMLReader)) '(script (:src "foo" :async)))))
   (with-memory-stream ($in (str "<ul>"
                                 "    <li>foo</li>"
                                 "    <li>bar</li>"
