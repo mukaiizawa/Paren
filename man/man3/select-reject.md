@@ -12,9 +12,9 @@ These functions return a sublist of the `LIST` elements based on the result of a
 For all these functions, elements not removed occur in the same order in the result as they did in sequence.
 
 # RETURN VALUE
-The function select(3) returns a list of elements for which `FX` returned `non-nil`.
+The function `select` returns a list of elements for which `FX` returned `non-nil`.
 
-The function reject(3) returns a list of elements for which `FX` returned `nil`.
+The function `reject` returns a list of elements for which `FX` returned `nil`.
 
 # NOTES
 
@@ -26,7 +26,9 @@ The function reject(3) returns a list of elements for which `FX` returned `nil`.
 
     ) (<- l '(1 (2) 3 (4)))
     (1 (2) 3 (4))
+
     ) (select atom? l)
     (1 3)
+
     ) (reject atom? l)
     ((2) (4))
