@@ -55,8 +55,8 @@ The function `!=` and `!==` return the result of inverting the boolean values of
     ) (= 1 1)
     true
     ) (== 1 1)
-
     true
+
     ) (= 1.0 1)
     true
     ) (== 1.0 1)
