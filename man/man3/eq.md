@@ -52,14 +52,9 @@ The function `!=` and `!==` return the result of inverting the boolean values of
 
 # EXAMPLES
 
-    ) (= 1 1)
+    ) (= "foo" "foo")
     true
-    ) (== 1 1)
-    true
-
-    ) (= 1.0 1)
-    true
-    ) (== 1.0 1)
+    ) (== "foo" "foo")
     nil
 
     ) (= '(1 2 3) '(1 2 3))

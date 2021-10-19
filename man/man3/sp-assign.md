@@ -30,9 +30,13 @@ Or When the return value of `BINDING-EXPR` does not match `BOUND-EXPR`.
     1
 
     ) (<- (a b c) (list 1 2 3))
-    3
-    ) (list a b c)
     (1 2 3)
+    ) a
+    1
+    ) b
+    2
+    ) c
+    3
 
 # SEE ALSO
 - let(3)

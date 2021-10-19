@@ -20,9 +20,9 @@ Returns whether `X` is a list.
     ) (list? nil)
     true
     ) (list? 1)
-    true
-    ) (list? (cons 1 nil))
     nil
+    ) (list? (cons 1 nil))
+    true
 
 # SEE ALSO
 - atom?(3)
