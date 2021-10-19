@@ -1,4 +1,4 @@
-name: man-test
+name: unit-test
 on: [push]
 jobs:
   mandb:
@@ -8,5 +8,7 @@ jobs:
       - run: make os=unix
         working-directory: ./src
       - run: ./paren manutg
+      - run: ../paren unit-test
+        working-directory: ./modules
       - run: ../paren unit-test
         working-directory: ./wk
