@@ -8,8 +8,8 @@
   (let (next (.next self))
     (&& next (none? (f (x) (= next x)) (cons "\n" args)))))
 
-(method MarkdownReader .continue? ()
-  (.none-match? self))
+(method MarkdownReader .EOL? ()
+  (|| (nil? (.next self)) (= (.next self) "\n")))
 
 (method MarkdownReader .parse-header ()
   (let (level 0)
@@ -19,21 +19,21 @@
     (if (<= 1 level  6) (list (symbol (str 'h level)) () (.skip-line (.skip-space self)))
         (raise SyntaxError (str "illegal header level " level)))))
 
+(method MarkdownReader .parse-quoted ()
+  (let (ch (.skip self))
+    (while (!= (.next self) ch) (.get self))
+    (.skip self ch)
+    (.token self)))
+
 (method MarkdownReader .parse-code ()
-  (.skip self)
-  (while (.none-match? self "`") (.get self))
-  (.skip self "`")
-  `(code ,(.token self)))
+  `(code () ,(.parse-quoted self)))
 
 (method MarkdownReader .parse-em ()
-  (.skip self)
-  (while (.none-match? self "*") (.get self))
-  (.skip self "*")
-  `(em ,(.token self)))
+  `(em () ,(.parse-quoted self)))
 
 (method MarkdownReader .parse-footnote-referrer ()
-  (.skip self)    ; ^
-  (while (.none-match? self "]") (.get self))
+  (.skip self "^")
+  (while (!= (.next self) "]") (.get self))
   (.skip self "]")
   (let (i (.token self))
     `(sup (:id ,(str "fnrefere" i))
@@ -53,16 +53,19 @@
   (if (= (.next self) "^") (.parse-footnote-referrer self)
       (.parse-link self)))
 
-(method MarkdownReader .parse-paragraph ()
+(method MarkdownReader .parse-string ()
   (let (children nil text nil)
-    (while (.continue? self)
+    (while (! (.EOL? self))
       (if (= (.next self) "`") (push! (.parse-code self) children)
           (= (.next self) "*") (push! (.parse-em self) children)
           (= (.next self) "[") (push! (.parse-ref self) children)
           (begin
             (while (.none-match? self "`" "*" "[") (.get self))
-            (if (!= (<- text (.token self)) "") (push! text children)))))
-    `(p () ,@(reverse! children))))
+            (if (! (space? (<- text (.token self)))) (push! text children)))))
+    (reverse! children)))
+
+(method MarkdownReader .parse-paragraph ()
+  `(p () ,@(.parse-string self)))
 
 (method MarkdownReader .parse-pre ()
   (let (get-line (f ()
@@ -74,7 +77,7 @@
 (method MarkdownReader .parse-quote ()
   (let (next-depth nil node-stack nil
                    fetch (f ()
-                           (when (.continue? self)
+                           (when (! (.EOL? self))
                              (<- next-depth 0)
                              (while (= (.next self) ">")
                                (.skip self)
@@ -160,16 +163,10 @@
   ; Read markdown.
   ; Returns a list representation of read markdown.
   ; Readable markdown is follows.
-  ;     <markdown> ::= <stmt> [<eol> <stmt> ...]
-  ;     <stmt> ::= <header>
-  ;              | <paragraph>
-  ;              | <pre>
-  ;              | <quote>
-  ;              | <ul>
-  ;              | <ol>
-  ;              | <table>
-  ;              | <footnote_reference>
-  ;              | <xml>
+  ;     <markdown> ::= <stmt> [<stmt> ...]
+  ;     <stmt> ::= <stmt_lf> <eol> | <stmt_nolf>
+  ;     <stmt_nolf> ::= <header> | <paragraph> | <footnote_reference> | <xml>
+  ;     <stmt> ::= <pre> | <quote> | <ul> | <ol> | <table>
   ;     <header> ::= { # | ## | ### | #### | ##### | ###### } <char> ... <eol>
   ;     <paragraph> ::= <string> <eol>
   ;     <pre> ::= '    ' <char> ... <eol> [<pre> ...]
@@ -191,18 +188,15 @@
   ;     <footnote_referrer> ::= '[^' <char> ... ']'
   ;     <footnote_reference> ::= '[^' <char> ... ']:' <char> ...
   ;     <xml> -- a xml.
-  ;     <eol> -- end on line.
+  ;     <eol> -- end of line.
   ;     <char> -- characters that have no special meaning.
-  ; <stmt> other than <header> are considered to be the same <stmt> up to the blank line.
-  ; If the same <stmt> line starts with 4 spaces, it is considered as a nested expression.
   (while (= (.next self) "\n") (.skip self))
   (let (next (.next self))
     (if (nil? next) nil
         (= next "#") (.parse-header self)
         (= next " ") (.parse-pre self)
         (= next ">") (.parse-quote self)
-        (= next "-") (.parse-list self)
-        (= next "1") (.parse-list self)
+        (in? next '("-" "1")) (.parse-list self)
         (= next "|") (.parse-table self)
         (= next "[") (.parse-footnote-reference self)
         (= next "<") (XMLReader.read self)
