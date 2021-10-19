@@ -1,0 +1,13 @@
+name: man-test
+on: [push]
+jobs:
+  mandb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: make os=unix
+        working-directory: ./src
+      - run: ./paren manutg
+      - run: |
+          cd ./wk
+          paren unit-test
