@@ -4,10 +4,6 @@
 
 (class MarkdownReader (AheadReader XMLReader))
 
-(method MarkdownReader .none-match? (:rest args)
-  (let (next (.next self))
-    (&& next (none? (f (x) (= next x)) (cons "\n" args)))))
-
 (method MarkdownReader .EOL? ()
   (|| (nil? (.next self)) (= (.next self) "\n")))
 
@@ -31,38 +27,48 @@
 (method MarkdownReader .parse-em ()
   `(em () ,(.parse-quoted self)))
 
-(method MarkdownReader .parse-footnote-referrer ()
-  (.skip self "^")
-  (while (!= (.next self) "]") (.get self))
-  (.skip self "]")
-  (let (i (.token self))
-    `(sup (:id ,(str "fnrefere" i))
-          (a (:href ,(str "#fnreferr" i)) ,i))))
+(method MarkdownReader .parse-link0 (text)
+  `(a (:id ,(str "fnreferr" text) :href ,(str "#fnrefere" text))
+      ,(str "[" text "]")))
+
+(method MarkdownReader .parse-link1 (text)
+  `(sup (:id ,(str "fnrefere" text))
+        (a (:href ,(str "#fnreferr" text)) ,text)))
+
+(method MarkdownReader .parse-link2 (text)
+  (.skip self "(")
+  (while (!= (.next self) ")") (.get self))
+  (.skip self ")")
+  `(a (:href ,(.token self)) ,text))
 
 (method MarkdownReader .parse-link ()
-  (while (.none-match? self "]") (.get self))
-  (.skip self "]")
-  (let (text (.token self))
-    (.skip self "(")
-    (while (.none-match? self ")") (.get self))
-    (.skip self ")")
-    `(a (:href ,(.token self)) ,text)))
-
-(method MarkdownReader .parse-ref ()
-  (.skip self)
-  (if (= (.next self) "^") (.parse-footnote-referrer self)
-      (.parse-link self)))
+  (let (caret? nil colon? nil)
+    (.skip self "[")
+    (when (= (.next self) "^")
+      (<- caret? true)
+      (.skip self))
+    (while (!= (.next self) "]")
+      (.get self))
+    (.skip self "]")
+    (when (= (.next self) ":")
+      (<- colon? true)
+      (.skip self))
+    (apply (if colon? .parse-link0 caret? .parse-link1 .parse-link2)
+           (list self (.token self)))))
 
 (method MarkdownReader .parse-string ()
-  (let (children nil text nil)
+  (let (children nil next nil)
     (while (! (.EOL? self))
-      (if (= (.next self) "`") (push! (.parse-code self) children)
-          (= (.next self) "*") (push! (.parse-em self) children)
-          (= (.next self) "[") (push! (.parse-ref self) children)
-          (begin
-            (while (.none-match? self "`" "*" "[") (.get self))
-            (if (! (space? (<- text (.token self)))) (push! text children)))))
-    (reverse! children)))
+      (if (! (in? (<- next (.next self)) '("`" "*" "["))) (.get self)
+          (let (text (.token self))
+            (if (! (empty? text)) (push! text children))
+            (if (= next "`") (push! (.parse-code self) children)
+                (= next "*") (push! (.parse-em self) children)
+                (= next "[") (push! (.parse-link self) children)
+                (assert nil)))))
+    (let (text (.token self))
+      (if (! (empty? text)) (push! text children))
+      (reverse! children))))
 
 (method MarkdownReader .parse-paragraph ()
   `(p () ,@(.parse-string self)))
@@ -148,24 +154,13 @@
             (thead () ,thlist)
             (tbody () ,@(reverse! tdlist)))))
 
-(method MarkdownReader .parse-footnote-reference ()
-  (.skip self)
-  (.skip self "^")
-  (while (!= (.next self) "]") (.get self))
-  (.skip self)
-  (.skip self ":")
-  (let (i (.token self))
-    `(small (:id ,(str "fnreferr" i))
-            (a (:href ,(str "#fnrefere" i)) ,(str "[" i "]"))
-            ,(.skip-line (.skip-space self)))))
-
 (method MarkdownReader .read ()
   ; Read markdown.
   ; Returns a list representation of read markdown.
   ; Readable markdown is follows.
   ;     <markdown> ::= <stmt> [<stmt> ...]
   ;     <stmt> ::= <stmt_lf> <eol> | <stmt_nolf>
-  ;     <stmt_nolf> ::= <header> | <paragraph> | <footnote_reference> | <xml>
+  ;     <stmt_nolf> ::= <header> | <paragraph> | <xml>
   ;     <stmt> ::= <pre> | <quote> | <ul> | <ol> | <table>
   ;     <header> ::= { # | ## | ### | #### | ##### | ###### } <char> ... <eol>
   ;     <paragraph> ::= <string> <eol>
@@ -179,14 +174,14 @@
   ;             <code>
   ;             | <em>
   ;             | <link>
-  ;             | <footnote_referrer>
   ;             | <char>
   ;         } ...
   ;     <code> ::= '`' <char> ... '`'
   ;     <em> ::= '*' <char> ... '*'
-  ;     <link> ::= '[' <char> ... '](' <char> ... ')'
-  ;     <footnote_referrer> ::= '[^' <char> ... ']'
-  ;     <footnote_reference> ::= '[^' <char> ... ']:' <char> ...
+  ;     <link> ::= <link0> | <link1> | <link2>
+  ;     <link1> :== '[^' <char> ... ']:'
+  ;     <link2> :== '[^' <char> ... ']'
+  ;     <link0> :== '[' <char> ... '](' <char> ... ')'
   ;     <xml> -- a xml.
   ;     <eol> -- end of line.
   ;     <char> -- characters that have no special meaning.
@@ -198,7 +193,6 @@
         (= next ">") (.parse-quote self)
         (in? next '("-" "1")) (.parse-list self)
         (= next "|") (.parse-table self)
-        (= next "[") (.parse-footnote-reference self)
         (= next "<") (XMLReader.read self)
         (.parse-paragraph self))))
 
@@ -241,4 +235,4 @@
     (assert (= (.read (.new MarkdownReader)) '(span (:style "color:red") "foo"))))
   (with-memory-stream ($in (join '("[^1]: reference\n")))
     (assert (= (.read (.new MarkdownReader))
-               '(small (:id "fnreferr1") (a (:href "#fnrefere1") "[1]") "reference")))))
+               '(p nil (a (:id "fnreferr1" :href "#fnrefere1") "[1]") " reference")))))

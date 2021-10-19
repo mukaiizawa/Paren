@@ -28,7 +28,6 @@ h1, h2, h3 { border-bottom:solid 1px #ccc; }
 h3, h4, h5, h6 { font-size:1.0em; }
 h1, h2, h3, h4, h5, h6 { display:block; margin-top:0.75em; font-weight:bold; }
 pre, code, th, td { padding:0.2em 0.5em; }
-small { display:block }
 p { text-indent:1em; }
 pre, blockquote, table { margin-left:1em; margin-right:1em; }
 pre, code { font-size:1rem; font-family:monospace; background-color:rgba(110, 118, 129, 0.1); border-radius:6px; }
@@ -101,7 +100,7 @@ document.querySelectorAll('pre').forEach(x => {
             (script ,$default-script)))))
 
 (function! main (args)
-  (catch (Error (f (e) (write-line $usage) (throw e)))
+  (catch (Error (f (e) (write-line $usage) (<- $out $stderr) (throw e)))
     (let ((op args) (.parse (.init (.new OptionParser) "c") args) rd (.new MarkdownReader))
       (foreach (f (x) (write-line (xml->str x)))
                (make-html (parse-nodes (collect (f () (.read rd))))
