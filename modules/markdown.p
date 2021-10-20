@@ -106,36 +106,33 @@
     (rec 1 nil)))
 
 (method MarkdownReader .parse-list ()
-  (let (next-root nil next-depth nil node-stack nil
-                  fetch (f ()
-                          (when (! (.EOL? self))
-                            (<- next-depth 1)
-                            (while (= (.next self) " ")
-                              (dotimes (i 4) (.skip self " "))
-                              (<- next-depth (++ next-depth)))
-                            (if (= (.next self) "-")
-                                (begin
-                                  (.skip self)    ; - xxx
-                                  (push! 'ul next-root))
-                                (.next? self digit?)
-                                (begin
-                                  (.skip-uint self) (.skip self ".")    ; 1. xxx
-                                  (push! 'ol next-root))
-                                (raise SyntaxError "missing list"))
-                            (.skip-space self)
-                            (push! `(li () ,@(.parse-string (.skip-space self))) node-stack)))
-                  rec (f (root depth nodes)
-                        (while (fetch)
-                          (if (< next-depth depth) (break)
-                              (= next-depth depth) (if (!= root (pop! next-root)) (raise SyntaxError "mixed list type")
-                                                       (push! (pop! node-stack) nodes))
+  (let (li-type nil li-depth nil li nil
+                next-type (f ()
+                            (let (next (.next self))
+                              (if (= next "-") 'ul
+                                  (digit? next) 'ol
+                                  (raise SyntaxError "invalid list"))))
+                next-li (f ()
+                          (if (! (nil? li)) li
+                              (! (.EOL? self))
                               (begin
-                                (push! (rec (pop! next-root) next-depth (list (pop! node-stack))) nodes)
-                                (when node-stack
-                                  (if (!= (pop! next-root) root) (raise SyntaxError "mixed list type")
-                                      (push! (pop! node-stack) nodes))))))
-                        (cons root (cons nil (reverse! nodes)))))
-    (rec (if (= (.next self) "-") 'ul 'ol) 1 nil)))
+                                (<- li-depth 1)
+                                (while (= (.next self) " ")
+                                  (dotimes (i 4) (.skip self " "))
+                                  (<- li-depth (++ li-depth)))
+                                (<- li-type (next-type))
+                                (if (== li-type 'ul) (.skip self)    ; -
+                                    (begin (.skip-uint self) (.skip self ".")))    ; 1.
+                                (<- li `(li () ,@(.parse-string (.skip-space self)))))))
+                get-li (f () (begin0 li (<- li nil)))
+                rec (f (ulol ulol-depth)
+                      (let (nodes nil)
+                        (while (next-li)
+                          (if (< li-depth ulol-depth) (break)
+                              (= li-depth ulol-depth) (push! (get-li) nodes)
+                              (push! (rec li-type li-depth) nodes)))
+                        `(,ulol () ,@(reverse! nodes)))))
+    (rec (next-type) 1)))
 
 (method MarkdownReader .parse-tr (:opt tx)
   (let (txlist nil)
