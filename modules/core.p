@@ -346,7 +346,6 @@
         (list <- l (list cdr l))))
 
 (function flatten (l)
-  ; Returns a list in which the car parts of all cons that make up the specified list l are elements.
   (let (acc nil rec (f (x)
                       (if (atom? x) (push! x acc)
                           (dolist (i x) (rec i)))))
