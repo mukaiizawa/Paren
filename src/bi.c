@@ -989,9 +989,11 @@ DEFUN(memcmp)
   size = o->mem.size;
   if (size > p->mem.size) size = p->mem.size;
   if ((val = memcmp(o->mem.elt, p->mem.elt, size)) == 0) {
-    if (o->mem.size < p->mem.size) val = -1;
-    else if (o->mem.size > p->mem.size) val = 1;
+    if (o->mem.size > p->mem.size) val = 1;
+    else if (o->mem.size < p->mem.size) val = -1;
   }
+  else if (val > 0) val = 1;    // normalize
+  else val = -1;
   *result = gc_new_xint(val);
   return TRUE;
 }
