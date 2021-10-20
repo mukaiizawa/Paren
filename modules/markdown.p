@@ -57,18 +57,20 @@
            (list self (.token self)))))
 
 (method MarkdownReader .parse-string ()
-  (let (children nil next nil)
-    (while (! (.EOL? self))
-      (if (! (in? (<- next (.next self)) '("`" "*" "["))) (.get self)
-          (let (text (.token self))
-            (if (! (empty? text)) (push! text children))
-            (if (= next "`") (push! (.parse-code self) children)
-                (= next "*") (push! (.parse-em self) children)
-                (= next "[") (push! (.parse-link self) children)
-                (assert nil)))))
+  (let (nodes nil)
+    (while (.next self)
+      (let (next (.next self))
+        (if (.EOL? self) (begin (.skip self) (break))
+            (! (in?  next '("`" "*" "["))) (.get self)
+            (let (text (.token self))
+              (if (! (empty? text)) (push! text nodes))
+              (if (= next "`") (push! (.parse-code self) nodes)
+                  (= next "*") (push! (.parse-em self) nodes)
+                  (= next "[") (push! (.parse-link self) nodes)
+                  (assert nil))))))
     (let (text (.token self))
-      (if (! (empty? text)) (push! text children))
-      (reverse! children))))
+      (if (! (empty? text)) (push! text nodes))
+      (reverse! nodes))))
 
 (method MarkdownReader .parse-paragraph ()
   `(p () ,@(.parse-string self)))
@@ -106,7 +108,7 @@
 (method MarkdownReader .parse-list ()
   (let (next-root nil next-depth nil node-stack nil
                   fetch (f ()
-                          (when (|| (.next? self digit?) (memmem "- " (.next self)))
+                          (when (! (.EOL? self))
                             (<- next-depth 1)
                             (while (= (.next self) " ")
                               (dotimes (i 4) (.skip self " "))
@@ -121,7 +123,7 @@
                                   (push! 'ol next-root))
                                 (raise SyntaxError "missing list"))
                             (.skip-space self)
-                            (push! (list 'li () (.skip-line (.skip-space self))) node-stack)))
+                            (push! `(li () ,@(.parse-string (.skip-space self))) node-stack)))
                   rec (f (root depth nodes)
                         (while (fetch)
                           (if (< next-depth depth) (break)
@@ -138,7 +140,7 @@
 (method MarkdownReader .parse-tr (:opt tx)
   (let (txlist nil)
     (.skip self "|")
-    (while (!= (.next self) "\n")
+    (while (! (.EOL? self))
       (while (!= (.next self) "|") (.get self))
       (.skip self "|")
       (push! (list tx () (.token self)) txlist))
@@ -166,8 +168,9 @@
   ;     <paragraph> ::= <string> <eol>
   ;     <pre> ::= '    ' <char> ... <eol> [<pre> ...]
   ;     <quote> ::= '>' ... <char> ... <eol> [<quote> ...]
-  ;     <ul> ::= '-'  ... <char> ... <eol> [<ul> ...]
-  ;     <ol> ::= '1.'  ... <char> ... <eol> [<ol> ...]
+  ;     <list> ::= <ol> | <ul>
+  ;     <ol> ::= '1. '  <string> <eol> [<ol> ...]
+  ;     <ul> ::= '- '  <string> <eol> [<ul> ...]
   ;     <table> ::= <tr> [<tr> ...]
   ;     <tr> ::= '|' <char> ... ['|' <char> ...] ... '|' <eol>
   ;     <string> ::= {
@@ -185,9 +188,9 @@
   ;     <xml> -- a xml.
   ;     <eol> -- end of line.
   ;     <char> -- characters that have no special meaning.
-  (while (= (.next self) "\n") (.skip self))
   (let (next (.next self))
     (if (nil? next) nil
+        (= next "\n") (begin (.skip self) (.read self))
         (= next "#") (.parse-header self)
         (= next " ") (.parse-pre self)
         (= next ">") (.parse-quote self)
