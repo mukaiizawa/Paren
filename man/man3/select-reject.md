@@ -3,24 +3,24 @@ select, reject - create a sublist that meets the conditions.
 
 # SYNOPSIS
 
-    (select FX LIST)
-    (reject FX LIST)
+    (select FN LIST)
+    (reject FN LIST)
 
 # DESCRIPTION
-These functions return a sublist of the `LIST` elements based on the result of applying the function `FX`.
+These functions return a sublist of the `LIST` elements based on the result of applying the function `FN`.
 
 For all these functions, elements not removed occur in the same order in the result as they did in sequence.
 
 # RETURN VALUE
-The function `select` returns a list of elements for which `FX` returned `non-nil`.
+The function `select` returns a list of elements for which `FN` returned `non-nil`.
 
-The function `reject` returns a list of elements for which `FX` returned `nil`.
+The function `reject` returns a list of elements for which `FN` returned `nil`.
 
 # NOTES
 
-    (select fx list) <=> { x ∊ list | (! (nil? (fx x))) }
-    (reject fx list) <=> { x ∊ list | (nil? (fx x)) }
-    (select fx list) ∪ (reject fx list) = list
+    (select fn list) <=> { x ∊ list | (! (nil? (fn x))) }
+    (reject fn list) <=> { x ∊ list | (nil? (fn x)) }
+    (select fn list) ∪ (reject fn list) = list
 
 # EXAMPLES
 
