@@ -353,10 +353,9 @@
     (reverse! acc)))
 
 (function collect (fn)
-  ; Returns a list of the applied results until the function fn returns nil.
   (let (rec (f (val :opt acc)
-              (if val (rec (fn) (cons val acc))
-                  (reverse! acc))))
+              (if (nil? val) (reverse! acc)
+                  (rec (fn) (cons val acc)))))
     (rec (fn))))
 
 (function zip (:rest args)
