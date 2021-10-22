@@ -414,8 +414,8 @@
     (rec l 0)))
 
 (function every? (fn l)
-  (if l (&& (fn (car l)) (every? fn (cdr l)))
-      true))
+  (if (nil? l) true
+      (fn (car l)) (every? fn (cdr l))))
 
 (function some? (fn l)
   (if (nil? l) nil
