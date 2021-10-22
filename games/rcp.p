@@ -5,8 +5,7 @@
 (<- $choices '("rock" "paper" "scissors"))
 
 (function choice->index (c)
-  (find (f (x) (if (prefix? (car x) c) (cadr x)))
-        (zip $choices (.. (len $choices)))))
+  (position (f (x) (prefix? x c)) $choices))
 
 (function user-choice ()
   (write-line "r(ock), p(aper), s(cissors):")

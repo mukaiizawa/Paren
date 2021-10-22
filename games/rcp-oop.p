@@ -1,12 +1,7 @@
 ; Rock paper scissors Object-oriented version.
 
 (import :rand)
-
-(<- $choices '("rock" "paper" "scissors"))
-
-(function choice->index (c)
-  (find (f (x) (if (prefix? (car x) c) (cadr x)))
-        (zip $choices (.. (len $choices)))))
+(import :rcp "./")
 
 (class Player () name)
 
@@ -17,7 +12,8 @@
   (raise NotImplementedError))
 
 (method Player .show (choice)
-  (write-line (str (.to-s self) ": choose " ([] $choices choice))))
+  (write-line (str (.to-s self) ": choose " ([] $choices choice)))
+  choice)
 
 (class User (Player))
 
@@ -27,13 +23,11 @@
 (method User .choice ()
   (write-bytes (str (.to-s self) ": r(ock), p(aper), s(cissors) >> "))
   (let (choice (choice->index (read-line)))
-    (if choice
-        (begin
-          (.show self choice)
-          choice)
+    (if (nil? choice)
         (begin
           (write-line "illegal choice")
-          (.choice self)))))
+          (.choice self))
+        (.show self choice))))
 
 (class Computer (Player))
 
@@ -41,15 +35,12 @@
   (&name! self "Computer"))
 
 (method Computer .choice ()
-  (let (choice (rand.int 3))
-    (.show self choice)
-    choice))
+  (.show self (rand.int 3)))
 
 (class RockComputer (Computer))
 
 (method RockComputer .choice ()
-  (.show self 0)
-  0)
+  (.show self 0))
 
 (function choice-player (msg)
   (write-line msg)
@@ -64,7 +55,7 @@
           (write-line "illegal choice")
           (choice-player msg)))))
 
-(function rcp (p1 p2)
+(function! rcp (p1 p2)
   (let (choice1 (.choice p1) choice2 (.choice p2))
     (if (= choice1 choice2) (write-line "draw")
         (= (% (++ choice1) 3) choice2) (write-line "Player2 win")
