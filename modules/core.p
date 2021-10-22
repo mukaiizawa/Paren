@@ -414,21 +414,15 @@
     (rec l 0)))
 
 (function every? (fn l)
-  ; Returns whether the result of the function fn applied to all the elements of the list is true.
-  ; If x is nil, returns true.
   (if l (&& (fn (car l)) (every? fn (cdr l)))
       true))
 
 (function some? (fn l)
-  ; Returns whether the function fn applied to any element of the list is true.
-  ; If x is nil, returns nil.
   (if (nil? l) nil
       (fn (car l)) true
       (some? fn (cdr l))))
 
 (function none? (fn l)
-  ; Returns whether the result of the function fn applied to all the elements of the list is nil.
-  ; If x is nil, returns true.
   (if (nil? l) true
       (fn (car l)) nil
       (none? fn (cdr l))))
