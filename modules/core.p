@@ -359,7 +359,6 @@
     (rec (fn))))
 
 (function map (fn args :rest more-args)
-  ; Returns a list of the results of mapping each element of the specified list args with the specified function fx.
   (let (map1 (f (fn args :opt acc)
                (if (nil? args) (reverse! acc)
                    (map1 fn (cdr args) (cons (fn (car args)) acc))))
