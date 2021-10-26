@@ -27,8 +27,9 @@
         (catch (Exception (f (e) (write-line (.to-s e))))
           (let (file-name (.to-s file))
             (write-bytes file-name) (write-bytes "\t")
-            (if (testable? file) (<- $status-cd (max (system (str "paren " file-name)) $status-cd))
-                (write-bytes " -- skip "))
+            (if (! (testable? file)) (write-bytes " -- skip ")
+                (let (sc (system (str "paren " file-name)))
+                  (if (!= sc 0) (<- $status-cd sc))))
             (write-line))))))
 
 (function! main (args)
