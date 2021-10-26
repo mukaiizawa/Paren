@@ -8,5 +8,4 @@ jobs:
       - run: make os=unix debug=on
         working-directory: ./src
       - run: ./paren manutg
-      - run: ../paren unit-test
-        working-directory: ./wk
+      - run: ./paren unit-test ./wk
