@@ -370,11 +370,7 @@
         (mapn (cons args more-args)))))
 
 (function foreach (fn args)
-  ; Apply a function to each argument.
-  ; Returns nil.
-  (when args
-    (fn (car args))
-    (foreach fn (cdr args))))
+  (dolist (x args) (fn x)))
 
 (function reduce (fn args)
   ; Returns the value that apply function of two arguments cumulatively to the elements of the list args, from left to right.
