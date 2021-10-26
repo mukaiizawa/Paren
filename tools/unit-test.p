@@ -2,6 +2,8 @@
 
 (import :optparse)
 
+(<- $status-cd 0)
+
 (function testable-main? (tree)
   (let (assert-expr? (f (x)
                        (&& (cons? x)
@@ -25,7 +27,7 @@
         (catch (Exception (f (e) (write-line (.to-s e))))
           (let (file-name (.to-s file))
             (write-bytes file-name) (write-bytes "\t")
-            (if (testable? file) (system (str "paren " file-name))
+            (if (testable? file) (<- $status-cd (max (system (str "paren " file-name)) $status-cd))
                 (write-bytes " -- skip "))
             (write-line))))))
 
@@ -35,4 +37,5 @@
   ;     -r test subdirectories recursively
   (let ((op args) (.parse (.init (.new OptionParser) "r") args))
     (if (! $debug?) (raise StateError "need to build in debug mode")
-        (unit-test (path (|| (car args) ".")) :recur? (.get op "r")))))
+        (unit-test (path (|| (car args) ".")) :recur? (.get op "r")))
+    (exit $status-cd)))

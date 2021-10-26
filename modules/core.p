@@ -1493,16 +1493,20 @@
   ; The Exception class is the superclass of all exceptions.
   ; It is recommended that new exceptions derive from the Error class or one of its subclasses.
   ; Do not derive from Exception.
-  message stack-trace)
+  message status-cd stack-trace)
 
-(method Exception .init (message)
-  (&message! self message))
+(method Exception .init (message :key status-cd)
+  (&message! self message)
+  (&status-cd! self (|| status-cd 1)))
 
 (method Exception .to-s ()
   ; Returns a String representing the receiver.
   (let (class-name (string (&class self)) msg (&message self))
     (if msg (memcat class-name " -- " msg)
         class-name)))
+
+(method Exception .status-cd ()
+  (&status-cd self))
 
 (method Exception .stack-trace ()
   ; Returns stack trace.
@@ -1521,6 +1525,9 @@
   ; Dispatched to shut down the Paren system.
   ; In principle, this exception is not caught.
   )
+
+(method SystemExit .init ()
+  (&status-cd! self 0))
 
 (class Error (Exception)
   ; All built-in, non-system-exiting exceptions are derived from this class.
@@ -2520,14 +2527,14 @@
       (if (<- $_ (read)) (<- $_ (write (eval $_)) $5 $4 $4 $3 $3 $2 $2 $1 $1 $_)
           (break)))))
 
-(function raise (cls :opt args)
+(function raise (cls :rest args)
   ; Throw the cls Class instance which initialized with argument args.
-  (let (e (.new cls))
-    (if (is-a? e Exception) (throw (.init e args))
-        (raise ArgumentError "Instances of the Excepion class cannot be raised"))))
+  (throw (apply .init (cons (.new cls) args))))
 
 (function quit ()
   (raise SystemExit))
+
+(built-in-function exit (status-cd))
 
 (function load (file)
   (with-open ($in file :read)
@@ -2549,8 +2556,8 @@
   ; Invoke repl if there are no command line arguments that bound to the symbol $args.
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
   ; Can be omitted if the script file has a `p` extension.
-  (catch (SystemExit (f (e) (return true))
-                     Exception (f (e) (.print-stack-trace e)))
+  (catch (SystemExit (f (e) (exit 0))
+                     Exception (f (e) (.print-stack-trace e) (exit (.status-cd e))))
     (if (.file? $parenrc) (load $parenrc))
     (if (nil? args) (repl)
         (let (file-name (car args)

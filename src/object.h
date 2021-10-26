@@ -89,15 +89,18 @@ extern object object_key;
 extern object object_opt;
 extern object object_rest;
 extern object object_quote;
-extern object object_stack_trace;
+
+// POS
 extern object object_Class;
-extern object object_Exception;
 extern object object_class;
 extern object object_symbol;
 extern object object_super;
 extern object object_features;
 extern object object_fields;
+extern object object_Exception;
 extern object object_message;
+extern object object_stack_trace;
+extern object object_status_cd;
 
 extern void object_set_alive(object o);
 extern void object_set_dead(object o);

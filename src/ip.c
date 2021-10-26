@@ -147,22 +147,6 @@ int ip_throw(enum error err, enum error_msg msg)
   return FALSE;
 }
 
-static void exit1(void)
-{
-  char buf[MAX_STR_LEN];
-  object o;
-  fprintf(stderr, "%s", object_describe(map_get(reg[0], object_class), buf));
-  if ((o = map_get(reg[0], object_message)) != NULL && o != object_nil)
-    fprintf(stderr, " -- %s", object_describe(o, buf));
-  fprintf(stderr, "\n");
-  o = map_get(reg[0], object_stack_trace);
-  while (o != object_nil) {
-    fprintf(stderr, "	at: %s\n", object_describe(o->cons.car, buf));
-    o = o->cons.cdr;
-  }
-  exit(1);
-}
-
 // stack frame
 
 /*
@@ -246,6 +230,7 @@ static int fp;
 static int sp;
 static object fs[FRAME_STACK_SIZE];
 
+#ifndef NDEBUG
 static char *frame_name(int frame_type)
 {
   switch (frame_type) {
@@ -272,8 +257,10 @@ static char *frame_name(int frame_type)
     default: xassert(FALSE); return NULL;
   }
 }
+#endif
 
-void dump_fs(void)
+#ifndef NDEBUG
+static void dump_fs(void)
 {
   int i, j, frame_type;
   char buf[MAX_STR_LEN];
@@ -285,8 +272,9 @@ void dump_fs(void)
     for (j = 0; j < frame_size(frame_type) - 2; j++)
       fprintf(stderr, "|%d: %s\n", i + j + 2, object_describe(get_frame_var(i, j), buf));
   }
-  exit1();
+  xerror("illegal state");
 }
+#endif
 
 static void gen(int frame_type)
 {
@@ -699,8 +687,7 @@ static void pop_throw_frame(void)
   if (!pos_is_a_p(reg[0], object_Exception)) {
     ip_throw(ArgumentError, expected_instance_of_Exception_class);
 #ifndef NDEBUG
-    if (map_get(object_toplevel, gc_new_mem_from(SYMBOL, "boot", 4)) == NULL)
-      dump_fs();
+    if (map_get(object_toplevel, gc_new_mem_from(SYMBOL, "boot", 4)) == NULL) dump_fs();
 #endif
     return;
   }
@@ -733,8 +720,10 @@ static void pop_throw_frame(void)
         break;
     }
   }
+#ifndef NDEBUG
   set_fp(i);
-  exit1();
+  dump_fs();
+#endif
 }
 
 // fundamental built in functions
@@ -895,6 +884,15 @@ DEFUN(find_2d_method)
 DEFUN(cycle)
 {
   reg[0] = gc_new_xint(cycle);
+  return TRUE;
+}
+
+DEFUN(exit)
+{
+  int sc;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_cbyte(argv->cons.car, &sc)) return FALSE;
+  exit(sc);
   return TRUE;
 }
 
@@ -1214,6 +1212,7 @@ static object new_Error(enum error e, enum error_msg em)
   if ((msg = error_msg(em)) != NULL)
     map_put(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
   map_put(o, object_stack_trace, object_nil);
+  map_put(o, object_status_cd, gc_new_xint(1));
   return o;
 }
 

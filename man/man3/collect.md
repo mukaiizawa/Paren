@@ -19,10 +19,10 @@ Returns a list of returned values were called until that function `FN` returned 
 
 # EXAMPLES
 
-    ) (<- l (.. 3) popl (f () (pop! l)))
-    (f nil (pop! l))
+    ) (<- l (.. 3))
+    (0 1 2)
 
-    ) (collect popl)
+    ) (collect (f () (pop! l)))
     (0 1 2)
 
     ) l

@@ -13,16 +13,17 @@ object object_key;
 object object_opt;
 object object_rest;
 object object_quote;
-object object_stack_trace;
 
 object object_Class;
-object object_Exception;
 object object_class;
 object object_symbol;
 object object_super;
 object object_features;
 object object_fields;
+object object_Exception;
 object object_message;
+object object_stack_trace;
+object object_status_cd;
 
 int object_hash(object o)
 {

@@ -4,7 +4,7 @@
 
 (<- $root (.mkdir (path "./wk"))
     $ignore-pages (map string
-                       '(f timeit macroexpand)))
+                       '(f foreach macroexpand timeit)))
 
 (function xmain (exprs)
   `(function! main (args)
@@ -22,7 +22,7 @@
       (if (space? ch) (continue)
           (= ch "#") (break)
           (= ch ")") (push! (list (read) (list quote (read))) exprs)
-          (raise StateError ch)))
+          (raise StateError "incorrect EXAMPLES section format")))
     (reverse! exprs)))
 
 (function md->p (file-name)

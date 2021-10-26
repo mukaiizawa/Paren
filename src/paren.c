@@ -171,15 +171,16 @@ static void make_initial_objects(int argc, char *argv[])
   object_opt = new_keyword("opt");
   object_rest = new_keyword("rest");
   object_quote = new_symbol("quote");
+  object_Class = new_symbol("Class");
   object_class = new_keyword("class");
   object_symbol = new_keyword("symbol");
   object_super = new_keyword("super");
   object_features = new_keyword("features");
   object_fields = new_keyword("fields");
+  object_Exception = new_symbol("Exception");
   object_message = new_keyword("message");
   object_stack_trace = new_keyword("stack-trace");
-  object_Class = new_symbol("Class");
-  object_Exception = new_symbol("Exception");
+  object_status_cd = new_keyword("status-cd");
   map_put(object_toplevel, new_symbol("$args"), parse_args(argc, argv));
   map_put(object_toplevel, new_symbol("core.p"), new_string(core_fn));
 #if WINDOWS_P
