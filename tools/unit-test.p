@@ -2,7 +2,8 @@
 
 (import :optparse)
 
-(<- $status-cd 0)
+(<- $paren-path (.to-s (.resolve $paren-home "paren"))
+    $status-cd 0)
 
 (function testable-main? (tree)
   (let (assert-expr? (f (x)
@@ -28,7 +29,7 @@
           (let (file-name (.to-s file))
             (write-bytes file-name) (write-bytes "\t")
             (if (! (testable? file)) (write-bytes " -- skip ")
-                (let (sc (system (str "paren " file-name)))
+                (let (sc (system (str $paren-path " " file-name)))
                   (if (!= sc 0) (<- $status-cd sc))))
             (write-line))))))
 
