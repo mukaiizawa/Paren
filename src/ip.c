@@ -891,7 +891,7 @@ DEFUN(exit)
 {
   int sc;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cbyte(argv->cons.car, &sc)) return FALSE;
+  if (!bi_cint(argv->cons.car, &sc)) return FALSE;
   exit(sc);
   return TRUE;
 }
