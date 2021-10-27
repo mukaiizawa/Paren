@@ -373,7 +373,6 @@
   (dolist (x args) (fn x)))
 
 (function reduce (fn args)
-  ; Returns the value that apply function of two arguments cumulatively to the elements of the list args, from left to right.
   (if (cdr args) (reduce fn (cons (fn (car args) (cadr args)) (cddr args)))
       (car args)))
 
