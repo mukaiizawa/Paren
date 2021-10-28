@@ -34,3 +34,4 @@ If you want to set a specific value as the initial value, just cons it to `LIST`
 
 # SEE ALSO
 - map(3)
+- higher-order-function(7)

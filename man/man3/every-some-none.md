@@ -49,3 +49,4 @@ The function `none?` returns whether the result of applying the function `FN` to
 
 # SEE ALSO
 - every-adjacent(3)
+- higher-order-function(7)

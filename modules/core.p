@@ -377,13 +377,7 @@
       (car args)))
 
 (function find (fn l)
-  ; Find the element in the list l where the function fn first returns not nil.
-  ; Returns the return value of the function fn that did not return nil first.
-  ; If there is no such element, returns nil.
-  (let (rec (f (l)
-              (if l
-                  (|| (fn (car l)) (rec (cdr l))))))
-    (rec l)))
+  (&& l (|| (fn (car l)) (find fn (cdr l)))))
 
 (function select (fn l)
   (let (rec (f (l acc)

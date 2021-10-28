@@ -12,3 +12,4 @@ In Paren, functions are first-class objects, so it can also be given to the argu
 
 # SEE ALSO
 - function(3)
+- higher-order-function(7)

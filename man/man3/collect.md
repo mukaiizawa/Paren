@@ -30,3 +30,4 @@ Returns a list of returned values were called until that function `FN` returned 
 
 # SEE ALSO
 - list(3)
+- higher-order-function(7)

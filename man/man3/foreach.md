@@ -32,3 +32,4 @@ In general, `foreach` is faster than `map`, because it doesn't create cons.
 # SEE ALSO
 - dolist(3)
 - map(3)
+- higher-order-function(7)
