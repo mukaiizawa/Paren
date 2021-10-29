@@ -376,9 +376,6 @@
   (if (cdr args) (reduce fn (cons (fn (car args) (cadr args)) (cddr args)))
       (car args)))
 
-(function find (fn l)
-  (&& l (|| (fn (car l)) (find fn (cdr l)))))
-
 (function select (fn l)
   (let (rec (f (l acc)
               (if (nil? l) (reverse! acc)
@@ -393,8 +390,10 @@
                   (rec (cdr l) (cons (car l) acc)))))
     (rec l nil)))
 
+(function find (fn l)
+  (&& l (|| (fn (car l)) (find fn (cdr l)))))
+
 (function position (fn l)
-  ; Returns the position of the elements for which the result of applying the function fn is true.
   (let (rec (f (l n)
               (if (nil? l) nil
                   (fn (car l)) n
