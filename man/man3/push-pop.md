@@ -24,7 +24,6 @@ The macro `pop!` returns first element of the list referenced by the symbol `VAR
 
     ) (<- stack nil)
     nil
-
     ) (push! 1 stack)
     1
     ) (push! 2 stack)
@@ -33,7 +32,6 @@ The macro `pop!` returns first element of the list referenced by the symbol `VAR
     3
     ) stack
     (3 2 1)
-
     ) (pop! stack)
     3
     ) (pop! stack)

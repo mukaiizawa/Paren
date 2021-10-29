@@ -26,10 +26,8 @@ The function `reject` returns a list of elements for which `FN` returned `nil`.
 
     ) (<- l '(1 (2) 3 (4)))
     (1 (2) 3 (4))
-
     ) (select atom? l)
     (1 3)
-
     ) (reject atom? l)
     ((2) (4))
 

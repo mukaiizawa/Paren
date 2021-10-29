@@ -19,7 +19,6 @@ If there is no corresponding value, returns `nil`.
 
     ) (<- alist '(:foo 0 :bar 1 :foo 2))
     (:foo 0 :bar 1 :foo 2)
-
     ) (assoc alist :foo)
     0
     ) (assoc alist :bar)

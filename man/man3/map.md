@@ -39,13 +39,10 @@ If you don't use a return value, you should use `foreach` or `dolist` instead.
 
     ) (map (f (x) (* x x)) (.. 10))
     (0 1 4 9 16 25 36 49 64 81)
-
     ) (map (f (x y) (+ x y)) (.. 10) (reverse! (.. 10)))
     (9 9 9 9 9 9 9 9 9 9)
-
     ) (map (f (x y z) (list x y z)) (.. 3) (.. 2) (.. 1))
     ((0 0 0) (1 1 nil) (2 nil nil))
-
     ) (map (f (x y z) (list x y z)) (.. 1) (.. 2) (.. 3))
     ((0 0 0))
 

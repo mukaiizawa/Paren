@@ -28,14 +28,12 @@ The function `reverse!` generally faster than `reverse`.
 
     ) (<- l1 (.. 3) l2 (slice l1))
     (0 1 2)
-
     ) (reverse nil)
     nil
     ) (reverse l1)
     (2 1 0)
     ) l1
     (0 1 2)
-
     ) (reverse! nil)
     nil
     ) (reverse! l2)

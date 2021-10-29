@@ -22,13 +22,10 @@ If you want to set a specific value as the initial value, just cons it to `LIST`
 
     ) (<- l (.. 10))
     (0 1 2 3 4 5 6 7 8 9)
-
     ) (reduce + l)
     45
-
     ) (reduce - (cons 100 l))
     55
-
     ) (reduce list l)
     (((((((((0 1) 2) 3) 4) 5) 6) 7) 8) 9)
 

@@ -17,7 +17,6 @@ Returns whether the `X` is a built-in operater.
     true
     ) (built-in? +)
     true
-
     ) (built-in? ++)
     nil
     ) (built-in? begin0)

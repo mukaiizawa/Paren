@@ -18,17 +18,14 @@ Error if, `SYMBOL` is not bound.
 
     ) (<- foo :global)
     :global
-
     ) (function static-resolution () (list foo))
     static-resolution
     ) (function dynamic-resolution () (list (dynamic foo)))
     dynamic-resolution
-
     ) (static-resolution)
     (:global)
     ) (dynamic-resolution)
     (:global)
-
     ) (let (foo :lexical) (static-resolution))
     (:global)
     ) (let (foo :lexical) (dynamic-resolution))

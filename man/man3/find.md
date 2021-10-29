@@ -21,7 +21,6 @@ If there is no such element, returns `nil`.
 
     ) (<- l (.. 10))
     (0 1 2 3 4 5 6 7 8 9)
-
     ) (find (f (x) (if (> x 5) (* x x))) l)
     36
 

@@ -26,12 +26,10 @@ See `cons(7)` for `Y` must be cons.
 
     ) (<- l (.. 3))
     (0 1 2)
-
     ) (car! l :foo)
     :foo
     ) l
     (:foo 1 2)
-
     ) (cdr! l nil)
     nil
     ) l

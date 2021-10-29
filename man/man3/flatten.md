@@ -18,13 +18,10 @@ Even if it is `nil`, if it can be regarded as a leaf, it becomes an element of t
 
     ) (flatten nil)
     (nil)
-
     ) (flatten '(nil (nil) nil))
     (nil nil nil)
-
     ) (flatten '(nil ((nil) (nil)) nil))
     (nil nil nil nil)
-
     ) (flatten '((a b (c d)) (e) f ()))
     (a b c d e f nil)
 

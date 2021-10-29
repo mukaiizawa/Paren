@@ -21,10 +21,8 @@ Returns a list of returned values were called until that function `FN` returned 
 
     ) (<- l (.. 3))
     (0 1 2)
-
     ) (collect (f () (pop! l)))
     (0 1 2)
-
     ) l
     nil
 
