@@ -415,7 +415,6 @@
       (none? fn (cdr l))))
 
 (function every-adjacent? (fn l)
-  ; Returns whether each adjacent element of the specified list l returns true when evaluated as an argument to the specified function fn.
   (if (cdr l) (&& (fn (car l) (cadr l)) (every-adjacent? fn (cdr l)))
       true))
 
