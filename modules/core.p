@@ -227,7 +227,7 @@
 (built-in-function cdr! (x v)
   (assert (let (x '(1 2 3)) (&& (= (cdr! x '(two)) '(two)) (= x '(1 two))))))
 
-;; cxr.
+;;; cxr.
 (function caar (x) (car (car x)))
 (function cadr (x) (car (cdr x)))
 (function cdar (x) (cdr (car x)))
@@ -352,6 +352,8 @@
     (rec l)
     (reverse! acc)))
 
+;;; higher-order functions.
+
 (function collect (fn)
   (let (rec (f (val :opt acc)
               (if (nil? val) (reverse! acc)
@@ -418,40 +420,26 @@
   (if (cdr l) (&& (fn (car l) (cadr l)) (every-adjacent? fn (cdr l)))
       true))
 
-(function union (fn :rest sets)
-  ; Return the union of lists.
-  (let ((test sets) (if (function? fn) (list fn sets)
-                        (list = (cons fn sets))))
-    (reduce (f (X Y)
-              (reduce (f (X y)
-                        (if (none? (f (x) (test x y)) X) (cons y X)
-                            X))
-                      (cons X Y)))
-            sets)))
+;;; set operations.
 
-(function intersection (fn :rest sets)
-  ; Return the intersection of lists.
-  (let ((test sets) (if (function? fn) (list fn sets)
-                        (list = (cons fn sets))))
-    (reduce (f (X Y)
-              (select (f (x) (some? (f (y) (test x y)) Y))
-                      X))
-            sets)))
+(function union (X Y)
+  (reduce (f (X y)
+            (if (in? y X) X
+                (cons y X)))
+          (cons X Y)))
 
-(function difference (fn :rest sets)
-  ; Return the difference of lists.
-  (let ((test minuend subtrahends) (if (function? fn) (list fn (car sets) (cdr sets))
-                                       (list = fn sets)))
-    (select (f (x)
-              (every? (f (subtrahend)
-                        (none? (f (y)
-                                 (test x y))
-                               subtrahend))
-                      subtrahends))
-            minuend)))
+(function intersection (X Y)
+  (select (f (x) (in? x Y))
+          X))
+
+(function difference (X Y)
+  (reject (f (x) (in? x Y))
+          X))
+
+(function symmetric-difference (X Y)
+  (union (difference X Y) (difference Y X)))
 
 (function product (X Y)
-  ; Return the product of args.
   (apply concat
          (map (f (x) (map (f (y) (list x y)) Y))
               X)))
