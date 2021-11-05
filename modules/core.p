@@ -453,7 +453,6 @@
   (assert (! (number? 'x))))
 
 (function byte? (x)
-  ; Returns whether the x is a integer and between 0 and 255.
   (&& (int? x) (<= 0 x 255)))
 
 (built-in-function int? (x)
