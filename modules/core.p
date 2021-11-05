@@ -456,7 +456,6 @@
   (&& (int? x) (<= 0 x 255)))
 
 (built-in-function int? (x)
-  ; Returns whether the x is a integer.
   (assert (int? 1))
   (assert (! (int? 3.14)))
   (assert (! (int? 'x))))
