@@ -4,9 +4,7 @@
 
 (write-line "
 The Paren philosophy, by Shintaro Mukai.
-- Simple is best.
-- Small is beautiful.
-- Data dominates.
+    Practical simplicity.
 ")
 
 (function! main (args)
