@@ -517,12 +517,10 @@
   (assert (= (% 4 2) 0)))
 
 (function ++ (x)
-  ; Same as `(+ x 1)`.
   (+ x 1))
 
 (function -- (x)
-  ; Same as `(- x 1)`.
-  (- x 1))
+  (+ x -1))
 
 ;;;; bitwise operates.
 
