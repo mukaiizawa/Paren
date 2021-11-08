@@ -461,25 +461,18 @@
   (assert (! (int? 'x))))
 
 (function int (x)
-  ; Return a integer constructed from a number or string x.
-  ; If argument x is nil, returns 0.
   (// (float x)))
 
 (function int32 (x)
-  ; Return a 32 bit integer constructed from a number or string x.
-  ; If argument x is nil, returns 0.
   (& 0xffffffff (int x)))
 
 (function float (x)
-  ; Return a floating point number constructed from a number or string x.
-  ; If argument x is nil, returns 0.
   (if (nil? x) 0
       (number? x) x
-      (string? x)
-      (with-memory-stream ($in x)
-        (let (ar (.new AheadReader) val (.skip-unumber ar))
-          (if (.next ar) (raise ArgumentError "illegal string")
-              val)))
+      (string? x) (with-memory-stream ($in x)
+                    (let (ar (.new AheadReader) val (.skip-unumber ar))
+                      (if (.next ar) (raise ArgumentError "illegal string")
+                          val)))
       (raise ArgumentError "expected number or string")))
 
 (built-in-function + (x :rest args)
