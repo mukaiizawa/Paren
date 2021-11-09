@@ -567,7 +567,10 @@ static int int64_multiply(int64_t ix, object argv, object *result)
 
 DEFUN(_2a_)
 {
-  if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
+  if (argc == 0) {
+    *result = gc_new_xint(1);
+    return TRUE;
+  }
   return int64_multiply(1, argv, result);
 }
 

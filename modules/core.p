@@ -476,34 +476,27 @@
       (raise ArgumentError "expected number or string")))
 
 (built-in-function + (x :rest args)
-  ; Returns the sum of the args.
   (assert (= (+) 0))
   (assert (= (+ 1) 1))
   (assert (= (+ 1 2 3) 6))
   (assert (= (+ 1 2.0 3.0) 6)))
 
 (function - (x :rest args)
-  ; Returns the value of the specified x minus the sum of the specified args.
-  ; If args is nil, returns inverted value of the x.
   (if (nil? args) (* x -1)
       (+ x (- (apply + args)))))
 
 (built-in-function * (x :rest args)
-  ; Returns the product of the arguments.
+  (assert (= (*) 1))
   (assert (= (* 1 2 3) 6))
   (assert (= (* 1.0 2.0 3.0) 6))
   (assert (= (* 1 2.0 3.0) 6)))
 
 (built-in-function / (x :rest args)
-  ; Returns the quotient of the x divided by the each args.
-  ; If args is nil, returns the reciprocal of x.
   (assert (= (/ 2) 0.5))
   (assert (= (/ 12 2 3) 2))
   (assert (= (/ 3 2 5) 0.3)))
 
 (built-in-function // (x :opt y)
-  ; Returns an integer value of the number x.
-  ; If y is specified, returns the quotient of the x divided by the y.
   (assert (= (// 3) 3))
   (assert (= (// 3.14) 3))
   (assert (= (// 2 1) 2))
@@ -511,7 +504,6 @@
   (assert (= (// 2 3) 0)))
 
 (built-in-function % (x y)
-  ; Returns the remainder of dividing x by y.
   (assert (= (% 4 5) 4))
   (assert (= (% 4 3) 1))
   (assert (= (% 4 2) 0)))
