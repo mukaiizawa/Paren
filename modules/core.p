@@ -517,35 +517,23 @@
 ;;;; bitwise operates.
 
 (built-in-function ~ (x)
-  ; Returns bitwise NOT of x.
-  ; x must be positive integer.
   (assert (= (~ (~ 2x1010)) 2x1010))
   (assert (= (& (~ 2x1010) 2x1111) 2x0101)))
 
 (built-in-function & (x y)
-  ; Returns bitwise AND of x and y.
-  ; x and y must be positive integer.
   (assert (= (& 0x333333333 0x555555555) 0x111111111)))
 
 (built-in-function | (x y)
-  ; Returns bitwise OR of x and y.
-  ; x and y must be positive integer.
   (assert (= (| 0x333333333 0x555555555) 0x777777777)))
 
 (built-in-function ^ (x y)
-  ; Returns bitwise XOR of x and y.
-  ; x and y must be positive integer.
   (assert (= (^ 3 0x500000000) 0x500000003))
   (assert (= (^ 0x500000000 0x500000003) 3)))
 
 (built-in-function << (x y)
-  ; bitwise left shift.
-  ; x must be positive integer.
   (assert (= (<< 3 2) 12)))
 
 (function >> (x y)
-  ; bitwise right shift.
-  ; x must be positive integer.
   (<< x (- y)))
 
 ;;;; mathematical functions.
