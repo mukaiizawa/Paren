@@ -536,62 +536,6 @@
 (function >> (x y)
   (<< x (- y)))
 
-;;;; mathematical functions.
-
-(built-in-function sin (x)
-  ; Returns the trigonometric sine of an angle.
-  (assert (= (sin 0) 0)))
-
-(built-in-function cos (x)
-  ; Returns the trigonometric cosine of an angle.
-  (assert (= (cos 0) 1.0)))
-
-(built-in-function tan (x)
-  ; Returns the trigonometric tangent of an angle.
-  (assert (= (tan 0) (/ (sin 0) (cos 0)))))
-
-(built-in-function asin (x)
-  ; Returns the arc sine of a value.
-  (assert (= (sin (asin 0.0)) 0)))
-
-(built-in-function acos (x)
-  ; Returns the arc cosine of a value.
-  (assert (= (cos (acos 0.0)) 0)))
-
-(built-in-function atan (x)
-  ; Returns the arc tangent of an angle.
-  (assert (= (tan (atan 0.0)) 0.0)))
-
-(built-in-function sinh (x)
-  ; Returns the hyperbolic sine of a value.
-  (assert (= (sinh 1) (/ (- (exp 1) (exp -1)) 2))))
-
-(built-in-function cosh (x)
-  ; Returns the hyperbolic cosine of a value.
-  (assert (= (cosh 1) (/ (+ (exp 1) (exp -1)) 2))))
-
-(built-in-function tanh (x)
-  ; Returns the hyperbolic tangent of an angle.
-  (assert (= (tanh 1) (/ (sinh 1) (cosh 1)))))
-
-(built-in-function exp (x)
-  ; Returns Euler's number e raised to the power of x.
-  (assert (= (log (exp 10)) 10)))
-
-(built-in-function log (x :opt y)
-  ; Returns the natural logarithm of x value.
-  ; If y is supplied, returns the base x logarithm of y value.
-  (assert (= (log (pow 2 10)) (* 10 (log 2))))
-  (assert (= (log 10 100) (/ (log 100) (log 10)))))
-
-(built-in-function pow (x y)
-  ; Returns the value of x raised to the power y.
-  (assert (= (// (pow 2 10)) 1024)))
-
-(built-in-function sqrt (x)
-  ; Returns the rounded positive square root of a value.
-  (assert (= (sqrt (pow 25 2)) 25)))
-
 (function abs (x)
   ; Returns the absolute value of the specified number x.
   (if (< x 0) (- x)
@@ -601,13 +545,47 @@
   ; Returns the average value of the arguments.
   (/ (apply + args) (len args)))
 
-(function max (:rest args)
-  ; Returns maximum value from argument.
-  (reduce (f (x y) (if (> x y) x y)) args))
+;;;; mathematical functions.
 
-(function min (:rest args)
-  ; Returns minimum value from argument.
-  (reduce (f (x y) (if (< x y) x y)) args))
+(built-in-function sin (x)
+  (assert (= (sin 0) 0)))
+
+(built-in-function cos (x)
+  (assert (= (cos 0) 1.0)))
+
+(built-in-function tan (x)
+  (assert (= (tan 0) (/ (sin 0) (cos 0)))))
+
+(built-in-function asin (x)
+  (assert (= (sin (asin 0.0)) 0)))
+
+(built-in-function acos (x)
+  (assert (= (cos (acos 0.0)) 0)))
+
+(built-in-function atan (x)
+  (assert (= (tan (atan 0.0)) 0.0)))
+
+(built-in-function sinh (x)
+  (assert (= (sinh 1) (/ (- (exp 1) (exp -1)) 2))))
+
+(built-in-function cosh (x)
+  (assert (= (cosh 1) (/ (+ (exp 1) (exp -1)) 2))))
+
+(built-in-function tanh (x)
+  (assert (= (tanh 1) (/ (sinh 1) (cosh 1)))))
+
+(built-in-function exp (x)
+  (assert (= (log (exp 10)) 10)))
+
+(built-in-function log (x :opt y)
+  (assert (= (log (pow 2 10)) (* 10 (log 2))))
+  (assert (= (log 10 100) (/ (log 100) (log 10)))))
+
+(built-in-function pow (x y)
+  (assert (= (// (pow 2 10)) 1024)))
+
+(built-in-function sqrt (x)
+  (assert (= (sqrt (pow 25 2)) 25)))
 
 ;; symbol & keyword.
 
@@ -1127,6 +1105,14 @@
 (function >= (:rest args)
   ; Returns whether the each of the specified args are in monotonically nonincreasing order.
   (every-adjacent? (f (x y) (! (< x y))) args))
+
+(function max (:rest args)
+  ; Returns maximum value from argument.
+  (reduce (f (x y) (if (> x y) x y)) args))
+
+(function min (:rest args)
+  ; Returns minimum value from argument.
+  (reduce (f (x y) (if (< x y) x y)) args))
 
 ;; os.
 
