@@ -79,6 +79,7 @@ static char *error_msg(enum error_msg em) {
   switch (em) {
     case assert_failed: return "assert failed";
     case built_in_failed: return "built-in function failed";
+    case clip_failed: return "clip failed";
     case connection_failed: return "connection failed";
     case division_by_zero: return "division by zero";
     case expected_array: return "expected_array";

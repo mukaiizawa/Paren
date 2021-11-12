@@ -1,19 +1,19 @@
 # makefile
 # Usage: make os={unix|windows} [cc=gcc] [debug={off|on}]
-# 	[sock=off|on]
+# 	[sock=off|on] [clip=off|on]
 
 supportos=unix windows
 cc?=gcc
 debug?=off
-sock?=off
+sock?=on
+clip?=on
 
 ifeq ($(filter $(supportos),$(os)),)
 $(error illegal os)
 endif
 ifeq ($(os), unix)
 extobj+=pf.u.o xsleep.u.o
-lib+=-lm
-lib+=-ldl
+dl_m?=-lm
 ifeq ($(sock),on)
 defun+=sock.c
 endif
@@ -22,10 +22,19 @@ ifeq ($(os), windows)
 extobj+=pf.w.o xsleep.w.o
 exe=.exe
 ifeq ($(sock),on)
-lib+=-lws2_32
+dl_ws?=-lws2_32
 defun+=sock.c
 endif
+ifeq ($(clip),on)
+dl_user?=-lUser32
+dl_ws?=-lws2_32
+defun+=clip.c
 endif
+endif
+
+lib+=$(dl_m)
+lib+=$(dl_user)
+lib+=$(dl_ws)
 
 uflags=-Wall -Werror
 cflags=$(uflags) -c
@@ -51,7 +60,7 @@ defsp=ip.c
 defsp.wk: $(defsp)
 	cat $+ | grep ^DEFSP>$@
 
-defun+=ip.c bi.c os.c dl.c
+defun+=ip.c bi.c os.c
 defun.wk: $(defun)
 	cat $+ | grep ^DEFUN>$@
 

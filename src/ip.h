@@ -23,6 +23,7 @@ enum error_msg {
   assert_failed,
   built_in_failed,
   connection_failed,
+  clip_failed,
   division_by_zero,
   expected_array,
   expected_binding_value,
