@@ -537,7 +537,6 @@
   (<< x (- y)))
 
 (function abs (x)
-  ; Returns the absolute value of the specified number x.
   (if (< x 0) (- x)
       x))
 
