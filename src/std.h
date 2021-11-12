@@ -26,6 +26,7 @@
 #include <utime.h>
 
 #if UNIX_P
+#include <netdb.h>
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <netinet/in.h>

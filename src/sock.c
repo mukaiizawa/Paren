@@ -88,7 +88,8 @@ DEFUN(server_2d_socket)
 
 DEFUN(accept)
 {
-  int sfd, cfd, size;
+  int sfd, cfd;
+  socklen_t size;
   struct sockaddr_in addr;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cint(argv->cons.car, &sfd)) return FALSE;
