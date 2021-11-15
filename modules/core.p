@@ -540,10 +540,6 @@
   (if (< x 0) (- x)
       x))
 
-(function average (:rest args)
-  ; Returns the average value of the arguments.
-  (/ (apply + args) (len args)))
-
 ;;;; mathematical functions.
 
 (built-in-function sin (x)
