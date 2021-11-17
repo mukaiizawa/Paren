@@ -845,16 +845,16 @@ DEFUN(pow)
 
 static int bytes_like_to(int type, int argc, object argv, object *result)
 {
-  int i, size;
+  int start, stop;
   object o;
   if (!bi_argc_range(argc, 1, 3)) return FALSE;
   if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
-  if (argc < 2) i = 0;
-  else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &i)) return FALSE;
-  if (argc < 3) size = o->mem.size - i;
-  else if (!bi_cint(argv->cons.cdr->cons.car, &size)) return FALSE;
-  if (!bi_range(0, i + size, o->mem.size)) return FALSE;
-  *result = gc_new_mem_from(type, o->mem.elt + i, size);
+  if (argc < 2) start = 0;
+  else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
+  if (argc < 3) stop = o->mem.size;
+  else if (!bi_cint(argv->cons.cdr->cons.car, &stop)) return FALSE;
+  if (!bi_range(start, stop, o->mem.size)) return FALSE;
+  *result = gc_new_mem_from(type, o->mem.elt + start, stop - start);
   return TRUE;
 }
 

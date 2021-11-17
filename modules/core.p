@@ -585,8 +585,6 @@
 ;; symbol & keyword.
 
 (built-in-function symbol (:opt x i size)
-  ; If there are no arguments, returns numbered symbol starting with `$G-`.
-  ; If x is supplied, Same as `(bytes x i size)` except returns symbol.
   (assert (== (symbol "foo") 'foo)))
 
 (built-in-function keyword (x :opt i size)
@@ -621,7 +619,7 @@
   ; Same as `(bytes x i size)` except returns string.
   (assert (= (string 'foo) "foo"))
   (assert (= (string 'foo 1) "oo"))
-  (assert (= (string 'foo 1 1) "o")))
+  (assert (= (string 'foo 1 2) "o")))
 
 (built-in-function string! (x)
   ; Same as `(string x)` except that it destructively modifies the specified bytes x.
