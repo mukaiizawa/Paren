@@ -735,6 +735,13 @@
   (assert (upper? "ABC"))
   (assert (! (upper? "abc"))))
 
+(function title? (s)
+  ; Return whether the string s is a titlecased string and there is at least one character.
+  (if (empty? s) nil
+      (= (len s) 1) (upper? s)
+      (&& (upper? (slice s 0 1))
+          (lower? (slice s 1)))))
+
 (built-in-function lower (s)
   ; Return a copy of the string with all the cased characters converted to lowercase.
   (assert (= (lower "ABC123") "abc123")))
@@ -742,6 +749,15 @@
 (built-in-function upper (b)
   ; Return a copy of the string with all the cased characters converted to uppercase.
   (assert (= (upper "abc123") "ABC123")))
+
+(function title (s)
+  ; Returns the string witch the first letter in each word upper case.
+  (join (map (f (word)
+               (if (empty? word) word
+                   (concat (upper (slice word 0 1))
+                           (lower (slice word 1)))))
+             (split s " "))
+        " "))
 
 (function strstr (s pat :opt start)
   ; Returns the position where the substring pat appears first in the string s.
