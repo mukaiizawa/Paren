@@ -588,7 +588,6 @@
   (assert (== (symbol "foo") 'foo)))
 
 (built-in-function keyword (x :opt i size)
-  ; Same as `(bytes x i size)` except returns keyword.
   (assert (== (keyword "foo") :foo)))
 
 (built-in-function symbol? (x)

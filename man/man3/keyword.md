@@ -1,0 +1,31 @@
+# NAME
+keyword - make a keyword.
+
+# SYNOPSIS
+
+    (keyword NAME [START [STOP]])
+
+# DESCRIPTION
+The function `keyword` make a keyword.
+
+# RETURN VALUE
+Returns a keyword consisting of the `START-th` through `(STOP - 1)-th` bytes-like object NAME.
+
+If `STOP` is omitted, the corresponding keyword from the `START` to the end is returned.
+
+If `START` is omitted, a keyword whose name is `NAME` is returned.
+
+# EXAMPLES
+
+    ) (keyword "foo")
+    :foo
+    ) (keyword "foo" 2)
+    :o
+    ) (keyword "foo" 1 3)
+    :oo
+
+# SEE ALSO
+- keyword(3)
+- with-gensyms(3)
+- bytes-like(7)
+- keyword(7)
