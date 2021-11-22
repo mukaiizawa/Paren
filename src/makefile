@@ -1,24 +1,36 @@
 # makefile
 # Usage: make os={unix|windows} [cc=gcc] [debug={off|on}]
-# 	[sock=off|on] [clip=off|on]
+# 	[sock=off|on] [clip=off|on] [mouse=off|on]
 
 supportos=unix windows
 cc?=gcc
 debug?=off
-sock?=on
-clip?=on
 
 ifeq ($(filter $(supportos),$(os)),)
 $(error illegal os)
 endif
+
 ifeq ($(os), unix)
+sock?=on
+clip?=off
+mouse?=off
 extobj+=pf.u.o xsleep.u.o
 dl_m?=-lm
 ifeq ($(sock),on)
 defun+=sock.c
 endif
+ifeq ($(clip),on)
+$(error clip does not supported)
 endif
+ifeq ($(mouse),on)
+$(error mouse does not supported)
+endif
+endif
+
 ifeq ($(os), windows)
+sock?=on
+clip?=on
+mouse?=on
 extobj+=pf.w.o xsleep.w.o
 exe=.exe
 ifeq ($(sock),on)
@@ -29,6 +41,11 @@ ifeq ($(clip),on)
 dl_user?=-lUser32
 dl_ws?=-lws2_32
 defun+=clip.c
+endif
+ifeq ($(mouse),on)
+dl_user?=-lUser32
+dl_ws?=-lws2_32
+defun+=mouse.c
 endif
 endif
 
