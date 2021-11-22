@@ -601,11 +601,7 @@
   (assert (! (keyword? (bytes 3)))))
 
 (function symcmp (x y)
-  ; If x is equals to y, returns 0.
-  ; If the memory address of x is less than y, returns -1.
-  ; If the memory address of x is greater than y, returns 1.
-  (if (== x y) 0
-      (- (address x) (address y))))
+  (- (address x) (address y)))
 
 (built-in-function bound? (sym)
   ; Returns whether the x is bound.

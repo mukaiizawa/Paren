@@ -4,7 +4,7 @@
 
 (<- $root (.mkdir (path "./wk"))
     $ignore-pages (map string
-                       '(f foreach macroexpand symbol timeit)))
+                       '(f foreach macroexpand symbol symcmp timeit)))
 
 (function xmain (exprs)
   `(function! main (args)
