@@ -43,7 +43,6 @@ DEFUN(mouse_2e_move)
   return TRUE;
 }
 
-
 static const int BTN_KIND = 3;
 static const int DIR_KIND = 2;
 
