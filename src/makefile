@@ -1,6 +1,6 @@
 # makefile
 # Usage: make os={unix|windows} [cc=gcc] [debug={off|on}]
-# 	[sock=off|on] [clip=off|on] [mouse=off|on]
+# 	[sock=off|on] [clip=off|on] [mouse=off|on] [keyboard=off|on]
 
 supportos=unix windows
 cc?=gcc
@@ -14,6 +14,7 @@ ifeq ($(os), unix)
 sock?=on
 clip?=off
 mouse?=off
+keyboard?=off
 extobj+=pf.u.o xsleep.u.o
 dl_m?=-lm
 ifeq ($(sock),on)
@@ -31,6 +32,7 @@ ifeq ($(os), windows)
 sock?=on
 clip?=on
 mouse?=on
+keyboard?=on
 extobj+=pf.w.o xsleep.w.o
 exe=.exe
 ifeq ($(sock),on)
@@ -46,6 +48,11 @@ ifeq ($(mouse),on)
 dl_user?=-lUser32
 dl_ws?=-lws2_32
 defun+=mouse.c
+endif
+ifeq ($(keyboard),on)
+dl_user?=-lUser32
+dl_ws?=-lws2_32
+defun+=keyboard.c
 endif
 endif
 

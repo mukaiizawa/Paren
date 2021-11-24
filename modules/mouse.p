@@ -6,21 +6,20 @@
 (built-in-function mouse.position ())
 (built-in-function mouse.move (p))
 
-(built-in-function mouse.fire (button dir)
+(built-in-function mouse.send (button dir)
   ; Do not call directly as it will change without notice in the future.
   )
 
 ; see mouse.c
-(<- $mouse.direction '(:down 0 :up 1)
-    $mouse.button '(:left 0 :middle 1 :right 2))
+(<- $mouse.button '(:left :middle :right))
 
 (function mouse.down (:opt button)
   (if (nil? button) (mouse.down :left)
-      (mouse.fire (assoc $mouse.button button) (assoc $mouse.direction :down))))
+      (mouse.send (index $mouse.button button) 0)))
 
 (function mouse.up (:opt button)
   (if (nil? button) (mouse.up :left)
-      (mouse.fire (assoc $mouse.button button) (assoc $mouse.direction :up))))
+      (mouse.send (index $mouse.button button) 1)))
 
 (function mouse.click (:opt button)
   (mouse.down button)

@@ -52,7 +52,7 @@ static int flg_table[] = {
   MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP,
 };
 
-DEFUN(mouse_2e_fire)
+DEFUN(mouse_2e_send)
 {
   int btn, dir;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
