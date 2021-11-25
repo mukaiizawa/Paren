@@ -604,7 +604,6 @@
   (- (address x) (address y)))
 
 (built-in-function bound? (sym)
-  ; Returns whether the x is bound.
   (assert (bound? 'bound?))
   (assert (bound? 'nil)))
 
