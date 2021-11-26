@@ -9,7 +9,7 @@ keyword - make a keyword.
 The function `keyword` make a keyword.
 
 # RETURN VALUE
-Returns a keyword consisting of the `START-th` through `(STOP - 1)-th` bytes-like object NAME.
+Returns a keyword consisting of the `START-th` through `(STOP - 1)-th` bytes-like object `NAME`.
 
 If `STOP` is omitted, the corresponding keyword from the `START` to the end is returned.
 

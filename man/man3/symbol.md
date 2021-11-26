@@ -3,13 +3,13 @@ symbol - make a symbol.
 
 # SYNOPSIS
 
-    (symbol [NAME [START [STOP]])
+    (symbol [NAME [START [STOP]]])
 
 # DESCRIPTION
 The function `symbol` make a symbol.
 
 # RETURN VALUE
-Returns a symbol consisting of the `START-th` through `(STOP - 1)-th` bytes-like object NAME.
+Returns a symbol consisting of the `START-th` through `(STOP - 1)-th` bytes-like object `NAME`.
 
 If `STOP` is omitted, the corresponding symbol from the `START` to the end is returned.
 
