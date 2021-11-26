@@ -610,14 +610,11 @@
 ;; string.
 
 (built-in-function string (x :opt i size)
-  ; Same as `(bytes x i size)` except returns string.
   (assert (= (string 'foo) "foo"))
   (assert (= (string 'foo 1) "oo"))
   (assert (= (string 'foo 1 2) "o")))
 
 (built-in-function string! (x)
-  ; Same as `(string x)` except that it destructively modifies the specified bytes x.
-  ; Generally faster than mem->str.
   (assert (let (x (bytes 1))
             ([] x 0 0x01)
             (= (string! x) "\x01"))))
