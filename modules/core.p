@@ -620,8 +620,6 @@
             (= (string! x) "\x01"))))
 
 (function str (:rest args)
-  ; Returns concatenated string which each of the specified args as string.
-  ; Treat nil as an empty string.
   (with-memory-stream ($out)
     (dolist (arg args)
       (if (nil? arg) :continue
