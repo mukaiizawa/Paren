@@ -1,6 +1,7 @@
 // paren main routine.
 
 #include "std.h"
+#include "xiconv.h"
 #include "pf.h"
 #include "object.h"
 #include "lex.h"
@@ -77,7 +78,7 @@ static object parse_expr(void)
       parse_skip();
       return o;
     default:
-      lex_error("illegal token '%c'.", (char)next_token);
+      lex_error("illegal token '%c'", (char)next_token);
       return NULL;
   }
 }
@@ -97,7 +98,7 @@ static object load(void)
   FILE *fp;
   object o;
   if ((fp = fopen(core_fn, "r")) == NULL)
-    xerror("load/open %s failed.", core_fn);
+    xerror("load/open %s failed", core_fn);
   lex_start(fp);
   parse_skip();
   o = load_rec();
@@ -139,19 +140,17 @@ static object parse_args(int argc, char *argv[])
 {
   object o;
 #if WINDOWS_P
-  int st;
-  LPWSTR *wcp;
-  char buf[MAX_STR_LEN];
+  LPWSTR *wc_args;
+  char *mb_arg;
   o = object_nil;
-  if ((wcp = CommandLineToArgvW(GetCommandLineW(), &argc)) == NULL) st = 0;
-  else {
-    while (argc-- > 1) {
-      if ((st = xwctomb(wcp[argc], buf)) == 0) break;
-      o = gc_new_cons(new_string(buf), o);
-    }
+  if ((wc_args = CommandLineToArgvW(GetCommandLineW(), &argc)) == NULL)
+    xerror("CommandLineToArgvW/failed");
+  while (argc-- > 1) {
+    if (!xiconv_wc2mb(XICONV_UTF8, wc_args[argc], &mb_arg))
+      xerror("parse_args/failed.");
+    o = gc_new_cons(new_string(mb_arg), o);
   }
-  if (st == 0) xerror("parse_args/failed.");
-  LocalFree(wcp);
+  LocalFree(wc_args);
 #else
   o = object_nil;
   while (argc-- > 1) o = gc_new_cons(new_string(argv[argc]), o);
@@ -217,6 +216,7 @@ int main(int argc, char *argv[])
 {
   char buf[MAX_STR_LEN];
   init_console();
+  xiconv_init();
   pf_exepath(argv[0], buf);
 #if !UNIX_P
   *strrchr(buf, '.') = '\0';

@@ -20,7 +20,7 @@ void lex_error(char *fmt, ...)
   va_start(va, fmt);
   xvsprintf(buf, fmt, va);
   va_end(va);
-  xerror("%s at line: %d, column: %d.", buf, line, column);
+  xerror("%s at line: %d, column: %d", buf, line, column);
 }
 
 static int skip(void)

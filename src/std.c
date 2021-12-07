@@ -29,7 +29,7 @@ void xvsprintf(char *buf, char *fmt, va_list va)
 {
   int len;
   len = vsnprintf(buf, MAX_STR_LEN, fmt, va);
-  if (len + 1 > MAX_STR_LEN) xerror("xvsprintf/buffer overflow.");
+  if (len + 1 > MAX_STR_LEN) xerror("xvsprintf/buffer overflow");
 }
 
 void xsprintf(char *buf, char *fmt, ...)
@@ -55,7 +55,7 @@ void *xmalloc(int size)
 {
   void *p;
   if (size == 0) return NULL;
-  if ((p = malloc(size)) == NULL) xerror("xmalloc failed.");
+  if ((p = malloc(size)) == NULL) xerror("xmalloc failed");
   return p;
 }
 
@@ -71,7 +71,7 @@ void *xrealloc(void *p, int size)
     xfree(p);
     p = NULL;
   } else {
-    if ((p = realloc(p, size)) == NULL) xerror("xrealloc failed.");
+    if ((p = realloc(p, size)) == NULL) xerror("xrealloc failed");
   }
   return p;
 }
@@ -86,30 +86,9 @@ char *xstrdup(char *s)
   return result;
 }
 
-#if WINDOWS_P
-int xwctomb(LPWSTR lp, char *p)
-{
-  return WideCharToMultiByte(CP_UTF8, 0, lp, -1, p, MAX_STR_LEN, NULL, NULL);
-}
-
-int xmbtowc(char *p, LPWSTR lp)
-{
-  DWORD dwFlags;
-  dwFlags = MB_PRECOMPOSED | MB_ERR_INVALID_CHARS;
-  return MultiByteToWideChar(CP_UTF8, dwFlags, p, -1, lp, MAX_STR_LEN);
-}
-
-int xmbtombacp(char *p, char *q)
-{
-  WCHAR wcbuf[MAX_STR_LEN];
-  if (!xmbtowc(p, wcbuf)) return FALSE;
-  return WideCharToMultiByte(CP_ACP, 0, wcbuf, -1, q, MAX_STR_LEN, NULL, NULL);
-}
-#endif
-
 #ifndef NDEBUG
 void xassert_failed(char *fn, int line)
 {
-  xerror("assert failed at %s:%d.", fn, line);
+  xerror("assert failed at %s:%d", fn, line);
 }
 #endif

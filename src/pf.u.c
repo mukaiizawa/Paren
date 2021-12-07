@@ -11,9 +11,9 @@ static int group_member_p(gid_t gid)
   int i, size;
   gid_t *gids;
   size = getgroups(0, NULL);
-  if (size == -1) xerror("getgroups failed");
+  if (size == -1) xerror("getgroups/failed");
   gids = xmalloc(size * sizeof(gid_t));
-  if (getgroups(size, gids) == -1) xerror("getgroups failed");
+  if (getgroups(size, gids) == -1) xerror("getgroups/failed");
   for (i = 0; i < size; i++) {
     if (gid == gids[i]) break;
   }
@@ -84,9 +84,9 @@ char *pf_exepath(char *argv0, char *path)
   xbarray_init(&paths);
   xbarray_adds(&paths, getenv("PATH"));
   xbarray_add(&paths, '\0');
-  result = find_paths(paths.elt, fn,path);
+  result = find_paths(paths.elt, fn, path);
   xbarray_free(&paths);
-  if (result == NULL) xerror("pf_exepath: can not find");
+  if (result == NULL) xerror("pf_exepath/can not find");
   return result;
 }
 

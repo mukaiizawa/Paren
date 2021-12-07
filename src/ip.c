@@ -32,7 +32,7 @@ static void intr_init(void)
   struct sigaction sa;
   memset(&sa, 0, sizeof(sa));
   sa.sa_handler = intr_handler;
-  if (sigaction(SIGINT, &sa, NULL) == -1) xerror("sigaction/failed.");
+  if (sigaction(SIGINT, &sa, NULL) == -1) xerror("sigaction/failed");
 }
 
 #elif WINDOWS_P
@@ -49,7 +49,7 @@ static BOOL intr_handler(DWORD dwCtrlType)
 static void intr_init(void)
 {
   if (SetConsoleCtrlHandler((PHANDLER_ROUTINE)intr_handler, TRUE) == 0)
-    xerror("SetConsoleCtrlHandler/failed.");
+    xerror("SetConsoleCtrlHandler/failed");
 }
 
 #endif

@@ -15,7 +15,7 @@ sock?=on
 clip?=off
 mouse?=off
 keyboard?=off
-extobj+=pf.u.o xsleep.u.o
+extobj+=pf.u.o xiconv.u.o xsleep.u.o
 dl_m?=-lm
 ifeq ($(sock),on)
 defun+=sock.c
@@ -26,6 +26,9 @@ endif
 ifeq ($(mouse),on)
 $(error mouse does not supported)
 endif
+ifeq ($(keyboard),on)
+$(error keyboard does not supported)
+endif
 endif
 
 ifeq ($(os), windows)
@@ -33,7 +36,7 @@ sock?=on
 clip?=on
 mouse?=on
 keyboard?=on
-extobj+=pf.w.o xsleep.w.o
+extobj+=pf.w.o xiconv.w.o xsleep.w.o
 exe=.exe
 ifeq ($(sock),on)
 dl_ws?=-lws2_32

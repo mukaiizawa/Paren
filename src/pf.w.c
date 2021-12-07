@@ -1,18 +1,29 @@
 // path and files for windows.
 
 #include "std.h"
+#include "xiconv.h"
 #include "pf.h"
 
 #define PATH_SEPR '\\'
 #define PATHS_SEPR ';'
 
+#define WIN_TICK 10000000
+#define WIN_OFFSET 11644473600
+#define win2unix(t) ((t / WIN_TICK) - WIN_OFFSET)
+#define unix2win(t) ((t + WIN_OFFSET) * WIN_TICK)
+
+static int64_t int64(DWORD high, DWORD low)
+{
+  return ((int64_t)high << 32) | low;
+}
+
 int pf_stat(char *fn, struct pf_stat *statbuf)
 {
   int mode;
-  WCHAR wcbuf[MAX_STR_LEN];
+  LPWSTR wc_fn;
   WIN32_FILE_ATTRIBUTE_DATA attr;
-  if (xmbtowc(fn, wcbuf) == 0) return FALSE;
-  if (!GetFileAttributesExW(wcbuf, GetFileExInfoStandard, &attr)) {
+  if (!xiconv_mb2wc(XICONV_UTF8, fn, &wc_fn)) return FALSE;
+  if (!GetFileAttributesExW(wc_fn, GetFileExInfoStandard, &attr)) {
     switch (GetLastError()) {
       case ERROR_FILE_NOT_FOUND:
       case ERROR_PATH_NOT_FOUND:
@@ -27,9 +38,8 @@ int pf_stat(char *fn, struct pf_stat *statbuf)
   else mode |= PF_REGF;
   if (!(attr.dwFileAttributes & FILE_ATTRIBUTE_READONLY)) mode |= PF_WRITABLE;
   if (statbuf != NULL) {
-    statbuf->size = ((int64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow;
-    statbuf->mtime = (((int64_t)attr.ftLastWriteTime.dwHighDateTime << 32)
-        | attr.ftLastWriteTime.dwLowDateTime) / 10000000 - 11644473600;
+    statbuf->size = int64(attr.nFileSizeHigh, attr.nFileSizeLow);
+    statbuf->mtime = win2unix(int64(attr.ftLastWriteTime.dwHighDateTime, attr.ftLastWriteTime.dwLowDateTime));
   }
   return mode;
 }
@@ -41,12 +51,12 @@ static int mode_p(char *fn, int mode)
 
 char *pf_exepath(char *argv0, char *path)
 {
-  int st;
-  WCHAR wcbuf[MAX_STR_LEN];
-  st = GetModuleFileNameW(NULL, wcbuf, MAX_STR_LEN);
-  if (st >= MAX_STR_LEN) st = 0;
-  else st = xwctomb(wcbuf, path);
-  if (st == 0) xerror("pf_exepath failed");
+  char *mb_path;
+  WCHAR wc_buf[MAX_STR_LEN];
+  if (GetModuleFileNameW(NULL, wc_buf, MAX_STR_LEN) >= MAX_STR_LEN
+      || !xiconv_wc2mb(XICONV_UTF8, wc_buf, &mb_path))
+    xerror("pf_exepath/failed");
+  strcpy(path, mb_path);
   return path;
 }
 
@@ -54,7 +64,7 @@ int pf_utime(char *fn, int64_t mtime)
 {
   HANDLE hFile;
   FILETIME ft;
-  mtime = mtime * 10000000 + 116444736000000000;
+  mtime = unix2win(mtime);
   ft.dwLowDateTime = mtime & 0xffffffff;
   ft.dwHighDateTime = mtime >> 32;
   hFile = CreateFile(fn, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -66,42 +76,45 @@ int pf_utime(char *fn, int64_t mtime)
 
 char *pf_getcwd(char *buf)
 {
-  int st;
-  WCHAR wcbuf[MAX_STR_LEN];
-  st = GetCurrentDirectoryW(MAX_STR_LEN, wcbuf);
-  if (st > MAX_STR_LEN) st = 0;
-  if (st != 0) st = xwctomb(wcbuf, buf);
-  if (st == 0) xerror("pf_getcwd failed");
+  char *mb_cwd;
+  WCHAR wc_buf[MAX_STR_LEN];
+  if (GetCurrentDirectoryW(MAX_STR_LEN, wc_buf) >= MAX_STR_LEN
+      || !xiconv_wc2mb(XICONV_UTF8, wc_buf, &mb_cwd))
+    xerror("pf_getcwd/failed");
+  strcpy(buf, mb_cwd);
   return buf;
 }
 
 FILE *pf_fopen(char *fn, char *mode)
 {
-  char buf[MAX_STR_LEN];
-  if (!xmbtombacp(fn, buf)) return FALSE;
-  return fopen(buf, mode);
+  char *mb_fn;
+  if (!xiconv(XICONV_UTF8, XICONV_ANSI, fn, &mb_fn)) return FALSE;
+  return fopen(mb_fn, mode);
 }
 
 int pf_readdir(char *path, struct xbarray *dirs)
 {
-  char buf[MAX_STR_LEN];
-  WCHAR *wcfn, wcbuf[MAX_STR_LEN];
+  char *mb_file, mb_buf[MAX_STR_LEN];
+  LPWSTR wc_path;
   WIN32_FIND_DATAW data;
   HANDLE h;
-  xsprintf(buf, "%s\\*", path);
-  if (xmbtowc(buf, wcbuf) == 0) return FALSE;
-  if ((h = FindFirstFileW(wcbuf, &data)) == INVALID_HANDLE_VALUE) return FALSE;
+  xsprintf(mb_buf, "%s\\*", path);
+  if (!xiconv_mb2wc(XICONV_UTF8, mb_buf, &wc_path)) return FALSE;
+  if ((h = FindFirstFileW(wc_path, &data)) == INVALID_HANDLE_VALUE) return FALSE;
   while (TRUE) {
-    wcfn = data.cFileName;
-    if (xwctomb(wcfn, buf) == 0) return FALSE;
-    if (!(strcmp(buf, ".") == 0 || strcmp(buf, "..") == 0)) {
+    if (!xiconv_wc2mb(XICONV_UTF8, data.cFileName, &mb_file)) return FALSE;
+    if (!(strcmp(mb_file, ".") == 0 || strcmp(mb_file, "..") == 0)) {
       if (dirs->size != 0) xbarray_add(dirs, '\n');
-      xbarray_adds(dirs, buf);
+      xbarray_adds(dirs, mb_file);
     }
     if (FindNextFileW(h, &data) == 0) {
       switch (GetLastError()) {
-        case ERROR_NO_MORE_FILES: FindClose(h); return TRUE;
-        default: FindClose(h); return FALSE;
+        case ERROR_NO_MORE_FILES:
+          FindClose(h);
+          return TRUE;
+        default:
+          FindClose(h);
+          return FALSE;
       }
     }
   }
@@ -109,22 +122,21 @@ int pf_readdir(char *path, struct xbarray *dirs)
 
 int pf_mkdir(char *path)
 {
-  WCHAR wcbuf[MAX_STR_LEN];
-  if (xmbtowc(path, wcbuf) == 0) return FALSE;
-  return CreateDirectoryW(wcbuf, NULL);
+  LPWSTR wc_path;
+  if (!xiconv_mb2wc(XICONV_UTF8, path, &wc_path)) return FALSE;
+  return CreateDirectoryW(wc_path, NULL);
 }
 
 int pf_remove(char *fn)
 {
-  WCHAR wcbuf[MAX_STR_LEN];
-  if (xmbtowc(fn, wcbuf) == 0) return FALSE;
-  if (mode_p(fn, PF_DIR)) return RemoveDirectoryW(wcbuf);
-  return DeleteFileW(wcbuf);
+  LPWSTR wc_fn;
+  if (!xiconv_mb2wc(XICONV_UTF8, fn, &wc_fn)) return FALSE;
+  if (mode_p(fn, PF_DIR)) return RemoveDirectoryW(wc_fn);
+  return DeleteFileW(wc_fn);
 }
 
 int pf_chdir(char *dir)
 {
-  WCHAR wcbuf[MAX_STR_LEN];
-  if (xmbtowc(dir, wcbuf) == 0) return FALSE;
-  return SetCurrentDirectoryW(wcbuf);
+  LPWSTR wc_dir;
+  return xiconv_mb2wc(XICONV_UTF8, dir, &wc_dir) && SetCurrentDirectoryW(wc_dir);
 }
