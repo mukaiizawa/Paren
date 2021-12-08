@@ -627,16 +627,12 @@
           (write arg :end "")))))
 
 (function bin (x)
-  ; Returns a binary representation string of argument.
   (format "2x%b" x))
 
 (function oct (x)
-  ; Returns a octal representation string of argument.
   (format "8x%o" x))
 
 (function hex (x)
-  ; Returns a hexdecimal representation string of argument.
-  ; If argument is bytes, returns hexdecimal dump.
   (if (bytes? x)
       (with-memory-stream ($out)
         (doarray (i x) (write-bytes (format "%02x" i))))
