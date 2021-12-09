@@ -644,7 +644,6 @@
   (assert (! (string? (bytes 1)))))
 
 (built-in-function chr (i)
-  ; Returns an integer representing the Unicode code point of that character.
   (assert (= (chr 0x20) " "))
   (assert (= (chr 0x61) "a"))
   (assert (= (chr 0x376) "Ͷ"))
@@ -653,7 +652,6 @@
   (assert (= (chr 0x2123d) "𡈽")))
 
 (built-in-function ord (ch)
-  ; Returns the string representing a character whose Unicode code point is the integer i.
   (assert (= (ord " ") 0x20))
   (assert (= (ord "a") 0x61))
   (assert (= (ord "Ͷ") 0x376))
