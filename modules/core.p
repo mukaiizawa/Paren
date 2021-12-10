@@ -660,15 +660,13 @@
   (assert (= (ord "𡈽") 0x2123d)))
 
 (function wcwidth (s)
-  ; Returns the number of columns needed to represent the string.
-  (let (width 0)
-    (dostring (ch s)
-      (<- width (+ width (if (print? ch) 1
-                             (let (cp (ord ch))
-                               (if (<= 0xff61 cp 0xffdf) 1    ; Halfwidth Katakana
-                                   (<= 0x3000 cp 0xffe6) 2    ; Fullwidth characters
-                                   0))))))
-    width))
+  (apply + (map (f (ch)
+                  (if (print? ch) 1
+                      (let (cp (ord ch))
+                        (if (<= 0xff61 cp 0xffdf) 1    ; Halfwidth Katakana
+                            (<= 0x3000 cp 0xffe6) 2    ; Fullwidth characters
+                            0))))
+                (split s))))
 
 (built-in-function ascii? (s)
   ; Returns whether all characters in the string are ASCII.
