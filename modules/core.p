@@ -669,55 +669,38 @@
                 (split s))))
 
 (built-in-function ascii? (s)
-  ; Returns whether all characters in the string are ASCII.
-  ; If s is empty, returns nil.
   (assert (ascii? "abc"))
   (assert (! (ascii? "あいう"))))
 
 (built-in-function alnum? (s)
-  ; Returns whether all characters in the string are alphanumeric.
-  ; If s is empty, returns nil.
   (assert (alnum? "abc123"))
   (assert (! (alnum? " "))))
 
 (built-in-function alpha? (s)
-  ; Returns whether all characters in the string are alphabetic ASCII characters.
-  ; If s is empty, returns nil.
   (assert (alpha? "abc"))
   (assert (! (alpha? "123"))))
 
 (built-in-function digit? (s)
-  ; Returns whether all characters in the string are ASCII decimal digits.
-  ; If s is empty, returns nil.
   (assert (digit? "0123456789"))
   (assert (! (digit? "abc"))))
 
 (built-in-function space? (s)
-  ; Returns whether all characters in the string are whitespace.
-  ; If s is empty, returns nil.
   (assert (space? " \t\r\n"))
   (assert (! (space? ""))))
 
 (built-in-function print? (s)
-  ; Returns whether all characters in the string are printable.
-  ; If s is empty, returns nil.
   (assert (print? " "))
   (assert (! (print? "\e"))))
 
 (built-in-function lower? (s)
-  ; Returns whether all characters in the string are ASCII lowercase.
-  ; If s is empty, returns nil.
   (assert (lower? "abc"))
   (assert (! (lower? "ABC"))))
 
 (built-in-function upper? (s)
-  ; Returns whether all characters in the string are ASCII uppercase.
-  ; If s is empty, returns nil.
   (assert (upper? "ABC"))
   (assert (! (upper? "abc"))))
 
 (function title? (s)
-  ; Return whether the string s is a titlecased string and there is at least one character.
   (if (empty? s) nil
       (= (len s) 1) (upper? s)
       (&& (upper? (slice s 0 1))
