@@ -721,9 +721,6 @@
         " "))
 
 (function strstr (s pat :opt start)
-  ; Returns the position where the substring pat appears first in the string s.
-  ; If the string pat is not a substring of the string s, returns nil.
-  ; If start is specified, search for substring pat from start-th of the string s.
   (let (start (|| start 0) sa (array s) slen (len sa) pa (array pat) plen (len pa))
     (if (< (- slen start) 0) (raise ArgumentError "illegal start")
         (= plen 0) (return 0))
@@ -736,8 +733,6 @@
             (if (= pi plen) (return i))))))))
 
 (function strlstr (s pat)
-  ; Returns the position where the substring pat appears last in the string s.
-  ; If the string pat is not a substring of the string s, returns nil.
   (let (sa (array s) slen (len sa) pa (array pat) plen (len pa))
     (if (= plen 0) (return (-- slen)))
     (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (i (-- i))
