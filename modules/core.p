@@ -744,28 +744,6 @@
             (if (= pi plen) (return i))))))))
 
 (function format (fmt :rest args)
-  ; Returns formatted string whitch the string in the same way as C `sprintf`.
-  ;     %[FLAG...][WIDTH][.[PRECISION]]CONV
-  ;         FLAG -- an character, which modify the meaning of the conversion specification.
-  ;             + -- always print a sign for numeric values
-  ;             - -- pad with spaces on the right rather than the left (left-justify the field)
-  ;             <space> -- leave a space for elided sign in numbers
-  ;             0 -- pad with leading zeros rather than spaces
-  ;         WIDTH -- an unsigned integer, which gives the minimum field width.
-  ;         PRECISION -- an unsigned integer, which modifies the field width.
-  ;             d, o, x -- gives the minimum number of digits.
-  ;             e, f, g -- gives the number of digits to output after the radix.
-  ;             v, s -- gives the maximum number of bytes to be printed from a string in the s conversion specifiers.
-  ;         CONV -- the type of conversion
-  ;             v -- converts any argument to readable format.
-  ;             b -- converts an unsigned integers to unsigned binary format.
-  ;             o -- converts an unsigned integers to unsigned octal format.
-  ;             d -- converts a number to integer format.
-  ;             x -- converts an unsigned integers to unsigned hexadecimal format.
-  ;             f -- converts float to decimal notation.
-  ;             c -- converts an unsigned integer to a character represented by the corresponding Unicode code point.
-  ;             s -- converts bytes-like object to string.
-  ;             % -- print a '%' character; no argument is converted.
   (with-memory-stream ($out)
     (with-memory-stream ($in fmt)
       (let (rd (.new AheadReader)
