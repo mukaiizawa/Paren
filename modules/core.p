@@ -788,7 +788,6 @@
 ;; bytes & bytes-like.
 
 (built-in-function memlen (x)
-  ; Returns byte length of bytes-like object x.
   (assert (= (memlen "foo") 3)))
 
 (function prefix? (x prefix)
