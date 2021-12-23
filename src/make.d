@@ -17,7 +17,8 @@ st.o: st.c st.h object.h config.h std.h
 std.o: std.c config.h std.h
 xarray.o: xarray.c xarray.h config.h std.h
 xbarray.o: xbarray.c xbarray.h config.h std.h
-xiconv.u.o: xiconv.u.c
+xiconv.o: xiconv.c ip.h xbarray.h bi.h gc.h object.h xiconv.h config.h std.h
+xiconv.u.o: xiconv.u.c config.h std.h
 xiconv.w.o: xiconv.w.c xiconv.h config.h std.h
 xsleep.u.o: xsleep.u.c xsleep.h config.h std.h
 xsleep.w.o: xsleep.w.c xsleep.h config.h std.h

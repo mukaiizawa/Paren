@@ -87,7 +87,7 @@ defsp=ip.c
 defsp.wk: $(defsp)
 	cat $+ | grep ^DEFSP>$@
 
-defun+=ip.c bi.c os.c
+defun+=ip.c bi.c os.c xiconv.c
 defun.wk: $(defun)
 	cat $+ | grep ^DEFUN>$@
 
