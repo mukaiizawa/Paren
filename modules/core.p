@@ -791,12 +791,10 @@
   (assert (= (memlen "foo") 3)))
 
 (function prefix? (x prefix)
-  ; Returns whether the byte sequence x with the specified prefix.
   (&& (>= (memlen x) (memlen prefix))
       (memmem x prefix 0 (memlen prefix))))
 
 (function suffix? (x suffix)
-  ; Returns whether the byte sequence x with the specified suffix.
   (&& (>= (memlen x) (memlen suffix))
       (memmem x suffix (- (memlen x) (memlen suffix)))))
 
