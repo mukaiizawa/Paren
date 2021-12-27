@@ -799,14 +799,8 @@
       (memmem x suffix (- (memlen x) (memlen suffix)))))
 
 (built-in-function memmem (x b :opt start end)
-  ; Returns the position where the byte b appears first in the byte sequence x.
-  ; If the b is not appeared, returns nil.
-  ; If b is byte sequence, returns the position where the partial byte sequence appears first in the byte sequence x.
-  ; If start is specified, search from start-th of the byte sequence x.
-  ; If end is specified, search untile end-th of the byte sequence x.
-  (assert (= (memmem "012" 0x31 1) 1))
-  (assert (= (memmem "012" 0x31 0 3) 1))
-  (assert (= (memmem "012" 0x31 0 3) 1))
+  (assert (= (memmem "012" "1" 1) 1))
+  (assert (= (memmem "012" "1" 0 3) 1))
   (assert (= (memmem "012" "12" 0 3) 1)))
 
 (built-in-function memcpy (src src-i dst dst-i size)

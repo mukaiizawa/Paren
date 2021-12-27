@@ -921,53 +921,21 @@ DEFUN(memcpy)
 
 DEFUN(memmem)
 {
-  int b, s, e;
+  int s, e;
   object o, p;
   if (!bi_argc_range(argc, 2, 4)) return FALSE;
   if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
-  b = 0;
-  p = NULL;
-  argv = argv->cons.cdr;
-  switch (object_type(argv->cons.car)) {
-    case SINT:
-      if (!bi_cbyte(argv->cons.car, &b)) return FALSE;
-      break;
-    case SYMBOL:
-    case KEYWORD:
-    case BYTES:
-    case STRING:
-      p = argv->cons.car;
-      if (o->mem.size < p->mem.size) {
-        *result = object_nil;
-        return TRUE;
-      }
-      break;
-    default:
-      return FALSE;
-  }
+  if (!bi_bytes_like((argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
   if (argc < 3) s = 0;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
   if (argc < 4) e = o->mem.size;
   else if (!bi_cpint(argv->cons.cdr->cons.car, &e)) return FALSE;
-  if (!bi_range(0, s, e)) return FALSE;
-  if (!bi_range(0, e, o->mem.size)) return FALSE;
-  if (p == NULL) {
-    while (s < e) {
-      if (LC(o->mem.elt + s) == b) {
-        *result = sint(s);
-        return TRUE;
-      }
-      s++;
+  while (p->mem.size <= e - s) {
+    if (memcmp(o->mem.elt + s, p->mem.elt, p->mem.size) == 0) {
+      *result = sint(s);
+      return TRUE;
     }
-  } else {
-    while (s < e) {
-      if (s + p->mem.size > o->mem.size) break;
-      if (memcmp(o->mem.elt + s, p->mem.elt, p->mem.size) == 0) {
-        *result = sint(s);
-        return TRUE;
-      }
-      s++;
-    }
+    s++;
   }
   *result = object_nil;
   return TRUE;
