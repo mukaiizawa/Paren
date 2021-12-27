@@ -11,15 +11,15 @@
   )
 
 ; see mouse.c
-(<- $mouse.button '(:left :middle :right))
+(<- $mouse.buttons '(:left :middle :right))
 
 (function mouse.down (:opt button)
   (if (nil? button) (mouse.down :left)
-      (mouse.send (index $mouse.button button) 0)))
+      (mouse.send (index $mouse.buttons button) 0)))
 
 (function mouse.up (:opt button)
   (if (nil? button) (mouse.up :left)
-      (mouse.send (index $mouse.button button) 1)))
+      (mouse.send (index $mouse.buttons button) 1)))
 
 (function mouse.click (:opt button)
   (mouse.down button)
