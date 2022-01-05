@@ -787,43 +787,6 @@
 
 ;; bytes & bytes-like.
 
-(built-in-function memlen (x)
-  (assert (= (memlen "foo") 3)))
-
-(function prefix? (x prefix)
-  (&& (>= (memlen x) (memlen prefix))
-      (memmem x prefix 0 (memlen prefix))))
-
-(function suffix? (x suffix)
-  (&& (>= (memlen x) (memlen suffix))
-      (memmem x suffix (- (memlen x) (memlen suffix)))))
-
-(built-in-function memmem (x b :opt start end)
-  (assert (= (memmem "012" "1" 1) 1))
-  (assert (= (memmem "012" "1" 0 3) 1))
-  (assert (= (memmem "012" "12" 0 3) 1)))
-
-(built-in-function memcpy (src src-i dst dst-i size)
-  ; Copy size elements from the `src-i`th element of the src byte sequence to the dst byte sequence `dst-i`th element and beyond.
-  ; Even if the areas to be copied overlap, it operates correctly.
-  ; Returns dst.
-  (assert (let (s (bytes "foo") d (bytes "bar"))
-            (= (string (memcpy s 1 d 1 2)) "boo"))))
-
-(built-in-function memcat (x :rest args)
-  ; Returns the result of combining each args with x.
-  (assert (= (memcat "0" "1" "2") "012")))
-
-(built-in-function memcmp (x y)
-  ; If x is equals to y, returns 0.
-  ; If x is lexicographically less than y, returns -1.
-  ; If x is lexicographically greater than y, returns 1.
-  (assert (= (memcmp "bar" "foo") -1))
-  (assert (= (memcmp "foo" "bar") 1))
-  (assert (= (memcmp "foo" "foo") 0))
-  (assert (= (memcmp "fo" "foo") -1))
-  (assert (= (memcmp "foo" "fo") 1)))
-
 (built-in-function bytes (bytes/size :opt i size)
   ; If the first argument is an integer, returns a bytes of size the specified size.
   ; The element is cleared to 0.
@@ -839,6 +802,40 @@
   (assert (! (bytes? :foo)))
   (assert (! (bytes? "foo")))
   (assert (! (bytes? (array 3)))))
+
+(built-in-function memcat (x :rest args)
+  ; Returns the result of combining each args with x.
+  (assert (= (memcat "0" "1" "2") "012")))
+
+(built-in-function memcpy (src src-start dst dst-start size)
+  (assert (let (s (bytes "foo") d (bytes "bar"))
+            (= (string (memcpy s 1 d 1 2)) "boo"))))
+
+(built-in-function memcmp (x y)
+  ; If x is equals to y, returns 0.
+  ; If x is lexicographically less than y, returns -1.
+  ; If x is lexicographically greater than y, returns 1.
+  (assert (= (memcmp "bar" "foo") -1))
+  (assert (= (memcmp "foo" "bar") 1))
+  (assert (= (memcmp "foo" "foo") 0))
+  (assert (= (memcmp "fo" "foo") -1))
+  (assert (= (memcmp "foo" "fo") 1)))
+
+(built-in-function memlen (x)
+  (assert (= (memlen "foo") 3)))
+
+(built-in-function memmem (x b :opt start end)
+  (assert (= (memmem "012" "1" 1) 1))
+  (assert (= (memmem "012" "1" 0 3) 1))
+  (assert (= (memmem "012" "12" 0 3) 1)))
+
+(function prefix? (x prefix)
+  (&& (>= (memlen x) (memlen prefix))
+      (memmem x prefix 0 (memlen prefix))))
+
+(function suffix? (x suffix)
+  (&& (>= (memlen x) (memlen suffix))
+      (memmem x suffix (- (memlen x) (memlen suffix)))))
 
 ;; array.
 

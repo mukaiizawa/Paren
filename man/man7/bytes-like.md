@@ -9,6 +9,8 @@ The bytes-like type refers to the following types to which a bytes type function
 - keyword(7)
 - string(7)
 
+All types except bytes are immutable.
+
 The functions listed below are applicable to bytes-like type.
 
 - memcmp(3)
