@@ -804,7 +804,6 @@
   (assert (! (bytes? (array 3)))))
 
 (built-in-function memcat (x :rest args)
-  ; Returns the result of combining each args with x.
   (assert (= (memcat "0" "1" "2") "012")))
 
 (built-in-function memcpy (src src-start dst dst-start size)
