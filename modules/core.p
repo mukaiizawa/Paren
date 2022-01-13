@@ -788,11 +788,6 @@
 ;; bytes & bytes-like.
 
 (built-in-function bytes (bytes/size :opt i size)
-  ; If the first argument is an integer, returns a bytes of size the specified size.
-  ; The element is cleared to 0.
-  ; If the first argument is a byte sequence object, returns bytes corresponding to byte sequence x.
-  ; If i is supplied, returns bytes of partial byte sequence from i of x.
-  ; If size is supplied, returns string of partial byte sequence from i to (size -1) of x.
   (assert (= (len (bytes 1)) 1))
   (assert (= ([] (bytes 1) 0) 0)))
 

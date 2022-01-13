@@ -3,16 +3,16 @@ string, string! - make a string.
 
 # SYNOPSIS
 
-    (string [NAME [START [STOP]]])
+    (string [NAME [START [END]]])
     (string! BYTES)
 
 # DESCRIPTION
 These functions are create a string.
 
 # RETURN VALUE
-The function `string` returns a string consisting of the `START-th` through `(STOP - 1)-th` bytes-like object `NAME`.
+The function `string` returns a string consisting of the `START-th` through `(END - 1)-th` bytes-like object `NAME`.
 
-If `STOP` is omitted, the corresponding string from the `START` to the end is returned.
+If `END` is omitted, the corresponding string from the `START` to the end is returned.
 
 If `START` is omitted, a string whose name is `NAME` is returned.
 

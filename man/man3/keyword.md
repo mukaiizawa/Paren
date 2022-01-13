@@ -3,15 +3,15 @@ keyword - make a keyword.
 
 # SYNOPSIS
 
-    (keyword NAME [START [STOP]])
+    (keyword NAME [START [END]])
 
 # DESCRIPTION
 The function `keyword` make a keyword.
 
 # RETURN VALUE
-Returns a keyword consisting of the `START-th` through `(STOP - 1)-th` bytes-like object `NAME`.
+Returns a keyword consisting of the `START-th` through `(END - 1)-th` bytes-like object `NAME`.
 
-If `STOP` is omitted, the corresponding keyword from the `START` to the end is returned.
+If `END` is omitted, the corresponding keyword from the `START` to the end is returned.
 
 If `START` is omitted, a keyword whose name is `NAME` is returned.
 
