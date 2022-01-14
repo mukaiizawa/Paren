@@ -785,6 +785,20 @@
                           (raise ArgumentError (str "unexpected conversion specifier " conv)))))
                 (<- args (cdr args)))))))))
 
+(function strip (s :opt fn)
+  (rstrip (lstrip s fn) fn))
+
+(function lstrip (s :opt fn)
+  (let (i 0 a (array s) size (len a) fn (|| fn space?))
+    (while (&& (< i size) (fn ([] a i))) (<- i (++ i)))
+    (if (= i 0) s
+        (slice s i))))
+
+(function rstrip (s :opt fn)
+  (let (a (array s) i (len a) fn (|| fn space?))
+    (while (&& (>= i 0) (fn ([] a (-- i)))) (<- i (-- i)))
+    (slice s 0 i)))
+
 ;; bytes & bytes-like.
 
 (built-in-function bytes (bytes/size :opt i size)
