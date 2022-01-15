@@ -845,9 +845,6 @@
 ;; array.
 
 (built-in-function array (x)
-  ; Returns an array.
-  ; If the argument x is a number, returns an array initialized with nil of size x.
-  ; If the argument x is a sequence, returns the corresponding array.
   (assert (= ([] (array 1) 0) nil))
   (assert (= ([] (array (array 1)) 0) nil))
   (assert (= ([] (array "foo") 1) "o"))
