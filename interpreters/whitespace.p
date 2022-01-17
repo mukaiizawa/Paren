@@ -146,7 +146,7 @@
   (loop
     (catch (WSJump (f (e) nil))
       (let ((inst :opt arg) ([] code $ip))
-        (debug-write `(:ip ,$ip ,inst ,@(->list arg) :stack ,$stack :call-stack ,$call-stack :heap ,$heap))
+        (debug-write `(:ip ,$ip ,inst ,@(atom->list arg) :stack ,$stack :call-stack ,$call-stack :heap ,$heap))
         (if (== inst :push) (ws-apply inst 0 (f () (push! arg $stack)))
             (== inst :copy) (ws-apply inst (++ arg) (f () (push! ([] $stack arg) $stack)))
             (== inst :ndrop) (ws-apply inst (++ arg) (f () (cdr! $stack (slice $stack (++ arg)))))

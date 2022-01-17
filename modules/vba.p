@@ -88,7 +88,7 @@
 (method VBASheet .put (r val)
   ; Returns vba that sets the value val to the specified range.
   ; If val is a list, treat each element as a row.
-  (let (lines (->list val))
+  (let (lines (atom->list val))
     (with-vba-vars (var)
                    var " = \"" (car lines) "\"\n"
                    (join (map (f (x) (str var " = " var " & vblf & \"" x "\"\n"))

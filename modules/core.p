@@ -265,7 +265,7 @@
   (if (cons? x) true
       (nil? x)))
 
-(function ->list (x)
+(function atom->list (x)
   (if (list? x) x
       (list x)))
 

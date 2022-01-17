@@ -74,7 +74,7 @@
         (raise SyntaxError (str "illegal token " next)))))
 
 (method BasicLexer .lex ()
-  (let ((key :opt val) (->list (.lex0 self)))
+  (let ((key :opt val) (atom->list (.lex0 self)))
     (&key! self key)
     (&val! self val)
     key))
