@@ -54,7 +54,7 @@
                      (if (atom? x) x
                          (let ((ope :rest args) x)
                            (str ope "(" (join (map parse-expr args) ", ") ")")))))
-    (join (map parse-expr (atom->list expr)) ", ")))
+    (join (map parse-expr (->list expr)) ", ")))
 
 (function db.parse-cond (expr)
   (if (atom? expr) (db.sqlstr expr)
@@ -81,7 +81,7 @@
                        (if (= (cadr expr) :asc) (group-by (cddr expr) (cons (car expr) acc))
                            (= (cadr expr) :desc) (group-by (cddr expr) (cons (str (car expr) " desc") acc))
                            (group-by (cdr expr) (cons (car expr) acc))))))
-    (join (group-by (atom->list expr) nil) ", ")))
+    (join (group-by (->list expr) nil) ", ")))
 
 (function db.parse-value-expr (expr)
   (if (atom? expr) (db.sqlstr expr)
@@ -93,16 +93,16 @@
   ; If multiple tables are specified, inner join is performed.
   ; In that case, it is necessary to explicitly write the join condition in the where clause.
   (str "select " (db.parse-select column-names)
-       " from "(join (atom->list table-names) ", ")
+       " from "(join (->list table-names) ", ")
        (if where (str " where" (db.parse-cond where)))
-       (if group-by (str " group by " (join (atom->list group-by) ", ")))
+       (if group-by (str " group by " (join (->list group-by) ", ")))
        (if having (str " having " (db.parse-cond having)))
        (if order-by (str " order by " (db.parse-order-by order-by)))
        ";"))
 
 (function db.insert-into (table-name column-names values)
   ; Returns the insert query string.
-  (str "insert into " table-name " (" (join (atom->list column-names) ", ") ") "
+  (str "insert into " table-name " (" (join (->list column-names) ", ") ") "
        "values (" (join (map db.sqlstr values) ", ") ");"))
 
 (function db.update-set (table-name column-names values :opt cond)
@@ -116,7 +116,7 @@
                         (.write-bytes mem (db.parse-value-expr (car values)))
                         (gen-set (cdr column-names) (cdr values) mem)))))
     (str "update " table-name
-         " set " (gen-set (atom->list column-names) (atom->list values) (.new MemoryStream))
+         " set " (gen-set (->list column-names) (->list values) (.new MemoryStream))
          (if cond (str " where" (db.parse-cond cond)))
          ";")))
 

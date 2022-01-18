@@ -3,7 +3,7 @@
 (function write-table (s e get-bytes)
   (for (i s digit 0) (<= i e) (i (++ i) digit (% i 0x10))
     (if (= digit 0) (write-bytes (format "0x%02x " i)))
-    (map write-byte (atom->list (get-bytes i)))
+    (map write-byte (->list (get-bytes i)))
     (if (= digit 0x0f) (write-byte 0x0a)
         (write-byte 0x20)))
   (write-line))

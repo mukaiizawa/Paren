@@ -74,7 +74,7 @@
         (raise SyntaxError (str "illegal token " next)))))
 
 (method BasicLexer .lex ()
-  (let ((key :opt val) (atom->list (.lex0 self)))
+  (let ((key :opt val) (->list (.lex0 self)))
     (&key! self key)
     (&val! self val)
     key))
@@ -611,5 +611,5 @@
     (if (nil? args) (raise ArgumentError "require basic source file")
         (begin
           (load-code (car args))
-          (if (.get op "i") (foreach write (array->list $code))
+          (if (.get op "i") (doarray (x $code) (write x))
               (interpret))))))

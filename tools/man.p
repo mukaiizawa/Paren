@@ -12,7 +12,7 @@
   (with-open ($in $man-indexes :read)
     (let (indexes (collect read))
       (return (if (nil? sections) indexes
-                  (select (f (x) (in? (car x) (atom->list sections)))
+                  (select (f (x) (in? (car x) (->list sections)))
                           indexes))))))
 
 (function man-dir? (dir)

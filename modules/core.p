@@ -265,7 +265,7 @@
   (if (cons? x) true
       (nil? x)))
 
-(function atom->list (x)
+(function ->list (x)
   (if (list? x) x
       (list x)))
 
@@ -279,7 +279,7 @@
 
 (function split (s :opt separator)
   (if (empty? s) nil
-      (nil? separator) (array->list (array s))
+      (nil? separator) (list... s)
       (let (i 0 lis nil chars nil
               sa (array s) salen (len sa)
               da (array separator) dalen (len da) end (- salen dalen)
@@ -854,13 +854,6 @@
   (assert (array? (array 3)))
   (assert (! (array? (bytes 3)))))
 
-(function array->list (x)
-  ; Returns a list containing all of the elements in x.
-  (let (rec (f (i acc)
-              (if (< i 0) acc
-                  (rec (-- i) (cons ([] x i) acc)))))
-    (rec (-- (len x)) nil)))
-
 ;; dictionary.
 
 (built-in-function dict ()
@@ -879,6 +872,13 @@
                 (= (keys d) '(:foo))))))
 
 ;; sequence
+
+(function list... (seq)
+  ; Returns list containing all of the elements in seq.
+  (let (lis nil)
+    (dotimes (i (len seq))
+      (push! ([] seq i) lis))
+    (reverse! lis)))
 
 (built-in-function concat (:rest args)
   ; Returns a sequence of concatenated arguments.

@@ -4,7 +4,7 @@
 (import :man (.resolve $paren-home "tools"))
 
 (function lhs (pages :opt ommit)
-  (let (val (join (concat pages (atom->list ommit)) ", "))
+  (let (val (join (concat pages (->list ommit)) ", "))
     (if (&& (cdr pages) (> (len val) 20)) (lhs (butlast pages) "...")
         val)))
 
