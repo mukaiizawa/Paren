@@ -114,7 +114,7 @@
   (len (&text self)))
 
 (method Re .subtext (start :opt end)
-  (let (text (array->list (slice (&text self) start (|| end (.text-length self)))))
+  (let (text (list... (slice (&text self) start (|| end (.text-length self)))))
     (if (nil? text) ""
         (apply memcat text))))
 
