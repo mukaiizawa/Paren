@@ -11,9 +11,9 @@
   (assert (.file? $man-indexes))
   (with-open ($in $man-indexes :read)
     (let (indexes (collect read))
-      (return (if (nil? sections) indexes
-                  (select (f (x) (in? (car x) (->list sections)))
-                          indexes))))))
+      (if (nil? sections) indexes
+          (select (f (x) (in? (car x) (->list sections)))
+                  indexes)))))
 
 (function man-dir? (dir)
   ; Returns whether dir is a manual directory.

@@ -24,10 +24,7 @@
             (if (nil? cs) (raise SyntaxError "missing close bracket")
                 (<- pc (pop! cs))))))))
 
-(function load-program (file)
-  (with-open ($in file :read)
-    (return (read-bytes))))
-
 (function! main (args)
   (if (nil? args) (raise ArgumentError "required souce file")
-      (interpret (load-program (car args)))))
+      (with-open ($in (car args) :read)
+        (interpret (read-bytes)))))

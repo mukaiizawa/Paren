@@ -10,8 +10,8 @@
     (let (line (read-line) (pages one-line-desc) (man-parse-name line))
       (while (<- line (read-line))
         (if (= line "# SEE ALSO") (break)))
-      (return (cons (car pages)
-                    (map (f (x) (slice x 2)) (collect read-line)))))))
+      (cons (car pages)
+            (map (f (x) (slice x 2)) (collect read-line))))))
 
 (function collect-dependencies (root)
   ;; Returns the list like a `(src dst ...) ...`.

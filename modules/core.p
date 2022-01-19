@@ -1552,7 +1552,7 @@
   ; Reads the contents of the file corresponding to the receiver.
   ; Returns it as a list.
   (with-open ($in self :read)
-    (return (collect read-line))))
+    (collect read-line)))
 
 (method Path .to-s ()
   ; Returns a string representation of the receiver.
@@ -2364,7 +2364,7 @@
 (macro with-open ((sym p mode) :rest body)
   ; Create file stream context.
   ; The file stream is guaranteed to be closed when exiting the context.
-  ; Returns nil.
+  ; Returns evaluation results for expression body.
   (with-gensyms (gsym)
     (list let (list gsym nil)
           (list unwind-protect
@@ -2404,8 +2404,8 @@
 
 (function load (file)
   (with-open ($in file :read)
-    (foreach eval (collect read)))
-  true)
+    (foreach eval (collect read))
+    true))
 
 (function import (key :opt dir)
   (if (in? key $import) key

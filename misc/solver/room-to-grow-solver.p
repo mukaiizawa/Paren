@@ -74,6 +74,7 @@
      (write-line)))
 
 (class BackTrackSignal (Error))
+(method BackTrackSignal .init () self)
 
 (macro head-and-body-vertexes ()
   '(concat $head-vertexes $body-vertexes))
@@ -179,7 +180,7 @@
 
 (function load-map (file-name)
   (with-open ($in file-name :read)
-    (return (read))))
+    (read)))
 
 (function transform-coods (p)
   (map (f (x) (++ (* x 2))) p))

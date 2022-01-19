@@ -617,6 +617,7 @@ static void pop_unwind_protect_frame(void)
   object body;
   body = get_frame_var(fp, 0);
   pop_frame();
+  gen1(QUOTE_FRAME, reg[0]);
   gen_eval_sequential_frame(body);
 }
 

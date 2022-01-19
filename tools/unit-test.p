@@ -16,7 +16,7 @@
 
 (function testable? (x)
   (with-open ($in x :read)
-    (return (some? testable-main? (collect read)))))
+    (some? testable-main? (collect read))))
 
 (function paren-file? (x)
   (&& (.file? x) (= (.suffix x) "p")))
