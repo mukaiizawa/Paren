@@ -857,7 +857,6 @@
 ;; dictionary.
 
 (built-in-function dict ()
-  ; Returns an empty dictionary.
   )
 
 (built-in-function dict? (x)
