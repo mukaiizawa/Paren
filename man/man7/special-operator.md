@@ -25,3 +25,5 @@ The complete list of the special operator is listed in `SEE ALSO`.
 - return(3)
 - throw(3)
 - unwind-protect(3)
+- data-types(7)
+- operator(7)

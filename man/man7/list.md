@@ -1,8 +1,8 @@
 # NAME
-list - list type.
+list - list data type.
 
 # DESCRIPTION
-A list is a cons type or symbol `nil`.
+A list data type is a cons data type or symbol `nil`.
 
 Lists are one of Paren's major data structures, and Paren source code is made of lists.
 
@@ -16,3 +16,4 @@ Thus, Paren programs can manipulate source code as a data structure, giving rise
 - nil(3)
 - association-list(7)
 - cons(7)
+- data-types(7)

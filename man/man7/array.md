@@ -1,18 +1,28 @@
 # NAME
-array - array type.
+array - array data type.
 
 # DESCRIPTION
-An array contains objects arranged according to a Cartesian coordinate system.
+An array data type is a data structure consisting of a collection of elements (values or variables), each identified by at least one array index or key. 
 
-Create by specifying the size with the `array(3)` function.
-
-Elements can be referenced and updated by calling the `[](3)` function.
-
-Any data type can be treated as a value.
-
-# NOTES
 Since the array is guaranteed to have contiguous memory, any element can be accessed with `O(1)`.
 
+The array can use the functions listed in `SEE ALSO` section, and can also use the functions supported by `sequence` and `collection` api.
+
+Any data type can be treated as a elements.
+
+# EXAMPLES
+
+    ) (<- a (array 3))
+    #[ nil nil nil ]
+    ) ([] a 0 :foo)
+    :foo
+    ) ([] a 1 'bar)
+    bar
+    ) ([] a 0)
+    :foo
+
 # SEE ALSO
-- [](3)
 - array(3)
+- collection(7)
+- data-types(7)
+- sequence(7)

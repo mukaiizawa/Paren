@@ -2,9 +2,9 @@
 environment - set of bindings.
 
 # DESCRIPTION
-A binding is an association between a symbol and that which the symbol denotes.
+An environment is a collection of associations between a symbol and what that symbol represents.
 
-Bindings are established by particular special operators.
+Environment are established by particular special operators.
 
 A single name can simultaneously have more than one associated binding per environment.
 

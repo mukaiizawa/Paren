@@ -1,8 +1,8 @@
 # NAME
-function - function type.
+function - function data type.
 
 # DESCRIPTION
-A function is a sub-program that can be called by code external (or internal in the case of recursion) to the function.
+A function data type is a sub-program that can be called by code external (or internal in the case of recursion) to the function.
 
 Like the program itself, a function is composed of a sequence of expression called the function body.
 
@@ -12,4 +12,5 @@ In Paren, functions are first-class objects, so it can also be given to the argu
 
 # SEE ALSO
 - function(3)
+- data-types(7)
 - higher-order-function(7)

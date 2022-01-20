@@ -1,24 +1,17 @@
 # NAME
-sequence - sequence type.
+sequence - sequence data type.
 
 # DESCRIPTION
-The types listed below are called `sequences`.
+The sequence data type refers to the following data types.
 
-- array(7)
-- bytes(7)
-- list(7)
-- string(7)
+- array
+- bytes
+- list
+- string
 
-The functions in the following list are supported by sequence.
+Everything except `string` is mutable.
 
-- concat(3)
-- last(3)
-- list...(3)
-- slice(3)
-- sort!(3)
-- swap!(3)
-
-Everything except string is mutable.
+In the `sequence`, functions such as those listed in the `SEE ALSO` section are supported.
 
 # SEE ALSO
 - butlast(3)

@@ -1,15 +1,9 @@
 # NAME
-atom - atom type.
+atom - atom data type.
 
 # DESCRIPTION
-An atom is any type that is not a cons type.
+An atom data type is any data type that is not a cons data type.
 
 # SEE ALSO
-- ->list(3)
-- atom?(3)
-- cons?(3)
-- list(3)
-- list?(3)
-- nil(3)
 - cons(7)
-- list(7)
+- data-types(7)

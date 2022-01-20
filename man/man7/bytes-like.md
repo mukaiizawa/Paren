@@ -1,25 +1,17 @@
 # NAME
-bytes-like - bytes-like type.
+bytes-like - bytes-like data type.
 
 # DESCRIPTION
-The bytes-like type refers to the following types to which a bytes type function can be applied.
+The bytes-like data type refers to the following data types.
 
-- bytes(7)
-- symbol(7)
-- keyword(7)
-- string(7)
+- bytes
+- symbol
+- keyword
+- string
 
-All types except bytes are immutable.
+All data types except bytes are immutable.
 
-The functions listed below are applicable to bytes-like type.
-
-- memcmp(3)
-- memcpy(3)
-- memlen(3)
-- memmem(3)
-- memcat(3)
-- prefix?(3)
-- suffix?(3)
+In the bytes-like, functions such as those listed in the `SEE ALSO` section are supported.
 
 # SEE ALSO
 - memcat(3)
@@ -33,3 +25,4 @@ The functions listed below are applicable to bytes-like type.
 - keyword(7)
 - string(7)
 - symbol(7)
+- data-types(7)
