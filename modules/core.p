@@ -864,7 +864,6 @@
   (assert (! (dict? (array 1)))))
 
 (built-in-function keys (d)
-  ; Returns a list of keys contained in this dictionary.
   (assert (let (d (dict))
             (&& (nil? (keys d))
                 (= ([] d :foo 'foo) 'foo)
