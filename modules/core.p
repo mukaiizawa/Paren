@@ -872,7 +872,6 @@
 ;; sequence
 
 (function list... (seq)
-  ; Returns list containing all of the elements in seq.
   (let (lis nil)
     (dotimes (i (len seq))
       (push! ([] seq i) lis))
