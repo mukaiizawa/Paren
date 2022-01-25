@@ -878,7 +878,6 @@
     (reverse! lis)))
 
 (built-in-function concat (:rest args)
-  ; Returns a sequence of concatenated arguments.
   (assert (nil? (concat)))
   (assert (nil? (concat nil)))
   (assert (nil? (concat nil nil)))
