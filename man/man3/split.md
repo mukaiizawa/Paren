@@ -22,14 +22,27 @@ If you want to split using a regular expression, refer to the `re(3)` module.
 
     ) (split "")
     nil
+    
     ) (split "foo")
     ("f" "o" "o")
+    
     ) (split "foo" ":")
     ("foo")
+    
     ) (split "foo::bar::buzz" "::")
     ("foo" "bar" "buzz")
+    
     ) (split "foo::::bar::buzz" "::")
     ("foo" "" "bar" "buzz")
+
+    ) (split ",foo" ",")
+    ("" "foo")
+    
+    ) (split "foo," ",")
+    ("foo" "")
+    
+    ) (split ",foo," ",")
+    ("" "foo" "")
 
 # SEE ALSO
 - join(3)
