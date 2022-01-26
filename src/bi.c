@@ -1289,14 +1289,14 @@ DEFUN(slice)
       return cons_slice(o, start, stop, result);
     case BYTES:
       if (stop == -1) stop = o->mem.size;
-      else if (!bi_range(0, stop, o->mem.size)) return FALSE;
+      if (!bi_range(start, o->mem.size, stop)) return FALSE;
       *result = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
       return TRUE;
     case STRING:
       return str_slice(o, start, stop, result);
     case ARRAY:
       if (stop == -1) stop = o->array.size;
-      else if (!bi_range(0, stop, o->array.size)) return FALSE;
+      if (!bi_range(start, o->array.size, stop)) return FALSE;
       *result = gc_new_array_from(o->array.elt + start, stop - start);
       return TRUE;
     default:
