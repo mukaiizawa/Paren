@@ -889,9 +889,6 @@
   (assert (= (concat (array 1) (array 2)) (array 3))))
 
 (built-in-function slice (seq :opt start stop)
-  ; Returns a subsequence of sequence x.
-  ; If start is omitted, it defaults to 0.
-  ; If stop is omitted, it defaults to `(len seq)`.
   (assert (= (slice nil) nil))
   (assert (= (slice nil 0) nil))
   (assert (= (slice nil 0 1) nil))
