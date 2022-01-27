@@ -15,12 +15,12 @@
   (write-line (str (.to-s self) ": choose " ([] $choices choice)))
   choice)
 
-(class User (Player))
+(class Man (Player))
 
-(method User .init (name)
+(method Man .init (name)
   (&name! self name))
 
-(method User .choice ()
+(method Man .choice ()
   (write-bytes (str (.to-s self) ": r(ock), p(aper), s(cissors) >> "))
   (let (choice (choice->index (read-line)))
     (if (nil? choice)
@@ -48,7 +48,7 @@
   (let (line (read-line))
     (if (= line "0") (begin
                        (write-bytes "your name>> ")
-                       (.init (.new User) (read-line)))
+                       (.init (.new Man) (read-line)))
         (= line "1") (.new Computer)
         (= line "2") (.new RockComputer)
         (begin
