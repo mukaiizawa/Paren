@@ -2,6 +2,14 @@
 lang - Paren language specification.
 
 # DESCRIPTION
+This manual is primarily intended for language implementers.
+
+Language users are advised to refer to `paren-tutorial(7)`.
+
+This document describes the basic concepts of the language and the knowledge required to parse the file `$paren-home/modoles/core.p`, which is loaded at startup.
+
+Therefore, the reader macro defined in the evaluation of the startup file are not included in the description. The extensibility of the language, by the language itself, is one of the most important features of Paren.
+
 ## Paren
 Paren is a programming languages that written by S-expression and evaluates S-expressions.
 
@@ -91,7 +99,8 @@ If '\' is described in a fixed phrase or a character group, it means the followi
 
 Exceptions are `\t` for tab characters, `\n` for newline characters.
 
-## Lexical rules
+## Reading rules
+### Lexical rules
 The lexical rules determines how a character sequence is split into a sequence of lexemes.
 
 This rule is the minimum rule required to read core.p. This is because paren can overwrite the reader by paren itself.
@@ -115,7 +124,7 @@ This rule is the minimum rule required to read core.p. This is because paren can
     digit = [0-9]
     sign = [+\-]
 
-## Syntax rules
+### Syntax rules
 The syntax rules describes the syntax of syntactic datain terms of a sequence of lexemes.
 
 It is possible to write a comment or a space arbitrarily at a break point in the syntax rules.
@@ -126,6 +135,35 @@ It is possible to write a comment or a space arbitrarily at a break point in the
     abbrev-prefix = '\''
     atom = symbol | keyword | number | string
 
+## Evaluation rules
+If the S-expression is one of the following, it is considered evaluable.
+
+- Atom
+- List and the first element is one of the following
+    - Function
+    - Macro
+    - Special operator
+
+### Atom
+If it is not a symbol, it returns itself.
+
+Otherwise, it returns a value that is resolved from the current environment.
+
+### List
+See the manual for implementation specifications of special operators and some of the built in functions.
+
+#### Special operator
+Perform a special evaluation for each individual operator.
+
+#### Function
+Apply it to the function after evaluating every second and subsequent element of the list.
+
+Built-in functions follow the same rules.
+
+### Macro
+Evaluate the resulting S-expressions after applying the second and subsequent elements to the macro.
+
 # SEE ALSO
-- paren-tutorial(7)
 - data-types(7)
+- object-system(7)
+- paren-tutorial(7)
