@@ -907,9 +907,6 @@
             (= (slice s 0 2) "ab"))))
 
 (function swap! (seq i j)
-  ; Swap the i-th and j-th elements of the sequence seq.
-  ; Argument sequence changes destructively.
-  ; Returns seq.
   (let (t ([] seq i))
     ([] seq i ([] seq j))
     ([] seq j t)
