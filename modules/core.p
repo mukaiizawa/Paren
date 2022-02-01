@@ -913,10 +913,6 @@
     seq))
 
 (function sort! (seq :key sorter key start end)
-  ; Sort the sequence seq.
-  ; Argument sequence changes destructively.
-  ; If you want to keep the original sequence, copy it like `(sort! (slice seq))`.
-  ; Returns sorted sequence.
   (let (sort-range!
          (f (seq start end)
            (let (i start j end x (key ([] seq start)))
