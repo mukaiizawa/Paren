@@ -932,17 +932,15 @@
     seq))
 
 (function first (x)
-  ; Same as `(car (last-cons x))`.
   ([] x 0))
 
 (function last (x)
-  ; Same as `(car (last-cons x))`.
   (if (list? x) (car (last-cons x))
       ([] x (-- (len x)))))
 
-(function butlast (x)
+(function butlast (x :opt n)
   ; Returns a list excluding the last element of the specified list l.
-  (slice x 0 (-- (len x))))
+  (slice x 0 (|| n (-- (len x)))))
 
 ;; collection
 
