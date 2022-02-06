@@ -939,8 +939,8 @@
       ([] x (-- (len x)))))
 
 (function butlast (x :opt n)
-  ; Returns a list excluding the last element of the specified list l.
-  (slice x 0 (|| n (-- (len x)))))
+  (if (nil? x) x
+      (slice x 0 (- (len x) (|| n 1)))))
 
 ;; collection
 
