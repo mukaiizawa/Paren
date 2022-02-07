@@ -945,11 +945,6 @@
 ;; collection
 
 (built-in-function [] (collection key :opt val)
-  ; Returns the value corresponding to key of the collection.
-  ; If val is specified, update the value corresponding to key.
-  ; If the argument collection is a list and the index key is is out of range, returns nil.
-  ; Error if the argument collection is not a list and the index key is out of range.
-  ; Error if collection is an immutable collection and val is specified.
   (assert (= ([] '(0 1 2) 0) 0))
   (assert (= ([] (array 1) 0) nil))
   (assert (= ([] "foo" 0) "f"))
