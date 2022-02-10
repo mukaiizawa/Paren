@@ -956,7 +956,6 @@
                 (= ([] b 0) 0xff)))))
 
 (built-in-function in? (x collection)
-  ; Returns whether element x exists in the collection.
   (assert (in? 1 '(1 2 3)))
   (assert (! (in? 0 '(1 2 3))))
   (assert (in? 0x00 (bytes 1)))
