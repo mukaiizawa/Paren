@@ -980,7 +980,6 @@
       (raise ArgumentError "expected collection")))
 
 (built-in-function len (collection)
-  ; Returns the length of the collection.
   (assert (= (len nil) 0))
   (assert (= (len '(1)) 1))
   (assert (= (len (array 1)) 1))
