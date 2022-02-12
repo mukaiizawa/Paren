@@ -987,8 +987,7 @@
   (assert (= (len "αβγ") 3)))
 
 (function empty? (collection)
-  ; Returns whether the collection is zero-length or nil.
-  (|| (nil? collection) (= (len collection) 0)))
+  (= (len collection) 0))
 
 ;; comparable.
 
