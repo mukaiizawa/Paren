@@ -1012,11 +1012,9 @@
   (every-adjacent? (f (x y) (! (< x y))) args))
 
 (function max (:rest args)
-  ; Returns maximum value from argument.
   (reduce (f (x y) (if (> x y) x y)) args))
 
 (function min (:rest args)
-  ; Returns minimum value from argument.
   (reduce (f (x y) (if (< x y) x y)) args))
 
 ;; os.
