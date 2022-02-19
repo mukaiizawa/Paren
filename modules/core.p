@@ -1019,13 +1019,7 @@
 
 ;; os.
 
-(built-in-function fp (fd)
-  ; Returns the file pointer associated with the file descriptor.
-  ; The argument fd can specify bellow value.
-  ;      0 -- stdin
-  ;      1 -- stdout
-  ;      2 -- stderr
-  )
+(built-in-function fp (fd))
 
 (built-in-function fopen (filename mode)
   ; Opens the file whose name is the string pointed to by filename and associates a stream with it.
