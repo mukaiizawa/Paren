@@ -63,3 +63,4 @@ In addition, the following pages may be helpful.
 
 - Ken'ichi Tokuoka
 - Kohei Kai
+- Miki Yonemura
