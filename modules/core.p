@@ -2368,6 +2368,7 @@
 (built-in-function exit (status-cd))
 
 (function load (file)
+  (if (keyword? file) (<- file (str file ".p")))
   (with-open ($in file :read)
     (foreach eval (collect read))
     true))

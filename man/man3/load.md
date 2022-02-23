@@ -12,6 +12,8 @@ The macro `with-open(3)` is called to open the file, so the value you can specif
 
 Unlike `import(3)`, it loads as many times as it is called for the same `FILE`.
 
+If `FILE` is a keyword data type, as in the function `import`, it will be read with the extension `p`.
+
 # RETURN VALUE
 Returns the `true`.
 
