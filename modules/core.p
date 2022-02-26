@@ -1020,16 +1020,7 @@
 ;; os.
 
 (built-in-function fp (fd))
-
-(built-in-function fopen (filename mode)
-  ; Opens the file whose name is the string pointed to by filename and associates a stream with it.
-  ; Returns file poiner for the opened file.
-  ; The argument mode can specify bellow value.
-  ;      0 -- Open file for reading.
-  ;      1 -- Open file for writing.
-  ;      2 -- Open file for appending
-  ;      3 -- Open file for reading and writing.
-  )
+(built-in-function fopen (filename mode))
 
 (built-in-function fgetc (fp)
   ; Read byte from the stream associated with the file pointer fp.
@@ -1067,10 +1058,7 @@
   ; Returns the current value of the file position indicator for the stream pointed to by fp.
   )
 
-(built-in-function fclose (fp)
-  ; Flushes the stream pointed to by fp (writing any buffered output data) and closes the underlying file descriptor.
-  ; Returns nil.
-  )
+(built-in-function fclose (fp))
 
 (built-in-function stat (filename)
   ; Returns the file status indicated filename.
