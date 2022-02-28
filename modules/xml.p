@@ -46,7 +46,7 @@
           (string? next) (begin (foreach write-bytes (list "='" next "'")) (<- attrs (cdr attrs)))
           (assert nil)))))
 
-(function xml.write (x)
+(function xml.write-element (x)
   ; Returns a list representation of xml as a string.
   (if (atom? x) (xml.write1 x)
       (let ((name :opt attrs :rest children) x)
@@ -56,16 +56,20 @@
             (&& attrs (|| (atom? attrs) (! (keyword? (car attrs)))))
             (begin
               (foreach write-bytes (list "<" name  ">"))
-              (foreach xml.write (cons attrs children))
+              (foreach xml.write-element (cons attrs children))
               (foreach write-bytes (list "</" name  ">")))
             (begin
               (write-bytes "<") (write-bytes name) (xml.write-attr attrs) (write-bytes ">")
-              (foreach xml.write children)
+              (foreach xml.write-element children)
               (foreach write-bytes (list "</" name  ">")))))))
+
+(function xml.write (x)
+  (xml.write-element x)
+  (write-line))
 
 (function xml->str (x)
   (with-memory-stream ($out)
-    (xml.write x)))
+    (xml.write-element x)))
 
 ; reader
 
