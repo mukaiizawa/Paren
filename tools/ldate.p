@@ -10,7 +10,7 @@
   ;     -l use long listing format
   (let (dt (datetime y m 1))
     (dotimes (i (.monthlen dt))
-      (write-bytes (.date.to-s dt))
+      (write-bytes (.to-s.date dt))
       (if long?  (write-line (str " " (.day-week.to-s dt)))
           (write-line))
       (<- dt (.offset dt :days 1)))))
