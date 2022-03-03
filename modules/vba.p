@@ -152,7 +152,7 @@
 (macro with-vba-vars ((:rest vars) :rest exprs)
   ; Create a context that uses vba variables.
   ; All evaluation results of argument expressions must be vba.
-  (let (vbasym (f () (str "G" (slice (str (gensym)) 3))))
+  (let (vbasym (f () (str "G" (slice (str (symbol)) 3))))
     `(let ,(reduce (f (x y) `(,y ,(vbasym) ,@x)) (cons nil vars))
        (str ,@(reduce (f (x y) `("Dim " ,y "\n" ,@x)) (cons nil vars))
             ,@exprs))))
