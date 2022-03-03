@@ -47,6 +47,9 @@
   ; Returns vba that activates the sheet.
   (str (.to-vbastr self) ".Activate\n"))
 
+(method VBASheet .name ()
+  (str (.to-vbastr self) ".Name"))
+
 (method VBASheet .hide ()
   ; Returns vba to hide this sheet.
   (str (.to-vbastr self) ".Visible = xlVeryHidden\n"))
@@ -59,7 +62,7 @@
   ; Returns vba to show this sheet.
   (with-vba-vars (x)
                  (str "For Each " x " In Worksheets\n"
-                      "If " x ".Name = \"" (&name self) "\" Then " x ".Delete: Exit For\n"
+                      "If " (.name x) " = \"" (&name self) "\" Then " x ".Delete: Exit For\n"
                       "Next\n")))
 
 (method VBASheet .rename (to)
