@@ -138,20 +138,20 @@
             (&& (= m 2) (= d 23)))
         (&& monday? (.public-holiday? (.offset self :days -1))))))
 
-(method DateTime .date.to-s ()
+(method DateTime .to-s.date ()
   (format "%d-%02d-%02d" (&year self) (&month self) (&day self)))
 
-(method DateTime .time.to-s ()
+(method DateTime .to-s.time ()
   (format "%02d:%02d:%02d" (&hour self) (&minute self) (&second self)))
 
-(method DateTime .datetime.to-s ()
-  (str (.date.to-s self) " " (.time.to-s self)))
+(method DateTime .to-s.datetime ()
+  (str (.to-s.date self) " " (.to-s.time self)))
 
-(method DateTime .day-week.to-s ()
+(method DateTime .to-s.day-week ()
   ([] '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat") (.day-week self)))
 
 (method DateTime .to-s ()
-  (join (list (.date.to-s self) (.day-week.to-s self) (.time.to-s self)) " "))
+  (join (list (.to-s.date self) (.to-s.day-week self) (.to-s.time self)) " "))
 
 (function! main (args)
   (let (dt (.init (.new DateTime) (- 1407737889 (utcoffset))))    ; 2014-08-11 Mon 06:18:09
@@ -164,8 +164,8 @@
     (assert (= (.second dt) 9))
     (assert (= (.unix-time dt) (- 1407737889 (utcoffset)))))
   (let (dt (datetime 2020 08 06 12 10 30))
-    (assert (= (.date.to-s dt) "2020-08-06"))
-    (assert (= (.time.to-s dt) "12:10:30"))
-    (assert (= (.datetime.to-s dt) "2020-08-06 12:10:30"))
-    (assert (= (.day-week.to-s dt) "Thu"))
+    (assert (= (.to-s.date dt) "2020-08-06"))
+    (assert (= (.to-s.time dt) "12:10:30"))
+    (assert (= (.to-s.datetime dt) "2020-08-06 12:10:30"))
+    (assert (= (.to-s.day-week dt) "Thu"))
     (assert (= (.to-s dt) "2020-08-06 Thu 12:10:30"))))

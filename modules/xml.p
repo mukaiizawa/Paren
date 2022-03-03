@@ -1,31 +1,75 @@
 ; xml module.
 
-(function xml.attrs->str (attrs)
-  (with-memory-stream ($out)
-    (while attrs
-      (assert (keyword? (car attrs)))
-      (write-bytes " ")
-      (write-bytes (car attrs))
-      (let (next (car (<- attrs (cdr attrs))))
-        (if (nil? next) (break)
-            (keyword? next) (continue)
-            (string? next) (begin (write-bytes (str "='" next "'")) (<- attrs (cdr attrs)))
-            (assert nil))))))
+(function xml.write-text (x)
+  (with-memory-stream ($in x)
+    (let (ch nil)
+      (while (<- ch (read-char))
+        (write-bytes
+          (if (= ch "\"") "&quot;"
+              (= ch "'") "&apos;"
+              (= ch "<") "&lt;"
+              (= ch ">") "&gt;"
+              (= ch "&") "&amp;"
+              ch))))))
 
-(function xml->str (l)
+(function xml.read-text (x)
+  (with-memory-stream ($out)
+    (with-memory-stream ($in x)
+      (let (ch nil rd (.new AheadReader))
+        (while (<- ch (.next rd))
+          (if (!= ch "&") (write-bytes (.skip rd))
+              (begin
+                (while (!= (.next rd) ";") (.get rd))
+                (.get rd)
+                (let (tk (.token rd))
+                  (write-bytes
+                    (if (= tk "&quot;") "\""
+                        (= tk "&apos;") "'"
+                        (= tk "&lt;") "<"
+                        (= tk "&gt;") ">"
+                        (= tk "&amp;") "&"
+                        tk))))))))))
+
+(function xml.write1 (x)
+  (if (nil? x) nil
+      (string? x) (xml.write-text x)
+      (assert nil)))
+
+(function xml.write-attr (attrs)
+  (while attrs
+    (assert (keyword? (car attrs)))
+    (write-bytes " ")
+    (write-bytes (car attrs))
+    (let (next (car (<- attrs (cdr attrs))))
+      (if (nil? next) (break)
+          (keyword? next) (continue)
+          (string? next) (begin (foreach write-bytes (list "='" next "'")) (<- attrs (cdr attrs)))
+          (assert nil)))))
+
+(function xml.write-element (x)
   ; Returns a list representation of xml as a string.
-  (if (atom? l) l
-      (let ((name :opt attrs :rest children) l)
-        (if (= name '?xml) (str "<? " attrs " ?>")
-            (= name '!DOCTYPE) (str "<!DOCTYPE " (cadr l) ">")
-            (= name '!--) (str "<!--" attrs "-->")
+  (if (atom? x) (xml.write1 x)
+      (let ((name :opt attrs :rest children) x)
+        (if (= name '?xml) (foreach write-bytes (list "<? " attrs " ?>"))
+            (= name '!DOCTYPE) (foreach write-bytes (list "<!DOCTYPE " attrs ">"))
+            (= name '!--) (foreach write-bytes (list "<!--" attrs "-->"))
             (&& attrs (|| (atom? attrs) (! (keyword? (car attrs)))))
-            (str "<" name  ">"
-                 (join (map xml->str (cons attrs children)))
-                 "</" name ">")
-            (str "<" name (xml.attrs->str attrs) ">"
-                 (join (map xml->str children))
-                 "</" name ">")))))
+            (begin
+              (foreach write-bytes (list "<" name  ">"))
+              (foreach xml.write-element (cons attrs children))
+              (foreach write-bytes (list "</" name  ">")))
+            (begin
+              (write-bytes "<") (write-bytes name) (xml.write-attr attrs) (write-bytes ">")
+              (foreach xml.write-element children)
+              (foreach write-bytes (list "</" name  ">")))))))
+
+(function xml.write (x)
+  (xml.write-element x)
+  (write-line))
+
+(function xml->str (x)
+  (with-memory-stream ($out)
+    (xml.write-element x)))
 
 ; reader
 
@@ -33,7 +77,7 @@
 
 (method XMLReader .parse-text ()
   (while (!= (.next self) "<") (.get self))
-  (.token self))
+  (xml.read-text (.token self)))
 
 (method XMLReader .parse-attrs ()
   (let (attrs nil q nil)

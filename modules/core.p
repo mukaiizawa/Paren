@@ -956,7 +956,6 @@
                 (= ([] b 0) 0xff)))))
 
 (built-in-function in? (x collection)
-  ; Returns whether element x exists in the collection.
   (assert (in? 1 '(1 2 3)))
   (assert (! (in? 0 '(1 2 3))))
   (assert (in? 0x00 (bytes 1)))
@@ -981,7 +980,6 @@
       (raise ArgumentError "expected collection")))
 
 (built-in-function len (collection)
-  ; Returns the length of the collection.
   (assert (= (len nil) 0))
   (assert (= (len '(1)) 1))
   (assert (= (len (array 1)) 1))
@@ -989,13 +987,11 @@
   (assert (= (len "αβγ") 3)))
 
 (function empty? (collection)
-  ; Returns whether the collection is zero-length or nil.
-  (|| (nil? collection) (= (len collection) 0)))
+  (= (len collection) 0))
 
 ;; comparable.
 
 (built-in-function < (:rest args)
-  ; Returns whether the each of the specified args are in monotonically decreasing order.
   (assert (< 0 1 2))
   (assert (< 0 1.0 2))
   (assert (! (< 0 0 1)))
@@ -1007,44 +1003,24 @@
   (assert (! (< "あいう" "あい" "あ"))))
 
 (function > (:rest args)
-  ; Returns whether the each of the specified args are in monotonically increasing order.
   (every-adjacent? (f (x y) (< y x)) args))
 
 (function <= (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nondecreasing order.
   (every-adjacent? (f (x y) (! (< y x))) args))
 
 (function >= (:rest args)
-  ; Returns whether the each of the specified args are in monotonically nonincreasing order.
   (every-adjacent? (f (x y) (! (< x y))) args))
 
 (function max (:rest args)
-  ; Returns maximum value from argument.
   (reduce (f (x y) (if (> x y) x y)) args))
 
 (function min (:rest args)
-  ; Returns minimum value from argument.
   (reduce (f (x y) (if (< x y) x y)) args))
 
 ;; os.
 
-(built-in-function fp (fd)
-  ; Returns the file pointer associated with the file descriptor.
-  ; The argument fd can specify bellow value.
-  ;      0 -- stdin
-  ;      1 -- stdout
-  ;      2 -- stderr
-  )
-
-(built-in-function fopen (filename mode)
-  ; Opens the file whose name is the string pointed to by filename and associates a stream with it.
-  ; Returns file poiner for the opened file.
-  ; The argument mode can specify bellow value.
-  ;      0 -- Open file for reading.
-  ;      1 -- Open file for writing.
-  ;      2 -- Open file for appending
-  ;      3 -- Open file for reading and writing.
-  )
+(built-in-function fp (fd))
+(built-in-function fopen (filename mode))
 
 (built-in-function fgetc (fp)
   ; Read byte from the stream associated with the file pointer fp.
@@ -1082,10 +1058,7 @@
   ; Returns the current value of the file position indicator for the stream pointed to by fp.
   )
 
-(built-in-function fclose (fp)
-  ; Flushes the stream pointed to by fp (writing any buffered output data) and closes the underlying file descriptor.
-  ; Returns nil.
-  )
+(built-in-function fclose (fp))
 
 (built-in-function stat (filename)
   ; Returns the file status indicated filename.
@@ -2383,6 +2356,7 @@
 (built-in-function exit (status-cd))
 
 (function load (file)
+  (if (keyword? file) (<- file (str file ".p")))
   (with-open ($in file :read)
     (foreach eval (collect read))
     true))
