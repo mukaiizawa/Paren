@@ -37,8 +37,7 @@
 (function init ()
   (rand.seed (time))
   (<- $word (split (str (rand.choice $dict)))
-      $history nil
-      $life 5)
+      $history nil)
   (update-state))
 
 (function! main (args)
