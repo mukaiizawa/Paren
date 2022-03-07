@@ -3,7 +3,7 @@ whatis - display one-line manual page descriptions.
 
 # SYNOPSIS
 
-    whatis [NAME] [OPTION]
+    whatis [OPTION] [NAME]
 
 # DESCRIPTION
 Each manual page has a short description available within it.
