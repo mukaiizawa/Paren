@@ -1432,8 +1432,7 @@
                                  (if (= c "\\") (write-bytes "/")
                                      (write-bytes c)))))
                            "/")))
-        (if root? (<- path (cons "/"path)))
-        (&path! (.new Path) path))))
+        (&path! (.new Path) (if root? (cons "/" path) path)))))
 
 (function path.getcwd ()
   ; Returns the path corresponding to the current directory.
@@ -1479,8 +1478,7 @@
   ; If the path parameter is an absolute path then this method trivially returns path
   ; Otherwise this method concatenate this path and the speciifed path.
   ; `.` and `..` included in path-name are not treated specially.
-  (if (string? p) (<- p (path p)))
-  (if (.absolute? p) p
+  (if (.absolute? (<- p (path p))) p
       (path (memcat (.to-s self) "/" (.to-s p)))))
 
 (method Path .relativize (p)
