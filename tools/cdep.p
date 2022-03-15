@@ -1,13 +1,9 @@
 ; output dependency for makefile.
 
 (function parse-line (line dependencies)
-  (let (open-quote nil close-quote nil file-name nil)
-    (if (&& (prefix? line "#include")
-            (<- open-quote (strstr line "\""))
-            (<- close-quote (strlstr line "\""))
-            (<- file-name (slice line (++ open-quote) close-quote))
-            (! (in? file-name dependencies)))
-        (parse-cfile (path file-name) (cons file-name dependencies))
+  (let (file nil)
+    (if (&& (in? "#include" line) (<- file (cadr (split line "\""))) (! (in? file dependencies)))
+        (parse-cfile (path file) (cons file dependencies))
         dependencies)))
 
 (function parse-cfile (file :opt dependencies)
