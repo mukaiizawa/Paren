@@ -1445,21 +1445,20 @@
 (method Path .base-name ()
   ; Returns base name (the string up to the first dot).
   ; If not including dot, returns the entire name.
-  (let (name (.name self) i (strstr name "."))
-    (if i (slice name 0 i)
-        name)))
+  (car (split (.name self) ".")))
 
 (method Path .suffix ()
   ; Returns the suffix (the string after the last dot).
   ; If not including dot, returns nil.
-  (let (name (.name self) i (strlstr name "."))
-    (if i (slice name (++ i)))))
+  (let ((name :rest suffixes) (split (.name self) "."))
+    (if (nil? suffixes) ""
+        (last suffixes))))
 
 (method Path .but-suffix ()
   ; Returns the name without the suffix.
-  (let (name (.name self) i (strlstr name "."))
-    (if i (slice name 0 i)
-        name)))
+  (let ((name :rest suffixes) (split (.name self) "."))
+    (if (nil? suffixes) name
+        (join (cons name (butlast suffixes)) "."))))
 
 (method Path .root? ()
   ; Returns whether the receiver is a root directory.
