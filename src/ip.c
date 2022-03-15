@@ -82,7 +82,7 @@ static char *error_msg(enum error_msg em) {
     case clip_failed: return "clip failed";
     case connection_failed: return "connection failed";
     case division_by_zero: return "division by zero";
-    case expected_array: return "expected_array";
+    case expected_array: return "expected array";
     case expected_binding_value: return "expected binding value";
     case expected_built_in_operator: return "expected built-in operator";
     case expected_byte: return "expected byte";
@@ -91,7 +91,7 @@ static char *error_msg(enum error_msg em) {
     case expected_collection: return "expected collection";
     case expected_comparable: return "expected comparable";
     case expected_cons: return "expected cons";
-    case expected_dict: return "expected dict";
+    case expected_dict: return "expected dictionary";
     case expected_function: return "expected function";
     case expected_function_macro: return "expected function or macro";
     case expected_instance_of_Class_class: return "expected instance of Class class";
