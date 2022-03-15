@@ -2,7 +2,8 @@
 
 (import :mouse)
 
-(<- $distance-threshold 50)
+(<- $origin '(0 0)
+    $distance-threshold 100)
 
 (function stopped? (p q)
   (< (sqrt
@@ -13,7 +14,6 @@
 
 (function! main (args)
   (let (prev (mouse.position))
-    (while (stopped? prev (mouse.position))
-      (foreach mouse.move '((0 0) (30 30)))
-      (<- prev (mouse.position))
+    (while (stopped? prev (<- prev (mouse.position)))
+      (foreach mouse.move (list $origin prev))
       (sleep 1))))
