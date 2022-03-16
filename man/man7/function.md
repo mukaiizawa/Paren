@@ -13,4 +13,5 @@ In Paren, functions are first-class objects, so it can also be given to the argu
 # SEE ALSO
 - function(3)
 - data-types(7)
-- higher-order-function(7)
+- macro(7)
+- special-operator(7)

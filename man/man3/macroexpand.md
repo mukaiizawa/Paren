@@ -53,4 +53,4 @@ Also, macro expansion works properly even if it contains special operators.
 
 # SEE ALSO
 - macro(3)
-- special-operater(7)
+- special-operator(7)

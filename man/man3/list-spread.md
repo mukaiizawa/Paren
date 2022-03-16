@@ -3,13 +3,13 @@ list... - expand the elements of a sequence into a list.
 
 # SYNOPSIS
 
-    (list... SEQ)
+    (list... SEQUENCE)
 
 # DESCRIPTION
 The function `list...` expand the elements of a sequence into a list.
 
 # RETURN VALUE
-Return a list such that the elements of the sequence `SEQ` are in the elements.
+Return a list such that the elements of the sequence `SEQUENCE` are in the elements.
 
 # EXAMPLES
 
@@ -30,4 +30,3 @@ Return a list such that the elements of the sequence `SEQ` are in the elements.
 
 # SEE ALSO
 - list(3)
-- sequence(7)

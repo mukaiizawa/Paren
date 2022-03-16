@@ -53,4 +53,3 @@ If `VAL` is not associated, returns `nil`.
 
 # SEE ALSO
 - position(3)
-- collection(7)

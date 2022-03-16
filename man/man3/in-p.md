@@ -62,4 +62,5 @@ Returns whether element `X` exists in the `COLLECTION`.
     nil
 
 # SEE ALSO
-- collection(7)
+- [](3)
+- index(3)

@@ -1,23 +1,30 @@
 # NAME
-[] - get and set elements of the collection.
+[] - general purpose accessor.
 
 # SYNOPSIS
 
-    ([] COLLECTION KEY)
-    ([] COLLECTION KEY VAL)
+    ([] LIST INDEX)
+    ([] LIST INDEX VAL)
+    ([] ARRAY INDEX)
+    ([] ARRAY INDEX VAL)
+    ([] BYTES INDEX)
+    ([] BYTES INDEX VAL)
+    ([] STRING INDEX)
+    ([] DICTIONARY KEY)
+    ([] DICTIONARY KEY VAL)
 
 # DESCRIPTION
-The function `[]` gets or sets an element of a collection.
+The function `[]` functions as a built-in per-type accessor.
 
 # RETURN VALUE
-Returns the value corresponding to `KEY` of the `COLLECTION`. If `COLLECTION` is a list and the index key is out of range, returns `nil`.
+If `VAL` is not specified, the value corresponding to `KEY` or `INDEX` is returned.
 
-If `VAL` is specified, update the value corresponding to `KEY`. Returns `VAL`.
+If `VAL` is specified, update the value corresponding to `KEY` or `INDEX`. Returns `VAL`.
 
 # ERRORS
-IndexError if `COLLECTION` is a bytes or array or string data type and the index `KEY` is out of range.
+IndexError if `INDEX` is out of range. For a list, return `nil`.
 
-ArgumentError if `COLLECTION` is a string data type and `VAL` is specified.
+ArgumentError if `X` is a string data type and `VAL` is specified.
 
 # EXAMPLES
 
@@ -85,4 +92,8 @@ ArgumentError if `COLLECTION` is a string data type and `VAL` is specified.
     #{ :buzz 2 :bar 10 :foo 0 }
 
 # SEE ALSO
-- collection(7)
+- array(7)
+- bytes(7)
+- dictionary(7)
+- list(7)
+- string(7)

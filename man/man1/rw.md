@@ -23,5 +23,4 @@ Commonly used to register in a text editor dictionary for highlighting and word 
 - function(3)
 - function!(3)
 - macro(3)
-- built-in-function(7)
 - special-operator(7)

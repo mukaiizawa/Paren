@@ -57,4 +57,3 @@ These functions return `nil` if `SEQUENCE` is `nil`.
 - [](3)
 - butlast(3)
 - last-cons(3)
-- sequence(7)

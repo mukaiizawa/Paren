@@ -1,5 +1,5 @@
 # NAME
-prefix? suffix? - determines whether a string starts or ends with the characters of a specified string.
+prefix?, suffix? - determines whether a string starts or ends with the characters of a specified string.
 
 # SYNOPSIS
 

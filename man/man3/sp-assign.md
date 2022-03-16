@@ -40,5 +40,4 @@ Or When the return value of `BINDING-EXPR` does not match `BOUND-EXPR`.
 
 # SEE ALSO
 - let(3)
-- environment(7)
 - special-operator(7)

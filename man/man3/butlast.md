@@ -58,4 +58,3 @@ Returns a copy of the `SEQUENCE` from which the last `N` elements have been omit
 - [](3)
 - first(3)
 - last(3)
-- sequence(7)

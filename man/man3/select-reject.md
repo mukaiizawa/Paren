@@ -33,4 +33,3 @@ The function `reject` returns a list of elements for which `FN` returned `nil`.
 
 # SEE ALSO
 - find(3)
-- higher-order-function(7)

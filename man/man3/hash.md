@@ -33,4 +33,3 @@ Returns a hash code value of the `X`.
 
 # SEE ALSO
 - =(3)
-- dictionary(7)

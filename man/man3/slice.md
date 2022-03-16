@@ -51,4 +51,5 @@ If `STOP` is omitted, it defaults to length of `SEQUENCE`.
     "o"
 
 # SEE ALSO
-- sequence(7)
+- take(3)
+- drop(3)

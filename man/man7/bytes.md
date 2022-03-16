@@ -10,7 +10,12 @@ The bytes data type can use the functions listed in `SEE ALSO` section, and can 
 
 # SEE ALSO
 - bytes(3)
+- memcat(3)
+- memcmp(3)
+- memcpy(3)
+- memlen(3)
+- memmem(3)
+- prefix?(3)
+- suffix?(3)
 - array(7)
-- bytes-like(7)
-- sequence(7)
 - data-types(7)

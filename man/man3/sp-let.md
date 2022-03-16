@@ -32,5 +32,4 @@ Like `let*` in Common Lisp, symbols bound to a newly created environment affect 
 
 # SEE ALSO
 - <-(3)
-- environment(7)
 - special-operator(7)

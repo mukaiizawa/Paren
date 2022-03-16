@@ -41,4 +41,7 @@ The function `min` returns minimum value from argument.
     :a
 
 # SEE ALSO
-- comparable(7)
+- <(3)
+- <=(3)
+- >(3)
+- >=(3)

@@ -33,5 +33,5 @@ If `ELSE` is undefined and any `TEST` is `nil`, returns `nil`.
     3
 
 # SEE ALSO
-- boolean(7)
+- when(3)
 - special-operator(7)

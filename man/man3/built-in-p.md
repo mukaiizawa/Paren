@@ -6,7 +6,7 @@ built-in? - built-in operator judgment function.
     (built-in? X)
 
 # DESCRIPTION
-The word built-in operator means special operater or built-in function.
+The function `built-in?` determine if the argument is built-in operator.
 
 # RETURN VALUE
 Returns whether the `X` is a built-in operater.
@@ -25,5 +25,5 @@ Returns whether the `X` is a built-in operater.
     nil
 
 # SEE ALSO
-- built-in-function(7)
+- built-in-name(3)
 - special-operator(7)

@@ -87,9 +87,9 @@ static char *error_msg(enum error_msg em) {
     case expected_built_in_operator: return "expected built-in operator";
     case expected_byte: return "expected byte";
     case expected_bytes: return "expected bytes";
-    case expected_bytes_like: return "expected bytes like object";
-    case expected_collection: return "expected collection";
-    case expected_comparable: return "expected comparable";
+    case expected_bytes_like: return "expected bytes, keyword, string or symbol";
+    case expected_collection: return "expected array, bytes, dictionary, list or string";
+    case expected_comparable: return "expected bytes, keyword, number, string or symbol";
     case expected_cons: return "expected cons";
     case expected_dict: return "expected dictionary";
     case expected_function: return "expected function";
@@ -105,8 +105,8 @@ static char *error_msg(enum error_msg em) {
     case expected_number: return "expected number";
     case expected_operator: return "expected operator";
     case expected_positive_integer: return "expected positive integer";
-    case expected_positive_integer_or_sequence: return "expected positive integer or sequence";
-    case expected_sequence: return "expected sequence";
+    case expected_positive_integer_or_sequence: return "expected positive integer, array, bytes, list, or string";
+    case expected_sequence: return "expected array, bytes, list, or string";
     case expected_string: return "expected string";
     case expected_symbol: return "expected symbol";
     case expected_symbol_keyword: return "expected symbol or keyword";

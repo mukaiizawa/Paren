@@ -39,5 +39,4 @@ Symbols with no arguments are used to prevent unintended symbol binding in macro
 # SEE ALSO
 - keyword(3)
 - with-gensyms(3)
-- bytes-like(7)
 - symbol(7)

@@ -22,5 +22,4 @@ Returns an empty dictionary.
 - in?(3)
 - index(3)
 - len(3)
-- collection(7)
 - dictionary(7)

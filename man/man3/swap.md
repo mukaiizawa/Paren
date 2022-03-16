@@ -17,17 +17,6 @@ Error if `SEQUENCE` is not a mutable sequence.
 # NOTES
 The `SEQUENCE` is modified.
 
-Since the string data type is an immutable sequence, the `swap!` function cannot be used. If you really want to swap the characters, you can convert it to a mutable sequence instead, as shown below, and then reverse the conversion.
-
-    ) (<- s "foo")
-    "foo"
-    
-    ) (string (swap! (bytes "foo") 0 1))
-    "ofo"
-    
-    ) (join (swap! (split "foo") 0 1))
-    "ofo"
-
 # EXAMPLES
 
     ) (swap! #[ 0 1 2 ] 0 1)
@@ -41,4 +30,3 @@ Since the string data type is an immutable sequence, the `swap!` function cannot
 
 # SEE ALSO
 - sort!(3)
-- sequence(7)

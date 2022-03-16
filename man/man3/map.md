@@ -49,4 +49,3 @@ If you don't use a return value, you should use `foreach` or `dolist` instead.
 # SEE ALSO
 - dolist(3)
 - foreach(3)
-- higher-order-function(7)

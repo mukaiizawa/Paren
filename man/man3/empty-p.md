@@ -1,9 +1,13 @@
 # NAME
-empty? - determine if there are any elements in the collection.
+empty? - determine if it can be considered empty.
 
 # SYNOPSIS
 
-    (empty? COLLECTION)
+    (concat)
+    (concat ARRAY ...)
+    (concat BYTES ...)
+    (concat LIST ...)
+    (concat STRING ...)
 
 # DESCRIPTION
 The function `empty?` determine if there are any elements in the collection.
@@ -43,4 +47,4 @@ Returns whether the collection is zero-length.
     nil
 
 # SEE ALSO
-- collection(7)
+- len(3)

@@ -34,4 +34,8 @@ If the `COLLECTION` is `nil`, `0` is returned.
     2
 
 # SEE ALSO
-- collection(7)
+- array(7)
+- bytes(7)
+- dictionary(7)
+- list(7)
+- string(7)

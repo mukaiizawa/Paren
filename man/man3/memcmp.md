@@ -33,10 +33,12 @@ If `X` is lexicographically greater than `Y`, returns `1`.
 Use `strcmp(3)` to compare strings in units of characters.
 
 # SEE ALSO
+- <(3)
+- <=(3)
+- >(3)
+- >=(3)
 - memcat(3)
 - memcpy(3)
 - memlen(3)
 - memmem(3)
-- strcmp(3)
 - bytes(7)
-- bytes-like(7)

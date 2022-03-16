@@ -1,15 +1,19 @@
 # NAME
-concat - concatenate the sequences.
+concat - concatenate the objects.
 
 # SYNOPSIS
 
-    (concat [SEQUENCE ...])
+    (concat)
+    (concat ARRAY ...)
+    (concat BYTES ...)
+    (concat LIST ...)
+    (concat STRING ...)
 
 # DESCRIPTION
-The function `concat` concatenate the sequences.
+The function `concat` concatenate an array, bytes, list, or string.
 
 # RETURN VALUE
-Returns a sequence of concatenated arguments in the order they are supplied.
+Returns the object concatenated in the order in which the arguments are given.
 
 If there is no argument, `nil` is returned.
 
@@ -45,4 +49,5 @@ Error if the argument data types are not all the same. However, the symbol `nil`
     #[ nil nil nil ]
 
 # SEE ALSO
-- sequence(7)
+- join(3)
+- split(3)

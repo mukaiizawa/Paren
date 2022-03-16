@@ -23,11 +23,8 @@ Returns the result of concatenating `X` with each `ARGS`.
     :foobarbuzz
 
 # SEE ALSO
-- concat(3)
 - memcmp(3)
 - memcpy(3)
 - memlen(3)
 - memmem(3)
-- strcmp(3)
 - bytes(7)
-- bytes-like(7)

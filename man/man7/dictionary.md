@@ -26,5 +26,4 @@ Unlike general dictionaries, pairs cannot be deleted. This limitation is because
 # SEE ALSO
 - dict(3)
 - keys(3)
-- collection(7)
 - data-types(7)

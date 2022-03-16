@@ -22,7 +22,10 @@ Any data type can be treated as a elements.
     :foo
 
 # SEE ALSO
+- [](3)
 - array(3)
-- collection(7)
+- empty?(3)
+- in?(3)
+- index(3)
+- len(3)
 - data-types(7)
-- sequence(7)

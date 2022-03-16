@@ -13,8 +13,6 @@ Returns the return value of the function `FN` that did not return `nil` first.
 
 If there is no such element, returns `nil`.
 
-# NOTES
-
     (find fn list) <=> (car (reject nil? (map fn list)))
 
 # EXAMPLES
@@ -28,4 +26,3 @@ If there is no such element, returns `nil`.
 - map(3)
 - select(3)
 - reject(3)
-- higher-order-function(7)

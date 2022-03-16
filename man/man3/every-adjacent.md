@@ -29,4 +29,3 @@ If `LIST` is `nil`, returns `nil`.
 
 # SEE ALSO
 - every?(3)
-- higher-order-function(7)

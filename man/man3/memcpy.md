@@ -39,4 +39,3 @@ Unlike the C language, it works correctly even if the areas to be copied overlap
 - memmem(3)
 - slice(3)
 - bytes(7)
-- bytes-like(7)

@@ -21,4 +21,3 @@ The string data type can use the functions listed in `SEE ALSO` section, and can
 
 # SEE ALSO
 - string(3)
-- sequence(7)

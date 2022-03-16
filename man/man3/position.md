@@ -31,4 +31,3 @@ If there is no such element, returns `nil`.
 # SEE ALSO
 - index(3)
 - find(3)
-- higher-order-function(7)

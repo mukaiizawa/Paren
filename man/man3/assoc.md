@@ -6,7 +6,11 @@ assoc - get the value from the association list.
     (assoc ALIST KEY)
 
 # DESCRIPTION
-The function `assoc` get the value from the association list.
+The function `assoc` regards the list as an associative list and returns the value corresponding to the key.
+
+An associative list is a list in which keys and values are arranged alternately.
+
+    (key1 val1 key2 val2 ... )
 
 # RETURN VALUE
 Returns the value corresponding to the `KEY` in the association list `ALIST`.
@@ -27,4 +31,4 @@ If there is no corresponding value, returns `nil`.
     nil
 
 # SEE ALSO
-- association-list(7)
+- list(7)

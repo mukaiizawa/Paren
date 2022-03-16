@@ -24,4 +24,3 @@ Returns the byte length of `BYTES`.
 
 # SEE ALSO
 - len(3)
-- bytes-like(7)

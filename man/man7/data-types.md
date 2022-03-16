@@ -16,25 +16,11 @@ Paren defines the primitive data types enumerated bellow. Every data belongs to 
 - string
 - symbol
 
-In addition, primitive data types behave as zero or more insubstantial abstract data types, as listed below.
-
-- atom
-- boolean
-- bytes-like
-- collection
-- comparable
-- list
-- operator
-- sequence
+In particular, anything other than cons is called atom.
 
 # SEE ALSO
 - array(7)
-- atom(7)
-- boolean(7)
 - bytes(7)
-- bytes-like(7)
-- collection(7)
-- comparable(7)
 - cons(7)
 - dictionary(7)
 - function(7)
@@ -42,7 +28,6 @@ In addition, primitive data types behave as zero or more insubstantial abstract 
 - macro(7)
 - number(7)
 - object-system(7)
-- sequence(7)
 - special-operator(7)
 - string(7)
 - symbol(7)

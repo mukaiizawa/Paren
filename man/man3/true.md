@@ -4,7 +4,7 @@ true - representative value of true.
 # DESCRIPTION
 The symbol `true` is a representative value of true.
 
-The ture is bound itself.
+The `true` is bound itself.
 
 # EXAMPLES
 
@@ -14,4 +14,5 @@ The ture is bound itself.
     1
 
 # SEE ALSO
-- boolean(7)
+- if(3)
+- nil(3)

@@ -55,4 +55,4 @@ The macros `&&` and `||` are so-called Short-circuit evaluation.
 
 # SEE ALSO
 - if(3)
-- boolean(7)
+- when(3)

@@ -27,5 +27,4 @@ If `START` is omitted, a keyword whose name is `NAME` is returned.
 # SEE ALSO
 - keyword(3)
 - with-gensyms(3)
-- bytes-like(7)
 - keyword(7)

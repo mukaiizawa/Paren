@@ -40,4 +40,3 @@ In general, `string!` is faster than `string` because it only changes arguments 
 
 # SEE ALSO
 - str(3)
-- bytes-like(7)

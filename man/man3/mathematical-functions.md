@@ -96,5 +96,4 @@ These functions error if result is not finite.
     true
 
 # SEE ALSO
-- average(3)
 - abs(3)
