@@ -411,6 +411,45 @@ DEFUN(list)
   return TRUE;
 }
 
+DEFUN(list_2e__2e__2e_)
+{
+  int i;
+  object o, p;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_collection(argv->cons.car, &o)) return FALSE;
+  *result = object_nil;
+  switch (object_type(o)) {
+    case SYMBOL:
+      break;
+    case CONS:
+      while (o != object_nil) {
+        *result = gc_new_cons(o->cons.car, *result);
+        o = o->cons.cdr;
+      }
+      break;
+    case STRING:
+      i = 0;
+      while (i < o->mem.size) {
+        if (!ch_at(o, &i, &p)) return FALSE;
+        *result = gc_new_cons(p, *result);
+      }
+      break;
+    case BYTES:
+      for (i = 0; i < o->mem.size; i++)
+        *result = gc_new_cons(gc_new_xint(LC(o->mem.elt + i)), *result);
+      break;
+    case ARRAY:
+      for (i = 0; i < o->array.size; i++)
+        *result = gc_new_cons(o->array.elt[i], *result);
+      break;
+    default:
+      xassert(FALSE);
+      return FALSE;
+  }
+  *result = list_reverse(*result);
+  return TRUE;
+}
+
 DEFUN(car)
 {
   object o;
@@ -1028,7 +1067,7 @@ DEFUN(chr)
 static int ord(object o, int from, int len, int *val)
 {
   xassert(object_type(o) == STRING);
-  xassert((from + len) <= o->mem.size);
+  if (from + len > o->mem.size) return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
   switch (len) {
     case 1:
       *val = LC(o->mem.elt + from);
@@ -1050,7 +1089,7 @@ static int ord(object o, int from, int len, int *val)
       return TRUE;
     default:
       *val = -1;
-      return ip_throw(ArgumentError, invalid_utf8_byte_sequence);
+      return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
   }
 }
 
@@ -1158,17 +1197,12 @@ DEFUN(upper)
 
 static int string_to_array(object o, object *result)
 {
-  int i, j, w, size;
+  int i, j, size;
   if (!str_len(o, &size)) return FALSE;
   *result = gc_new_array(size);
-  i = j = w = 0;
-  while (i < size) {
-    if (!ch_len(LC(o->mem.elt + j), &w)) return FALSE;
-    (*result)->array.elt[i] = gc_new_mem_from(STRING, o->mem.elt + j, w);
-    i++;
-    j += w;
-    w = 0;
-  }
+  for (i = 0, j = 0; i < size; i++)
+    ch_at(o, &j, ((*result)->array.elt + i));
+  xassert(j == o->mem.size);
   return TRUE;
 }
 
@@ -1263,6 +1297,7 @@ static int str_slice(object o, int start, int stop, object *result)
   else {
     for (i = start, t = s; i < stop; i++)
       if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
+    if (t > o->mem.size) return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
   }
   if (!bi_range(0, s, t)) return FALSE;
   *result = gc_new_mem_from(STRING, o->mem.elt + s, t - s);

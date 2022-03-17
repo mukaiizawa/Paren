@@ -82,6 +82,7 @@ static char *error_msg(enum error_msg em) {
     case clip_failed: return "clip failed";
     case connection_failed: return "connection failed";
     case division_by_zero: return "division by zero";
+    case error_msg_nil: return NULL;
     case expected_array: return "expected array";
     case expected_binding_value: return "expected binding value";
     case expected_built_in_operator: return "expected built-in operator";
@@ -119,10 +120,10 @@ static char *error_msg(enum error_msg em) {
     case ftell_failed: return "ftell failed";
     case fwrite_failed: return "fwrite failed";
     case gethostname_failed: return "gethostname failed";
+    case incomplete_utf8_byte_sequence: return "incomplete utf8 byte sequence";
     case index_out_of_range: return "index out of range";
     case invalid_args: return "invalid arguments";
     case invalid_binding_expr: return "invalid binding expression";
-    case invalid_utf8_byte_sequence: return "invalid utf8 byte sequence";
     case numeric_overflow: return "numeric overflow";
     case readdir_failed: return "readdir failed";
     case recv_failed: return "recv failed";
@@ -135,7 +136,7 @@ static char *error_msg(enum error_msg em) {
     case undeclared_class: return "undeclared class";
     case undeclared_keyword_param: return "undeclared keyword parameter";
     case unexpected_keyword_parameter: return "unexpected keyword parameter";
-    case error_msg_nil: return NULL;
+    case unexpected_utf8_leading_byte: return "unexpected utf8 leading byte";
     default: xassert(FALSE); return NULL;
   }
 };

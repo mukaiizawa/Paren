@@ -135,6 +135,7 @@ extern int built_in_p(object o);
 extern int list_len(object o);
 extern object list_reverse(object o);
 
+extern int ch_at(object o, int *i, object *result);
 extern int ch_len(unsigned char ch, int *len);
 extern int str_len(object o, int *len);
 

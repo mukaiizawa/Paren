@@ -22,7 +22,7 @@
 
 ;; fundamental macro.
 
-(macro built-in-function (name args :rest body)
+(macro built-in-function (name :opt args :rest body)
   (cons begin body))
 
 (macro function! (name args :rest body)
@@ -44,16 +44,16 @@
 (macro && (:rest args)
   (if (! args) true
       (! (cdr args)) (car args)
-      (let (rec (f (l)
-                  (if (cdr l) (list if (car l) (rec (cdr l)))
-                      (car l))))
+      (let (rec (f (lis)
+                  (if (cdr lis) (list if (car lis) (rec (cdr lis)))
+                      (car lis))))
         (rec args))))
 
 (macro || (:rest args)
   (if (! args) nil
       (! (cdr args)) (car args)
       (with-gensyms (g)
-        (let (rec (f (l) (if l (cons (list <- g (car l)) (cons g (rec (cdr l)))))))
+        (let (rec (f (lis) (if lis (cons (list <- g (car lis)) (cons g (rec (cdr lis)))))))
           (list let (list g nil)
                 (cons if (rec args)))))))
 
@@ -68,9 +68,9 @@
                 (list if (list ! test) '(break))
                 (cons begin body)))))
 
-(macro dolist ((i l) :rest body)
+(macro dolist ((i lis) :rest body)
   (with-gensyms (gl)
-    (list for (list gl l i (list car gl)) gl (list gl (list cdr gl) i (list car gl))
+    (list for (list gl lis i (list car gl)) gl (list gl (list cdr gl) i (list car gl))
           (cons begin body))))
 
 (macro dotimes ((i n) :rest body)
@@ -97,27 +97,25 @@
                                    :time (list '- '(clock) clock-offset)
                                    :cycle (list '- '(cycle) cycle-offset)))))))
 
-(built-in-function macroexpand-1 (expr)
-  (assert (== (car (macroexpand-1 '(begin0 1 2 3))) let)))
+(built-in-function macroexpand-1)
 
-(function! macroexpand (expr :key ignore)
-  (let (%find (f (x l) (if l (if (== x (car l)) true (%find x (cdr l)))))
-              ignore? (f (x) (%find x ignore))
-              add-ignore (f (x)
-                           (if (cons? x) (begin (add-ignore (car x)) (add-ignore (cdr x)))
-                               (<- ignore (cons x ignore)) x)
-                           x)
-              expand1 (f (x)
-                        (if x (cons (macroexpand (car x) :ignore ignore)
-                                    (expand1 (cdr x)))))
-              expand2 (f (x) (if x (cons (add-ignore (car x))
-                                         (cons (macroexpand (cadr x) :ignore ignore)
+(function! macroexpand (expr :key ignore-list)
+  (let (add-ignore (f (x)
+                     (if (cons? x) (begin (add-ignore (car x)) (add-ignore (cdr x)))
+                         (<- ignore-list (cons x ignore-list)) x)
+                     x)
+                   expand1 (f (x)
+                             (if x (cons (macroexpand (car x) :ignore-list ignore-list)
+                                         (expand1 (cdr x)))))
+                   expand2 (f (x)
+                             (if x (cons (add-ignore (car x))
+                                         (cons (macroexpand (cadr x) :ignore-list ignore-list)
                                                (expand2 (cddr x)))))))
     (if (! (cons? expr)) expr
         (let ((ope :rest args) expr)
-          (if (symbol? ope) (if (&& (! (ignore? ope)) (bound? ope)) (<- ope (eval ope))
+          (if (symbol? ope) (if (&& (! (in? ope ignore-list)) (bound? ope)) (<- ope (eval ope))
                                 (return (cons ope (expand1 args)))))    ; do not expand.
-          (if (macro? ope) (macroexpand (macroexpand-1 expr) :ignore ignore)
+          (if (macro? ope) (macroexpand (macroexpand-1 expr) :ignore-list ignore-list)
               (cons ope
                     (if (== ope quote) args
                         (== ope <-) (expand2 args)
@@ -137,22 +135,9 @@
 
 ;; fundamental function.
 
-(built-in-function = (x y)
-  (assert (= 1 1))
-  (assert (= 1.0 1))
-  (assert (= 1 1.0))
-  (assert (! (= 10 20)))
-  (assert (= 'x 'x))
-  (assert (! (= 'x 'y))))
-
-(built-in-function == (x y)
-  (assert (== :x :x))
-  (assert (! (== "x" "x"))))
-
-(built-in-function ! (x)
-  (assert (! (== 'x 'y)))
-  (assert (! nil))
-  (assert (== (! true) nil)))
+(built-in-function =)
+(built-in-function ==)
+(built-in-function !)
 
 (function != (x y)
   (! (= x y)))
@@ -160,14 +145,7 @@
 (function !== (x y)
   (! (== x y)))
 
-(built-in-function hash (x)
-  (assert (= (hash 10.0) (hash 10)))
-  (assert (= (hash "foo") (hash :foo)))
-  (assert (= (hash :foo) (hash 'foo)))
-  (assert (= (hash (array 1)) 0))
-  (assert (= (hash (bytes 1)) 0))
-  (assert (= (hash (dict)) 0))
-  (assert (= (hash (cons nil nil)) 0)))
+(built-in-function hash (x))
 
 (built-in-function address (x)
   (assert (= (address 'x) (address 'x))))
@@ -257,9 +235,8 @@
 (function cdddar (x) (cdr (cddar x)))
 (function cddddr (x) (cdr (cdddr x)))
 
-(built-in-function list (:rest args)
-  (assert (= (list 1 2 3) '(1 2 3)))
-  (assert (nil? (list))))
+(built-in-function list)
+(built-in-function list...)
 
 (function list? (x)
   (if (cons? x) true
@@ -269,13 +246,13 @@
   (if (list? x) x
       (list x)))
 
-(function join (l :opt separator)
-  (if (nil? l) ""
-      (nil? (cdr l)) (car l)
-      (nil? separator) (apply memcat l)
+(function join (lis :opt separator)
+  (if (nil? lis) ""
+      (nil? (cdr lis)) (car lis)
+      (nil? separator) (apply memcat lis)
       (with-memory-stream ($out)
-        (write-bytes (car l))
-        (dolist (x (cdr l)) (write-bytes separator) (write-bytes x)))))
+        (write-bytes (car lis))
+        (dolist (x (cdr lis)) (write-bytes separator) (write-bytes x)))))
 
 (function split (s :opt separator)
   (if (empty? s) nil
@@ -317,39 +294,39 @@
         (<= step 0) (raise IndexError "step must be positive integer"))
     (rec start stop step)))
 
-(function group (l n)
-  (let (rec (f (l acc)
-              (if (nil? l) (reverse! acc)
-                  (rec (slice l n) (cons (slice l 0 n) acc)))))
+(function group (lis n)
+  (let (rec (f (lis acc)
+              (if (nil? lis) (reverse! acc)
+                  (rec (slice lis n) (cons (slice lis 0 n) acc)))))
     (if (<= n 0) (raise IndexError "sublists length must be positive integer")
-        (rec l nil))))
+        (rec lis nil))))
 
-(function reverse (l)
-  (let (rec (f (l acc)
-              (if (nil? l) acc
-                  (rec (cdr l) (cons (car l) acc)))))
-    (rec l nil)))
+(function reverse (lis)
+  (let (rec (f (lis acc)
+              (if (nil? lis) acc
+                  (rec (cdr lis) (cons (car lis) acc)))))
+    (rec lis nil)))
 
-(built-in-function reverse! (l)
+(built-in-function reverse! (lis)
   (assert (nil? (reverse! nil)))
   (assert (= (car (reverse! '(0 1))) 1)))
 
-(macro push! (x l)
+(macro push! (x lis)
   (with-gensyms (gx)
     (list let (list gx x)
-          (list <- l (list cons gx l))
+          (list <- lis (list cons gx lis))
           gx)))
 
-(macro pop! (l)
+(macro pop! (lis)
   (list begin0
-        (list car l)
-        (list <- l (list cdr l))))
+        (list car lis)
+        (list <- lis (list cdr lis))))
 
-(function flatten (l)
+(function flatten (lis)
   (let (acc nil rec (f (x)
                       (if (atom? x) (push! x acc)
                           (dolist (i x) (rec i)))))
-    (rec l)
+    (rec lis)
     (reverse! acc)))
 
 ;;; higher-order functions.
@@ -378,46 +355,46 @@
   (if (cdr args) (reduce fn (cons (fn (car args) (cadr args)) (cddr args)))
       (car args)))
 
-(function select (fn l)
-  (let (rec (f (l acc)
-              (if (nil? l) (reverse! acc)
-                  (fn (car l)) (rec (cdr l) (cons (car l) acc))
-                  (rec (cdr l) acc))))
-    (rec l nil)))
+(function select (fn lis)
+  (let (rec (f (lis acc)
+              (if (nil? lis) (reverse! acc)
+                  (fn (car lis)) (rec (cdr lis) (cons (car lis) acc))
+                  (rec (cdr lis) acc))))
+    (rec lis nil)))
 
-(function reject (fn l)
-  (let (rec (f (l acc)
-              (if (nil? l) (reverse! acc)
-                  (fn (car l)) (rec (cdr l) acc)
-                  (rec (cdr l) (cons (car l) acc)))))
-    (rec l nil)))
+(function reject (fn lis)
+  (let (rec (f (lis acc)
+              (if (nil? lis) (reverse! acc)
+                  (fn (car lis)) (rec (cdr lis) acc)
+                  (rec (cdr lis) (cons (car lis) acc)))))
+    (rec lis nil)))
 
-(function find (fn l)
-  (&& l (|| (fn (car l)) (find fn (cdr l)))))
+(function find (fn lis)
+  (&& lis (|| (fn (car lis)) (find fn (cdr lis)))))
 
-(function position (fn l)
-  (let (rec (f (l n)
-              (if (nil? l) nil
-                  (fn (car l)) n
-                  (rec (cdr l) (++ n)))))
-    (rec l 0)))
+(function position (fn lis)
+  (let (rec (f (lis n)
+              (if (nil? lis) nil
+                  (fn (car lis)) n
+                  (rec (cdr lis) (++ n)))))
+    (rec lis 0)))
 
-(function every? (fn l)
-  (if (nil? l) true
-      (fn (car l)) (every? fn (cdr l))))
+(function every? (fn lis)
+  (if (nil? lis) true
+      (fn (car lis)) (every? fn (cdr lis))))
 
-(function some? (fn l)
-  (if (nil? l) nil
-      (fn (car l)) true
-      (some? fn (cdr l))))
+(function some? (fn lis)
+  (if (nil? lis) nil
+      (fn (car lis)) true
+      (some? fn (cdr lis))))
 
-(function none? (fn l)
-  (if (nil? l) true
-      (fn (car l)) nil
-      (none? fn (cdr l))))
+(function none? (fn lis)
+  (if (nil? lis) true
+      (fn (car lis)) nil
+      (none? fn (cdr lis))))
 
-(function every-adjacent? (fn l)
-  (if (cdr l) (&& (fn (car l) (cadr l)) (every-adjacent? fn (cdr l)))
+(function every-adjacent? (fn lis)
+  (if (cdr lis) (&& (fn (car lis) (cadr lis)) (every-adjacent? fn (cdr lis)))
       true))
 
 ;;; set operations.
@@ -870,12 +847,6 @@
                 (= (keys d) '(:foo))))))
 
 ;; sequence
-
-(function list... (seq)
-  (let (lis nil)
-    (dotimes (i (len seq))
-      (push! ([] seq i) lis))
-    (reverse! lis)))
 
 (built-in-function concat (:rest args)
   (assert (nil? (concat)))

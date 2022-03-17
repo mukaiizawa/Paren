@@ -22,8 +22,8 @@ enum error {
 enum error_msg {
   assert_failed,
   built_in_failed,
-  connection_failed,
   clip_failed,
+  connection_failed,
   division_by_zero,
   expected_array,
   expected_binding_value,
@@ -62,10 +62,10 @@ enum error_msg {
   ftell_failed,
   fwrite_failed,
   gethostname_failed,
+  incomplete_utf8_byte_sequence,
   index_out_of_range,
   invalid_args,
   invalid_binding_expr,
-  invalid_utf8_byte_sequence,
   numeric_overflow,
   readdir_failed,
   recv_failed,
@@ -80,6 +80,7 @@ enum error_msg {
   undeclared_keyword_param,
   unexpected_keyword_parameter,
   unexpected_mode,
+  unexpected_utf8_leading_byte,
   error_msg_nil
 };
 
