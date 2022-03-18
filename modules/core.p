@@ -272,6 +272,17 @@
 (function drop (lis n)
   (slice lis n))
 
+(function take-while (fn lis)
+  (let (rec (f (lis acc)
+              (if (&& lis (fn (car lis))) (rec (cdr lis) (cons (car lis) acc))
+                  (reverse! acc))))
+    (rec lis nil)))
+
+(function drop-while (fn lis)
+  (if (nil? lis) nil
+      (fn (car lis)) (drop-while fn (cdr lis))
+      lis))
+
 (function group (lis n)
   (let (rec (f (lis acc)
               (if (nil? lis) (reverse! acc)
