@@ -84,7 +84,7 @@
 (function parse-inst (rd)
   (let (step (f (x :opt acc)
                (if (keyword? (car x)) (car x)
-                   (let (ch (next-ch rd) next-branch (find (f (y) (if (= (car y) ch) y)) x))
+                   (let (ch (next-ch rd) next-branch (select1 (f (y) (= (car y) ch)) x))
                      (if next-branch (step (cdr next-branch) (cons (car next-branch) acc))
                          (nil? ch) (raise EOFError "unexpected EOF")
                          (raise SyntaxError (str "unknown instruction " (reverse (cons ch acc)))))))))

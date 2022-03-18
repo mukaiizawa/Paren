@@ -28,9 +28,9 @@
 
 (function found? (indexes section-page)
   (let ((section page) (man-split-section-page section-page))
-    (find (f (x) (in? page (car x)))
-          (find (f (x) (if (= (car x) section) (cdr x)))
-                indexes))))
+    (some? (f (x) (in? page (car x)))
+           (keep1 (f (x) (if (= (car x) section) (cdr x)))
+                  indexes))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "a") args)

@@ -135,6 +135,8 @@
 
 ;; fundamental function.
 
+(built-in-function hash)
+(built-in-function address)
 (built-in-function =)
 (built-in-function ==)
 (built-in-function !)
@@ -145,65 +147,30 @@
 (function !== (x y)
   (! (== x y)))
 
-(built-in-function hash (x))
-
-(built-in-function address (x)
-  (assert (= (address 'x) (address 'x))))
-
 ;; function & macro.
 
-(built-in-function function? (x)
-  (assert (function? (f (x) x)))
-  (assert (! (function? begin0))))
-
-(built-in-function built-in? (x)
-  (assert (built-in? f))
-  (assert (built-in? +))
-  (assert (! (built-in? built-in-function))))
-
-(built-in-function special-operator? (x)
-  (assert (special-operator? <-))
-  (assert (! (special-operator? special-operator?))))
-
-(built-in-function macro? (x)
-  (assert (macro? begin0))
-  (assert (! (macro? begin))))
-
-(built-in-function params (proc)
-  (assert (= (params (f (x y z) nil)) '(x y z)))
-  (assert (= (params (f (x :opt y :rest z) nil)) '(x :opt y :rest z))))
-
-(built-in-function body (proc)
-  (assert (= (body (f () (list 1 2 3))) '((list 1 2 3)))))
+(built-in-function function?)
+(built-in-function built-in?)
+(built-in-function special-operator?)
+(built-in-function macro?)
+(built-in-function params)
+(built-in-function body)
 
 ;; list.
 
 (function nil? (x)
   (! x))
 
-(built-in-function cons? (x)
-  (assert (cons? '(1)))
-  (assert (! (cons? nil))))
+(built-in-function cons?)
 
 (function atom? (x)
   (! (cons? x)))
 
-(built-in-function cons (x y)
-  (assert (= (cons 'x nil) '(x))))
-
-(built-in-function car (x)
-  (assert (= (car '(1 2 3)) 1))
-  (assert (nil? (car '()))))
-
-(built-in-function cdr (x)
-  (assert (= (cdr '(1 2 3)) '(2 3)))
-  (assert (nil? (cdr '()))))
-
-(built-in-function car! (x v)
-  (assert (let (x '(1 2 3)) (&& (== (car! x :one) :one) (= x '(:one 2 3))))))
-
-(built-in-function cdr! (x v)
-  (assert (let (x '(1 2 3)) (&& (= (cdr! x '(two)) '(two)) (= x '(1 two))))))
+(built-in-function cons)
+(built-in-function car)
+(built-in-function cdr)
+(built-in-function car!)
+(built-in-function cdr!)
 
 ;;; cxr.
 (function caar (x) (car (car x)))
@@ -246,6 +213,20 @@
   (if (list? x) x
       (list x)))
 
+(function assoc (alist key)
+  (if (nil? alist) nil
+      (= (car alist) key) (cadr alist)
+      (assoc (cddr alist) key)))
+
+(function .. (start :opt stop step)
+  (let (rec (f (next stop step :opt acc)
+              (if (< next stop) (rec (+ next step) stop step (cons next acc))
+                  (reverse! acc))))
+    (if (nil? stop) (<- stop start start 0 step 1)
+        (nil? step) (<- step 1)
+        (<= step 0) (raise IndexError "step must be positive integer"))
+    (rec start stop step)))
+
 (function join (lis :opt separator)
   (if (nil? lis) ""
       (nil? (cdr lis)) (car lis)
@@ -276,23 +257,20 @@
               i (++ i)))
         (reverse! (cons (join-chars) lis)))))
 
-(built-in-function last-cons (x)
-  (assert (= (car (last-cons '(1 2 3))) 3))
-  (assert (nil? (last-cons nil))))
+(built-in-function last-cons)
 
-(function assoc (alist key)
-  (if (nil? alist) nil
-      (= (car alist) key) (cadr alist)
-      (assoc (cddr alist) key)))
+(function last (lis)
+  (car (last-cons lis)))
 
-(function .. (start :opt stop step)
-  (let (rec (f (next stop step :opt acc)
-              (if (< next stop) (rec (+ next step) stop step (cons next acc))
-                  (reverse! acc))))
-    (if (nil? stop) (<- stop start start 0 step 1)
-        (nil? step) (<- step 1)
-        (<= step 0) (raise IndexError "step must be positive integer"))
-    (rec start stop step)))
+(function butlast (x :opt n)
+  (if (nil? x) x
+      (slice x 0 (- (len x) (|| n 1)))))
+
+(function take (lis n)
+  (slice lis 0 n))
+
+(function drop (lis n)
+  (slice lis n))
 
 (function group (lis n)
   (let (rec (f (lis acc)
@@ -307,9 +285,7 @@
                   (rec (cdr lis) (cons (car lis) acc)))))
     (rec lis nil)))
 
-(built-in-function reverse! (lis)
-  (assert (nil? (reverse! nil)))
-  (assert (= (car (reverse! '(0 1))) 1)))
+(built-in-function reverse!)
 
 (macro push! (x lis)
   (with-gensyms (gx)
@@ -331,11 +307,41 @@
 
 ;;; higher-order functions.
 
+(function identity (x) x)
+
+(function partial (fn :rest partial-args)
+  (f (:rest args) (apply fn (concat partial-args args))))
+
+(function complement (fn)
+  (f (:rest args) (! (apply fn args)))) ; <=> (compose ! fn)
+
+(function compose (:rest fns)
+  (if (nil? fns) identity
+      (let ((fn1 :rest fns) (reverse fns))
+        (f (:rest args)
+          (reduce (f (args fn) (fn args))
+                  (cons (apply fn1 args) fns))))))
+
+(function juxt (:rest fns)
+  (f (:rest args)
+    (map (f (fn) (apply fn args))
+         fns)))
+
+(function foreach (fn args)
+  (dolist (x args) (fn x)))
+
 (function collect (fn)
   (let (rec (f (val :opt acc)
               (if (nil? val) (reverse! acc)
                   (rec (fn) (cons val acc)))))
     (rec (fn))))
+
+(function count (fn lis)
+  (if (nil? lis) 0
+      (let (rec (f (val rest n)
+                  (if (nil? rest) n
+                      (rec (fn (car rest)) (cdr rest) (if val (++ n) n)))))
+        (rec (fn (car lis)) (cdr lis) 0))))
 
 (function map (fn args :rest more-args)
   (let (map1 (f (fn args :opt acc)
@@ -348,9 +354,6 @@
     (if (nil? more-args) (map1 fn args)
         (mapn (cons args more-args)))))
 
-(function foreach (fn args)
-  (dolist (x args) (fn x)))
-
 (function reduce (fn args)
   (if (cdr args) (reduce fn (cons (fn (car args) (cadr args)) (cddr args)))
       (car args)))
@@ -362,15 +365,24 @@
                   (rec (cdr lis) acc))))
     (rec lis nil)))
 
+(function select1 (fn lis)
+  (if (nil? lis) nil
+      (fn (car lis)) (car lis)
+      (select1 fn (cdr lis))))
+
 (function reject (fn lis)
+  (select (complement fn) lis))
+
+(function keep (fn lis)
   (let (rec (f (lis acc)
               (if (nil? lis) (reverse! acc)
-                  (fn (car lis)) (rec (cdr lis) acc)
-                  (rec (cdr lis) (cons (car lis) acc)))))
+                  (let (val (fn (car lis)))
+                    (if (nil? val) (rec (cdr lis) acc)
+                        (rec (cdr lis) (cons val acc)))))))
     (rec lis nil)))
 
-(function find (fn lis)
-  (&& lis (|| (fn (car lis)) (find fn (cdr lis)))))
+(function keep1 (fn lis)
+  (&& lis (|| (fn (car lis)) (keep1 fn (cdr lis)))))
 
 (function position (fn lis)
   (let (rec (f (lis n)
@@ -423,19 +435,26 @@
 
 ;; number.
 
-(built-in-function number? (x)
-  (assert (number? 1))
-  (assert (number? 3.14))
-  (assert (number? 0x20))
-  (assert (! (number? 'x))))
+(built-in-function number?)
+(built-in-function int?)
 
 (function byte? (x)
   (&& (int? x) (<= 0 x 255)))
 
-(built-in-function int? (x)
-  (assert (int? 1))
-  (assert (! (int? 3.14)))
-  (assert (! (int? 'x))))
+(function zero? (x)
+  (= x 0))
+
+(function pos? (x)
+  (> x 0))
+
+(function neg? (x)
+  (< x 0))
+
+(function even? (x)
+  (zero? (% x 2)))
+
+(function odd? (x)
+  (! (zero? (% x 2))))
 
 (function int (x)
   (// (float x)))
@@ -452,38 +471,16 @@
                           val)))
       (raise ArgumentError "expected number or string")))
 
-(built-in-function + (x :rest args)
-  (assert (= (+) 0))
-  (assert (= (+ 1) 1))
-  (assert (= (+ 1 2 3) 6))
-  (assert (= (+ 1 2.0 3.0) 6)))
+(built-in-function +)
 
 (function - (x :rest args)
   (if (nil? args) (* x -1)
       (+ x (- (apply + args)))))
 
-(built-in-function * (x :rest args)
-  (assert (= (*) 1))
-  (assert (= (* 1 2 3) 6))
-  (assert (= (* 1.0 2.0 3.0) 6))
-  (assert (= (* 1 2.0 3.0) 6)))
-
-(built-in-function / (x :rest args)
-  (assert (= (/ 2) 0.5))
-  (assert (= (/ 12 2 3) 2))
-  (assert (= (/ 3 2 5) 0.3)))
-
-(built-in-function // (x :opt y)
-  (assert (= (// 3) 3))
-  (assert (= (// 3.14) 3))
-  (assert (= (// 2 1) 2))
-  (assert (= (// 2 2) 1))
-  (assert (= (// 2 3) 0)))
-
-(built-in-function % (x y)
-  (assert (= (% 4 5) 4))
-  (assert (= (% 4 3) 1))
-  (assert (= (% 4 2) 0)))
+(built-in-function *)
+(built-in-function /)
+(built-in-function //)
+(built-in-function %)
 
 (function ++ (x)
   (+ x 1))
@@ -493,22 +490,11 @@
 
 ;;;; bitwise operates.
 
-(built-in-function ~ (x)
-  (assert (= (~ (~ 2x1010)) 2x1010))
-  (assert (= (& (~ 2x1010) 2x1111) 2x0101)))
-
-(built-in-function & (x y)
-  (assert (= (& 0x333333333 0x555555555) 0x111111111)))
-
-(built-in-function | (x y)
-  (assert (= (| 0x333333333 0x555555555) 0x777777777)))
-
-(built-in-function ^ (x y)
-  (assert (= (^ 3 0x500000000) 0x500000003))
-  (assert (= (^ 0x500000000 0x500000003) 3)))
-
-(built-in-function << (x y)
-  (assert (= (<< 3 2) 12)))
+(built-in-function ~)
+(built-in-function &)
+(built-in-function |)
+(built-in-function ^)
+(built-in-function <<)
 
 (function >> (x y)
   (<< x (- y)))
@@ -519,82 +505,35 @@
 
 ;;;; mathematical functions.
 
-(built-in-function sin (x)
-  (assert (= (sin 0) 0)))
-
-(built-in-function cos (x)
-  (assert (= (cos 0) 1.0)))
-
-(built-in-function tan (x)
-  (assert (= (tan 0) (/ (sin 0) (cos 0)))))
-
-(built-in-function asin (x)
-  (assert (= (sin (asin 0.0)) 0)))
-
-(built-in-function acos (x)
-  (assert (= (cos (acos 0.0)) 0)))
-
-(built-in-function atan (x)
-  (assert (= (tan (atan 0.0)) 0.0)))
-
-(built-in-function sinh (x)
-  (assert (= (sinh 1) (/ (- (exp 1) (exp -1)) 2))))
-
-(built-in-function cosh (x)
-  (assert (= (cosh 1) (/ (+ (exp 1) (exp -1)) 2))))
-
-(built-in-function tanh (x)
-  (assert (= (tanh 1) (/ (sinh 1) (cosh 1)))))
-
-(built-in-function exp (x)
-  (assert (= (log (exp 10)) 10)))
-
-(built-in-function log (x :opt y)
-  (assert (= (log (pow 2 10)) (* 10 (log 2))))
-  (assert (= (log 10 100) (/ (log 100) (log 10)))))
-
-(built-in-function pow (x y)
-  (assert (= (// (pow 2 10)) 1024)))
-
-(built-in-function sqrt (x)
-  (assert (= (sqrt (pow 25 2)) 25)))
+(built-in-function sin)
+(built-in-function cos)
+(built-in-function tan)
+(built-in-function asin)
+(built-in-function acos)
+(built-in-function atan)
+(built-in-function sinh)
+(built-in-function cosh)
+(built-in-function tanh)
+(built-in-function exp)
+(built-in-function log)
+(built-in-function pow)
+(built-in-function sqrt)
 
 ;; symbol & keyword.
 
-(built-in-function symbol (:opt x i size)
-  (assert (== (symbol "foo") 'foo)))
-
-(built-in-function keyword (x :opt i size)
-  (assert (== (keyword "foo") :foo)))
-
-(built-in-function symbol? (x)
-  (assert (symbol? 'foo))
-  (assert (! (symbol? :foo)))
-  (assert (! (symbol? (bytes 3)))))
-
-(built-in-function keyword? (x)
-  (assert (keyword? :foo))
-  (assert (! (keyword? 'foo)))
-  (assert (! (keyword? (bytes 3)))))
+(built-in-function symbol?)
+(built-in-function keyword?)
+(built-in-function bound?)
+(built-in-function symbol)
+(built-in-function keyword)
 
 (function symcmp (x y)
   (- (address x) (address y)))
 
-(built-in-function bound? (sym)
-  (assert (bound? 'bound?))
-  (assert (bound? 'nil)))
-
 ;; string.
 
-(built-in-function string (x :opt i size)
-  (assert (= (string 'foo) "foo"))
-  (assert (= (string 'foo 1) "oo"))
-  (assert (= (string 'foo 1 2) "o")))
-
-(built-in-function string! (x)
-  (assert (let (x (bytes 1))
-            ([] x 0 0x01)
-            (= (string! x) "\x01"))))
+(built-in-function string)
+(built-in-function string!)
 
 (function str (:rest args)
   (with-memory-stream ($out)
@@ -615,26 +554,35 @@
         (doarray (i x) (write-bytes (format "%02x" i))))
       (format "0x%x" x)))
 
-(built-in-function string? (x)
-  (assert (string? ""))
-  (assert (string? "aaa"))
-  (assert (! (string? (bytes 1)))))
+(built-in-function string?)
+(built-in-function chr)
+(built-in-function ord)
 
-(built-in-function chr (i)
-  (assert (= (chr 0x20) " "))
-  (assert (= (chr 0x61) "a"))
-  (assert (= (chr 0x376) "Ͷ"))
-  (assert (= (chr 0x8056) "聖"))
-  (assert (= (chr 0x611b) "愛"))
-  (assert (= (chr 0x2123d) "𡈽")))
+(built-in-function ascii?)
+(built-in-function alnum?)
+(built-in-function alpha?)
+(built-in-function digit?)
+(built-in-function space?)
+(built-in-function print?)
+(built-in-function lower?)
+(built-in-function upper?)
 
-(built-in-function ord (ch)
-  (assert (= (ord " ") 0x20))
-  (assert (= (ord "a") 0x61))
-  (assert (= (ord "Ͷ") 0x376))
-  (assert (= (ord "聖") 0x8056))
-  (assert (= (ord "愛") 0x611b))
-  (assert (= (ord "𡈽") 0x2123d)))
+(function title? (s)
+  (if (empty? s) nil
+      (= (len s) 1) (upper? s)
+      (&& (upper? (slice s 0 1))
+          (lower? (slice s 1)))))
+
+(built-in-function lower)
+(built-in-function upper)
+
+(function title (s)
+  (join (map (f (word)
+               (if (empty? word) word
+                   (concat (upper (slice word 0 1))
+                           (lower (slice word 1)))))
+             (split s " "))
+        " "))
 
 (function wcwidth (s)
   (apply + (map (f (ch)
@@ -644,58 +592,6 @@
                             (<= 0x3000 cp 0xffe6) 2    ; Fullwidth characters
                             0))))
                 (split s))))
-
-(built-in-function ascii? (s)
-  (assert (ascii? "abc"))
-  (assert (! (ascii? "あいう"))))
-
-(built-in-function alnum? (s)
-  (assert (alnum? "abc123"))
-  (assert (! (alnum? " "))))
-
-(built-in-function alpha? (s)
-  (assert (alpha? "abc"))
-  (assert (! (alpha? "123"))))
-
-(built-in-function digit? (s)
-  (assert (digit? "0123456789"))
-  (assert (! (digit? "abc"))))
-
-(built-in-function space? (s)
-  (assert (space? " \t\r\n"))
-  (assert (! (space? ""))))
-
-(built-in-function print? (s)
-  (assert (print? " "))
-  (assert (! (print? "\e"))))
-
-(built-in-function lower? (s)
-  (assert (lower? "abc"))
-  (assert (! (lower? "ABC"))))
-
-(built-in-function upper? (s)
-  (assert (upper? "ABC"))
-  (assert (! (upper? "abc"))))
-
-(function title? (s)
-  (if (empty? s) nil
-      (= (len s) 1) (upper? s)
-      (&& (upper? (slice s 0 1))
-          (lower? (slice s 1)))))
-
-(built-in-function lower (s)
-  (assert (= (lower "ABC123") "abc123")))
-
-(built-in-function upper (b)
-  (assert (= (upper "abc123") "ABC123")))
-
-(function title (s)
-  (join (map (f (word)
-               (if (empty? word) word
-                   (concat (upper (slice word 0 1))
-                           (lower (slice word 1)))))
-             (split s " "))
-        " "))
 
 (function strstr (s pat :opt start)
   (let (start (|| start 0) sa (array s) slen (len sa) pa (array pat) plen (len pa))
@@ -778,38 +674,14 @@
 
 ;; bytes & bytes-like.
 
-(built-in-function bytes (bytes/size :opt i size)
-  (assert (= (len (bytes 1)) 1))
-  (assert (= ([] (bytes 1) 0) 0)))
+(built-in-function bytes)
+(built-in-function bytes?)
 
-(built-in-function bytes? (x)
-  (assert (bytes? (bytes 3)))
-  (assert (! (bytes? 'foo)))
-  (assert (! (bytes? :foo)))
-  (assert (! (bytes? "foo")))
-  (assert (! (bytes? (array 3)))))
-
-(built-in-function memcat (x :rest args)
-  (assert (= (memcat "0" "1" "2") "012")))
-
-(built-in-function memcpy (src src-start dst dst-start size)
-  (assert (let (s (bytes "foo") d (bytes "bar"))
-            (= (string (memcpy s 1 d 1 2)) "boo"))))
-
-(built-in-function memcmp (x y)
-  (assert (= (memcmp "bar" "foo") -1))
-  (assert (= (memcmp "foo" "bar") 1))
-  (assert (= (memcmp "foo" "foo") 0))
-  (assert (= (memcmp "fo" "foo") -1))
-  (assert (= (memcmp "foo" "fo") 1)))
-
-(built-in-function memlen (x)
-  (assert (= (memlen "foo") 3)))
-
-(built-in-function memmem (x b :opt start end)
-  (assert (= (memmem "012" "1" 1) 1))
-  (assert (= (memmem "012" "1" 0 3) 1))
-  (assert (= (memmem "012" "12" 0 3) 1)))
+(built-in-function memcat)
+(built-in-function memcpy)
+(built-in-function memcmp)
+(built-in-function memlen)
+(built-in-function memmem)
 
 (function prefix? (x prefix)
   (&& (>= (memlen x) (memlen prefix))
@@ -821,61 +693,19 @@
 
 ;; array.
 
-(built-in-function array (x)
-  (assert (= ([] (array 1) 0) nil))
-  (assert (= ([] (array (array 1)) 0) nil))
-  (assert (= ([] (array "foo") 1) "o"))
-  (assert (= ([] (array '(foo bar buzz)) 1) 'bar)))
-
-(built-in-function array? (x)
-  (assert (array? (array 3)))
-  (assert (! (array? (bytes 3)))))
+(built-in-function array)
+(built-in-function array)
 
 ;; dictionary.
 
-(built-in-function dict ()
-  )
+(built-in-function dict)
+(built-in-function dict?)
+(built-in-function keys)
 
-(built-in-function dict? (x)
-  (assert (dict? (dict)))
-  (assert (! (dict? (array 1)))))
+;; generic functions.
 
-(built-in-function keys (d)
-  (assert (let (d (dict))
-            (&& (nil? (keys d))
-                (= ([] d :foo 'foo) 'foo)
-                (= (keys d) '(:foo))))))
-
-;; sequence
-
-(built-in-function concat (:rest args)
-  (assert (nil? (concat)))
-  (assert (nil? (concat nil)))
-  (assert (nil? (concat nil nil)))
-  (assert (= (concat '(1 2) '(3)) '(1 2 3)))
-  (assert (= (concat '(1) '(2)) '(1 2)))
-  (assert (= (concat nil '(1) '(2)) '(1 2)))
-  (assert (= (concat "0" "1" "2") "012"))
-  (assert (= (concat (bytes 1) (bytes 2)) (bytes 3)))
-  (assert (= (concat (array 1) (array 2)) (array 3))))
-
-(built-in-function slice (seq :opt start stop)
-  (assert (= (slice nil) nil))
-  (assert (= (slice nil 0) nil))
-  (assert (= (slice nil 0 1) nil))
-  (assert (let (lis '(0 1 2))
-            (= (slice lis) lis)
-            (!== (slice lis) lis) ; guarantee to be copied.
-            (= (slice lis 0) lis)
-            (= (slice lis 2) '(2))
-            (= (slice lis 2 2) nil)
-            (= (slice lis 4) nil)
-            (= (slice lis 0 2) '(0 1))))
-  (assert (let (s "abc")
-            (= (slice s ) s)
-            (= (slice s 0) "bc")
-            (= (slice s 0 0) "")
-            (= (slice s 0 2) "ab"))))
+(built-in-function concat)
+(built-in-function slice)
 
 (function swap! (seq i j)
   (let (t ([] seq i))
@@ -902,76 +732,27 @@
     (sort-range! seq (|| start 0) (-- (|| end (len seq))))
     seq))
 
-(function first (x)
-  ([] x 0))
+(built-in-function [])
+(built-in-function in?)
 
-(function last (x)
-  (if (list? x) (car (last-cons x))
-      ([] x (-- (len x)))))
+(function index (coll x)
+  (if (dict? coll)
+      (dolist (key (keys coll))
+        (if (= ([] coll key) x) (return key)))
+      (list? coll)
+      (position (f (y) (= x y)) coll)
+      (|| (string? coll) (array? coll))
+      (dotimes (i (len coll))
+        (if (= ([] coll i) x) (return i)))
+      (bytes? coll) (memmem coll x)
+      (raise ArgumentError "expected coll")))
 
-(function butlast (x :opt n)
-  (if (nil? x) x
-      (slice x 0 (- (len x) (|| n 1)))))
+(built-in-function len)
 
-;; collection
+(function empty? (x)
+  (= (len x) 0))
 
-(built-in-function [] (collection key :opt val)
-  (assert (= ([] '(0 1 2) 0) 0))
-  (assert (= ([] (array 1) 0) nil))
-  (assert (= ([] "foo" 0) "f"))
-  (assert (= ([] (bytes 1) 0) 0))
-  (assert (let (a (array 1) b (bytes 1))
-            (&& ([] a 0 true)
-                ([] a 0)
-                ([] b 0 0xff)
-                (= ([] b 0) 0xff)))))
-
-(built-in-function in? (x collection)
-  (assert (in? 1 '(1 2 3)))
-  (assert (! (in? 0 '(1 2 3))))
-  (assert (in? 0x00 (bytes 1)))
-  (assert (! (in? 0x01 (bytes 1))))
-  (assert (in? "foo" "xfoox"))
-  (assert (! (in? "foo" "xbarx")))
-  (assert (in? nil (array 1)))
-  (assert (! (in? true (array 1))))
-  (assert (let (d (dict)) ([] d nil nil) (in? nil d)))
-  (assert (! (in? nil (dict)))))
-
-(function index (collection x)
-  (if (dict? collection)
-      (dolist (key (keys collection))
-        (if (= ([] collection key) x) (return key)))
-      (list? collection)
-      (position (f (y) (= x y)) collection)
-      (|| (string? collection) (array? collection))
-      (dotimes (i (len collection))
-        (if (= ([] collection i) x) (return i)))
-      (bytes? collection) (memmem collection x)
-      (raise ArgumentError "expected collection")))
-
-(built-in-function len (collection)
-  (assert (= (len nil) 0))
-  (assert (= (len '(1)) 1))
-  (assert (= (len (array 1)) 1))
-  (assert (= (len (let (d (dict)) ([] d :x 1) d)) 1))
-  (assert (= (len "αβγ") 3)))
-
-(function empty? (collection)
-  (= (len collection) 0))
-
-;; comparable.
-
-(built-in-function < (:rest args)
-  (assert (< 0 1 2))
-  (assert (< 0 1.0 2))
-  (assert (! (< 0 0 1)))
-  (assert (! (< :foo :foo)))
-  (assert (< :f :fo :foo))
-  (assert (! (< :foo :fo :f)))
-  (assert (< "あ" "い" "う"))
-  (assert (< "abcあ" "abcい" "abcいい"))
-  (assert (! (< "あいう" "あい" "あ"))))
+(built-in-function <)
 
 (function > (:rest args)
   (every-adjacent? (f (x y) (< y x)) args))
@@ -2348,11 +2129,10 @@
                      Exception (f (e) (.print-stack-trace e) (exit (.status-cd e))))
     (if (.file? $parenrc) (load $parenrc))
     (if (nil? args) (repl)
-        (let (file-name (car args)
-                        script (find (f (x) (if (.file? x) x))
-                                     (map (f (x) (apply .resolve x))
-                                          (product (cons (path.getcwd) $runtime-path)
-                                                   (list file-name (str file-name ".p"))))))
+        (let (file-name (car args) script (select1 .file?
+                                                   (map (f (x) (apply .resolve x))
+                                                        (product (cons (path.getcwd) $runtime-path)
+                                                                 (list file-name (str file-name ".p"))))))
           (if (nil? script) (raise ArgumentError (str "unreadable file " file-name))
               (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 

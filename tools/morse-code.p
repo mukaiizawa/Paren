@@ -50,8 +50,8 @@
       (0 -----)))
 
 (function encode-ch (ch)
-  (find (f (x) (if (= (str (car x)) ch) (str (cadr x))))
-        $table))
+  (keep1 (f (x) (if (= (str (car x)) ch) (str (cadr x))))
+         $table))
 
 (function encode-word (word)
   (join (map encode-ch (split word))
@@ -62,8 +62,8 @@
         $word-space))
 
 (function decode-ch (ch)
-  (find (f (x) (if (= (str (cadr x)) ch) (str (car x))))
-        $table))
+  (keep1 (f (x) (if (= (str (cadr x)) ch) (str (car x))))
+         $table))
 
 (function decode-word (word)
   (join (map decode-ch (reject empty? (split word " ")))))

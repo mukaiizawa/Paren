@@ -16,8 +16,7 @@
     (&table! self table)))
 
 (method OptionParser .lookup (opt)
-  (let (record (find (f (x) (if (= opt (car x)) x))
-                     (&table self)))
+  (let (record (select1 (f (x) (= opt (car x))) (&table self)))
     (if (nil? record) (raise ArgumentError "unknown option")
         record)))
 

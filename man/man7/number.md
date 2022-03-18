@@ -32,7 +32,7 @@ Integers and real numbers support the range that can be represented by the `int6
 - >>(3)
 - ^(3)
 - `*`(3)
-- abs
+- abs(3)
 - acos(3)
 - asin(3)
 - atan(3)

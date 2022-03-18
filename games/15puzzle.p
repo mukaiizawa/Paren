@@ -32,7 +32,7 @@
 (function input ()
   (write (reject list? $vector))
   (let (selection (read))
-    (|| (find (f (x) (if (= (cadr x) selection) (caddr x)))
+    (|| (keep1 (f (x) (if (= (cadr x) selection) (caddr x)))
               (group $vector 3))
         (input))))
 
