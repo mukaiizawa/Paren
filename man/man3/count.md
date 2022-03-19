@@ -19,6 +19,8 @@ Returns the number of elements in the `LIST` that satisfy the predicate function
 
     ) (count even? (.. 10))
     5
+    ) (count odd? (.. 10))
+    5
     ) (count zero? (.. 10))
     1
 

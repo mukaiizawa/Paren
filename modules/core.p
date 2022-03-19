@@ -348,11 +348,11 @@
     (rec (fn))))
 
 (function count (fn lis)
-  (if (nil? lis) 0
-      (let (rec (f (val rest n)
-                  (if (nil? rest) n
-                      (rec (fn (car rest)) (cdr rest) (if val (++ n) n)))))
-        (rec (fn (car lis)) (cdr lis) 0))))
+  (let (rec (f (lis sum)
+              (if (nil? lis) sum
+                  (fn (car lis)) (rec (cdr lis) (++ sum))
+                  (rec (cdr lis) sum))))
+    (rec lis 0)))
 
 (function map (fn args :rest more-args)
   (let (map1 (f (fn args :opt acc)
