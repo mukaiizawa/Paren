@@ -49,6 +49,9 @@ If the list is long enough for `i`.
 
 # SEE ALSO
 - butlast(3)
+- grop(3)
+- grop-by(3)
 - last(3)
 - partial(3)
 - slice(3)
+- span(3)

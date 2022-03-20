@@ -35,3 +35,4 @@ The length of the last sublists is:
 
 # SEE ALSO
 - slice(3)
+- group-by(3)

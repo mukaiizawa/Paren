@@ -155,6 +155,7 @@
 (built-in-function macro?)
 (built-in-function params)
 (built-in-function body)
+(function identity (x) x)
 
 ;; list.
 
@@ -283,12 +284,24 @@
       (fn (car lis)) (drop-while fn (cdr lis))
       lis))
 
+(function span (fn lis)
+  (apply (juxt take-while drop-while) (list fn lis)))
+
 (function group (lis n)
   (let (rec (f (lis acc)
               (if (nil? lis) (reverse! acc)
                   (rec (slice lis n) (cons (slice lis 0 n) acc)))))
     (if (<= n 0) (raise IndexError "sublists length must be positive integer")
         (rec lis nil))))
+
+(function group-by (fn lis)
+  (let (d (dict) keys nil ret nil)
+    (dolist (x lis)
+      (let (key (fn x) val ([] d key))
+        (if (! (in? key d)) (push! key keys))
+        ([] d key (cons x val))))
+    (reduce (f (acc key) (cons key (cons (reverse! ([] d key)) acc)))
+            (cons nil keys))))
 
 (function reverse (lis)
   (let (rec (f (lis acc)
@@ -317,8 +330,6 @@
     (reverse! acc)))
 
 ;;; higher-order functions.
-
-(function identity (x) x)
 
 (function partial (fn :rest partial-args)
   (f (:rest args) (apply fn (concat partial-args args))))
@@ -365,6 +376,9 @@
     (if (nil? more-args) (map1 fn args)
         (mapn (cons args more-args)))))
 
+(function zip (:rest args)
+  (apply (partial map list) args))
+
 (function reduce (fn args)
   (if (cdr args) (reduce fn (cons (fn (car args) (cadr args)) (cddr args)))
       (car args)))
@@ -394,6 +408,11 @@
 
 (function keep1 (fn lis)
   (&& lis (|| (fn (car lis)) (keep1 fn (cdr lis)))))
+
+(function member (fn lis)
+  (if (nil? lis) nil
+      (fn (car lis)) lis
+      (member fn (cdr lis))))
 
 (function position (fn lis)
   (let (rec (f (lis n)
