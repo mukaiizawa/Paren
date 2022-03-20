@@ -109,7 +109,7 @@ rw.vim:
 		sed 's/|/\\|/g' | \
 		sed '/^\[/d' | \
 		sed '/^[A-Z]/d' | \
-		sed 's/^/syn keyword ParenBuiltIn /' > rw.wk
+		sed 's/^/syn keyword ParenBuiltIn /' | sort > rw.wk
 
 clean:
 	rm -f *.o *.out *.a *.wk $(paren)
