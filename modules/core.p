@@ -1236,6 +1236,9 @@
     (if (nil? suffixes) ""
         (last suffixes))))
 
+(method Path .suffix! (suffix)
+  (.resolve (.parent self) (str (.but-suffix self) "." suffix)))
+
 (method Path .but-suffix ()
   ; Returns the name without the suffix.
   (let ((name :rest suffixes) (split (.name self) "."))
