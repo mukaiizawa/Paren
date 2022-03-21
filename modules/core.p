@@ -1372,6 +1372,10 @@
   (map (f (x) (.resolve self x))
        (sort! (split (readdir (.to-s self)) "\n"))))
 
+(method Path .walk (fn)
+  (if (.dir? self) (foreach (f (x) (.walk x fn)) (.children self))
+      (.file? self) (fn self)))
+
 ;;; I/O.
 
 (class Stream ()
