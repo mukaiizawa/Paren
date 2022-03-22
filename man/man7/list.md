@@ -60,6 +60,7 @@ Thus, Paren programs can manipulate source code as a data structure, giving rise
 - take(3)
 - take-while(3)
 - union(3)
+- uniq(3)
 - zip(3)
 - cons(7)
 - data-types(7)

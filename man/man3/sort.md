@@ -51,3 +51,4 @@ The `SEQUENCE` is modified. If you want to keep the original sequence, copy it l
 
 # SEE ALSO
 - <(3)
+- uniq(3)

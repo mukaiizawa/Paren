@@ -409,6 +409,13 @@
 (function keep1 (fn lis)
   (&& lis (|| (fn (car lis)) (keep1 fn (cdr lis)))))
 
+(function uniq (lis)
+  (let (rec (f (lis acc)
+              (if (nil? lis) (reverse! acc)
+                  (let (x (car lis))
+                    (rec (drop-while (partial = x) lis) (cons x acc))))))
+    (rec lis nil)))
+
 (function member (fn lis)
   (if (nil? lis) nil
       (fn (car lis)) lis
