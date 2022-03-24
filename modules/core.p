@@ -159,21 +159,35 @@
 
 ;; list.
 
+(built-in-function [])
+(built-in-function car!)
+(built-in-function car)
+(built-in-function cdr!)
+(built-in-function cdr)
+(built-in-function concat)
+(built-in-function cons)
+(built-in-function cons?)
+(built-in-function in?)
+(built-in-function last-cons)
+(built-in-function len)
+(built-in-function list)
+(built-in-function list...)
+(built-in-function slice)
+
 (function nil? (x)
   (! x))
-
-(built-in-function cons?)
 
 (function atom? (x)
   (! (cons? x)))
 
-(built-in-function cons)
-(built-in-function car)
-(built-in-function cdr)
-(built-in-function car!)
-(built-in-function cdr!)
+(function list? (x)
+  (if (cons? x) true
+      (nil? x)))
 
-;;; cxr.
+(function ->list (x)
+  (if (list? x) x
+      (list x)))
+
 (function caar (x) (car (car x)))
 (function cadr (x) (car (cdr x)))
 (function cdar (x) (cdr (car x)))
@@ -203,16 +217,17 @@
 (function cdddar (x) (cdr (cddar x)))
 (function cddddr (x) (cdr (cdddr x)))
 
-(built-in-function list)
-(built-in-function list...)
-
-(function list? (x)
-  (if (cons? x) true
-      (nil? x)))
-
-(function ->list (x)
-  (if (list? x) x
-      (list x)))
+(function index (coll x)
+  (if (dict? coll)
+      (dolist (key (keys coll))
+        (if (= ([] coll key) x) (return key)))
+      (list? coll)
+      (position (f (y) (= x y)) coll)
+      (|| (string? coll) (array? coll))
+      (dotimes (i (len coll))
+        (if (= ([] coll i) x) (return i)))
+      (bytes? coll) (memmem coll x)
+      (raise ArgumentError "expected coll")))
 
 (function assoc (alist key)
   (if (nil? alist) nil
@@ -257,8 +272,6 @@
           (<- chars (cons ([] sa i) chars)
               i (++ i)))
         (reverse! (cons (join-chars) lis)))))
-
-(built-in-function last-cons)
 
 (function last (lis)
   (car (last-cons lis)))
@@ -341,6 +354,31 @@
                           (dolist (i x) (rec i)))))
     (rec lis)
     (reverse! acc)))
+
+(function swap! (seq i j)
+  (let (t ([] seq i))
+    ([] seq i ([] seq j))
+    ([] seq j t)
+    seq))
+
+(function sort! (seq :key sorter key start end)
+  (let (sort-range!
+         (f (seq start end)
+           (let (i start j end x (key ([] seq start)))
+             (loop
+               (while (&& (< i end) (sorter (key ([] seq i)) x)) (<- i (++ i)))
+               (while (&& (>= j start) (sorter x (key ([] seq j)))) (<- j (-- j)))
+               (if (< i j)
+                   (begin
+                     (swap! seq i j)
+                     (<- i (++ i) j (-- j)))
+                   (break)))
+             (if (< start (<- i (-- i))) (sort-range! seq start i))
+             (if (< (<- j (++ j)) end) (sort-range! seq j end)))))
+    (if (nil? sorter) (<- sorter <))
+    (if (nil? key) (<- key (f (x) x)))
+    (sort-range! seq (|| start 0) (-- (|| end (len seq))))
+    seq))
 
 ;;; higher-order functions.
 
@@ -538,6 +576,27 @@
 (function -- (x)
   (+ x -1))
 
+(built-in-function <)
+
+(function > (:rest args)
+  (every-adjacent? (f (x y) (< y x)) args))
+
+(function <= (:rest args)
+  (every-adjacent? (f (x y) (! (< y x))) args))
+
+(function >= (:rest args)
+  (every-adjacent? (f (x y) (! (< x y))) args))
+
+(function max (:rest args)
+  (reduce (f (x y) (if (> x y) x y)) args))
+
+(function min (:rest args)
+  (reduce (f (x y) (if (< x y) x y)) args))
+
+(function abs (x)
+  (if (< x 0) (- x)
+      x))
+
 ;;;; bitwise operates.
 
 (built-in-function ~)
@@ -548,10 +607,6 @@
 
 (function >> (x y)
   (<< x (- y)))
-
-(function abs (x)
-  (if (< x 0) (- x)
-      x))
 
 ;;;; mathematical functions.
 
@@ -582,8 +637,23 @@
 
 ;; string.
 
-(built-in-function string)
 (built-in-function string!)
+(built-in-function string)
+(built-in-function string?)
+
+(built-in-function chr)
+(built-in-function ord)
+
+(built-in-function alnum?)
+(built-in-function alpha?)
+(built-in-function ascii?)
+(built-in-function digit?)
+(built-in-function lower)
+(built-in-function lower?)
+(built-in-function print?)
+(built-in-function space?)
+(built-in-function upper)
+(built-in-function upper?)
 
 (function str (:rest args)
   (with-memory-stream ($out)
@@ -604,27 +674,14 @@
         (doarray (i x) (write-bytes (format "%02x" i))))
       (format "0x%x" x)))
 
-(built-in-function string?)
-(built-in-function chr)
-(built-in-function ord)
-
-(built-in-function ascii?)
-(built-in-function alnum?)
-(built-in-function alpha?)
-(built-in-function digit?)
-(built-in-function space?)
-(built-in-function print?)
-(built-in-function lower?)
-(built-in-function upper?)
+(function empty? (x)
+  (= (len x) 0))
 
 (function title? (s)
   (if (empty? s) nil
       (= (len s) 1) (upper? s)
       (&& (upper? (slice s 0 1))
           (lower? (slice s 1)))))
-
-(built-in-function lower)
-(built-in-function upper)
 
 (function title (s)
   (join (map (f (word)
@@ -722,7 +779,7 @@
     (while (&& (>= i 0) (fn ([] a (-- i)))) (<- i (-- i)))
     (slice s 0 i)))
 
-;; bytes & bytes-like.
+;; bytes
 
 (built-in-function bytes)
 (built-in-function bytes?)
@@ -744,80 +801,13 @@
 ;; array.
 
 (built-in-function array)
-(built-in-function array)
+(built-in-function array?)
 
 ;; dictionary.
 
 (built-in-function dict)
 (built-in-function dict?)
 (built-in-function keys)
-
-;; generic functions.
-
-(built-in-function concat)
-(built-in-function slice)
-
-(function swap! (seq i j)
-  (let (t ([] seq i))
-    ([] seq i ([] seq j))
-    ([] seq j t)
-    seq))
-
-(function sort! (seq :key sorter key start end)
-  (let (sort-range!
-         (f (seq start end)
-           (let (i start j end x (key ([] seq start)))
-             (loop
-               (while (&& (< i end) (sorter (key ([] seq i)) x)) (<- i (++ i)))
-               (while (&& (>= j start) (sorter x (key ([] seq j)))) (<- j (-- j)))
-               (if (< i j)
-                   (begin
-                     (swap! seq i j)
-                     (<- i (++ i) j (-- j)))
-                   (break)))
-             (if (< start (<- i (-- i))) (sort-range! seq start i))
-             (if (< (<- j (++ j)) end) (sort-range! seq j end)))))
-    (if (nil? sorter) (<- sorter <))
-    (if (nil? key) (<- key (f (x) x)))
-    (sort-range! seq (|| start 0) (-- (|| end (len seq))))
-    seq))
-
-(built-in-function [])
-(built-in-function in?)
-
-(function index (coll x)
-  (if (dict? coll)
-      (dolist (key (keys coll))
-        (if (= ([] coll key) x) (return key)))
-      (list? coll)
-      (position (f (y) (= x y)) coll)
-      (|| (string? coll) (array? coll))
-      (dotimes (i (len coll))
-        (if (= ([] coll i) x) (return i)))
-      (bytes? coll) (memmem coll x)
-      (raise ArgumentError "expected coll")))
-
-(built-in-function len)
-
-(function empty? (x)
-  (= (len x) 0))
-
-(built-in-function <)
-
-(function > (:rest args)
-  (every-adjacent? (f (x y) (< y x)) args))
-
-(function <= (:rest args)
-  (every-adjacent? (f (x y) (! (< y x))) args))
-
-(function >= (:rest args)
-  (every-adjacent? (f (x y) (! (< x y))) args))
-
-(function max (:rest args)
-  (reduce (f (x y) (if (> x y) x y)) args))
-
-(function min (:rest args)
-  (reduce (f (x y) (if (< x y) x y)) args))
 
 ;; os.
 
