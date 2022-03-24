@@ -263,15 +263,20 @@
 (function last (lis)
   (car (last-cons lis)))
 
-(function butlast (x :opt n)
-  (if (nil? x) x
-      (slice x 0 (- (len x) (|| n 1)))))
+(function butlast (lis)
+  (drop-last lis 1))
 
 (function take (lis n)
   (slice lis 0 n))
 
 (function drop (lis n)
   (slice lis n))
+
+(function take-last (lis n)
+  (slice lis (- (max (len lis) n) n)))
+
+(function drop-last (lis n)
+  (slice lis 0 (- (max (len lis) n) n)))
 
 (function take-while (fn lis)
   (let (rec (f (lis acc)
