@@ -1,19 +1,12 @@
 ; prevent sleep.
 
 (import :mouse)
+(import :rand)
 
-(<- $origin '(0 0)
-    $distance-threshold 100)
-
-(function stopped? (p q)
-  (< (sqrt
-       (apply +
-              (map (f (dx) (pow dx 2))
-                   (map - p q))))
-     $distance-threshold))
+(<- $HD '(720 1280)
+    $interval 120)
 
 (function! main (args)
-  (let (prev (mouse.position))
-    (while (stopped? prev (<- prev (mouse.position)))
-      (foreach mouse.move (list $origin prev))
-      (sleep 1))))
+  (loop
+    (mouse.move (map rand.int $HD))
+    (sleep $interval)))
