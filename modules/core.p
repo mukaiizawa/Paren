@@ -809,6 +809,9 @@
 (built-in-function dict?)
 (built-in-function keys)
 
+(function vals (d)
+  (map (partial [] d) (keys d)))
+
 ;; os.
 
 (built-in-function fp (fd))
