@@ -34,7 +34,7 @@ In Paren, functions are first-class objects, so it can also be given to the argu
 - select(3)
 - select1(3)
 - some?(3)
-- span(3)
+- split-with(3)
 - data-types(7)
 - macro(7)
 - special-operator(7)

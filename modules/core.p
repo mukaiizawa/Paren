@@ -289,7 +289,10 @@
       (fn (car lis)) (drop-while fn (cdr lis))
       lis))
 
-(function span (fn lis)
+(function split-at (lis i)
+  (apply (juxt take drop) (list lis i)))
+
+(function split-with (fn lis)
   (apply (juxt take-while drop-while) (list fn lis)))
 
 (function group (lis n)

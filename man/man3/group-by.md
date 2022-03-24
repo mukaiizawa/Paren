@@ -24,7 +24,5 @@ Returns the `LIST` into sublists by function `FN` return value.
 
 # SEE ALSO
 - chunk(3)
-- drop-while(3)
 - group(3)
-- span(3)
-- take-while(3)
+- split-with(3)
