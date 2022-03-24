@@ -303,6 +303,11 @@
     (reduce (f (acc key) (cons key (cons (reverse! ([] d key)) acc)))
             (cons nil keys))))
 
+(function chunk (fn lis)
+  (if (nil? lis) nil
+      (let (val (fn (car lis)) separator (compose (partial = val) fn))
+        (cons val (cons (take-while separator lis) (chunk fn (drop-while separator lis)))))))
+
 (function reverse (lis)
   (let (rec (f (lis acc)
               (if (nil? lis) acc

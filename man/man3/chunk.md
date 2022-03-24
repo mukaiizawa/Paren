@@ -1,5 +1,5 @@
 # NAME
-group-by - grouping the list into sublists by function return value.
+chunk - grouping the list into sublists by function return value.
 
 # SYNOPSIS
 
@@ -23,7 +23,6 @@ Returns the `LIST` into sublists by function `FN` return value.
     (0 (0 3 6 9) 1 (1 4 7) 2 (2 5 8))
 
 # SEE ALSO
-- chunk(3)
 - drop-while(3)
 - group(3)
 - span(3)
