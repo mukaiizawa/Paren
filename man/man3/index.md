@@ -1,55 +1,99 @@
 # NAME
-index - locate a element.
+index, last-index - locate a element.
 
 # SYNOPSIS
 
-    (index COLLECTION VAL)
+    (index ARRAY VAL)
+    (index BYTES VAL)
+    (index DICTIONARY VAL)
+    (index LIST VAL)
+    (index STRING VAL)
+    (last-index ARRAY VAL)
+    (last-index BYTES VAL)
+    (last-index DICTIONARY VAL)
+    (last-index LIST VAL)
+    (last-index STRING VAL)
 
 # DESCRIPTION
-The function `index` returns the key of the `COLLECTION` corresponding to `VAL`.
+The function `index` returns the key of the argument corresponding to `VAL`.
+
+The function `last-index` is identical to `index` except that it searches from the tail. However, for dictionaries without the concept of order, it is identical to `index`.
 
 # RETURN VALUE
-Returns the key of the `COLLECTION` corresponding to `VAL`.
+If the argument is `ARRAY` or `BYTES` or `LIST`, the position of `VAL` is returned.
+
+If the argument is `STRING`, returns the index within this string of the first occurrence of the specified substring `VAL`.
+
+If the argument is a `DICTIONARY`, returns the key corresponding to `VAL`. If there are multiple identical `VAL`, the value returned is undefined.
 
 If `VAL` is not associated, returns `nil`.
 
 # EXAMPLES
 
-    ) (<- d #{ :foo 1 :bar 2 })
-    #{ :bar 2 :foo 1 }
-    ) (index d 1)
-    :foo
-    ) (index d 2)
-    :bar
-    ) (index d 3)
-    nil
-
-    ) (<- l (.. 3))
-    (0 1 2)
-    ) (index l 1)
-    1
-    ) (index l 2)
-    2
-    ) (index l 3)
-    nil
-
-    ) (<- a (array (.. 3)))
-    #[ 0 1 2 ]
-    ) (index a 1)
-    1
-    ) (index a 2)
-    2
-    ) (index a 3)
-    nil
-
-    ) (<- s "abc") ; string.
-    "abc"
-    ) (index s "a")
+    ) (index #[ 0 1 0 ] 0)
     0
-    ) (index s "b")
+    ) (index #[ 0 1 0 ] 1)
     1
-    ) (index s "d")
+    ) (index #[ 0 1 0 ] 10)
     nil
+    ) (last-index #[ 0 1 0 ] 0)
+    2
+    ) (last-index #[ 0 1 0 ] 1)
+    1
+    ) (last-index #[ 0 1 0 ] 10)
+    nil
+
+    ) (index (bytes 3) 0x01)
+    nil
+    ) (index (bytes 3) 0x00)
+    0
+    ) (last-index (bytes 3) 0x01)
+    nil
+    ) (last-index (bytes 3) 0x00)
+    2
+
+    ) (index #{ :foo 0 :bar 1 } 0)
+    :foo
+    ) (index #{ :foo 0 :bar 1 } 1)
+    :bar
+    ) (index #{ :foo 0 :bar 1 } 2)
+    nil
+
+    ) (index '(0 1 0) 0)
+    0
+    ) (index '(0 1 0) 1)
+    1
+    ) (index '(0 1 0) 2)
+    nil
+    ) (last-index '(0 1 0) 0)
+    2
+    ) (last-index '(0 1 0) 1)
+    1
+    ) (last-index '(0 1 0) 2)
+    nil
+
+    ) (index "abcab" "a")
+    0
+    ) (index "abcab" "b")
+    1
+    ) (index "abcab" "d")
+    nil
+    ) (index "abcab" "ab")
+    0
+    ) (index "abcab" "bc")
+    1
+    ) (last-index "abcab" "a")
+    3
+    ) (last-index "abcab" "b")
+    4
+    ) (last-index "abcab" "d")
+    nil
+    ) (last-index "abcab" "ab")
+    3
+    ) (last-index "abcab" "bc")
+    1
 
 # SEE ALSO
+- [](3)
+- in?(3)
 - position(3)

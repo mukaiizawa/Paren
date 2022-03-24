@@ -168,7 +168,9 @@
 (built-in-function cons)
 (built-in-function cons?)
 (built-in-function in?)
+(built-in-function index)
 (built-in-function last-cons)
+(built-in-function last-index)
 (built-in-function len)
 (built-in-function list)
 (built-in-function list...)
@@ -216,18 +218,6 @@
 (function cddadr (x) (cdr (cdadr x)))
 (function cdddar (x) (cdr (cddar x)))
 (function cddddr (x) (cdr (cdddr x)))
-
-(function index (coll x)
-  (if (dict? coll)
-      (dolist (key (keys coll))
-        (if (= ([] coll key) x) (return key)))
-      (list? coll)
-      (position (f (y) (= x y)) coll)
-      (|| (string? coll) (array? coll))
-      (dotimes (i (len coll))
-        (if (= ([] coll i) x) (return i)))
-      (bytes? coll) (memmem coll x)
-      (raise ArgumentError "expected coll")))
 
 (function assoc (alist key)
   (if (nil? alist) nil
