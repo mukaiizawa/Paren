@@ -14,13 +14,12 @@
   ; Returns true or nil randomly.
   (= (rand.int 2) 0))
 
-(function rand.shuffle! (seq :key seed)
+(function rand.shuffle! (seq)
   ; Randomly permutes the specified sequence using a default source of randomness.
   ; Returns seq.
-  (if seed (rand.seed seed))
   (let (rec (f (seq n)
-              (if (= n 0) seq
-                  (rec (swap! seq (rand.int n) n) (-- n)))))
+              (if (pos? n) (rec (swap! seq (rand.int n) n) (-- n))
+                   seq)))
     (rec seq (-- (len seq)))))
 
 (function rand.choice (seq)
