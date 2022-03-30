@@ -2046,39 +2046,30 @@
           (list [] $read-table (list quote next) g))))
 
 (function read-byte ()
-  ; Same as `(.read-byte (dynamic $in))`.
   (.read-byte (dynamic $in)))
 
 (function read-bytes (:opt buf from size)
-  ; Same as `(.read-bytes (dynamic $in))`.
   (.read-bytes (dynamic $in) buf from size))
 
 (function read-char ()
-  ; Same as `(.read-char (dynamic $in))`.
   (.read-char (dynamic $in)))
 
 (function read-line ()
-  ; Same as `(.read-line (dynamic $in))`.
   (.read-line (dynamic $in)))
 
 (function read ()
-  ; Same as `(.read (dynamic $in))`.
   (.read (dynamic $in)))
 
 (function write-byte (x)
-  ; Same as `(.write-byte (dynamic $out) x)`.
   (.write-byte (dynamic $out) x))
 
 (function write-bytes (x :opt from size)
-  ; Same as `(.write-bytes (dynamic $out) x)`.
   (.write-bytes (dynamic $out) x from size))
 
 (function write-line (:opt x)
-  ; Same as `(.write-line (dynamic $out) x)`.
   (.write-line (dynamic $out) x))
 
 (function write (x :key start end)
-  ; Same as `(.write (dynamic $out) x :start start :end end))`.
   (.write (dynamic $out) x :start start :end end))
 
 (macro with-memory-stream ((ms :opt s) :rest body)
