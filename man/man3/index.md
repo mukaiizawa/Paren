@@ -3,21 +3,24 @@ index, last-index - locate a element.
 
 # SYNOPSIS
 
-    (index ARRAY VAL)
-    (index BYTES VAL)
+    (index ARRAY VAL [START [END]])
+    (index BYTES VAL [START [END]])
     (index DICTIONARY VAL)
-    (index LIST VAL)
-    (index STRING VAL)
-    (last-index ARRAY VAL)
-    (last-index BYTES VAL)
+    (index LIST VAL [START [END]])
+    (index STRING VAL [START [END]])
+    
+    (last-index ARRAY VAL [START [END]])
+    (last-index BYTES VAL [START [END]])
     (last-index DICTIONARY VAL)
-    (last-index LIST VAL)
-    (last-index STRING VAL)
+    (last-index LIST VAL [START [END]])
+    (last-index STRING VAL [START [END]])
 
 # DESCRIPTION
 The function `index` returns the key of the argument corresponding to `VAL`.
 
 The function `last-index` is identical to `index` except that it searches from the tail. However, for dictionaries without the concept of order, it is identical to `index`.
+
+If `START` and `END` are specified, the search is performed over a range equivalent to `(slice x START `END`)`. Their initial values are `0` and `(len x)`
 
 # RETURN VALUE
 If the argument is `ARRAY` or `BYTES` or `LIST`, the position of `VAL` is returned.
@@ -32,6 +35,10 @@ If `VAL` is not associated, returns `nil`.
 
     ) (index #[ 0 1 0 ] 0)
     0
+    ) (index #[ 0 1 0 ] 0 1)
+    2
+    ) (index #[ 0 1 0 ] 0 1 2)
+    nil
     ) (index #[ 0 1 0 ] 1)
     1
     ) (index #[ 0 1 0 ] 10)
@@ -61,6 +68,10 @@ If `VAL` is not associated, returns `nil`.
 
     ) (index '(0 1 0) 0)
     0
+    ) (index '(0 1 0) 0 1)
+    2
+    ) (index '(0 1 0) 0 1 2)
+    nil
     ) (index '(0 1 0) 1)
     1
     ) (index '(0 1 0) 2)
@@ -74,6 +85,10 @@ If `VAL` is not associated, returns `nil`.
 
     ) (index "abcab" "a")
     0
+    ) (index "abcab" "a" 1)
+    3
+    ) (index "abcab" "a" 1 2)
+    nil
     ) (index "abcab" "b")
     1
     ) (index "abcab" "d")
