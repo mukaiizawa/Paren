@@ -311,13 +311,14 @@
       (let (key (fn x) val ([] d key))
         (if (! (in? key d)) (push! key keys))
         ([] d key (cons x val))))
-    (reduce (f (acc key) (cons key (cons (reverse! ([] d key)) acc)))
+    (reduce (f (acc key) (cons (list key (reverse! ([] d key))) acc))
             (cons nil keys))))
 
 (function chunk (fn lis)
   (if (nil? lis) nil
       (let (val (fn (car lis)) separator (compose (partial = val) fn))
-        (cons val (cons (take-while separator lis) (chunk fn (drop-while separator lis)))))))
+        (cons (list val (take-while separator lis))
+              (chunk fn (drop-while separator lis))))))
 
 (function reverse (lis)
   (let (rec (f (lis acc)
@@ -2071,6 +2072,14 @@
 
 (function write (x :key start end)
   (.write (dynamic $out) x :start start :end end))
+
+(function print (:rest args)
+  (foreach (compose write-bytes str) args))
+
+(function println (:rest args)
+  (begin0
+    (apply print args)
+    (write-line)))
 
 (macro with-memory-stream ((ms :opt s) :rest body)
   ; Create memory stream context.

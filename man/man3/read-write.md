@@ -1,5 +1,5 @@
 # NAME
-read, read-byte, read-bytes, read-char, read-line, write, write-byte, write-bytes, write-line - input and output functions.
+read, read-byte, read-bytes, read-char, read-line, write, write-byte, write-bytes, write-line, print, println - input and output functions.
 
 # SYNOPSIS
 
@@ -12,6 +12,8 @@ read, read-byte, read-bytes, read-char, read-line, write, write-byte, write-byte
     (write-bytes BYTES [FROM [SIZE]])
     (write-line [BYTES])
     (write EXPR [:start START] [:end END])
+    (print EXPR ...)
+    (println EXPR ...)
 
 # DESCRIPTION
 These functions read from the stream to which $in is bound and write to the stream to which $out is bound.
@@ -24,10 +26,12 @@ These functions read from the stream to which $in is bound and write to the stre
         read-line -- read 1 line.
     
     $out
-        write -- write in a format that can be read by read.
+        write -- write S-expression in a format that can be read by function read.
         write-byte -- write a byte BYTE.
         write-bytes -- if BYTES is not specified write a bytes BYTES. Otherwise, write the length SIZE from the FROMth of BYTES.
         write-line -- write a bytes BYTES and new line(LF -- 0x0a).
+        print -- print multiple S-expressions in a more human-readable format.
+        println -- print multiple S-expressions in a more human-readable format and new line(LF -- 0x0a).
 
 The initial values of `FROM`, `SIZE`, `START` and `END` are `0`, `(len BYTES)`, `""` and `"\n"` respectively.
 
@@ -49,6 +53,10 @@ The function write-byte returns `BYTE`.
 The function write-bytes if `FROM` is not specified, returns `BYTES`. Otherwise, returns the number of bytes successfully written.
 
 The function write-line returns `BYTES`.
+
+The function print returns `nil`.
+
+The function println returns `nil`.
 
 # NOTES
 If a single buffer can be used, as socket programming, `BYTES` can be specified for `read-bytes` and `write-bytes`.
