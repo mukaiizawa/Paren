@@ -3,14 +3,14 @@ assoc - get the value from the association list.
 
 # SYNOPSIS
 
-    (assoc ALIST KEY)
+    (assoc KEY ALIST)
 
 # DESCRIPTION
 The function `assoc` regards the list as an associative list and returns the value corresponding to the key.
 
 An associative list is a list in which keys and values are arranged alternately.
 
-    (key1 val1 key2 val2 ... )
+    ((key1 val11 ...) (key2 val21 ...) ... )
 
 # RETURN VALUE
 Returns the value corresponding to the `KEY` in the association list `ALIST`.
@@ -21,13 +21,11 @@ If there is no corresponding value, returns `nil`.
 
 # EXAMPLES
 
-    ) (<- alist '(:foo 0 :bar 1 :foo 2))
-    (:foo 0 :bar 1 :foo 2)
-    ) (assoc alist :foo)
-    0
-    ) (assoc alist :bar)
-    1
-    ) (assoc alist :buzz)
+    ) (assoc :foo '((:foo 0) (:bar 1)))
+    (:foo 0)
+    ) (assoc :bar '((:foo 0) (:bar 1)))
+    (:bar 1)
+    ) (assoc :buzz '((:foo 0) (:bar 1)))
     nil
 
 # SEE ALSO

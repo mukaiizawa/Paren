@@ -219,10 +219,9 @@
 (function cdddar (x) (cdr (cddar x)))
 (function cddddr (x) (cdr (cdddr x)))
 
-(function assoc (alist key)
-  (if (nil? alist) nil
-      (= (car alist) key) (cadr alist)
-      (assoc (cddr alist) key)))
+(function assoc (key alist)
+  (keep1 (f (x) (if (= (car x) key) (car x)))
+         alist))
 
 (function .. (start :opt stop step)
   (let (rec (f (next stop step :opt acc)
@@ -751,7 +750,10 @@
                                            "")
                                        val (with-memory-stream ($out)
                                              (if (in? conv '("e" "f" "g")) (.write-float $out x :precision precision :style (keyword conv))
-                                                 (.write-int $out (// x) :radix (assoc '("b" 2 "o" 8 "d" 10 "x" 16) conv) :padding precision))))
+                                                 (.write-int $out (// x)
+                                                             :radix (keep1 (f (x) (if (= (car x) conv) (cadr x)))
+                                                                           '(("b" 2) ("o" 8) ("d" 10) ("x" 16)))
+                                                             :padding precision))))
                             (format1 flags width prefix val))
                           (raise ArgumentError (str "unexpected conversion specifier " conv)))))
                 (<- args (cdr args)))))))))

@@ -321,7 +321,7 @@
   (raise ArgumentError (str "missing code:" lno)))
 
 (function basic-string-var? (name)
-  (= (last (str name)) "$"))
+  (= (last (list... (str name))) "$"))
 
 (function basic-default-value (var)
   (if (basic-string-var? var) "" 0))
@@ -480,8 +480,9 @@
 (basic-built-in NEXT (:rest vars)
   (dolist (next vars)
     (while $for-stack
-      (if (= next (assoc (car $for-stack) :var)) (break)
-          (pop! $for-stack)))
+      (let ((ip sp :key var to step) (car $for-stack))
+        (if (= next var) (break)
+            (pop! $for-stack))))
     (if (nil? $for-stack) (return nil)
         (let ((ip sp :key var to step) (car $for-stack) val nil)
           (basic-set-var var (<- val (+ (basic-get-var var) step)))

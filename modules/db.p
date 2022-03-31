@@ -2,10 +2,6 @@
 
 ;; DDL
 
-(function db.select-table-columns (table key)
-  (select (f (x) (assoc (cdr x) key))
-          (cdr table)))
-
 (function db.column->create-query (column)
   (let ((column-name :key primarykey? foreignkey required? type size default-value) column)
     (str "  " column-name " " type (if size (str "(" size ")"))
@@ -19,20 +15,19 @@
          "\n);")))
 
 (function db.table->constraints (table)
-  (let (primarykeys (db.select-table-columns table :primarykey?)
-                    foreignkeys (db.select-table-columns table :foreignkey))
-    (join
-      (concat
-        (if primarykeys (list (str "alter table " (car table) " "
-                                   "add primary key (" (join (map car primarykeys) ", ") ");")))
-        (map (f (x)
-               (let (fk (assoc (cdr x) :foreignkey) (fk-table fk-column) (split (str fk) "."))
-                 (str "alter table " (car table) " "
-                      "add constraints fk_" (car x) " "
-                      "foreign key(" (car x) ") "
-                      "references " fk-table "(" fk-column ");")))
-             foreignkeys))
-      "\n")))
+  (let ((table-name :rest columns) table constraints nil)
+    (let (pks (keep (f (x) (if (in? :primarykey? x) (car x)))
+                    columns))
+      (if pks (push! (str "alter table " table-name " add primary key(" (join pks ", ") ");")
+                     constraints)))
+    (dolist (column columns)
+      (let ((column-name :key primarykey? foreignkey required? type size default-value) column)
+        (if foreignkey
+            (let ((fk-table fk-column) (split (str foreignkey) "."))
+              (push! (str "alter table " table-name " add constraints fk_" column-name " "
+                          "foreign key(" column-name ") references " fk-table "(" fk-column ");")
+                     constraints)))))
+    (join (reverse! constraints) "\n")))
 
 (function db.create-tables (tables)
   ; Returns a list representing a table in the table definition language.
@@ -153,9 +148,9 @@
                        "  product_id number(10) not null,"
                        "  text varchar(1000) not null"
                        ");"
-                       "alter table users add primary key (id);"
-                       "alter table products add primary key (id);"
-                       "alter table reviews add primary key (user_id, product_id);"
+                       "alter table users add primary key(id);"
+                       "alter table products add primary key(id);"
+                       "alter table reviews add primary key(user_id, product_id);"
                        "alter table reviews add constraints fk_user_id foreign key(user_id) references users(id);"
                        "alter table reviews add constraints fk_product_id foreign key(product_id) references products(id);") "\n")))
     (assert (= (db.select-from '(usres.name reviews.text) '(users reviews)
