@@ -45,6 +45,10 @@ If `VAL` is not associated, returns `nil`.
     nil
     ) (last-index #[ 0 1 0 ] 0)
     2
+    ) (last-index #[ 0 1 0 ] 0 0 1)
+    0
+    ) (last-index #[ 0 1 0 ] 0 1 2)
+    nil
     ) (last-index #[ 0 1 0 ] 1)
     1
     ) (last-index #[ 0 1 0 ] 10)
@@ -78,6 +82,10 @@ If `VAL` is not associated, returns `nil`.
     nil
     ) (last-index '(0 1 0) 0)
     2
+    ) (last-index '(0 1 0) 0 0 1)
+    0
+    ) (last-index '(0 1 0) 0 1 2)
+    nil
     ) (last-index '(0 1 0) 1)
     1
     ) (last-index '(0 1 0) 2)
@@ -99,6 +107,10 @@ If `VAL` is not associated, returns `nil`.
     1
     ) (last-index "abcab" "a")
     3
+    ) (last-index "abcab" "a" 0 2)
+    0
+    ) (last-index "abcab" "a" 1 2)
+    nil
     ) (last-index "abcab" "b")
     4
     ) (last-index "abcab" "d")

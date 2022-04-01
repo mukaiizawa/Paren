@@ -1666,35 +1666,38 @@ DEFUN(index)
   }
 }
 
-int cons_rindex(object o, object p, object *result)
+int cons_rindex(object o, object p, int s, int e, object *result)
 {
   int i, ri;
-  for (i = 0, ri = -1; o != object_nil; i++) {
+  for (i = 0, ri = -1; o != object_nil && i != e; i++, o = o->cons.cdr) {
+    if (i < s) continue;
     if (object_eq_p(o->cons.car, p)) ri = i;
-    o = o->cons.cdr;
   }
   if (ri == -1) *result = object_nil;
   else *result = gc_new_xint(ri);
   return TRUE;
 }
 
-int bytes_rindex(object o, object p, object *result)
+int bytes_rindex(object o, object p, int s, int e, object *result)
 {
-  int i, ri, byte;
+  int i, byte;
   if (!bi_cbyte(p, &byte)) return FALSE;
-  for (i = 0, ri = -1; i < o->mem.size; i++)
-    if (LC(o->mem.elt + i) == byte) ri = i;
-  if (ri == -1) *result = object_nil;
-  else *result = gc_new_xint(ri);
+  for (i = e - 1; i < o->mem.size && i >= s; i--) {
+    if (LC(o->mem.elt + i) == byte) {
+      *result = gc_new_xint(i);
+      return TRUE;
+    }
+  }
+  *result = object_nil;
   return TRUE;
 }
 
-int string_rindex(object o, object p, object *result)
+int string_rindex(object o, object p, int s, int e, object *result)
 {
   int i, ri, n;
   if (!bi_string(p, &p)) return FALSE;
-  for (i = n = 0, ri = -1; i < o->mem.size && (o->mem.size - i >= p->mem.size); n++) {
-    if (memcmp(o->mem.elt + i, p->mem.elt, p->mem.size) == 0) ri = i;
+  for (i = n = 0, ri = -1; i < o->mem.size && (o->mem.size - i >= p->mem.size) && n != e; n++) {
+    if (n >= s && memcmp(o->mem.elt + i, p->mem.elt, p->mem.size) == 0) ri = i;
     if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
   }
   if (ri == -1) *result = object_nil;
@@ -1702,31 +1705,40 @@ int string_rindex(object o, object p, object *result)
   return TRUE;
 }
 
-int array_rindex(object o, object p, object *result)
+int array_rindex(object o, object p, int s, int e, object *result)
 {
-  int i, ri;
-  for (i = 0, ri = -1; i < o->array.size; i++)
-    if (object_eq_p(o->array.elt[i], p)) ri = i;
-  if (ri == -1) *result = object_nil;
-  else *result = gc_new_xint(ri);
+  int i;
+  for (i = e - 1; i < o->array.size && i >= s; i--) {
+    if (object_eq_p(o->array.elt[i], p)) {
+      *result = gc_new_xint(i);
+      return TRUE;
+    }
+  }
+  *result = object_nil;
   return TRUE;
 }
 
 DEFUN(last_2d_index)
 {
-  object o;
-  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  int s, e;
+  object o, p;
+  if (!bi_argc_range(argc, 2, 4)) return FALSE;
   if (!bi_collection(argv->cons.car, &o)) return FALSE;
+  p = (argv = argv->cons.cdr)->cons.car;
+  if (argc < 3) s = 0;
+  else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
+  if (argc < 4) e = -1;
+  else if (!bi_cpint(argv->cons.cdr->cons.car, &e)) return FALSE;
   switch (object_type(o)) {
     case SYMBOL:
     case CONS:
-      return cons_rindex(o, argv->cons.cdr->cons.car, result);
+      return cons_rindex(o, p, s, e, result);
     case BYTES:
-      return bytes_rindex(o, argv->cons.cdr->cons.car, result);
+      return bytes_rindex(o, p, s, e, result);
     case STRING:
-      return string_rindex(o, argv->cons.cdr->cons.car, result);
+      return string_rindex(o, p, s, e, result);
     case ARRAY:
-      return array_rindex(o, argv->cons.cdr->cons.car, result);
+      return array_rindex(o, p, s, e, result);
     case DICT:
       return dict_index(o, argv->cons.cdr->cons.car, result);
     default:
