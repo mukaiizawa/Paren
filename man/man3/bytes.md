@@ -21,20 +21,6 @@ If `END` is omitted, it is assumed that the length of the argument object is spe
 
 If `START` is omitted, a bytes corresponding to argument is returned.
 
-# EXAMPLES
-
-    ) (bytes 3)
-    #[ 0x00 0x00 0x00 ]
-
-    ) (bytes 'foo)
-    #[ 0x66 0x6f 0x6f ]
-    
-    ) (bytes 'foo 1)
-    #[ 0x6f 0x6f ]
-    
-    ) (bytes 'foo 1 2)
-    #[ 0x6f ]
-
 # SEE ALSO
 - keyword(3)
 - string(3)

@@ -40,7 +40,8 @@
               (write (xmain (parse-example)))
               (write-log :succeed)
               (return nil))))
-        (write-log :skip)))))
+        (write-log :skip)
+        (return nil)))))
 
 (function! main (args)
   (man-walk (f (section pages one-line-desc file-name)

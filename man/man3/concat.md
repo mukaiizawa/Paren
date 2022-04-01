@@ -42,9 +42,6 @@ Error if the argument data types are not all the same. However, the symbol `nil`
     ) (concat "0" "1" "2")
     "012"
 
-    ) (concat (bytes 1) (bytes 2))
-    #[ 0x00 0x00 0x00 ]
-
     ) (concat (array 1) (array 2))
     #[ nil nil nil ]
 

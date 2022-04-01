@@ -25,17 +25,7 @@ In general, `string!` is faster than `string` because it only changes arguments 
 
 # EXAMPLES
 
-    ) (begin0 (<- val (bytes 3)) ([] val 0 0x30) ([] val 1 0x31) ([] val 2 0x32))
-    #[ 0x30 0x31 0x32 ]
-
-    ) (string val)
-    "012"
-    ) val
-    #[ 0x30 0x31 0x32 ]
-
-    ) (string! val)
-    "012"
-    ) val
+    ) (string (begin0 (<- val (bytes 3)) ([] val 0 0x30) ([] val 1 0x31) ([] val 2 0x32)))
     "012"
 
 # SEE ALSO

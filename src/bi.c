@@ -1687,6 +1687,7 @@ int bytes_rindex(object o, object p, int s, int e, object *result)
 {
   int i, byte;
   if (!bi_cbyte(p, &byte)) return FALSE;
+  if (e == -1) e = o->array.size;
   for (i = e - 1; i < o->mem.size && i >= s; i--) {
     if (LC(o->mem.elt + i) == byte) {
       *result = gc_new_xint(i);
@@ -1713,6 +1714,7 @@ int string_rindex(object o, object p, int s, int e, object *result)
 int array_rindex(object o, object p, int s, int e, object *result)
 {
   int i;
+  if (e == -1) e = o->array.size;
   for (i = e - 1; i < o->array.size && i >= s; i--) {
     if (object_eq_p(o->array.elt[i], p)) {
       *result = gc_new_xint(i);

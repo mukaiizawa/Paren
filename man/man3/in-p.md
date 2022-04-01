@@ -1,15 +1,19 @@
 # NAME
-in? - determine if the collection contains an element.
+in? - determine if a certain value is included.
 
 # SYNOPSIS
 
-    (in? X COLLECTION)
+    (in? X LIST)
+    (in? X ARRAY)
+    (in? X BYTES)
+    (in? X STRING)
+    (in? X DICTIONARY)
 
 # DESCRIPTION
-The function `in?` determine if the collection contains an element.
+The function `in?` determine if a `X` is included in the second argument.
 
 # RETURN VALUE
-Returns whether element `X` exists in the `COLLECTION`.
+Returns whether element `X` exists or not.
 
 # EXAMPLES
 
@@ -40,25 +44,13 @@ Returns whether element `X` exists in the `COLLECTION`.
     ) (in? "bar" "foo")
     nil
 
-    ) (<- b (bytes 3))
-    #[ 0x00 0x00 0x00 ]
-    
-    ) (in? 0x00 b)
+    ) (in? :foo #{ :foo 0 :bar 1 })
     true
     
-    ) (in? 0x01 b)
-    nil
-
-    ) (<- d #{ :foo 0 :bar 1 })
-    #{ :bar 1 :foo 0 }
-    
-    ) (in? :foo d)
-    true
-    
-    ) (in? 1 d)
+    ) (in? 1 #{ :foo 0 :bar 1 })
     nil
     
-    ) (in? 2 d)
+    ) (in? 2 #{ :foo 0 :bar 1 })
     nil
 
 # SEE ALSO

@@ -20,9 +20,9 @@ In the current implementation, these functions return the position where the par
 # EXAMPLES
 
     ) (prefix? "foo" "")
-    nil
+    0
     ) (suffix? "foo" "")
-    nil
+    3
 
     ) (prefix? "foo" "fo")
     0

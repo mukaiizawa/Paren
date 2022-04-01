@@ -58,18 +58,6 @@ ArgumentError if `X` is a string data type and `VAL` is specified.
     ) a
     #[ 0 10 2 ]
 
-    ) (<- b (bytes 3))
-    #[ 0x00 0x00 0x00 ]
-    
-    ) ([] b 0)
-    0
-    
-    ) ([] b 1 0xff)
-    255
-    
-    ) b
-    #[ 0x00 0xff 0x00 ]
-
     ) ([] "foo" 1)
     "o"
 

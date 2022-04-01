@@ -3,19 +3,22 @@ slice - create a sub-sequence from a sequence.
 
 # SYNOPSIS
 
-    (slice SEQUENCE [START [STOP]])
+    (slice LIST [START [STOP]])
+    (slice ARRAY [START [STOP]])
+    (slice BYTES [START [STOP]])
+    (slice STRING [START [STOP]])
 
 # DESCRIPTION
 The function `slice` create a sub-sequence.
 
-A sub-sequence is always created. Therefore, it can be used for the purpose of copying `SEQUENCE`. On the other hand, care must be taken when calling it on a huge `SEQUENCE`.
+A sub-sequence is always created. Therefore, it can be used for the purpose of copying the first argument.
 
 # RETURN VALUE
-Returns a sub-sequence of `SEQUENCE`. The sub-sequence begins at the `START` and extends to the element at index `STOP - 1`.
+Returns a sub-sequence of the first argument. The sub-sequence begins at the `START` and extends to the element at index `STOP - 1`.
 
 If `START` is omitted, it defaults to `0`.
 
-If `STOP` is omitted, it defaults to length of `SEQUENCE`.
+If `STOP` is omitted, it defaults to length of the first argument.
 
 # NOTES
 
@@ -40,9 +43,6 @@ If `STOP` is omitted, it defaults to length of `SEQUENCE`.
     (1)
     ) (slice (.. 3) 1 3)
     (1 2)
-
-    ) (slice (bytes 3) 1 2)
-    #[ 0x00 ]
 
     ) (slice (array 3) 1 2)
     #[ nil ]

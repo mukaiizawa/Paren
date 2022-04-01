@@ -16,10 +16,10 @@ The function `drop-while` drops the longest initial prefix of `LIST` whose eleme
 
 # EXAMPLES
 
-    ) (take-while (partial < 3) (.. 10))
+    ) (take-while (partial > 3) (.. 10))
     (0 1 2)
 
-    ) (drop-while (partial < 3) (.. 10))
+    ) (drop-while (partial > 3) (.. 10))
     (3 4 5 6 7 8 9)
 
 # SEE ALSO

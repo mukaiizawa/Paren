@@ -15,7 +15,7 @@ The `nil` is bound itself.
     ) (list? nil)
     true
     ) (cons? nil)
-    true
+    nil
     ) (len nil)
     0
 

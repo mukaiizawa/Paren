@@ -221,7 +221,7 @@
 (function cddddr (x) (cdr (cdddr x)))
 
 (function assoc (key alist)
-  (keep1 (f (x) (if (= (car x) key) (car x)))
+  (keep1 (f (x) (if (= (car x) key) x))
          alist))
 
 (function .. (start :opt stop step)

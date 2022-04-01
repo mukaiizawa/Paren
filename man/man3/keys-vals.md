@@ -19,11 +19,11 @@ The order of the return value is undefined.
 
 # EXAMPLES
 
-    ) (keys #{ :foo 0 :bar 1 :buzz 2 })
-    (:buzz :bar :foo)
+    ) (sort! (keys #{ :foo 0 :bar 1 :buzz 2 }))
+    (:bar :buzz :foo)
 
-    ) (vals #{ :foo 0 :bar 1 :buzz 2 })
-    (2 1 0)
+    ) (sort! (vals #{ :foo 0 :bar 1 :buzz 2 }))
+    (0 1 2)
 
 # SEE ALSO
 - dict(3)

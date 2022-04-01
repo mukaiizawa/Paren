@@ -13,10 +13,8 @@ Returns the function with some of the arguments fixed.
 
 # EXAMPLES
 
-    ) (<- plus1 (partial + 1))
-    (f (:rest args) (apply fn (concat partial-args args)))
-    ) (plus1 2)
-    3
+    ) (apply (partial + 1) (list 2 3 4))
+    10
 
 # SEE ALSO
 - complement(3)

@@ -15,9 +15,9 @@ If the argument is not a built-in operator, return `nil`.
 
 # EXAMPLES
 
-    ) (built-name f)
+    ) (built-in-name f)
     f
-    ) (built-name -)
+    ) (built-in-name -)
     nil
 
 # SEE ALSO
