@@ -93,10 +93,8 @@ static int bit_count (int bits) {
 int bi_argv(int bits, object o, object *result)
 {
   int i, n;
-  if (type_bits(o) & bits) {
-    *result = o;
-    return TRUE;
-  }
+  *result = o;
+  if (type_bits(o) & bits) return TRUE;
   i = 0, n = bit_count(bits);
   xbarray_reset(&bi_buf);
   xbarray_adds(&bi_buf, "expected ");
