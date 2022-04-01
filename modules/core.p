@@ -235,7 +235,7 @@
 (function join (lis :opt separator)
   (if (nil? lis) ""
       (nil? (cdr lis)) (car lis)
-      (nil? separator) (apply memcat lis)
+      (nil? separator) (apply concat lis)
       (with-memory-stream ($out)
         (write-bytes (car lis))
         (dolist (x (cdr lis)) (write-bytes separator) (write-bytes x)))))
@@ -250,7 +250,7 @@
                        (dotimes (j dalen)
                          (if (!= ([] sa (+ i j)) ([] da j)) (return nil)))
                        true)
-              join-chars (f () (if chars (apply memcat (reverse! chars)) "")))
+              join-chars (f () (if chars (apply concat (reverse! chars)) "")))
         (while (<= i end)
           (if (match?) (<- lis (cons (join-chars) lis)
                            chars nil
@@ -690,29 +690,6 @@
                             0))))
                 (split s))))
 
-(function strstr (s pat :opt start)
-  (let (start (|| start 0) sa (array s) slen (len sa) pa (array pat) plen (len pa))
-    (if (< (- slen start) 0) (raise ArgumentError "illegal start")
-        (= plen 0) (return 0))
-    (for (i start end (- slen plen) p0 ([] pa 0)) (<= i end) (i (++ i))
-      (when (= ([] sa i) p0)
-        (if (= plen 1) (return i))
-        (let (si (++ i) pi 1)
-          (while (= ([] sa si) ([] pa pi))
-            (<- si (++ si) pi (++ pi))
-            (if (= pi plen) (return i))))))))
-
-(function strlstr (s pat)
-  (let (sa (array s) slen (len sa) pa (array pat) plen (len pa))
-    (if (= plen 0) (return (-- slen)))
-    (for (i (- slen plen) p0 ([] pa 0)) (>= i 0) (i (-- i))
-      (when (= ([] sa i) p0)
-        (if (= plen 1) (return i))
-        (let (si (++ i) pi 1)
-          (while (= ([] sa si) ([] pa pi))
-            (<- si (++ si) pi (++ pi))
-            (if (= pi plen) (return i))))))))
-
 (function format (fmt :rest args)
   (with-memory-stream ($out)
     (with-memory-stream ($in fmt)
@@ -751,8 +728,7 @@
                                        val (with-memory-stream ($out)
                                              (if (in? conv '("e" "f" "g")) (.write-float $out x :precision precision :style (keyword conv))
                                                  (.write-int $out (// x)
-                                                             :radix (keep1 (f (x) (if (= (car x) conv) (cadr x)))
-                                                                           '(("b" 2) ("o" 8) ("d" 10) ("x" 16)))
+                                                             :radix (cadr (member (partial =  conv) '("b" 2 "o" 8 "d" 10 "x" 16)))
                                                              :padding precision))))
                             (format1 flags width prefix val))
                           (raise ArgumentError (str "unexpected conversion specifier " conv)))))
@@ -777,7 +753,6 @@
 (built-in-function bytes)
 (built-in-function bytes?)
 
-(built-in-function memcat)
 (built-in-function memcpy)
 (built-in-function memcmp)
 (built-in-function memlen)
@@ -960,7 +935,9 @@
   ; If field name is 'xxx', bind a getter named `&xxx` and setter named `&xxx!`.
   ; Works faster than method which defined with the `method` macro.
   (with-gensyms (receiver val)
-    (let (key (keyword field) getter (memcat '& field) setter (memcat getter '!))
+    (let (key (keyword field)
+              getter (symbol (apply concat (map string (list :& field))))
+              setter (symbol (apply concat (map string (list getter :!)))))
       (list begin
             (list if (list ! (list bound? (list quote getter)))
                   (list function getter (list receiver)
@@ -1014,7 +991,7 @@
 (macro method (cls-sym method-sym args :rest body)
   ; Define method.
   ; Returns method symbol.
-  (let (global-method-name (memcat cls-sym method-sym))
+  (let (global-method-name (symbol (apply concat (map string (list cls-sym method-sym)))))
     (list begin
           (list if
                 (list ! (list find-class (list quote cls-sym)))
@@ -1109,8 +1086,8 @@
 (method Exception .to-s ()
   ; Returns a String representing the receiver.
   (let (class-name (string (&class self)) msg (&message self))
-    (if msg (memcat class-name " -- " msg)
-        class-name)))
+    (if (nil? msg) class-name
+        (concat class-name " -- " msg))))
 
 (method Exception .status-cd ()
   (&status-cd self))
@@ -1209,8 +1186,8 @@
   (if (is-a? path-name Path) path-name
       (let (c nil path nil root? nil)
         (if (prefix? path-name "/") (<- root? true)
-            (prefix? path-name "~") (<- path-name (memcat (if (!= $hostname :windows) (getenv "HOME")
-                                                              (memcat (getenv "HOMEDRIVE") (getenv "HOMEPATH")))
+            (prefix? path-name "~") (<- path-name (concat (if (!= $hostname :windows) (getenv "HOME")
+                                                              (concat (getenv "HOMEDRIVE") (getenv "HOMEPATH")))
                                                           "/" (slice path-name 1))))
         (<- path (reject empty?
                          (split
@@ -1269,7 +1246,7 @@
   ; Otherwise this method concatenate this path and the speciifed path.
   ; `.` and `..` included in path-name are not treated specially.
   (if (.absolute? (<- p (path p))) p
-      (path (memcat (.to-s self) "/" (.to-s p)))))
+      (path (concat (.to-s self) "/" (.to-s p)))))
 
 (method Path .relativize (p)
   ; Returns a relative path between the receiver and a given path.
@@ -1298,7 +1275,7 @@
 (method Path .to-s ()
   ; Returns a string representation of the receiver.
   (reduce (f (acc rest)
-            (memcat (if (= acc "/") "" acc) "/" rest))
+            (concat (if (= acc "/") "" acc) "/" rest))
           (&path self)))
 
 (method Path .open (mode)
@@ -1809,7 +1786,7 @@
         (let (line (.read-line (&stream self)))
           (if (nil? line) (&next! self nil)
               (begin
-                (<- line (memcat next line))
+                (<- line (concat next line))
                 (&lineno! self (++ (&lineno self)))
                 (&next! self (.read-char (&stream self)))))
           line))))
@@ -2155,7 +2132,7 @@
 (function import (key :opt dir)
   (if (in? key $import) key
       (let ($G-module (.resolve (if dir (path dir) (.resolve $paren-home "modules"))
-                                (memcat (string key) ".p")))
+                                (concat (string key) ".p")))
         (if (! (.file? $G-module)) (raise OSError (str "unreadable module " (.to-s $G-module)))
             (begin
               (load $G-module)

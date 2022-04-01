@@ -1027,14 +1027,6 @@ static int bytes_like_concat(object o, object argv, object *result)
   return TRUE;
 }
 
-DEFUN(memcat)
-{
-  object o;
-  if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
-  if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
-  return bytes_like_concat(o, argv->cons.cdr, result);
-}
-
 DEFUN(chr)
 {
   int x, size;

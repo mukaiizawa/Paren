@@ -10,7 +10,6 @@ The bytes data type can use the functions listed in `SEE ALSO` section, and can 
 
 # SEE ALSO
 - bytes(3)
-- memcat(3)
 - memcmp(3)
 - memcpy(3)
 - memlen(3)

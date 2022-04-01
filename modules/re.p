@@ -65,7 +65,7 @@
 
 (function re.parse (ar)
   (let (elements nil expr nil c nil)
-    (while (&& (<- c (&next ar)) (! (strstr "|)" c)))
+    (while (&& (<- c (&next ar)) (! (in? c "|)")))
       (<- expr (if (= c ".") (re.parse-any ar)
                    (= c "(") (re.parse-group ar)
                    (= c "[") (re.parse-charset ar)
@@ -76,13 +76,11 @@
 (method Re .test (elt i)
   (if (< i (.text-length self))
       (let (key (&key elt))
-        (if (= key :char) (if (= (.text-at self i) (&val elt)) (++ i))
-            (= key :alternate)
-            (dolist (elements (&val elt))
-              (if (.try self elements i) (return (&end self))))
-            (= key :any) (++ i)
-            (= key :char-class) (if (strstr (&val elt) (.text-at self i)) (++ i))
-            (= key :exclude-char-class) (if (! (strstr (&val elt) (.text-at self i))) (++ i))
+        (if (== key :char) (if (= (.char-at self i) (&val elt)) (++ i))
+            (== key :alternate) (keep1 (f (x) (if (.try self x i) (&end self))) (&val elt))
+            (== key :any) (++ i)
+            (== key :char-class) (if (in? (.char-at self i) (&val elt)) (++ i))
+            (== key :exclude-char-class) (if (! (in? (.char-at self i) (&val elt))) (++ i))
             (assert nil)))))
 
 (method Re .try-n-times (elt i n)
@@ -107,16 +105,16 @@
               (return true))
           (<- n (++ n))))))
 
-(method Re .text-at (i)
+(method Re .char-at (i)
   ([] (&text self) i))
 
 (method Re .text-length ()
   (len (&text self)))
 
 (method Re .subtext (start :opt end)
-  (let (text (list... (slice (&text self) start (|| end (.text-length self)))))
-    (if (nil? text) ""
-        (apply memcat text))))
+  (with-memory-stream ($out)
+    (for (text (&text self) i start end (|| end (.text-length self))) (< i end) (i (++ i))
+      (write-bytes ([] text i)))))
 
 (method Re .match-string ()
   (.subtext self (&start self) (&end self)))

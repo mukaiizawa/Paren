@@ -38,7 +38,6 @@ If `START` or `END` is omitted, the entire `BYTES` will be searched. This implie
     <=> (memmem (slice x s e) y)
 
 # SEE ALSO
-- memcat(3)
 - memcmp(3)
 - memcpy(3)
 - memlen(3)
