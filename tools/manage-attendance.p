@@ -16,11 +16,8 @@
   (let (pairs (map parse-day days))
     (list (len pairs) (apply + (map cadr pairs)))))
 
-(function more-zero? (x)
-  (&& x (> x 0)))
-
 (function summarize (title day hour)
-  (if (more-zero? day) (list title (list :day day :h hour :h/day (/ hour day)))))
+  (if (&& day (pos? day)) (list title (list :day day :h hour :h/day (/ hour day)))))
 
 (function parse (expr)
   (catch (Error (f (e) nil))
