@@ -151,6 +151,7 @@
 
 (built-in-function function?)
 (built-in-function built-in?)
+(built-in-function built-in-name)
 (built-in-function special-operator?)
 (built-in-function macro?)
 (built-in-function params)

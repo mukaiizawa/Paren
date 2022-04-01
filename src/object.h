@@ -122,15 +122,6 @@ extern int object_eq_p(object o, object p);
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
 #define sint(i) ((object)((((intptr_t)i) << 1) | 1))
 #define list_p(o) (o == object_nil || (object_type(o) == CONS))
-extern int int_p(object o);
-extern int number_p(object o);
-extern int bytes_like_p(object o);
-extern int sequence_p(object o);
-extern int mutable_sequence_p(object o);
-extern int collection_p(object o);
-extern int comparable_p(object o);
-extern int symbol_keyword_p(object o);
-extern int built_in_p(object o);
 
 extern int list_len(object o);
 extern object list_reverse(object o);

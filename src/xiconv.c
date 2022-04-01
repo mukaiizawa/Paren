@@ -10,7 +10,7 @@ static int object_to_encoding(object o, int *enc)
 {
   object p;
   char buf[MAX_STR_LEN];
-  if (!bi_keyword(o, &p)) return FALSE;
+  if (!bi_argv(BI_KEY, o, &p)) return FALSE;
   if (p->mem.size >= MAX_STR_LEN) return FALSE;
   memcpy(buf, p->mem.elt, p->mem.size);
   buf[p->mem.size] = '\0';

@@ -17,128 +17,110 @@ int bi_argc_range(int argc, int min, int max)
   return TRUE;
 }
 
+static int type_bits(object o)
+{
+  switch (object_type(o)) {
+    case SINT:
+    case XINT:
+    case XFLOAT:
+      return BI_NUM;
+    case CONS:
+      return BI_LIST | BI_CONS;
+    case SYMBOL:
+      if (o == object_nil) return BI_SYM | BI_LIST;
+      return BI_SYM;
+    case KEYWORD:
+      return BI_KEY;
+    case STRING:
+      return BI_STR;
+    case BYTES:
+      return BI_BYTES;
+    case ARRAY:
+      return BI_ARRAY;
+    case DICT:
+      return BI_DICT;
+    case MACRO:
+      return BI_MACRO;
+    case FUNC:
+      return BI_FUNC;
+    case SPECIAL:
+      return BI_SP;
+    case BFUNC:
+      return BI_FUNC;
+    default:
+      xassert(FALSE);
+      return 0;
+  }
+}
+
+static char *type_name(int type) {
+  switch (type) {
+    case BI_SYM: return "symbol";
+    case BI_STR: return "string";
+    case BI_ARRAY: return "array";
+    case BI_BYTES: return "bytes";
+    case BI_CONS: return "cons";
+    case BI_DICT: return "dictionary";
+    case BI_FUNC: return "function";
+    case BI_MACRO: return "macro";
+    case BI_SP: return "special operator";
+    case BI_KEY: return "keyword";
+    case BI_LIST: return "list";
+    case BI_NUM: return "number";
+    default: xassert(FALSE); return NULL;
+  }
+}
+
+#define CHECK(t) {\
+  if (t & bits) {\
+    if (n != 1) {\
+      if (i != 0) xbarray_adds(&bi_buf, ", ");\
+      else if (i == n - 1) xbarray_adds(&bi_buf, " or ");\
+    }\
+    xbarray_adds(&bi_buf, type_name(t));\
+    i++;\
+  }\
+}
+
+static int bit_count (int bits) {
+  bits = (bits & 0x55555555) + (bits >> 1 & 0x55555555);
+  bits = (bits & 0x33333333) + (bits >> 2 & 0x33333333);
+  bits = (bits & 0x0f0f0f0f) + (bits >> 4 & 0x0f0f0f0f);
+  bits = (bits & 0x00ff00ff) + (bits >> 8 & 0x00ff00ff);
+  return (bits & 0x0000ffff) + (bits >>16 & 0x0000ffff);
+}
+
+int bi_argv(int bits, object o, object *result)
+{
+  int i, n;
+  if (type_bits(o) & bits) {
+    *result = o;
+    return TRUE;
+  }
+  i = 0, n = bit_count(bits);
+  xbarray_reset(&bi_buf);
+  xbarray_adds(&bi_buf, "expected ");
+  CHECK(BI_SYM);
+  CHECK(BI_STR);
+  CHECK(BI_ARRAY);
+  CHECK(BI_BYTES);
+  CHECK(BI_CONS);
+  CHECK(BI_DICT);
+  CHECK(BI_FUNC);
+  CHECK(BI_MACRO);
+  CHECK(BI_SP);
+  CHECK(BI_KEY);
+  CHECK(BI_LIST);
+  CHECK(BI_NUM);
+  xbarray_add(&bi_buf, '\0');
+  return ip_throw(ArgumentError, bi_buf_msg);
+}
+
 int bi_range(int min, int x, int max)
 {
   if (x < min || x > max)
     return ip_throw(IndexError, index_out_of_range);
   return TRUE;
-}
-
-int bi_cons(object o, object *result)
-{
-  if (object_type(*result = o) != CONS)
-    return ip_throw(ArgumentError, expected_cons);
-  return TRUE;
-}
-
-int bi_string(object o, object *result)
-{
-  if (object_type(*result = o) != STRING)
-    return ip_throw(ArgumentError, expected_string);
-  return TRUE;
-}
-
-int bi_symbol(object o, object *result)
-{
-  if (object_type(*result = o) != SYMBOL)
-    return ip_throw(ArgumentError, expected_symbol);
-  return TRUE;
-}
-
-int bi_keyword(object o, object *result)
-{
-  if (object_type(*result = o) != KEYWORD)
-    return ip_throw(ArgumentError, expected_keyword);
-  return TRUE;
-}
-
-int bi_bytes(object o, object *result)
-{
-  if (object_type(*result = o) != BYTES)
-    return ip_throw(ArgumentError, expected_bytes);
-  return TRUE;
-}
-
-int bi_array(object o, object *result)
-{
-  if (object_type(*result = o) != ARRAY)
-    return ip_throw(ArgumentError, expected_array);
-  return TRUE;
-}
-
-int bi_dict(object o, object *result)
-{
-  if (object_type(*result = o) != DICT)
-    return ip_throw(ArgumentError, expected_dict);
-  return TRUE;
-}
-
-int bi_func(object o, object *result)
-{
-  if (object_type(*result = o) != FUNC)
-    return ip_throw(ArgumentError, expected_function);
-  return TRUE;
-}
-
-int bi_list(object o, object *result)
-{
-  *result = o;
-  if (!list_p(o))
-    return ip_throw(ArgumentError, expected_list);
-  return TRUE;
-}
-
-int bi_bytes_like(object o, object *result)
-{
-  if (!bytes_like_p(*result = o))
-    return ip_throw(ArgumentError, expected_bytes_like);
-  return TRUE;
-}
-
-int bi_sequence(object o, object *result)
-{
-  if (!sequence_p(*result = o))
-    return ip_throw(ArgumentError, expected_sequence);
-  return TRUE;
-}
-
-int bi_mutable_sequence(object o, object *result)
-{
-  if (!mutable_sequence_p(*result = o))
-    return ip_throw(ArgumentError, expected_mutable_sequence);
-  return TRUE;
-}
-
-int bi_collection(object o, object *result)
-{
-  if (!collection_p(*result = o))
-    return ip_throw(ArgumentError, expected_collection);
-  return TRUE;
-}
-
-int bi_comparable(object o, object *result)
-{
-  if (!comparable_p(*result = o))
-    return ip_throw(ArgumentError, expected_comparable);
-  return TRUE;
-}
-
-int bi_built_in(object o, object *result)
-{
-  if (!built_in_p(*result = o))
-    return ip_throw(ArgumentError, expected_built_in_operator);
-  return TRUE;
-}
-
-int bi_proc(object o, object *result)
-{
-  switch (object_type(*result = o)) {
-    case FUNC:
-    case MACRO:
-      return TRUE;
-    default:
-      return ip_throw(ArgumentError, expected_function_macro);
-  }
 }
 
 int bi_cbyte(object o, int *p)
@@ -201,14 +183,13 @@ int bi_cdouble(object o, double *p)
 
 int bi_cstrings(int n, object argv, char **ss)
 {
-  int i;
-  int offset[MAX_STRINGS]; // xbarray use realloc.
+  int i, offset[MAX_STRINGS]; // xbarray use realloc.
   object o;
   xassert(n <= MAX_STRINGS);
   xassert(object_type(argv) == CONS);
   xbarray_reset(&bi_buf);
   for (i = 0; i < n; i++) {
-    if (!bi_string(argv->cons.car, &o)) return FALSE;
+    if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
     argv = argv->cons.cdr;
     offset[i] = bi_buf.size;
     memcpy(xbarray_reserve(&bi_buf, o->mem.size), o->mem.elt, o->mem.size);
@@ -325,13 +306,6 @@ DEFUN(function_3f_)
   return TRUE;
 }
 
-DEFUN(built_2d_in_3f_)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(built_in_p(argv->cons.car));
-  return TRUE;
-}
-
 DEFUN(hash)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -367,12 +341,33 @@ DEFUN(_3d__3d_)
   return TRUE;
 }
 
+DEFUN(built_2d_in_3f_)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  switch (object_type(argv->cons.car)) {
+    case BFUNC:
+    case SPECIAL:
+      *result = object_true;
+      break;
+    default:
+      *result = object_nil;
+      break;
+  }
+  return TRUE;
+}
+
 DEFUN(built_2d_in_2d_name)
 {
-  object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_built_in(argv->cons.car, &o)) return FALSE;
-  *result = o->native.name;
+  switch (object_type(argv->cons.car)) {
+    case BFUNC:
+    case SPECIAL:
+      *result = argv->cons.car->native.name;
+      break;
+    default:
+      *result = object_nil;
+      break;
+  }
   return TRUE;
 }
 
@@ -380,8 +375,19 @@ DEFUN(params)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_proc(argv->cons.car, &o)) return FALSE;
-  *result = o->proc.params;
+  if (!bi_argv(BI_FUNC | BI_MACRO, argv->cons.car, &o)) return FALSE;
+  switch (object_type(o)) {
+    case BFUNC:
+      *result = object_nil;
+      break;
+    case MACRO:
+    case FUNC:
+      *result = o->proc.params;
+      break;
+    default:
+      xassert(FALSE);
+      break;
+  }
   return TRUE;
 }
 
@@ -389,8 +395,19 @@ DEFUN(body)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_proc(argv->cons.car, &o)) return FALSE;
-  *result = o->proc.body;
+  if (!bi_argv(BI_FUNC | BI_MACRO, argv->cons.car, &o)) return FALSE;
+  switch (object_type(o)) {
+    case BFUNC:
+      *result = object_nil;
+      break;
+    case MACRO:
+    case FUNC:
+      *result = o->proc.body;
+      break;
+    default:
+      xassert(FALSE);
+      break;
+  }
   return TRUE;
 }
 
@@ -400,7 +417,7 @@ DEFUN(cons)
 {
   object o;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_list(argv->cons.cdr->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST, argv->cons.cdr->cons.car, &o)) return FALSE;
   *result = gc_new_cons(argv->cons.car, o);
   return TRUE;
 }
@@ -416,7 +433,7 @@ DEFUN(list_2e__2e__2e_)
   int i;
   object o, p;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_collection(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
   *result = object_nil;
   switch (object_type(o)) {
     case SYMBOL:
@@ -454,7 +471,7 @@ DEFUN(car)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_list(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST, argv->cons.car, &o)) return FALSE;
   if (o == object_nil) *result = object_nil;
   else *result = o->cons.car;
   return TRUE;
@@ -464,7 +481,7 @@ DEFUN(car_21_)
 {
   object o, p;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cons(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_CONS, argv->cons.car, &o)) return FALSE;
   p = argv->cons.cdr->cons.car;
   o->cons.car = p;
   *result = p;
@@ -475,7 +492,7 @@ DEFUN(cdr)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_list(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST, argv->cons.car, &o)) return FALSE;
   if (o == object_nil) *result = object_nil;
   else *result = o->cons.cdr;
   return TRUE;
@@ -485,8 +502,8 @@ DEFUN(cdr_21_)
 {
   object o, p;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cons(argv->cons.car, &o)) return FALSE;
-  if (!bi_list(argv->cons.cdr->cons.car, &p)) return FALSE;
+  if (!bi_argv(BI_CONS, argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST, argv->cons.cdr->cons.car, &p)) return FALSE;
   o->cons.cdr = p;
   *result = p;
   return TRUE;
@@ -496,7 +513,7 @@ DEFUN(last_2d_cons)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_list(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST, argv->cons.car, &o)) return FALSE;
   if (o != object_nil) {
     while (o->cons.cdr != object_nil) o = o->cons.cdr;
   }
@@ -508,7 +525,7 @@ DEFUN(reverse_21_)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_list(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST, argv->cons.car, &o)) return FALSE;
   if (o == object_nil) *result = object_nil;
   else *result = list_reverse(o);
   return TRUE;
@@ -880,14 +897,14 @@ DEFUN(pow)
   return TRUE;
 }
 
-// bytes & bytes-like.
+// bytes
 
 static int bytes_like_to(int type, int argc, object argv, object *result)
 {
   int start, stop;
   object o;
   if (!bi_argc_range(argc, 1, 3)) return FALSE;
-  if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_BYTES | BI_STR | BI_SYM | BI_KEY, argv->cons.car, &o)) return FALSE;
   if (argc < 2) start = 0;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
   if (argc < 3) stop = o->mem.size;
@@ -934,7 +951,7 @@ DEFUN(string_21_)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_bytes(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_BYTES, argv->cons.car, &o)) return FALSE;
   object_reset_type(o, STRING);
   object_set_hash(o, object_mem_hash(o->mem.elt, o->mem.size));
   *result = o;
@@ -946,9 +963,9 @@ DEFUN(memcpy)
   int oi, pi, size;
   object o, p;
   if (!bi_argc_range(argc, 5, 5)) return FALSE;
-  if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_BYTES | BI_STR | BI_SYM | BI_KEY, argv->cons.car, &o)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &oi)) return FALSE;
-  if (!bi_bytes((argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
+  if (!bi_argv(BI_BYTES, (argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &pi)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!bi_range(0, oi + size, o->mem.size)) return FALSE;
@@ -963,8 +980,8 @@ DEFUN(memmem)
   int s, e;
   object o, p;
   if (!bi_argc_range(argc, 2, 4)) return FALSE;
-  if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
-  if (!bi_bytes_like((argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
+  if (!bi_argv(BI_BYTES | BI_STR | BI_SYM | BI_KEY, argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_BYTES | BI_STR | BI_SYM | BI_KEY, (argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
   if (argc < 3) s = 0;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
   if (argc < 4) e = o->mem.size;
@@ -984,7 +1001,7 @@ DEFUN(memlen)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_BYTES | BI_STR | BI_SYM | BI_KEY, argv->cons.car, &o)) return FALSE;
   *result = gc_new_xint(o->mem.size);
   return TRUE;
 }
@@ -994,8 +1011,8 @@ DEFUN(memcmp)
   int val, size;
   object o, p;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_bytes_like(argv->cons.car, &o)) return FALSE;
-  if (!bi_bytes_like(argv->cons.cdr->cons.car, &p)) return FALSE;
+  if (!bi_argv(BI_BYTES | BI_STR | BI_SYM | BI_KEY, argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_BYTES | BI_STR | BI_SYM | BI_KEY, argv->cons.cdr->cons.car, &p)) return FALSE;
   size = o->mem.size;
   if (size > p->mem.size) size = p->mem.size;
   if ((val = memcmp(o->mem.elt, p->mem.elt, size)) == 0) {
@@ -1015,7 +1032,7 @@ static int bytes_like_concat(object o, object argv, object *result)
   xbarray_init(&x);
   xbarray_copy(&x, o->mem.elt, o->mem.size);
   while (argv != object_nil) {
-    if (!bi_bytes_like(argv->cons.car, &p)) {
+    if (!bi_argv(BI_BYTES | BI_STR | BI_SYM | BI_KEY, argv->cons.car, &p)) {
       xbarray_free(&x);
       return FALSE;
     }
@@ -1090,7 +1107,7 @@ DEFUN(ord)
   int x;
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_string(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
   if (!ord(o, 0, o->mem.size, &x)) return FALSE;
   *result = gc_new_xint(x);
   return TRUE;
@@ -1101,7 +1118,7 @@ DEFUN(ascii_3f_)
   int len;
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_string(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
   if (!str_len(o, &len)) return FALSE;
   *result = object_bool(len == o->mem.size);
   return TRUE;
@@ -1112,7 +1129,7 @@ static int xctype_p(int argc, object argv, int (*f)(int c), object *result)
   int i;
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_string(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
   *result = object_nil;
   if (o->mem.size == 0) return TRUE;
   i = 0;
@@ -1164,7 +1181,7 @@ static int ch_conv_case(int argc, object argv, int (*f)(int c), int offset, obje
   int i, ch;
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_string(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
   o = gc_new_mem_from(STRING, o->mem.elt, o->mem.size);
   i = 0;
   while (i < o->mem.size) {
@@ -1251,12 +1268,10 @@ DEFUN(keys)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_dict(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_DICT, argv->cons.car, &o)) return FALSE;
   *result = map_keys(o);
   return TRUE;
 }
-
-// sequence.
 
 static int cons_slice(object o, int start, int stop, object *result)
 {
@@ -1301,7 +1316,7 @@ DEFUN(slice)
   int start, stop;
   object o;
   if (!bi_argc_range(argc, 1, 3)) return FALSE;
-  if (!bi_sequence(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, argv->cons.car, &o)) return FALSE;
   if (argc < 2) start = 0;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &start)) return FALSE;
   if (argc < 3) stop = -1;
@@ -1337,7 +1352,7 @@ static int cons_concat(object argv, object *result)
   object o;
   *result = object_nil;
   while (argv != object_nil) {
-    if (!bi_list(argv->cons.car, &o)) return FALSE;
+    if (!bi_argv(BI_LIST, argv->cons.car, &o)) return FALSE;
     while (o != object_nil) {
       *result = gc_new_cons(o->cons.car, *result);
       o = o->cons.cdr;
@@ -1355,7 +1370,7 @@ static int array_concat(object o, object argv, object *result)
   size = o->array.size;
   p = argv;
   while (p != object_nil) {
-    if (!bi_array(p->cons.car, &q)) return FALSE;
+    if (!bi_argv(BI_ARRAY, p->cons.car, &q)) return FALSE;
     size += q->array.size;
     p = p->cons.cdr;
   }
@@ -1378,7 +1393,7 @@ DEFUN(concat)
     *result = object_nil;
     return TRUE;
   }
-  if (!bi_sequence(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, argv->cons.car, &o)) return FALSE;
   switch (object_type(o)) {
     case SYMBOL:
     case CONS:
@@ -1393,8 +1408,6 @@ DEFUN(concat)
       return FALSE;
   }
 }
-
-// collection.
 
 static int cons_access(int argc, object argv, object o, object *result)
 {
@@ -1417,7 +1430,7 @@ static int string_access(int argc, object argv, object o, object *result)
   int i;
   if (!bi_cpint(argv->cons.car, &i)) return FALSE;
   if (argc == 2) return str_slice(o, i, i + 1, result);
-  return ip_throw(ArgumentError, expected_mutable_sequence);
+  return ip_throw(ArgumentError, too_many_arguments);
 }
 
 static int bytes_access(int argc, object argv, object o, object *result)
@@ -1460,7 +1473,7 @@ DEFUN(_5b__5d_)
 {
   object o;
   if (!bi_argc_range(argc, 2, 3)) return FALSE;
-  if (!bi_collection(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
   switch (object_type(o)) {
     case SYMBOL:
     case CONS:
@@ -1504,7 +1517,7 @@ int bytes_in_p(object o, object p, object *result)
 int string_in_p(object o, object p, object *result)
 {
   int i;
-  if (!bi_string(p, &p)) return FALSE;
+  if (!bi_argv(BI_STR, p, &p)) return FALSE;
   i = 0;
   while (i < o->mem.size && (o->mem.size - i >= p->mem.size)) {
     if (memcmp(o->mem.elt + i, p->mem.elt, p->mem.size) == 0) {
@@ -1540,7 +1553,7 @@ DEFUN(in_3f_)
 {
   object o;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_collection(argv->cons.cdr->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.cdr->cons.car, &o)) return FALSE;
   switch (object_type(o)) {
     case SYMBOL:
     case CONS:
@@ -1590,7 +1603,7 @@ int bytes_index(object o, object p, int s, int e, object *result)
 int string_index(object o, object p, int s, int e, object *result)
 {
   int i, n;
-  if (!bi_string(p, &p)) return FALSE;
+  if (!bi_argv(BI_STR, p, &p)) return FALSE;
   for (i = n = 0; i < o->mem.size && (o->mem.size - i >= p->mem.size) && n != e; n++) {
     if (n >= s && (memcmp(o->mem.elt + i, p->mem.elt, p->mem.size) == 0)) {
       *result = gc_new_xint(n);
@@ -1633,7 +1646,7 @@ DEFUN(index)
   int s, e;
   object o, p;
   if (!bi_argc_range(argc, 2, 4)) return FALSE;
-  if (!bi_collection(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
   p = (argv = argv->cons.cdr)->cons.car;
   if (argc < 3) s = 0;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
@@ -1687,7 +1700,7 @@ int bytes_rindex(object o, object p, int s, int e, object *result)
 int string_rindex(object o, object p, int s, int e, object *result)
 {
   int i, ri, n;
-  if (!bi_string(p, &p)) return FALSE;
+  if (!bi_argv(BI_STR, p, &p)) return FALSE;
   for (i = n = 0, ri = -1; i < o->mem.size && (o->mem.size - i >= p->mem.size) && n != e; n++) {
     if (n >= s && memcmp(o->mem.elt + i, p->mem.elt, p->mem.size) == 0) ri = i;
     if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
@@ -1715,7 +1728,7 @@ DEFUN(last_2d_index)
   int s, e;
   object o, p;
   if (!bi_argc_range(argc, 2, 4)) return FALSE;
-  if (!bi_collection(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
   p = (argv = argv->cons.cdr)->cons.car;
   if (argc < 3) s = 0;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
@@ -1744,7 +1757,7 @@ DEFUN(len)
   int len;
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_collection(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
   switch (object_type(o)) {
     case SYMBOL: len = 0; break;
     case CONS: len = list_len(o); break;
@@ -1757,8 +1770,6 @@ DEFUN(len)
   *result = gc_new_xint(len);
   return TRUE;
 }
-
-// comparable.
 
 static int double_lt(double x, object argv, object *result)
 {
@@ -1811,7 +1822,7 @@ static int bytes_lt(object o, object argv, object *result)
     *result = object_true;
     return TRUE;
   }
-  if (!bi_bytes_like(argv->cons.car, &p)) return FALSE;
+  if (!bi_argv(BI_BYTES | BI_STR | BI_SYM | BI_KEY, argv->cons.car, &p)) return FALSE;
   for (i = 0; i < p->mem.size; i++) {
     if (i == o->mem.size) x = -1;
     else x = LC(o->mem.elt + i) - LC(p->mem.elt + i);
@@ -1843,7 +1854,7 @@ static int str_lt(object o, object argv, object *result)
     *result = object_true;
     return TRUE;
   }
-  if (!bi_string(argv->cons.car, &p)) return FALSE;
+  if (!bi_argv(BI_STR, argv->cons.car, &p)) return FALSE;
   oi = pi = 0;
   while (pi < p->mem.size) {
     if (oi == o->mem.size) x = -1;
@@ -1858,7 +1869,7 @@ DEFUN(_3c_)
 {
   object o;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_comparable(argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_NUM | BI_SYM | BI_KEY | BI_BYTES | BI_STR, argv->cons.car, &o)) return FALSE;
   *result = object_nil;
   switch (object_type(o)) {
     case SINT:

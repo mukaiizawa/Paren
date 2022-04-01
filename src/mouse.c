@@ -15,10 +15,10 @@ static int object_to_point(object o, POINT *p)
 {
   int i;
   object q;
-  if (!bi_cons(o, &q)) return FALSE;
+  if (!bi_argv(BI_CONS, o, &q)) return FALSE;
   if (!bi_cint(o->cons.car, &i)) return FALSE;
   p->x = i;
-  if (!bi_cons((o = o->cons.cdr), &q)) return FALSE;
+  if (!bi_argv(BI_CONS, (o = o->cons.cdr), &q)) return FALSE;
   if (!bi_cint(o->cons.car, &i)) return FALSE;
   p->y = i;
   return TRUE;

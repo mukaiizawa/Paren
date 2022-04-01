@@ -5,6 +5,19 @@
 #define DEFSP(name) int special_##name(int argc, object argv)
 #define DEFUN(name) int function_##name(int argc, object argv, object *result)
 
+#define BI_SYM    0x001
+#define BI_STR    0x002
+#define BI_ARRAY  0x004
+#define BI_BYTES  0x008
+#define BI_CONS   0x010
+#define BI_DICT   0x020
+#define BI_FUNC   0x040
+#define BI_MACRO  0x080
+#define BI_SP     0x100
+#define BI_KEY    0x200
+#define BI_LIST   0x400
+#define BI_NUM    0x800
+
 extern struct xbarray bi_buf;
 
 extern char *special_name_table[];
@@ -14,21 +27,8 @@ extern int (*function_table[])(int argc, object argv, object *result);
 extern char *bi_as_symbol_name(char *name, char *buf);
 
 extern int bi_argc_range(int argc, int min, int max);
+extern int bi_argv(int expected_types, object o, object *result);
 extern int bi_range(int min, int x, int max);
-extern int bi_array(object o, object *result);
-extern int bi_bytes(object o, object *result);
-extern int bi_bytes_like(object o, object *result);
-extern int bi_collection(object o, object *result);
-extern int bi_cons(object o, object *result);
-extern int bi_dict(object o, object *result);
-extern int bi_func(object o, object *result);
-extern int bi_keyword(object o, object *result);
-extern int bi_list(object o, object *result);
-extern int bi_mutable_sequence(object o, object *result);
-extern int bi_proc(object o, object *result);
-extern int bi_sequence(object o, object *result);
-extern int bi_string(object o, object *result);
-extern int bi_symbol(object o, object *result);
 
 extern int bi_cbyte(object o, int *p);
 extern int bi_cdouble(object o, double *p);
