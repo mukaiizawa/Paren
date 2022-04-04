@@ -1626,25 +1626,12 @@ int array_index(object o, object p, int s, int e, object *result)
   return TRUE;
 }
 
-int dict_index(object o, object p, object *result)
-{
-  object val, keys;
-  for (keys = map_keys(o); keys != object_nil; keys = keys->cons.cdr) {
-    if ((val = map_get(o, keys->cons.car)) != NULL && object_eq_p(val, p)) {
-      *result = keys->cons.car;
-      return TRUE;
-    }
-  }
-  *result = object_nil;
-  return TRUE;
-}
-
 DEFUN(index)
 {
   int s, e;
   object o, p;
   if (!bi_argc_range(argc, 2, 4)) return FALSE;
-  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, argv->cons.car, &o)) return FALSE;
   p = (argv = argv->cons.cdr)->cons.car;
   if (argc < 3) s = 0;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
@@ -1660,9 +1647,6 @@ DEFUN(index)
       return string_index(o, p, s, e, result);
     case ARRAY:
       return array_index(o, p, s, e, result);
-    case DICT:
-      if (argc != 2) return ip_throw(ArgumentError, too_many_arguments);
-      return dict_index(o, p, result);
     default:
       xassert(FALSE);
       return FALSE;
@@ -1728,7 +1712,7 @@ DEFUN(last_2d_index)
   int s, e;
   object o, p;
   if (!bi_argc_range(argc, 2, 4)) return FALSE;
-  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, argv->cons.car, &o)) return FALSE;
   p = (argv = argv->cons.cdr)->cons.car;
   if (argc < 3) s = 0;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
@@ -1744,8 +1728,6 @@ DEFUN(last_2d_index)
       return string_rindex(o, p, s, e, result);
     case ARRAY:
       return array_rindex(o, p, s, e, result);
-    case DICT:
-      return dict_index(o, argv->cons.cdr->cons.car, result);
     default:
       xassert(FALSE);
       return FALSE;

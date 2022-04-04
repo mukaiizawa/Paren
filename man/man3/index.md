@@ -5,13 +5,11 @@ index, last-index - locate a element.
 
     (index ARRAY VAL [START [END]])
     (index BYTES VAL [START [END]])
-    (index DICTIONARY VAL)
     (index LIST VAL [START [END]])
     (index STRING VAL [START [END]])
     
     (last-index ARRAY VAL [START [END]])
     (last-index BYTES VAL [START [END]])
-    (last-index DICTIONARY VAL)
     (last-index LIST VAL [START [END]])
     (last-index STRING VAL [START [END]])
 
@@ -26,8 +24,6 @@ If `START` and `END` are specified, the search is performed over a range equival
 If the argument is `ARRAY` or `BYTES` or `LIST`, the position of `VAL` is returned.
 
 If the argument is `STRING`, returns the index within this string of the first occurrence of the specified substring `VAL`.
-
-If the argument is a `DICTIONARY`, returns the key corresponding to `VAL`. If there are multiple identical `VAL`, the value returned is undefined.
 
 If `VAL` is not associated, returns `nil`.
 
@@ -62,13 +58,6 @@ If `VAL` is not associated, returns `nil`.
     nil
     ) (last-index (bytes 3) 0x00)
     2
-
-    ) (index #{ :foo 0 :bar 1 } 0)
-    :foo
-    ) (index #{ :foo 0 :bar 1 } 1)
-    :bar
-    ) (index #{ :foo 0 :bar 1 } 2)
-    nil
 
     ) (index '(0 1 0) 0)
     0
