@@ -9,7 +9,7 @@ Unlike array data type, it can only handle bytes.
 The bytes data type can use the functions listed in `SEE ALSO` section, and can also use the functions supported by `bytes-like` and `sequence`.
 
 # SEE ALSO
-- []?(3)
+- `[]`(3)
 - byte-len(3)
 - bytes(3)
 - concat(3)
@@ -18,8 +18,8 @@ The bytes data type can use the functions listed in `SEE ALSO` section, and can 
 - memcpy(3)
 - prefix?(3)
 - slice(3)
-- sting(3)
+- string(3)
 - suffix?(3)
-- swap(3)
+- swap!(3)
 - array(7)
 - data-types(7)

@@ -22,7 +22,7 @@ Any data type can be treated as a elements.
     :foo
 
 # SEE ALSO
-- [](3)
+- `[]`(3)
 - array(3)
 - empty?(3)
 - in?(3)
