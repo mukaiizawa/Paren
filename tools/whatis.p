@@ -25,4 +25,4 @@
                     page (car args) sections (split (.get op "s") ","))
       (whatis (f (section pages)
                 (&& (|| (nil? sections) (in? section sections))
-                    (|| (nil? page) (some? (f (x) (memmem x page)) pages))))))))
+                    (|| (nil? page) (some? (partial in? page) pages))))))))

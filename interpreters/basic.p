@@ -599,8 +599,8 @@
 
 (function split-line (line)
   (catch (Error (f (e) (list 0 (format "REM %s" line))))
-    (let (i (memmem line " "))
-      (list (int (slice line 0 i)) (slice line (++ i))))))
+    (let ((no code) (split-at line (index line " ")))
+      (list (int no) code))))
 
 (function load-code (file)
   (with-open ($in file :read)

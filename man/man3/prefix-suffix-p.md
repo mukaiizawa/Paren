@@ -3,41 +3,38 @@ prefix?, suffix? - determines whether a string starts or ends with the character
 
 # SYNOPSIS
 
-    (prefix? BYTES PREFIX)
-    (suffix? BYTES SUFFIX)
+    (prefix? STRING PREFIX)
+    (suffix? STRING SUFFIX)
 
 # DESCRIPTION
-These functions determines whether a `BYTES` starts or ends with the characters of a specified string.
+These functions determines whether a `STRING` starts or ends with the characters of a specified string.
 
 # RETURN VALUE
-The function `prefix?` returns whether `BYTES` starts with the specified `PREFIX` or not.
+The function `prefix?` returns whether `STRING` starts with the specified `PREFIX` or not.
 
-The function `suffix?` returns whether `BYTES` ends with the specified `SUFFIX` or not.
-
-# NOTES
-In the current implementation, these functions return the position where the partial bytes matches if the condition is satisfied. This behavior is due to the internal use of `memmem(3)`. They should not use except for boolean value as this may change in the future without notice.
+The function `suffix?` returns whether `STRING` ends with the specified `SUFFIX` or not.
 
 # EXAMPLES
 
     ) (prefix? "foo" "")
-    0
-    ) (suffix? "foo" "")
-    3
-
+    true
     ) (prefix? "foo" "fo")
-    0
-    ) (suffix? "foo" "oo")
-    1
-
+    true
     ) (prefix? "foo" "foo")
-    0
-    ) (suffix? "foo" "foo")
-    0
-
+    true
     ) (prefix? "foo" "fooo")
     nil
+
+    ) (suffix? "foo" "")
+    true
+    ) (suffix? "foo" "oo")
+    true
+    ) (suffix? "foo" "foo")
+    true
     ) (suffix? "foo" "fooo")
     nil
 
+
 # SEE ALSO
-- memmem(3)
+- index(3)
+- last-index(3)

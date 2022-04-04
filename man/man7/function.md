@@ -25,7 +25,6 @@ In Paren, functions are first-class objects, so it can also be given to the argu
 - keep(3)
 - keep1(3)
 - map(3)
-- member(3)
 - none?(3)
 - partial(3)
 - position(3)

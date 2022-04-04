@@ -973,28 +973,6 @@ DEFUN(memcpy)
   return TRUE;
 }
 
-DEFUN(memmem)
-{
-  int s, e;
-  object o, p;
-  if (!bi_argc_range(argc, 2, 4)) return FALSE;
-  if (!bi_argv(BI_BYTES | BI_STR | BI_SYM | BI_KEY, argv->cons.car, &o)) return FALSE;
-  if (!bi_argv(BI_BYTES | BI_STR | BI_SYM | BI_KEY, (argv = argv->cons.cdr)->cons.car, &p)) return FALSE;
-  if (argc < 3) s = 0;
-  else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
-  if (argc < 4) e = o->mem.size;
-  else if (!bi_cpint(argv->cons.cdr->cons.car, &e)) return FALSE;
-  while (p->mem.size <= e - s) {
-    if (memcmp(o->mem.elt + s, p->mem.elt, p->mem.size) == 0) {
-      *result = sint(s);
-      return TRUE;
-    }
-    s++;
-  }
-  *result = object_nil;
-  return TRUE;
-}
-
 DEFUN(byte_2d_len)
 {
   object o;

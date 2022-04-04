@@ -16,7 +16,6 @@ The bytes data type can use the functions listed in `SEE ALSO` section, and can 
 - in?(3)
 - memcmp(3)
 - memcpy(3)
-- memmem(3)
 - prefix?(3)
 - slice(3)
 - sting(3)

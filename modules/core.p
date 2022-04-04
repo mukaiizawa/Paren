@@ -458,10 +458,10 @@
                     (rec (drop-while (partial = x) lis) (cons x acc))))))
     (rec lis nil)))
 
-(function member (fn lis)
+(function member (x lis)
   (if (nil? lis) nil
-      (fn (car lis)) lis
-      (member fn (cdr lis))))
+      (= x (car lis)) lis
+      (member x (cdr lis))))
 
 (function position (fn lis)
   (let (rec (f (lis n)
@@ -632,6 +632,7 @@
 (built-in-function string)
 (built-in-function string?)
 
+(built-in-function byte-len)
 (built-in-function chr)
 (built-in-function ord)
 
@@ -667,6 +668,14 @@
 
 (function empty? (x)
   (= (len x) 0))
+
+(function prefix? (x prefix)
+  (let (plen (len prefix))
+    (|| (= plen 0) (= (index x prefix 0 plen) 0))))
+
+(function suffix? (x suffix)
+  (let (slen (len suffix) start (- (len x) slen))
+    (|| (= slen 0) (&& (>= start 0) (= (last-index x suffix start) start)))))
 
 (function title? (s)
   (if (empty? s) nil
@@ -729,7 +738,7 @@
                                        val (with-memory-stream ($out)
                                              (if (in? conv '("e" "f" "g")) (.write-float $out x :precision precision :style (keyword conv))
                                                  (.write-int $out (// x)
-                                                             :radix (cadr (member (partial =  conv) '("b" 2 "o" 8 "d" 10 "x" 16)))
+                                                             :radix (cadr (member conv '("b" 2 "o" 8 "d" 10 "x" 16)))
                                                              :padding precision))))
                             (format1 flags width prefix val))
                           (raise ArgumentError (str "unexpected conversion specifier " conv)))))
@@ -753,19 +762,8 @@
 
 (built-in-function bytes)
 (built-in-function bytes?)
-
 (built-in-function memcpy)
 (built-in-function memcmp)
-(built-in-function byte-len)
-(built-in-function memmem)
-
-(function prefix? (x prefix)
-  (&& (>= (byte-len x) (byte-len prefix))
-      (memmem x prefix 0 (byte-len prefix))))
-
-(function suffix? (x suffix)
-  (&& (>= (byte-len x) (byte-len suffix))
-      (memmem x suffix (- (byte-len x) (byte-len suffix)))))
 
 ;; array.
 
@@ -1887,11 +1885,11 @@
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (|| (memmem "!#$%&*./<=>?^[]_{|}~" (&next self))
+  (|| (in? (&next self) "!#$%&*./<=>?^[]_{|}~")
       (.next? self alpha?)))
 
 (method ParenLexer .identifier-sign? ()
-  (memmem "+-" (&next self)))
+  (in? (&next self) "+-"))
 
 (method ParenLexer .identifier-trail? ()
   (|| (.identifier-symbol-alpha? self)
@@ -1950,8 +1948,8 @@
         (= next ":") (list :atom (.lex-keyword self))
         (= next ";") (begin (.skip-line self) (.lex self))
         (= next "#") (begin (.skip self) (list :read-macro (symbol (&next self))))
-        (memmem "+-" next) (list :atom (.lex-sign self))
-        (memmem "0123456789" next) (list :atom (.skip-number self))
+        (in? next "+-") (list :atom (.lex-sign self))
+        (digit? next) (list :atom (.skip-number self))
         (list :atom (.lex-symbol self)))))
 
 (class ParenReader ()

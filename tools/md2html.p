@@ -47,12 +47,12 @@ document.querySelectorAll('pre').forEach(x => {
     $contents nil)
 
 (function contents-padding (id)
-  (let (i -1 pad nil)
-    (while (<- i (memmem id "." (++ i)))
-      (push! '(span ()) pad))
-    pad))
+  (let (padding nil)
+    (dotimes (i (count (partial = ".") (list... id)))
+      (push! '(span ()) padding))
+    padding))
 
-(function parse-contents (contentss)
+(function parse-contents (contents)
   `((aside
       (h1 "Table of Contents")
       (ul (:class "contents")
@@ -60,7 +60,7 @@ document.querySelectorAll('pre').forEach(x => {
                    (let (id (cadadr node))
                      `(li (:id ,(str 'contents- id))
                           (a (:href ,(str "#" id)) ,@(contents-padding id) ,@(cddr node)))))
-                 contentss)))))
+                 contents)))))
 
 (function next-id (contents-index)
   (with-memory-stream ($out)
