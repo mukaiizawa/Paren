@@ -1369,11 +1369,13 @@ DEFUN(concat)
     *result = object_nil;
     return TRUE;
   }
-  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_SYM | BI_KEY | BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, argv->cons.car, &o)) return FALSE;
+  if (o == object_nil) return cons_concat(argv, result);
   switch (object_type(o)) {
-    case SYMBOL:
     case CONS:
       return cons_concat(argv, result);
+    case SYMBOL:
+    case KEYWORD:
     case BYTES:
     case STRING:
       return bytes_like_concat(o, argv->cons.cdr, result);

@@ -6,8 +6,10 @@ concat - concatenate the objects.
     (concat)
     (concat ARRAY ...)
     (concat BYTES ...)
+    (concat KEYWORD ...)
     (concat LIST ...)
     (concat STRING ...)
+    (concat SYMBOL ...)
 
 # DESCRIPTION
 The function `concat` concatenate an array, bytes, list, or string.
@@ -28,6 +30,12 @@ Error if the argument data types are not all the same. However, the symbol `nil`
     ) (concat)
     nil
 
+    ) (concat (array 1) (array 2))
+    #[ nil nil nil ]
+
+    ) (concat :foo :bar)
+    :foobar
+
     ) (concat nil)
     nil
     ) (concat nil nil)
@@ -42,8 +50,8 @@ Error if the argument data types are not all the same. However, the symbol `nil`
     ) (concat "0" "1" "2")
     "012"
 
-    ) (concat (array 1) (array 2))
-    #[ nil nil nil ]
+    ) (concat 'foo 'bar)
+    foobar
 
 # SEE ALSO
 - `join(3)`

@@ -934,9 +934,7 @@
   ; If field name is 'xxx', bind a getter named `&xxx` and setter named `&xxx!`.
   ; Works faster than method which defined with the `method` macro.
   (with-gensyms (receiver val)
-    (let (key (keyword field)
-              getter (symbol (apply concat (map string (list :& field))))
-              setter (symbol (apply concat (map string (list getter :!)))))
+    (let (key (keyword field) getter (concat '& field) setter (concat getter '!))
       (list begin
             (list if (list ! (list bound? (list quote getter)))
                   (list function getter (list receiver)
@@ -990,7 +988,7 @@
 (macro method (cls-sym method-sym args :rest body)
   ; Define method.
   ; Returns method symbol.
-  (let (global-method-name (symbol (apply concat (map string (list cls-sym method-sym)))))
+  (let (global-method-name (concat cls-sym method-sym))
     (list begin
           (list if
                 (list ! (list find-class (list quote cls-sym)))
