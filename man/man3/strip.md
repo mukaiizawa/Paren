@@ -46,6 +46,6 @@ If function `FN` is ommited, `space?` is assumed to be specified.
     <=> (rstrip (lstrip s fn) fn)
 
 # SEE ALSO
-- slice(3)
-- space?(3)
-- string(7)
+- `slice(3)`
+- `space?(3)`
+- `string(7)`

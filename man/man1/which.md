@@ -35,4 +35,4 @@ Search for files whose name exactly matches `paren`.
 If run without sufficient permissions, unreadable directories will be excluded from the search.
 
 # SEE ALSO
-- getenv(3)
+- `getenv(3)`

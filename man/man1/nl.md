@@ -16,4 +16,4 @@ If `START` is omitted, it is considered that `1` is specified.
         Consider the input as CSV and make the first column a serial number.
 
 # SEE ALSO
-- coreutils(7)
+- `coreutils(7)`

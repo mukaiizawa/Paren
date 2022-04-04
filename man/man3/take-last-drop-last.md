@@ -36,12 +36,12 @@ If the list is long enough for `i`.
     nil
 
 # SEE ALSO
-- [](3)
-- butlast(3)
-- drop(3)
-- drop-while(3)
-- last(3)
-- slice(3)
-- split-at(3)
-- take(3)
-- take-while(3)
+- `[](3)`
+- `butlast(3)`
+- `drop(3)`
+- `drop-while(3)`
+- `last(3)`
+- `slice(3)`
+- `split-at(3)`
+- `take(3)`
+- `take-while(3)`

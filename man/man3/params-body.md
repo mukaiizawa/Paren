@@ -33,5 +33,5 @@ If these functions are applied to built-in functions, `nil` is returned.
     nil
 
 # SEE ALSO
-- function(7)
-- macro(7)
+- `function(7)`
+- `macro(7)`

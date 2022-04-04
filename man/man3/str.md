@@ -28,4 +28,4 @@ Returns the string whitch intended to look good to people.
     "(0 1 2)"
 
 # SEE ALSO
-- string(3)
+- `string(3)`

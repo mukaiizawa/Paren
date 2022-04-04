@@ -12,5 +12,5 @@ By default, the following directories are searched at runtime.
 You can add or remove runtime paths by changing the value of `$runtime-path` in file `.parenrc(5)`.
 
 # SEE ALSO
-- $paren-home(3)
-- .parenrc(5)
+- `$paren-home(3)`
+- `.parenrc(5)`

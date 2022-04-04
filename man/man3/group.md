@@ -34,5 +34,5 @@ The length of the last sublists is:
     ((0 1 2 3) (4 5 6 7) (8 9))
 
 # SEE ALSO
-- slice(3)
-- group-by(3)
+- `slice(3)`
+- `group-by(3)`

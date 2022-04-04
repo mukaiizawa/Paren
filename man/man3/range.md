@@ -36,4 +36,4 @@ Error if `STEP` is not positive integer.
     (0 2 4 6 8)
 
 # SEE ALSO
-- seq(1)
+- `seq(1)`

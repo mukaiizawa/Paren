@@ -15,7 +15,7 @@ Arguments can be passed to a macro, and the macro will return a value.
 In Paren, macro are first-class objects, so it can also be given to the argument of the macro.
 
 # SEE ALSO
-- macro(3)
-- data-types(7)
-- function(7)
-- special-operator(7)
+- `macro(3)`
+- `data-types(7)`
+- `function(7)`
+- `special-operator(7)`

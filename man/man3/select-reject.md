@@ -39,8 +39,8 @@ The function `reject` returns a list of elements for which `FN` returned `nil`.
     ((2) (4))
 
 # SEE ALSO
-- complement(3)
-- compose(3)
-- keep(3)
-- keep1(3)
-- partial(3)
+- `complement(3)`
+- `compose(3)`
+- `keep(3)`
+- `keep1(3)`
+- `partial(3)`

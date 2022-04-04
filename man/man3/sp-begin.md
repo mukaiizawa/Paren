@@ -19,4 +19,4 @@ Returns the last evaluation result.
     3
 
 # SEE ALSO
-- special-operator(7)
+- `special-operator(7)`

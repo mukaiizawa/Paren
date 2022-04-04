@@ -32,5 +32,5 @@ Returns whether `X` is a byte.
     nil
 
 # SEE ALSO
-- int?(3)
-- number?(3)
+- `int?(3)`
+- `number?(3)`

@@ -93,4 +93,4 @@ See `memcmp(3)` for a comparison specification of lexicographic order.
     true
 
 # SEE ALSO
-- memcmp(3)
+- `memcmp(3)`

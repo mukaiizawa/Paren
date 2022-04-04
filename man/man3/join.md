@@ -30,4 +30,4 @@ If `LIST` is `nil`, returns empty string.
     "foo::bar::buzz"
 
 # SEE ALSO
-- split(3)
+- `split(3)`

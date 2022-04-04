@@ -24,6 +24,6 @@ The symbol `main(3)` is bound to `nil` so that the `main` function is not execut
     :core
 
 # SEE ALSO
-- load(3)
-- main(3)
-- module(7)
+- `load(3)`
+- `main(3)`
+- `module(7)`

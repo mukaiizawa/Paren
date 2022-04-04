@@ -29,8 +29,8 @@ On the other hand, the list manipulation function has the advantage of being ver
     2
 
 # SEE ALSO
-- car(3)
-- cdr(3)
-- cons(3)
-- data-types(7)
-- list(7)
+- `car(3)`
+- `cdr(3)`
+- `cons(3)`
+- `data-types(7)`
+- `list(7)`

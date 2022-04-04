@@ -11,4 +11,4 @@ Repeatedly output a line with all specified `STRING`.
 If `STRING` is omitted, it is considered that the `y` is specified.
 
 # SEE ALSO
-- coreutils(7)
+- `coreutils(7)`

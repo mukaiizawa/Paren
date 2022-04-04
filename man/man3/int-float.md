@@ -54,4 +54,4 @@ If `X` is `nil`, these functions returns `0`.
     68719476735
 
 # SEE ALSO
-- int?(3)
+- `int?(3)`

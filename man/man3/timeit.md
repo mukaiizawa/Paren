@@ -21,5 +21,5 @@ Returns evaluation result of the last `EXPRs`.
     3
 
 # SEE ALSO
-- clock(3)
-- cycle(3)
+- `clock(3)`
+- `cycle(3)`

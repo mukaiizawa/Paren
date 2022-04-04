@@ -36,6 +36,6 @@ The `CONS` is modified.
     (:foo)
 
 # SEE ALSO
-- car(3)
-- cdr(3)
-- cons(7)
+- `car(3)`
+- `cdr(3)`
+- `cons(7)`

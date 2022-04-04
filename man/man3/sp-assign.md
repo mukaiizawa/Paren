@@ -39,5 +39,5 @@ Or When the return value of `BINDING-EXPR` does not match `BOUND-EXPR`.
     3
 
 # SEE ALSO
-- let(3)
-- special-operator(7)
+- `let(3)`
+- `special-operator(7)`

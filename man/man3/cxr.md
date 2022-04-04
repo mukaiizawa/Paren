@@ -93,9 +93,9 @@ Error if `X` is not a list.
     (2)
 
 # SEE ALSO
-- car!(3)
-- cdr!(3)
-- cons(3)
-- list(3)
-- cons(7)
-- list(7)
+- `car!(3)`
+- `cdr!(3)`
+- `cons(3)`
+- `list(3)`
+- `cons(7)`
+- `list(7)`

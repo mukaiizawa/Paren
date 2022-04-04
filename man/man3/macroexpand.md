@@ -52,5 +52,5 @@ Also, macro expansion works properly even if it contains special operators.
     (if (&& 1 2) (begin 3))
 
 # SEE ALSO
-- macro(3)
-- special-operator(7)
+- `macro(3)`
+- `special-operator(7)`

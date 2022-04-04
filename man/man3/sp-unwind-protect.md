@@ -32,4 +32,4 @@ In general, it is rare to call `unwind-protect` directly, and it is used in a ma
     (:foo 1 :buzz)
 
 # SEE ALSO
-- special-operator(7)
+- `special-operator(7)`

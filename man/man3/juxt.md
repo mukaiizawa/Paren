@@ -27,4 +27,4 @@ Returns list of results of the mapping of list `LIST` by function `FN`.
     ((0 0 0) (1 1 1) (2 4 8))
 
 # SEE ALSO
-- map(3)
+- `map(3)`

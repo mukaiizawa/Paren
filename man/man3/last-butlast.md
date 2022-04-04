@@ -34,8 +34,8 @@ These functions return `nil` if `LIST` is an empty list.
     (0 1)
 
 # SEE ALSO
-- take(3)
-- drop(3)
-- drop-last(3)
-- last-cons(3)
-- take-last(3)
+- `take(3)`
+- `drop(3)`
+- `drop-last(3)`
+- `last-cons(3)`
+- `take-last(3)`

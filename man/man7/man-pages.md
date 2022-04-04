@@ -125,4 +125,4 @@ For details on writing example programs, see Example programs below.
 A list of related man pages, possibly followed by other related pages or documents.
 
 # SEE ALSO
-- man(1)
+- `man(1)`

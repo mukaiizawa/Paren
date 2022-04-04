@@ -29,4 +29,4 @@ In general, `string!` is faster than `string` because it only changes arguments 
     "012"
 
 # SEE ALSO
-- str(3)
+- `str(3)`

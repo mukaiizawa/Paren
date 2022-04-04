@@ -42,4 +42,4 @@ The function `reverse!` generally faster than `reverse`.
     (0)
 
 # SEE ALSO
-- slice(3)
+- `slice(3)`

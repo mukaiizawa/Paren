@@ -14,4 +14,4 @@ In principle, this exception will not be caught and the Paren will be terminated
 Undefined.
 
 # SEE ALSO
-- SystemExit(3)
+- `SystemExit(3)`

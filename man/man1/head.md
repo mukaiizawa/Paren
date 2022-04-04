@@ -14,5 +14,5 @@ Print the first `10` lines of standard input.
         Print the first N lines.
 
 # SEE ALSO
-- tail(1)
-- coreutils(7)
+- `tail(1)`
+- `coreutils(7)`

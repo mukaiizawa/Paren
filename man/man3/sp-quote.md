@@ -24,4 +24,4 @@ Since quote is used frequently, the reader macro is defined.
     foo
 
 # SEE ALSO
-- special-operator(7)
+- `special-operator(7)`

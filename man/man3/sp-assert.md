@@ -19,5 +19,5 @@ Do not use the return value as the internal processing will be different dependi
 Error if, `EXPR` is evaluated to nil.
 
 # SEE ALSO
-- $debug?(3)
-- special-operator(7)
+- `$debug?(3)`
+- `special-operator(7)`

@@ -12,5 +12,5 @@ Displays the current host.
 Must be compiled with sock option to use.
 
 # SEE ALSO
-- sock(3)
-- coreutils(7)
+- `sock(3)`
+- `coreutils(7)`

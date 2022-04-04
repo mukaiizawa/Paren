@@ -26,4 +26,4 @@ Even if it is `nil`, if it can be regarded as a leaf, it becomes an element of t
     (a b c d e f nil)
 
 # SEE ALSO
-- list(3)
+- `list(3)`

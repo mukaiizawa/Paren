@@ -50,5 +50,5 @@ The `SEQUENCE` is modified. If you want to keep the original sequence, copy it l
     (2 1 4 3)
 
 # SEE ALSO
-- <(3)
-- uniq(3)
+- `<(3)`
+- `uniq(3)`

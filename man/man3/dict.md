@@ -17,8 +17,8 @@ Returns an empty dictionary.
     #{ }
 
 # SEE ALSO
-- [](3)
-- empty?(3)
-- in?(3)
-- len(3)
-- dictionary(7)
+- `[](3)`
+- `empty?(3)`
+- `in?(3)`
+- `len(3)`
+- `dictionary(7)`

@@ -20,7 +20,7 @@ The reserved word here is one of the following.
 Commonly used to register in a text editor dictionary for highlighting and word completion.
 
 # SEE ALSO
-- function(3)
-- function!(3)
-- macro(3)
-- special-operator(7)
+- `function(3)`
+- `function!(3)`
+- `macro(3)`
+- `special-operator(7)`

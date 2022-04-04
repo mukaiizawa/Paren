@@ -29,5 +29,5 @@ If there is no corresponding value, returns `nil`.
     nil
 
 # SEE ALSO
-- member(3)
-- list(7)
+- `member(3)`
+- `list(7)`

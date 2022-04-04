@@ -1,6 +1,8 @@
 ; manual dependency.
 
 (import :optparse)
+(import :re)
+
 (import :man (.resolve $paren-home "tools"))
 
 (function parse-see-also (file)
@@ -11,7 +13,8 @@
       (while (<- line (read-line))
         (if (= line "# SEE ALSO") (break)))
       (cons (car pages)
-            (map (f (x) (slice x 2)) (collect read-line))))))
+            (map (f (x) (slice x (++ (index "`" x)) (last-index "`" x)))
+                 (collect read-line))))))
 
 (function collect-dependencies (root)
   ;; Returns the list like a `(src dst ...) ...`.

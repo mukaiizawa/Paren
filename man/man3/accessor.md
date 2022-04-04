@@ -80,8 +80,8 @@ ArgumentError if `X` is a string data type and `VAL` is specified.
     #{ :buzz 2 :bar 10 :foo 0 }
 
 # SEE ALSO
-- array(7)
-- bytes(7)
-- dictionary(7)
-- list(7)
-- string(7)
+- `array(7)`
+- `bytes(7)`
+- `dictionary(7)`
+- `list(7)`
+- `string(7)`

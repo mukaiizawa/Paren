@@ -21,5 +21,5 @@ Print the unique lines in the standard input.
 The input must be sorted.
 
 # SEE ALSO
-- sort(1)
-- coreutils(7)
+- `sort(1)`
+- `coreutils(7)`

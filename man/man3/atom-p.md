@@ -25,5 +25,5 @@ Returns whether `X` is an atom.
     nil
 
 # SEE ALSO
-- cons?(3)
-- list?(3)
+- `cons?(3)`
+- `list?(3)`

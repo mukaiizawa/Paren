@@ -48,4 +48,4 @@ The function `none?` returns whether the result of applying the function `FN` to
     nil
 
 # SEE ALSO
-- every-adjacent?(3)
+- `every-adjacent?(3)`

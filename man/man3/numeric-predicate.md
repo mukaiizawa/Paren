@@ -55,7 +55,7 @@ The function `odd?` returns whether the `X` is odd number or not.
     nil
 
 # SEE ALSO
-- <(3)
-- <=(3)
-- >(3)
-- >=(3)
+- `<(3)`
+- `<=(3)`
+- `>(3)`
+- `>=(3)`

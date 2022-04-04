@@ -27,5 +27,5 @@ The function `--` returns `X` minus `1`.
     -1
 
 # SEE ALSO
-- +(3)
-- -(3)
+- `+(3)`
+- `-(3)`

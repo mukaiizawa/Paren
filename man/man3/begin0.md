@@ -26,4 +26,4 @@ The macro `begin0` is typically used to evaluate one or more expressions with si
     (3)
 
 # SEE ALSO
-- begin(3)
+- `begin(3)`

@@ -54,5 +54,5 @@ Returns whether element `X` exists or not.
     nil
 
 # SEE ALSO
-- [](3)
-- index(3)
+- `[](3)`
+- `index(3)`

@@ -20,5 +20,5 @@ Returns evaluation result of last `EXPRs`.
     <=> (let (a (gensym) b (gensym) c (gensym)) ...)
 
 # SEE ALSO
-- macro(3)
-- special-operator(7)
+- `macro(3)`
+- `special-operator(7)`

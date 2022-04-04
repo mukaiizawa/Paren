@@ -51,5 +51,5 @@ These functions only accept positive integers. Error if `X` is not positive inte
     "2x10"
 
 # SEE ALSO
-- +(3)
-- -(3)
+- `+(3)`
+- `-(3)`

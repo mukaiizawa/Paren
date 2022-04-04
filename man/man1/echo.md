@@ -14,4 +14,4 @@ Echo the `STRING` to standard output.
         Do not output the trailing newline.
 
 # SEE ALSO
-- coreutils(7)
+- `coreutils(7)`

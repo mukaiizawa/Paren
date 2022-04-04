@@ -16,4 +16,4 @@ Returns a address of `X`.
     (== X Y) <=> (= (address X) (address Y))
 
 # SEE ALSO
-- ==(3)
+- `==(3)`

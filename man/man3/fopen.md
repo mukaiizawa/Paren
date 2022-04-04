@@ -26,5 +26,5 @@ Returns file poiner for the opened `FILE`.
     nil
 
 # SEE ALSO
-- fclose(3)
-- with-open(3)
+- `fclose(3)`
+- `with-open(3)`

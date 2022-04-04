@@ -164,6 +164,6 @@ Built-in functions follow the same rules.
 Evaluate the resulting S-expressions after applying the second and subsequent elements to the macro.
 
 # SEE ALSO
-- data-types(7)
-- object-system(7)
-- paren-tutorial(7)
+- `data-types(7)`
+- `object-system(7)`
+- `paren-tutorial(7)`

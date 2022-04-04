@@ -14,5 +14,5 @@ Print the last `10` lines of standard input to standard output.
         Print the last N lines.
 
 # SEE ALSO
-- head(1)
-- coreutils(7)
+- `head(1)`
+- `coreutils(7)`

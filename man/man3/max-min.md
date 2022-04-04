@@ -41,7 +41,7 @@ The function `min` returns minimum value from argument.
     :a
 
 # SEE ALSO
-- <(3)
-- <=(3)
-- >(3)
-- >=(3)
+- `<(3)`
+- `<=(3)`
+- `>(3)`
+- `>=(3)`

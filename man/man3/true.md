@@ -14,5 +14,5 @@ The `true` is bound itself.
     1
 
 # SEE ALSO
-- if(3)
-- nil(3)
+- `if(3)`
+- `nil(3)`

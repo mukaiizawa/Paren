@@ -83,4 +83,4 @@ The macro `function` error if, the symbol is already bound.
     (1 2 3)
 
 # SEE ALSO
-- special-operator(7)
+- `special-operator(7)`

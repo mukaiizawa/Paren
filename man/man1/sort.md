@@ -9,5 +9,5 @@ sort - sort input lines.
 Read standard input, sort and output.
 
 # SEE ALSO
-- shuf(1)
-- coreutils(7)
+- `shuf(1)`
+- `coreutils(7)`

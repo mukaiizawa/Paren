@@ -14,4 +14,4 @@ Copy standard input to `FILE`, and also to standard output.
         Append to `FILE`.
 
 # SEE ALSO
-- coreutils(7)
+- `coreutils(7)`

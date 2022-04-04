@@ -80,6 +80,6 @@ If `TEXT` is empty, these functions returns `nil`.
     nil
 
 # SEE ALSO
-- lower(3)
-- title(3)
-- upper(3)
+- `lower(3)`
+- `title(3)`
+- `upper(3)`

@@ -32,4 +32,4 @@ Error if, `SYMBOL` is not bound.
     (:lexical)
 
 # SEE ALSO
-- special-operator(7)
+- `special-operator(7)`

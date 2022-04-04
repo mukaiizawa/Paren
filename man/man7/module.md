@@ -16,5 +16,5 @@ Since Paren does not have a package system, the modules are made with the follow
 The module file must be written in UTF-8.
 
 # SEE ALSO
-- import(3)
-- $paren-home(3)
+- `import(3)`
+- `$paren-home(3)`

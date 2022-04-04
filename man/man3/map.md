@@ -47,5 +47,5 @@ If you don't use a return value, you should use `foreach` or `dolist` instead.
     ((0 0 0))
 
 # SEE ALSO
-- dolist(3)
-- foreach(3)
+- `dolist(3)`
+- `foreach(3)`

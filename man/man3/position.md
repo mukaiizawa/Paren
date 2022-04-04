@@ -29,5 +29,5 @@ If there is no such element, returns `nil`.
     nil
 
 # SEE ALSO
-- index(3)
-- select(3)
+- `index(3)`
+- `select(3)`

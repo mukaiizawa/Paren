@@ -34,11 +34,11 @@ The function `split-with` splits the `LIST` in the part where the predicate `FN`
     ((0 1 2 3 4) (5 6 7 8 9))
 
 # SEE ALSO
-- chunk(3)
-- drop(3)
-- drop-while(3)
-- group-by(3)
-- juxt(3)
-- split(3)
-- take(3)
-- take-while(3)
+- `chunk(3)`
+- `drop(3)`
+- `drop-while(3)`
+- `group-by(3)`
+- `juxt(3)`
+- `split(3)`
+- `take(3)`
+- `take-while(3)`

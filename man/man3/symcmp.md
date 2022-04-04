@@ -23,4 +23,4 @@ Returns a negative integer, zero, or a positive integer as `X` is less than, equ
     21848
 
 # SEE ALSO
-- memcmp(3)
+- `memcmp(3)`

@@ -68,4 +68,4 @@ The function `!=` and `!==` return the result of inverting the boolean values of
     true
 
 # SEE ALSO
-- !(3)
+- `!(3)`

@@ -21,4 +21,4 @@ If the argument is not a built-in operator, return `nil`.
     nil
 
 # SEE ALSO
-- built-in?(3)
+- `built-in?(3)`

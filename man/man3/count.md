@@ -25,5 +25,5 @@ Returns the number of elements in the `LIST` that satisfy the predicate function
     1
 
 # SEE ALSO
-- len(3)
-- select(3)
+- `len(3)`
+- `select(3)`

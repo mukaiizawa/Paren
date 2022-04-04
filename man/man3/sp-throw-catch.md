@@ -34,5 +34,5 @@ In general, `throw` is rarely used directly, and `raise(3)` is used instead.
     2
 
 # SEE ALSO
-- raise(3)
-- special-operator(7)
+- `raise(3)`
+- `special-operator(7)`

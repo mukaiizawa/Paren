@@ -14,4 +14,4 @@ The original Hunt the Wumpus is a text-based adventure game developed by Gregory
 If you have the original BASIC source code, you can run it with basic(1).
 
 # SEE ALSO
-- basic(1)
+- `basic(1)`

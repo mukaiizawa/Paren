@@ -24,4 +24,4 @@ If the `PATH` is omitted, it is considered that the current directory is specifi
         Use full path format.
 
 # SEE ALSO
-- coreutils(7)
+- `coreutils(7)`

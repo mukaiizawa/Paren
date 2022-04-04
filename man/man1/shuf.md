@@ -9,5 +9,5 @@ shuf - generate random permutations.
 Write a random permutation of the input lines to standard output.
 
 # SEE ALSO
-- sort(1)
-- coreutils(7)
+- `sort(1)`
+- `coreutils(7)`

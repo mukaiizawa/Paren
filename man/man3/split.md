@@ -45,5 +45,5 @@ If you want to split using a regular expression, refer to the `re(3)` module.
     ("" "foo" "")
 
 # SEE ALSO
-- join(3)
-- re(3)
+- `join(3)`
+- `re(3)`

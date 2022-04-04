@@ -29,4 +29,4 @@ Return a list such that the elements of the sequence `SEQUENCE` are in the eleme
     (0 0 0)
 
 # SEE ALSO
-- list(3)
+- `list(3)`

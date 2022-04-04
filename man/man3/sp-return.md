@@ -19,4 +19,4 @@ Returns the `VALUE`.
     :value
 
 # SEE ALSO
-- special-operator(7)
+- `special-operator(7)`

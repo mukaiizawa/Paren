@@ -18,4 +18,4 @@ If the `DIRECTORY` is omitted, the usage below the current directory is displaye
         Limit the display to one level below the specified `DIRECTORY`.
 
 # SEE ALSO
-- coreutils(7)
+- `coreutils(7)`

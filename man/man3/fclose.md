@@ -22,5 +22,5 @@ In general, the `with-open` macro is used, so it is not called directly.
     nil
 
 # SEE ALSO
-- fopen(3)
-- with-open(3)
+- `fopen(3)`
+- `with-open(3)`

@@ -31,6 +31,6 @@ The special operator `loop` returns the `nil`.
     10
 
 # SEE ALSO
-- while(3)
-- for(3)
-- special-operator(7)
+- `while(3)`
+- `for(3)`
+- `special-operator(7)`

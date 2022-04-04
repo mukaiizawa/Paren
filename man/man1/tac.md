@@ -9,5 +9,5 @@ tac - output standard input in reverse order.
 Output standard input in reverse order.
 
 # SEE ALSO
-- cat(1)
-- coreutils(7)
+- `cat(1)`
+- `coreutils(7)`

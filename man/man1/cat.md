@@ -9,5 +9,5 @@ cat - concatenate files and output.
 Concatenate `FILEs` to standard output.
 
 # SEE ALSO
-- tac(1)
-- coreutils(7)
+- `tac(1)`
+- `coreutils(7)`

@@ -27,5 +27,5 @@ Returns a list of returned values were called until that function `FN` returned 
     nil
 
 # SEE ALSO
-- list(3)
-- map(3)
+- `list(3)`
+- `map(3)`

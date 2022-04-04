@@ -20,5 +20,5 @@ The `nil` is bound itself.
     0
 
 # SEE ALSO
-- if(3)
-- true(3)
+- `if(3)`
+- `true(3)`

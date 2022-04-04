@@ -26,5 +26,5 @@ Returns the number of columns needed to represent the character `CHAR`.
 This function is only implemented for characters that are used in daily life in Japan.
 
 # SEE ALSO
-- byte-len(3)
-- len(3)
+- `byte-len(3)`
+- `len(3)`

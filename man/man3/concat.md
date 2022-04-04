@@ -46,5 +46,5 @@ Error if the argument data types are not all the same. However, the symbol `nil`
     #[ nil nil nil ]
 
 # SEE ALSO
-- join(3)
-- split(3)
+- `join(3)`
+- `split(3)`

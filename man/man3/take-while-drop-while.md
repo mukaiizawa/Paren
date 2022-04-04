@@ -23,7 +23,7 @@ The function `drop-while` drops the longest initial prefix of `LIST` whose eleme
     (3 4 5 6 7 8 9)
 
 # SEE ALSO
-- drop(3)
-- slice(3)
-- split-with(3)
-- take(3)
+- `drop(3)`
+- `slice(3)`
+- `split-with(3)`
+- `take(3)`

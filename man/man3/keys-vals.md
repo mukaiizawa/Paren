@@ -26,5 +26,5 @@ The order of the return value is undefined.
     (0 1 2)
 
 # SEE ALSO
-- dict(3)
-- dictionary(7)
+- `dict(3)`
+- `dictionary(7)`

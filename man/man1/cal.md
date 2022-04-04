@@ -11,4 +11,4 @@ Display the calendar for the specified `YEAR` and `MONTH`.
 If the `YEAR` and `MONTH` are omitted, it is considered that the current year and month are specified.
 
 # SEE ALSO
-- coreutils(7)
+- `coreutils(7)`

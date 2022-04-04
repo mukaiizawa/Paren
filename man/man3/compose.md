@@ -21,9 +21,9 @@ Returns the composite function.
     2
 
 # SEE ALSO
-- complement(3)
-- map(3)
-- reject(3)
-- select(3)
-- select1(3)
-- partial(3)
+- `complement(3)`
+- `map(3)`
+- `reject(3)`
+- `select(3)`
+- `select1(3)`
+- `partial(3)`

@@ -7,4 +7,4 @@ The symbol `$parenrc` holds the path of the initialization file `.parenrc(5)` wh
 The value is not intended to be updated and its value is `~/.parenrc`.
 
 # SEE ALSO
-- .parenrc(5)
+- `.parenrc(5)`

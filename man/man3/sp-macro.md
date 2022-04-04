@@ -18,5 +18,5 @@ In addition to the fact that formal arguments can be specified in the same way a
 Read `paren-tutorial(7)` for details.
 
 # SEE ALSO
-- paren-tutorial(7)
-- special-operator(7)
+- `paren-tutorial(7)`
+- `special-operator(7)`

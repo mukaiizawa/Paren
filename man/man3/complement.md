@@ -23,9 +23,9 @@ Returns a composite function to invert boolean values.
     (1 1 1 2)
 
 # SEE ALSO
-- compose(3)
-- map(3)
-- reject(3)
-- select(3)
-- select1(3)
-- partial(3)
+- `compose(3)`
+- `map(3)`
+- `reject(3)`
+- `select(3)`
+- `select1(3)`
+- `partial(3)`

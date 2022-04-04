@@ -35,7 +35,7 @@ If argument is an array, byte, list, or string, return the corresponding array.
     #[ "f" "o" "o" ]
 
 # SEE ALSO
-- bytes(3)
-- list(3)
-- string(3)
-- array(7)
+- `bytes(3)`
+- `list(3)`
+- `string(3)`
+- `array(7)`

@@ -27,5 +27,5 @@ The function `oct` returns an integer representing the Unicode code point of the
     97
 
 # SEE ALSO
-- int(3)
-- str(3)
+- `int(3)`
+- `str(3)`

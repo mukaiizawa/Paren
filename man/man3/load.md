@@ -23,5 +23,5 @@ Returns the `true`.
     true
 
 # SEE ALSO
-- import(3)
-- with-open(3)
+- `import(3)`
+- `with-open(3)`

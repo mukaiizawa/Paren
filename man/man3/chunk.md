@@ -21,6 +21,6 @@ Returns the `LIST` into sublists by function `FN` return value.
     ((0 (0)) (1 (1)) (2 (2)) (0 (3)) (1 (4)) (2 (5)) (0 (6)) (1 (7)) (2 (8)) (0 (9)))
 
 # SEE ALSO
-- group(3)
-- group-by(3)
-- split-with(3)
+- `group(3)`
+- `group-by(3)`
+- `split-with(3)`

@@ -21,5 +21,5 @@ Returns whether `X` is bound.
     nil
 
 # SEE ALSO
-- symbol(3)
-- symbol(7)
+- `symbol(3)`
+- `symbol(7)`

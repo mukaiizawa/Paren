@@ -62,5 +62,5 @@ The function println returns `nil`.
 If a single buffer can be used, as socket programming, `BYTES` can be specified for `read-bytes` and `write-bytes`.
 
 # SEE ALSO
-- $in(3)
-- $out(3)
+- `$in(3)`
+- `$out(3)`

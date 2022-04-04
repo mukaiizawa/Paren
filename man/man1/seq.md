@@ -16,4 +16,4 @@ If `FIRST` or `INCREMENT` is omitted, it defaults to `1`.
         Equalize width by padding with leading zeroes.
 
 # SEE ALSO
-- coreutils(7)
+- `coreutils(7)`

@@ -20,10 +20,10 @@ The string data type can use the functions listed in `SEE ALSO` section, and can
     "world"
 
 # SEE ALSO
-- byte-len(3)
-- index(3)
-- last-index(3)
-- prefix?(3)
-- string(3)
-- suffix?(3)
-- data-types(7)
+- `byte-len(3)`
+- `index(3)`
+- `last-index(3)`
+- `prefix?(3)`
+- `string(3)`
+- `suffix?(3)`
+- `data-types(7)`

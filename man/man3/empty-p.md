@@ -47,4 +47,4 @@ Returns whether the collection is zero-length.
     nil
 
 # SEE ALSO
-- len(3)
+- `len(3)`

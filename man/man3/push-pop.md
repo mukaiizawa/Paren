@@ -42,4 +42,4 @@ The macro `pop!` returns first element of the list referenced by the symbol `VAR
     nil
 
 # SEE ALSO
-- list(3)
+- `list(3)`

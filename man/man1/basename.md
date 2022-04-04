@@ -14,5 +14,5 @@ Write standard input to standard output, with any leading directory components r
         Remove suffix.
 
 # SEE ALSO
-- dirname(1)
-- coreutils(7)
+- `dirname(1)`
+- `coreutils(7)`

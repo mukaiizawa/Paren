@@ -37,6 +37,6 @@ Symbols with no arguments are used to prevent unintended symbol binding in macro
     oo
 
 # SEE ALSO
-- keyword(3)
-- with-gensyms(3)
-- symbol(7)
+- `keyword(3)`
+- `with-gensyms(3)`
+- `symbol(7)`

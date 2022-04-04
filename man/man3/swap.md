@@ -25,4 +25,4 @@ The first argument is modified.
     (1 0 2)
 
 # SEE ALSO
-- sort!(3)
+- `sort!(3)`

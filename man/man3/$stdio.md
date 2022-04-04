@@ -11,5 +11,5 @@ The symbols `$stdin`, `$stdout`, and `$stderr` holds standard I/O streams.
 These symbols values should not be updated.
 
 # SEE ALSO
-- $in(3)
-- $out(3)
+- `$in(3)`
+- `$out(3)`

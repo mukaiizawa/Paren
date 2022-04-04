@@ -67,5 +67,5 @@ The function `%` returns remainder of dividing `NUMERATOR` by `DENOMINATOR`.
     1
 
 # SEE ALSO
-- ++(3)
-- --(3)
+- `++(3)`
+- `--(3)`

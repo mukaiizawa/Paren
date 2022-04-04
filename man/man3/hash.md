@@ -32,4 +32,4 @@ Returns a hash code value of the `X`.
     0
 
 # SEE ALSO
-- =(3)
+- `=(3)`

@@ -30,5 +30,5 @@ Returns the evaluation result of the last `EXPRs`.
     2
 
 # SEE ALSO
-- if(3)
-- begin(3)
+- `if(3)`
+- `begin(3)`

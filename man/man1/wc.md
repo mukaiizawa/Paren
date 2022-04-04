@@ -45,4 +45,4 @@ Print only the number of words and characters
     paren wc -wc
 
 # SEE ALSO
-- coreutils(7)
+- `coreutils(7)`

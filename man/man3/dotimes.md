@@ -29,8 +29,8 @@ Supports `break(3)` and  `continue(3)`.
     45
 
 # SEE ALSO
-- break(3)
-- continue(3)
-- doarray(3)
-- dolist(3)
-- dostring(3)
+- `break(3)`
+- `continue(3)`
+- `doarray(3)`
+- `dolist(3)`
+- `dostring(3)`

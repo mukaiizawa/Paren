@@ -55,4 +55,4 @@ If `DEDUCTION-TIME` is omitted, `1` is assumed.
      (28 "09:45" "18:30"))
 
 # SEE ALSO
-- manage-attendance(1)
+- `manage-attendance(1)`

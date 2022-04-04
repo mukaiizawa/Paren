@@ -157,9 +157,9 @@ The evaluation results are as follows.
     (:name :rectangle :area 1)
 
 # SEE ALSO
-- Class(3)
-- Object(3)
-- catch(3)
-- class(3)
-- method(3)
-- throw(3)
+- `Class(3)`
+- `Object(3)`
+- `catch(3)`
+- `class(3)`
+- `method(3)`
+- `throw(3)`

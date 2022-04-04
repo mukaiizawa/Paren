@@ -31,5 +31,5 @@ Like `let*` in Common Lisp, symbols bound to a newly created environment affect 
     (:foo :bar)
 
 # SEE ALSO
-- <-(3)
-- special-operator(7)
+- `<-(3)`
+- `special-operator(7)`

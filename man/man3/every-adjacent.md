@@ -28,4 +28,4 @@ If `LIST` is `nil`, returns `nil`.
     nil
 
 # SEE ALSO
-- every?(3)
+- `every?(3)`

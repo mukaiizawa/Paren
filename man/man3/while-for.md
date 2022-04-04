@@ -55,6 +55,6 @@ Since these macros are expanded into a special operator `loop(3)`, `break(3)` an
     ((0 0) (1 1) (2 0) (3 1) (4 0))
 
 # SEE ALSO
-- break(3)
-- continue(3)
-- loop(3)
+- `break(3)`
+- `continue(3)`
+- `loop(3)`

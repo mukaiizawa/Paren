@@ -22,7 +22,7 @@ If `END` is omitted, it is assumed that the length of the argument object is spe
 If `START` is omitted, a bytes corresponding to argument is returned.
 
 # SEE ALSO
-- keyword(3)
-- string(3)
-- symbol(3)
-- bytes(7)
+- `keyword(3)`
+- `string(3)`
+- `symbol(3)`
+- `bytes(7)`

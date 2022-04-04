@@ -23,5 +23,5 @@ Returns whether `X` is a integer.
     nil
 
 # SEE ALSO
-- byte?(3)
-- number?(3)
+- `byte?(3)`
+- `number?(3)`

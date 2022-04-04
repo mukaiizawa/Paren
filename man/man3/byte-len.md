@@ -26,4 +26,4 @@ Returns the byte length.
     3
 
 # SEE ALSO
-- len(3)
+- `len(3)`

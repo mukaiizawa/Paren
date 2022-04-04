@@ -51,5 +51,5 @@ If `STOP` is omitted, it defaults to length of the first argument.
     "o"
 
 # SEE ALSO
-- take(3)
-- drop(3)
+- `take(3)`
+- `drop(3)`

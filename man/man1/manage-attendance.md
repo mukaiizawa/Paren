@@ -11,5 +11,5 @@ Read attendance information from standard input and output summary to standard o
 See `manage-attendance(5)` for attendance information format specifications.
 
 # SEE ALSO
-- cal(1)
-- ldate(1)
+- `cal(1)`
+- `ldate(1)`

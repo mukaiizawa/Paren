@@ -9,13 +9,13 @@ Immediately after execution, they are connected to `$stdin(3)` and `$stdout(3)`.
 The macro `with-memory-stream(3)` allows you to connect to a string I/O stream.
 
 # SEE ALSO
-- read(3)
-- read-byte(3)
-- read-bytes(3)
-- read-char(3)
-- read-line(3)
-- with-memory-stream(3)
-- write(3)
-- write-byte(3)
-- write-bytes(3)
-- write-line(3)
+- `read(3)`
+- `read-byte(3)`
+- `read-bytes(3)`
+- `read-char(3)`
+- `read-line(3)`
+- `with-memory-stream(3)`
+- `write(3)`
+- `write-byte(3)`
+- `write-bytes(3)`
+- `write-line(3)`

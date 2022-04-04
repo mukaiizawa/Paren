@@ -24,5 +24,5 @@ Error if `LIST` is not a list.
     (2)
 
 # SEE ALSO
-- last(3)
-- slice(3)
+- `last(3)`
+- `slice(3)`

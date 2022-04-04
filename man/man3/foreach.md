@@ -30,5 +30,5 @@ In general, `foreach` is faster than `map`, because it doesn't create cons.
     nil
 
 # SEE ALSO
-- dolist(3)
-- map(3)
+- `dolist(3)`
+- `map(3)`

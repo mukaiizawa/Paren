@@ -22,6 +22,6 @@ As with `map(3)`, if the number of elements in each argument list differs, it is
     (("Alice" "Bob" "Charlie") (10 32 24) (m f f))
 
 # SEE ALSO
-- dolist(3)
-- foreach(3)
-- map(3)
+- `dolist(3)`
+- `foreach(3)`
+- `map(3)`

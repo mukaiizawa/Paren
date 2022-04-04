@@ -14,8 +14,8 @@ Unlike Common Lisp, there is no concept of packaging, so symbols in the system a
 See `lang(7)` for names that can be used for symbols.
 
 # SEE ALSO
-- <-(3)
-- byte-len(3)
-- symbol(3)
-- data-types(7)
-- lang(7)
+- `<-(3)`
+- `byte-len(3)`
+- `symbol(3)`
+- `data-types(7)`
+- `lang(7)`

@@ -27,4 +27,4 @@ If `X` is a list, returns `X`.
     (0 1 2)
 
 # SEE ALSO
-- list(3)
+- `list(3)`

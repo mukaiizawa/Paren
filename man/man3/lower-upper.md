@@ -27,6 +27,6 @@ The function `title` returns the string witch the first letter in each word uppe
     "Foo Bar"
 
 # SEE ALSO
-- lower?(3)
-- title?(3)
-- upper?(3)
+- `lower?(3)`
+- `title?(3)`
+- `upper?(3)`

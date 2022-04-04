@@ -21,5 +21,5 @@ Otherwise `nil` is returned.
     nil
 
 # SEE ALSO
-- assoc(3)
-- index(3)
+- `assoc(3)`
+- `index(3)`

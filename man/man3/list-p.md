@@ -25,5 +25,5 @@ Returns whether `X` is a list.
     true
 
 # SEE ALSO
-- atom?(3)
-- cons?(3)
+- `atom?(3)`
+- `cons?(3)`

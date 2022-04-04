@@ -30,5 +30,5 @@ Search for manuals containing the string `ca` from section 1 and 3.
     $ paren whatis -s1,3 ca
 
 # SEE ALSO
-- man(1)
-- man-pages(7)
+- `man(1)`
+- `man-pages(7)`

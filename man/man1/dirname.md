@@ -9,5 +9,5 @@ dirname - strip non-directory suffix from file name.
 Write standard input to standard output, with its trailing /component removed.
 
 # SEE ALSO
-- basename(1)
-- coreutils(7)
+- `basename(1)`
+- `coreutils(7)`

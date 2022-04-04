@@ -110,6 +110,6 @@ If `X` is not associated, returns `nil`.
     1
 
 # SEE ALSO
-- `[]`(3)
-- in?(3)
-- position(3)
+- `[](3)`
+- `in?(3)`
+- `position(3)`

@@ -118,8 +118,8 @@ The function `bytes?` returns true only if `X` is exactly bytes, even if `X` is 
     nil
 
 # SEE ALSO
-- atom?(3)
-- byte?(3)
-- int?(3)
-- list?(3)
-- nil?(3)
+- `atom?(3)`
+- `byte?(3)`
+- `int?(3)`
+- `list?(3)`
+- `nil?(3)`

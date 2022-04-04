@@ -35,4 +35,4 @@ Use `format(3)` for more sensitive output.
     "666f6f"
 
 # SEE ALSO
-- format(3)
+- `format(3)`

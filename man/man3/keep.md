@@ -27,10 +27,10 @@ If there is no such element, returns `nil`.
     36
 
 # SEE ALSO
-- complement(3)
-- compose(3)
-- map(3)
-- reject(3)
-- select(3)
-- select1(3)
-- partial(3)
+- `complement(3)`
+- `compose(3)`
+- `map(3)`
+- `reject(3)`
+- `select(3)`
+- `select1(3)`
+- `partial(3)`

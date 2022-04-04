@@ -96,4 +96,4 @@ These functions error if result is not finite.
     true
 
 # SEE ALSO
-- abs(3)
+- `abs(3)`

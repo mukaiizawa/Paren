@@ -22,7 +22,7 @@ Error if `Y` is not cons.
     (1 2)
 
 # SEE ALSO
-- car(3)
-- cdr(3)
-- list(3)
-- cons(7)
+- `car(3)`
+- `cdr(3)`
+- `list(3)`
+- `cons(7)`

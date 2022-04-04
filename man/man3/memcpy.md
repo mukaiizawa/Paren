@@ -33,6 +33,6 @@ IndexError if the reference range of the `SRC` or `DST` is incorrect.
 Unlike the C language, it works correctly even if the areas to be copied overlap.
 
 # SEE ALSO
-- memcmp(3)
-- slice(3)
-- bytes(7)
+- `memcmp(3)`
+- `slice(3)`
+- `bytes(7)`

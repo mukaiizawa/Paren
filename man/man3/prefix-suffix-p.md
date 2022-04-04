@@ -36,5 +36,5 @@ The function `suffix?` returns whether `STRING` ends with the specified `SUFFIX`
 
 
 # SEE ALSO
-- index(3)
-- last-index(3)
+- `index(3)`
+- `last-index(3)`

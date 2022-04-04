@@ -127,7 +127,7 @@ Returns a string with the arguments `ARGS` formatted according to the `FORMATTER
     "1e-05"
 
 # SEE ALSO
-- bin(3)
-- hex(3)
-- oct(3)
-- str(3)
+- `bin(3)`
+- `hex(3)`
+- `oct(3)`
+- `str(3)`

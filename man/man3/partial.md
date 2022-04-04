@@ -17,5 +17,5 @@ Returns the function with some of the arguments fixed.
     10
 
 # SEE ALSO
-- complement(3)
-- compose(3)
+- `complement(3)`
+- `compose(3)`

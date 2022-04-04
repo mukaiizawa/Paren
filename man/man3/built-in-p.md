@@ -25,5 +25,5 @@ Returns whether the `X` is a built-in operater.
     nil
 
 # SEE ALSO
-- built-in-name(3)
-- special-operator(7)
+- `built-in-name(3)`
+- `special-operator(7)`

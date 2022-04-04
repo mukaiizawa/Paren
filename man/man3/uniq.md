@@ -25,4 +25,4 @@ Returns a list excluding adjacent identical elements.
     (0 1 2 3 4)
 
 # SEE ALSO
-- sort!(3)
+- `sort!(3)`

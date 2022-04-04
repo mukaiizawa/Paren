@@ -12,5 +12,5 @@ You can check using a checksum file by using the c option of md5sum.
     26987b1fd1268f022d883231e44230fc md5sum.p
 
 # SEE ALSO
-- md5sum(1)
-- coreutils(7)
+- `md5sum(1)`
+- `coreutils(7)`

@@ -9,5 +9,5 @@ date - print the system date and time.
 Display the current time.
 
 # SEE ALSO
-- cal(1)
-- coreutils(7)
+- `cal(1)`
+- `coreutils(7)`
