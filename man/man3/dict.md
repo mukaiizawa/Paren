@@ -20,6 +20,5 @@ Returns an empty dictionary.
 - [](3)
 - empty?(3)
 - in?(3)
-- index(3)
 - len(3)
 - dictionary(7)

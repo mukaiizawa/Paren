@@ -31,7 +31,7 @@
       (let (text-ch (chr ([] text i)) key-ch (chr ([] key (% i (len key)))))
         (write-bytes (if (! (alpha? text-ch)) text-ch
                          (! decrypt?) (lookup key-ch text-ch)
-                         (->alpha (index (lookup key-ch) text-ch))))))))
+                         (->alpha (index text-ch (lookup key-ch)))))))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "d") args)

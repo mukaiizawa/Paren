@@ -599,7 +599,7 @@
 
 (function split-line (line)
   (catch (Error (f (e) (list 0 (format "REM %s" line))))
-    (let ((no code) (split-at line (index line " ")))
+    (let ((no code) (split-at line (index " " line)))
       (list (int no) code))))
 
 (function load-code (file)

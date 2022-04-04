@@ -671,11 +671,11 @@
 
 (function prefix? (x prefix)
   (let (plen (len prefix))
-    (|| (= plen 0) (= (index x prefix 0 plen) 0))))
+    (|| (= plen 0) (= (index prefix x 0 plen) 0))))
 
 (function suffix? (x suffix)
   (let (slen (len suffix) start (- (len x) slen))
-    (|| (= slen 0) (&& (>= start 0) (= (last-index x suffix start) start)))))
+    (|| (= slen 0) (&& (>= start 0) (= (last-index suffix x start) start)))))
 
 (function title? (s)
   (if (empty? s) nil
@@ -1279,11 +1279,7 @@
 
 (method Path .open (mode)
   ; Returns a stream that reads the contents of the receiver.
-  (.init (.new FileStream) (fopen (.to-s self) (if (= mode :read) 0
-                                                   (= mode :write) 1
-                                                   (= mode :append) 2
-                                                   (= mode :update) 3
-                                                   (assert nil)))))
+  (.init (.new FileStream) (fopen (.to-s self) (index mode '(:read :write :append :update)))))
 
 (method Path .mkdir ()
   ; Create a directory corresponding to this receiver, including any necessary but nonexistent parent directories.
@@ -2169,7 +2165,7 @@
    (if (!= (.read reader) '[) (raise SyntaxError "missing space in array literal")
        (let ($G-l nil $G-v nil)
          (while (!= (<- $G-v (.read reader)) '])
-             (push! (eval $G-v) $G-l))
+             (push! $G-v $G-l))
          (array (reverse! $G-l)))))
 
 (reader-macro { (reader)
@@ -2177,7 +2173,7 @@
   (if (!= (.read reader) '{) (raise SyntaxError "missing space in dictionary literal")
       (let ($G-d (dict) $G-k nil)
         (while (!= (<- $G-k (.read reader)) '})
-          ([] $G-d $G-k (eval (.read reader))))
+          ([] $G-d $G-k (.read reader)))
         $G-d)))
 
 (reader-macro p (reader)

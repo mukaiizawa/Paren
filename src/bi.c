@@ -1609,8 +1609,8 @@ DEFUN(index)
   int s, e;
   object o, p;
   if (!bi_argc_range(argc, 2, 4)) return FALSE;
-  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, argv->cons.car, &o)) return FALSE;
-  p = (argv = argv->cons.cdr)->cons.car;
+  p = argv->cons.car;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, (argv = argv->cons.cdr)->cons.car, &o)) return FALSE;
   if (argc < 3) s = 0;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
   if (argc < 4) e = -1;
@@ -1690,8 +1690,8 @@ DEFUN(last_2d_index)
   int s, e;
   object o, p;
   if (!bi_argc_range(argc, 2, 4)) return FALSE;
-  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, argv->cons.car, &o)) return FALSE;
-  p = (argv = argv->cons.cdr)->cons.car;
+  p = argv->cons.car;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, (argv = argv->cons.cdr)->cons.car, &o)) return FALSE;
   if (argc < 3) s = 0;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
   if (argc < 4) e = -1;
