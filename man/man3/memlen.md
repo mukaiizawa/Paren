@@ -1,25 +1,28 @@
 # NAME
-memlen - get the byte length of a bytes-like object.
+byte-len - get the byte length.
 
 # SYNOPSIS
 
-    (memlen BYTES)
+    (byte-len BYTES)
+    (byte-len KEYWORD)
+    (byte-len STRING)
+    (byte-len SYMBOL)
 
 # DESCRIPTION
-The function `memlen` returns the byte length of a bytes-like object.
+The function `byte-len` returns the byte length.
 
 # RETURN VALUE
-Returns the byte length of `BYTES`.
+Returns the byte length.
 
 # EXAMPLES
 
-    ) (memlen "foo")
+    ) (byte-len "foo")
     3
-    ) (memlen :foo)
+    ) (byte-len :foo)
     3
-    ) (memlen 'foo)
+    ) (byte-len 'foo)
     3
-    ) (memlen "あ")
+    ) (byte-len "あ")
     3
 
 # SEE ALSO

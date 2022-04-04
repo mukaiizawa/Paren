@@ -756,16 +756,16 @@
 
 (built-in-function memcpy)
 (built-in-function memcmp)
-(built-in-function memlen)
+(built-in-function byte-len)
 (built-in-function memmem)
 
 (function prefix? (x prefix)
-  (&& (>= (memlen x) (memlen prefix))
-      (memmem x prefix 0 (memlen prefix))))
+  (&& (>= (byte-len x) (byte-len prefix))
+      (memmem x prefix 0 (byte-len prefix))))
 
 (function suffix? (x suffix)
-  (&& (>= (memlen x) (memlen suffix))
-      (memmem x suffix (- (memlen x) (memlen suffix)))))
+  (&& (>= (byte-len x) (byte-len suffix))
+      (memmem x suffix (- (byte-len x) (byte-len suffix)))))
 
 ;; array.
 
@@ -1653,7 +1653,7 @@
 
 (method MemoryStream .write-bytes (x :opt from size)
   ; Implementation of the Stream.write-bytes.
-  (.reserve self (|| size (<- size (memlen x))))
+  (.reserve self (|| size (<- size (byte-len x))))
   (memcpy x (|| from 0) (&buf self) (&wrpos self) size)
   (&wrpos! self (+ (&wrpos self) size))
   (if from size x))
@@ -1712,7 +1712,7 @@
 
 (method FileStream .write-bytes (x :opt from size)
   ; Implementation of the Stream.write-bytes.
-  (fwrite x (|| from 0) (|| size (memlen x)) (&fp self))
+  (fwrite x (|| from 0) (|| size (byte-len x)) (&fp self))
   (if from size x))
 
 (method FileStream .seek (offset)

@@ -995,7 +995,7 @@ DEFUN(memmem)
   return TRUE;
 }
 
-DEFUN(memlen)
+DEFUN(byte_2d_len)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;

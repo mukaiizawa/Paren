@@ -38,6 +38,5 @@ Use `strcmp(3)` to compare strings in units of characters.
 - >(3)
 - >=(3)
 - memcpy(3)
-- memlen(3)
 - memmem(3)
 - bytes(7)

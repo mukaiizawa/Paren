@@ -10,12 +10,12 @@ The bytes data type can use the functions listed in `SEE ALSO` section, and can 
 
 # SEE ALSO
 - []?(3)
+- byte-len(3)
 - bytes(3)
 - concat(3)
 - in?(3)
 - memcmp(3)
 - memcpy(3)
-- memlen(3)
 - memmem(3)
 - prefix?(3)
 - slice(3)
