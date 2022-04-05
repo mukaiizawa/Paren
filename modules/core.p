@@ -781,8 +781,9 @@
 
 ;; os.
 
-(built-in-function fp (fd))
-(built-in-function fopen (filename mode))
+(built-in-function fp)
+(built-in-function fopen)
+(built-in-function fclose)
 
 (built-in-function fgetc (fp)
   ; Read byte from the stream associated with the file pointer fp.
@@ -819,8 +820,6 @@
 (built-in-function ftell (fp)
   ; Returns the current value of the file position indicator for the stream pointed to by fp.
   )
-
-(built-in-function fclose (fp))
 
 (built-in-function stat (filename)
   ; Returns the file status indicated filename.
@@ -890,6 +889,9 @@
   ; Sleep for a specified number of seconds.
   ; Returns nil.
   )
+
+(built-in-function popen)
+(built-in-function pclose)
 
 (built-in-function system (command)
   ; Execute host system commands.
@@ -2085,6 +2087,13 @@
                 (cons let (cons (list sym (list <- gsym (list '.open (list path p) mode)))
                                 body))
                 (list if gsym (list '.close gsym))))))
+
+(macro with-process ((sym cmd mode) :rest body)
+  (with-gensyms (gsym)
+    (list let (list gsym (list popen cmd (list index mode ''(:read :write))))
+          (list unwind-protect
+                (cons let (cons (list sym (list '.init '(.new FileStream) gsym)) body))
+                (list pclose gsym)))))
 
 ;; execution.
 

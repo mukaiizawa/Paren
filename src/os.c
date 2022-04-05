@@ -24,7 +24,7 @@ DEFUN(fp)
   return TRUE;
 }
 
-static char *mode_table[] = {
+static char *fopen_mode_table[] = {
   "rb",
   "wb",
   "ab",
@@ -39,9 +39,9 @@ DEFUN(fopen)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cstring(argv, &fn)) return FALSE;
   if (!bi_cpint(argv->cons.cdr->cons.car, &mode)) return FALSE;
-  if (mode >= sizeof(mode_table) / sizeof(char *))
+  if (mode >= sizeof(fopen_mode_table) / sizeof(char *))
     return ip_throw(ArgumentError, invalid_args);
-  if ((fp = pf_fopen(fn, mode_table[mode])) == NULL)
+  if ((fp = pf_fopen(fn, fopen_mode_table[mode])) == NULL)
     return ip_throw(OSError, fopen_failed);
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;
@@ -300,6 +300,35 @@ DEFUN(utcoffset)
   else if (gtm.tm_yday == ltm.tm_yday + 1) off = -1;
   else off = 1;
   *result = gc_new_xint(daysec(&ltm) + off * 24 * 60 * 60 - daysec(&gtm));
+  return TRUE;
+}
+
+static char *popen_mode_table[] = {
+  "r",
+  "w"
+};
+
+DEFUN(popen)
+{
+  char *s;
+  int mode;
+  FILE *fp;
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_cstring(argv, &s)) return FALSE;
+  if (!bi_cpint(argv->cons.cdr->cons.car, &mode)) return FALSE;
+  if (mode >= sizeof(popen_mode_table) / sizeof(char *)) return ip_throw(ArgumentError, invalid_args);
+  if ((fp = popen(s, popen_mode_table[mode])) == NULL) return ip_throw(OSError, fopen_failed);
+  *result = gc_new_xint((intptr_t)fp);
+  return TRUE;
+}
+
+DEFUN(pclose)
+{
+  FILE *fp;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  pclose(fp);
+  *result = object_nil;
   return TRUE;
 }
 
