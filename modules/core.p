@@ -108,9 +108,10 @@
                              (if x (cons (macroexpand (car x) :ignore-list ignore-list)
                                          (expand1 (cdr x)))))
                    expand2 (f (x)
-                             (if x (cons (add-ignore (car x))
-                                         (cons (macroexpand (cadr x) :ignore-list ignore-list)
-                                               (expand2 (cddr x)))))))
+                             (if (cdr x) (cons (add-ignore (car x))
+                                               (cons (macroexpand (cadr x) :ignore-list ignore-list)
+                                                     (expand2 (cddr x))))
+                                 x (raise SyntaxError (str "missing value for variable " expr)))))
     (if (! (cons? expr)) expr
         (let ((ope :rest args) expr)
           (if (symbol? ope) (if (&& (! (in? ope ignore-list)) (bound? ope)) (<- ope (eval ope))
