@@ -3,22 +3,19 @@
 # 	[sock=off|on] [clip=off|on] [mouse=off|on] [keyboard=off|on]
 
 supportos=unix windows
-cc?=gcc
-debug?=off
-
 ifeq ($(filter $(supportos),$(os)),)
 $(error illegal os)
 endif
 
 ifeq ($(os), unix)
+cc?=gcc
 sock?=on
 clip?=off
 mouse?=off
 keyboard?=off
-extobj+=pf.u.o xiconv.u.o xsleep.u.o
-dl_m?=-lm
+obj+=pf.u.o xiconv.u.o xsleep.u.o
 ifeq ($(sock),on)
-defun+=sock.c
+obj+=sock.o
 endif
 ifeq ($(clip),on)
 $(error clip does not supported)
@@ -29,87 +26,75 @@ endif
 ifeq ($(keyboard),on)
 $(error keyboard does not supported)
 endif
+lib+=-lm
 endif
 
 ifeq ($(os), windows)
+cc?=x86_64-w64-mingw32-gcc
 sock?=on
 clip?=on
 mouse?=on
 keyboard?=on
-extobj+=pf.w.o xiconv.w.o xsleep.w.o
+obj+=pf.w.o xiconv.w.o xsleep.w.o
 exe=.exe
 ifeq ($(sock),on)
+obj+=sock.o
 dl_ws?=-lws2_32
-defun+=sock.c
 endif
 ifeq ($(clip),on)
+obj+=clip.o
 dl_user?=-lUser32
 dl_ws?=-lws2_32
-defun+=clip.c
 endif
 ifeq ($(mouse),on)
+obj+=mouse.o
 dl_user?=-lUser32
 dl_ws?=-lws2_32
-defun+=mouse.c
 endif
 ifeq ($(keyboard),on)
+obj+=keyboard.o
 dl_user?=-lUser32
 dl_ws?=-lws2_32
-defun+=keyboard.c
 endif
-endif
-
-lib+=$(dl_m)
 lib+=$(dl_user)
 lib+=$(dl_ws)
+endif
 
+obj+=std.o xarray.o xbarray.o heap.o st.o object.o lex.o gc.o ip.o bi.o os.o xiconv.o paren.o
 uflags=-Wall -Werror
 cflags=$(uflags) -c
 lflags=$(uflags)
-sflags=-s
 link=$(cc) $(lflags) -o $@ $+ $(lib)
 
+debug?=off
 ifeq ($(debug),on)
 uflags+=-g
 else
 cflags+=-O3 -DNDEBUG
-link+= ; strip $(sflags) $@
+link+=&& strip -s $@
 endif
 
 .SUFFIXES: .c .o
 .c.o:
 	$(cc) $(cflags) $<
 
-paren=../paren$(exe)
+paren=paren$(exe)
 all: $(paren)
 
-defsp=ip.c
-defsp.wk: $(defsp)
-	cat $+ | grep ^DEFSP>$@
+defsp.wk: $(obj:%.o=%.c)
+	cat $+ | grep ^DEFSP > $@
 
-defun+=ip.c bi.c os.c xiconv.c
-defun.wk: $(defun)
-	cat $+ | grep ^DEFUN>$@
+defun.wk: $(obj:%.o=%.c)
+	cat $+ | grep ^DEFUN > $@
 
-xc.a: std.o xarray.o xbarray.o heap.o object.o gc.o lex.o st.o \
-	$(defsp:%.c=%.o) \
-	$(defun:%.c=%.o) \
-	$(extobj)
-	rm -f $@
-	ar -r $@ $+
-
-$(paren): paren.o xc.a
-	$(link)
+$(paren): $(obj)
+	$(link) && mv $(paren) ../$(paren)
 
 cdep:
-	paren cdep.p > make.d
+	paren cdep > make.d
 
 rw.vim:
-	paren rw.p | \
-		sed 's/|/\\|/g' | \
-		sed '/^\[/d' | \
-		sed '/^[A-Z]/d' | \
-		sed 's/^/syn keyword ParenBuiltIn /' | sort > rw.wk
+	paren rw | sort | sed -e 's/|/\\|/g' -e '/\[/d' -e 's/^/syn keyword ParenBuiltIn /' > rw.wk
 
 clean:
 	rm -f *.o *.out *.a *.wk $(paren)
