@@ -546,7 +546,7 @@
   (if (nil? x) 0
       (number? x) x
       (string? x) (with-memory-stream ($in x)
-                    (let (ar (.new AheadReader) val (.skip-unumber ar))
+                    (let (ar (.new AheadReader) val (.skip-number ar))
                       (if (.next ar) (raise ArgumentError "illegal string")
                           val)))
       (raise ArgumentError "expected number or string")))
