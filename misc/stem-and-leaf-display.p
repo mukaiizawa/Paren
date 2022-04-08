@@ -11,7 +11,7 @@
 
 (function ->leafs (stem stem-leaf-list)
   (map (f (x) (if (zero? stem) x (% x (* stem 10))))
-       (sort! (cadr (select1 (f (x) (= (car x) stem)) stem-leaf-list)))))
+       (sort! (cdr (select1 (f (x) (= (car x) stem)) stem-leaf-list)))))
 
 (function display (data)
   (let (stem-leaf-list (->stem-leaf data) (lo hi) (apply (juxt min max) (map car stem-leaf-list)))
