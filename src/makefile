@@ -71,7 +71,7 @@ ifeq ($(debug),on)
 uflags+=-g
 else
 cflags+=-O3 -DNDEBUG
-link+=&& strip -s $@
+link+=; strip -s $@
 endif
 
 .SUFFIXES: .c .o
