@@ -668,7 +668,8 @@
       (format "0x%x" x)))
 
 (function empty? (x)
-  (= (len x) 0))
+  (if (nil? x) true
+      (= (len x) 0)))
 
 (function prefix? (x prefix)
   (let (plen (len prefix))
@@ -785,22 +786,12 @@
 (built-in-function fp)
 (built-in-function fopen)
 (built-in-function fclose)
-
-(built-in-function fgetc (fp)
-  ; Read byte from the stream associated with the file pointer fp.
-  ; Returns read byte.
-  ; If stream reached EOF, returns -1.
-  )
+(built-in-function fgetc)
+(built-in-function fgets)
 
 (built-in-function fputc (c fp)
   ; Write the byte specified by c to the output stream pointed to by fp.
   ; Returns written byte.
-  )
-
-(built-in-function fgets (fp)
-  ; Read a line from the steream pointed to by fp and return it.
-  ; Do not include newline characters.
-  ; Returns nil if EOF.
   )
 
 (built-in-function fread (buf from size fp)

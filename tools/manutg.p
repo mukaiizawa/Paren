@@ -4,8 +4,25 @@
 
 (<- $root (.mkdir (path "./wk"))
     $ignore-pages (map string
-                       '(f fclose fopen foreach macroexpand symbol symcmp timeit
-                          read read-byte read-bytes read-char read-line write write-byte write-bytes write-line)))
+                       '(f
+                          fclose
+                          fgetc
+                          fgets
+                          fopen
+                          foreach
+                          macroexpand
+                          read
+                          read-byte
+                          read-bytes
+                          read-char
+                          read-line
+                          symbol
+                          symcmp
+                          timeit
+                          write
+                          write-byte
+                          write-bytes
+                          write-line)))
 
 (function xmain (exprs)
   `(function! main (args)
