@@ -6,8 +6,7 @@ The symbol `$runtime-path` holds a list of directories to search for scripts to 
 
 By default, the following directories are searched at runtime.
 
-- $paren-home/tools
-- $paren-home/tools/coreutils
+- $paren-home/scripts
 
 You can add or remove runtime paths by changing the value of `$runtime-path` in file `.parenrc(5)`.
 
