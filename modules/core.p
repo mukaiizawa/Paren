@@ -2152,8 +2152,7 @@
     $debug? (== (assert true) true)
     $paren-home (.parent (.parent (.resolve (path.getcwd) core.p)))
     $parenrc (path "~/.parenrc")
-    $runtime-path (map (f (p) (.resolve $paren-home p))
-                       '("tools/coreutils" "tools")))
+    $runtime-path (map (f (p) (.resolve $paren-home p)) '("scripts")))
 
 (reader-macro [ (reader)
    ; Define array/bytes literal reader.

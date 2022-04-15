@@ -10,4 +10,3 @@ Output standard input in reverse order.
 
 # SEE ALSO
 - `cat(1)`
-- `coreutils(7)`

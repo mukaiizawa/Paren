@@ -3,7 +3,7 @@
 (import :optparse)
 (import :re)
 
-(import :man (.resolve $paren-home "tools"))
+(import :man (.resolve $paren-home "scripts"))
 
 (function parse-see-also (file)
   ;; Returns the list like a `(page dst ...)`.

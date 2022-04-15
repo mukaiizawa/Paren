@@ -12,6 +12,3 @@ Copy standard input to `FILE`, and also to standard output.
 
     -a
         Append to `FILE`.
-
-# SEE ALSO
-- `coreutils(7)`

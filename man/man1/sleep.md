@@ -11,4 +11,4 @@ Pause for `SEC` seconds.
 `SEC` can specify any numeric literal in Paren.
 
 # SEE ALSO
-- `coreutils(7)`
+- `sleep(3)`

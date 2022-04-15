@@ -58,3 +58,7 @@ The L, S, T options support only one character.
     
     $ paren whitespace.p -SS -TT hello.ws
     Hello World
+
+# SEE ALSO
+- `basic(1)`
+- `brainfuck(1)`

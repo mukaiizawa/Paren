@@ -15,4 +15,3 @@ Print MD5 (128-bit) checksums of standard input.
 
 # SEE ALSO
 - `md5sum(5)`
-- `coreutils(7)`

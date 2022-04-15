@@ -7,3 +7,6 @@ multable - multiplication table.
 
 # DESCRIPTION
  Print a multiplication table to standard ouput.
+
+# SEE ALSO
+- `asctable(1)`

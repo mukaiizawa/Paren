@@ -27,18 +27,16 @@ Paren is a dialect of the Lisp programming languages:
 # Structure
 The main project structures are shown below.
 
-    + algorithm/ -- implementation of various algorithms by Paren.
-    + games/ -- games and toy-like programs.
-    + interpreters/ -- implementation of language processing system.
     + man/ -- manual files for man(1).
     + misc/ -- miscellaneous programs.
+        + algorithm/ -- implementation of various algorithms by Paren.
+        + games/ -- games and toy-like programs.
     + modules/ -- importable Paren module files.
+    + scripts/ -- some useful script files, including POSIX-like ones.
     + src/ -- implementation of Paren itself.
-    + tools/ -- implementation of tools by Paren.
-     |+ coreutils/ -- Paren implementation of like the GNU coreutils programs.
     license.txt -- Paren license file.
 
-Since `tools` and` tools/coreutils` are included in `$runtime-path(3)`, the files in these folders can be executed as script files anywhere.
+Since `scripts` are included in `$runtime-path(3)`, the files in these folders can be executed as script files anywhere.
 
 # Documentation
 Paren comes with a UNIX-like manual page system. You can refer to the manual with the man command as follows.

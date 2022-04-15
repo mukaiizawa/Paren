@@ -27,4 +27,4 @@ Convert uppercase to lowercase.
     paren tr A-Z a-z
 
 # SEE ALSO
-- `coreutils(7)`
+- `grep(1)`

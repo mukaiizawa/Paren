@@ -44,4 +44,4 @@ Display the fourth, third, first, and second columns of the CSV file `foo.csv`.
     $ paren cut -d, -f 4,3,-2 < foo.csv
 
 # SEE ALSO
-- `coreutils(7)`
+- `cat(1)`

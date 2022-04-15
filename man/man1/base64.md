@@ -15,4 +15,3 @@ Base64 encode or decode standard input.
 
 # SEE ALSO
 - `base64(3)`
-- `coreutils(7)`

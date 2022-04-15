@@ -19,5 +19,5 @@ Therefore, the output is a list of manuals that must be created.
 Manuals referenced outside the `SEE ALSO` section are not subject to extraction.
 
 # See Also
-- man(1)
-- mandb(1)
+- `man(1)`
+- `mandb(1)`

@@ -73,3 +73,7 @@ Reads the program from a `FILE` and runs it with classic Microsoft BASIC compati
     20 END
     $ paren basic hello.bas
     Hello, World!
+
+# SEE ALSO
+- `brainfuck(1)`
+- `whitespace(1)`

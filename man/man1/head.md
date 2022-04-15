@@ -15,4 +15,3 @@ Print the first `10` lines of standard input.
 
 # SEE ALSO
 - `tail(1)`
-- `coreutils(7)`

@@ -1,6 +1,6 @@
 ; manual unit-test generator.
 
-(import :man (.resolve $paren-home "tools"))
+(import :man (.resolve $paren-home "scripts"))
 
 (<- $root (.mkdir (path "./wk"))
     $ignore-pages (map string

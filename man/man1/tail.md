@@ -15,4 +15,3 @@ Print the last `10` lines of standard input to standard output.
 
 # SEE ALSO
 - `head(1)`
-- `coreutils(7)`

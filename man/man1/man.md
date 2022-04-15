@@ -50,5 +50,5 @@ Display the manual page `man-pages` for section number `7`.
     $ paren man 7 man pages
 
 # See Also
-- whatis(1)
-- man-pages(7)
+- `whatis(1)`
+- `man-pages(7)`

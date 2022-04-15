@@ -7,3 +7,6 @@ asctable - display ASCII code table.
 
 # DESCRIPTION
  Print a ASCII table to standard ouput.
+
+# SEE ALSO
+- `multable(1)`

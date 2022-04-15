@@ -9,4 +9,4 @@ pwd - print name of current working directory.
 Print the full filename of the current working directory.
 
 # SEE ALSO
-- `coreutils(7)`
+- `ls(1)`

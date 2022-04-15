@@ -13,4 +13,3 @@ You can check using a checksum file by using the c option of md5sum.
 
 # SEE ALSO
 - `md5sum(1)`
-- `coreutils(7)`

@@ -9,4 +9,4 @@ mkdir - make directories.
 Create the `DIRECTORYies`, if they do not already exist.
 
 # SEE ALSO
-- `coreutils(7)`
+- `ls(1)`
