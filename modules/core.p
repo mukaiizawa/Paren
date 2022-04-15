@@ -788,11 +788,7 @@
 (built-in-function fclose)
 (built-in-function fgetc)
 (built-in-function fgets)
-
-(built-in-function fputc (c fp)
-  ; Write the byte specified by c to the output stream pointed to by fp.
-  ; Returns written byte.
-  )
+(built-in-function fputc)
 
 (built-in-function fread (buf from size fp)
   ; Reads size bytes of data from the stream pointed to by fp, storing them at the location given by bytes buf offset from.
