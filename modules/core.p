@@ -789,16 +789,8 @@
 (built-in-function fgetc)
 (built-in-function fgets)
 (built-in-function fputc)
-
-(built-in-function fread (buf from size fp)
-  ; Reads size bytes of data from the stream pointed to by fp, storing them at the location given by bytes buf offset from.
-  ; Returns size;
-  )
-
-(built-in-function fwrite (buf from size fp)
-  ; Writes size bytes of data to the stream pointed to by fp, obtaining them at the location given by bytes buf offset from.
-  ; Returns size;
-  )
+(built-in-function fread)
+(built-in-function fwrite)
 
 (built-in-function fseek (fp)
   ; Sets the file position indicator for the stream pointed to by fp
