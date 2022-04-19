@@ -2,7 +2,7 @@
 
 (import :optparse)
 
-(function uniq (:key count? uniq? duplicate?)
+(function! uniq (:key count? uniq? duplicate?)
   (let (count 1 prev (read-line)
               try-write (f (count line)
                           (when (|| (&& (! uniq?) (! duplicate?))
