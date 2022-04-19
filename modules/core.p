@@ -791,15 +791,8 @@
 (built-in-function fputc)
 (built-in-function fread)
 (built-in-function fwrite)
-
-(built-in-function fseek (fp)
-  ; Sets the file position indicator for the stream pointed to by fp
-  ; Returns nil.
-  )
-
-(built-in-function ftell (fp)
-  ; Returns the current value of the file position indicator for the stream pointed to by fp.
-  )
+(built-in-function fseek)
+(built-in-function ftell)
 
 (built-in-function stat (filename)
   ; Returns the file status indicated filename.
