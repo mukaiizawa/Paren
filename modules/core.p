@@ -1916,7 +1916,7 @@
         (= next "\"") (list :atom (.lex-string self))
         (= next ":") (list :atom (.lex-keyword self))
         (= next ";") (begin (.skip-line self) (.lex self))
-        (= next "#") (begin (.skip self) (list :read-macro (symbol (&next self))))
+        (= next "#") (begin (.skip self) (list :read-macro (symbol (.skip self))))
         (in? next "+-") (list :atom (.lex-sign self))
         (digit? next) (list :atom (.skip-number self))
         (list :atom (.lex-symbol self)))))
@@ -1949,7 +1949,7 @@
         (== type :backquote) (list 'quasiquote (.parse (.scan self)))
         (== type :unquote) (list 'unquote (.parse (.scan self)))
         (== type :unquote-splicing) (list 'unquote-splicing (.parse (.scan self)))
-        (== type :read-macro) (apply ([] $read-table (&token self)) (list self))
+        (== type :read-macro) (apply (|| ([] $read-table (&token self)) (raise ArgumentError "undefined reader macro")) (list self))
         (raise SyntaxError))))
 
 (macro unquote (expr)
@@ -1989,9 +1989,7 @@
   ; next must be a single character string.
   ; When the reserved character string is read, the processing moves to the specified function f and the evaluation result is expanded.
   ; Returns nil.
-  (with-gensyms (g)
-    (list let (list g (cons f (cons params body)))
-          (list [] $read-table (list quote next) g))))
+  (list [] $read-table (list quote (symbol next)) (cons f (cons params body))))
 
 (function read-byte ()
   (.read-byte (dynamic $in)))
@@ -2139,30 +2137,31 @@
     $parenrc (path "~/.parenrc")
     $runtime-path (map (f (p) (.resolve $paren-home p)) '("scripts")))
 
-(reader-macro [ (reader)
-   ; Define array/bytes literal reader.
-   (if (!= (.read reader) '[) (raise SyntaxError "missing space in array literal")
-       (let ($G-l nil $G-v nil)
-         (while (!= (<- $G-v (.read reader)) '])
-             (push! $G-v $G-l))
-         (array (reverse! $G-l)))))
+(reader-macro "[" (reader)
+  ; Define array/bytes literal reader.
+  (let ($G-l nil $G-v nil)
+    (while (!= (<- $G-v (.read reader)) '])
+    (push! $G-v $G-l))
+  (array (reverse! $G-l))))
 
-(reader-macro { (reader)
+(reader-macro "{" (reader)
   ; Define dictionary literal reader.
-  (if (!= (.read reader) '{) (raise SyntaxError "missing space in dictionary literal")
-      (let ($G-d (dict) $G-k nil)
-        (while (!= (<- $G-k (.read reader)) '})
-          ([] $G-d $G-k (.read reader)))
-        $G-d)))
+  (let ($G-d (dict) $G-k nil)
+    (while (!= (<- $G-k (.read reader)) '})
+      ([] $G-d $G-k (.read reader)))
+    $G-d))
 
-(reader-macro p (reader)
+(reader-macro "p" (reader)
   ; Define print reader macro.
-  (.skip (&lexer reader))
   (list 'write (.read reader)))
 
-(reader-macro . (reader)
+(reader-macro "." (reader)
   ; Define eval reader.
-  (.skip (&lexer reader))
   (eval (.read reader)))
+
+(reader-macro ";" (reader)
+  ; Define comment reader.
+  (.read reader)    ; skip
+  (.read reader))
 
 (boot $args)
