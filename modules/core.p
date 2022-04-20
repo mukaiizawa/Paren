@@ -793,20 +793,7 @@
 (built-in-function fwrite)
 (built-in-function fseek)
 (built-in-function ftell)
-
-(built-in-function stat (filename)
-  ; Returns the file status indicated filename.
-  ; The return value is an array of length 3.
-  ;     0 -- file type and mode.
-  ;         1 none
-  ;         2 file
-  ;         4 dir
-  ;         8 other
-  ;         16 readable
-  ;         32 writable
-  ;     1 -- file size
-  ;     2 -- modification timestamp
-  )
+(built-in-function stat)
 
 (built-in-function utime (filename unix-time)
   ; Change the access time and modification time of the file indicated filename to the specified unix-time in times.
