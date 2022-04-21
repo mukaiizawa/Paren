@@ -794,11 +794,7 @@
 (built-in-function fseek)
 (built-in-function ftell)
 (built-in-function stat)
-
-(built-in-function utime (filename unix-time)
-  ; Change the access time and modification time of the file indicated filename to the specified unix-time in times.
-  ; Returns nil.
-  )
+(built-in-function utime)
 
 (built-in-function getcwd ()
   ; Returns a string containing the absolute filename of the current working directory.

@@ -26,3 +26,4 @@ OSError may occur for some reason.
 
 # SEE ALSO
 - `path(3)`
+- `utime(3)`

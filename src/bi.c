@@ -2041,10 +2041,10 @@ DEFUN(utime)
   int64_t tv;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cstring(argv, &fn)) return FALSE;
-  if (!bi_cint64(argv->cons.cdr->cons.car, &tv))
-    return ip_throw(ArgumentError, expected_integer);
+  if (!bi_cint64(argv->cons.cdr->cons.car, &tv)) return ip_throw(ArgumentError, expected_integer);
+  if (!pf_utime(fn, tv)) return ip_throw(OSError, error_nil);
   *result = object_nil;
-  return pf_utime(fn, tv);
+  return TRUE;
 }
 
 DEFUN(getcwd)
