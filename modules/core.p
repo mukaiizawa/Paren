@@ -534,7 +534,7 @@
   (zero? (% x 2)))
 
 (function odd? (x)
-  (! (zero? (% x 2))))
+  (! (even? x)))
 
 (function int (x)
   (// (float x)))
