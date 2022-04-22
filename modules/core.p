@@ -795,10 +795,7 @@
 (built-in-function ftell)
 (built-in-function stat)
 (built-in-function utime)
-
-(built-in-function getcwd ()
-  ; Returns a string containing the absolute filename of the current working directory.
-  )
+(built-in-function getcwd)
 
 (built-in-function chdir (filename)
   ; Change the current working directory to the directory specified in filename
