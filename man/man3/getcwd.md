@@ -15,5 +15,5 @@ Returns a string containing the absolute filename of the current working directo
 OSError may occur for some reason.
 
 # SEE ALSO
-- `path(3)`
 - `chdir(3)`
+- `path(3)`

@@ -796,11 +796,7 @@
 (built-in-function stat)
 (built-in-function utime)
 (built-in-function getcwd)
-
-(built-in-function chdir (filename)
-  ; Change the current working directory to the directory specified in filename
-  ; Returns nil.
-  )
+(built-in-function chdir)
 
 (built-in-function readdir (filename)
   ; Return the contents of the directory indicated by filename as a character string delimited by a newline character.

@@ -2042,7 +2042,7 @@ DEFUN(utime)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cstring(argv, &fn)) return FALSE;
   if (!bi_cint64(argv->cons.cdr->cons.car, &tv)) return ip_throw(ArgumentError, expected_integer);
-  if (!pf_utime(fn, tv)) return ip_throw(OSError, error_nil);
+  if (!pf_utime(fn, tv)) return ip_throw(OSError, error_msg_nil);
   *result = object_nil;
   return TRUE;
 }
@@ -2062,7 +2062,8 @@ DEFUN(chdir)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv, &fn)) return FALSE;
   *result = object_nil;
-  return pf_chdir(fn);
+  if (!pf_chdir(fn)) return ip_throw(OSError, error_msg_nil);
+  return TRUE;
 }
 
 DEFUN(readdir)
