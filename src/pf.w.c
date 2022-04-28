@@ -92,7 +92,7 @@ FILE *pf_fopen(char *fn, char *mode)
   return fopen(mb_fn, mode);
 }
 
-int pf_readdir(char *path, struct xbarray *dirs)
+int pf_readdir(char *path, struct xbarray *files)
 {
   char *mb_file, mb_buf[MAX_STR_LEN];
   LPWSTR wc_path;
@@ -104,8 +104,8 @@ int pf_readdir(char *path, struct xbarray *dirs)
   while (TRUE) {
     if (!xiconv_wc2mb(XICONV_UTF8, data.cFileName, &mb_file)) return FALSE;
     if (!(strcmp(mb_file, ".") == 0 || strcmp(mb_file, "..") == 0)) {
-      if (dirs->size != 0) xbarray_add(dirs, '\n');
-      xbarray_adds(dirs, mb_file);
+      if (files->size != 0) xbarray_add(files, '\n');
+      xbarray_adds(files, mb_file);
     }
     if (FindNextFileW(h, &data) == 0) {
       switch (GetLastError()) {

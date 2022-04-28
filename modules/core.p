@@ -797,10 +797,7 @@
 (built-in-function utime)
 (built-in-function getcwd)
 (built-in-function chdir)
-
-(built-in-function readdir (filename)
-  ; Return the contents of the directory indicated by filename as a character string delimited by a newline character.
-  )
+(built-in-function readdir)
 
 (built-in-function remove (filename)
   ; Attempts to remove a file whose name is pathname.

@@ -112,7 +112,7 @@ FILE *pf_fopen(char *fn, char *mode)
   return fopen(fn, mode);
 }
 
-int pf_readdir(char *path, struct xbarray *dirs)
+int pf_readdir(char *path, struct xbarray *files)
 {
   char *fn;
   DIR *d;
@@ -121,8 +121,8 @@ int pf_readdir(char *path, struct xbarray *dirs)
   while ((de = readdir(d)) != NULL) {
     fn = de->d_name;
     if (strcmp(fn,".") == 0 || strcmp(fn,"..") == 0) continue;
-    if (dirs->size != 0) xbarray_add(dirs, '\n');
-    xbarray_adds(dirs, fn);
+    if (files->size != 0) xbarray_add(files, '\n');
+    xbarray_adds(files, fn);
   }
   closedir(d);
   return TRUE;

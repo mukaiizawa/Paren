@@ -2069,14 +2069,14 @@ DEFUN(chdir)
 DEFUN(readdir)
 {
   char *path;
-  struct xbarray dirs;
+  struct xbarray files;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv, &path)) return FALSE;
-  xbarray_init(&dirs);
-  if (!pf_readdir(path, &dirs))
+  xbarray_init(&files);
+  if (!pf_readdir(path, &files))
     return ip_throw(OSError, readdir_failed);
-  *result = gc_new_mem_from(STRING, dirs.elt, dirs.size);
-  xbarray_free(&dirs);
+  *result = gc_new_mem_from(STRING, files.elt, files.size);
+  xbarray_free(&files);
   return TRUE;
 }
 
