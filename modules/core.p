@@ -798,11 +798,7 @@
 (built-in-function getcwd)
 (built-in-function chdir)
 (built-in-function readdir)
-
-(built-in-function remove (filename)
-  ; Attempts to remove a file whose name is pathname.
-  ; Returns nil.
-  )
+(built-in-function remove)
 
 (built-in-function mkdir (filename)
   ; Attempts to create a directory whose name is pathname.
