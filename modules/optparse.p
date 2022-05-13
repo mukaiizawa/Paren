@@ -43,7 +43,30 @@
   ; Returns option value specified opt.
   (|| (caddr (.lookup self opt)) default-value))
 
+(method OptionParser .get-int (opt :opt default-value)
+  ; Returns option integer value.
+  (let (val (.get self opt))
+    (if (nil? val) default-value
+        (int val))))
+
+(method OptionParser .get-ints (opt :opt default-value)
+  ; Returns list of positive integer.
+  ;; "1-5,7,9" -> '(1 2 3 4 5 7 9)
+  (let (val (.get self opt))
+    (if (nil? val) default-value
+        (flatten (map (f (x)
+                        (if (! (index "-" x)) (int x)
+                            (let ((s e) (split x "-"))
+                              (.. (int s) (++ (int e))))))
+                      (split val ","))))))
+
 (function! main (args)
+  (let ((op args) (.parse (.init (.new OptionParser) "b:c:d:r:s:") '("-b30" "-r" "1,2-4,8" "-d249")))
+    (assert (= (.get-int op "b" 329) 30))
+    (assert (= (.get-int op "c" 329) 329))
+    (assert (= (.get-int op "d") 249))
+    (assert (= (.get-ints op "r") '(1 2 3 4 8)))
+    (assert (= (.get-ints op "s" '(3)) '(3))))
   (let (option "abc:d:")
     (let ((op args) (.parse (.init (.new OptionParser) option) '("-a" "-c" "carg" "arg")))
       (assert (= (car args) "arg"))
