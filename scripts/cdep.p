@@ -12,8 +12,6 @@
   dependencies)
 
 (function! main (args)
-  ; cdep
-  ; Get C source file names from current directories and output dependency rule for makefile.
   (write-line "# following rules are generated automatically.")
   (foreach write-line
            (map (f (cfile)
