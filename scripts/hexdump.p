@@ -25,19 +25,8 @@
           addr (+ addr n)))))
 
 (function! main (args)
-  ; # NAME
-  ; hexdump [OPTION]
-  ;
-  ; # DESCRIPTION
-  ; The hexdump utility is a filter which displays the standard input in a hexdecimal format.
-  ;
-  ; # OPTION
-  ;     -n N -- Dump for N bytes. The default is 256 bytes.
-  ;     -s OFFSET -- Skip OFFSET bytes from the beginning of the input.
-  ;     -h -- Print addresses in hexadecimal.
   (let ((op args) (.parse (.init (.new OptionParser) "n:s:h") args))
-    (let (size (.get op "n") skip-size (int (.get op "s")))
-      (<- size (if (nil? size) 256 (int size))
-          $outline-hex? (.get op "h"))
+    (let (size (.get-int op "n" 256) skip-size (.get-int op "s" 0))
+      (<- $outline-hex? (.get op "h"))
       (skip skip-size)
       (hexdump skip-size size))))
