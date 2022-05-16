@@ -799,12 +799,7 @@
 (built-in-function chdir)
 (built-in-function readdir)
 (built-in-function remove)
-
-(built-in-function mkdir (filename)
-  ; Attempts to create a directory whose name is pathname.
-  ; Error if filename already exists.
-  ; Returns nil.
-  )
+(built-in-function mkdir)
 
 (built-in-function rename (src dst)
   ; Rename the file and move between directories if necessary.
