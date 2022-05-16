@@ -6,7 +6,7 @@ remove - remove a file.
     (remove PATH)
 
 # DESCRIPTION
-The function remove attempts to delete the file indicated by `PATH`.
+The function `remove` attempts to delete the file indicated by `PATH`.
 
 # RETURN VALUE
 Returns `nil`.
