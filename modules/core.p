@@ -798,13 +798,9 @@
 (built-in-function getcwd)
 (built-in-function chdir)
 (built-in-function readdir)
-(built-in-function remove)
 (built-in-function mkdir)
-
-(built-in-function rename (src dst)
-  ; Rename the file and move between directories if necessary.
-  ; Returns nil.
-  )
+(built-in-function remove)
+(built-in-function rename)
 
 (built-in-function time ()
   ; Returns the number of seconds relative to the unix epoch (January 1, 1970, 00:00:00 UTC).
