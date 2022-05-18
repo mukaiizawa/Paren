@@ -801,10 +801,7 @@
 (built-in-function mkdir)
 (built-in-function remove)
 (built-in-function rename)
-
-(built-in-function time ()
-  ; Returns the number of seconds relative to the unix epoch (January 1, 1970, 00:00:00 UTC).
-  )
+(built-in-function time)
 
 (built-in-function clock ()
   ; Returns the approximate processor time[sec] used by the program.
