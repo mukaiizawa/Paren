@@ -6,7 +6,7 @@ rename - rename a file.
     (rename SRC DST)
 
 # DESCRIPTION
-Rename the `rename` shall change the name of a file.
+The function `rename` shall change the name of a file.
 
 The `SRC` argument points to the pathname of the file to be renamed. The `DST` argument points to the new pathname of the file.
 
