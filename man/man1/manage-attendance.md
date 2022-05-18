@@ -16,6 +16,8 @@ See `manage-attendance(5)` for attendance information format specifications.
         All subject to.
     -e
         Estimate the change in working hours if working at current levels.
+    -E HOUR
+        Estimate the change in working hours if working HOUR hours per day.
     -h HOUR
         Specify HOUR for the target monthly working hours instead of 140.
     -m MONTHS

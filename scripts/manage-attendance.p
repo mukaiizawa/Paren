@@ -3,11 +3,7 @@
 (import :datetime)
 (import :optparse)
 
-(<- $estimate? nil
-    $default-deduction-time 1
-    $suppress-summary? nil
-    $target-working-hours 140
-    $verbose? nil)
+(<- $default-deduction-time 1)
 
 (function cadr-member (key lis)
   (cadr (member key lis)))
@@ -19,7 +15,7 @@
 (function write-summary (x)
   (if (! $suppress-summary?) (write x))
   (when (&& $estimate? (in? :total x) (in? :rest x))
-    (let (h/day (cadr-member :h/day (cadr-member :total x))
+    (let (h/day (|| $estimate-with (cadr-member :h/day (cadr-member :total x)))
                 rest (cadr-member :rest x)
                 day (cadr-member :day rest)
                 h (cadr-member :h rest))
@@ -70,8 +66,9 @@
            (collect read1)))
 
 (function! main (args)
-  (let ((op args) (.parse (.init (.new OptionParser) "aem:h:sy:v") args) now (datetime.now))
-    (<- $estimate? (.get op "e")
+  (let ((op args) (.parse (.init (.new OptionParser) "aeE:m:h:sy:v") args) now (datetime.now))
+    (<- $estimate-with (.get-float op "E")
+        $estimate? (|| $estimate-with (.get op "e"))
         $target-working-hours (.get-int op "h" 140)
         $suppress-summary? (.get op "s")
         $year (.get-ints op "y")
