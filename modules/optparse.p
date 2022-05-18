@@ -43,6 +43,12 @@
   ; Returns option value specified opt.
   (|| (caddr (.lookup self opt)) default-value))
 
+(method OptionParser .get-float (opt :opt default-value)
+  ; Returns option float value.
+  (let (val (.get self opt))
+    (if (nil? val) default-value
+        (float val))))
+
 (method OptionParser .get-int (opt :opt default-value)
   ; Returns option integer value.
   (let (val (.get self opt))
