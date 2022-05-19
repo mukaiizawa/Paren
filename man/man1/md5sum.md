@@ -14,4 +14,5 @@ Print MD5 (128-bit) checksums of standard input.
         Read MD5 sums from the FILE(see md5sum(5)) and check them.
 
 # SEE ALSO
+- `crc32(1)`
 - `md5sum(5)`
