@@ -743,8 +743,8 @@
                                                              :radix (cadr (member conv '("b" 2 "o" 8 "d" 10 "x" 16)))
                                                              :padding precision))))
                             (format1 flags width prefix val))
-                          (raise ArgumentError (str "unexpected conversion specifier " conv)))))
-                (<- args (cdr args)))))))))
+                          (raise ArgumentError (str "unexpected conversion specifier " conv)))
+                      (<- args (cdr args)))))))))))
 
 (function strip (s :opt fn)
   (rstrip (lstrip s fn) fn))

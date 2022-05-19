@@ -48,6 +48,9 @@ Returns a string with the arguments `ARGS` formatted according to the `FORMATTER
 
 # EXAMPLES
 
+    ) (format "%g%%" 20.5)
+    "20.5%"
+
     ) (format "%+d" 1)
     "+1"
 
