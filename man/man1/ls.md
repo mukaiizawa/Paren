@@ -25,3 +25,4 @@ If the `PATH` is omitted, it is considered that the current directory is specifi
 
 # SEE ALSO
 - `du(1)`
+- `zipinfo(1)`
