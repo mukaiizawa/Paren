@@ -2037,12 +2037,19 @@
 (function repl ()
   ; Enter repl(read eval print loop) mode.
   ; Executed when there is no command line argument when paren starts.
-  (<- (:opt $_ $1 $2 $3 $4 $5) nil)
+  (<- $0 nil $1 nil $2 nil $3 nil $4 nil $5 nil $6 nil $7 nil $8 nil $9 nil)
   (loop
     (catch (Error (f (e) (.print-stack-trace e)))
       (write-bytes ") ")
-      (if (<- $_ (read)) (<- $_ (write (eval $_)) $5 $4 $4 $3 $3 $2 $2 $1 $1 $_)
-          (break)))))
+      (if (== (<- $$ (read)) :q) (break)
+          (== $$ :h) (foreach write
+                              '((:h "show this help")
+                                (:r "show register")
+                                (:q "quit repl")))
+          (== $$ :r) (foreach (f (x) (write (list x (eval x))))
+                              (map (compose symbol (partial str "$"))
+                                   (.. 10)))
+          (<- $9 $8 $8 $7 $7 $6 $6 $5 $5 $4 $4 $3 $3 $2 $2 $1 $1 $0 $0 (write (eval $$)))))))
 
 (function raise (cls :rest args)
   ; Throw the cls Class instance which initialized with argument args.
