@@ -37,6 +37,15 @@
       (&day! self (+ t (- offset) 1)))
     self))
 
+(function datetime.parse-msdos-datetime (date time)
+  ; Returns the DateTime instance corresponding to the msdos date/time.
+  (datetime (+ (>> date 9) 1980)
+            (& (>> date 5) 0xf)
+            (& date 0x1f)
+            (& (>> time 11) 0x1f)
+            (& (>> time 5) 0x3f)
+            (* (& time 0x1f) 2)))
+
 (function datetime (year month day :opt hour minute second)
   ; Returns the DateTime instance corresponding to the specified argument.
   (.init (.new DateTime)
