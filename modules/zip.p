@@ -17,15 +17,12 @@
 (class Zip ()
   buf pos entries)
 
-(method Zip .init ()
-  (&pos! self 0))
-
 (method Zip .entries ()
   (&entries self))
 
-(method Zip .read (file)
-  (with-open ($in file :read)
-    (&buf! self (read-bytes)))
+(method Zip .read ()
+  (&pos! self 0)
+  (&buf! self (read-bytes))
   (&entries! self (collect (f () (if (= (.peek-u32 self) $zip.local-file-header-signature) (.read-entry self))))))
 
 (method Zip .skip (n)
@@ -80,6 +77,12 @@
   file-name
   extra-field)
 
+(method ZipEntry .uncompressed-size ()
+  (&uncompressed-size self))
+
+(method ZipEntry .compressed-size ()
+  (&compressed-size self))
+
 (method ZipEntry .timestamp ()
   (datetime.parse-msdos-datetime (&last-mod-file-date self) (&last-mod-file-time self)))
 
@@ -90,7 +93,8 @@
   (string (&extra-field self)))
 
 (function zip.entries (file)
-  (.entries (.read (.new Zip) file)))
+  (with-open ($in file :read)
+    (.entries (.read (.new Zip)))))
 
 (function zip.entry-names (file)
   (map .file-name (zip.entries file)))
@@ -104,4 +108,4 @@
       )))
 
 (function! main (args)
-  nil)
+  (write (zip.entries "txt.zip.wk")))
