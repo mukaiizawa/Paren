@@ -3,19 +3,26 @@
 (import :datetime)
 (import :endian)
 
-; [archive decryption header]
-; [archive extra data record]
-; [central directory header 1]
-; ...
-; [central directory header n]
-; [zip64 end of central directory record]
-; [zip64 end of central directory locator]
-; [end of central directory record]
-
-(<- $zip.local-file-header-signature 0x04034b50)
+(<- $zip.local-file-header-signature                0x04034b50
+    $zip.data-descriptor-signature                  0x08074b50
+    $zip.archive-extra-data-signature               0x08064b50
+    $zip.central-file-header-signature              0x02014b50
+    $zip.digital-header-signature                   0x05054b50
+    $zip.zip64-end-of-central-dir-signature         0x06064b50
+    $zip.zip64-end-of-central-dir-locator-signature 0x07064b50
+    $zip.end-of-central-dir-signature               0x06054b50
+    $zip.headers (list $zip.local-file-header-signature
+                       $zip.archive-extra-data-signature
+                       $zip.central-file-header-signature
+                       $zip.digital-header-signature
+                       $zip.zip64-end-of-central-dir-signature
+                       $zip.zip64-end-of-central-dir-locator-signature
+                       $zip.end-of-central-dir-signature))
 
 (class Zip ()
   buf pos entries)
+
+(class ZipError (Error))
 
 (method Zip .entries ()
   (&entries self))
@@ -23,10 +30,27 @@
 (method Zip .read ()
   (&pos! self 0)
   (&buf! self (read-bytes))
-  (&entries! self (collect (f () (if (= (.peek-u32 self) $zip.local-file-header-signature) (.read-entry self))))))
+  (let (entries nil)
+    (loop
+      (let (signature (.peek-u32 self))
+        (if (= signature $zip.local-file-header-signature) (push! (.read-entry self) entries)
+            (= signature $zip.data-descriptor-signature) (.skip-data-descriptor self)
+            (in? signature $zip.headers) (break)
+            (raise ZipError "bad zip"))))
+    (&entries! self (reverse! entries))))
+
+(method Zip .write ()
+  (write-bytes (&buf self)))
+
+(method Zip .add (entry)
+  (&entries! self (concat (&entries self) (list entry))))
 
 (method Zip .skip (n)
   (&pos! self (+ (&pos self) n)))
+
+(method Zip .skip-data-descriptor (n)
+  (while (! (in? (.peek-u32 self) $zip.headers))
+    (.skip 4)))    ; 4 or 8
 
 (method Zip .peek-u32 ()
   (endian.ui32LE (&buf self) (&pos self)))
@@ -60,7 +84,7 @@
     (&file-name-length! entry (.u16 self))
     (&extra-field-length! entry (.u16 self))
     (&file-name! entry (.bytes self (&file-name-length entry)))
-    (&extra-field! entry (.bytes self (&extra-field-length entry)))))
+    (&extra-field! entry (.bytes self (&compressed-size entry)))))
 
 (class ZipEntry ()
   local-file-header-signature
@@ -99,13 +123,11 @@
 (function zip.entry-names (file)
   (map .file-name (zip.entries file)))
 
-(function zip.compress ()
+(function zip.compress (src dst)
   nil)
 
-(function zip.uncompress (file)
-  (with-open ($in file :read)
-    (let (rd (.new ZIPReader))
-      )))
+(function zip.uncompress (src dst)
+  nil)
 
 (function! main (args)
   (write (zip.entries "txt.zip.wk")))
