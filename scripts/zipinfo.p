@@ -5,13 +5,15 @@
 
 (function zipinfo ()
   (dolist (entry (.entries (.read (.new Zip))))
-    (write-line (format "%11d %11d %3d%% %s %s"
-                        (.uncompressed-size entry)
-                        (.compressed-size entry)
-                        (* 100 (/ (.compressed-size entry) (.uncompressed-size entry)))
-                        (.file-name entry)
-                        (.to-s (.timestamp entry))))
-    (if $verbose? (write entry))))
+    (let (usize (.uncompressed-size entry)
+                csize (.compressed-size entry)
+                name (.file-name entry)
+                timestamp (.to-s (.timestamp entry)))
+      (write-line
+        (if (zero? usize)
+            (format "%11s %11s %3s%% %s %s" "-" "-" "-" timestamp name)
+            (format "%11d %11d %3d%% %s %s" usize csize (* 100 (/ csize usize)) timestamp name)))
+      (if $verbose? (write entry)))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "v") args))
