@@ -110,6 +110,18 @@
         (in? m '(4 6 9 11)) 30
         31)))
 
+(method DateTime .msdos-date ()
+  ; Returns the msdos date.
+  (| (<< (- (.year self) 1980) 9)
+     (| (<< (.month self) 5)
+        (.day self))))
+
+(method DateTime .msdos-time ()
+  ; Returns the msdos time.
+  (| (<< (.hour self) 11)
+     (| (<< (.minute self) 5)
+        (// (.second self) 2))))
+
 (method DateTime .offset (:key days)
   ; Returns an instance at the specified offset from the receiver.
   (let (offset 0)
@@ -171,7 +183,14 @@
     (assert (= (.hour dt) 6))
     (assert (= (.minute dt) 18))
     (assert (= (.second dt) 9))
-    (assert (= (.unix-time dt) (- 1407737889 (utcoffset)))))
+    (assert (= (.unix-time dt) (- 1407737889 (utcoffset))))
+    (let (msdt (datetime.parse-msdos-datetime (.msdos-date dt) (.msdos-time dt)))
+      (assert (= (.year dt) (.year msdt)))
+      (assert (= (.month dt) (.month msdt)))
+      (assert (= (.day dt) (.day msdt)))
+      (assert (= (.hour dt) (.hour msdt)))
+      (assert (= (.minute dt) (.minute msdt)))
+      (assert (= (.second dt) (++ (.second msdt))))))
   (let (dt (datetime 2020 08 06 12 10 30))
     (assert (= (.to-s.date dt) "2020-08-06"))
     (assert (= (.to-s.time dt) "12:10:30"))
