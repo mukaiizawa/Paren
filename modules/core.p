@@ -1195,6 +1195,11 @@
   ; Same as `(! (.absolute? self))`.
   (! (.absolute? self)))
 
+(method Path .contents ()
+  ; Returns file contents of the receiver.
+  (with-open ($in self :read)
+    (read-bytes)))
+
 (method Path .to-l ()
   ; Reads the contents of the file corresponding to the receiver.
   ; Returns it as a list.
