@@ -1514,12 +1514,12 @@
         (.write-bytes self "}"))
       (bytes? x)
       (begin
-        (.write-bytes self "#[ ")
+        (.write-bytes self "#< ")
         (dotimes (i (len x))
           (.write-bytes self "0x")
           (.write-int self ([] x i) :radix 16 :padding 2)
           (.write-byte self 0x20))
-        (.write-byte self 0x5d))
+        (.write-byte self 0x3e))
       (array? x)
       (begin
         (.write-bytes self "#[ ")
@@ -2106,11 +2106,23 @@
     $parenrc (path "~/.parenrc")
     $runtime-path (map (f (p) (.resolve $paren-home p)) '("scripts")))
 
+(reader-macro "<" (reader)
+  ; Define bytes literal reader.
+  (let ($G-val nil $G-pos 0 $G-buf (bytes 8))
+    (while (!= (<- $G-val (.read reader)) '>)
+      (when (> $G-pos (len $G-buf))
+        (let ($G-newbuf (bytes (* (len $G-buf) 2)))
+          (memcpy $G-buf 0 $G-newbuf 0 $G-pos)
+          (<- $G-buf $G-newbuf)))
+      ([] $G-buf $G-pos $G-val)
+      (<- $G-pos (++ $G-pos)))
+    (slice $G-buf 0 $G-pos)))
+
 (reader-macro "[" (reader)
-  ; Define array/bytes literal reader.
+  ; Define array literal reader.
   (let ($G-l nil $G-v nil)
     (while (!= (<- $G-v (.read reader)) '])
-    (push! $G-v $G-l))
+      (push! $G-v $G-l))
   (array (reverse! $G-l))))
 
 (reader-macro "{" (reader)

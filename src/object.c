@@ -135,7 +135,7 @@ static void describe_cons(object o, struct xbarray *x)
 static void describe_mem(object o, struct xbarray *x)
 {
   int i;
-  xbarray_adds(x, "#[");
+  xbarray_adds(x, "#<");
   for (i = 0; i < o->mem.size; i++) {
     if (i == 5) {
       xbarray_adds(x, "...");
@@ -144,7 +144,7 @@ static void describe_mem(object o, struct xbarray *x)
     xbarray_addf(x, "0x%02x ", LC(o->mem.elt + i));
     if (x->size > MAX_STR_LEN) return;
   }
-  xbarray_add(x, ']');
+  xbarray_add(x, '>');
 }
 
 static void describe_array(object o, struct xbarray *x)
