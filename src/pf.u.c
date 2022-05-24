@@ -120,7 +120,7 @@ int pf_readdir(char *path, struct xbarray *files)
   if ((d = opendir(path)) == NULL) return FALSE;
   while ((de = readdir(d)) != NULL) {
     fn = de->d_name;
-    if (strcmp(fn,".") == 0 || strcmp(fn,"..") == 0) continue;
+    if (strcmp(fn, ".") == 0 || strcmp(fn, "..") == 0) continue;
     if (files->size != 0) xbarray_add(files, '\n');
     xbarray_adds(files, fn);
   }
@@ -130,7 +130,7 @@ int pf_readdir(char *path, struct xbarray *files)
 
 int pf_mkdir(char *path)
 {
-  return mkdir(path,0777) == 0;
+  return mkdir(path, 0777) == 0;
 }
 
 int pf_remove(char *fn)
