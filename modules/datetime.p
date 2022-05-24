@@ -46,6 +46,10 @@
             (& (>> time 5) 0x3f)
             (* (& time 0x1f) 2)))
 
+(function datetime.parse-unix-time (unix-time)
+  ; Returns the DateTime instance corresponding to the unix-time.
+  (.init (.new DateTime) unix-time))
+
 (function datetime (year month day :opt hour minute second)
   ; Returns the DateTime instance corresponding to the specified argument.
   (.init (.new DateTime)
@@ -175,7 +179,7 @@
   (join (list (.to-s.date self) (.to-s.day-week self) (.to-s.time self)) " "))
 
 (function! main (args)
-  (let (dt (.init (.new DateTime) (- 1407737889 (utcoffset))))    ; 2014-08-11 Mon 06:18:09
+  (let (dt (datetime.parse-unix-time (- 1407737889 (utcoffset))))    ; 2014-08-11 Mon 06:18:09
     (assert (= (.year dt) 2014))
     (assert (= (.month dt) 8))
     (assert (= (.day dt) 11))
