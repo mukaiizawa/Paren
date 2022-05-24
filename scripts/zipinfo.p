@@ -10,10 +10,7 @@
                   csize (.compressed-size entry)
                   name (.file-name entry)
                   timestamp (.to-s (.timestamp entry)))
-        (write-line
-          (if (zero? usize)
-              (format "%11s %11s %3s%% %s %s" "-" "-" "-" timestamp name)
-              (format "%11d %11d %3d%% %s %s" usize csize (* 100 (/ csize usize)) timestamp name)))
+        (if (pos? usize) (write-line (format "%11d %11d %3d%% %s %s" usize csize (* 100 (/ csize usize)) timestamp name)))
         (if $verbose? (write entry))))))
 
 (function! main (args)
