@@ -1008,7 +1008,7 @@
   ; Do not derive from Exception.
   message status-cd stack-trace)
 
-(method Exception .init (message :key status-cd)
+(method Exception .init (:opt message :key status-cd)
   (&message! self message)
   (&status-cd! self (|| status-cd 1)))
 
@@ -1227,7 +1227,8 @@
 (method Path .remove ()
   ; Deletes the file corresponding to the receiver.
   ; Returns the receiver.
-  (remove (.to-s self))
+  (if (.dir? self) (foreach .remove (.children self)))
+  (if (! (.none? self)) (remove (.to-s self)))
   self)
 
 (method Path .stat ()
@@ -1878,7 +1879,7 @@
         (= next "\"") (list :atom (.lex-string self))
         (= next ":") (list :atom (.lex-keyword self))
         (= next ";") (begin (.skip-line self) (.lex self))
-        (= next "#") (begin (.skip self) (list :read-macro (symbol (.skip self))))
+        (= next "#") (begin (.skip self) (list :reader-macro (symbol (.skip self))))
         (in? next "+-") (list :atom (.lex-sign self))
         (digit? next) (list :atom (.skip-number self))
         (list :atom (.lex-symbol self)))))
@@ -1911,7 +1912,7 @@
         (== type :backquote) (list 'quasiquote (.parse (.scan self)))
         (== type :unquote) (list 'unquote (.parse (.scan self)))
         (== type :unquote-splicing) (list 'unquote-splicing (.parse (.scan self)))
-        (== type :read-macro) (apply (|| ([] $read-table (&token self)) (raise ArgumentError "undefined reader macro")) (list self))
+        (== type :reader-macro) (apply (|| ([] $read-table (&token self)) (raise ArgumentError "undefined reader macro")) (list self))
         (raise SyntaxError))))
 
 (macro unquote (expr)
