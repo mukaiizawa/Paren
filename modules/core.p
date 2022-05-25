@@ -1214,6 +1214,7 @@
 
 (method Path .open (mode)
   ; Returns a stream that reads the contents of the receiver.
+  (if (&& (== mode :write) (.parent self)) (.mkdir (.parent self)))
   (.init (.new FileStream) (fopen (.to-s self) (index mode '(:read :write :append :update)))))
 
 (method Path .mkdir ()
