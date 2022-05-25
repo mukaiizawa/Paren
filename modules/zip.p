@@ -55,8 +55,15 @@
 (method ZipEntry .file-name ()
   (string (&file-name self)))
 
-(method ZipEntry .contents ()
-  (string (&extra-field self)))
+(method ZipEntry .uncompress ()
+  (let (compression-method (&compression-method self) contents (&extra-field self))
+    (if (= compression-method $zip.no-compression) contents
+        (raise ZipError "unsupported compression method"))))
+
+(method ZipEntry .compress ()
+  (let (compression-method (&compression-method self) contents (&extra-field self))
+    (if (= compression-method $zip.no-compression) contents
+        (raise ZipError "unsupported compression method"))))
 
 ;; ZipStream
 
@@ -151,27 +158,22 @@
     (memcpy val 0 (.reserve self size) (&pos self) size)
     (.skip self size)))
 
-(method ZipWriter .compress (file compression-method)
-  (let (contents (.contents file))
-    (if (= compression-method $zip.no-compression) contents
-        (raise ZipError "unsupported compression method"))))
-
 (method ZipWriter .add (file :opt alias)
   (let (file-name (bytes (|| alias (.name file)))
                   mtime (.init (.new DateTime) (.mtime file))
-                  conpressed (.compress self file 0)
+                  contents (.contents file)
                   entry (.new ZipEntry))
     (&general-purpose-bit-flag! entry 0)
     (&compression-method! entry 0)
     (&last-mod-file-time! entry (.msdos-time mtime))
     (&last-mod-file-date! entry (.msdos-date mtime))
-    (&crc-32! entry (crc32.sum conpressed))
-    (&compressed-size! entry (len conpressed))
+    (&crc-32! entry (crc32.sum contents))
+    (&compressed-size! entry (len contents))
     (&uncompressed-size! entry (.size file))
     (&file-name-length! entry (len file-name))
     (&extra-field-length! entry 0)
     (&file-name! entry file-name)
-    (&extra-field! entry conpressed)
+    (&extra-field! entry contents)
     (&entries! self (cons entry (&entries self)))))
 
 (method ZipWriter .write-local-file-header (entry)
@@ -223,7 +225,7 @@
     (.write-u16 self 0)))    ; .ZIP file comment length
 
 (method ZipWriter .write ()
-  (let (entries (reverse! (&entries self)) central-directory-header-start nil)
+  (let (entries (reverse (&entries self)) central-directory-header-start nil)
     (foreach (partial .write-local-file-header self) entries)
     (<- central-directory-header-start (&pos self))
     (foreach (partial .write-central-directory-header self) entries)
@@ -234,21 +236,33 @@
 
 (function zip.entries (zipfile)
   (with-open ($in zipfile :read)
-    (let (rd (.new ZipReader))
-      (collect (f () (.read rd))))))
+    (collect (partial .read (.new ZipReader)))))
 
 (function zip.entry-names (zipfile)
   (map .file-name (zip.entries zipfile)))
 
 (function zip.compress (dir zipfile)
-  (with-open ($out zipfile :write)
-    (let (wr (.new ZipWriter))
-      (.walk (path dir) (f (x) (.add wr x)))
-      (.write wr))))
+  (let (root (path dir) wr (.new ZipWriter))
+    (.walk root (f (x) (.add wr x (.to-s (.relativize root x)))))
+    (with-open ($out zipfile :write)
+      (.write wr))
+    zipfile))
 
 (function zip.uncompress (zipfile dir)
-  nil)
+  (let (root (path dir))
+    (dolist (entry (zip.entries zipfile))
+      (when (pos? (.uncompressed-size entry))
+        (let (file (.resolve root (.file-name entry)) parent (.parent file))
+          (with-open ($out file :write)
+            (write-bytes (.uncompress entry))))))
+    root))
 
 (function! main (args)
-  (zip.compress "./x" "./x.zip")
-  (write (zip.entry-names "./x.zip")))
+  (let (dir (path "../modules") wk (path "../wk/zip/") zipfile (.resolve wk "modules.zip"))
+    (assert (= (map .name (.children dir))
+               (zip.entry-names (zip.compress dir zipfile))))
+    (assert (= (zip.uncompress zipfile wk) wk))
+    (assert (.none? (.remove zipfile)))
+    (assert (= (map .name (.children dir))
+               (map .name (.children wk))))
+    (assert (.none? (.remove wk)))))
