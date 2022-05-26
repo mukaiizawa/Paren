@@ -75,7 +75,7 @@
 
 (macro dotimes ((i n) :rest body)
   (with-gensyms (gn)
-    (list for (list i 0 gn n) (list < i gn) (list i (list '++ i))
+    (list for (list i 0 gn n) (list < i gn) (list i (list ++ i))
           (cons begin body))))
 
 (macro dostring ((c s) :rest body)
@@ -84,7 +84,7 @@
 
 (macro doarray ((i a) :rest body)
   (with-gensyms (ga gi glen)
-    (list for (list gi 0 ga a glen (list len ga)) (list < gi glen) (list gi (list '++ gi))
+    (list for (list gi 0 ga a glen (list len ga)) (list < gi glen) (list gi (list ++ gi))
           (list let (list i (list [] ga gi))
                 (cons begin body)))))
 
