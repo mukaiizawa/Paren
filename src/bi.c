@@ -575,6 +575,18 @@ DEFUN(_2b_)
   return int64_add(0, argv, result);
 }
 
+DEFUN(_2b__2b_)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  return int64_add(1, argv, result);
+}
+
+DEFUN(_2d__2d_)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  return int64_add(-1, argv, result);
+}
+
 static int double_multiply(double dx, object argv, object *result)
 {
   int64_t iy;

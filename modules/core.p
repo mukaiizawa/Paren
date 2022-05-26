@@ -557,16 +557,12 @@
   (if (nil? args) (* x -1)
       (+ x (- (apply + args)))))
 
+(built-in-function ++)
+(built-in-function --)
 (built-in-function *)
 (built-in-function /)
 (built-in-function //)
 (built-in-function %)
-
-(function ++ (x)
-  (+ x 1))
-
-(function -- (x)
-  (+ x -1))
 
 (built-in-function <)
 
