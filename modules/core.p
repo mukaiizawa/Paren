@@ -798,10 +798,7 @@
 (built-in-function remove)
 (built-in-function rename)
 (built-in-function time)
-
-(built-in-function clock ()
-  ; Returns the approximate processor time[sec] used by the program.
-  )
+(built-in-function clock)
 
 (built-in-function cycle ()
   ; Returns the cycle of the internal virtual machine.
