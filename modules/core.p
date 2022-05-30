@@ -728,7 +728,7 @@
                       (if (= conv "s") (format1 flags width "" (substr x precision))
                           (= conv "v") (format1 flags width "" (substr (with-memory-stream ($out) (write x :end "")) precision))
                           (= conv "c") (format1 flags width "" (chr x))
-                          (in? conv '("b" "o" "d" "x" "f" "e" "g"))
+                          (in? conv '("b" "o" "d" "x" "X" "f" "e" "g"))
                           (let (prefix (if (< x 0) (begin (<- x (- x)) "-")
                                            (in? "+" flags) "+"
                                            (in? " " flags) " "
@@ -736,7 +736,8 @@
                                        val (with-memory-stream ($out)
                                              (if (in? conv '("e" "f" "g")) (.write-float $out x :precision precision :style (keyword conv))
                                                  (.write-int $out (// x)
-                                                             :radix (cadr (member conv '("b" 2 "o" 8 "d" 10 "x" 16)))
+                                                             :radix (cadr (member (lower conv) '("b" 2 "o" 8 "d" 10 "x" 16)))
+                                                             :upper? (upper? conv)
                                                              :padding precision))))
                             (format1 flags width prefix val))
                           (raise ArgumentError (str "unexpected conversion specifier " conv)))
@@ -1367,13 +1368,14 @@
   (.write-byte self 0x0a)
   string)
 
-(method Stream .write-int (n :key radix padding)
+(method Stream .write-int (n :key radix padding upper?)
   ; Write an integer with the specified padding and radix.
   ; Returns n.
   (let (x n radix (|| radix 10) padding (|| padding 0)
           ->byte (f (x)
                    (if (< x 10) (+ x 0x30)
-                       (+ x 0x61 -10)))
+                       (! upper?) (+ x 0x61 -10)
+                       (+ x 0x41 -10)))
           write1 (f (x padding)
                    (let (upper (// x radix))
                      (if (!= upper 0) (write1 upper (-- padding))

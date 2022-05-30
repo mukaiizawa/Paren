@@ -26,7 +26,7 @@ The `FORMATTER` format is as follows.
 ## PRECISION
 `PRECISION` is  an unsigned integer, which modifies the field width.
 
-    d, o, x -- gives the minimum number of digits.
+    d, o, x, X -- gives the minimum number of digits.
     e, f, g -- gives the number of digits to output after the radix.
     v, s -- gives the maximum number of bytes to be printed from a string in the s conversion specifiers.
 
@@ -38,6 +38,7 @@ The `FORMATTER` format is as follows.
     o -- converts an unsigned integers to unsigned octal format.
     d -- converts a number to integer format.
     x -- converts an unsigned integers to unsigned hexadecimal format.
+    X -- identical to `x` except that the letters are `ABCDEF` instead of `abcdef`.
     f -- converts float to decimal notation.
     c -- converts an unsigned integer to a character represented by the corresponding Unicode code point.
     s -- converts bytes-like object to string.
