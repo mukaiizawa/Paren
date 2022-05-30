@@ -799,10 +799,7 @@
 (built-in-function rename)
 (built-in-function time)
 (built-in-function clock)
-
-(built-in-function cycle ()
-  ; Returns the cycle of the internal virtual machine.
-  )
+(built-in-function cycle)
 
 (built-in-function utcoffset ()
   ; Returns the difference in hours and minutes from Coordinated Universal Time (UTC) for time zone set in the host system.
