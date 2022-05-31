@@ -1223,6 +1223,11 @@
   (if (! (.none? self)) (remove (.to-s self)))
   self)
 
+(method Path .move (to)
+  (with-open ($out to :write)
+    (write-bytes (.contents self)))
+  (.remove self))
+
 (method Path .stat ()
   ; Returns stat of the receiver.
   (let (stat-array (stat (.to-s self)))
