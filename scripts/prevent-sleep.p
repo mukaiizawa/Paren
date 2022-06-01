@@ -3,10 +3,11 @@
 (import :mouse)
 (import :rand)
 
-(<- $HD '(720 1280)
-    $interval 120)
+(function dx (x)
+  (+ x (rand.choice '(-1 0 1))))
 
 (function! main (args)
   (loop
-    (mouse.move (map rand.int $HD))
-    (sleep $interval)))
+    (catch (Error (f (e) nil))
+      (mouse.move (map dx (mouse.position))))
+    (sleep 0.1)))
