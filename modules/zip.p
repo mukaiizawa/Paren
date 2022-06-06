@@ -41,6 +41,7 @@
   extra-field-length
   file-name
   extra-field
+  file-data
   relative-offset-of-local-header)
 
 (method ZipEntry .uncompressed-size ()
@@ -56,12 +57,12 @@
   (string (&file-name self)))
 
 (method ZipEntry .uncompress ()
-  (let (compression-method (&compression-method self) contents (&extra-field self))
+  (let (compression-method (&compression-method self) contents (&file-data self))
     (if (= compression-method $zip.no-compression) contents
         (raise ZipError "unsupported compression method"))))
 
 (method ZipEntry .compress ()
-  (let (compression-method (&compression-method self) contents (&extra-field self))
+  (let (compression-method (&compression-method self) contents (&file-data self))
     (if (= compression-method $zip.no-compression) contents
         (raise ZipError "unsupported compression method"))))
 
@@ -118,7 +119,8 @@
     (&file-name-length! entry (.read-u16 self))
     (&extra-field-length! entry (.read-u16 self))
     (&file-name! entry (.read-size self (&file-name-length entry)))
-    (&extra-field! entry (.read-size self (&compressed-size entry)))))
+    (&extra-field! entry (.read-size self (&extra-field-length entry)))
+    (&file-data! entry (.read-size self (&compressed-size entry)))))
 
 (method ZipReader .read ()
   (let (signature (.peek-u32 self))
@@ -162,19 +164,20 @@
   (let (file (path file)
              file-name (bytes (|| alias (.name file)))
              mtime (.init (.new DateTime) (.mtime file))
-             contents (.contents file)
+             file-data (.contents file)
              entry (.new ZipEntry))
     (&general-purpose-bit-flag! entry 0)
     (&compression-method! entry 0)
     (&last-mod-file-time! entry (.msdos-time mtime))
     (&last-mod-file-date! entry (.msdos-date mtime))
-    (&crc-32! entry (crc32.sum contents))
-    (&compressed-size! entry (len contents))
+    (&crc-32! entry (crc32.sum file-data))
+    (&compressed-size! entry (len file-data))
     (&uncompressed-size! entry (.size file))
     (&file-name-length! entry (len file-name))
     (&extra-field-length! entry 0)
     (&file-name! entry file-name)
-    (&extra-field! entry contents)
+    (&extra-field! entry (bytes 0))
+    (&file-data! entry file-data)
     (&entries! self (cons entry (&entries self)))))
 
 (method ZipWriter .write-local-file-header (entry)
@@ -191,7 +194,8 @@
   (.write-u16 self (&file-name-length entry))
   (.write-u16 self (&extra-field-length entry))
   (.write-bytes self (&file-name entry))
-  (.write-bytes self (&extra-field entry)))
+  (.write-bytes self (&extra-field entry))
+  (.write-bytes self (&file-data entry)))
 
 (method ZipWriter .write-central-directory-header (entry)
   (.write-u32 self $zip.central-file-header-signature)
