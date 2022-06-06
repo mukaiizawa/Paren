@@ -25,18 +25,17 @@
                                 network-addr (& addr mask)
                                 broadcast-addr (+ network-addr address-count -1)
                                 address-range (map i32->x.x.x.x (list network-addr broadcast-addr)))
-    (group (list
-             :address x.x.x.x
-             :mask (i32->x.x.x.x mask)
-             :addresses address-count
-             :address-range address-range
-             :network-address (car address-range)
-             :broadcast-address (cadr address-range))
-           2)))
+    (list
+      :address x.x.x.x
+      :mask (i32->x.x.x.x mask)
+      :addresses address-count
+      :address-range address-range
+      :network-address (car address-range)
+      :broadcast-address (cadr address-range))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "l") args)
                   result (parse-cidr (car args)))
-    (if (nil? (.get op "l")) (foreach write result)
-        (for ((s e) (map x.x.x.x->i32 (cadr (assoc :address-range result)))) (<= s e) (s (++ s))
+    (if (nil? (.get op "l")) (foreach write (group result 2))
+        (for ((s e) (map x.x.x.x->i32 (cadr (member :address-range result)))) (<= s e) (s (++ s))
           (write-line (i32->x.x.x.x s))))))
