@@ -3,8 +3,8 @@
 (import :optparse)
 
 (function x.x.x.x->i32 (x.x.x.x)
-  (let ((a b c d) (map int (split x.x.x.x ".")))
-    (| (<< a 24) (<< b 16) (<< c 8) d)))
+  (reduce (f (x y) (| (<< x 8) y))
+          (map int (split x.x.x.x "."))))
 
 (function i32->x.x.x.x (x)
   (format "%d.%d.%d.%d"
