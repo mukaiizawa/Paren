@@ -7,16 +7,16 @@
   anchored-start?
   anchored-end?)
 
-(class Re.Elt ()
+(class ReElt ()
   key val n m greedy?)
 
-(method Re.Elt .init (key :opt val)
+(method ReElt .init (key :opt val)
   (&key! self key)
   (&val! self val))
 
 (function re.parse-any (ar)
   (.skip ar)
-  (.init (.new Re.Elt) :any))
+  (.init (.new ReElt) :any))
 
 (function re.parse-group (ar)
   (.skip ar)
@@ -26,7 +26,7 @@
       (.skip ar)
       (push! (re.parse ar) val))
     (.skip ar ")")
-    (.init (.new Re.Elt) :alternate (reverse! val))))
+    (.init (.new ReElt) :alternate (reverse! val))))
 
 (function re.parse-charset (ar)
   (.skip ar)
@@ -39,10 +39,10 @@
                    (.put ar (chr s))))
           (.put ar c)))
     (.skip ar)
-    (.init (.new Re.Elt) key (.token ar))))
+    (.init (.new ReElt) key (.token ar))))
 
 (function re.parse-char (ar)
-  (.init (.new Re.Elt) :char (.skip-escape ar)))
+  (.init (.new ReElt) :char (.skip-escape ar)))
 
 (function re.parse-quantifier (ar expr)
   (let (c (&next ar) n 1 m 1 greedy? true)
