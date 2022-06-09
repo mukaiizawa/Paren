@@ -769,6 +769,12 @@
 (built-in-function array)
 (built-in-function array?)
 
+(function fill! (seq x :opt start end)
+  (let (s (|| start 0) e (|| end (len seq)))
+    (dotimes (i (- e s))
+      ([] seq (+ s i) x))
+    seq))
+
 ;; dictionary.
 
 (built-in-function dict)
