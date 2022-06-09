@@ -1,10 +1,10 @@
 ; md5 module.
 
-(import :bits)
+(import :bin)
 
 (macro md5.apply (fn a b c d x s ac)
   `(<- ,a (int32 (+ ,a (int32 (,fn ,b ,c ,d)) ,x ,ac))
-       ,a (bits.rotl32 ,a ,s)
+       ,a (bin.rotl32 ,a ,s)
        ,a (int32 (+ ,a ,b))))
 
 (function md5.next (X A B C D)

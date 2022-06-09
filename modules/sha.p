@@ -1,6 +1,6 @@
 ; sha module.
 
-(import :bits)
+(import :bin)
 
 (<- sha256.table
     #[ 0x428a2f98 0x71374491 0xb5c0fbcf 0xe9b5dba5 0x3956c25b 0x59f111f1 0x923f82a4 0xab1c5ed5
@@ -17,8 +17,8 @@
                                   T1 nil T2 nil K sha256.table
                                   Ch (f (x y z) (^ (& x y) (& (~ x) z)))
                                   Maj (f (x y z) (^ (& x y) (& x z) (& y z)))
-                                  sig0 (f (x) (^ (bits.rotr32 x 2) (bits.rotr32 x 13) (bits.rotr32 x 22)))
-                                  sig1 (f (x) (^ (bits.rotr32 x 6) (bits.rotr32 x 11) (bits.rotr32 x 25))))
+                                  sig0 (f (x) (^ (bin.rotr32 x 2) (bin.rotr32 x 13) (bin.rotr32 x 22)))
+                                  sig1 (f (x) (^ (bin.rotr32 x 6) (bin.rotr32 x 11) (bin.rotr32 x 25))))
     (dotimes (i 64)
       (<- T1 (int32 (+ h8 (sig1 h5) (Ch h5 h6 h7) ([] K i) ([] W i)))
           T2 (int32 (+ (sig0 h1) (Maj h1 h2 h3)))
@@ -38,8 +38,8 @@
             W (array 64)
             at (f (i) (if (< i msglen) ([] msg i)
                           ([] padding (- i msglen))))
-            sig0 (f (x) (^ (bits.rotr32 x 7) (bits.rotr32 x 18) (>> x 3)))
-            sig1 (f (x) (^ (bits.rotr32 x 17) (bits.rotr32 x 19) (>> x 10))))
+            sig0 (f (x) (^ (bin.rotr32 x 7) (bin.rotr32 x 18) (>> x 3)))
+            sig1 (f (x) (^ (bin.rotr32 x 17) (bin.rotr32 x 19) (>> x 10))))
     (dotimes (i 64)
       (if (< i 16) (let (p (+ (* n 64) (* i 4)))
                      ([] W i (| (<< (at p) 24)
