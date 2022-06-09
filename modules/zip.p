@@ -1,8 +1,8 @@
 ; zip module.
 
+(import :bin)
 (import :crc32)
 (import :datetime)
-(import :endian)
 
 (<- $zip.local-file-header-signature                0x04034b50
     $zip.data-descriptor-signature                  0x08074b50
@@ -89,7 +89,7 @@
 
 (method ZipReader .read-u16 ()
   (begin0
-    (endian.ui16LE (&buf self) (&pos self))
+    (bin.ui16LE (&buf self) (&pos self))
     (.skip self 2)))
 
 (method ZipReader .read-u32 ()
@@ -98,7 +98,7 @@
     (.skip self 4)))
 
 (method ZipReader .peek-u32 ()
-  (endian.ui32LE (&buf self) (&pos self)))
+  (bin.ui32LE (&buf self) (&pos self)))
 
 (method ZipReader .read-size (len)
   (begin0
@@ -148,11 +148,11 @@
     (&buf self)))
 
 (method ZipWriter .write-u16 (val)
-  (endian.ui16LE! (.reserve self 2) (&pos self) val)
+  (bin.ui16LE! (.reserve self 2) (&pos self) val)
   (.skip self 2))
 
 (method ZipWriter .write-u32 (val)
-  (endian.ui32LE! (.reserve self 4) (&pos self) val)
+  (bin.ui32LE! (.reserve self 4) (&pos self) val)
   (.skip self 4))
 
 (method ZipWriter .write-bytes (val)
