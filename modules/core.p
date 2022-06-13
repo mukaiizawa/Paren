@@ -2115,7 +2115,7 @@
   ; Define bytes literal reader.
   (let ($G-val nil $G-pos 0 $G-buf (bytes 8))
     (while (!= (<- $G-val (.read reader)) '>)
-      (when (> $G-pos (len $G-buf))
+      (when (= $G-pos (len $G-buf))
         (let ($G-newbuf (bytes (* (len $G-buf) 2)))
           (memcpy $G-buf 0 $G-newbuf 0 $G-pos)
           (<- $G-buf $G-newbuf)))
