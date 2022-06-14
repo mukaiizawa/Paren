@@ -1,5 +1,7 @@
 ; xml module.
 
+(class XMLError (Error))
+
 (function xml.write-text (x)
   (with-memory-stream ($in x)
     (let (ch nil)
@@ -33,18 +35,19 @@
 (function xml.write1 (x)
   (if (nil? x) nil
       (string? x) (xml.write-text x)
-      (assert nil)))
+      (raise XMLError "unexpected expression")))
 
 (function xml.write-attr (attrs)
   (while attrs
-    (assert (keyword? (car attrs)))
-    (write-bytes " ")
-    (write-bytes (car attrs))
-    (let (next (car (<- attrs (cdr attrs))))
-      (if (nil? next) (break)
-          (keyword? next) (continue)
-          (string? next) (begin (foreach write-bytes (list "='" next "'")) (<- attrs (cdr attrs)))
-          (assert nil)))))
+    (if (! (keyword? (car attrs))) (raise XMLError "invalid attribute name")
+        (begin
+          (write-bytes " ")
+          (write-bytes (car attrs))
+          (let (next (car (<- attrs (cdr attrs))))
+            (if (nil? next) (break)
+                (keyword? next) (continue)
+                (string? next) (begin (foreach write-bytes (list "='" next "'")) (<- attrs (cdr attrs)))
+                (raise XMLError "invalid attribute value")))))))
 
 (function xml.write-element (x)
   ; Returns a list representation of xml as a string.
@@ -88,7 +91,7 @@
       (if (!= (.next (.skip-space self)) "=") (continue)    ; single attribute
           (.skip self "="))
       (if (! (in? (<- q (.skip (.skip-space self))) '("'" "\"")))
-          (raise StateError "missing attribute value"))
+          (raise XMLError "missing attribute value"))
       (while (!= (.next self) q)
         (.get-escape self))
       (.skip self q)
@@ -186,7 +189,7 @@
           (if (! stag?) tag    ; make sense
               (let (name (car tag) child nil children nil)
                 (while (!= name (<- child (XMLReader.read self)))
-                  (if (symbol? child) (raise StateError (str "unexpected close tag " child " expected " name))
+                  (if (symbol? child) (raise XMLError (str "unexpected close tag " child " expected " name))
                       (push! child children)))
                 (cons (car tag)
                       (cons (cadr tag)
