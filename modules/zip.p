@@ -3,6 +3,7 @@
 (import :bin)
 (import :crc32)
 (import :datetime)
+(import :deflate)
 
 (<- $zip.local-file-header-signature                0x04034b50
     $zip.data-descriptor-signature                  0x08074b50
@@ -19,7 +20,8 @@
                        $zip.zip64-end-of-central-dir-signature
                        $zip.zip64-end-of-central-dir-locator-signature
                        $zip.end-of-central-dir-signature)
-    $zip.no-compression 0
+    $zip.compression-method.no-compression 0
+    $zip.compression-method.deflated 8
     $zip.version-need-to-extract 20
     $zip.made-by-unix 3
     $zip.version-made-by (| (<< $zip.made-by-unix 8) $zip.version-need-to-extract))
@@ -58,7 +60,8 @@
 
 (method ZipEntry .uncompress ()
   (let (compression-method (&compression-method self) contents (&file-data self))
-    (if (= compression-method $zip.no-compression) contents
+    (if (= compression-method $zip.compression-method.no-compression) contents
+        (= compression-method $zip.compression-method.deflated) (deflate.uncompress contents)
         (raise ZipError "unsupported compression method"))))
 
 (method ZipEntry .compress ()

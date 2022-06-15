@@ -14,4 +14,5 @@ Lists technical information about files in a ZIP archive `FILE`.
         List zipfile information in verbosely.
 
 # SEE ALSO
-- `ls(1)`
+- `unzip(1)`
+- `zip(1)`
