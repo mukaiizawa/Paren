@@ -347,6 +347,9 @@
     (rec lis)
     (reverse! acc)))
 
+(function repeat (x n)
+  (if (pos? n) (cons x (repeat x (-- n)))))
+
 (function swap! (seq i j)
   (let (t ([] seq i))
     ([] seq i ([] seq j))

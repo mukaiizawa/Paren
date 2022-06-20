@@ -52,6 +52,7 @@ Thus, Paren programs can manipulate source code as a data structure, giving rise
 - `push!(3)`
 - `reduce(3)`
 - `reject(3)`
+- `repeat(3)`
 - `reverse!(3)`
 - `reverse(3)`
 - `select(3)`
