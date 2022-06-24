@@ -11,7 +11,8 @@
       (if (!= dw 0) (write-bytes " "))
       (write-bytes (format "%2d" (++ i)))
       (if (= (<- dw (% (++ dw) 7)) 0)
-          (write-line)))))
+          (write-line)))
+    (write-line)))
 
 (function! main (args)
   (let (argc (len args) now (datetime.now))
