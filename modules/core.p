@@ -2085,7 +2085,7 @@
   ; Executed when there is no command line argument when paren starts.
   (<- $0 nil $1 nil $2 nil $3 nil $4 nil $5 nil $6 nil $7 nil $8 nil $9 nil)
   (loop
-    (catch (Error (f (e) (.print-stack-trace e)))
+    (catch (Error .print-stack-trace)
       (write-bytes ") ")
       (if (== (<- $$ (read)) :q) (break)
           (== $$ :h) (foreach write
