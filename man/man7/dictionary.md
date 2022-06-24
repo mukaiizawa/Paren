@@ -28,4 +28,5 @@ Unlike general dictionaries, pairs cannot be deleted. This limitation is because
 - `dict?(3)`
 - `keys(3)`
 - `vals(3)`
+- `with(3)`
 - `data-types(7)`

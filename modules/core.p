@@ -787,6 +787,39 @@
 (function vals (d)
   (map (partial [] d) (keys d)))
 
+(macro with (dic :rest exprs)
+  (let (compile (f (dic exprs)
+                       (assert (dict? dic))
+                       (let (parse (f (keys expr)
+                                     (if (nil? keys) expr
+                                         (&& (symbol? expr) (in? expr keys)) (list [] dic (list quote expr))
+                                         (atom? expr) expr
+                                         (let ((ope :rest args) expr diffkeys (f (x) (<- keys (difference keys (flatten x)))))
+                                           (if (&& (symbol? ope) (|| (! (bound? ope)) (function? (<- ope (eval ope))))) (cons ope (map (f (x) (parse keys x)) args))
+                                               (== ope <-) (cons begin
+                                                                 (map (f (x) (if (in? (car x) keys)
+                                                                                 (list [] dic (list quote (car x)) (parse keys (cadr x)))
+                                                                                 (list <- (car x) (parse keys (cadr x)))))
+                                                                      (group args 2)))
+                                               (== ope let) (cons let (cons (apply concat (map (f (x)
+                                                                                                 (if (nil? (cdr x)) (raise SyntaxError "missing let binding value")
+                                                                                                     (let (k (car x) v (parse keys (cadr x)))
+                                                                                                       (diffkeys (->list k))
+                                                                                                       (list k v))))
+                                                                                               (group (car args) 2)))
+                                                                            (cdr args)))
+                                               (== ope quote) expr
+                                               (== ope macro) (raise SyntaxError "unsupport special-operator macro in with context")
+                                               (== ope catch) (raise SyntaxError "unsupport special-operator catch in with context")
+                                               (== ope f) (cons f (cons (car args)
+                                                                        (map (f (x) (parse (diffkeys (car args)) x))
+                                                                             (cdr args))))
+                                               (macro? ope) (parse keys (macroexpand expr))
+                                               (cons ope (map (f (x) (parse keys x)) args)))))))
+                         (cons begin (map (partial parse (select symbol? (keys dic)))
+                                          exprs)))))
+    (compile (eval dic) exprs)))
+
 ;; os.
 
 (built-in-function fp)
