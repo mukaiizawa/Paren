@@ -42,8 +42,8 @@
   (list 'if test (cons 'begin body)))
 
 (macro && (:rest args)
-  (if (cddr args) (list 'if (car args) (cons '&& (cdr args)))
-      (cdr args) (list 'if (car args) (cadr args))
+  (if (cdr (cdr args)) (list 'if (car args) (cons '&& (cdr args)))
+      (cdr args) (list 'if (car args) (car (cdr args)))
       (car args) (car args)
       true))
 
@@ -114,7 +114,7 @@
     (if (! (cons? expr)) expr
         (let ((ope :rest args) expr)
           (if (in? ope ignores) (cons ope (expand1 args))
-              (macro? ope) (macroexpand (macroexpand-1 expr) :ignores ignores)
+              (&& (symbol? ope) (bound? ope) (macro? (eval ope))) (macroexpand (macroexpand-1 expr) :ignores ignores)
               (cons ope
                     (if (== ope 'quote) args
                         (== ope '<-) (expand2 args)
