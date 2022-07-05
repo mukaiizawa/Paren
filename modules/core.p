@@ -23,74 +23,73 @@
 ;; fundamental macro.
 
 (macro built-in-function (name :opt args :rest body)
-  (cons begin body))
+  (cons 'begin body))
 
 (macro function! (name args :rest body)
-  (list <- name (cons f (cons args body))))
+  (list '<- name (cons 'f (cons args body))))
 
 (macro with-gensyms ((:rest syms) :rest body)
   (let (rec (f (syms) (if syms (cons (car syms) (cons '(symbol) (rec (cdr syms)))))))
-    (cons let (cons (rec syms) body))))
+    (cons 'let (cons (rec syms) body))))
 
 (macro begin0 (:rest body)
-  (with-gensyms (x)
-    (list let (list x (car body))
-          (cons begin (cdr body))
-          x)))
+  (with-gensyms (gsym)
+    (list 'let (list gsym (car body))
+          (cons 'begin (cdr body))
+          gsym)))
 
 (macro when (test :rest body)
-  (list if test (cons begin body)))
+  (list 'if test (cons 'begin body)))
 
 (macro && (:rest args)
-  (if (! args) true
-      (! (cdr args)) (car args)
-      (let (rec (f (lis)
-                  (if (cdr lis) (list if (car lis) (rec (cdr lis)))
-                      (car lis))))
-        (rec args))))
+  (if (cddr args) (list 'if (car args) (cons '&& (cdr args)))
+      (cdr args) (list 'if (car args) (cadr args))
+      (car args) (car args)
+      true))
 
 (macro || (:rest args)
-  (if (! args) nil
-      (! (cdr args)) (car args)
-      (with-gensyms (g)
-        (let (rec (f (lis) (if lis (cons (list <- g (car lis)) (cons g (rec (cdr lis)))))))
-          (list let (list g nil)
-                (cons if (rec args)))))))
+  (if (cdr args) (with-gensyms (gsym)
+                   (list 'let (list gsym (car args))
+                         (list 'if gsym gsym
+                               (cons '|| (cdr args)))))
+      (car args)))
 
 (macro while (test :rest body)
-  (list loop (list if test (cons begin body) '(break))))
+  (list 'loop (list 'if test (cons 'begin body) '(break))))
 
 (macro for (binding test update :rest body)
-  (with-gensyms (gupdate?)
-    (list let (cons gupdate? (cons nil binding))
-          (list loop
-                (list if gupdate? (cons <- update) (list <- gupdate? true))    ; for continue(3).
-                (list if (list ! test) '(break))
-                (cons begin body)))))
+  (with-gensyms (first-loop?)
+    (list 'let (cons first-loop? (cons true binding))
+          (list 'loop
+                (list 'if first-loop? (list '<- first-loop? nil)
+                      (cons '<- update))    ; for continue(3).
+                (list 'if test (cons 'begin body)
+                      '(break))))))
 
-(macro dolist ((i lis) :rest body)
+(macro dolist ((x lis) :rest body)
   (with-gensyms (gl)
-    (list for (list gl lis i (list car gl)) gl (list gl (list cdr gl) i (list car gl))
+    (list 'for (list gl lis x (list car gl)) gl (list gl (list cdr gl) x (list car gl))
           (cons begin body))))
 
 (macro dotimes ((i n) :rest body)
-  (with-gensyms (gn)
-    (list for (list i 0 gn n) (list < i gn) (list i (list ++ i))
-          (cons begin body))))
+  (with-gensyms (gend)
+    (list 'for (list i 0 gend n) (list '< i gend) (list i (list '++ i))
+          (cons 'begin body))))
 
 (macro dostring ((c s) :rest body)
-  (list doarray (list c (list array s))
-        (cons begin body)))
+  (list 'doarray (list c (list 'array s))
+        (cons 'begin body)))
 
-(macro doarray ((i a) :rest body)
-  (with-gensyms (ga gi glen)
-    (list for (list gi 0 ga a glen (list len ga)) (list < gi glen) (list gi (list ++ gi))
-          (list let (list i (list [] ga gi))
-                (cons begin body)))))
+(macro doarray ((x a) :rest body)
+  (with-gensyms (ga gi)
+    (list 'let (list ga a)
+          (cons 'dotimes (cons (list gi (list 'len ga))
+                               (cons (list '<- x (list '[] a gi))
+                                     body))))))
 
 (macro timeit (:rest body)
   (with-gensyms (clock-offset cycle-offset)
-    (list let (list clock-offset '(clock) cycle-offset '(cycle))
+    (list 'let (list clock-offset '(clock) cycle-offset '(cycle))
           (list 'begin0
                 (cons begin body)
                 (list 'write (list 'list
@@ -99,40 +98,18 @@
 
 (built-in-function macroexpand-1)
 
-(function! macroexpand (expr :key ignore-list)
-  (let (add-ignore (f (x)
-                     (if (cons? x) (begin (add-ignore (car x)) (add-ignore (cdr x)))
-                         (<- ignore-list (cons x ignore-list)) x)
-                     x)
-                   expand1 (f (x)
-                             (if x (cons (macroexpand (car x) :ignore-list ignore-list)
-                                         (expand1 (cdr x)))))
-                   expand2 (f (x)
-                             (if (cdr x) (cons (add-ignore (car x))
-                                               (cons (macroexpand (cadr x) :ignore-list ignore-list)
-                                                     (expand2 (cddr x))))
-                                 x (raise SyntaxError (str "missing value for variable " expr)))))
-    (if (! (cons? expr)) expr
-        (let ((ope :rest args) expr)
-          (if (symbol? ope) (if (&& (! (in? ope ignore-list)) (bound? ope)) (<- ope (eval ope))
-                                (return (cons ope (expand1 args)))))    ; do not expand.
-          (if (macro? ope) (macroexpand (macroexpand-1 expr) :ignore-list ignore-list)
-              (cons ope
-                    (if (== ope quote) args
-                        (== ope <-) (expand2 args)
-                        (== ope f) (cons (car args) (expand1 (cdr args)))
-                        (== ope macro) (cons (car args) (cons (cadr args) (expand1 (cddr args))))
-                        (|| (== ope let) (== ope catch)) (cons (expand2 (car args)) (expand1 (cdr args)))
-                        (expand1 args))))))))
+(function! macroexpand (expr)
+  (let (expand (f (x) (if (cons? x) (cons (macroexpand (car x)) (expand (cdr x))) x)))
+    (if (cons? expr) (begin
+                       (while (! (== expr (<- expr (macroexpand-1 expr)))))
+                       (expand expr))
+        expr)))
 
 (macro function (name args :rest body)
-  (with-gensyms (gname)
-    (let (expand-body (f (x) (if x (cons (macroexpand (car x)) (expand-body (cdr x))))))
-      (list let (list gname (list quote name))
-            (list if (list bound? gname)
-                  (list 'raise 'ArgumentError (list 'str "function name '" gname "` already bound"))
-                  (list <- name (cons f (cons args (expand-body body)))))
-            gname))))
+  (let (expand-body (f (x) (if x (cons (macroexpand (car x)) (expand-body (cdr x))))))
+    (list 'if
+          (list 'bound? (list 'quote name)) '(raise ArgumentError "symbol already bound")
+          (list '<- name (cons 'f (cons args (expand-body body)))) (list 'quote name))))
 
 ;; fundamental function.
 
@@ -331,14 +308,14 @@
 
 (macro push! (x lis)
   (with-gensyms (gx)
-    (list let (list gx x)
-          (list <- lis (list cons gx lis))
+    (list 'let (list gx x)
+          (list '<- lis (list 'cons gx lis))
           gx)))
 
 (macro pop! (lis)
-  (list begin0
-        (list car lis)
-        (list <- lis (list cdr lis))))
+  (list 'begin0
+        (list 'car lis)
+        (list '<- lis (list 'cdr lis))))
 
 (function flatten (lis)
   (let (acc nil rec (f (x)
@@ -473,6 +450,10 @@
                   (fn (car lis)) n
                   (rec (cdr lis) (++ n)))))
     (rec lis 0)))
+
+(function map-group (fn args chunk-size)
+  (if args (cons (apply fn (slice args 0 chunk-size))
+                 (map-group fn (cddr args) chunk-size))))
 
 (function every? (fn lis)
   (if (nil? lis) true
@@ -787,39 +768,6 @@
 (function vals (d)
   (map (partial [] d) (keys d)))
 
-(macro with (dic :rest exprs)
-  (let (compile (f (dic exprs)
-                       (assert (dict? dic))
-                       (let (parse (f (keys expr)
-                                     (if (nil? keys) expr
-                                         (&& (symbol? expr) (in? expr keys)) (list [] dic (list quote expr))
-                                         (atom? expr) expr
-                                         (let ((ope :rest args) expr diffkeys (f (x) (<- keys (difference keys (flatten x)))))
-                                           (if (&& (symbol? ope) (|| (! (bound? ope)) (function? (<- ope (eval ope))))) (cons ope (map (f (x) (parse keys x)) args))
-                                               (== ope <-) (cons begin
-                                                                 (map (f (x) (if (in? (car x) keys)
-                                                                                 (list [] dic (list quote (car x)) (parse keys (cadr x)))
-                                                                                 (list <- (car x) (parse keys (cadr x)))))
-                                                                      (group args 2)))
-                                               (== ope let) (cons let (cons (apply concat (map (f (x)
-                                                                                                 (if (nil? (cdr x)) (raise SyntaxError "missing let binding value")
-                                                                                                     (let (k (car x) v (parse keys (cadr x)))
-                                                                                                       (diffkeys (->list k))
-                                                                                                       (list k v))))
-                                                                                               (group (car args) 2)))
-                                                                            (cdr args)))
-                                               (== ope quote) expr
-                                               (== ope macro) (raise SyntaxError "unsupport special-operator macro in with context")
-                                               (== ope catch) (raise SyntaxError "unsupport special-operator catch in with context")
-                                               (== ope f) (cons f (cons (car args)
-                                                                        (map (f (x) (parse (diffkeys (car args)) x))
-                                                                             (cdr args))))
-                                               (macro? ope) (parse keys (macroexpand expr))
-                                               (cons ope (map (f (x) (parse keys x)) args)))))))
-                         (cons begin (map (partial parse (select symbol? (keys dic)))
-                                          exprs)))))
-    (compile (eval dic) exprs)))
-
 ;; os.
 
 (built-in-function fp)
@@ -894,84 +842,68 @@
   ; Error If the class or method is undefined.
   )
 
-(macro make-accessor (field)
-  ; Returns an expression that binds getter and setter.
-  ; If field name is 'xxx', bind a getter named `&xxx` and setter named `&xxx!`.
-  ; Works faster than method which defined with the `method` macro.
-  (with-gensyms (receiver val)
-    (let (key (keyword field) getter (concat '& field) setter (concat getter '!))
-      (list begin
-            (list if (list ! (list bound? (list quote getter)))
-                  (list function getter (list receiver)
-                        (list [] receiver key)))
-            (list if (list ! (list bound? (list quote setter)))
-                  (list function setter (list receiver val)
-                        (list [] receiver key val)
-                        receiver))))))
-
-(macro make-method-dispatcher (method-sym)
-  (when (! (bound? method-sym))
-    (with-gensyms (receiver args)
-      (list function method-sym (list receiver :rest args)
-            (list apply
-                  (list find-method (list [] receiver :class) (list quote method-sym))
-                  (list cons receiver args))))))
+(macro with-arrow-syntax (:rest body)
+  (let (compile0 (f (expr)
+                   (if (! (symbol? expr)) expr
+                       (let (name (string expr) pos (index "->" name))
+                         (if (nil? pos) expr
+                             (reduce (f (x y) (list '[] x (keyword y)))
+                                     (map symbol (split name "->")))))))
+                 compile (f (expr)
+                           (if (atom? expr) (compile0 expr)
+                               (let ((ope :rest args) expr)
+                                 (if (== ope '<-) (cons 'begin
+                                                        (map-group (f (left right)
+                                                                     (let (x (compile0 left) y (compile right))
+                                                                       (if (== x left) (list '<- x y)    ; (<- x y)
+                                                                           (concat x (list y)))))        ; ([] x y)
+                                                                   args 2))
+                                     (== ope 'let) (cons 'let
+                                                         (cons (apply concat (map-group (f (left right) (list left (compile right)))
+                                                                                        (car args) 2))
+                                                               (map compile (cdr args))))
+                                     (== ope 'f) (cons 'f (cons (car args) (map compile (cdr args))))
+                                     (== ope 'quote) expr
+                                     (cons ope (map compile args)))))))
+    (cons begin (map compile body))))
 
 (macro class (cls-sym (:opt super :rest features) :rest fields)
   ; Define class.
   ; Returns class symbol.
   (with-gensyms (gcls-sym gsuper gfeatures gfields)
-    (list let (list gcls-sym (list quote cls-sym)
-                    gsuper (list quote super)
-                    gfeatures (list quote features)
-                    gfields (list quote fields))
-          (list if
-                (list bound? gcls-sym)
-                (list 'raise 'ArgumentError (list str "class name '" gcls-sym "` already bound"))
-                (list ! (list bound? gsuper))
-                (list 'raise 'ArgumentError (list str "super class '" gsuper "` is not defined"))
-                (list ! (list every? symbol? gfeatures))
-                (list 'raise 'ArgumentError (list str "features classes " gfeatures " must be symbol"))
-                (list ! (list every? bound? gfeatures))
-                (list 'raise 'ArgumentError (list str "some of the features " gfeatures " is not defined"))
-                (list ! (list every? symbol? gfields))
-                (list 'raise (list str "instance variables " gfields " must be symbol")))
-          (list <- cls-sym '(dict))
-          (cons begin
-                (map (f (k v) (list [] cls-sym k v))
-                     '(:class :symbol :super :features :fields)
-                     (list ''Class
-                           gcls-sym
-                           (list || gsuper (list if (list != gcls-sym ''Object) ''Object))
-                           gfeatures
-                           gfields)))
-          (cons begin
-                (map (f (field) (list make-accessor field))
-                     fields))
+    (list 'let (list gcls-sym (list 'quote cls-sym)
+                     gsuper (list 'quote super)
+                     gfeatures (list 'quote features)
+                     gfields (list 'quote fields))
+          (list 'if
+                (list 'bound? gcls-sym) '(raise ArgumentError "symbol already bound")
+                (list '! (list 'bound? gsuper)) '(raise ArgumentError "undefined super class")
+                (list '! (list 'every? 'bound? gfeatures)) '(raise ArgumentError "undefined feature class")
+                (list '! (list 'every? 'symbol? gfields)) '(raise ArgumentError "invalid fields")
+                (cons 'begin
+                      (cons (list '<- cls-sym '(dict))
+                            (map (f (k v) (list '[] cls-sym k v))
+                                 '(:class :symbol :super :features :fields)
+                                 (list ''Class
+                                       gcls-sym
+                                       (list '|| gsuper (list 'if (list '!= gcls-sym ''Object) ''Object))
+                                       gfeatures
+                                       gfields)))))
           gcls-sym)))
 
 (macro method (cls-sym method-sym args :rest body)
   ; Define method.
   ; Returns method symbol.
   (let (global-method-name (concat cls-sym method-sym))
-    (list begin
-          (list if
-                (list ! (list find-class (list quote cls-sym)))
-                (list 'raise 'ArgumentError (list str "class '" (list quote cls-sym) "` is not defined"))
-                (list bound? (list quote global-method-name))
-                (list 'raise 'ArgumentError (list str "method '" (list quote global-method-name) "` already bound")))
-          (list make-method-dispatcher method-sym)
-          (cons function (cons global-method-name (cons (cons 'self args) body))))))
-
-(macro overload (method-sym sym)
-  ; Overload operator.
-  (with-gensyms (gsym gargs garg)
-    (list let (list gsym sym)
-          (list function! sym (list :rest gargs)
-                (list let (list garg (list car gargs))
-                      (list if (list object? garg)
-                            (list apply (list find-method (list [] garg :class) (list quote method-sym)) gargs)
-                            (list apply gsym gargs)))))))
+    (list 'if
+          (list '! (list 'find-class (list 'quote cls-sym))) '(raise ArgumentError "class not found")
+          (list 'bound? (list 'quote global-method-name)) '(raise ArgumentError "symbol already bound")
+          (list 'with-arrow-syntax
+                (list 'function! method-sym '(self :rest args)
+                      (list 'apply
+                            (list 'find-method 'self->class (list 'quote method-sym))
+                            '(cons self args)))
+                (cons 'function (cons global-method-name (cons (cons 'self args) body)))))))
 
 ;;; fundamental class.
 
@@ -990,7 +922,7 @@
 
 (method Object .class ()
   ; Returns the class of the receiver.
-  (find-class (&class self)))
+  (find-class self->class))
 
 (method Object .eq? (o)
   ; Returns whether the o is equals of the receiver.
@@ -1004,7 +936,7 @@
 
 (method Object .to-s ()
   ; Returns a String representing the receiver.
-  (str "<" (&symbol (.class self)) ":0x" (address self)  ">"))
+  (str "<" (.symbol (.class self)) ":0x" (address self)  ">"))
 
 (class Class ()
   ; Class of class object.
@@ -1016,24 +948,24 @@
   ; If .init method has argument, must invoke after create an instance.
   ; Otherwise automatically invoke .init method.
   (let (o (dict))
-    (for (cls self) cls (cls (find-class ([] cls :super)))
+    (for (cls self) cls (cls (find-class cls->super))
       (foreach (f (x) ([] o (keyword x) nil))
-               ([] cls :fields)))
-    ([] o :class ([] self :symbol))
-    (if (= (params (find-method ([] o :class) '.init)) '(self)) (.init o)
+               cls->fields))
+    (<- o->class self->symbol)
+    (if (= (params (find-method o->class '.init)) '(self)) (.init o)
         o)))
 
 (method Class .symbol ()
   ; Returns the class symbol.
-  (&symbol self))
+  self->symbol)
 
 (method Class .super ()
   ; Returns the class representing the superclass of the receiver.
-  (find-class (&super self)))
+  (find-class self->super))
 
 (method Class .features ()
   ; Returns the feature list representing the feature of the receiver.
-  (map find-class (&features self)))
+  (map find-class self->features))
 
 (class Exception ()
   ; The Exception class is the superclass of all exceptions.
@@ -1042,21 +974,22 @@
   message status-cd stack-trace)
 
 (method Exception .init (:opt message :key status-cd)
-  (&message! self message)
-  (&status-cd! self (|| status-cd 1)))
+  (<- self->message message
+      self->status-cd (|| status-cd 1))
+  self)
 
 (method Exception .to-s ()
   ; Returns a String representing the receiver.
-  (let (class-name (string (&class self)) msg (&message self))
+  (let (class-name (string self->class) msg self->message)
     (if (nil? msg) class-name
         (concat class-name " -- " msg))))
 
 (method Exception .status-cd ()
-  (&status-cd self))
+  self->status-cd)
 
 (method Exception .stack-trace ()
   ; Returns stack trace.
-  (&stack-trace self))
+  self->stack-trace)
 
 (method Exception .print-stack-trace ()
   ; Display stack trace.
@@ -1073,7 +1006,8 @@
   )
 
 (method SystemExit .init ()
-  (&status-cd! self 0))
+  (<- self->status-cd 0)
+  self)
 
 (class Error (Exception)
   ; All built-in, non-system-exiting exceptions are derived from this class.
@@ -1109,7 +1043,8 @@
   )
 
 (method UnicodeError .init (args)
-  (&message! self (str "illegal byte sequence " (map hex args))))
+  (<- self->message (str "illegal byte sequence " (map hex args)))
+  self)
 
 (class EOFError (StateError)
   ; Raised when reached EOF unexpectedly.
@@ -1127,39 +1062,44 @@
   ; It should not be construct by new.
   ; The corresponding file does not have to exist.
   ; You can read and write files to the corresponding path as needed.
-  path)
+  path absolute?)
+
+(method Path .init (path absolute?)
+  (<- self->path path self->absolute? absolute?)
+  self)
 
 (function path (path-name)
   ; Constructs and returns the path object corresponding to path-name.
-  ; Internally it just holds the string path-name as a list of filenames.
-  ;     (path "foo/bar/buzz") -- ("foo" "bar" "buzz")
-  ;     (path "/etc") -- ("/" "etc")
+  ; Internally it just holds the string path-name as a list of filenapath functionmes.
+  ;     (path "./foo/bar/buzz") -- ("." "foo" "bar" "buzz")
+  ;     (path "/etc") -- ("etc")
   ; The first `~` expands to the home directory using the environment variable.
-  ; Any `~` other than the beginning is ignored.
   ;     (path "~/.vimrc") <=> ("home" "foo" ".vimrc")
-  ;     (path "~/~.vimrc") <=> ("home" "foo" ".vimrc")
-  ; All characters `\` in path-name are replaced with `/` for processing.
-  ;     (path "C:\\foo") <=> ("C:" "foo")
-  ; `.` and `..` included in path-name are not treated specially.
   ; Path class places the highest priority on keeping the implementation simple, and assumes that these features are implemente where necessary.
-  ;     (path "foo/bar/../buzz") <=> ("foo" "bar" ".." "buzz")
+  ;     (path "foo/bar/../buzz") <=> ("foo" "buzz")
   ; Two or more consecutive `/`s or trailing `/`s are ignored.
   ;     (path "foo//bar/") <=> ("foo" "bar")
   (if (is-a? path-name Path) path-name
-      (let (c nil path nil root? nil)
-        (if (prefix? path-name "/") (<- root? true)
-            (prefix? path-name "~") (<- path-name (concat (if (!= $hostname :windows) (getenv "HOME")
-                                                              (concat (getenv "HOMEDRIVE") (getenv "HOMEPATH")))
-                                                          "/" (slice path-name 1))))
-        (<- path (reject empty?
-                         (split
-                           (with-memory-stream ($out)
-                             (with-memory-stream ($in path-name)
-                               (while (<- c (read-char))
-                                 (if (= c "\\") (write-bytes "/")
-                                     (write-bytes c)))))
-                           "/")))
-        (&path! (.new Path) (if root? (cons "/" path) path)))))
+      (let (path nil absolute? nil windows? (== $hostname :windows)
+                 home (if windows? (concat (getenv "HOMEDRIVE") (getenv "HOMEPATH")) (getenv "HOME"))
+                 sepr? (if windows? (f (x) (in? x '("/" "\\"))) (f (x) (= x "/")))
+                 parse-file (f (x s e)
+                              (if (< s e)
+                                  (let (file (slice x s e))
+                                    (if (= file ".") (if (nil? path) (push! file path))
+                                        (= file "..") (if (nil? path) (push! file path) (pop! path))
+                                        (push! file path))))))
+        (if (prefix? path-name "~") (<- path-name (concat home (slice path-name 1)) absolute? true)
+            (|| (&& windows? (> (len path-name) 1) (= ([] path-name 1) ":"))
+                (&& (! windows?) (prefix? path-name "/"))) (<- absolute? true))
+        (let (s 0 e (len path-name))
+          (for (i 0) (< i e) (i (++ i))
+            (when (sepr? ([] path-name i))
+              (parse-file path-name s i)
+              (<- s (++ i))))
+          (parse-file path-name s e)
+          (if (nil? path) nil
+              (.init (.new Path) (reverse! path) absolute?))))))
 
 (function path.getcwd ()
   ; Returns the path corresponding to the current directory.
@@ -1167,7 +1107,7 @@
 
 (method Path .name ()
   ; Returns file name.
-  (last (&path self)))
+  (last self->path))
 
 (method Path .base-name ()
   ; Returns base name (the string up to the first dot).
@@ -1182,7 +1122,7 @@
         (last suffixes))))
 
 (method Path .suffix! (suffix)
-  (.resolve (.parent self) (str (.but-suffix self) "." suffix)))
+  (.resolve self (str "../" (.but-suffix self) "." suffix)))
 
 (method Path .but-suffix ()
   ; Returns the name without the suffix.
@@ -1190,39 +1130,32 @@
     (if (nil? suffixes) name
         (join (cons name (butlast suffixes)) "."))))
 
-(method Path .root? ()
-  ; Returns whether the receiver is a root directory.
-  (&& (.absolute? self) (nil? (.parent self))))
-
 (method Path .parent ()
   ; Returns the parent path
   ; If the receiver is root directory, returns nil.
   ; However, the receiver is relative path, non-root directory may return nil.
-  (let (path (butlast (&path self)))
-    (if path (&path! (.new Path) path))))
+  (.resolve self ".."))
 
 (method Path .resolve (p)
   ; Resolve the given path against this path.
   ; If the argument is a character string, convert it to a path object before processing.
   ; If the path parameter is an absolute path then this method trivially returns path
   ; Otherwise this method concatenate this path and the speciifed path.
-  ; `.` and `..` included in path-name are not treated specially.
   (if (.absolute? (<- p (path p))) p
       (path (concat (.to-s self) "/" (.to-s p)))))
 
 (method Path .relativize (p)
   ; Returns a relative path between the receiver and a given path.
-  (let (relative nil src (&path self) dst (&path p))
+  (let (relative nil src self->path dst p->path)
     (while src
       (if (= (pop! src) (car dst)) (pop! dst)
           (push! ".." relative)))
-    (&path! (.new Path) (concat relative dst))))
+    (.init (.new Path) (concat relative dst) nil)))
 
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
-  (let (first (car (&path self)))
-    (if (== $hostname :windows) (&& (= (len first) 2) (= ([] first 1) ":"))
-        (= first "/"))))
+  ; Same as `(! (.relative? self))`.
+  self->absolute?)
 
 (method Path .relative? ()
   ; Same as `(! (.absolute? self))`.
@@ -1241,9 +1174,9 @@
 
 (method Path .to-s ()
   ; Returns a string representation of the receiver.
-  (reduce (f (acc rest)
-            (concat (if (= acc "/") "" acc) "/" rest))
-          (&path self)))
+  (join (if (&& (!= $hostname :windows) (.absolute? self)) (cons "" self->path)
+            self->path)
+        "/"))
 
 (method Path .open (mode)
   ; Returns a stream that reads the contents of the receiver.
@@ -1577,78 +1510,81 @@
   buf rdpos wrpos)
 
 (method MemoryStream .init ()
-  (&buf! self (bytes 64))
-  (&rdpos! self 0)
-  (&wrpos! self 0))
+  (<- self->buf (bytes 64)
+      self->rdpos 0
+      self->wrpos 0)
+  self)
 
 (method MemoryStream .size ()
   ; Returns the number of bytes written to the stream.
-  (&wrpos self))
+  self->wrpos)
 
 (method MemoryStream .buf ()
   ; Returns the buffer of the receiver.
-  (slice (&buf self) (&rdpos self) (&wrpos self)))
+  (slice self->buf self->rdpos self->wrpos))
 
 (method MemoryStream .reserve (size)
-  (let (req (+ (&wrpos self) size) buf-size (len (&buf self)))
+  (let (req (+ self->wrpos size) buf-size (len self->buf))
     (when (< buf-size req)
       (while (< (<- buf-size (* buf-size 2)) req))
       (let (buf (bytes buf-size))
-        (memcpy (&buf self) 0 buf 0 (&wrpos self))
-        (&buf! self buf)))
+        (memcpy self->buf 0 buf 0 self->wrpos)
+        (<- self->buf buf)))
     self))
 
 (method MemoryStream .read-byte ()
   ; Implementation of the Stream.read-byte.
-  (let (rdpos (&rdpos self))
-    (if (= rdpos (&wrpos self)) -1
-        (begin0 ([] (&buf self) rdpos)
-                (&rdpos! self (++ rdpos))))))
+  (let (rdpos self->rdpos)
+    (if (= rdpos self->wrpos) -1
+        (begin0 ([] self->buf rdpos)
+                (<- self->rdpos (++ rdpos))))))
 
 (method MemoryStream .read-bytes (:opt buf from size)
   ; Implementation of the Stream.read-bytes.
-  (if (nil? buf) (slice (&buf self) (&rdpos self) (&wrpos self))
-      (let (rest (- (&wrpos self) (&rdpos self)))
+  (if (nil? buf) (slice self->buf self->rdpos self->wrpos)
+      (let (rest (- self->wrpos self->rdpos))
         (if (< rest size) (<- size rest))
-        (memcpy (&buf self) (&rdpos self) buf (&wrpos self) size)
+        (memcpy self->buf self->rdpos buf self->wrpos size)
         size)))
 
 (method MemoryStream .write-byte (byte)
   ; Implementation of the Stream.write-byte.
-  (let (wrpos (&wrpos self))
+  (let (wrpos self->wrpos)
     (.reserve self 1)
-    ([] (&buf self) wrpos byte)
-    (&wrpos! self (++ wrpos))
+    ([] self->buf wrpos byte)
+    (<- self->wrpos (++ wrpos))
     byte))
 
 (method MemoryStream .write-bytes (x :opt from size)
   ; Implementation of the Stream.write-bytes.
   (.reserve self (|| size (<- size (byte-len x))))
-  (memcpy x (|| from 0) (&buf self) (&wrpos self) size)
-  (&wrpos! self (+ (&wrpos self) size))
+  (memcpy x (|| from 0) self->buf self->wrpos size)
+  (<- self->wrpos (+ self->wrpos size))
   (if from size x))
 
 (method MemoryStream .seek (offset)
   ; Sets the file position indicator of the receiver.
   ; Returns the receiver.
-  (if (! (<= 0 offset (&wrpos self))) (raise IndexError)
-      (&rdpos! self offset)))
+  (if (! (<= 0 offset self->wrpos)) (raise IndexError)
+      (<- self->rdpos offset))
+  self)
 
 (method MemoryStream .tell ()
   ; Returns current byte position in stream.
-  (&rdpos self))
+  self->rdpos)
 
 (method MemoryStream .to-s ()
   ; Returns the contents written to the stream as a string.
-  (let (size (&wrpos self))
+  (let (size self->wrpos)
     (if (= size 0) ""
-        (string (&buf self) 0 size))))
+        (string self->buf 0 size))))
 
 (method MemoryStream .reset ()
   ; Empty the contents of the stream.
   ; Returns the receiver.
-  (&rdpos! self 0)
-  (&wrpos! self 0))
+  (<- self->rdpos 0
+      self->wrpos 0)
+  self)
 
 (class FileStream (Stream)
   ; Provides I/O functions for files.
@@ -1657,46 +1593,47 @@
   fp)
 
 (method FileStream .init (fp)
-  (&fp! self fp))
+  (<- self->fp fp)
+  self)
 
 (method FileStream .read-byte ()
   ; Implementation of the Stream.read-byte.
-  (fgetc (&fp self)))
+  (fgetc self->fp))
 
 (method FileStream .read-bytes (:opt buf from size)
   ; Implementation of the Stream.read-bytes.
   (if (nil? buf)
       (let (out (.new MemoryStream) buf (bytes 1024))
-        (while (> (<- size (fread buf 0 1024 (&fp self))) 0)
+        (while (> (<- size (fread buf 0 1024 self->fp)) 0)
           (.write-bytes out buf 0 size))
         (.buf out))
-      (fread buf from size (&fp self))))
+      (fread buf from size self->fp)))
 
 (method FileStream .read-line ()
   ; Override of the Stream.read-line.
-  (fgets (&fp self)))
+  (fgets self->fp))
 
 (method FileStream .write-byte (byte)
   ; Implementation of the Stream.write-byte.
-  (fputc byte (&fp self)))
+  (fputc byte self->fp))
 
 (method FileStream .write-bytes (x :opt from size)
   ; Implementation of the Stream.write-bytes.
-  (fwrite x (|| from 0) (|| size (byte-len x)) (&fp self))
+  (fwrite x (|| from 0) (|| size (byte-len x)) self->fp)
   (if from size x))
 
 (method FileStream .seek (offset)
   ; Sets the file position indicator of the receiver.
   ; Returns the receiver.
-  (fseek (&fp self) offset)
+  (fseek self->fp offset)
   self)
 
 (method FileStream .tell ()
   ; Returns the current value of the file position indicator of the receiver.
-  (ftell (&fp self)))
+  (ftell self->fp))
 
 (method FileStream .close ()
-  (fclose (&fp self)))
+  (fclose self->fp))
 
 (class AheadReader ()
   ; A one-character look-ahead reader.
@@ -1707,28 +1644,29 @@
 (method AheadReader .init ()
   ; initializing AheadReader with (dynamic $in).
   ; Returns the receiver.
-  (&stream! self (dynamic $in))
-  (&next! self (.read-char (&stream self)))
-  (&token! self (.new MemoryStream))
-  (&lineno! self 1))
+  (<- self->stream (dynamic $in)
+      self->next (.read-char self->stream)
+      self->token (.new MemoryStream)
+      self->lineno 1)
+  self)
 
 (method AheadReader .next ()
   ; Returns a pre-read character.
-  (&next self))
+  self->next)
 
 (method AheadReader .next? (predicate)
   ; Returns whether The end of the file has not been reached and the predicate is satisfied
   ; EOF is reached, returns nil.
-  (&& (&next self) (predicate (&next self))))
+  (&& self->next (predicate self->next)))
 
 (method AheadReader .skip (:opt expected)
   ; Skip next character and returns it.
   ; Error if expected is specified and the next character is not the same as the expected.
-  (let (next (&next self))
+  (let (next self->next)
     (if (nil? next) (raise EOFError "unexpected EOF")
         (&& expected (!= next expected)) (raise StateError (str "unexpected character '" next "`"))
-        (= next "\n") (&lineno! self (++ (&lineno self))))
-    (&next! self (.read-char (&stream self)))
+        (= next "\n") (<- self->lineno (++ self->lineno)))
+    (<- self->next (.read-char self->stream))
     next))
 
 (method AheadReader .skip-escape ()
@@ -1751,15 +1689,14 @@
   ; Skip line.
   ; Returns line.
   ; If stream reached eof, returns nil.
-  (let (next (&next self))
+  (let (next self->next)
     (if (nil? next) (.skip self)    ; raise error.
         (= next "\n") (begin (.skip self) "")
-        (let (line (.read-line (&stream self)))
-          (if (nil? line) (&next! self nil)
-              (begin
-                (<- line (concat next line))
-                (&lineno! self (++ (&lineno self)))
-                (&next! self (.read-char (&stream self)))))
+        (let (line (.read-line self->stream))
+          (if (nil? line) (<- self->next nil)
+              (<- line (concat next line)
+                  self->lineno (++ self->lineno)
+                  self->next (.read-char self->stream)))
           line))))
 
 (method AheadReader .skip-space ()
@@ -1769,7 +1706,7 @@
   self)
 
 (method AheadReader .skip-sign ()
-  (let (next (&next self))
+  (let (next self->next)
     (if (= next "+") (begin (.skip self) nil)
         (= next "-") (begin (.skip self) true)
         nil)))
@@ -1794,7 +1731,7 @@
         val)))
 
 (method AheadReader .skip-unumber ()
-  (let (val (.skip-uint self) next (&next self))
+  (let (val (.skip-uint self) next self->next)
     (if (= next "x")
         (let (radix (if (= val 0) 16 val) val 0)
           (.skip self)
@@ -1837,31 +1774,31 @@
 (method AheadReader .put (o)
   ; Put the o to the end of the token regardless of the stream.
   ; Returns o;
-  (.write-bytes (&token self) o)
+  (.write-bytes self->token o)
   o)
 
 (method AheadReader .token ()
   ; Returns the token string currently cut out.
   ; In the process of processing, token is initialized.
-  (begin0 (.to-s (&token self))
-          (.reset (&token self))))
+  (begin0 (.to-s self->token)
+          (.reset self->token)))
 
 (method AheadReader .stream ()
   ; Returns the stream held by the receiver.
-  (&stream self))
+  self->stream)
 
 (method AheadReader .to-s ()
-  (str "<" (&symbol (.class self)) ":0x" (address self) " "
-       (list :next (&next self) :lineno (&lineno self)) ">"))
+  (str "<" (.symbol (.class self)) ":0x" (address self) " "
+       (list :next self->next :lineno self->lineno) ">"))
 
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (|| (in? (&next self) "!#$%&*./<=>?^[]_{|}~")
+  (|| (in? self->next "!#$%&*./<=>?^[]_{|}~")
       (.next? self alpha?)))
 
 (method ParenLexer .identifier-sign? ()
-  (in? (&next self) "+-"))
+  (in? self->next "+-"))
 
 (method ParenLexer .identifier-trail? ()
   (|| (.identifier-symbol-alpha? self)
@@ -1903,19 +1840,19 @@
 
 (method ParenLexer .lex-string ()
   (.skip self)
-  (while (!= (&next self) "\"") (.get-escape self))
+  (while (!= self->next "\"") (.get-escape self))
   (.skip self "\"")
   (.token self))
 
 (method ParenLexer .lex ()
   (.skip-space self)
-  (let (next (&next self))
+  (let (next self->next)
     (if (nil? next) '(:EOF)
         (= next "(") (begin (.skip self) '(:open-paren))
         (= next ")") (begin (.skip self) '(:close-paren))
         (= next "'") (begin (.skip self) '(:quote))
         (= next "`") (begin (.skip self) '(:backquote))
-        (= next ",") (begin (.skip self) (if (= (&next self) "@") (begin (.skip self) '(:unquote-splicing)) '(:unquote)))
+        (= next ",") (begin (.skip self) (if (= self->next "@") (begin (.skip self) '(:unquote-splicing)) '(:unquote)))
         (= next "\"") (list :atom (.lex-string self))
         (= next ":") (list :atom (.lex-keyword self))
         (= next ";") (begin (.skip-line self) (.lex self))
@@ -1928,31 +1865,33 @@
   lexer token-type token)
 
 (method ParenReader .init ()
-  (&lexer! self (.new ParenLexer)))
+  (<- self->lexer (.new ParenLexer))
+  self)
 
 (method ParenReader .scan ()
-  (let ((token-type :opt token) (.lex (&lexer self)))
-    (&token-type! self token-type)
-    (&token! self token)))
+  (let ((token-type :opt token) (.lex self->lexer))
+    (<- self->token-type token-type
+        self->token token)
+    self))
 
 (method ParenReader .parse-list ()
   (let (parse-cdr (f (acc)
                     (.scan self)
-                    (if (== (&token-type self) :close-paren) (reverse! acc)
-                        (== (&token-type self) :EOF) (raise SyntaxError "missing close-paren")
+                    (if (== self->token-type :close-paren) (reverse! acc)
+                        (== self->token-type :EOF) (raise SyntaxError "missing close-paren")
                         (parse-cdr (cons (.parse self) acc)))))
     (parse-cdr nil)))
 
 (method ParenReader .parse ()
-  (let (type (&token-type self))
+  (let (type self->token-type)
     (if (== type :EOF) nil
-        (== type :atom) (&token self)
+        (== type :atom) self->token
         (== type :open-paren) (.parse-list self)
         (== type :quote) (list 'quote (.parse (.scan self)))
         (== type :backquote) (list 'quasiquote (.parse (.scan self)))
         (== type :unquote) (list 'unquote (.parse (.scan self)))
         (== type :unquote-splicing) (list 'unquote-splicing (.parse (.scan self)))
-        (== type :reader-macro) (apply (|| ([] $read-table (&token self)) (raise ArgumentError "undefined reader macro")) (list self))
+        (== type :reader-macro) (apply (|| ([] $read-table self->token) (raise ArgumentError "undefined reader macro")) (list self))
         (raise SyntaxError))))
 
 (macro unquote (expr)
@@ -1964,24 +1903,24 @@
 (macro quasiquote (expr)
   (let (descend
          (f (x level)
-           (if (atom? x) (list quote x)
+           (if (atom? x) (list 'quote x)
                (let (ope (car x))
-                 (if (= ope 'quasiquote) (list cons ''quasiquote (descend (cdr x) (++ level)))
+                 (if (= ope 'quasiquote) (list 'cons ''quasiquote (descend (cdr x) (++ level)))
                      (= ope 'unquote) (if (= level 0) (cadr x)
-                                          (list cons ''unquote (descend (cdr x) (-- level))))
+                                          (list 'cons ''unquote (descend (cdr x) (-- level))))
                      (= ope 'unquote-splicing) (if (= level 0)
-                                                   (cadr x) (list cons ''unquote-splicing (descend (cdr x) (-- level))))
+                                                   (cadr x) (list 'cons ''unquote-splicing (descend (cdr x) (-- level))))
                      (list concat (descend-car (car x) level) (descend (cdr x) level))))))
          descend-car
          (f (x level)
            (if (atom? x) (list quote (list x))
                (let (ope (car x))
-                 (if (= ope 'quasiquote) (list list (list cons ''quasiquote (descend (cdr x) (++ level))))
-                     (= ope 'unquote) (if (= level 0) (cons list (cdr x))
-                                          (list list (list cons ''unquote (descend (cdr x) (-- level)))))
+                 (if (= ope 'quasiquote) (list 'list (list 'cons ''quasiquote (descend (cdr x) (++ level))))
+                     (= ope 'unquote) (if (= level 0) (cons 'list (cdr x))
+                                          (list 'list (list 'cons ''unquote (descend (cdr x) (-- level)))))
                      (= ope 'unquote-splicing) (if (= level 0)
-                                                   (cons concat (cdr x)) (list list (list cons ''unquote-splicing (descend (cdr x) (-- level)))))
-                     (list list (list concat (descend-car (car x) level) (descend (cdr x) level))))))))
+                                                   (cons 'concat (cdr x)) (list 'list (list cons ''unquote-splicing (descend (cdr x) (-- level)))))
+                     (list 'list (list 'concat (descend-car (car x) level) (descend (cdr x) level))))))))
     (descend expr 0)))
 
 (method ParenReader .read ()
@@ -1992,7 +1931,7 @@
   ; next must be a single character string.
   ; When the reserved character string is read, the processing moves to the specified function f and the evaluation result is expanded.
   ; Returns nil.
-  (list [] $read-table (list quote (symbol next)) (cons f (cons params body))))
+  (list '[] '$read-table (list 'quote (symbol next)) (cons 'f (cons params body))))
 
 (function read-byte ()
   (.read-byte (dynamic $in)))
@@ -2041,33 +1980,26 @@
   ;        (if s (.write-bytes ms s))
   ;        expr1 expr2 ...
   ;        (if s (.to-s ms)))
-  (with-gensyms (gs)
-    (list let (list gs s ms '(.new MemoryStream))
-          (list if gs
-                (list begin
-                      (list '.write-bytes ms gs)
-                      (cons begin body))
-                (list begin
-                      (cons begin body)
-                      (list '.to-s ms))))))
+  (cons 'let (cons (list ms '(.new MemoryStream))
+                   (if (nil? s) (list (cons 'begin body) (list '.to-s ms))    ; output stream
+                       (cons (list '.write-bytes ms s) body)))))              ; input stream
 
 (macro with-open ((sym p mode) :rest body)
   ; Create file stream context.
   ; The file stream is guaranteed to be closed when exiting the context.
   ; Returns evaluation results for expression body.
   (with-gensyms (gsym)
-    (list let (list gsym nil)
-          (list unwind-protect
-                (cons let (cons (list sym (list <- gsym (list '.open (list path p) mode)))
-                                body))
-                (list if gsym (list '.close gsym))))))
+    (list 'let (list gsym nil)
+          (list 'unwind-protect
+                (cons 'let (cons (list sym (list '<- gsym (list '.open (list 'path p) mode))) body))
+                (list 'if gsym (list '.close gsym))))))
 
 (macro with-process ((sym cmd mode) :rest body)
   (with-gensyms (gsym)
-    (list let (list gsym (list popen cmd (list index mode ''(:read :write))))
-          (list unwind-protect
-                (cons let (cons (list sym (list '.init '(.new FileStream) gsym)) body))
-                (list pclose gsym)))))
+    (list 'let (list gsym (list 'popen cmd (list 'index mode ''(:read :write))))
+          (list 'unwind-protect
+                (cons 'let (cons (list sym (list '.init '(.new FileStream) gsym)) body))
+                (list 'pclose gsym)))))
 
 ;; execution.
 
@@ -2131,10 +2063,10 @@
                      Exception (f (e) (.print-stack-trace e) (exit (.status-cd e))))
     (if (.file? $parenrc) (load $parenrc))
     (if (nil? args) (repl)
-        (let (file-name (car args) script (select1 .file?
-                                                   (map (f (x) (apply .resolve x))
-                                                        (product (cons (path.getcwd) $runtime-path)
-                                                                 (list file-name (str file-name ".p"))))))
+        (let (file-name (path (car args)) script (select1 .file?
+                                                          (map (f (x) (apply .resolve x))
+                                                               (product (cons (path.getcwd) $runtime-path)
+                                                                        (list file-name (.suffix! file-name "p"))))))
           (if (nil? script) (raise ArgumentError (str "unreadable file " file-name))
               (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 
