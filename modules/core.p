@@ -98,12 +98,30 @@
 
 (built-in-function macroexpand-1)
 
-(function! macroexpand (expr)
-  (let (expand (f (x) (if (cons? x) (cons (macroexpand (car x)) (expand (cdr x))) x)))
-    (if (cons? expr) (begin
-                       (while (! (== expr (<- expr (macroexpand-1 expr)))))
-                       (expand expr))
-        expr)))
+(function! macroexpand (expr :key ignores)
+  (let (ignore (f (x)
+                 (if (cons? x) (begin (ignore (car x)) (ignore (cdr x)))
+                     (<- ignores (cons x ignores)) x)
+                 x)
+               expand1 (f (x)
+                         (if x (cons (macroexpand (car x) :ignores ignores)
+                                     (expand1 (cdr x)))))
+               expand2 (f (x)
+                         (if (cdr x) (cons (ignore (car x))
+                                           (cons (macroexpand (cadr x) :ignores ignores)
+                                                 (expand2 (cddr x))))
+                             x (raise SyntaxError (str "missing value for variable " expr)))))
+    (if (! (cons? expr)) expr
+        (let ((ope :rest args) expr)
+          (if (in? ope ignores) (cons ope (expand1 args))
+              (macro? ope) (macroexpand (macroexpand-1 expr) :ignores ignores)
+              (cons ope
+                    (if (== ope 'quote) args
+                        (== ope '<-) (expand2 args)
+                        (== ope 'f) (cons (car args) (expand1 (cdr args)))
+                        (== ope 'macro) (cons (car args) (cons (cadr args) (expand1 (cddr args))))
+                        (in? ope '(let catch)) (cons (expand2 (car args)) (expand1 (cdr args)))
+                        (expand1 args))))))))
 
 (macro function (name args :rest body)
   (let (expand-body (f (x) (if x (cons (macroexpand (car x)) (expand-body (cdr x))))))
@@ -1031,7 +1049,7 @@
   )
 
 (class NotImplementedError (StateError)
-   ; In user defined base classes, abstract methods should raise this exception when they require derived classes to override the method, or while the class is being developed to indicate that the real implementation still needs to be added.
+  ; In user defined base classes, abstract methods should raise this exception when they require derived classes to override the method, or while the class is being developed to indicate that the real implementation still needs to be added.
   )
 
 (class SyntaxError (StateError)
@@ -2094,15 +2112,13 @@
 (reader-macro "[" (reader)
   ; Define array literal reader.
   (let ($G-l nil $G-v nil)
-    (while (!= (<- $G-v (.read reader)) '])
-      (push! $G-v $G-l))
+    (while (!= (<- $G-v (.read reader)) ']) (push! $G-v $G-l))
   (array (reverse! $G-l))))
 
 (reader-macro "{" (reader)
   ; Define dictionary literal reader.
   (let ($G-d (dict) $G-k nil)
-    (while (!= (<- $G-k (.read reader)) '})
-      ([] $G-d $G-k (.read reader)))
+    (while (!= (<- $G-k (.read reader)) '}) ([] $G-d $G-k (.read reader)))
     $G-d))
 
 (reader-macro "p" (reader)
