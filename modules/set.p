@@ -4,24 +4,25 @@
   eq? elements)
 
 (method Set .init (eq?)
-  (&eq?! self eq?))
+  (<- self->eq? eq?)
+  self)
 
 (method Set .include? (val)
-  (let (eq? (&eq? self))
-    (dolist (elt (&elements self))
+  (let (eq? self->eq?)
+    (dolist (elt self->elements)
       (if (eq? elt val) (return true)))
     (return nil)))
 
 (method Set .add (val)
   (if (! (.include? self val))
-      (&elements! self (cons val (&elements self))))
+      (<- self->elements (cons val self->elements)))
   self)
 
 (method Set .elements ()
-  (&elements self))
+  self->elements)
 
 (method Set .size ()
-  (len (&elements self)))
+  (len self->elements))
 
 (function! main (args)
   (let (set (.init (.new Set) =))

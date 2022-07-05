@@ -3,38 +3,35 @@
 (class Matrix ()
   shape contents)
 
-(function matrix (shape)
-  ; Returns a matrix instance corresponding to the shape (x y).
-  (.init (.new Matrix) shape))
-
 (method Matrix .init (shape)
   ; Initialize the receiver to a matrix object with width x height y based on a point object that has coordinates (x, y).
   (if (|| (!= (len shape) 2) (some? (f (x) (<= x 0)) shape)) (raise ArgumentError))
-  (&shape! self shape)
-  (&contents! self (array (apply * shape))))
+  (<- self->shape shape
+      self->contents (array (apply * shape)))
+  self)
 
 (method Matrix .shape ()
   ; Returns the elements of the shape list give the lengths of the corresponding the receiver dimensions.
-  (&shape self))
+  self->shape)
 
 (method Matrix .inside? (p)
   ; Returns whether the position corresponding to the point is within the receiver.
-  (let ((x y) (&shape self))
+  (let ((x y) self->shape)
     (&& (<= 0 (car p) (-- x))
         (<= 0 (cadr p) (-- y)))))
 
 (method Matrix .index (p)
   (if (! (.inside? self p)) (raise IndexError)
-      (+ (car p) (* (cadr p) (car (&shape self))))))
+      (+ (car p) (* (cadr p) (car self->shape)))))
 
 (method Matrix .at (p)
   ; Returns the value of receiver at the position corresponding to the point object.
-  ([] (&contents self) (.index self p)))
+  ([] self->contents (.index self p)))
 
 (method Matrix .put (p v)
   ; Update the value of the receiver at the position corresponding to the point object to v.
   ; Returns the receiver.
-  ([] (&contents self) (.index self p) v)
+  ([] self->contents (.index self p) v)
   self)
 
 (macro domatrix ((p m) :rest body)
@@ -46,6 +43,10 @@
          (dotimes (,gj ,gy)
            (let (,p (list ,gi ,gj))
              ,@body))))))
+
+(function matrix (shape)
+  ; Returns a matrix instance corresponding to the shape (x y).
+  (.init (.new Matrix) shape))
 
 (function! main (args)
   (let (m (matrix '(2 3)))

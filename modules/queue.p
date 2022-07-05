@@ -5,35 +5,36 @@
   size head tail)
 
 (method Queue .init ()
-  (&size! self 0))
+  (<- self->size 0)
+  self)
 
 (method Queue .empty? ()
   ; Returns whether the receiver is empty.
-  (= (&size self) 0))
+  (= self->size 0))
 
 (method Queue .size ()
   ; Returns the size of the receiver.
-  (&size self))
+  self->size)
 
 (method Queue .enqueue (x)
   ; Add element x.
   ; Returns the receiver.
-  (let (tail (&tail self))
-    (&tail! self (cons x nil))
-    (&size! self (++ (&size self)))
-    (if (nil? tail) (&head! self (&tail self))
-        (cdr! tail (&tail self)))
+  (let (tail self->tail)
+    (<- self->tail (cons x nil)
+        self->size (++ self->size))
+    (if (nil? tail) (<- self->head self->tail)
+        (cdr! tail self->tail))
     self))
 
 (method Queue .dequeue ()
   ; Returns the first element.
   ; If the receiver is empty, returns nil.
-  (let (head (&head self))
+  (let (head self->head)
     (if (nil? head) nil
         (begin
-          (if (== head (&tail self)) (&tail! self nil))
-          (&head! self (cdr head))
-          (&size! self (-- (&size self)))
+          (if (== head self->tail) (<- self->tail nil))
+          (<- self->head (cdr head))
+          (<- self->size (-- self->size))
           (car head)))))
 
 (function! main (args)

@@ -47,25 +47,25 @@
   relative-offset-of-local-header)
 
 (method ZipEntry .uncompressed-size ()
-  (&uncompressed-size self))
+  self->uncompressed-size)
 
 (method ZipEntry .compressed-size ()
-  (&compressed-size self))
+  self->compressed-size)
 
 (method ZipEntry .timestamp ()
-  (datetime.parse-msdos-datetime (&last-mod-file-date self) (&last-mod-file-time self)))
+  (datetime.parse-msdos-datetime self->last-mod-file-date self->last-mod-file-time))
 
 (method ZipEntry .file-name ()
-  (string (&file-name self)))
+  (string self->file-name))
 
 (method ZipEntry .uncompress ()
-  (let (compression-method (&compression-method self) contents (&file-data self))
+  (let (compression-method self->compression-method contents self->file-data)
     (if (= compression-method $zip.compression-method.no-compression) contents
         (= compression-method $zip.compression-method.deflated) (deflate.uncompress contents)
         (raise ZipError "unsupported compression method"))))
 
 (method ZipEntry .compress ()
-  (let (compression-method (&compression-method self) contents (&file-data self))
+  (let (compression-method self->compression-method contents self->file-data)
     (if (= compression-method $zip.no-compression) contents
         (raise ZipError "unsupported compression method"))))
 
@@ -75,15 +75,16 @@
   buf pos)
 
 (method ZipStream .skip (n)
-  (&pos! self (+ (&pos self) n)))
+  (<- self->pos (+ self->pos n)))
 
 ;; Reader
 
 (class ZipReader (ZipStream))
 
 (method ZipReader .init ()
-  (&pos! self 0)
-  (&buf! self (read-bytes)))
+  (<- self->pos 0
+      self->buf (read-bytes))
+  self)
 
 (method ZipReader .skip-data-descriptor (n)
   (while (! (in? (.peek-u32 self) $zip.headers))
@@ -92,7 +93,7 @@
 
 (method ZipReader .read-u16 ()
   (begin0
-    (bin.ui16LE (&buf self) (&pos self))
+    (bin.ui16LE self->buf self->pos)
     (.skip self 2)))
 
 (method ZipReader .read-u32 ()
@@ -101,29 +102,30 @@
     (.skip self 4)))
 
 (method ZipReader .peek-u32 ()
-  (bin.ui32LE (&buf self) (&pos self)))
+  (bin.ui32LE self->buf self->pos))
 
 (method ZipReader .read-size (len)
   (begin0
-    (bytes (&buf self) (&pos self) (+ (&pos self) len))
+    (bytes self->buf self->pos (+ self->pos len))
     (.skip self len)))
 
 (method ZipReader .read1 ()
   (let (entry (.new ZipEntry))
     (.read-u32 self)
-    (&version-needed-to-extract! entry (.read-u16 self))
-    (&general-purpose-bit-flag! entry (.read-u16 self))
-    (&compression-method! entry (.read-u16 self))
-    (&last-mod-file-time! entry (.read-u16 self))
-    (&last-mod-file-date! entry (.read-u16 self))
-    (&crc-32! entry (.read-u32 self))
-    (&compressed-size! entry (.read-u32 self))
-    (&uncompressed-size! entry (.read-u32 self))
-    (&file-name-length! entry (.read-u16 self))
-    (&extra-field-length! entry (.read-u16 self))
-    (&file-name! entry (.read-size self (&file-name-length entry)))
-    (&extra-field! entry (.read-size self (&extra-field-length entry)))
-    (&file-data! entry (.read-size self (&compressed-size entry)))))
+    (<- entry->version-needed-to-extract (.read-u16 self)
+        entry->general-purpose-bit-flag (.read-u16 self)
+        entry->compression-method (.read-u16 self)
+        entry->last-mod-file-time (.read-u16 self)
+        entry->last-mod-file-date (.read-u16 self)
+        entry->crc-32 (.read-u32 self)
+        entry->compressed-size (.read-u32 self)
+        entry->uncompressed-size (.read-u32 self)
+        entry->file-name-length (.read-u16 self)
+        entry->extra-field-length (.read-u16 self)
+        entry->file-name (.read-size self entry->file-name-length)
+        entry->extra-field (.read-size self entry->extra-field-length)
+        entry->file-data (.read-size self entry->compressed-size))
+    entry))
 
 (method ZipReader .read ()
   (let (signature (.peek-u32 self))
@@ -138,29 +140,30 @@
   entries)
 
 (method ZipWriter .init ()
-  (&pos! self 0)
-  (&buf! self (bytes 1024)))
+  (<- self->pos 0
+      self->buf (bytes 1024))
+  self)
 
 (method ZipWriter .reserve (n)
-  (let (pos (+ (&pos self) n) size (len (&buf self)))
+  (let (pos (+ self->pos n) size (len self->buf))
     (when (< size pos)
       (while (< (<- size (* size 2)) pos))
       (let (buf (bytes size))
-        (memcpy (&buf self) 0 buf 0 (&pos self))
-        (&buf! self buf)))
-    (&buf self)))
+        (memcpy self->buf 0 buf 0 self->pos)
+        (<- self->buf buf)))
+    self->buf))
 
 (method ZipWriter .write-u16 (val)
-  (bin.ui16LE! (.reserve self 2) (&pos self) val)
+  (bin.ui16LE! (.reserve self 2) self->pos val)
   (.skip self 2))
 
 (method ZipWriter .write-u32 (val)
-  (bin.ui32LE! (.reserve self 4) (&pos self) val)
+  (bin.ui32LE! (.reserve self 4) self->pos val)
   (.skip self 4))
 
 (method ZipWriter .write-bytes (val)
   (let (size (len val))
-    (memcpy val 0 (.reserve self size) (&pos self) size)
+    (memcpy val 0 (.reserve self size) self->pos size)
     (.skip self size)))
 
 (method ZipWriter .add (file :opt alias)
@@ -169,60 +172,61 @@
              mtime (.init (.new DateTime) (.mtime file))
              file-data (.contents file)
              entry (.new ZipEntry))
-    (&general-purpose-bit-flag! entry 0)
-    (&compression-method! entry 0)
-    (&last-mod-file-time! entry (.msdos-time mtime))
-    (&last-mod-file-date! entry (.msdos-date mtime))
-    (&crc-32! entry (crc32.sum file-data))
-    (&compressed-size! entry (len file-data))
-    (&uncompressed-size! entry (.size file))
-    (&file-name-length! entry (len file-name))
-    (&extra-field-length! entry 0)
-    (&file-name! entry file-name)
-    (&extra-field! entry (bytes 0))
-    (&file-data! entry file-data)
-    (&entries! self (cons entry (&entries self)))))
+    (<- entry->general-purpose-bit-flag 0
+        entry->compression-method 0
+        entry->last-mod-file-time (.msdos-time mtime)
+        entry->last-mod-file-date (.msdos-date mtime)
+        entry->crc-32 (crc32.sum file-data)
+        entry->compressed-size (len file-data)
+        entry->uncompressed-size (.size file)
+        entry->file-name-length (len file-name)
+        entry->extra-field-length 0
+        entry->file-name file-name
+        entry->extra-field (bytes 0)
+        entry->file-data file-data
+        self->entries (cons entry self->entries))
+    self))
 
 (method ZipWriter .write-local-file-header (entry)
-  (&relative-offset-of-local-header! entry (&pos self))
+  (<- entry->relative-offset-of-local-header self->pos)
   (.write-u32 self $zip.local-file-header-signature)
   (.write-u16 self $zip.version-need-to-extract)
-  (.write-u16 self (&general-purpose-bit-flag entry))
-  (.write-u16 self (&compression-method entry))
-  (.write-u16 self (&last-mod-file-time entry))
-  (.write-u16 self (&last-mod-file-date entry))
-  (.write-u32 self (&crc-32 entry))
-  (.write-u32 self (&compressed-size entry))
-  (.write-u32 self (&uncompressed-size entry))
-  (.write-u16 self (&file-name-length entry))
-  (.write-u16 self (&extra-field-length entry))
-  (.write-bytes self (&file-name entry))
-  (.write-bytes self (&extra-field entry))
-  (.write-bytes self (&file-data entry)))
+  (.write-u16 self entry->general-purpose-bit-flag)
+  (.write-u16 self entry->compression-method)
+  (.write-u16 self entry->last-mod-file-time)
+  (.write-u16 self entry->last-mod-file-date)
+  (.write-u32 self entry->crc-32)
+  (.write-u32 self entry->compressed-size)
+  (.write-u32 self entry->uncompressed-size)
+  (.write-u16 self entry->file-name-length)
+  (.write-u16 self entry->extra-field-length)
+  (.write-bytes self entry->file-name)
+  (.write-bytes self entry->extra-field)
+  (.write-bytes self entry->file-data))
 
 (method ZipWriter .write-central-directory-header (entry)
   (.write-u32 self $zip.central-file-header-signature)
   (.write-u16 self $zip.version-made-by)
   (.write-u16 self $zip.version-need-to-extract)
-  (.write-u16 self (&general-purpose-bit-flag entry))
-  (.write-u16 self (&compression-method entry))
-  (.write-u16 self (&last-mod-file-time entry))
-  (.write-u16 self (&last-mod-file-date entry))
-  (.write-u32 self (&crc-32 entry))
-  (.write-u32 self (&compressed-size entry))
-  (.write-u32 self (&uncompressed-size entry))
-  (.write-u16 self (&file-name-length entry))
-  (.write-u16 self (&extra-field-length entry))
+  (.write-u16 self entry->general-purpose-bit-flag)
+  (.write-u16 self entry->compression-method)
+  (.write-u16 self entry->last-mod-file-time)
+  (.write-u16 self entry->last-mod-file-date)
+  (.write-u32 self entry->crc-32)
+  (.write-u32 self entry->compressed-size)
+  (.write-u32 self entry->uncompressed-size)
+  (.write-u16 self entry->file-name-length)
+  (.write-u16 self entry->extra-field-length)
   (.write-u16 self 0)     ; extra field length
   (.write-u16 self 0)     ; file comment length
   (.write-u16 self 0)     ; disk number start
   (.write-u16 self 0)     ; internal file attributes
   (.write-u16 self 0)     ; external file attributes
-  (.write-u32 self (&relative-offset-of-local-header entry))
-  (.write-bytes self (&file-name entry)))
+  (.write-u32 self entry->relative-offset-of-local-header)
+  (.write-bytes self entry->file-name))
 
 (method ZipWriter .write-end-of-central-directry-record (central-directory-header-start)
-  (let (end-of-central-directory-record-start (&pos self) entry-count (len (&entries self)))
+  (let (end-of-central-directory-record-start self->pos entry-count (len self->entries))
     (.write-u32 self $zip.end-of-central-dir-signature)
     (.write-u16 self 0)    ; number of this disk
     (.write-u16 self 0)    ; number of the disk with the start of the central directory
@@ -233,12 +237,12 @@
     (.write-u16 self 0)))    ; .ZIP file comment length
 
 (method ZipWriter .write ()
-  (let (entries (reverse (&entries self)) central-directory-header-start nil)
+  (let (entries (reverse self->entries) central-directory-header-start nil)
     (foreach (partial .write-local-file-header self) entries)
-    (<- central-directory-header-start (&pos self))
+    (<- central-directory-header-start self->pos)
     (foreach (partial .write-central-directory-header self) entries)
     (.write-end-of-central-directry-record self central-directory-header-start)
-    (write-bytes (&buf self) 0 (&pos self))))
+    (write-bytes self->buf 0 self->pos)))
 
 ;; API
 

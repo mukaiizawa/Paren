@@ -2,39 +2,6 @@
 
 (import :array)
 
-(function json.obj->str (lis)
-  (with-memory-stream ($out)
-    (write-bytes "{")
-    (let (i 0)
-      (while lis
-        (if (> i 0) (write-bytes ",")
-            (<- i (++ i)))
-        (write-bytes (json->str (car lis)))
-        (write-bytes ":")
-        (<- lis (cdr lis))
-        (assert lis)    ; must be pair
-        (write-bytes (json->str (car lis)))
-        (<- lis (cdr lis))))
-    (write-bytes "}")))
-
-(function json.arr->str (arr)
-  (with-memory-stream ($out)
-    (write-bytes "[")
-    (for (i 0) (< i (len arr)) (i (++ i))
-      (if (> i 0) (write-bytes ","))
-      (write-bytes (json->str ([] arr i))))
-    (write-bytes "]")))
-
-(function json->str (x)
-  ; Returns a list representation of json as a string.
-  (if (cons? x) (json.obj->str x)
-      (array? x) (json.arr->str x)
-      (nil? x) "null"
-      (= x 'true) "true"
-      (= x 'false) "false"
-      (number? x) (str x)
-      (str "\"" x "\"")))
-
 (class JSONReader (AheadReader))
 
 (method JSONReader .parse-object ()
@@ -65,24 +32,21 @@
 
 (method JSONReader .parse-string ()
   (.skip self)
-  (while (!= (&next self) "\"") (.get-escape self))
+  (while (!= (.next self) "\"") (.get-escape self))
   (.skip self)
   (.token self))
 
 (method JSONReader .parse-literal ()
   (if (.next? self digit?) (.skip-number self)
-      (= (.next self) "t")
-      (begin
-        (dostring (c "true") (.skip self c))
-        'true)
-      (= (.next self) "f")
-      (begin
-        (dostring (c "false") (.skip self c))
-        'false)
-      (= (.next self) "n")
-      (begin
-        (dostring (c "null") (.skip self c))
-        nil)
+      (= (.next self) "t") (begin
+                             (dostring (c "true") (.skip self c))
+                             'true)
+      (= (.next self) "f") (begin
+                             (dostring (c "false") (.skip self c))
+                             'false)
+      (= (.next self) "n") (begin
+                             (dostring (c "null") (.skip self c))
+                             nil)
       (raise SyntaxError "unexpected token")))
 
 (method JSONReader .read ()
@@ -93,6 +57,33 @@
         (= next "[") (.parse-array self)
         (= next "\"") (.parse-string self)
         (.parse-literal self))))
+
+(function json->str (x)
+  ; Returns a list representation of json as a string.
+  (if (cons? x) (with-memory-stream ($out)
+                  (write-bytes "{")
+                  (let (i 0)
+                    (while x
+                      (if (> i 0) (write-bytes ",")
+                          (<- i (++ i)))
+                      (write-bytes (json->str (car x)))
+                      (write-bytes ":")
+                      (<- x (cdr x))
+                      (assert x)    ; must be pair
+                      (write-bytes (json->str (car x)))
+                      (<- x (cdr x))))
+                  (write-bytes "}"))
+      (array? x) (with-memory-stream ($out)
+                   (write-bytes "[")
+                   (for (i 0) (< i (len x)) (i (++ i))
+                     (if (> i 0) (write-bytes ","))
+                     (write-bytes (json->str ([] x i))))
+                   (write-bytes "]"))
+      (nil? x) "null"
+      (= x 'true) "true"
+      (= x 'false) "false"
+      (number? x) (str x)
+      (str "\"" x "\"")))
 
 (function! main (args)
   (let (json-str (str "{"

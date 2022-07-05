@@ -4,49 +4,42 @@
   key val left right)
 
 (method SplayNode .init (:opt key val left right)
-  (&key! self key)
-  (&val! self val)
-  (&left! self left)
-  (&right! self right))
+  (<- self->key key
+      self->val val
+      self->left left
+      self->right right)
+  self)
 
 (method SplayNode .rotl ()
-  (let (p (&left self))
-    (&left! self (&right p))
-    (&right! p self)
+  (let (p self->left)
+    (<- self->left p->right p->right self)
     p))
 
 (method SplayNode .rotr ()
-  (let (p (&right self))
-    (&right! self (&left p))
-    (&left! p self)
+  (let (p self->right)
+    (<- self->right p->left p->left self)
     p))
 
 (method SplayNode .rotll ()
-  (let (p (&left self) q (&left p))
-    (&left! p (&right q))
-    (&right! q self)
+  (let (p self->left q p->left)
+    (<- p->left q->right q->right self)
     q))
 
 (method SplayNode .rotrr ()
-  (let (p (&right self) q (&right p))
-    (&right! p (&left q))
-    (&left! q self)
+  (let (p self->right q p->right)
+    (<- p->right q->left q->left self)
     q))
 
 (method SplayNode .rotlr ()
-  (let (p (&left self) q (&right p))
-    (&right! p (&left q))
-    (&left! q p)
-    (&left! self (&right q))
-    (&right! q self)
+  (let (p self->left q p->right)
+    (<- p->right q->left q->left p
+        self->left q->right q->right self)
     q))
 
 (method SplayNode .rotrl ()
-  (let (p (&right self) q (&left p))
-    (&left! p (&right q))
-    (&right! q p)
-    (&right! self (&left q))
-    (&left! q self)
+  (let (p self->right q p->left)
+    (<- p->left q->right q->right p
+        self->right q->left q->left self)
     q))
 
 (class Splay ()
@@ -56,86 +49,85 @@
   ; Initialize the receiver using the comparison function cmp, which returns a negative, zero, or positive integer.
   ; Returns the receiver.
   (let (sentinel (.new SplayNode))
-    (&top! self sentinel)
-    (&sentinel! self sentinel)
-    (&cmp! self cmp)
-    (&size! self 0)))
+    (<- self->top sentinel
+        self->sentinel sentinel
+        self->cmp cmp
+        self->size 0)
+    self))
 
 (method Splay .balance (key)
-  (let (top (&top self) sentinel (&sentinel self) cmp (&cmp self) p top q nil d nil)
-    (&key! sentinel key)
-    (&left! sentinel sentinel)
-    (&right! sentinel sentinel)
-    (while (!= (<- d (cmp (&key p) key)) 0)
+  (let (top self->top sentinel self->sentinel cmp self->cmp p top q nil d nil)
+    (<- sentinel->key key
+        sentinel->left sentinel
+        sentinel->right sentinel)
+    (while (!= (<- d (cmp p->key key)) 0)
       (if (< d 0)
           (begin
-            (<- q (&left p))
-            (if (= (<- d (cmp (&key q) key)) 0)
+            (<- q p->left)
+            (if (= (<- d (cmp q->key key)) 0)
                 (begin (<- p (.rotl p)) (break))
                 (<- p (if (< d 0) (.rotll p) (.rotlr p)))))
           (begin
-            (<- q (&right p))
-            (if (= (<- d (cmp (&key q) key)) 0)
+            (<- q p->right)
+            (if (= (<- d (cmp q->key key)) 0)
                 (begin (<- p (.rotr p)) (break))
                 (<- p (if (> d 0) (.rotrr p) (.rotrl p)))))))
-    (&top! self p)
+    (<- self->top p)
     p))
 
 (method Splay .resume ()
-  (let (top (&top self) left (&left top) right (&right top) sentinel (&sentinel self))
-    (if (== left sentinel) (&top! self right)
-        (== right sentinel) (&top! self left)
+  (let (top self->top left top->left right top->right sentinel self->sentinel)
+    (if (== left sentinel) (<- self->top right)
+        (== right sentinel) (<- self->top left)
         (let (p left)
-          (while (!= (&right p) sentinel) (<- p (&right p)))
-          (&right! p right)
-          (&top! self left)))
+          (while (!= p->right sentinel) (<- p p->right))
+          (<- p->right right self->top left)))
     nil))
 
 (method Splay .has-key? (key)
   ; Returns whether the value corresponding to the key exists.
-  (let (top (.balance self key) absent? (== top (&sentinel self)))
+  (let (top (.balance self key) absent? (== top self->sentinel))
     (if absent? (.resume self)
         true)))
 
 (method Splay .size ()
   ; Returns the number of key-value mappings in the receiver.
-  (&size self))
+  self->size)
 
 (method Splay .get (key)
   ; Returns the value corresponding to key.
   ; If there is no corresponding value for the key, returns nil.
-  (let (top (.balance self key) sentinel (&sentinel self))
+  (let (top (.balance self key) sentinel self->sentinel)
     (if (== top sentinel) (.resume self)
-        (&val top))))
+        top->val)))
 
 (method Splay .put (key val)
   ; Set the value corresponding to the key.
   ; Works with or without a corresponding value already.
   ; Returns the receiver.
-  (let (top (.balance self key) sentinel (&sentinel self))
-    (if (== top sentinel) (begin
-                             (&top! self (.init (.new SplayNode) key val (&left sentinel) (&right sentinel)))
-                             (&size! self (++ (&size self))))
-        (&val! top val))))
+  (let (top (.balance self key) sentinel self->sentinel)
+    (if (== top sentinel) (<- self->top (.init (.new SplayNode) key val sentinel->left sentinel->right)
+                              self->size (++ self->size))
+        (<- top->val val))))
 
 (method Splay .remove (key)
   ; Delete the value corresponding to the key.
   ; If there is no corresponding value for the key, do nothing.
   ; Returns the receiver.
   (let (top (.balance self key))
-    (if (!== top (&sentinel self)) (&size! self (-- (&size self))))
+    (if (!== top self->sentinel) (<- self->size (-- self->size)))
     (.resume self)
     self))
 
 (method Splay .foreach (fn)
   ; Call a function fn that takes a key and a value as arguments for each node in splay.
-  (let (sentinel (&sentinel self)
+  (let (sentinel self->sentinel
                  rec (f (node)
                        (when (!== sentinel node)
-                         (rec (&left node))
-                         (fn (&key node) (&val node))
-                         (rec (&right node)))))
-    (rec (&top self))))
+                         (rec node->left)
+                         (fn node->key node->val)
+                         (rec node->right))))
+    (rec self->top)))
 
 (function! main (args)
   (let (splay (.init (.new Splay) symcmp))

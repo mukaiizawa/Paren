@@ -17,24 +17,23 @@
 
 (method DateTime .init (unix-time)
   (let (t nil y nil offset nil)
-    (&unix-time! self unix-time)
-    ;; utc to localtime and offset from 0001-01-01
-    (<- t (+ unix-time (utcoffset) 62135596800))
-    (&second! self (% t 60)) (<- t (// t 60))
-    (&minute! self (% t 60)) (<- t (// t 60))
-    (&hour! self (% t 24)) (<- t (// t 24))
-    (&day-week! self (% (+ t 1) 7))    ; 0001-01-01 is Mon
-    (<- y (++ (// t 365)))
+    (<- self->unix-time unix-time
+        t (+ unix-time (utcoffset) 62135596800) ;; utc to localtime and offset from 0001-01-01
+        self->second (% t 60) t (// t 60)
+        self->minute (% t 60) t (// t 60)
+        self->hour (% t 24) t (// t 24)
+        self->day-week (% (+ t 1) 7)    ; 0001-01-01 is Mon
+        y (++ (// t 365)))
     (while (> (<- offset (datetime.offset-0001-01-01 y 1 1)) t)
       (<- y (-- y)))
-    (&year! self y)
-    (&month! self (++ (// (- t offset) 31)))
-    (<- offset (datetime.offset-0001-01-01 y (&month self) 1))
+    (<- self->year y
+        self->month (++ (// (- t offset) 31))
+        offset (datetime.offset-0001-01-01 y self->month 1))
     (let (mlen (.monthlen self))
       (when (<= (+ offset mlen) t)
-        (&month! self (++ (&month self)))
-        (<- offset (+ offset mlen)))
-      (&day! self (+ t (- offset) 1)))
+        (<- self->month (++ self->month)
+            offset (+ offset mlen)))
+      (<- self->day (+ t (- offset) 1)))
     self))
 
 (function datetime.parse-msdos-datetime (date time)
@@ -65,52 +64,52 @@
 
 (method DateTime .year ()
   ; Returns the year.
-  (&year self))
+  self->year)
 
 (method DateTime .month ()
   ; Returns the month (1-12).
-  (&month self))
+  self->month)
 
 (method DateTime .day ()
   ; Returns the day (1-31).
-  (&day self))
+  self->day)
 
 (method DateTime .day-week ()
   ; Returns the index of the day of the week (0:sun, 1:mon, ... , 6: sat).
-  (&day-week self))
+  self->day-week)
 
 (method DateTime .week-of-month ()
   ; Returns the week of month of the receiver.
-  (let (first-day-of-month (datetime (&year self) (&month self) 1))
-    (++ (// (+ (&day self) -1 (&day-week first-day-of-month)) 7))))
+  (let (first-day-of-month (datetime self->year self->month 1))
+    (++ (// (+ self->day -1 first-day-of-month->day-week) 7))))
 
 (method DateTime .hour ()
   ; Returns the hour (0-23).
-  (&hour self))
+  self->hour)
 
 (method DateTime .minute ()
   ; Returns the minute (0-59).
-  (&minute self))
+  self->minute)
 
 (method DateTime .second ()
   ; Returns the second (0-59).
-  (&second self))
+  self->second)
 
 (method DateTime .unix-time ()
   ; Returns the number of seconds relative to the receiver's unix epoch (January 1, 1970, 00:00:00 UTC).
-  (&unix-time self))
+  self->unix-time)
 
 (method DateTime .cmp (o)
-  (let (x (&unix-time self) y (&unix-time o))
+  (let (x self->unix-time y o)->unix-time
     (if (= x y) 0
         (< x y) -1
         1)))
 
 (method DateTime .monthlen ()
   ; Returns the number of days in the year
-  (let (m (&month self))
-    (if (= m 2) (- (datetime.offset-0001-01-01 (&year self) 3 1)
-                   (datetime.offset-0001-01-01 (&year self) 2 1))
+  (let (m self->month)
+    (if (= m 2) (- (datetime.offset-0001-01-01 self->year 3 1)
+                   (datetime.offset-0001-01-01 self->year 2 1))
         (in? m '(4 6 9 11)) 30
         31)))
 
@@ -134,15 +133,15 @@
 
 (method DateTime .holiday? ()
   ; Returns whether the receiver is Saturday, Sunday, or a public holiday.
-  (let (day-week (&day-week self))
+  (let (day-week self->day-week)
     (|| (= day-week 0) (= day-week 6) (.public-holiday? self))))
 
 (method DateTime .public-holiday? ()
   ; Returns whether the receiver is a public holiday.
   ;; https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
   ; Do not use for strict judgment due to sloppy construction.
-  (let (y (&year self) m (&month self) d (&day self)
-          y-1980 (- y 1980) monday? (= (&day-week self) 1) nth-monday (++ (// (-- d) 7)))
+  (let (y self->year m self->month d self->day
+          y-1980 (- y 1980) monday? (= self->day-week 1) nth-monday (++ (// (-- d) 7)))
     (|| (&& (= m 1) (= d 1))
         (&& (= m 1) monday? (= nth-monday 2))
         (&& (= m 2) (= d 11))
@@ -164,10 +163,10 @@
         (&& monday? (.public-holiday? (.offset self :days -1))))))
 
 (method DateTime .to-s.date ()
-  (format "%d-%02d-%02d" (&year self) (&month self) (&day self)))
+  (format "%d-%02d-%02d" self->year self->month self->day))
 
 (method DateTime .to-s.time ()
-  (format "%02d:%02d:%02d" (&hour self) (&minute self) (&second self)))
+  (format "%02d:%02d:%02d" self->hour self->minute self->second))
 
 (method DateTime .to-s.datetime ()
   (str (.to-s.date self) " " (.to-s.time self)))

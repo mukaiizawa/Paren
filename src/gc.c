@@ -68,7 +68,7 @@ void gc_free(object o)
   switch (object_type(o)) {
     case DICT:
     case ENV:
-      gc_free0(sizeof(object) * o->map.half_size * 2, o->map.table);
+      if (o->map.half_size != 0) gc_free0(sizeof(object) * o->map.half_size * 2, o->map.table);
       break;
     default:
       break;

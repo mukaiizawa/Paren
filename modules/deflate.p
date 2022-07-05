@@ -9,15 +9,18 @@
   pos curr-byte)
 
 (method Deflate.Reader .init ()
-  (&pos! self 0))
+  (<- self->pos 0)
+  self)
+
+(method Deflate.Reader .align ()
+  (.init self))
 
 (method Deflate.Reader .read-bit ()
-  (let (byte (&curr-byte self) pos (&pos self))
-    (when (= pos 0)
-      (&curr-byte! self (<- byte (read-byte))))
+  (let (byte self->curr-byte pos self->pos)
+    (if (= pos 0) (<- self->curr-byte (<- byte (read-byte))))
     (if (< byte 0) -1
         (begin
-          (&pos! self (% (++ pos) 8))
+          (<- self->pos (% (++ pos) 8))
           (& (>> byte pos) 1)))))
 
 (method Deflate.Reader .read (size)
@@ -35,12 +38,12 @@
 (method Deflate.Writer .copy (length distance)
   (if (|| (nil? distance) (< distance 1) (> distance 32768)) (raise DeflateError "invalid distance")
       (|| (nil? length) (< length 0)) (raise DeflateError "invalid length")
-      (let (buf (&buf (.reserve self length)) pos (&wrpos self))
+      (let (buf (.buf (.reserve self length)) pos self->wrpos)
         (dotimes (i length)
           (.write-byte self ([] buf (+ (- pos distance) i)))))))
 
 (method Deflate.Writer .flush ()
-  (slice (&buf self) 0 (&wrpos self)))
+  (slice self->buf 0 self->wrpos))
 
 ;; Haffman code
 
@@ -106,7 +109,7 @@
           (raise DeflateError "invalid Huffman block")))))
 
 (function deflate.no-compression-block (rd wr)
-  (while (!= (&pos rd) 0) (.read rd 1))    ; Any bits of input up to the next byte boundary are ignored.
+  (.align rd)    ; Any bits of input up to the next byte boundary are ignored.
   (let (len (.read rd 16))
     (if (!= (^ len 0xffff) (.read rd 16)) (raise DeflateError "invalid Non-compressed block")
         (dotimes (i len) (.write-byte wr (.read rd 8))))))
@@ -140,7 +143,6 @@
     (let (rd (.new Deflate.Reader) wr (.new Deflate.Writer) last-block? nil type nil)
       (while (nil? last-block?)
         (<- last-block? (= (.read rd 1) 1) type (.read rd 2))
-        (.write $stdout (list :last? last-block? :type (bin type)))
         (if (= type 0) (deflate.no-compression-block rd wr)
             (= type 1) (deflate.fixed-huffman-block rd wr)
             (= type 2) (deflate.dynamic-huffman-block rd wr)
