@@ -43,16 +43,13 @@
           (raise StateError "incorrect EXAMPLES section format")))
     (reverse! exprs)))
 
-(function md->p (file-name)
-  (str (.base-name (path file-name)) ".p"))
-
 (function parse-man (file-name)
   (catch (IllegalManError (f (e) (write-log :failed)))
     (with-open ($in (.resolve $man-root file-name) :read)
       (let (line nil)
         (while (<- line (read-line))
           (when (= line "# EXAMPLES")
-            (with-open ($out (.resolve $root (md->p file-name)) :write)
+            (with-open ($out (.suffix! (.resolve $root file-name) "p") :write)
               (write-line (str "; " file-name))
               (write (xmain (parse-example)))
               (write-log :succeed)

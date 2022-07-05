@@ -41,6 +41,7 @@ Thus, Paren programs can manipulate source code as a data structure, giving rise
 - `list...(3)`
 - `list?(3)`
 - `map(3)`
+- `map-group(3)`
 - `member(3)`
 - `nil(3)`
 - `nil?(3)`

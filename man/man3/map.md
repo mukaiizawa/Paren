@@ -49,3 +49,5 @@ If you don't use a return value, you should use `foreach` or `dolist` instead.
 # SEE ALSO
 - `dolist(3)`
 - `foreach(3)`
+- `keep(3)`
+- `map-group(3)`
