@@ -14,25 +14,28 @@
 ; range
 
 (method VBARange .init (expr)
-  (&expr! self expr))
+  (<- self->expr expr)
+  self)
 
 (method VBACell .init (row col)
-  (&row! self row)
-  (&col! self col))
+  (<- self->row row
+      self->col col)
+  self)
 
 (method VBARange .to-vbastr ()
-  (str "Range(\"" (&expr self) "\")"))
+  (str "Range(\"" self->expr "\")"))
 
 (method VBACell .to-vbastr ()
-  (str "Cells(" (++ (&row self)) ", " (++ (&col self)) ")"))
+  (str "Cells(" (++ self->row) ", " (++ self->col) ")"))
 
 ; sheet
 
 (method VBASheet .init (name)
-  (&name! self name))
+  (<- self->name name)
+  self)
 
 (method VBASheet .to-vbastr ()
-  (str "Worksheets(\"" (&name self) "\")"))
+  (str "Worksheets(\"" self->name "\")"))
 
 (method VBAFirstSheet .to-vbastr ()
   "Worksheets(1)")
@@ -62,12 +65,12 @@
   ; Returns vba to show this sheet.
   (with-vba-vars (x)
                  (str "For Each " x " In Worksheets\n"
-                      "If " (.name x) " = \"" (&name self) "\" Then " x ".Delete: Exit For\n"
+                      "If " (.name x) " = \"" self->name "\" Then " x ".Delete: Exit For\n"
                       "Next\n")))
 
 (method VBASheet .rename (to)
   ; Returns vba to rename sheet.
-  (str (.to-vbastr self) ".Name = \"" (&name to) "\"\n"))
+  (str (.to-vbastr self) ".Name = \"" to->name "\"\n"))
 
 (method VBASheet .add-last ()
   ; Returns vba to add this sheet to the end of the workbook.

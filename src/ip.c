@@ -314,6 +314,11 @@ static void gen_if_frame(object args)
   gen_eval_frame(args->cons.car);
 }
 
+static void gen_trace(object o)
+{
+  gen2(FUNC_FRAME, reg[1], o);
+}
+
 static int same_symbol_keyword_p(object sym, object key)
 {
   xassert(object_type(sym) == SYMBOL);
@@ -424,8 +429,7 @@ static void pop_apply_frame(void)
   // optimize tail recursion
   if (fs_top() == FUNC_FRAME) set_frame_var(fp, 1, trace);
   else gen2(FUNC_FRAME, reg[1], trace);
-  if (func->proc.param_count == 0) reg[1] = func->proc.env;
-  else reg[1] = gc_new_env(func->proc.env, func->proc.param_count * 2);
+  reg[1] = gc_new_env(func->proc.env, func->proc.param_count * 2);
   gen_eval_sequential_frame(func->proc.body);
   parse_args(&map_put, func->proc.params, reg[0]);
 }
@@ -439,9 +443,8 @@ static void pop_apply_built_in_frame(void)
   function = f->native.u.function;
   pop_frame();
   if ((*function)(list_len(args), args, &(reg[0]))) return;
+  gen_trace(gc_new_cons(f->native.name, args));
   if (ip_trap_code == TRAP_NONE) ip_throw(Error, built_in_failed);
-  // trace
-  gen2(FUNC_FRAME, reg[1], gc_new_cons(f->native.name, args));
 }
 
 static void pop_assert_frame(void)
@@ -494,8 +497,7 @@ static int eval_symbol(object *result)
   object o;
   o = *result;
   if ((*result = map_get_propagation(reg[1], *result)) == NULL) {
-    // trace
-    gen2(FUNC_FRAME, reg[1], o);
+    gen_trace(o);
     return ip_throw(StateError, unbound_symbol);
   }
   return TRUE;
@@ -520,8 +522,7 @@ static void pop_eval_frame(void)
         case SPECIAL:
           special = operator->native.u.special;
           if ((*special)(list_len(args), args)) return;
-          // tarace
-          gen2(FUNC_FRAME, reg[1], gc_new_cons(operator->native.name, args));
+          gen_trace(gc_new_cons(operator->native.name, args));
           return;
         case BFUNC:
           gen1(APPLY_BUILT_IN_FRAME, operator);
@@ -537,9 +538,8 @@ static void pop_eval_frame(void)
           gen_eval_args_frame(args);
           return;
         default:
+          gen_trace(reg[0]);
           ip_throw(StateError, expected_operator);
-          // trace
-          gen2(FUNC_FRAME, reg[1], reg[0]);
           return;
       }
       break;
@@ -990,15 +990,15 @@ static int gen_bind_frames(int frame_type, object args)
 
 DEFSP(let)
 {
-  object args;
+  object binds;
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
-  if (!bi_argv(BI_LIST, argv->cons.car, &args)) return FALSE;
-  if (args == object_nil) gen_eval_sequential_frame(argv->cons.cdr);
+  if (!bi_argv(BI_LIST, argv->cons.car, &binds)) return FALSE;
+  if (binds == object_nil) gen_eval_sequential_frame(argv->cons.cdr);
   else {
     gen0(LET_FRAME);
     gen_eval_sequential_frame(argv->cons.cdr);
     param_count = 0;
-    if (!gen_bind_frames(BIND_FRAME, args)) return FALSE;
+    if (!gen_bind_frames(BIND_FRAME, binds)) return FALSE;
     reg[1] = gc_new_env(reg[1], param_count * 2);
   }
   return TRUE;

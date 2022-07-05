@@ -7,16 +7,16 @@
   ; Specifies a character string listing option characters to be interpreted as optionsArg.
   ; Options with ':' immediately after the specified character have option arguments.
   ; Returns this object.
-  (<- option (array option))
-  (let (table nil i 0 len (len option))
+  (let (i 0 table nil len (len (<- option (array option))))
     (while (< i len)
       (let (opt ([] option i) optarg? (&& (< (<- i (++ i)) len) (= ([] option i) ":")))
         (if optarg? (<- i (++ i)))
         (push! (list opt optarg? nil) table)))
-    (&table! self table)))
+    (<- self->table table)
+    self))
 
 (method OptionParser .lookup (opt)
-  (let (record (select1 (f (x) (= opt (car x))) (&table self)))
+  (let (record (select1 (f (x) (= opt (car x))) self->table))
     (if (nil? record) (raise ArgumentError "unknown option")
         record)))
 

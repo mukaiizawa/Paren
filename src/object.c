@@ -408,10 +408,12 @@ object map_get(object o, object s)
 {
   int i;
   object p;
-  i = object_hash(s) % o->map.half_size;
-  while ((p = o->map.table[i]) != NULL) {
-    if (object_eq_p(p, s)) return o->map.table[i + o->map.half_size];
-    if (++i == o->map.half_size) i = 0;
+  if (o->map.half_size != 0) {
+    i = object_hash(s) % o->map.half_size;
+    while ((p = o->map.table[i]) != NULL) {
+      if (object_eq_p(p, s)) return o->map.table[i + o->map.half_size];
+      if (++i == o->map.half_size) i = 0;
+    }
   }
   return NULL;
 }
@@ -430,6 +432,7 @@ void map_put(object o, object s, object v)
 {
   int i;
   object p;
+  xassert(o->map.half_size != 0);
   i = object_hash(s) % o->map.half_size;
   while ((p = o->map.table[i]) != NULL) {
     if (object_eq_p(p, s)) {
