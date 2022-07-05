@@ -223,7 +223,7 @@ static object new_map(int type, int half_size, object top)
   o->map.top = top;
   o->map.entry_count = 0;
   o->map.half_size = half_size;
-  o->map.table = gc_alloc(sizeof(object) * half_size * 2);
+  if (half_size != 0) o->map.table = gc_alloc(sizeof(object) * half_size * 2);
   for (i = 0; i < half_size; i++) o->map.table[i] = NULL;
   regist(o);
   return o;
