@@ -1143,7 +1143,7 @@
 (method Path .but-suffix ()
   ; Returns the name without the suffix.
   (let (name (.name self) pos (last-index "." name))
-    (if (nil? pos) ""
+    (if (nil? pos) name
         (slice name 0 pos))))
 
 (method Path .parent ()
