@@ -39,10 +39,12 @@
   lexer token)
 
 (method ForthReader .init () 
-  (&lexer! self (.new ForthLexer)))
+  (<- self->lexer (.new ForthLexer))
+  self)
 
 (method ForthReader .scan ()
-  (&token! self (.lex (&lexer self))))
+  (<- self->token (.lex self->lexer))
+  self)
 
 (method ForthReader .parse-definition ()
   (list :definition

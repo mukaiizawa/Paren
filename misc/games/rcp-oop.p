@@ -6,7 +6,7 @@
 (class Player () name)
 
 (method Player .to-s ()
-  (&name self))
+  self->name)
 
 (method Player .choice ()
   (raise NotImplementedError))
@@ -18,7 +18,8 @@
 (class Man (Player))
 
 (method Man .init (name)
-  (&name! self name))
+  (<- self->name name)
+  self)
 
 (method Man .choice ()
   (write-bytes (str (.to-s self) ": r(ock), p(aper), s(cissors) >> "))
@@ -32,7 +33,8 @@
 (class Computer (Player))
 
 (method Computer .init ()
-  (&name! self "Computer"))
+  (<- self->name  "Computer")
+  self)
 
 (method Computer .choice ()
   (.show self (rand.int 3)))

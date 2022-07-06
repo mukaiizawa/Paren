@@ -16,26 +16,34 @@
   health agility strength)
 
 (method Player .init ()
-  (&health! self 30)
-  (&agility! self 30)
-  (&strength! self 30))
+  (<- self->health 30
+      self->agility 30
+      self->strength 30)
+  self)
+
+(method Player .health () self->health)
+(method Player .agility () self->agility)
+(method Player .strength () self->strength)
 
 (method Player .to-s ()
-  (str "You are a valiant knight with a health of " (&health self)
-       ", an agility of " (&agility self)
-       ", and a strength of " (&strength self)))
+  (str "You are a valiant knight with a health of " self->health
+       ", an agility of " self->agility
+       ", and a strength of " self->strength))
+
+(method Player .action-point ()
+  (++ (// self->agility 15)))
 
 (method Player .stab ()
-  (.hit (.pick-monster self) (+ 2 (rand1-n (>> (&strength self) 1)))))
+  (.hit (.pick-monster self) (+ 2 (rand1-n (>> self->strength 1)))))
 
 (method Player .double-swing ()
-  (let (x (rand1-n (// (&strength self) 6)))
+  (let (x (rand1-n (// self->strength 6)))
     (write-line (str "Your double swing has a strength of " x))
     (.hit (.pick-monster self) x)
     (if (! (monsters-dead?)) (.hit (.pick-monster self) x))))
 
 (method Player .round-house ()
-  (dotimes (x (++ (rand1-n (// (&strength self) 3))))
+  (dotimes (x (++ (rand1-n (// self->strength 3))))
     (if (monsters-dead?) (return nil)
         (.hit (.pick-monster-randomly self) 1))))
 
@@ -51,9 +59,9 @@
           (.attack self)))))
 
 (method Player .hit (x :key type)
-  (if (= type :health) (&health! self (- (&health self) x))
-      (= type :agility) (&agility! self (- (&agility self) x))
-      (= type :strength) (&strength! self (- (&strength self) x))
+  (if (= type :health) (<- self->health (- self->health x))
+      (= type :agility) (<- self->agility (- self->agility x))
+      (= type :strength) (<- self->strength (- self->strength x))
       (assert nil)))
 
 (method Player .pick-monster ()
@@ -71,96 +79,106 @@
         m)))
 
 (method Player .dead? ()
-  (<= (&health self) 0))
+  (<= self->health 0))
+
+; Monster
 
 (macro define-monster (name (:opt super :rest features) :rest fields)
   `(begin (class ,name ,(if super (cons super features) '(Monster))
             ,@fields)
           (push! ,name $monster-classes)))
 
-; Monster
-
 (class Monster () health)
 
 (method Monster .init ()
-  (&health! self (rand1-n 10)))
+  (<- self->health (rand1-n 10))
+  self)
+
+(method Monster .health ()
+  self->health))
 
 (method Monster .dead? ()
-  (<= (&health self) 0))
+  (<= self->health 0))
 
 (method Monster .hit (x)
-  (&health! self (- (&health self) x))
-  (if (.dead? self)
-      (write-line (str "You killed the " (&symbol (.class self)) "!"))
-      (write-line (str "You hit the " (&symbol (.class self)) ", knocking off " x  " health points!"))))
+  (<- self->health (- self->health x))
+  (write-line
+    (if (.dead? self) (str "You killed the " (.symbol (.class self)) "!")
+        (str "You hit the " (.symbol (.class self)) ", knocking off " x  " health points!"))))
 
 (method Monster .attack ()
   (assert nil))
 
+(method Monster .describe ()
+  (str "A fierce " (.symbol (.class self))))
+
 (method Monster .to-s ()
-  (str "A fierce " (&symbol (.class self))))
+  (if (.dead? self) "**dead**"
+      (str "(Health=" self->health ") " (.describe self))))
 
 (define-monster Orc () club-level)
 
 (method Orc .init ()
   (Monster.init self)
-  (&club-level! self (rand1-n 8)))
+  (<- self->club-level (rand1-n 8))
+  self)
 
 (method Orc .attack ()
-  (let (x (rand1-n (&club-level self)))
+  (let (x (rand1-n self->club-level))
     (write-line (str "An orc swings his club at you and knocks off " x " of your health points."))
     (.hit $player x :type :health)))
 
-(method Orc .to-s ()
-  (str "A wicked orc with a level " (&club-level self) " club"))
+(method Orc .describe ()
+  (str "A wicked orc with a level " self->club-level " club"))
 
 (define-monster Hydra ())
 
 (method Hydra .attack ()
-  (let (x (rand1-n (>> (&health self) 1)))
+  (let (x (rand1-n (>> (.health self) 1)))
     (write-line (str "A hydra attacks you with " x " of its heads! It also grows back one more head!"))
-    (&health! self (++ (&health self)))
+    (<- self->health (++ self->health))
     (.hit $player x :type :health)))
 
 (method Hydra .hit (x)
-  (&health! self (- (&health self) x))
-  (if (.dead? self)
-      (write-line "The corpse of the fully decapitated and decapacitated hydra falls to the floor!")
-      (write-line (str "You lop off " x " of the hydra's heads!"))))
+  (<- self->health (- self->health x))
+  (write-line
+    (if (.dead? self) "The corpse of the fully decapitated and decapacitated hydra falls to the floor!"
+        (str "You lop off " x " of the hydra's heads!"))))
 
-(method Hydra .to-s ()
-  (str "A malicious hydra with " (&health self) " heads."))
+(method Hydra .describe ()
+  (str "A malicious hydra with " (.health self) " heads."))
 
 (define-monster Slime () sliminess)
 
 (method Slime .init ()
   (Monster.init self)
-  (&sliminess! self (rand1-n 5)))
+  (<- self->sliminess (rand1-n 5))
+  self)
 
 (method Slime .attack ()
-  (let (x (rand1-n (&sliminess self)))
+  (let (x (rand1-n self->sliminess))
     (write-line (str "A slime mold wraps around your legs and decreases your agility by " x "!"))
     (.hit $player x :type :agility)
     (when (rand.bool)
       (write-line "It also squirts in your face, taking away a health point!")
       (.hit $player 1 :type :health))))
 
-(method Slime .to-s ()
-  (str "A slime mold with a sliminess of " (&sliminess self)))
+(method Slime .describe ()
+  (str "A slime mold with a sliminess of " self->sliminess))
 
 (define-monster Brigand ())
 
 (method Brigand .attack ()
-  (let (x (max (&health $player) (&agility $player) (&strength $player)))
-    (if (= x (&health $player))
+  (let (x (max (.health $player) (.agility $player) (.strength $player)))
+    (if (= x (.health $player))
         (begin
           (write-line "A brigand hits you with his slingshot, taking off 2 health points!")
           (.hit $player 2 :type :health))
-        (= x (&agility $player))
+        (= x (.agility $player))
         (begin
           (write-line "A brigand catches your leg with his whip, taking off 2 agility points!")
           (.hit $player 2 :type :agility))
-        (= x (&strength $player))
+        (= x (.strength $player))
         (begin
           (write-line "A brigand cuts your arm with his whip, taking off 2 strength points!")
           (.hit $player 2 :type :strength))
@@ -178,14 +196,13 @@
   (write-line "Your foes:")
   (dotimes (i $monster-count)
     (let (m ([] $monsters i))
-      (write-line (str i ". " (if (.dead? m) "**dead**"
-                                  (str "(Health=" (&health m) ") " (.to-s m))))))))
+      (write-line (str i ". " (.to-s m))))))
 
 (function game-loop ()
   (if (|| (.dead? $player) (monsters-dead?)) (return nil))
   (write-line)
   (write-line (.to-s $player))
-  (dotimes (k (++ (// (&agility $player) 15)))
+  (dotimes (k (.action-point $player))
     (show-monsters)
     (.attack $player)
     (if (monsters-dead?) (return nil)))

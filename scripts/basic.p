@@ -30,6 +30,9 @@
 (class BasicLexer (AheadReader)
   key val)
 
+(method BasicLexer .val ()
+  self->val)
+
 (method BasicLexer .lex-lt ()
   (.skip self)
   (if (= (.next self) "=") (begin (.skip self) '<=)
@@ -43,7 +46,7 @@
 
 (method BasicLexer .lex-string ()
   (.skip self)
-  (while (!= (&next self) "\"") (.get self))
+  (while (!= (.next self) "\"") (.get self))
   (.skip self "\"")
   (.token self))
 
@@ -75,8 +78,8 @@
 
 (method BasicLexer .lex ()
   (let ((key :opt val) (->list (.lex0 self)))
-    (&key! self key)
-    (&val! self val)
+    (<- self->key key
+        self->val val)
     key))
 
 (function get-token (rd :opt expected)
@@ -85,7 +88,7 @@
         token)))
 
 (function get-token-value (rd)
-  (&val rd))
+  (.val rd))
 
 (function peek-token (rd)
   (let (token (get-token rd))
