@@ -1132,21 +1132,19 @@
   ; If not including dot, returns the entire name.
   (car (split (.name self) ".")))
 
-(method Path .suffix ()
+(method Path .suffix (:opt new-suffix)
   ; Returns the suffix (the string after the last dot).
   ; If not including dot, returns nil.
-  (let ((name :rest suffixes) (split (.name self) "."))
-    (if (nil? suffixes) ""
-        (last suffixes))))
-
-(method Path .suffix! (suffix)
-  (.resolve self (str "../" (.but-suffix self) "." suffix)))
+  (if (nil? new-suffix) (let (name (.name self) pos (last-index "." name))
+                          (if (nil? pos) ""
+                              (slice name (++ pos))))
+      (.resolve self (concat "../" (.but-suffix self) "." new-suffix))))
 
 (method Path .but-suffix ()
   ; Returns the name without the suffix.
-  (let ((name :rest suffixes) (split (.name self) "."))
-    (if (nil? suffixes) name
-        (join (cons name (butlast suffixes)) "."))))
+  (let (name (.name self) pos (last-index "." name))
+    (if (nil? pos) ""
+        (slice name 0 pos))))
 
 (method Path .parent ()
   ; Returns the parent path
@@ -2084,7 +2082,7 @@
         (let (file-name (path (car args)) script (select1 .file?
                                                           (map (f (x) (apply .resolve x))
                                                                (product (cons (path.getcwd) $runtime-path)
-                                                                        (list file-name (.suffix! file-name "p"))))))
+                                                                        (list file-name (.suffix file-name "p"))))))
           (if (nil? script) (raise ArgumentError (str "unreadable file " file-name))
               (&& (load script) (bound? 'main) main) (main (cdr args)))))))
 

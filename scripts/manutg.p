@@ -49,7 +49,7 @@
       (let (line nil)
         (while (<- line (read-line))
           (when (= line "# EXAMPLES")
-            (with-open ($out (.suffix! (.resolve $root file-name) "p") :write)
+            (with-open ($out (.suffix (.resolve $root file-name) "p") :write)
               (write-line (str "; " file-name))
               (write (xmain (parse-example)))
               (write-log :succeed)
