@@ -2,237 +2,279 @@
 
 (import :xml)
 
-(class MarkdownReader (AheadReader XMLReader))
+(<- $markdown.ol "1. "
+    $markdown.ul "- ")
 
-(method MarkdownReader .EOL? ()
-  (|| (nil? (.next self)) (= (.next self) "\n")))
+(class MarkdownReader ()
+  stream)
 
-(method MarkdownReader .parse-header ()
-  (let (level 0)
-    (while (= (.next self) "#")
+(method MarkdownReader .init ()
+  (<- self->stream (.new MemoryStream))
+  (.write-bytes self->stream (read-bytes))
+  self)
+
+(method MarkdownReader .peek! ()
+  (let (pos (.tell self->stream) ch (.read-char self))
+    (.seek self->stream pos)
+    ch))
+
+(method MarkdownReader .peek ()
+  (let (ch (.peek! self))
+    (if (nil? ch) (raise EOFError)
+        ch)))
+
+(method MarkdownReader .skip (:opt size)
+  (dotimes (i (|| size 1))
+    (.read-char self))
+  self)
+
+(method MarkdownReader .skip-space ()
+  (while (= (.peek self) " ")
+    (.skip self))
+  self)
+
+(method MarkdownReader .match? (text)
+  (let (match? true pos (.tell self->stream))
+    (dostring (ch text)
+      (when (!= ch (.read-char self))
+        (<- match? nil)
+        (break)))
+    (.seek self->stream pos)
+    match?))
+
+(method MarkdownReader .read-char ()
+  (.read-char self->stream))
+
+(method MarkdownReader .read-line ()
+  (with-memory-stream (line)
+    (while (!= (.peek self) "\n")
+      (.write-bytes line (.read-char self)))
+    (.skip self)))
+
+(method MarkdownReader .read-hr ()
+  (.read-line self)
+  '(hr ()))
+
+(method MarkdownReader .read-header ()
+  (let (n 0)
+    (while (= (.peek self) "#")
       (.skip self)
-      (<- level (++ level)))
-    (if (<= 1 level  6) (list (symbol (str 'h level)) () (.skip-line (.skip-space self)))
-        (raise SyntaxError (str "illegal header level " level)))))
+      (<- n (++ n)))
+    (.skip-space self)
+    (if (> n 6) (raise SyntaxError "illegal header")
+        `(,(symbol (str 'h n)) () ,(.read-line self)))))
 
-(method MarkdownReader .parse-quoted ()
-  (let (ch (.skip self))
-    (while (!= (.next self) ch) (.get self))
-    (.skip self ch)
-    (.token self)))
+(method MarkdownReader .read-code-block ()
+  (let (text (.new MemoryStream))
+    (while (.match? self "    ")
+      (.skip self 4)
+      (.write-line text (.read-line self)))
+    `(pre () (code () ,(.to-s text)))))
 
-(method MarkdownReader .parse-code ()
-  `(code () ,(.parse-quoted self)))
+(method MarkdownReader .read-fenced-code-block ()
+  (let (text (.new MemoryStream))
+    (.read-line self)
+    (while (! (.match? self "```"))
+      (.write-line text (.read-line self)))
+    (.read-line self)
+    `(pre () (code () ,(.to-s text)))))
 
-(method MarkdownReader .parse-em ()
-  `(em () ,(.parse-quoted self)))
+(method MarkdownReader .read-html ()
+  (let ($in self->stream)
+    (.read (.new XMLReader))))
 
-(method MarkdownReader .parse-link0 (text)
+(method MarkdownReader .read-list (sym lev)
+  (let (li-list nil
+                sym->str (f (x) (if (== x 'ol) $markdown.ol $markdown.ul))
+                prefix (f (sym lev)
+                         (join (concat (repeat " " (* lev 4)) (list (sym->str sym))))))
+    (while (.match? self (prefix sym lev))
+      (.skip self (len (prefix sym lev)))
+      (push!
+        (let (p (.read-paragraph self))
+          (if (.match? self (prefix 'ul (++ lev))) `(li () ,p ,(.read-list self 'ul (++ lev)))
+              (.match? self (prefix 'ol (++ lev))) `(li () ,p ,(.read-list self 'ol (++ lev)))
+              (begin
+                (car! p 'li)
+                p)))
+        li-list))
+    `(,sym () ,@(reverse! li-list))))
+
+(method MarkdownReader .read-tr (td)
+  (let (td-list nil text (.new MemoryStream))
+    (.skip self)
+    (while (!= (.peek self) "\n")
+      (while (!= (.peek self) "|")
+        (.write-bytes text (.read-char self)))
+      (.skip self)
+      (push! `(,td () ,(.to-s text)) td-list)
+      (.reset text))
+    (.skip self)
+    `(tr () ,@(reverse! td-list))))
+
+(method MarkdownReader .read-table ()
+  (let (th-list (.read-tr self 'th) td-list nil)
+    (.read-line self)    ; skip separator.
+    (while (= (.peek! self) "|")
+      (push! (.read-tr self 'td) td-list))
+    `(table ()
+            (thead () ,th-list)
+            (tbody () ,@(reverse! td-list)))))
+
+(method MarkdownReader .read-quoted (ch)
+  (with-memory-stream (text)
+    (let (skip-quote (f ()
+                       (while (= (.peek self) ch)
+                         (.skip self))))
+      (skip-quote)
+      (while (!= (.peek self) ch)
+        (.write-bytes text (.read-char self)))
+      (skip-quote))))
+
+(method MarkdownReader .read-em ()
+  `(em () ,(.read-quoted self "*")))
+
+(method MarkdownReader .read-code ()
+  `(code () ,(.read-quoted self "`")))
+
+(method MarkdownReader .read-blockquote ()
+  (with-memory-stream (inner-blockquote)
+    (while (= (.peek! self) ">")
+      (.skip self)
+      (if (= (.peek self) " ") (.skip self))
+      (.write-line inner-blockquote (.read-line self)))
+    (let ($in inner-blockquote)
+      (return `(blockquote () ,@(collect (partial .read (.new MarkdownReader))))))))
+
+(method MarkdownReader .read-link0 (text)
   `(a (:id ,(str "fnreferr" text) :href ,(str "#fnrefere" text))
       ,(str "[" text "]")))
 
-(method MarkdownReader .parse-link1 (text)
+(method MarkdownReader .read-link1 (text)
   `(sup (:id ,(str "fnrefere" text))
         (a (:href ,(str "#fnreferr" text)) ,text)))
 
-(method MarkdownReader .parse-link2 (text)
-  (.skip self "(")
-  (while (!= (.next self) ")") (.get self))
-  (.skip self ")")
-  `(a (:href ,(.token self)) ,text))
+(method MarkdownReader .read-link2 (text)
+  (let (href (.new MemoryStream))
+    (.skip self)
+    (while (!= (.peek self) ")")
+      (.write-bytes href (.read-char self)))
+    (.skip self)
+    `(a (:href ,(.to-s href)) ,text)))
 
-(method MarkdownReader .parse-link ()
-  (let (caret? nil colon? nil)
-    (.skip self "[")
-    (when (= (.next self) "^")
+(method MarkdownReader .read-link ()
+  (let (text (.new MemoryStream) caret? nil colon? nil)
+    (.skip self)
+    (when (= (.peek self) "^")
       (<- caret? true)
       (.skip self))
-    (while (!= (.next self) "]")
-      (.get self))
-    (.skip self "]")
-    (when (= (.next self) ":")
+    (while (!= (.peek self) "]")
+      (.write-bytes text (.read-char self)))
+    (.skip self)
+    (when (= (.peek self) ":")
       (<- colon? true)
       (.skip self))
-    (apply (if colon? .parse-link0 caret? .parse-link1 .parse-link2)
-           (list self (.token self)))))
+    (apply (if colon? .read-link0 caret? .read-link1 .read-link2)
+           (list self (.to-s text)))))
 
-(method MarkdownReader .parse-string ()
-  (let (nodes nil)
-    (while (.next self)
-      (let (next (.next self))
-        (if (.EOL? self) (begin (.skip self) (break))
-            (! (in?  next '("`" "*" "["))) (.get self)
-            (let (text (.token self))
-              (if (! (empty? text)) (push! text nodes))
-              (if (= next "`") (push! (.parse-code self) nodes)
-                  (= next "*") (push! (.parse-em self) nodes)
-                  (= next "[") (push! (.parse-link self) nodes)
-                  (assert nil))))))
-    (let (text (.token self))
-      (if (! (empty? text)) (push! text nodes))
-      (reverse! nodes))))
-
-(method MarkdownReader .parse-paragraph ()
-  `(p () ,@(.parse-string self)))
-
-(method MarkdownReader .parse-pre ()
-  (let (get-line (f ()
-                   (when (= (.next self) " ")
-                     (dotimes (i 4) (.skip self " "))
-                     (.skip-line self))))
-    `(pre () ,(join (collect get-line) "\n"))))
-
-(method MarkdownReader .parse-quote ()
-  (let (next-depth nil node-stack nil
-                   fetch (f ()
-                           (when (! (.EOL? self))
-                             (<- next-depth 0)
-                             (while (= (.next self) ">")
-                               (.skip self)
-                               (<- next-depth (++ next-depth)))
-                             (if (= next-depth 0) (raise SyntaxError "missing >"))
-                             (.skip-space self)
-                             (push! (.skip-line (.skip-space self)) node-stack)))
-                   rec (f (depth nodes)
-                         (while (fetch)
-                           (if (< next-depth depth) (break)
-                               (= next-depth depth) (begin
-                                                      (if (&& nodes (string? (car nodes))) (push! '(br ()) nodes))
-                                                      (push! (pop! node-stack) nodes))
-                               (begin
-                                 (push! (rec next-depth (list (pop! node-stack))) nodes)
-                                 (if node-stack (push! (pop! node-stack) nodes)))))
-                         `(blockquote () ,@(reverse! nodes))))
-    (rec 1 nil)))
-
-(method MarkdownReader .parse-list ()
-  (let (li-type nil li-depth nil li nil
-                next-type (f ()
-                            (let (next (.next self))
-                              (if (= next "-") 'ul
-                                  (digit? next) 'ol
-                                  (raise SyntaxError "invalid list"))))
-                next-li (f ()
-                          (if (! (nil? li)) li
-                              (! (.EOL? self))
-                              (begin
-                                (<- li-depth 1)
-                                (while (= (.next self) " ")
-                                  (dotimes (i 4) (.skip self " "))
-                                  (<- li-depth (++ li-depth)))
-                                (<- li-type (next-type))
-                                (if (== li-type 'ul) (.skip self)    ; -
-                                    (begin (.skip-uint self) (.skip self ".")))    ; 1.
-                                (<- li `(li () ,@(.parse-string (.skip-space self)))))))
-                get-li (f () (begin0 li (<- li nil)))
-                rec (f (ulol ulol-depth)
-                      (let (nodes nil)
-                        (while (next-li)
-                          (if (< li-depth ulol-depth) (break)
-                              (= li-depth ulol-depth) (push! (get-li) nodes)
-                              (push! (rec li-type li-depth) nodes)))
-                        `(,ulol () ,@(reverse! nodes)))))
-    (rec (next-type) 1)))
-
-(method MarkdownReader .parse-tr (:opt tx)
-  (let (txlist nil)
-    (.skip self "|")
-    (while (! (.EOL? self))
-      (while (!= (.next self) "|") (.get self))
-      (.skip self "|")
-      (push! (list tx () (.token self)) txlist))
+(method MarkdownReader .read-paragraph ()
+  (let (ch nil text (.new MemoryStream) nodes nil
+           flush (f ()
+                   (when (> (.size text) 0)
+                     (push! (.to-s text) nodes)
+                     (.reset text))))
+    (while (!= (<- ch (.peek self)) "\n")
+      (if (= ch "`") (begin (flush) (push! (.read-code self) nodes))
+          (= ch "*") (begin (flush) (push! (.read-em self) nodes))
+          (= ch "[") (begin (flush) (push! (.read-link self) nodes))
+          (.write-bytes text (.read-char self))))
     (.skip self)
-    `(tr () ,@(reverse! txlist))))
-
-(method MarkdownReader .parse-table ()
-  (let (thlist (.parse-tr self 'th) tdlist nil)
-    (.skip-line self)    ; skip separator.
-    (while (= (.next self) "|")
-      (push! (.parse-tr self 'td) tdlist))
-    `(table ()
-            (thead () ,thlist)
-            (tbody () ,@(reverse! tdlist)))))
+    (flush)
+    `(p () ,@(reverse! nodes))))
 
 (method MarkdownReader .read ()
   ; Read markdown.
   ; Returns a list representation of read markdown.
-  ; Readable markdown is follows.
-  ;     <markdown> ::= <stmt> [<stmt> ...]
-  ;     <stmt> ::= <stmt_lf> <eol> | <stmt_nolf>
-  ;     <stmt_nolf> ::= <header> | <paragraph> | <xml>
-  ;     <stmt> ::= <pre> | <quote> | <ul> | <ol> | <table>
-  ;     <header> ::= { # | ## | ### | #### | ##### | ###### } <char> ... <eol>
-  ;     <paragraph> ::= <string> <eol>
-  ;     <pre> ::= '    ' <char> ... <eol> [<pre> ...]
-  ;     <quote> ::= '>' ... <char> ... <eol> [<quote> ...]
-  ;     <list> ::= <ol> | <ul>
-  ;     <ol> ::= '1. '  <string> <eol> [<ol> ...]
-  ;     <ul> ::= '- '  <string> <eol> [<ul> ...]
-  ;     <table> ::= <tr> [<tr> ...]
-  ;     <tr> ::= '|' <char> ... ['|' <char> ...] ... '|' <eol>
-  ;     <string> ::= {
-  ;             <code>
-  ;             | <em>
-  ;             | <link>
-  ;             | <char>
-  ;         } ...
-  ;     <code> ::= '`' <char> ... '`'
-  ;     <em> ::= '*' <char> ... '*'
-  ;     <link> ::= <link0> | <link1> | <link2>
-  ;     <link1> :== '[^' <char> ... ']:'
-  ;     <link2> :== '[^' <char> ... ']'
-  ;     <link0> :== '[' <char> ... '](' <char> ... ')'
-  ;     <xml> -- a xml.
-  ;     <eol> -- end of line.
-  ;     <char> -- characters that have no special meaning.
-  (let (next (.next self))
+  (let (next (.peek! self))
     (if (nil? next) nil
-        (= next "\n") (begin (.skip self) (.read self))
-        (= next "#") (.parse-header self)
-        (= next " ") (.parse-pre self)
-        (= next ">") (.parse-quote self)
-        (in? next '("-" "1")) (.parse-list self)
-        (= next "|") (.parse-table self)
-        (= next "<") (XMLReader.read self)
-        (.parse-paragraph self))))
+        (= next "\n") (.read (.skip self))
+        (= next "#") (.read-header self)
+        (= next "<") (.read-html self)
+        (= next ">") (.read-blockquote self)
+        (= next "|") (.read-table self)
+        (.match? self "---") (.read-hr self)
+        (.match? self "    ") (.read-code-block self)
+        (.match? self "```") (.read-fenced-code-block self)
+        (.match? self $markdown.ul) (.read-list self 'ul 0)
+        (.match? self $markdown.ol) (.read-list self 'ol 0)
+        (.read-paragraph self))))
 
 (function! main (args)
-  (with-memory-stream ($in "# header1\n")
-    (assert (= (.read (.new MarkdownReader)) '(h1 () "header1"))))
-  (with-memory-stream ($in "paragraph[^1]\n")
-    (assert (= (.read (.new MarkdownReader))
-               '(p () "paragraph" (sup (:id "fnrefere1") (a (:href "#fnreferr1") "1"))))))
-  (with-memory-stream ($in "link to google [google](https://google.com)\n")
-    (assert (= (.read (.new MarkdownReader))
-               '(p () "link to google " (a (:href "https://google.com") "google")))))
-  (with-memory-stream ($in (join '("|x|y|z|\n"
-                                   "||||\n"
-                                   "|a|b|c|\n")))
-    (assert (= (.read (.new MarkdownReader))
-               '(table ()
-                       (thead () (tr () (th () "x") (th () "y") (th () "z")))
-                       (tbody () (tr () (td () "a") (td () "b") (td () "c")))))))
-  (with-memory-stream ($in (join '("    foo\n"
-                                   "    bar\n")))
-    (assert (= (.read (.new MarkdownReader)) '(pre () "foo\nbar"))))
-  (with-memory-stream ($in (join '("> bq1\n"
-                                   ">> bq2\n"
-                                   "> bq3\n")))
-    (assert (= (.read (.new MarkdownReader))
-               '(blockquote () "bq1" (blockquote () "bq2") "bq3"))))
+  ;; paragraph
+  (with-memory-stream ($in "abc\n\n\na*b*c\n\n\nlink to [google](https://google.com)\n")
+    (let (rd (.new MarkdownReader))
+      (assert (= (.read rd) '(p () "abc")))
+      (assert (= (.read rd) '(p () "a" (em () "b") "c")))
+      (assert (= (.read rd) '(p () "link to " (a (:href "https://google.com") "google"))))))
+  (with-memory-stream ($in "paragraph[^1]\n\n[^1]: reference\n")
+    (let (rd (.new MarkdownReader))
+      (assert (= (.read rd) '(p () "paragraph" (sup (:id "fnrefere1") (a (:href "#fnreferr1") "1")))))
+      (assert (= (.read rd) '(p () (a (:id "fnreferr1" :href "#fnrefere1") "[1]") " reference")))))
+  ;; header
+  (with-memory-stream ($in "# header1\n\n###### header6\n")
+    (let (rd (.new MarkdownReader))
+      (assert (= (.read rd) '(h1 () "header1")))
+      (assert (= (.read rd) '(h6 () "header6")))))
+  ;; code-block
+  (with-memory-stream ($in "    foo\n    bar\n----\n```\nfoo\nbar\n```\n")
+    (let (rd (.new MarkdownReader))
+      (assert (= (.read rd) '(pre () (code () "foo\nbar\n"))))
+      (assert (= (.read rd) '(hr ())))
+      (assert (= (.read rd) '(pre () (code () "foo\nbar\n"))))))
+  ;; table
+  (with-memory-stream ($in "|x|y|z|\n||||\n|a|b|c|\n|vv|ww|xx|\n")
+    (let (rd (.new MarkdownReader))
+      (assert (= (.read rd) '(table ()
+                                    (thead ()
+                                           (tr () (th () "x") (th () "y") (th () "z")))
+                                    (tbody ()
+                                           (tr () (td () "a") (td () "b") (td () "c"))
+                                           (tr () (td () "vv") (td () "ww") (td () "xx"))))))))
+  ;; html
+  (with-memory-stream ($in "--- html start\n<span style='color:red'>foo</span>\n--- html end\n")
+    (let (rd (.new MarkdownReader))
+      (assert (= (.read rd) '(hr ())))
+      (assert (= (.read rd) '(span (:style "color:red") "foo")))
+      (assert (= (.read rd) '(hr ())))))
+  ;; list
+  (with-memory-stream ($in "- a\n- b\n- c\n-------\n- a\n    - a1\n    - a2\n- b\n1. c\n")
+    (let (rd (.new MarkdownReader))
+      (assert (= (.read rd) '(ul () (li () "a") (li () "b") (li () "c"))))
+      (assert (= (.read rd) '(hr ())))
+      (assert (= (.read rd) '(ul ()
+                                 (li ()
+                                     (p () "a")
+                                     (ul ()
+                                         (li () "a1")
+                                         (li () "a2")))
+                                 (li () "b"))))
+      (assert (= (.read rd) '(ol () (li () "c"))))))
   (with-memory-stream ($in (join '("- ul1\n"
                                    "    1. ol1\n"
                                    "    1. ol2\n"
                                    "- ul2\n")))
     (assert (= (.read (.new MarkdownReader))
                '(ul ()
-                    (li () "ul1")
-                    (ol ()
-                        (li () "ol1")
-                        (li () "ol2"))
+                    (li () (p () "ul1")
+                        (ol ()
+                            (li () "ol1")
+                            (li () "ol2")))
                     (li () "ul2")))))
-  (with-memory-stream ($in (join '("<span style='color:red'>foo</span>\n")))
-    (assert (= (.read (.new MarkdownReader)) '(span (:style "color:red") "foo"))))
-  (with-memory-stream ($in (join '("[^1]: reference\n")))
-    (assert (= (.read (.new MarkdownReader))
-               '(p nil (a (:id "fnreferr1" :href "#fnrefere1") "[1]") " reference")))))
+  ;; blockquote
+  (with-memory-stream ($in "> bq1\n\n> bq1\n>> bq2\n> bq3\n")
+    (let (rd (.new MarkdownReader))
+      (assert (= (.read rd) '(blockquote () (p () "bq1"))))
+      (assert (= (.read rd) '(blockquote ()
+                                         (p () "bq1")
+                                         (blockquote () (p () "bq2"))
+                                         (p () "bq3")))))))

@@ -3,45 +3,33 @@
 (import :optparse)
 (import :markdown)
 
-(<- $usage
-"
-Usage: paren md2html.p [OPTION]
-	Convert the markdown file read from the standard input into an html file and output it to the standard output.
-OPTION:
-	c -- Do not output table of contents.
-"
-    $default-css
+(<- $default-css
 "
 ::-webkit-scrollbar { width:8px; height:8px; }
 ::-webkit-scrollbar-thumb { background-color:rgba(40, 40, 40, .5); border-radius:5px; }
 body { margin:0; display:flex; justify-content:center; font-family:Consolas, 'Courier New', Courier, Monaco, monospace; }
-aside { width:25vw; overflow:scroll; margin-left:1em; max-height:100vh; position:sticky; top:0; font-size:0.9rem; }
+aside { width:25vw; overflow:scroll; margin-left:1rem; max-height:100vh; position:sticky; top:0; font-size:0.9rem; }
 aside ul { padding-left:0px; list-style:none; }
-aside ul span { margin-left:1em; }
+aside ul span { margin-left:1rem; }
 aside ul a { color:#000; text-decoration:none; margin:2px; white-space:nowrap; }
-article { width:75vw; margin-left:1em; }
-h1 { margin-top:0.25em; }
-h1, h2, h3, h4, h5, h6, p, pre, blockquote, table { margin-bottom:0.75em; }
-h1 { font-size:1.6em; }
-h2 { font-size:1.2em; }
+article { width:75vw; margin-left:1rem; }
+h1 { margin-top:0.25rem; }
+h1, h2, h3, h4, h5, h6, p, pre, blockquote, table { margin-bottom:0.75rem; }
+h1 { font-size:1.6rem; }
+h2 { font-size:1.2rem; }
 h1, h2, h3 { border-bottom:solid 1px #ccc; }
-h3, h4, h5, h6 { font-size:1.0em; }
-h1, h2, h3, h4, h5, h6 { display:block; margin-top:0.75em; font-weight:bold; }
-pre, code, th, td { padding:0.2em 0.5em; }
-p { text-indent:1em; }
-pre, blockquote, table { margin-left:1em; margin-right:1em; }
-pre, code { font-size:1rem; font-family:monospace; background-color:rgba(110, 118, 129, 0.1); border-radius:6px; }
-pre { overflow-x:auto; }
-blockquote { padding-left:1em; border-left:1.2px solid #ccc; }
+h3, h4, h5, h6 { font-size:1.0rem; }
+h1, h2, h3, h4, h5, h6 { display:block; margin-top:0.75rem; font-weight:bold; }
+th, td { padding:0.2em 0.5rem; }
+p { text-indent:1rem; }
+ul p, ol p { text-indent:0; margin:0; }
+pre, blockquote, table { margin-left:1rem; margin-right:1rem; }
+pre { padding:1rem; overflow-x:auto; border:1px solid #ddd; }
+code { font-size:1rem; font-family:monospace; }
+blockquote { padding-left:1rem; border-left:1.2px solid #ccc; }
 table { border-collapse:collapse; }
 thead { border-bottom:1.2px solid #ccc; }
 th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
-"
-    $default-script
-"
-document.querySelectorAll('pre').forEach(x => {
-  x.onclick = (e => navigator.clipboard.writeText(e.target.innerHTML));
-});
 "
     $headers '(h1 h2 h3 h4 h5 h6)
     $contents nil)
@@ -96,12 +84,10 @@ document.querySelectorAll('pre').forEach(x => {
                   (style () ,$default-css))
             (body ()
                   ,@table-of-contents
-                  (article ,@nodes))
-            (script ,$default-script)))))
+                  (article ,@nodes))))))
 
 (function! main (args)
-  (catch (Error (f (e) (write-line $usage) (<- $out $stderr) (throw e)))
-    (let ((op args) (.parse (.init (.new OptionParser) "c") args) rd (.new MarkdownReader))
-      (foreach (f (x) (write-line (xml->str x)))
-               (make-html (parse-nodes (collect (f () (.read rd))))
-                          :output-table-of-contents? (! (.get op "c")))))))
+  (let ((op args) (.parse (.init (.new OptionParser) "c") args) rd (.new MarkdownReader))
+    (foreach (f (x) (write-line (xml->str x)))
+             (make-html (parse-nodes (collect (f () (.read rd))))
+                        :output-table-of-contents? (! (.get op "c"))))))
