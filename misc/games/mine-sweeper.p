@@ -14,69 +14,69 @@
 ; cell
 
 (class Cell ()
-  state mine? mine-counts)
+  state mine?)
 
 (method Cell .init ()
-  (&state! self :close)) ; (:open :close :mark)
+  (.state! self :close))
 
-(method Cell .to-s ()
-  (format "%-2s"
-          (if (= (&state self) :close) "#"
-              (= (&state self) :mark) "?"
-              (let (mine-counts (&mine-counts self))
-                (if (= mine-counts 0) "."
-                    (str mine-counts))))))
+(method Cell .state ()
+  self->state)
 
-(function init-cell (p)
-  (.put $board p (.new Cell)))
+(method Cell .state! (state)
+  (assert (in? state '(:open :close :mark)))
+  (<- self->state state)
+  self)
+
+(method Cell .set-mine! ()
+  (<- self->mine? true))
+
+(method Cell .mine? ()
+  self->mine?)
 
 (function cell (p)
   (if (.inside? $board p) (.at $board p)))
 
-(function neighbor-cells (p)
-  (select (f (p) (cell p))
-          (map (f (q) (map + p q))
-               '((-1 -1) (-1 0) (-1 1) (0 -1)
-                         (0 1) (1 -1) (1 0) (1 1)))))
-
-(function set-mine-count (p)
-  (&mine-counts! (cell p) (len (select mine? (neighbor-cells p)))))
-
-(function open? (p)
-  (= (&state (cell p)) :open))
-
-(function close? (p)
-  (= (&state (cell p)) :close))
-
-(function mark? (p)
-  (= (&state (cell p)) :mark))
+(function put-mine (p)
+  (.set-mine! (cell p)))
 
 (function mine? (p)
-  (&mine? (cell p)))
+  (.mine? (cell p)))
+
+(function open? (p)
+  (== (.state (cell p)) :open))
+
+(function close? (p)
+  (== (.state (cell p)) :close))
+
+(function mark? (p)
+  (== (.state (cell p)) :mark))
 
 (function open! (p)
   (assert (! (open? p)))
   (if (mark? p) (<- $mark-count (-- $mark-count)))
   (<- $covered-count (-- $covered-count))
-  (&state! (cell p) :open))
+  (.state! (cell p) :open))
 
 (function close! (p)
   (assert (! (open? p)))
   (if (mark? p) (<- $mark-count (-- $mark-count)))
-  (&state! (cell p) :close))
+  (.state! (cell p) :close))
 
 (function mark! (p)
   (assert (! (open? p)))
   (if (! (mark? p)) (<- $mark-count (++ $mark-count)))
-  (&state! (cell p) :mark))
-
-(function put-mine (p)
-  (&mine?! (cell p) true))
-
-(function no-mines-around? (p)
-  (= (&mine-counts (cell p)) 0))
+  (.state! (cell p) :mark))
 
 ; game
+
+(function neighbor-coods (p)
+  (select cell
+          (map (f (q) (map + p q))
+               '((-1 -1) (-1 0) (-1 1) (0 -1)
+                         (0 1) (1 -1) (1 0) (1 1)))))
+
+(function count-neighbor-mine (p)
+  (count mine? (neighbor-coods p)))
 
 (function mark (p)
   (if (mark? p) (close! p)
@@ -90,8 +90,7 @@
       (! (open? p))
       (begin
         (open! p)
-        (if (no-mines-around? p)
-            (foreach sweep (neighbor-cells p))))))
+        (if (zero? (count-neighbor-mine p)) (foreach sweep (neighbor-coods p))))))
 
 (function show ()
   (console.clear)
@@ -101,7 +100,13 @@
   (dotimes (x $height)
     (dotimes (y $width)
       (if (= y 0) (write-bytes (format "%-2d" x)))
-      (write-bytes (.to-s (cell (list x y)))))
+      (let (p (list x y))
+        (write-bytes (format "%-2s"
+                             (if (close? p) "#"
+                                 (mark? p) "?"
+                                 (let (n (count-neighbor-mine p))
+                                   (if (= n 0) "."
+                                       (str n))))))))
     (write-line)))
 
 (function input ()
@@ -141,9 +146,8 @@
                                 (put-mine p)
                                 (fill-mine (-- n))))))))
   (rand.seed (time))
-  (domatrix (p $board) (init-cell p))
-  (fill-mine $mine-count)
-  (domatrix (p $board) (set-mine-count p))))
+  (domatrix (p $board) (.put $board p (.new Cell)))
+  (fill-mine $mine-count)))
 
 (function! main (args)
   (init)
