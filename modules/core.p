@@ -91,7 +91,7 @@
   (with-gensyms (clock-offset cycle-offset)
     (list 'let (list clock-offset '(clock) cycle-offset '(cycle))
           (list 'begin0
-                (cons begin body)
+                (cons 'begin body)
                 (list 'write (list 'list
                                    :time (list '- '(clock) clock-offset)
                                    :cycle (list '- '(cycle) cycle-offset)))))))
@@ -240,24 +240,11 @@
 (function split (s :opt separator)
   (if (empty? s) nil
       (nil? separator) (list... s)
-      (let (i 0 lis nil chars nil
-              sa (array s) salen (len sa)
-              da (array separator) dalen (len da) end (- salen dalen)
-              match? (f ()
-                       (dotimes (j dalen)
-                         (if (!= ([] sa (+ i j)) ([] da j)) (return nil)))
-                       true)
-              join-chars (f () (if chars (apply concat (reverse! chars)) "")))
-        (while (<= i end)
-          (if (match?) (<- lis (cons (join-chars) lis)
-                           chars nil
-                           i (+ i dalen))
-              (<- chars (cons ([] sa i) chars)
-                  i (++ i))))
-        (while (< i salen)
-          (<- chars (cons ([] sa i) chars)
-              i (++ i)))
-        (reverse! (cons (join-chars) lis)))))
+      (let (pos nil lis nil seplen (len separator))
+        (while (<- pos (index separator s))
+          (<- lis (cons (slice s 0 pos) lis)
+              s (slice s (+ pos seplen))))
+        (reverse! (cons s lis)))))
 
 (function last (lis)
   (car (last-cons lis)))
