@@ -38,9 +38,9 @@
 (method Deflate.Writer .copy (length distance)
   (if (|| (nil? distance) (< distance 1) (> distance 32768)) (raise DeflateError "invalid distance")
       (|| (nil? length) (< length 0)) (raise DeflateError "invalid length")
-      (let (buf (.buf (.reserve self length)) pos self->wrpos)
+      (let (pos (- self->wrpos distance))
         (dotimes (i length)
-          (.write-byte self ([] buf (+ (- pos distance) i)))))))
+          (.write-byte self ([] self->buf (+ pos i)))))))
 
 (method Deflate.Writer .flush ()
   (slice self->buf 0 self->wrpos))
