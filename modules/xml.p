@@ -60,15 +60,16 @@
   (symbol (.token self)))
 
 (method XMLReader .read-declaration ()
-  (dostring (c "?xml")
-    (.skip self c))
+  (dostring (ch "?xml")
+    (.skip self ch))
   (let (attrs (.read-attrs self))
     (.skip (.skip-space self) "?") (.skip self ">")
     (list '?xml attrs)))
 
 (method XMLReader .read-doctype ()
-  (dostring (c "DOCTYPE")
-    (.skip self c))
+  (dostring (ch "DOCTYPE")
+    (if (= (.next self) ch) (.skip self)
+        (.skip self (lower ch))))
   (.skip-space self)
   (while (!= (.next self) ">")
     (.get self))
@@ -142,9 +143,7 @@
               (while (!= name (<- child (XMLReader.read self)))
                 (if (symbol? child) (raise XMLError (str "unexpected close tag " child " expected " name))
                     (push! child children)))
-              (cons (car tag)
-                    (cons (cadr tag)
-                          (reverse! children))))))))
+              (concat tag (reverse! children)))))))
 
 ;; SAX -- Simple API for XML.
 
