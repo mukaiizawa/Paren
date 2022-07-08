@@ -21,6 +21,7 @@ h1, h2, h3 { border-bottom:solid 1px #ccc; }
 h3, h4, h5, h6 { font-size:1.0rem; }
 h1, h2, h3, h4, h5, h6 { display:block; margin-top:0.75rem; font-weight:bold; }
 th, td { padding:0.2em 0.5rem; }
+em { font-weight:bold; font-style:normal; }
 p { text-indent:1rem; }
 ul p, ol p { text-indent:0; margin:0; }
 pre, blockquote, table { margin-left:1rem; margin-right:1rem; }
