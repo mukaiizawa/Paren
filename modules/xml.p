@@ -151,24 +151,27 @@
   on-start-element
   on-end-element
   on-read-text
-  on-read-comment)
+  on-read-comment
+  on-error)
 
-(method XMLSAXParser .init (:key on-start-element on-end-element on-read-text on-read-comment)
+(method XMLSAXParser .init (:key on-start-element on-end-element on-read-text on-read-comment on-error)
   (<- self->on-start-element (|| on-start-element (f (name attrs) nil))
       self->on-end-element (|| on-end-element (f (name) nil))
       self->on-read-text (|| on-read-text (f (text) nil))
-      self->on-read-comment (|| on-read-comment (f (comment) nil)))
+      self->on-read-comment (|| on-read-comment (f (comment) nil))
+      self->on-error (|| on-error (f (parser error) (throw error))))
   (AheadReader.init self))
 
 (method XMLSAXParser .parse ()
   ;; parse xml from standard input.
-  (while (.next (.get-space self))
-    (if (!= (.next self) "<") (apply self->on-read-text (list (.read-text self)))
-        (let ((_ tag) (.read-tag (.reset self)))
-          (if (symbol? tag) (apply self->on-end-element (list tag))
-              (in? (car tag) '(!DOCTYPE ?xml)) (continue)
-              (== (car tag) '!--) (apply self->on-read-comment (cdr tag))
-              (apply self->on-start-element tag))))))
+  (catch (Error (partial self->on-error self))
+    (while (.next (.get-space self))
+      (if (!= (.next self) "<") (apply self->on-read-text (list (.read-text self)))
+          (let ((_ tag) (.read-tag (.reset self)))
+            (if (symbol? tag) (apply self->on-end-element (list tag))
+                (in? (car tag) '(!DOCTYPE ?xml)) (continue)
+                (== (car tag) '!--) (apply self->on-read-comment (cdr tag))
+                (apply self->on-start-element tag)))))))
 
 ;; Wirter
 
