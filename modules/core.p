@@ -69,7 +69,7 @@
 (macro dolist ((x lis) :rest body)
   (with-gensyms (gl)
     (list 'for (list gl lis x (list car gl)) gl (list gl (list cdr gl) x (list car gl))
-          (cons begin body))))
+          (cons 'begin body))))
 
 (macro dotimes ((i n) :rest body)
   (with-gensyms (gend)
@@ -608,9 +608,6 @@
 (built-in-function bound?)
 (built-in-function symbol)
 (built-in-function keyword)
-
-(function symcmp (x y)
-  (- (address x) (address y)))
 
 ;; string.
 

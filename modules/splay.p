@@ -43,20 +43,18 @@
     q))
 
 (class Splay ()
-  top sentinel cmp size)
+  top sentinel size)
 
-(method Splay .init (cmp)
-  ; Initialize the receiver using the comparison function cmp, which returns a negative, zero, or positive integer.
-  ; Returns the receiver.
+(method Splay .init ()
   (let (sentinel (.new SplayNode))
     (<- self->top sentinel
         self->sentinel sentinel
-        self->cmp cmp
         self->size 0)
     self))
 
 (method Splay .balance (key)
-  (let (top self->top sentinel self->sentinel cmp self->cmp p top q nil d nil)
+  (let (top self->top sentinel self->sentinel p top q nil d nil
+            cmp (f (x y) (- (address x) (address y))))
     (<- sentinel->key key
         sentinel->left sentinel
         sentinel->right sentinel)
@@ -130,7 +128,7 @@
     (rec self->top)))
 
 (function! main (args)
-  (let (splay (.init (.new Splay) symcmp))
+  (let (splay (.new Splay))
     (.put splay :one 1)
     (.put splay :two 2)
     (.put splay :three 3)
