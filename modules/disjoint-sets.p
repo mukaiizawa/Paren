@@ -50,7 +50,6 @@
         (let ((src dst) (map (partial [] self->nodes) (list i j)))
           (if (< dst->set-size src->set-size) (<- (i j src dst) (list j i dst src)))
           (<- dst->set-size (+ src->set-size dst->set-size)
-              src->set-size 0
               src->parent-node-index j
               self->size (-- self->size))
           true))))
