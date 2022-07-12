@@ -1,4 +1,4 @@
-; disjoint-set forest.
+; fixed size disjoint-set forest.
 
 (class DisjointSet.Node ()
   parent-node-index
@@ -48,7 +48,7 @@
   (let (node ([] self->nodes i) parent-node-index node->parent-node-index)
     (if (= i parent-node-index) i
         (let (parent-node ([] self->nodes parent-node-index))
-          (.find self (<- node->parent-node-index parent-node->parent-node-index))))))
+          (<- node->parent-node-index (.find self parent-node->parent-node-index))))))
 
 (method DisjointSet .in-same-set? (i j)
   ; Returns whether the i-th node and the j-th node belong to the same set.
