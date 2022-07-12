@@ -48,6 +48,7 @@
   (let (node ([] self->nodes i) parent-node-index node->parent-node-index)
     (if (= i parent-node-index) i
         (let (parent-node ([] self->nodes parent-node-index))
+          ;; Partial path compression
           (<- node->parent-node-index (.find self parent-node->parent-node-index))))))
 
 (method DisjointSet .in-same-set? (i j)
