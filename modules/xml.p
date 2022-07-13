@@ -176,44 +176,48 @@
 ;; Wirter
 
 (function xml.write (x)
-  (let (write1 (f (x)
-                 (if (nil? x) nil
-                     (string? x) (with-memory-stream ($in x)
-                                   (let (ch nil)
-                                     (while (<- ch (read-char))
-                                       (write-bytes
-                                         (if (= ch "\"") "&quot;"
-                                             (= ch "'") "&apos;"
-                                             (= ch "<") "&lt;"
-                                             (= ch ">") "&gt;"
-                                             (= ch "&") "&amp;"
-                                             ch)))))
-                     (raise XMLError "unexpected expression")))
-               write-attr (f (x)
-                            (while x
-                              (if (! (keyword? (car x))) (raise XMLError "attribute name must be keyword")
-                                  (begin
-                                    (write-bytes " ")
-                                    (write-bytes (car x))
-                                    (let (next (car (<- x (cdr x))))
-                                      (if (nil? next) (break)
-                                          (keyword? next) (continue)
-                                          (string? next) (begin (foreach write-bytes (list "='" next "'")) (<- x (cdr x)))
-                                          (raise XMLError "attribute value must be string"))))))))
-    (if (atom? x) (write1 x)
-        (let ((name :opt attrs :rest children) x)
-          (if (= name '?xml) (begin (write-bytes "<?xml") (write-attr attrs) (write-bytes "?>"))
-              (= name '!DOCTYPE) (foreach write-bytes (list "<!DOCTYPE " attrs ">"))
-              (= name '!--) (foreach write-bytes (list "<!--" attrs "-->"))
-              (&& attrs (|| (atom? attrs) (! (keyword? (car attrs)))))
-              (begin
-                (foreach write-bytes (list "<" name  ">"))
-                (foreach xml.write (cons attrs children))
-                (foreach write-bytes (list "</" name  ">")))
-              (begin
-                (write-bytes "<") (write-bytes name) (write-attr attrs) (write-bytes ">")
-                (foreach xml.write children)
-                (foreach write-bytes (list "</" name  ">"))))))))
+  (let (write-attr (f (x)
+                     (if (! (list? x)) (raise XMLError "attributes must be list")
+                         (let (rest x curr (car x))
+                           (while rest
+                             (if (! (keyword? curr)) (raise XMLError "attribute name must be keyword")
+                                 (begin
+                                   (write-bytes " ")
+                                   (write-bytes curr)
+                                   (<- rest (cdr rest)
+                                       curr (car rest))
+                                   (if (nil? curr) (break)
+                                       (keyword? curr) (continue)
+                                       (string? curr) (begin
+                                                        (foreach write-bytes (list "='" curr "'"))
+                                                        (<- rest (cdr rest)
+                                                            curr (car rest)))
+                                       (raise XMLError "attribute value must be string"))))))))
+                   write1 (f (x)
+                            (if (string? x) (dostring (ch x)
+                                              (write-bytes (if (= ch "\"") "&quot;"
+                                                               (= ch "'") "&apos;"
+                                                               (= ch "<") "&lt;"
+                                                               (= ch ">") "&gt;"
+                                                               (= ch "&") "&amp;"
+                                                               ch)))
+                                (cons? x) (let ((name :opt attrs :rest children) x)
+                                            (if (= name '?xml) (begin (write-bytes "<?xml") (write-attr attrs) (write-bytes "?>"))
+                                                (= name '!DOCTYPE) (foreach write-bytes (list "<!DOCTYPE " attrs ">"))
+                                                (= name '!--) (foreach write-bytes (list "<!--" attrs "-->"))
+                                                (&& attrs (|| (atom? attrs) (! (keyword? (car attrs)))))
+                                                (begin
+                                                  (foreach write-bytes (list "<" name  ">"))
+                                                  (foreach write1 (cons attrs children))
+                                                  (foreach write-bytes (list "</" name  ">")))
+                                                (begin
+                                                  (write-bytes "<") (write-bytes name) (write-attr attrs) (write-bytes ">")
+                                                  (foreach write1 children)
+                                                  (foreach write-bytes (list "</" name  ">")))))
+                                (raise XMLError "unexpected expression"))))
+    (write1 x)
+    (write-line)
+    x))
 
 (function! main (args)
   ;; DOM.
@@ -270,22 +274,22 @@
   ;; Writer.
   (assert (= (with-memory-stream ($out)
                (xml.write '(!DOCTYPE "html")))
-             "<!DOCTYPE html>"))
+             "<!DOCTYPE html>\n"))
   (assert (= (with-memory-stream ($out)
                (xml.write '(?xml (:version "1.0" :encoding "UTF-8" :standalone "yes"))))
-             "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"))
+             "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n"))
   (assert (= (with-memory-stream ($out)
                (xml.write '(html (:lang "ja") "foo")))
-             "<html lang='ja'>foo</html>"))
+             "<html lang='ja'>foo</html>\n"))
   (assert (= (with-memory-stream ($out)
                (xml.write '(!-- " -- foo -- ")))
-             "<!-- -- foo -- -->"))
+             "<!-- -- foo -- -->\n"))
   (assert (= (with-memory-stream ($out)
                (xml.write '(script (:async :src "foo"))))
-             "<script async src='foo'></script>"))
+             "<script async src='foo'></script>\n"))
   (assert (= (with-memory-stream ($out)
                (xml.write '(script (:src "foo" :async))))
-             "<script src='foo' async></script>"))
+             "<script src='foo' async></script>\n"))
   (assert (= (with-memory-stream ($out)
                (xml.write '(title ())))
-             "<title></title>")))
+             "<title></title>\n")))
