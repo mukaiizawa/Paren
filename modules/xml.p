@@ -191,7 +191,7 @@
                      (raise XMLError "unexpected expression")))
                write-attr (f (x)
                             (while x
-                              (if (! (keyword? (car x))) (raise XMLError "attribute must be keyword")
+                              (if (! (keyword? (car x))) (raise XMLError "attribute name must be keyword")
                                   (begin
                                     (write-bytes " ")
                                     (write-bytes (car x))
@@ -199,7 +199,7 @@
                                       (if (nil? next) (break)
                                           (keyword? next) (continue)
                                           (string? next) (begin (foreach write-bytes (list "='" next "'")) (<- x (cdr x)))
-                                          (raise XMLError "invalid attribute value"))))))))
+                                          (raise XMLError "attribute value must be string"))))))))
     (if (atom? x) (write1 x)
         (let ((name :opt attrs :rest children) x)
           (if (= name '?xml) (begin (write-bytes "<?xml") (write-attr attrs) (write-bytes "?>"))
