@@ -173,7 +173,7 @@
                 (== (car tag) '!--) (apply self->on-read-comment (cdr tag))
                 (apply self->on-start-element tag)))))))
 
-;; Wirter
+;; Wirter.
 
 (function xml.write (x)
   (let (write-attr (f (x)
