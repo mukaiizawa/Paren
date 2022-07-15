@@ -3,7 +3,6 @@
 (class XMLError (Error))
 
 ;; Reader, Parser.
-;;; DOM -- Document Object Model.
 
 (class XMLReader (AheadReader))
 
@@ -145,8 +144,6 @@
                     (push! child children)))
               (concat tag (reverse! children)))))))
 
-;; SAX -- Simple API for XML.
-
 (class XMLSAXParser (AheadReader XMLReader)
   on-start-element
   on-end-element
@@ -177,7 +174,8 @@
 
 (function xml.write (x)
   (let (write-attr (f (x)
-                     (if (! (list? x)) (raise XMLError "attributes must be list")
+                     (if (nil? x) nil
+                         (! (cons? x)) (raise XMLError "attributes must be list")
                          (let (rest x curr (car x))
                            (while rest
                              (if (! (keyword? curr)) (raise XMLError "attribute name must be keyword")
@@ -205,11 +203,6 @@
                                             (if (= name '?xml) (begin (write-bytes "<?xml") (write-attr attrs) (write-bytes "?>"))
                                                 (= name '!DOCTYPE) (foreach write-bytes (list "<!DOCTYPE " attrs ">"))
                                                 (= name '!--) (foreach write-bytes (list "<!--" attrs "-->"))
-                                                (&& attrs (|| (atom? attrs) (! (keyword? (car attrs)))))
-                                                (begin
-                                                  (foreach write-bytes (list "<" name  ">"))
-                                                  (foreach write1 (cons attrs children))
-                                                  (foreach write-bytes (list "</" name  ">")))
                                                 (begin
                                                   (write-bytes "<") (write-bytes name) (write-attr attrs) (write-bytes ">")
                                                   (foreach write1 children)
