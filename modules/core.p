@@ -1505,6 +1505,22 @@
   (.write-bytes self (|| end "\n"))
   x)
 
+(method Stream .seek (offset)
+  (raise NotImplementedError))
+
+(method Stream .tell ()
+  (raise NotImplementedError))
+
+(method Stream .peek-byte ()
+  (let (pos (.tell self) byte (.read-byte self))
+    (.seek self pos)
+    byte))
+
+(method Stream .peek-char ()
+  (let (pos (.tell self) ch (.read-char self))
+    (.seek self pos)
+    ch))
+
 (class MemoryStream (Stream)
   ; A stream whose contents are held in memory.
   buf rdpos wrpos)
