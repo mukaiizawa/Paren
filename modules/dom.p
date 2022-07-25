@@ -1,5 +1,126 @@
 ; DOM module.
 
+(<- $dom.singleton '(area base br col command embed hr img input keygen link meta param source track wbr))
+
+;; reader.
+
+(class DOM.Reader ()
+  stream)
+
+(method DOM.Reader .init ()
+  (<- self->stream (.new MemoryStream))
+  (.write-bytes self->stream (read-bytes))
+  self)
+
+(method DOM.Reader .skip (:opt size)
+  (dotimes (i (|| size 1))
+    (.read-char self->stream))
+  self)
+
+(method DOM.Reader .match? (text)
+  (let (match? true pos (.tell self->stream))
+    (dostring (ch text)
+      (when (!= ch (.read-char self->stream))
+        (<- match? nil)
+        (break)))
+    (.seek self->stream pos)
+    match?))
+
+(method DOM.Reader .skip-space ()
+  (let (ch nil)
+    (while (<- ch (.peek-char self->stream))
+      (if (space? ch) (.skip self)
+          (break)))
+    self))
+
+(method DOM.Reader .skip-doctype ()
+  (while (!= (.read-char self->stream) "<"))
+  (if (!= (.read-char self->stream) "!") (raise SyntaxError "missing DOCTYPE")
+  (while (!= (.read-char self->stream) ">"))))
+
+(method DOM.Reader .read-quoted ()
+  (with-memory-stream (val)
+    (let (ch nil quote (.read-char self->stream))
+      (if (! (in? quote '("'" "\""))) (raise SyntaxError "expected quote")
+          (while (!= (<- ch (.read-char self->stream)) quote)
+            (if (nil? ch) (raise SyntaxError "missing quote")
+                (.write-bytes val ch)))))))
+
+(method DOM.Reader .read-ident ()
+  (let (ch nil ident (.new MemoryStream))
+    (while (<- ch (.peek-char self->stream))
+      (if (nil? ch) (raise SyntaxError "expected '>'")
+          (alnum? ch) (.write-bytes ident (.read-char self->stream))
+          (break)))
+    (symbol (.to-s ident))))
+
+(method DOM.Reader .read-text ()
+  (with-memory-stream (text)
+    (let (ch nil)
+      (while (<- ch (.peek-char self->stream))
+        (if (= ch "<") (break)
+            (!= ch "&") (.write-bytes text (.read-char self->stream))
+            (begin
+              (.read-char self->stream)
+              (.write-bytes text
+                            (if (.match? self "&quot;") "\""
+                                (.match? self "&apos;") "'"
+                                (.match? self "&lt;") "<"
+                                (.match? self "&gt;") ">"
+                                (.match? self "&amp;") "&"
+                                "&"))))))))
+
+(method DOM.Reader .read-attrs ()
+  (let (ch nil attrs nil)
+    (while (!= (<- ch (.peek-char self->stream)) ">")
+      (if (nil? ch) (raise EOFError "missing '>'")
+          (push! (keyword (.read-ident self)) attrs))
+      (.skip-space self)
+      (if (= (.peek-char self->stream) "=") (.skip self)
+          (continue))    ; single attribute
+      (push! (.read-quoted (.skip-space self)) attrs))
+    (reverse! attrs)))
+
+(method DOM.Reader .skip-comment ()
+  (.skip self 3)
+  (while (! (.match? self "-->"))
+    (.read-char self->stream))
+  (.skip self 3))
+
+(method DOM.Reader .read-close-tag ()
+  (.skip self)
+  (let (name (.read-ident self))
+    (if (!= (.read-char self->stream) ">") (raise SyntaxError "expected end tag '>'")
+        (list nil name))))
+
+(method DOM.Reader .read-tag ()
+  (.skip self)
+  (if (= (.peek-char self->stream) "!") (begin (.skip-comment self) (.read-tag self))
+      (= (.peek-char self->stream) "/") (.read-close-tag self)    ; end-element
+      (let (name (.read-ident self) attrs (.read-attrs self))
+        (.skip-space self)
+        (if (!= (.read-char self->stream) ">") (raise SyntaxError "expected close tag '>'")
+            (list true (list name attrs))))))
+
+(method DOM.Reader .read-node ()
+  (if (!= (.peek-char self->stream) "<") (.read-text self)
+      (let ((trail? tag) (.read-tag self))
+        (if (! trail?) tag    ; make sense
+            (let (name (car tag) child nil children nil)
+              (if (in? name $dom.singleton) tag
+                  (begin
+                    (while (!= name (<- child (.read-node self)))
+                      (if (symbol? child) (raise SyntaxError (str "unexpected close tag " child " expected " name))
+                          (push! child children)))
+                    (concat tag (reverse! children)))))))))
+
+(method DOM.Reader .read ()
+  ; Read dom.
+  (.skip-doctype self)
+  (.read-node (.skip-space self)))
+
+;; query-selector.
+
 (class DOM.SelectorCompiler ()
   reader)
 
@@ -62,6 +183,8 @@
 (function dom.compile-selector (selector)
   (with-memory-stream ($in selector)
     (.compile (.new DOM.SelectorCompiler))))
+
+;; API.
 
 (function dom.name (node)
   (lower (string (car node))))
@@ -132,7 +255,53 @@
       (sweep selector dom nil nil))
     (reverse! nodes)))
 
+(function dom.read ()
+  (.read (.new DOM.Reader)))
+
+(function dom.write (x)
+  (let (write-attr (f (x)
+                     (if (nil? x) nil
+                         (! (cons? x)) (raise SyntaxError "attributes must be list")
+                         (let (rest x curr (car x))
+                           (while rest
+                             (if (! (keyword? curr)) (raise SyntaxError "attribute name must be keyword")
+                                 (begin
+                                   (write-bytes " ")
+                                   (write-bytes curr)
+                                   (<- rest (cdr rest)
+                                       curr (car rest))
+                                   (if (nil? curr) (break)
+                                       (keyword? curr) (continue)
+                                       (string? curr) (begin
+                                                        (foreach write-bytes (list "='" curr "'"))
+                                                        (<- rest (cdr rest)
+                                                            curr (car rest)))
+                                       (raise SyntaxError "attribute value must be string"))))))))
+                   write-node (f (x)
+                                (if (string? x) (dostring (ch x)
+                                                  (write-bytes (if (= ch "\"") "&quot;"
+                                                                   (= ch "'") "&apos;"
+                                                                   (= ch "<") "&lt;"
+                                                                   (= ch ">") "&gt;"
+                                                                   (= ch "&") "&amp;"
+                                                                   ch)))
+                                    (cons? x) (let ((name attrs :rest children) x)
+                                                (write-bytes "<") (write-bytes name) (write-attr attrs) (write-bytes ">")
+                                                (when (! (in? name $dom.singleton))
+                                                  (foreach write-node children)
+                                                  (write-bytes "<") (write-bytes name) (write-bytes ">")))
+                                    (raise SyntaxError "unexpected expression"))))
+    (write-line "<!DOCTYPE html>")
+    (write-node x)
+    (write-line)
+    x))
+
 (function! main (args)
+  ;; reader.
+  (with-memory-stream ($in "<!DOCTYPE html>\n<html>hello html</html>")
+    (assert (= (dom.read)
+               '(html () "hello html"))))
+  ;; accessor.
   (let (dom '(div (:id "container" :class "v")
                   (p (:class "x y z") "text")
                   (input (:type "text"))))
