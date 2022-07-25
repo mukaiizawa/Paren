@@ -132,9 +132,11 @@
   (let (selectors nil next nil
                   lead-basic-selector? (f (rd) (in? (.next rd) '("#" "." "[")))
                   read-ident (f (rd)
-                               (while (.next? rd alnum?)
-                                 (.get rd))
-                               (.token rd)))
+                               (if (= (.next rd) "*") (begin (.skip rd) "*")
+                                   (begin
+                                     (while (.next? rd alnum?)
+                                       (.get rd))
+                                     (.token rd)))))
     (if (! (lead-basic-selector? self->reader)) (push! `(:name ,(read-ident self->reader)) selectors))
     (while (lead-basic-selector? self->reader)
       (<- next (.skip self->reader))
@@ -181,8 +183,9 @@
     (reverse! selectors)))
 
 (function dom.compile-selector (selector)
-  (with-memory-stream ($in selector)
-    (.compile (.new DOM.SelectorCompiler))))
+  (if (! (string? selector)) selector
+      (with-memory-stream ($in selector)
+        (.compile (.new DOM.SelectorCompiler)))))
 
 ;; API.
 
@@ -205,6 +208,9 @@
 (function dom.children (node)
   (cddr node))
 
+(function dom.first-child (node)
+  (car (dom.children node)))
+
 (function dom.text-node? (node)
   (string? node))
 
@@ -215,7 +221,7 @@
   (dom.query-selector dom name))
 
 (function dom.query-selector (dom selector)
-  (car (dom.query-selector dom selector)))
+  (car (dom.query-selector-all dom selector)))
 
 (function dom.query-selector-all (dom selector)
   (let (nodes nil selectors (dom.compile-selector selector)
@@ -223,7 +229,8 @@
               basic-match? (f (node expr)
                              (every? (f (x)
                                        (let ((type args) x)
-                                         (if (== type :name) (= args (dom.name node))
+                                         (if (== type :name) (|| (= args "*")
+                                                                 (= args (dom.name node)))
                                              (== type :id) (= args (dom.id node))
                                              (== type :class) (in? args (dom.classes node))
                                              (== type :attr) (in? args (dom.attributes node))
