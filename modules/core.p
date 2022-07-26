@@ -1557,7 +1557,9 @@
 
 (method MemoryStream .read-bytes (:opt buf from size)
   ; Implementation of the Stream.read-bytes.
-  (if (nil? buf) (slice self->buf self->rdpos self->wrpos)
+  (if (nil? buf) (begin0
+                   (slice self->buf self->rdpos self->wrpos)
+                   (<- self->rdpos self->wrpos))
       (let (rest (- self->wrpos self->rdpos))
         (if (< rest size) (<- size rest))
         (memcpy self->buf self->rdpos buf self->wrpos size)
@@ -1618,11 +1620,10 @@
 
 (method FileStream .read-bytes (:opt buf from size)
   ; Implementation of the Stream.read-bytes.
-  (if (nil? buf)
-      (let (out (.new MemoryStream) buf (bytes 1024))
-        (while (> (<- size (fread buf 0 1024 self->fp)) 0)
-          (.write-bytes out buf 0 size))
-        (.buf out))
+  (if (nil? buf) (let (out (.new MemoryStream) buf (bytes 1024))
+                   (while (> (<- size (fread buf 0 1024 self->fp)) 0)
+                     (.write-bytes out buf 0 size))
+                   (.buf out))
       (fread buf from size self->fp)))
 
 (method FileStream .read-line ()
