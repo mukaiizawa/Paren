@@ -7,7 +7,7 @@
 
 (method XML.Reader .init ()
   (<- self->stream (.new MemoryStream))
-  (.write-bytes self->stream (read-bytes))
+  (.write-bytes self->stream (.read-bytes (dynamic $in)))
   self)
 
 (method XML.Reader .next ()
@@ -38,10 +38,10 @@
     match?))
 
 (method XML.Reader .read-ident ()
-  (let (ch nil ident (.new MemoryStream))
-    (while (<- ch (.next self))
-      (if (alnum? ch) (.write-bytes ident (.skip self))
-          (break)))
+  (let (ident (.new MemoryStream))
+    (while (alnum? (.next self))
+      (.write-bytes ident (.skip self)))
+    (assert (! (empty? (.to-s ident))))
     (symbol (.to-s ident))))
 
 (method XML.Reader .read-quoted ()
@@ -68,7 +68,7 @@
 
 (method XML.Reader .read-attrs ()
   (let (ch nil attrs nil)
-    (while (! (in? (<- ch (.next (.skip-space self))) '("/" "?" ">")))
+    (while (! (in? (<- ch (.next (.skip-space self))) '("/" ">")))
       (if (nil? ch) (raise EOFError "missing '>'")
           (push! (keyword (.read-ident self)) attrs))
       (if (!= (.skip (.skip-space self)) "=") (raise SyntaxError "missing '='")
@@ -76,11 +76,7 @@
     (reverse! attrs)))
 
 (method XML.Reader .skip-declaration ()
-  (if (! (.match? self "<?xml")) (raise SyntaxError "invalid xml declaration")
-      (begin
-        (.read-attrs (.skip-space (.skip-size self 5)))
-        (if (! (.match? (.skip-space self) "?>")) (raise SyntaxError "missing '?>'")
-            (.skip-size self 2)))))
+  (if (.match? self "<?xml") (while (!= (.skip self) ">"))))
 
 (method XML.Reader .read-comment ()
   (if (! (.match? self "!--")) (raise SyntaxError "invalid comment")
@@ -101,7 +97,7 @@
                      (let (name (.read-ident self))
                        (if (!= (.skip self) ">") (raise SyntaxError (str "missing close tag " name " '>'"))
                            (list :close name))))
-        (let (type :open name (.read-ident self) attrs (.read-attrs (.skip-space self)))
+        (let (type :open name (.read-ident self) attrs (.read-attrs self))
           (<- ch (.skip (.skip-space self)))
           (if (= ch "/") (<- type :single ch (.skip self)))
           (if (!= ch ">") (raise SyntaxError (str "missing close tag " (list name attrs) " '>'"))
@@ -176,7 +172,8 @@
                                                    (list " " k "='" v "'"))))
                                     x 2)))
                    write1 (f (x)
-                            (if (string? x) (dostring (ch x)
+                            (if (nil? x) nil
+                                (string? x) (dostring (ch x)
                                               (write-bytes (if (= ch "\"") "&quot;"
                                                                (= ch "'") "&apos;"
                                                                (= ch "<") "&lt;"

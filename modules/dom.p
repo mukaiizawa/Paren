@@ -10,13 +10,11 @@
   stream)
 
 (method DOM.Reader .skip-doctype ()
-  (while (!= (.skip self) "<"))
-  (if (!= (.skip self) "!") (raise SyntaxError "missing DOCTYPE")
-  (while (!= (.skip self) ">"))))
+  (if (.match? self "<!") (while (!= (.skip self) ">"))))
 
 (method DOM.Reader .read-attrs ()
   (let (ch nil attrs nil)
-    (while (!= (<- ch (.next self)) ">")
+    (while (! (in? (<- ch (.next (.skip-space self))) '("/" ">")))
       (if (nil? ch) (raise EOFError "missing '>'")
           (push! (keyword (.read-ident self)) attrs))
       (.skip-space self)
@@ -34,8 +32,9 @@
             (let (name (car val) node nil children nil)
               (if (in? name $dom.singleton) val
                   (begin
-                    (while (!= name (<- child (.read-node self)))
-                      (if (symbol? child) (raise SyntaxError (str "unexpected close tag " child " expected " name))
+                    (while (<- child (.read-node self))
+                      (if (= name child) (break)
+                          (symbol? child) (raise SyntaxError (str "unexpected close tag " child " expected " name))
                           (push! child children)))
                     (concat val (reverse! children)))))))))
 
@@ -210,7 +209,8 @@
                                                             curr (car rest)))
                                        (raise SyntaxError "attribute value must be string"))))))))
                    write-node (f (x)
-                                (if (string? x) (dostring (ch x)
+                                (if (nil? x) nil
+                                    (string? x) (dostring (ch x)
                                                   (write-bytes (if (= ch "\"") "&quot;"
                                                                    (= ch "'") "&apos;"
                                                                    (= ch "<") "&lt;"
@@ -221,7 +221,7 @@
                                                 (write-bytes "<") (write-bytes name) (write-attr attrs) (write-bytes ">")
                                                 (when (! (in? name $dom.singleton))
                                                   (foreach write-node children)
-                                                  (write-bytes "<") (write-bytes name) (write-bytes ">")))
+                                                  (write-bytes "</") (write-bytes name) (write-bytes ">")))
                                     (raise SyntaxError "unexpected expression"))))
     (write-line "<!DOCTYPE html>")
     (write-node x)
@@ -230,9 +230,12 @@
 
 (function! main (args)
   ;; reader.
-  (with-memory-stream ($in "<!DOCTYPE html>\n<html>hello html</html>")
+  (with-memory-stream ($in "<!DOCTYPE html>\n<html lang='ja'>hello html</html>")
     (assert (= (dom.read)
-               '(html () "hello html"))))
+               '(html (:lang "ja") "hello html"))))
+  (with-memory-stream ($in "<img src='./x.png'>")
+    (assert (= (dom.read)
+               '(img (:src "./x.png")))))
   ;; accessor.
   (let (dom '(div (:id "container" :class "v")
                   (p (:class "x y z") "text")
