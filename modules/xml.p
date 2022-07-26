@@ -1,196 +1,180 @@
 ; xml module.
 
-(class XMLError (Error))
-
 ;; Reader, Parser.
 
-(class XMLReader (AheadReader))
+(class XML.Reader ()
+  stream)
 
-(method XMLReader .reset ()
-  (.token self)
+(method XML.Reader .init ()
+  (<- self->stream (.new MemoryStream))
+  (.write-bytes self->stream (read-bytes))
   self)
 
-(method XMLReader .get-space ()
-  (while (.next? self space?) (.get self))
+(method XML.Reader .next ()
+  (.peek-char self->stream))
+
+(method XML.Reader .skip ()
+  (.read-char self->stream))
+
+(method XML.Reader .skip-size (size)
+  (dotimes (i size)
+    (.skip self))
   self)
 
-(method XMLReader .read-text ()
-  (while (!= (.next self) "<")
-    (.get self))
-  (with-memory-stream ($out)
-    (with-memory-stream ($in (.token self))
-      (let (ch nil rd (.new AheadReader))
-        (while (<- ch (.next rd))
-          (if (!= ch "&") (write-bytes (.skip rd))
-              (begin
-                (while (!= (.next rd) ";") (.get rd))
-                (.get rd)
-                (let (tk (.token rd))
-                  (write-bytes
-                    (if (= tk "&quot;") "\""
-                        (= tk "&apos;") "'"
-                        (= tk "&lt;") "<"
-                        (= tk "&gt;") ">"
-                        (= tk "&amp;") "&"
-                        tk))))))))))
+(method XML.Reader .skip-space ()
+  (let (ch nil)
+    (while (<- ch (.next self))
+      (if (space? ch) (.skip self)
+          (break)))
+    self))
 
-(method XMLReader .read-attrs ()
-  (let (attrs nil q nil)
-    (while (! (in? (.next (.skip-space self)) '("?" "/" ">")))
-      (while (! (in? (.next self) '("=" " " "/" ">")))
-        (.get self))
-      (push! (keyword (.token self)) attrs)
-      (if (!= (.next (.skip-space self)) "=") (continue)    ; single attribute
-          (.skip self "="))
-      (if (! (in? (<- q (.skip (.skip-space self))) '("'" "\"")))
-          (raise XMLError "missing attribute value"))
-      (while (!= (.next self) q)
-        (.get-escape self))
-      (.skip self q)
-      (push! (.token self) attrs))
+(method XML.Reader .match? (text)
+  (let (match? true pos (.tell self->stream))
+    (dostring (ch text)
+      (when (!= ch (.skip self))
+        (<- match? nil)
+        (break)))
+    (.seek self->stream pos)
+    match?))
+
+(method XML.Reader .read-ident ()
+  (let (ch nil ident (.new MemoryStream))
+    (while (<- ch (.next self))
+      (if (alnum? ch) (.write-bytes ident (.skip self))
+          (break)))
+    (symbol (.to-s ident))))
+
+(method XML.Reader .read-quoted ()
+  (with-memory-stream (val)
+    (let (ch nil q (.skip self))
+      (if (! (in? q '("'" "\""))) (raise SyntaxError "expected quote")
+          (while (!= (<- ch (.skip self)) q)
+            (if (nil? ch) (raise EOFError "missing quote")
+                (.write-bytes val ch)))))))
+
+(method XML.Reader .read-text ()
+  (with-memory-stream (text)
+    (let (ch nil)
+      (while (<- ch (.next self))
+        (if (= ch "<") (break)
+            (!= ch "&") (.write-bytes text (.skip self))
+            (.write-bytes text
+                          (if (.match? self "&quot;") (begin (.skip-size self 6) "\"")
+                              (.match? self "&apos;") (begin (.skip-size self 6) "'")
+                              (.match? self "&lt;")   (begin (.skip-size self 4) "<")
+                              (.match? self "&gt;")   (begin (.skip-size self 4) ">")
+                              (.match? self "&amp;")  (begin (.skip-size self 5) "&")
+                              (.skip self))))))))
+
+(method XML.Reader .read-attrs ()
+  (let (ch nil attrs nil)
+    (while (! (in? (<- ch (.next (.skip-space self))) '("/" "?" ">")))
+      (if (nil? ch) (raise EOFError "missing '>'")
+          (push! (keyword (.read-ident self)) attrs))
+      (if (!= (.skip (.skip-space self)) "=") (raise SyntaxError "missing '='")
+          (push! (.read-quoted (.skip-space self)) attrs)))
     (reverse! attrs)))
 
-(method XMLReader .read-name ()
-  (.skip-space self)
-  (while (&& (! (.next? self space?))
-             (!= (.next self) "/")
-             (!= (.next self) ">"))
-    (.get self))
-  (symbol (.token self)))
+(method XML.Reader .skip-declaration ()
+  (if (! (.match? self "<?xml")) (raise SyntaxError "invalid xml declaration")
+      (begin
+        (.read-attrs (.skip-space (.skip-size self 5)))
+        (if (! (.match? (.skip-space self) "?>")) (raise SyntaxError "missing '?>'")
+            (.skip-size self 2)))))
 
-(method XMLReader .read-declaration ()
-  (dostring (ch "?xml")
-    (.skip self ch))
-  (let (attrs (.read-attrs self))
-    (.skip (.skip-space self) "?") (.skip self ">")
-    (list '?xml attrs)))
+(method XML.Reader .read-comment ()
+  (if (! (.match? self "!--")) (raise SyntaxError "invalid comment")
+      (let (ch nil comment (.new MemoryStream))
+        (.skip-size self 3)
+        (while (! (.match? self "-->"))
+          (if (nil? (<- ch (.skip self))) (raise EOFError "comment not terminated")
+              (.write-bytes comment ch)))
+        (.skip-size self 3)
+        (.to-s comment))))
 
-(method XMLReader .read-doctype ()
-  (dostring (ch "DOCTYPE")
-    (if (= (.next self) ch) (.skip self)
-        (.skip self (lower ch))))
-  (.skip-space self)
-  (while (!= (.next self) ">")
-    (.get self))
-  (.skip self)
-  (list '!DOCTYPE (.token self)))
+(method XML.Reader .read-tag ()
+  (.skip self)    ; <
+  (let (ch (.next self))
+    (if (= ch "!") (list :comment (.read-comment self))
+        (= ch "/") (begin
+                     (.skip self)
+                     (let (name (.read-ident self))
+                       (if (!= (.skip self) ">") (raise SyntaxError (str "missing close tag " name " '>'"))
+                           (list :close name))))
+        (let (type :open name (.read-ident self) attrs (.read-attrs (.skip-space self)))
+          (<- ch (.skip (.skip-space self)))
+          (if (= ch "/") (<- type :single ch (.skip self)))
+          (if (!= ch ">") (raise SyntaxError (str "missing close tag " (list name attrs) " '>'"))
+              (list type (list name attrs)))))))
 
-(method XMLReader .read-comment ()
-  (dostring (ch "--") (.skip self ch))
-  (loop
-    (while (!= (.next self) "-")
-      (.get self))
-    (.skip self)
-    (when (!= (.next self) "-")
-      (.put self "-")
-      (continue))
-    (.skip self)
-    (when (!= (.next self) ">")
-      (.put self "--")
-      (continue))
-    (.skip self)
-    (return (list '!-- (.token self)))))
+(method XML.Reader .text-node? ()
+  (let (ch nil pos (.tell self->stream) text? true)
+    (while (<- ch (.skip self))
+      (if (space? ch) (continue)
+          (begin
+            (<- text? (!= ch "<"))
+            (break))))
+    (.seek self->stream pos)
+    text?))
 
-(method XMLReader .read-exclam ()
-  (.skip self "!")
-  (if (= (.next self) "-") (.read-comment self)
-      (.read-doctype self)))
+(method XML.Reader .read-node ()
+  (if (nil? (.next self)) nil
+      (.text-node? self) (.read-text self)
+      (let ((type val) (.read-tag (.skip-space self)))
+        (if (== type :comment) (.read-node self)
+            (in? type '(:close :single)) val    ; make sense
+            (let (name (car val) node nil children nil)
+              (while (!== name (<- node (.read-node self)))
+                (if (symbol? node) (raise SyntaxError (str "unexpected close tag " child " expected " name))
+                    (push! node children)))
+              (concat val (reverse! children)))))))
 
-(method XMLReader .read-tag ()
-  (.skip self "<")
-  (if (= (.next self) "!") (list nil (.read-exclam self))
-      (= (.next self) "?") (list nil (.read-declaration self))
-      (= (.next self) "/") (begin
-                             (.skip self "/")
-                             (while (!= (.next self) ">") (.get self))
-                             (.skip self)
-                             (list nil (symbol (.token self))))    ; end-element
-      (let (start-element? nil name (.read-name self) attrs (.read-attrs self))
-        (if (= (.next (.skip-space self)) "/") (.skip self)
-            (<- start-element? true))
-        (.skip self ">")
-        (list start-element? (list name attrs)))))
+(method XML.Reader .read ()
+  (.skip-declaration self)
+  (.read-node self))
 
-(method XMLReader .read ()
+(function xml.read ()
   ; Read xml.
-  ; Returns the list corresponding to dom.
-  ; Readable xml is as follows.
-  ;     <xml> ::= <node> ...
-  ;     <node> ::= <tag>
-  ;              | <text>
-  ;     <tag> ::= <stag> <node> ... <etag>
-  ;             | <singletag>
-  ;             | <?tag>
-  ;             | <!tag>
-  ;     <?tag> :== '<?'	 <char> ... '>'
-  ;     <!tag> :== <doctype>
-  ;              | <comment>
-  ;     <doctype> ::= '<!DOCTYPE' <char> ... '>'
-  ;     <comment> ::= '<!--' <char> ... '-->'
-  ;     <element> ::= <single_element>
-  ;                 | <open_element> <node> ... <close_element>
-  ;     <singletag> ::= '<' <name> [<attr> ...] '/>'
-  ;     <stag> ::= '<' <name> [<attr> ...] '>'
-  ;     <etag> ::= '</' <name>   '>'
-  ;     <attr> ::= <key> ['=' '"' <value> '"']
-  ;     <text> -- a text node.
-  (if (nil? (.next (.get-space self))) nil
-      (!= (.next self) "<") (.read-text self)
-      (let ((start-element? tag) (.read-tag (.reset self)))
-        (if (! start-element?) tag    ; make sense
-            (let (name (car tag) child nil children nil)
-              (while (!= name (<- child (XMLReader.read self)))
-                (if (symbol? child) (raise XMLError (str "unexpected close tag " child " expected " name))
-                    (push! child children)))
-              (concat tag (reverse! children)))))))
+  ; Returns the list corresponding to xml.
+  (.read (.new XML.Reader)))
 
-(class XMLSAXParser (AheadReader XMLReader)
+(class XML.SAXParser (Object XML.Reader)
   on-start-element
   on-end-element
   on-read-text
   on-read-comment
   on-error)
 
-(method XMLSAXParser .init (:key on-start-element on-end-element on-read-text on-read-comment on-error)
+(method XML.SAXParser .init (:key on-start-element on-end-element on-read-text on-read-comment on-error)
   (<- self->on-start-element (|| on-start-element (f (name attrs) nil))
       self->on-end-element (|| on-end-element (f (name) nil))
       self->on-read-text (|| on-read-text (f (text) nil))
       self->on-read-comment (|| on-read-comment (f (comment) nil))
       self->on-error (|| on-error (f (parser error) (throw error))))
-  (AheadReader.init self))
+  (XML.Reader.init self))
 
-(method XMLSAXParser .parse ()
+(method XML.SAXParser .parse ()
   ;; parse xml from standard input.
   (catch (Error (partial self->on-error self))
-    (while (.next (.get-space self))
-      (if (!= (.next self) "<") (apply self->on-read-text (list (.read-text self)))
-          (let ((_ tag) (.read-tag (.reset self)))
-            (if (symbol? tag) (apply self->on-end-element (list tag))
-                (in? (car tag) '(!DOCTYPE ?xml)) (continue)
-                (== (car tag) '!--) (apply self->on-read-comment (cdr tag))
-                (apply self->on-start-element tag)))))))
+    (.skip-declaration self)
+    (while (.next self)
+      (if (.text-node? self) (apply self->on-read-text (list (.read-text self)))
+          (let ((type val) (.read-tag (.skip-space self)))
+            (if (== type :close) (apply self->on-end-element (list val))
+                (== type :comment) (apply self->on-read-comment (list val))
+                (apply self->on-start-element val)))))))
 
 ;; Wirter.
 
 (function xml.write (x)
   (let (write-attr (f (x)
-                     (if (nil? x) nil
-                         (! (cons? x)) (raise XMLError "attributes must be list")
-                         (let (rest x curr (car x))
-                           (while rest
-                             (if (! (keyword? curr)) (raise XMLError "attribute name must be keyword")
-                                 (begin
-                                   (write-bytes " ")
-                                   (write-bytes curr)
-                                   (<- rest (cdr rest)
-                                       curr (car rest))
-                                   (if (nil? curr) (break)
-                                       (keyword? curr) (continue)
-                                       (string? curr) (begin
-                                                        (foreach write-bytes (list "='" curr "'"))
-                                                        (<- rest (cdr rest)
-                                                            curr (car rest)))
-                                       (raise XMLError "attribute value must be string"))))))))
+                     (if (! (list? x)) (raise SyntaxError "attributes must be list")
+                         (map-group (f (k v)
+                                      (if (! (keyword? k)) (raise SyntaxError "attribute name must be keyword")
+                                          (! (string? v)) (raise SyntaxError "attribute value must be string")
+                                          (foreach write-bytes
+                                                   (list " " k "='" v "'"))))
+                                    x 2)))
                    write1 (f (x)
                             (if (string? x) (dostring (ch x)
                                               (write-bytes (if (= ch "\"") "&quot;"
@@ -200,51 +184,47 @@
                                                                (= ch "&") "&amp;"
                                                                ch)))
                                 (cons? x) (let ((name :opt attrs :rest children) x)
-                                            (if (= name '?xml) (begin (write-bytes "<?xml") (write-attr attrs) (write-bytes "?>"))
-                                                (= name '!DOCTYPE) (foreach write-bytes (list "<!DOCTYPE " attrs ">"))
-                                                (= name '!--) (foreach write-bytes (list "<!--" attrs "-->"))
-                                                (begin
-                                                  (write-bytes "<") (write-bytes name) (write-attr attrs) (write-bytes ">")
-                                                  (foreach write1 children)
-                                                  (foreach write-bytes (list "</" name  ">")))))
-                                (raise XMLError "unexpected expression"))))
+                                            (write-bytes "<") (write-bytes name) (write-attr attrs) (write-bytes ">")
+                                            (foreach write1 children)
+                                            (write-bytes "</") (write-bytes name) (write-bytes ">"))
+                                (raise SyntaxError "unexpected expression"))))
+
+    (write-line "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>")
     (write1 x)
     (write-line)
     x))
 
 (function! main (args)
-  ;; DOM.
-  (with-memory-stream ($in "<!DOCTYPE html>")
-    (assert (= (.read (.new XMLReader))
-               '(!DOCTYPE "html"))))
-  (with-memory-stream ($in "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>")
-    (assert (= (.read (.new XMLReader))
-               '(?xml (:version "1.0" :encoding "UTF-8" :standalone "yes")))))
-  (with-memory-stream ($in "<!-- -- foo -- -->")
-    (assert (= (.read (.new XMLReader))
-               '(!-- " -- foo -- "))))
-  (with-memory-stream ($in "<div></div>")
-    (assert (= (.read (.new XMLReader))
-               '(div ()))))
-  (with-memory-stream ($in "<input type='hidden'/>")
-    (assert (= (.read (.new XMLReader))
-               '(input (:type "hidden")))))
-  (with-memory-stream ($in "<script async src='foo'/>")
-    (assert (= (.read (.new XMLReader))
-               '(script (:async :src "foo")))))
-  (with-memory-stream ($in "<script src='foo'async/>")
-    (assert (= (.read (.new XMLReader))
-               '(script (:src "foo" :async)))))
-  (with-memory-stream ($in (str "<ul>"
-                                "    <li>foo</li>"
-                                "    <li>bar</li>"
-                                "</ul>"))
-    (assert (= (.read (.new XMLReader))
-               '(ul ()
-                    (li () "foo")
-                    (li () "bar")))))
+  ;; Reader.
+  (with-memory-stream ($in (str "<?xml version='1.0'?>"
+                                "<a><!-- -- foo -- -->bar</a>"))
+    (assert (= (xml.read)
+               '(a () "bar"))))
+  (with-memory-stream ($in (str "<?xml version='1.0'?>"
+                                "<single foo='bar'/>"))
+    (assert (= (xml.read)
+               '(single (:foo "bar")))))
+  (with-memory-stream ($in (str "<?xml version='1.0'?>"
+                                "<x>"
+                                "    <v a='b' b='c'><y>yyy</y></v>"
+                                "    <w d='e' e='f'><z>zzz</z></w>"
+                                "</x>"))
+    (assert (= (xml.read)
+               '(x ()
+                   (v (:a "b" :b "c") (y () "yyy"))
+                   (w (:d "e" :e "f") (z () "zzz"))))))
+  ;; Writer.
+  (assert (= (with-memory-stream ($out)
+               (xml.write '(a (:lang "ja") "foo")))
+             (str "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n"
+                  "<a lang='ja'>foo</a>\n")))
+  (assert (= (with-memory-stream ($out)
+               (xml.write '(title () "title")))
+             (str "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n"
+                  "<title>title</title>\n")))
   ;; SAX.
-  (with-memory-stream ($in (str "<img src='foo'/>"
+  (with-memory-stream ($in (str "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n"
+                                "<img src='foo'/>"
                                 "<!-- contents start -->"
                                 "<div class='contents'>"
                                 "    <ul class='none'>"
@@ -253,36 +233,14 @@
                                 "    </ul>"
                                 "</div>"))
     (let (elements nil classes nil texts (.new MemoryStream) comment nil)
-      (.parse (.init (.new XMLSAXParser)
+      (.parse (.init (.new XML.SAXParser)
                      :on-read-text (f (text) (.write-bytes texts text))
                      :on-read-comment (f (text) (<- comment text))
                      :on-start-element (f (name attrs)
-                                         (let (class (cadr (member :class attrs)))
-                                           (if class (push! class classes))))
+                                         (let (cls (cadr (member :class attrs)))
+                                           (if cls (push! cls classes))))
                      :on-end-element (f (name) (push! name elements))))
       (assert (= (.to-s texts) "foobar"))
       (assert (= comment " contents start "))
       (assert (= (sort! (uniq elements)) (sort! '(div ul li))))
-      (assert (= (sort! classes) (sort! '("contents" "none"))))))
-  ;; Writer.
-  (assert (= (with-memory-stream ($out)
-               (xml.write '(!DOCTYPE "html")))
-             "<!DOCTYPE html>\n"))
-  (assert (= (with-memory-stream ($out)
-               (xml.write '(?xml (:version "1.0" :encoding "UTF-8" :standalone "yes"))))
-             "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n"))
-  (assert (= (with-memory-stream ($out)
-               (xml.write '(html (:lang "ja") "foo")))
-             "<html lang='ja'>foo</html>\n"))
-  (assert (= (with-memory-stream ($out)
-               (xml.write '(!-- " -- foo -- ")))
-             "<!-- -- foo -- -->\n"))
-  (assert (= (with-memory-stream ($out)
-               (xml.write '(script (:async :src "foo"))))
-             "<script async src='foo'></script>\n"))
-  (assert (= (with-memory-stream ($out)
-               (xml.write '(script (:src "foo" :async))))
-             "<script src='foo' async></script>\n"))
-  (assert (= (with-memory-stream ($out)
-               (xml.write '(title ())))
-             "<title></title>\n")))
+      (assert (= (sort! classes) (sort! '("contents" "none")))))))

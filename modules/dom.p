@@ -1,123 +1,48 @@
 ; DOM module.
 
+(import :xml)
+
 (<- $dom.singleton '(area base br col command embed hr img input keygen link meta param source track wbr))
 
 ;; reader.
 
-(class DOM.Reader ()
+(class DOM.Reader (Object XML.Reader)
   stream)
 
-(method DOM.Reader .init ()
-  (<- self->stream (.new MemoryStream))
-  (.write-bytes self->stream (read-bytes))
-  self)
-
-(method DOM.Reader .skip (:opt size)
-  (dotimes (i (|| size 1))
-    (.read-char self->stream))
-  self)
-
-(method DOM.Reader .match? (text)
-  (let (match? true pos (.tell self->stream))
-    (dostring (ch text)
-      (when (!= ch (.read-char self->stream))
-        (<- match? nil)
-        (break)))
-    (.seek self->stream pos)
-    match?))
-
-(method DOM.Reader .skip-space ()
-  (let (ch nil)
-    (while (<- ch (.peek-char self->stream))
-      (if (space? ch) (.skip self)
-          (break)))
-    self))
-
 (method DOM.Reader .skip-doctype ()
-  (while (!= (.read-char self->stream) "<"))
-  (if (!= (.read-char self->stream) "!") (raise SyntaxError "missing DOCTYPE")
-  (while (!= (.read-char self->stream) ">"))))
-
-(method DOM.Reader .read-quoted ()
-  (with-memory-stream (val)
-    (let (ch nil quote (.read-char self->stream))
-      (if (! (in? quote '("'" "\""))) (raise SyntaxError "expected quote")
-          (while (!= (<- ch (.read-char self->stream)) quote)
-            (if (nil? ch) (raise SyntaxError "missing quote")
-                (.write-bytes val ch)))))))
-
-(method DOM.Reader .read-ident ()
-  (let (ch nil ident (.new MemoryStream))
-    (while (<- ch (.peek-char self->stream))
-      (if (nil? ch) (raise SyntaxError "expected '>'")
-          (alnum? ch) (.write-bytes ident (.read-char self->stream))
-          (break)))
-    (symbol (.to-s ident))))
-
-(method DOM.Reader .read-text ()
-  (with-memory-stream (text)
-    (let (ch nil)
-      (while (<- ch (.peek-char self->stream))
-        (if (= ch "<") (break)
-            (!= ch "&") (.write-bytes text (.read-char self->stream))
-            (begin
-              (.read-char self->stream)
-              (.write-bytes text
-                            (if (.match? self "&quot;") "\""
-                                (.match? self "&apos;") "'"
-                                (.match? self "&lt;") "<"
-                                (.match? self "&gt;") ">"
-                                (.match? self "&amp;") "&"
-                                "&"))))))))
+  (while (!= (.skip self) "<"))
+  (if (!= (.skip self) "!") (raise SyntaxError "missing DOCTYPE")
+  (while (!= (.skip self) ">"))))
 
 (method DOM.Reader .read-attrs ()
   (let (ch nil attrs nil)
-    (while (!= (<- ch (.peek-char self->stream)) ">")
+    (while (!= (<- ch (.next self)) ">")
       (if (nil? ch) (raise EOFError "missing '>'")
           (push! (keyword (.read-ident self)) attrs))
       (.skip-space self)
-      (if (= (.peek-char self->stream) "=") (.skip self)
-          (continue))    ; single attribute
+      (if (= (.next self) "=") (.skip self)
+          (continue))    ; Unlike xml, single attribute is allowed.
       (push! (.read-quoted (.skip-space self)) attrs))
     (reverse! attrs)))
 
-(method DOM.Reader .skip-comment ()
-  (.skip self 3)
-  (while (! (.match? self "-->"))
-    (.read-char self->stream))
-  (.skip self 3))
-
-(method DOM.Reader .read-close-tag ()
-  (.skip self)
-  (let (name (.read-ident self))
-    (if (!= (.read-char self->stream) ">") (raise SyntaxError "expected end tag '>'")
-        (list nil name))))
-
-(method DOM.Reader .read-tag ()
-  (.skip self)
-  (if (= (.peek-char self->stream) "!") (begin (.skip-comment self) (.read-tag self))
-      (= (.peek-char self->stream) "/") (.read-close-tag self)    ; end-element
-      (let (name (.read-ident self) attrs (.read-attrs self))
-        (.skip-space self)
-        (if (!= (.read-char self->stream) ">") (raise SyntaxError "expected close tag '>'")
-            (list true (list name attrs))))))
-
 (method DOM.Reader .read-node ()
-  (if (!= (.peek-char self->stream) "<") (.read-text self)
-      (let ((trail? tag) (.read-tag self))
-        (if (! trail?) tag    ; make sense
-            (let (name (car tag) child nil children nil)
-              (if (in? name $dom.singleton) tag
+  (if (nil? (.next self)) nil
+      (.text-node? self) (.read-text self)
+      (let ((type val) (.read-tag (.skip-space self)))
+        (if (== type :comment) (.read-node self)
+            (in? type '(:close :single)) val    ; make sense
+            (let (name (car val) node nil children nil)
+              (if (in? name $dom.singleton) val
                   (begin
                     (while (!= name (<- child (.read-node self)))
                       (if (symbol? child) (raise SyntaxError (str "unexpected close tag " child " expected " name))
                           (push! child children)))
-                    (concat tag (reverse! children)))))))))
+                    (concat val (reverse! children)))))))))
 
 (method DOM.Reader .read ()
   ; Read dom.
   (.skip-doctype self)
-  (.read-node (.skip-space self)))
+  (.read-node self))
 
 ;; query-selector.
 
