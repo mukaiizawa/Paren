@@ -129,6 +129,15 @@
 (function dom.classes (node)
   (split (dom.attribute node :class) " "))
 
+(function dom.text-content (node)
+  (let (text (.new MemoryStream)
+             sweep (f (x)
+                     (dolist (node (dom.children x))
+                       (if (string? node) (.write-bytes text node)
+                           (sweep node)))))
+    (sweep node)
+    (.to-s text)))
+
 (function dom.children (node)
   (cddr node))
 
@@ -244,7 +253,8 @@
     (assert (= (dom.name dom) "div"))
     (assert (= (dom.attributes dom) '("id" "class")))
     (assert (= (dom.classes (car (dom.children dom))) '("x" "y" "z")))
-    (assert (= (dom.attribute (cadr (dom.children dom)) "type") "text")))
+    (assert (= (dom.attribute (cadr (dom.children dom)) "type") "text"))
+    (assert (= (dom.text-content dom) "text")))
   ;; compiler.
   (assert (= (dom.compile-selector "input")
              '(((:name "input")))))
