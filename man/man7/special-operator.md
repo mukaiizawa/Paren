@@ -10,7 +10,6 @@ The complete list of the special operator is listed in `SEE ALSO`.
 
 # SEE ALSO
 - `<-(3)`
-- `assert(3)`
 - `begin(3)`
 - `break(3)`
 - `catch(3)`

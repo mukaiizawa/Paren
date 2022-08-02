@@ -77,7 +77,6 @@ static char *error_name(enum error e) {
 
 static char *error_msg(enum error_msg em) {
   switch (em) {
-    case assert_failed: return "assert failed";
     case bi_buf_msg: return bi_buf.elt;
     case built_in_failed: return "built-in function failed";
     case clip_failed: return "clip failed";
@@ -175,24 +174,23 @@ int ip_throw(enum error err, enum error_msg msg)
 #define FRAME_SIZE_MASK          0x00f
 #define   APPLY_BUILT_IN_FRAME   0x003
 #define   APPLY_FRAME            0x013
-#define   ASSERT_FRAME           0x023
-#define   BIND_FRAME             0x033
-#define   BIND_HANDLER_FRAME     0x043
-#define   BIND_PROPAGATION_FRAME 0x053
-#define   BREAK_FRAME            0x062
-#define   CONTINUE_FRAME         0x072
-#define   EVAL_ARGS_FRAME        0x084
-#define   EVAL_FRAME             0x092
-#define   EVAL_SEQUENTIAL_FRAME  0x0a3
-#define   FUNC_FRAME             0x0b4
-#define   HANDLERS_FRAME         0x0c3
-#define   IF_FRAME               0x0d3
-#define   LET_FRAME              0x0e2
-#define   LOOP_FRAME             0x0f3
-#define   QUOTE_FRAME            0x103
-#define   RETURN_FRAME           0x112
-#define   THROW_FRAME            0x122
-#define   UNWIND_PROTECT_FRAME   0x133
+#define   BIND_FRAME             0x023
+#define   BIND_HANDLER_FRAME     0x033
+#define   BIND_PROPAGATION_FRAME 0x043
+#define   BREAK_FRAME            0x052
+#define   CONTINUE_FRAME         0x062
+#define   EVAL_ARGS_FRAME        0x074
+#define   EVAL_FRAME             0x082
+#define   EVAL_SEQUENTIAL_FRAME  0x093
+#define   FUNC_FRAME             0x0a4
+#define   HANDLERS_FRAME         0x0b3
+#define   IF_FRAME               0x0c3
+#define   LET_FRAME              0x0d2
+#define   LOOP_FRAME             0x0e3
+#define   QUOTE_FRAME            0x0f3
+#define   RETURN_FRAME           0x102
+#define   THROW_FRAME            0x112
+#define   UNWIND_PROTECT_FRAME   0x123
 
 #define fs_top() (sint_val(fs[fp]))
 #define fs_nth(i) (sint_val(fs[i]))
@@ -225,7 +223,6 @@ static char *frame_name(int frame_type)
   switch (frame_type) {
     case APPLY_BUILT_IN_FRAME: return "APPLY_BUILT_IN_FRAME";
     case APPLY_FRAME: return "APPLY_FRAME";
-    case ASSERT_FRAME: return "ASSERT_FRAME";
     case BIND_FRAME: return "BIND_FRAME";
     case BIND_HANDLER_FRAME: return "BIND_HANDLER_FRAME";
     case BIND_PROPAGATION_FRAME: return "BIND_PROPAGATION_FRAME";
@@ -445,12 +442,6 @@ static void pop_apply_built_in_frame(void)
   if ((*function)(list_len(args), args, &(reg[0]))) return;
   gen_trace(gc_new_cons(f->native.name, args));
   if (ip_trap_code == TRAP_NONE) ip_throw(Error, built_in_failed);
-}
-
-static void pop_assert_frame(void)
-{
-  if (reg[0] != object_nil) pop_frame();
-  else ip_throw(StateError, assert_failed);
 }
 
 static void pop_bind_frame(void)
@@ -676,9 +667,6 @@ static void pop_throw_frame(void)
   pop_frame();
   if (!pos_is_a_p(reg[0], object_Exception)) {
     ip_throw(ArgumentError, expected_instance_of_Exception_class);
-#ifndef NDEBUG
-    if (map_get(object_toplevel, gc_new_mem_from(SYMBOL, "boot", 4)) == NULL) dump_fs();
-#endif
     return;
   }
   if (map_get(reg[0], object_stack_trace) == object_nil)
@@ -1130,16 +1118,6 @@ DEFSP(return)
   return TRUE;
 }
 
-DEFSP(assert)
-{
-#ifndef NDEBUG
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  gen1(ASSERT_FRAME, argv->cons.car);
-  gen_eval_frame(argv->cons.car);
-#endif
-  return TRUE;
-}
-
 static object anonimous_proc;
 static object named_proc;
 
@@ -1168,10 +1146,6 @@ static object get_call_stack(void)
   o = object_nil;
   for (i = 0; i <= fp; i = next_fp(i)) {
     switch (fs_nth(i)) {
-      case ASSERT_FRAME:
-        p = get_frame_var(i, 0);
-        o = gc_new_cons(p, o);
-        break;
       case FUNC_FRAME:
         p = get_frame_var(i, 1);
         if (object_type(p) != CONS) o = gc_new_cons(p, o);
@@ -1239,7 +1213,6 @@ static void ip_main(object args)
     switch (fs_top()) {
       case APPLY_BUILT_IN_FRAME: pop_apply_built_in_frame(); break;
       case APPLY_FRAME: pop_apply_frame(); break;
-      case ASSERT_FRAME: pop_assert_frame(); break;
       case BIND_FRAME: pop_bind_frame(); break;
       case BIND_HANDLER_FRAME: pop_bind_handler_frame(); break;
       case BIND_PROPAGATION_FRAME: pop_bind_propagation_frame(); break;

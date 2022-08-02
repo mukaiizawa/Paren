@@ -38,6 +38,5 @@
   ; Run unit tests for the specified PATH (the current directory by default).
   ;     -r test subdirectories recursively
   (let ((op args) (.parse (.init (.new OptionParser) "r") args))
-    (if (! $debug?) (raise StateError "need to build in debug mode")
-        (unit-test (path (|| (car args) ".")) :recur? (.get op "r")))
+    (unit-test (path (|| (car args) ".")) :recur? (.get op "r"))
     (exit $status-cd)))

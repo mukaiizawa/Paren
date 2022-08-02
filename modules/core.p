@@ -4,7 +4,6 @@
 
 (macro special-operator (name) name)
 (special-operator <-)
-(special-operator assert)
 (special-operator begin)
 (special-operator break)
 (special-operator catch)
@@ -95,6 +94,10 @@
                 (list 'write (list 'list
                                    :time (list '- '(clock) clock-offset)
                                    :cycle (list '- '(cycle) cycle-offset)))))))
+
+(macro assert (expr)
+  (list if expr true
+        (list 'raise 'AssertException (list 'str (list quote expr)))))
 
 (built-in-function macroexpand-1)
 
@@ -1011,6 +1014,8 @@
   (<- self->status-cd 0)
   self)
 
+(class AssertException (Exception))
+
 (class Error (Exception)
   ; All built-in, non-system-exiting exceptions are derived from this class.
   ; All user-defined exceptions should also be derived from this class.
@@ -1272,14 +1277,14 @@
   ; Read 1byte from the receiver.
   ; Returns -1 when the stream reaches the end.
   ; Must be implemented in the inherited class.
-  (assert nil))
+  (raise NotImplementedError))
 
 (method Stream .read-bytes (:opt buf from size)
   ; Reads size bytes of data from the receiver and saves it in the from position from the location specified by buf.
   ; Return the size of items read.
   ; If args is omitted, read until the stream reaches the end and returns it.
   ; Must be implemented in the inherited class.
-  (assert nil))
+  (raise NotImplementedError))
 
 (method Stream .read-char ()
   ; Read 1 character from the receiver
@@ -2091,7 +2096,6 @@
     $read-table (dict)
     ($stdin $stdout $stderr) (map (f (x) (.init (.new FileStream) (fp x))) (.. 3))
     ($in $out) (list $stdin $stdout)
-    $debug? (== (assert true) true)
     $paren-home (.parent (.parent (.resolve (path.getcwd) core.p)))
     $parenrc (path "~/.parenrc")
     $runtime-path (map (f (p) (.resolve $paren-home p)) '("scripts")))
