@@ -42,14 +42,14 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
     padding))
 
 (function parse-contents (contents)
-  `((aside
-      (h1 "Table of Contents")
-      (ul (:class "contents")
-          ,@(map (f (node)
-                   (let (id (cadadr node))
-                     `(li (:id ,(str 'contents- id))
-                          (a (:href ,(str "#" id)) ,@(contents-padding id) ,@(cddr node)))))
-                 contents)))))
+  `((aside ()
+           (h1 () "Table of Contents")
+           (ul (:class "contents")
+               ,@(map (f (node)
+                        (let (id (cadadr node))
+                          `(li (:id ,(str 'contents- id))
+                               (a (:href ,(str "#" id)) ,@(contents-padding id) ,@(cddr node)))))
+                      contents)))))
 
 (function next-id (contents-index)
   (with-memory-stream ($out)
@@ -77,18 +77,17 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
   (let (title? (= (caar nodes) 'p)
                (title nodes) (if title? (list `((title () ,(caddar nodes))) (cdr nodes)) (list nil nodes))
                table-of-contents (if output-table-of-contents? (parse-contents (reverse! $contents))))
-    `((!DOCTYPE "html")
-      (html (:lang "ja")
-            (head ()
-                  (meta (:charset "UTF-8"))
-                  ,@title
-                  (style () ,$default-css))
-            (body ()
-                  ,@table-of-contents
-                  (article ,@nodes))))))
+    `(html (:lang "ja")
+           (head ()
+                 (meta (:charset "UTF-8"))
+                 ,@title
+                 (style () ,$default-css))
+           (body ()
+                 ,@table-of-contents
+                 (article ()
+                          ,@nodes)))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "c") args) rd (.new MarkdownReader))
-    (foreach xml.write
-             (make-html (parse-nodes (collect (f () (.read rd))))
-                        :output-table-of-contents? (! (.get op "c"))))))
+    (dom.write (make-html (parse-nodes (collect (f () (.read rd))))
+                          :output-table-of-contents? (! (.get op "c"))))))
