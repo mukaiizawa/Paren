@@ -1025,11 +1025,11 @@
   ; Raised when an operation or function is applied to an object of inappropriate argument.
   )
 
-(class IndexError (ArgumentError)
+(class IndexError (Error)
   ; Raised when a sequence subscript is out of range.
   )
 
-(class ArithmeticError (ArgumentError)
+(class ArithmeticError (Error)
   ; Raised when an error occurs in an arithmetic operation.
   )
 
@@ -1037,27 +1037,19 @@
   ; Raised when a function has been invoked at an illegal or inappropriate time.
   )
 
-(class NotImplementedError (StateError)
+(class NotImplementedError (Error)
   ; In user defined base classes, abstract methods should raise this exception when they require derived classes to override the method, or while the class is being developed to indicate that the real implementation still needs to be added.
   )
 
-(class SyntaxError (StateError)
+(class SyntaxError (Error)
   ; Raised when the parser encounters a syntax error.
   )
 
-(class UnicodeError (StateError)
-  ; Raised when a Unicode-related encoding or decoding error occurs.
-  )
-
-(method UnicodeError .init (args)
-  (<- self->message (str "illegal byte sequence " (map hex args)))
-  self)
-
-(class EOFError (StateError)
+(class EOFError (Error)
   ; Raised when reached EOF unexpectedly.
   )
 
-(class OSError (StateError)
+(class OSError (Error)
   ; Raised when a system function returns a system-related error, including I/O failures.
   )
 
@@ -1302,7 +1294,7 @@
                            (<< (& (.read-byte self) 0x3f) 12)
                            (<< (& (.read-byte self) 0x3f) 6)
                            (& (.read-byte self) 0x3f))
-          (raise UnicodeError)))))
+          (raise StateError "unexpected utf8 leading byte")))))
 
 (method Stream .read ()
   ; Read expression from the receiver.

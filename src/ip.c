@@ -68,7 +68,6 @@ static char *error_name(enum error e) {
     case IndexError: return "IndexError";
     case ArithmeticError: return "ArithmeticError";
     case StateError: return "StateError";
-    case UnicodeError: return "UnicodeError";
     case OSError: return "OSError";
     case SyntaxError: return "SyntaxError";
     default: xassert(FALSE); return NULL;

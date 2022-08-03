@@ -10,12 +10,11 @@ enum error {
     SystemExit,
     Error,
       ArgumentError,
-        IndexError,
-        ArithmeticError,
+      IndexError,
+      ArithmeticError,
       StateError,
-        UnicodeError,
-        OSError,
-        SyntaxError,
+      OSError,
+      SyntaxError,
   error_nil
 };
 
