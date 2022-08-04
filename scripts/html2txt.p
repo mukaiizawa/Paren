@@ -5,7 +5,7 @@
 (<- $write? nil $script? nil)
 
 (function! main (args)
-  (.parse (.init (.new XMLSAXParser)
+  (.parse (.init (.new XML.SAXParser)
                  :on-start-element (f (name attrs)
                                      (if (== name 'body) (<- $write? true)
                                          (== name 'script) (push! true $script?)))
