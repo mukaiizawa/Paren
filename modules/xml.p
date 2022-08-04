@@ -38,9 +38,11 @@
     match?))
 
 (method XML.Reader .read-ident ()
-  (let (ident (.new MemoryStream))
-    (while (alnum? (.next self))
-      (.write-bytes ident (.skip self)))
+  (let (ch nil ident (.new MemoryStream))
+    (loop
+      (if (nil? (<- ch (.next self))) (raise EOFError)
+          (in? ch '(" " "/" ">" "=")) (break)
+          (.write-bytes ident (.skip self))))
     (assert (! (empty? (.to-s ident))))
     (symbol (.to-s ident))))
 
@@ -121,7 +123,7 @@
             (in? type '(:close :single)) val    ; make sense
             (let (name (car val) node nil children nil)
               (while (!== name (<- node (.read-element self)))
-                (if (symbol? node) (raise SyntaxError (str "unexpected close tag " child " expected " name))
+                (if (symbol? node) (raise SyntaxError (str "unexpected close tag " node " expected " name))
                     (push! node children)))
               (concat val (reverse! children)))))))
 
