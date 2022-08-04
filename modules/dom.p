@@ -1,49 +1,6 @@
 ; DOM module.
 
-(import :xml)
-
-(<- $dom.singleton '(area base br col command embed hr img input keygen link meta param source track wbr))
-
-;; reader.
-
-(class DOM.Reader (Object XML.Reader)
-  stream)
-
-(method DOM.Reader .skip-doctype ()
-  (if (.match? self "<!") (while (!= (.skip self) ">"))))
-
-(method DOM.Reader .read-attrs ()
-  (let (ch nil attrs nil)
-    (while (! (in? (<- ch (.next (.skip-space self))) '("/" ">")))
-      (if (nil? ch) (raise EOFError "missing '>'")
-          (push! (keyword (.read-ident self)) attrs))
-      (.skip-space self)
-      (if (= (.next self) "=") (.skip self)
-          (continue))    ; Unlike xml, single attribute is allowed.
-      (push! (.read-quoted (.skip-space self)) attrs))
-    (reverse! attrs)))
-
-(method DOM.Reader .read-node ()
-  (if (nil? (.next self)) nil
-      (.text-node? self) (.read-text self)
-      (let ((type val) (.read-tag (.skip-space self)))
-        (if (== type :comment) (.read-node self)
-            (in? type '(:close :single)) val    ; make sense
-            (let (name (car val) node nil children nil)
-              (if (in? name $dom.singleton) val
-                  (begin
-                    (while (<- child (.read-node self))
-                      (if (= name child) (break)
-                          (symbol? child) (raise SyntaxError (str "unexpected close tag " child " expected " name))
-                          (push! child children)))
-                    (concat val (reverse! children)))))))))
-
-(method DOM.Reader .read ()
-  ; Read dom.
-  (.skip-doctype self)
-  (.read-node self))
-
-;; query-selector.
+;; SelectorCompiler.
 
 (class DOM.SelectorCompiler ()
   reader)
@@ -106,11 +63,6 @@
       (push! (.parse-selector self) selectors))
     (reverse! selectors)))
 
-(function dom.compile-selector (selector)
-  (if (! (string? selector)) selector
-      (with-memory-stream ($in selector)
-        (.compile (.new DOM.SelectorCompiler)))))
-
 ;; API.
 
 (function dom.name (node)
@@ -146,6 +98,11 @@
 
 (function dom.text-node? (node)
   (string? node))
+
+(function dom.compile-selector (selector)
+  (if (! (string? selector)) selector
+      (with-memory-stream ($in selector)
+        (.compile (.new DOM.SelectorCompiler)))))
 
 (function dom.get-element-by-id (dom id)
   (dom.query-selector dom (str "#" id)))
@@ -195,56 +152,7 @@
       (sweep selector dom nil nil))
     (reverse! nodes)))
 
-(function dom.read ()
-  (.read (.new DOM.Reader)))
-
-(function dom.write (x)
-  (let (write-attr (f (x)
-                     (if (nil? x) nil
-                         (! (cons? x)) (raise SyntaxError "attributes must be list")
-                         (let (rest x curr (car x))
-                           (while rest
-                             (if (! (keyword? curr)) (raise SyntaxError "attribute name must be keyword")
-                                 (begin
-                                   (write-bytes " ")
-                                   (write-bytes curr)
-                                   (<- rest (cdr rest)
-                                       curr (car rest))
-                                   (if (nil? curr) (break)
-                                       (keyword? curr) (continue)
-                                       (string? curr) (begin
-                                                        (foreach write-bytes (list "='" curr "'"))
-                                                        (<- rest (cdr rest)
-                                                            curr (car rest)))
-                                       (raise SyntaxError "attribute value must be string"))))))))
-                   write-node (f (x)
-                                (if (nil? x) nil
-                                    (string? x) (dostring (ch x)
-                                                  (write-bytes (if (= ch "\"") "&quot;"
-                                                                   (= ch "'") "&apos;"
-                                                                   (= ch "<") "&lt;"
-                                                                   (= ch ">") "&gt;"
-                                                                   (= ch "&") "&amp;"
-                                                                   ch)))
-                                    (cons? x) (let ((name attrs :rest children) x)
-                                                (write-bytes "<") (write-bytes name) (write-attr attrs) (write-bytes ">")
-                                                (when (! (in? name $dom.singleton))
-                                                  (foreach write-node children)
-                                                  (write-bytes "</") (write-bytes name) (write-bytes ">")))
-                                    (raise SyntaxError "unexpected expression"))))
-    (write-line "<!DOCTYPE html>")
-    (write-node x)
-    (write-line)
-    x))
-
 (function! main (args)
-  ;; reader.
-  (with-memory-stream ($in "<!DOCTYPE html>\n<html lang='ja'>hello html</html>")
-    (assert (= (dom.read)
-               '(html (:lang "ja") "hello html"))))
-  (with-memory-stream ($in "<img src='./x.png'>")
-    (assert (= (dom.read)
-               '(img (:src "./x.png")))))
   ;; accessor.
   (let (dom '(div (:id "container" :class "v")
                   (p (:class "x y z") "text")

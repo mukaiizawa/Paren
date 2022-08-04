@@ -1,6 +1,6 @@
 ; markdown module.
 
-(import :dom)
+(import :html)
 
 (<- $markdown.ol "1. "
     $markdown.ul "- ")
@@ -64,7 +64,7 @@
     `(pre () (code () ,(.to-s text)))))
 
 (method MarkdownReader .read-html ()
-  (let ($in self->stream rd (.new DOM.Reader) dom (.read rd))
+  (let ($in self->stream rd (.new HTML.Reader) dom (.read rd))
     (<- self->stream rd->stream)
     dom))
 

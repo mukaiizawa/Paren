@@ -1,7 +1,8 @@
 ; markdown to html.
 
-(import :optparse)
+(import :html)
 (import :markdown)
+(import :optparse)
 
 (<- $default-css
 "
@@ -89,5 +90,5 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "c") args) rd (.new MarkdownReader))
-    (dom.write (make-html (parse-nodes (collect (f () (.read rd))))
-                          :output-table-of-contents? (! (.get op "c"))))))
+    (html.write (make-html (parse-nodes (collect (f () (.read rd))))
+                           :output-table-of-contents? (! (.get op "c"))))))

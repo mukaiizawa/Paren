@@ -113,21 +113,21 @@
     (.seek self->stream pos)
     text?))
 
-(method XML.Reader .read-node ()
+(method XML.Reader .read-element ()
   (if (nil? (.next self)) nil
       (.text-node? self) (.read-text self)
       (let ((type val) (.read-tag (.skip-space self)))
-        (if (== type :comment) (.read-node self)
+        (if (== type :comment) (.read-element self)
             (in? type '(:close :single)) val    ; make sense
             (let (name (car val) node nil children nil)
-              (while (!== name (<- node (.read-node self)))
+              (while (!== name (<- node (.read-element self)))
                 (if (symbol? node) (raise SyntaxError (str "unexpected close tag " child " expected " name))
                     (push! node children)))
               (concat val (reverse! children)))))))
 
 (method XML.Reader .read ()
   (.skip-declaration self)
-  (.read-node self))
+  (.read-element self))
 
 (function xml.read ()
   ; Read xml.
@@ -162,7 +162,7 @@
 
 ;; Wirter.
 
-(function xml.write (x)
+(function xml.write-element (x)
   (let (write-attr (f (x)
                      (if (! (list? x)) (raise SyntaxError "attributes must be list")
                          (map-group (f (k v)
@@ -185,42 +185,48 @@
                                             (foreach write1 children)
                                             (write-bytes "</") (write-bytes name) (write-bytes ">"))
                                 (raise SyntaxError "unexpected expression"))))
-
-    (write-line "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>")
     (write1 x)
     (write-line)
     x))
 
+(function xml.write (x)
+  (write-line "<?xml version='1.0' encoding='UTF-8'?>")
+  (xml.write-element x))
+
 (function! main (args)
   ;; Reader.
-  (with-memory-stream ($in (str "<?xml version='1.0'?>"
-                                "<a><!-- -- foo -- -->bar</a>"))
-    (assert (= (xml.read)
-               '(a () "bar"))))
-  (with-memory-stream ($in (str "<?xml version='1.0'?>"
-                                "<single foo='bar'/>"))
-    (assert (= (xml.read)
-               '(single (:foo "bar")))))
-  (with-memory-stream ($in (str "<?xml version='1.0'?>"
-                                "<x>"
-                                "    <v a='b' b='c'><y>yyy</y></v>"
-                                "    <w d='e' e='f'><z>zzz</z></w>"
-                                "</x>"))
-    (assert (= (xml.read)
-               '(x ()
-                   (v (:a "b" :b "c") (y () "yyy"))
-                   (w (:d "e" :e "f") (z () "zzz"))))))
+  (assert (= (with-memory-stream ($in "<?xml version='1.0'?>\n<a>bar</a>")
+               (xml.read))
+             '(a () "bar")))
+  (assert (= (with-memory-stream ($in "<a><!-- -- foo -- -->bar</a>")
+               (xml.read))
+             '(a () "bar")))
+  (assert (= (with-memory-stream ($in "<a>bar</a>")
+               (xml.read))
+             '(a () "bar")))
+  (assert (= (with-memory-stream ($in "<a foo='bar'/>")
+               (xml.read))
+             '(a (:foo "bar"))))
+  (assert (= (with-memory-stream ($in "<x> <v a='b' b='c'><y>yyy</y></v> <w d='e' e='f'><z>zzz</z></w> </x>")
+               (xml.read))
+             '(x ()
+                 (v (:a "b" :b "c") (y () "yyy"))
+                 (w (:d "e" :e "f") (z () "zzz")))))
   ;; Writer.
   (assert (= (with-memory-stream ($out)
-               (xml.write '(a (:lang "ja") "foo")))
-             (str "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n"
-                  "<a lang='ja'>foo</a>\n")))
+               (xml.write '(a () "bar")))
+             "<?xml version='1.0' encoding='UTF-8'?>\n<a>bar</a>\n"))
   (assert (= (with-memory-stream ($out)
-               (xml.write '(title () "title")))
-             (str "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n"
-                  "<title>title</title>\n")))
+               (xml.write-element '(a () "bar")))
+             "<a>bar</a>\n"))
+  (assert (= (with-memory-stream ($out)
+               (xml.write-element
+                 '(x ()
+                     (v (:a "b" :b "c") (y () "yyy"))
+                     (w (:d "e" :e "f") (z () "zzz")))))
+             "<x><v a='b' b='c'><y>yyy</y></v><w d='e' e='f'><z>zzz</z></w></x>\n"))
   ;; SAX.
-  (with-memory-stream ($in (str "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n"
+  (with-memory-stream ($in (str "<?xml version='1.0' encoding='UTF-8'?>\n"
                                 "<img src='foo'/>"
                                 "<!-- contents start -->"
                                 "<div class='contents'>"
