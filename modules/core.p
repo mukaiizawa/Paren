@@ -229,7 +229,7 @@
                   (reverse! acc))))
     (if (nil? stop) (<- stop start start 0 step 1)
         (nil? step) (<- step 1)
-        (<= step 0) (raise IndexError "step must be positive integer"))
+        (<= step 0) (raise ArgumentError "step must be positive integer"))
     (rec start stop step)))
 
 (function join (lis :opt separator)
@@ -288,7 +288,7 @@
   (let (rec (f (lis acc)
               (if (nil? lis) (reverse! acc)
                   (rec (slice lis n) (cons (slice lis 0 n) acc)))))
-    (if (<= n 0) (raise IndexError "sublists length must be positive integer")
+    (if (<= n 0) (raise ArgumentError "sublists length must be positive integer")
         (rec lis nil))))
 
 (function group-by (fn lis)
@@ -1025,10 +1025,6 @@
   ; Raised when an operation or function is applied to an object of inappropriate argument.
   )
 
-(class IndexError (Error)
-  ; Raised when a sequence subscript is out of range.
-  )
-
 (class ArithmeticError (Error)
   ; Raised when an error occurs in an arithmetic operation.
   )
@@ -1568,7 +1564,7 @@
 (method MemoryStream .seek (offset)
   ; Sets the file position indicator of the receiver.
   ; Returns the receiver.
-  (if (! (<= 0 offset self->wrpos)) (raise IndexError)
+  (if (! (<= 0 offset self->wrpos)) (raise ArgumentError "index out of range")
       (<- self->rdpos offset))
   self)
 

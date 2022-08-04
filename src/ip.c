@@ -65,7 +65,6 @@ static char *error_name(enum error e) {
     case SystemExit: return "SystemExit";
     case Error: return "Error";
     case ArgumentError: return "ArgumentError";
-    case IndexError: return "IndexError";
     case ArithmeticError: return "ArithmeticError";
     case StateError: return "StateError";
     case OSError: return "OSError";

@@ -10,7 +10,6 @@ enum error {
     SystemExit,
     Error,
       ArgumentError,
-      IndexError,
       ArithmeticError,
       StateError,
       OSError,

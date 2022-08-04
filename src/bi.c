@@ -119,7 +119,7 @@ int bi_argv(int bits, object o, object *result)
 int bi_range(int min, int x, int max)
 {
   if (x < min || x > max)
-    return ip_throw(IndexError, index_out_of_range);
+    return ip_throw(ArgumentError, index_out_of_range);
   return TRUE;
 }
 
@@ -1059,7 +1059,7 @@ DEFUN(chr)
     buf[1] = 0x80 | ((x >> 12) & 0x3f);
     buf[2] = 0x80 | ((x >> 6) & 0x3f);
     buf[3] = 0x80 | (x & 0x3f);
-  } else return ip_throw(IndexError, index_out_of_range);
+  } else return ip_throw(ArgumentError, index_out_of_range);
   *result = gc_new_mem_from(STRING, buf, size);
   return TRUE;
 }
@@ -1411,7 +1411,7 @@ static int cons_access(int argc, object argv, object o, object *result)
     if (o == object_nil) *result = o;
     else *result = o->cons.car;
   } else {
-    if (o == object_nil) return ip_throw(IndexError, index_out_of_range);
+    if (o == object_nil) return ip_throw(ArgumentError, index_out_of_range);
     *result = argv->cons.cdr->cons.car;
     o->cons.car = *result;
   }

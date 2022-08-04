@@ -21,7 +21,7 @@
         (<= 0 (cadr p) (-- y)))))
 
 (method Matrix .index (p)
-  (if (! (.inside? self p)) (raise IndexError)
+  (if (! (.inside? self p)) (raise ArgumentError "index out of range")
       (+ (car p) (* (cadr p) (car self->shape)))))
 
 (method Matrix .at (p)
