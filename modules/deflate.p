@@ -9,11 +9,11 @@
   pos curr-byte)
 
 (method Deflate.Reader .init ()
-  (<- self->pos 0)
-  self)
+  (.align self))
 
 (method Deflate.Reader .align ()
-  (.init self))
+  (<- self->pos 0)
+  self)
 
 (method Deflate.Reader .read-bit ()
   (let (byte self->curr-byte pos self->pos)
