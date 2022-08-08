@@ -41,7 +41,7 @@
   (let (ch nil ident (.new MemoryStream))
     (loop
       (if (nil? (<- ch (.next self))) (raise EOFError)
-          (in? ch '(" " "/" ">" "=")) (break)
+          (in? ch '("=" " " "/" ">" "\n")) (break)
           (.write-bytes ident (.skip self))))
     (assert (! (empty? (.to-s ident))))
     (symbol (.to-s ident))))
