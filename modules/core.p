@@ -67,7 +67,7 @@
 
 (macro dolist ((x lis) :rest body)
   (with-gensyms (gl)
-    (list 'for (list gl lis x (list car gl)) gl (list gl (list cdr gl) x (list car gl))
+    (list 'for (list gl lis x (list 'car gl)) gl (list gl (list 'cdr gl) x (list 'car gl))
           (cons 'begin body))))
 
 (macro dotimes ((i n) :rest body)
@@ -97,7 +97,7 @@
 
 (macro assert (expr)
   (list if expr true
-        (list 'raise 'AssertException (list 'str (list quote expr)))))
+        (list 'raise 'AssertException (list 'str (list 'quote expr)))))
 
 (built-in-function macroexpand-1)
 
