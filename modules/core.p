@@ -796,10 +796,7 @@
 (built-in-function time)
 (built-in-function clock)
 (built-in-function cycle)
-
-(built-in-function utcoffset ()
-  ; Returns the difference in hours and minutes from Coordinated Universal Time (UTC) for time zone set in the host system.
-  )
+(built-in-function utcoffset)
 
 (built-in-function sleep (sec)
   ; Sleep for a specified number of seconds.
