@@ -2,7 +2,7 @@
 
 (import :optparse)
 
-(<- $paren-path (.to-s (.resolve $paren-home "paren"))
+(<- $paren (.to-s (.resolve $paren-home "paren"))
     $status-cd 0)
 
 (function testable-main? (tree)
@@ -25,13 +25,11 @@
   (dolist (file (.children dir))
     (if (.dir? file) (if recur? (unit-test file :recur? true))
         (paren-file? file)
-        (catch (Exception (f (e) (write-line (.to-s e))))
-          (let (file-name (.to-s file))
-            (write-bytes file-name) (write-bytes "\t")
-            (if (! (testable? file)) (write-bytes " -- skip ")
-                (let (sc (system (str $paren-path " " file-name)))
-                  (if (!= sc 0) (<- $status-cd sc))))
-            (write-line))))))
+        (let (file-name (.to-s file))
+          (write-bytes file-name) (write-bytes "\t")
+          (if (! (testable? file)) (write-bytes " -- skip ")
+              (<- $status-cd (max $status-cd (system (str $paren " " file-name)))))
+          (write-line))))))
 
 (function! main (args)
   ; unit-test [OPTION]... [PATH]

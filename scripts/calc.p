@@ -21,10 +21,11 @@
     tree))
 
 (function calc (expr)
-  (catch (Error (f (e) 'NaN))
+  (catch
     (with-memory-stream ($in expr)
       (let (rd (.new AheadReader))
-        (eval (parse-expr rd))))))
+        (eval (parse-expr rd))))
+    (f (e) 'NaN)))
 
 (function! main (args)
   (if (nil? args) (loop (write (calc (read-line))))

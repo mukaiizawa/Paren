@@ -8,6 +8,5 @@
 
 (function! main (args)
   (loop
-    (catch (Error (f (e) nil))
-      (mouse.move (map dx (mouse.position))))
-    (sleep 0.1)))
+    (catch (mouse.move (map dx (mouse.position))) identity)
+    (sleep 0.05)))
