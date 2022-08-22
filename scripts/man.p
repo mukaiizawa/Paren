@@ -1,6 +1,6 @@
 ; man.
 
-;; man, mandb, whatis.
+;; Utilities for manual-related programs.
 
 (<- $man-root (.resolve $paren-home "man")
     $man-indexes (.resolve $man-root "indexes.p")
@@ -57,6 +57,16 @@
   ; Returns a string that uniquely identifies the manual.
   (str page "(" section ")"))
 
+(function man-parse-command-line-args (args)
+  ;; Returns '(section page).
+  (let ((:opt arg1 arg2 :rest rest-args) args)
+    (if (nil? args) (list "1" "man")
+        (nil? arg2) (if (suffix? arg1 ")") (man-split-section-page arg1) (list nil arg1))
+        (let (section nil page-names nil)
+          (if (digit? arg1) (<- section arg1 page-names (cons arg2 rest-args))
+              (<- page-names (cons arg1 (cons arg2 rest-args))))
+          (list section (join page-names "-"))))))
+
 (function man-walk (fn indexes)
   ;; walk indexes with fn until fn returns true.
   ;; Returns whether fn returned true.
@@ -105,19 +115,9 @@
                 (return true)))
             indexes))
 
-(function parse-args (args)
-  ;; Returns '(section page).
-  (let ((:opt arg1 arg2 :rest rest-args) args)
-    (if (nil? args) (list "1" "man")
-        (nil? arg2) (if (suffix? arg1 ")") (man-split-section-page arg1) (list nil arg1))
-        (let (section nil page-names nil)
-          (if (digit? arg1) (<- section arg1 page-names (cons arg2 rest-args))
-              (<- page-names (cons arg1 (cons arg2 rest-args))))
-          (list section (join page-names "-"))))))
-
 (function! main (args)
   (catch
-    (let ((section page) (parse-args args) indexes (man-indexes section))
+    (let ((section page) (man-parse-command-line-args args) indexes (man-indexes section))
       (if (nil? (man indexes section page)) (fuzzy-man indexes section page)))
     (f (e)
       (if (is-a? OSError) nil
