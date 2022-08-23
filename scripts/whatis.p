@@ -1,6 +1,7 @@
 ; whatis.
 
 (import :optparse)
+
 (import :man (.resolve $paren-home "scripts"))
 
 (function lhs (pages :opt ommit)
