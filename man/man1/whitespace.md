@@ -28,35 +28,35 @@ The L, S, T options support only one character.
 # EXAMPLES
 
     $ cat hello.ws
-    SSSTSSTSSS
-    T
-    SSSSSTTSSTST
-    T
-    SSSSSTTSTTSS
-    T
-    SSSSSTTSTTSS
-    T
-    SSSSSTTSTTTT
-    T
-    SSSSSTSSSSS
-    T
-    SSSSSTSTSTTT
-    T
-    SSSSSTTSTTTT
-    T
-    SSSSSTTTSSTS
-    T
-    SSSSSTTSTTSS
-    T
-    SSSSSTTSSTSS
-    T
-    SSSSSSSSTSTS
-    T
-    SS
+    ssstsstsssl
+    tl
+    sssssttsststl
+    tl
+    sssssttsttssl
+    tl
+    sssssttsttssl
+    tl
+    sssssttsttttl
+    tl
+    ssssstsssssl
+    tl
+    ssssstststttl
+    tl
+    sssssttsttttl
+    tl
+    ssssstttsstsl
+    tl
+    sssssttsttssl
+    tl
+    sssssttsstssl
+    tl
+    sssssssststsl
+    tl
+    ssl
+    l
+    l
     
-    
-    
-    $ paren whitespace.p -SS -TT hello.ws
+    $ paren whitespace.p -Ss -Tt -Ll hello.ws
     Hello World
 
 # SEE ALSO

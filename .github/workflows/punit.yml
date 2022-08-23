@@ -1,4 +1,4 @@
-name: unit-test
+name: punit
 on: [push]
 jobs:
   unit-test:
@@ -7,5 +7,5 @@ jobs:
       - uses: actions/checkout@v2
       - run: make os=unix debug=on
         working-directory: ./src
-      - run: ./paren manutg
-      - run: ./paren unit-test ./wk
+      - run: ./paren manunit
+      - run: ./paren punit ./wk

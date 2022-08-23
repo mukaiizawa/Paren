@@ -1,6 +1,7 @@
 ; whatis.
 
 (import :optparse)
+
 (import :man (.resolve $paren-home "scripts"))
 
 (function lhs (pages :opt ommit)
@@ -20,9 +21,8 @@
                         one-line-desc))))))))
 
 (function! main (args)
-  (catch (OSError (f (e) nil))
-    (let ((op args) (.parse (.init (.new OptionParser) "s:") args)
-                    page (car args) sections (split (.get op "s") ","))
-      (whatis (f (section pages)
-                (&& (|| (nil? sections) (in? section sections))
-                    (|| (nil? page) (some? (partial in? page) pages))))))))
+  (let ((op args) (.parse (.init (.new OptionParser) "s:") args)
+                  page (car args) sections (split (.get op "s") ","))
+    (whatis (f (section pages)
+              (&& (|| (nil? sections) (in? section sections))
+                  (|| (nil? page) (some? (partial in? page) pages)))))))

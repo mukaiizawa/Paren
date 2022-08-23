@@ -21,6 +21,6 @@ Generally, it is automatically executed by GitHub Actions at the time of push, s
 
 The behavior when reading an unexpected manual is undefined.
 
-# See Also
+# SEE ALSO
 - `mandep(1)`
 - `$paren-home(3)`

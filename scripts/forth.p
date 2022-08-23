@@ -5,8 +5,6 @@
     $stack nil
     $dictionary (dict))
 
-(class ForthError (Error))
-
 ; Lexer.
 
 (class ForthLexer (AheadReader))
@@ -38,7 +36,7 @@
 (class ForthReader ()
   lexer token)
 
-(method ForthReader .init () 
+(method ForthReader .init ()
   (<- self->lexer (.new ForthLexer))
   self)
 
@@ -62,7 +60,7 @@
     (list :if (reverse! then) (reverse! else))))
 
 (method ForthReader .parse ()
-  (let (token (&token self))
+  (let (token self->token)
     (if (nil? token) (raise SystemExit)
         (= token ":") (.parse-definition self)
         (= token "if") (.parse-if self)
@@ -72,7 +70,7 @@
         (number? token) token
         (symbol token))))
 
-(function forth-read () 
+(function forth-read ()
   (.parse (.scan (.new ForthReader))))
 
 ; Evaluate.
@@ -104,7 +102,7 @@
 (function forth-define (x)
   (let ((key (name :rest body)) x)
     (assert (== key :definition))
-    (if (! (symbol? name)) (raise ForthError "illegal function name") 
+    (if (! (symbol? name)) (raise ArgumentError "illegal function name")
         ([] $dictionary name body))))
 
 (function forth-if (x)
@@ -116,7 +114,7 @@
   (car $stack))
 
 (function forth-pop ()
-  (if (nil? $stack) (raise ForthError "stack under flow")
+  (if (nil? $stack) (raise StateError "stack under flow")
       (pop! $stack)))
 
 (function forth-push (x)
@@ -167,12 +165,15 @@
       (forth-function? x) (forth-apply x)
       (forth-definition? x) (forth-define x)
       (forth-if? x) (forth-if x)
-      (raise ForthError "illegal syntax")))
+      (raise SyntaxError "illegal syntax")))
 
 (function interpret ()
   (loop
-    (catch (ForthError (f (e) (write-line (.to-s e))))
-      (forth-eval (forth-read)))))
+    (catch
+      (forth-eval (forth-read))
+      (f (e)
+        (if (is-a? e Error) (write-line (.to-s e))
+            (break))))))
 
 (function! main (args)
   (if (nil? args) (interpret)

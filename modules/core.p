@@ -123,7 +123,7 @@
                         (== ope '<-) (expand2 args)
                         (== ope 'f) (cons (car args) (expand1 (cdr args)))
                         (== ope 'macro) (cons (car args) (cons (cadr args) (expand1 (cddr args))))
-                        (in? ope '(let catch)) (cons (expand2 (car args)) (expand1 (cdr args)))
+                        (== ope 'let) (cons (expand2 (car args)) (expand1 (cdr args)))
                         (expand1 args))))))))
 
 (macro function (name args :rest body)
@@ -2012,17 +2012,21 @@
   ; Executed when there is no command line argument when paren starts.
   (<- $0 nil $1 nil $2 nil $3 nil $4 nil $5 nil $6 nil $7 nil $8 nil $9 nil)
   (loop
-    (catch (Error .print-stack-trace)
-      (write-bytes ") ")
-      (if (== (<- $$ (read)) :q) (break)
-          (== $$ :h) (foreach write
-                              '((:h "show this help")
-                                (:r "show register")
-                                (:q "quit repl")))
-          (== $$ :r) (foreach (f (x) (write (list x (eval x))))
-                              (map (compose symbol (partial str "$"))
-                                   (.. 10)))
-          (<- $9 $8 $8 $7 $7 $6 $6 $5 $5 $4 $4 $3 $3 $2 $2 $1 $1 $0 $0 (write (eval $$)))))))
+    (catch
+      (begin
+        (write-bytes ") ")
+        (if (== (<- $$ (read)) :q) (break)
+            (== $$ :h) (foreach write
+                                '((:h "show this help")
+                                  (:r "show register")
+                                  (:q "quit repl")))
+            (== $$ :r) (foreach (f (x) (write (list x (eval x))))
+                                (map (compose symbol (partial str "$"))
+                                     (.. 10)))
+            (<- $9 $8 $8 $7 $7 $6 $6 $5 $5 $4 $4 $3 $3 $2 $2 $1 $1 $0 $0 (write (eval $$)))))
+      (f (e)
+        (if (is-a? e Error) (.print-stack-trace e)
+            (throw e))))))
 
 (function raise (cls :rest args)
   ; Throw the cls Class instance which initialized with argument args.
@@ -2054,16 +2058,24 @@
   ; Invoke repl if there are no command line arguments that bound to the symbol $args.
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
   ; Can be omitted if the script file has a `p` extension.
-  (catch (SystemExit (f (e) (exit 0))
-                     Exception (f (e) (.print-stack-trace e) (exit (.status-cd e))))
-    (if (.file? $parenrc) (load $parenrc))
-    (if (nil? args) (repl)
-        (let (file-name (path (car args)) script (select1 .file?
-                                                          (map (f (x) (apply .resolve x))
-                                                               (product (cons (path.getcwd) $runtime-path)
-                                                                        (list file-name (.suffix file-name "p"))))))
-          (if (nil? script) (raise ArgumentError (str "unreadable file " file-name))
-              (&& (load script) (bound? 'main) main) (main (cdr args)))))))
+  (catch
+    (begin
+      (if (.file? $parenrc) (load $parenrc))
+      (if (nil? args) (repl)
+          (let (file-name (path (car args)) script (select1 .file?
+                                                            (map (f (x) (apply .resolve x))
+                                                                 (product (cons (path.getcwd) $runtime-path)
+                                                                          (list file-name (.suffix file-name "p"))))))
+            (if (nil? script) (raise ArgumentError (str "unreadable file " file-name))
+                (&& (load script) (bound? 'main) main) (main (cdr args))))))
+      (f (e)
+        (if (is-a? e SystemExit) (exit 0)
+            (is-a? e Exception) (begin 
+                                  (.print-stack-trace e)
+                                  (exit (.status-cd e)))
+            (begin
+              (.write-bytes $stderr "uncaught error:")
+              (.write $stderr e))))))
 
 (<- $import '(:core)
     $read-table (dict)

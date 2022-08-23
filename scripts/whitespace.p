@@ -144,7 +144,7 @@
 (function interpret (code)
   (debug-write :interpret)
   (loop
-    (catch (WSJump (f (e) nil))
+    (catch
       (let ((inst :opt arg) ([] code $ip))
         (debug-write `(:ip ,$ip ,inst ,arg :stack ,$stack :call-stack ,$call-stack :heap ,$heap))
         (if (== inst :push) (ws-apply inst 0 (f () (push! arg $stack)))
@@ -172,7 +172,10 @@
             (== inst :ret) (ws-return)
             (== inst :end) (quit)
             (assert nil))
-        (<- $ip (++ $ip))))))
+        (<- $ip (++ $ip)))
+      (f (e)
+        (if (is-a? e WSJump) nil
+            (throw e))))))
 
 (function debug-write (expr)
   (if (nil? expr) nil

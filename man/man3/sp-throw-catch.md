@@ -1,38 +1,35 @@
 # NAME
-throw, catch - throw exceptions and catch exceptions.
+catch, throw - throw exceptions and catch exceptions.
 
 # SYNOPSIS
 
-    (throw EXCEPTION)
+    (catch EXPR HANDLER)
     
-    (catch (EXCEPTION-CLASS HANDLER [EXCEPTION-CLASS HANDLER] ...)
-        EXPR ...)
+    (throw VALUE)
 
 # DESCRIPTION
-The special operator throw throws a `EXCEPTION`.
+The special operator `catch` evaluates `EXPR` first. If an exception is thrown when it is evaluated, the process is transferred to `HANDLER`. `HANDLER` is a function that takes a thrown `VALUE` as an argument.
 
-When `EXCEPTION` is thrown, execution of the current function stops and control is passed to the first `HANDLER` in the first matching catch expression.
-
-The special operator `catch` evaluates `EXPRs` in order from the left.
-
-If an `EXCEPTION` is thrown by throw while evaluating `EXPRs`, control is first transferred to a `HANDLER` that matches the `EXCEPTION` type regarded as `EXCEPTION-CLASS`.
-
-`HANDLER` is a function that takes a thrown `EXCEPTION` as an argument.
-
-If no `HANDLER` is matched, the program will terminate.
+The special operator `throw` throws a `VALUE`.  When a `VALUE` is thrown, it is caught by the exception handler of the most recent catch expression and processing is transferred.
 
 # NOTES
-In general, `throw` is rarely used directly, and `raise(3)` is used instead.
+As shown in the example, OOP error handling can be implemented as needed.
 
 # EXAMPLES
 
-    ) (catch (ArgumentError (f (e) 1) StateError (f (e) 2))
-        3)
-    3
-    ) (catch (ArgumentError (f (e) 1) StateError (f (e) 2))
-        (throw (.new StateError)))
+    ) (catch (/ 4 2) (f (e) "division by zero"))
     2
+    ) (catch (/ 4 0) (f (e) "division by zero"))
+    "division by zero"
+    ) (catch
+        (throw (.new ArgumentError))
+        (f (e)
+          (if (is-a? e StateError) :StateError
+              (is-a? e ArgumentError) :ArgumentError
+              (throw e))))
+    :ArgumentError
 
 # SEE ALSO
 - `raise(3)`
+- `unwind-protect(3)`
 - `special-operator(7)`

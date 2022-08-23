@@ -153,14 +153,16 @@
 
 (method XML.SAXParser .parse ()
   ;; parse xml from standard input.
-  (catch (Error (partial self->on-error self))
-    (.skip-declaration self)
-    (while (.next self)
-      (if (.text-node? self) (apply self->on-read-text (list (.read-text self)))
-          (let ((type val) (.read-tag (.skip-space self)))
-            (if (== type :close) (apply self->on-end-element (list val))
-                (== type :comment) (apply self->on-read-comment (list val))
-                (apply self->on-start-element val)))))))
+  (catch
+    (begin
+      (.skip-declaration self)
+      (while (.next self)
+        (if (.text-node? self) (apply self->on-read-text (list (.read-text self)))
+            (let ((type val) (.read-tag (.skip-space self)))
+              (if (== type :close) (apply self->on-end-element (list val))
+                  (== type :comment) (apply self->on-read-comment (list val))
+                  (apply self->on-start-element val))))))
+    (partial self->on-error self)))
 
 ;; Wirter.
 

@@ -10,9 +10,6 @@
     $state '($result $head-vertexes $body-vertexes $cuctus-vertexes $cuctus-coods $branches)
     $unit-vectors '((0 -1) (1 0) (0 1) (-1 0)))
 
-(function even? (x)
-  (= (% x 2) 0))
-
 (function coods? (p)
   (none? even? p))
 
@@ -138,7 +135,7 @@
 (function step1 (dir state)
   (with-state (state)
     (push! dir $result)
-    (catch (BackTrackSignal (f (e) (if $debug? (write :back-track)) (<- $hint nil)))
+    (catch
       (let ($head (car $head-vertexes) peek (map + $head dir))
         (if (! (.inside? $board peek)) (raise BackTrackSignal))
         (if (== (.at $board peek) :wall) (move-opposite)
@@ -151,7 +148,10 @@
               (show)
               (write (reverse (map vector->symbol $result)))
               (if (! $show-all?) (quit)))
-            (step (make-state)))))))
+            (step (make-state))))
+      (f (e)
+        (if $debug? (write :back-track))
+        (<- $hint nil)))))
 
 (function step-dir (state)
   (dolist (dir $unit-vectors) (step1 dir state)))

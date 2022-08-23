@@ -1,6 +1,7 @@
 ; yes.
 
 (function main (args)
-  (catch (OSError (f (x) nil))
+  (catch
     (let (y (|| (car args) "y"))
-      (loop (write-line y)))))
+      (loop (write-line y)))
+    (f (x) nil)))

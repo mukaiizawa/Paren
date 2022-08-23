@@ -18,6 +18,6 @@ Therefore, the output is a list of manuals that must be created.
 # NOTES
 Manuals referenced outside the `SEE ALSO` section are not subject to extraction.
 
-# See Also
+# SEE ALSO
 - `man(1)`
 - `mandb(1)`

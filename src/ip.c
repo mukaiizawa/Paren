@@ -6,15 +6,10 @@
 #include "bi.h"
 #include "ip.h"
 
-/*
- * virtual machine registers
- *   0 -- instruction argument.
- *   1 -- current environment.
- */
-#define REG_SIZE 2
-static object reg[REG_SIZE];
-
 static long cycle;
+
+static object dr;    // data register.
+static object cr;    // context register.
 
 // interrupt
 
@@ -85,8 +80,6 @@ static char *error_msg(enum error_msg em) {
     case expected_built_in_operator: return "expected built-in operator";
     case expected_byte: return "expected byte";
     case expected_function: return "expected function";
-    case expected_instance_of_Class_class: return "expected instance of Class class";
-    case expected_instance_of_Exception_class: return "expected instance of Exception class";
     case expected_integer: return "expected integer";
     case expected_keyword_parameter_value: return "expected keyword parameter value";
     case expected_list: return "expected list";
@@ -176,12 +169,12 @@ int ip_throw(enum error err, enum error_msg msg)
 #define   BIND_HANDLER_FRAME     0x033
 #define   BIND_PROPAGATION_FRAME 0x043
 #define   BREAK_FRAME            0x052
-#define   CONTINUE_FRAME         0x062
-#define   EVAL_ARGS_FRAME        0x074
-#define   EVAL_FRAME             0x082
-#define   EVAL_SEQUENTIAL_FRAME  0x093
-#define   FUNC_FRAME             0x0a4
-#define   HANDLERS_FRAME         0x0b3
+#define   CATCH_FRAME            0x063
+#define   CONTINUE_FRAME         0x072
+#define   EVAL_ARGS_FRAME        0x084
+#define   EVAL_FRAME             0x092
+#define   EVAL_SEQUENTIAL_FRAME  0x0a3
+#define   FUNC_FRAME             0x0b4
 #define   IF_FRAME               0x0c3
 #define   LET_FRAME              0x0d2
 #define   LOOP_FRAME             0x0e3
@@ -225,12 +218,12 @@ static char *frame_name(int frame_type)
     case BIND_HANDLER_FRAME: return "BIND_HANDLER_FRAME";
     case BIND_PROPAGATION_FRAME: return "BIND_PROPAGATION_FRAME";
     case BREAK_FRAME: return "BREAK_FRAME";
+    case CATCH_FRAME: return "CATCH_FRAME";
     case CONTINUE_FRAME: return "CONTINUE_FRAME";
     case EVAL_ARGS_FRAME: return "EVAL_ARGS_FRAME";
     case EVAL_FRAME: return "EVAL_FRAME";
     case EVAL_SEQUENTIAL_FRAME: return "EVAL_SEQUENTIAL_FRAME";
     case FUNC_FRAME: return "FUNC_FRAME";
-    case HANDLERS_FRAME: return "HANDLERS_FRAME";
     case IF_FRAME: return "IF_FRAME";
     case LET_FRAME: return "LET_FRAME";
     case LOOP_FRAME: return "LOOP_FRAME";
@@ -256,6 +249,8 @@ static void dump_fs(void)
     for (j = 0; j < frame_size(frame_type) - 2; j++)
       fprintf(stderr, "|%d: %s\n", i + j + 2, object_describe(get_frame_var(i, j), buf));
   }
+  fprintf(stderr, "dr: %s", object_describe(dr, buf));
+  fprintf(stderr, "cr: %s", object_describe(cr, buf));
   xerror("illegal state");
 }
 #endif
@@ -276,8 +271,8 @@ static void pop_frame(void)
 
 static void gen_eval_frame(object o)
 {
-  reg[0] = o;
-  switch (object_type(reg[0])) {
+  dr = o;
+  switch (object_type(dr)) {
     case SYMBOL:
     case CONS:
       gen0(EVAL_FRAME);
@@ -289,7 +284,7 @@ static void gen_eval_frame(object o)
 
 static void gen_eval_args_frame(object args)
 {
-  if (args == object_nil) reg[0] = object_nil;
+  if (args == object_nil) dr = object_nil;
   else {
     gen2(EVAL_ARGS_FRAME, args->cons.cdr, object_nil);
     gen_eval_frame(args->cons.car);
@@ -298,7 +293,7 @@ static void gen_eval_args_frame(object args)
 
 static void gen_eval_sequential_frame(object args)
 {
-  if (args == object_nil) reg[0] = object_nil;
+  if (args == object_nil) dr = object_nil;
   else gen1(EVAL_SEQUENTIAL_FRAME, args);
 }
 
@@ -311,7 +306,7 @@ static void gen_if_frame(object args)
 
 static void gen_trace(object o)
 {
-  gen2(FUNC_FRAME, reg[1], o);
+  gen2(FUNC_FRAME, cr, o);
 }
 
 static int same_symbol_keyword_p(object sym, object key)
@@ -353,7 +348,7 @@ static int parse_args(void (*f)(object, object, object), object params, object a
     if (args == object_nil)
       return ip_throw(ArgumentError, too_few_arguments);
     if (object_type(params->cons.car) == SYMBOL)
-      (*f)(reg[1], params->cons.car, args->cons.car);
+      (*f)(cr, params->cons.car, args->cons.car);
     else if (!parse_args(f, params->cons.car, args->cons.car)) return FALSE;
     params = params->cons.cdr;
     args = args->cons.cdr;
@@ -364,9 +359,9 @@ static int parse_args(void (*f)(object, object, object), object params, object a
     while (params != object_nil) {
       if (object_type(params->cons.car) == KEYWORD) break;
       k = params->cons.car;
-      if (args == object_nil) (*f)(reg[1], k, object_nil);
+      if (args == object_nil) (*f)(cr, k, object_nil);
       else {
-        (*f)(reg[1], k, args->cons.car);
+        (*f)(cr, k, args->cons.car);
         args = args->cons.cdr;
       }
       params = params->cons.cdr;
@@ -374,7 +369,7 @@ static int parse_args(void (*f)(object, object, object), object params, object a
   }
   // rest args
   if (params->cons.car == object_rest) {
-    (*f)(reg[1], params->cons.cdr->cons.car, args);
+    (*f)(cr, params->cons.cdr->cons.car, args);
     return TRUE;
   }
   // keyword args
@@ -393,7 +388,7 @@ static int parse_args(void (*f)(object, object, object), object params, object a
         }
         args = args->cons.cdr->cons.cdr;
       }
-      (*f)(reg[1], k, v);
+      (*f)(cr, k, v);
       params = params->cons.cdr;
     }
     return TRUE;
@@ -405,28 +400,28 @@ static int parse_args(void (*f)(object, object, object), object params, object a
 
 static void pop_func_frame(void)
 {
-  reg[1] = get_frame_var(fp, 0);
+  cr = get_frame_var(fp, 0);
   pop_frame();
 }
 
 static void pop_let_frame(void)
 {
-  reg[1] = reg[1]->map.top;
+  cr = cr->map.top;
   pop_frame();
 }
 
 static void pop_apply_frame(void)
 {
-  object func, trace;
-  func = get_frame_var(fp, 0);
+  object f, trace;
+  f = get_frame_var(fp, 0);
   pop_frame();
-  trace = gc_new_cons(func, reg[0]);
+  trace = gc_new_cons(f, dr);
   // optimize tail recursion
   if (fs_top() == FUNC_FRAME) set_frame_var(fp, 1, trace);
-  else gen2(FUNC_FRAME, reg[1], trace);
-  reg[1] = gc_new_env(func->proc.env, func->proc.param_count * 2);
-  gen_eval_sequential_frame(func->proc.body);
-  parse_args(&map_put, func->proc.params, reg[0]);
+  else gen2(FUNC_FRAME, cr, trace);
+  cr = gc_new_env(f->proc.env, f->proc.param_count * 2);
+  gen_eval_sequential_frame(f->proc.body);
+  parse_args(&map_put, f->proc.params, dr);
 }
 
 static void pop_apply_built_in_frame(void)
@@ -434,10 +429,10 @@ static void pop_apply_built_in_frame(void)
   object f, args;
   int (*function)(int, object, object *);
   f = get_frame_var(fp, 0);
-  args = reg[0];
+  args = dr;
   function = f->native.u.function;
   pop_frame();
-  if ((*function)(list_len(args), args, &(reg[0]))) return;
+  if ((*function)(list_len(args), args, &(dr))) return;
   gen_trace(gc_new_cons(f->native.name, args));
   if (ip_trap_code == TRAP_NONE) ip_throw(Error, built_in_failed);
 }
@@ -446,38 +441,32 @@ static void pop_bind_frame(void)
 {
   object o;
   o = get_frame_var(fp, 0);
-  if (object_type(o) == SYMBOL) map_put(reg[1], o, reg[0]);
-  else parse_args(&map_put, o, reg[0]);
+  if (object_type(o) == SYMBOL) map_put(cr, o, dr);
+  else parse_args(&map_put, o, dr);
   pop_frame();
 }
 
 static void pop_bind_handler_frame(void)
 {
-  int i;
-  object cls_sym, handler, handlers;
-  cls_sym = get_frame_var(fp, 0);
+  object expr, handler;
+  expr = get_frame_var(fp, 0);
   pop_frame();
-  if (!bi_argv(BI_FUNC, reg[0], &handler)) return;
-  for (i = fp; i > -1; i = prev_fp(i)) {
-    if (sint_val(fs[i]) != HANDLERS_FRAME) continue;
-    handlers = get_frame_var(i, 0);
-    for (i = 0; i < handlers->array.size; i += 2) {
-      if (handlers->array.elt[i] != object_nil) continue;
-      handlers->array.elt[i] = cls_sym;
-      handlers->array.elt[i + 1] = handler;
-      return;
-    }
-    xassert(FALSE);
+  if (!bi_argv(BI_FUNC, dr, &handler)) {
+    gen_trace(gc_new_cons(gc_new_mem_from(SYMBOL, "catch", 5)
+          , gc_new_cons(expr
+            , gc_new_cons(handler, object_nil))));
+    return;
   }
-  xassert(FALSE);
+  gen1(CATCH_FRAME, handler);
+  gen_eval_frame(expr);
 }
 
 static void pop_bind_propagation_frame(void)
 {
   object o;
   o = get_frame_var(fp, 0);
-  if (object_type(o) == SYMBOL) map_put_propagation(reg[1], o, reg[0]);
-  else parse_args(&map_put_propagation, o, reg[0]);
+  if (object_type(o) == SYMBOL) map_put_propagation(cr, o, dr);
+  else parse_args(&map_put_propagation, o, dr);
   pop_frame();
 }
 
@@ -485,7 +474,7 @@ static int eval_symbol(object *result)
 {
   object o;
   o = *result;
-  if ((*result = map_get_propagation(reg[1], *result)) == NULL) {
+  if ((*result = map_get_propagation(cr, *result)) == NULL) {
     gen_trace(o);
     return ip_throw(StateError, unbound_symbol);
   }
@@ -497,13 +486,13 @@ static void pop_eval_frame(void)
   object args, operator;
   int (*special)(int, object);
   pop_frame();
-  switch (object_type(reg[0])) {
+  switch (object_type(dr)) {
     case SYMBOL:
-      eval_symbol(&(reg[0]));
+      eval_symbol(&(dr));
       return;
     case CONS:
-      operator = reg[0]->cons.car;
-      args = reg[0]->cons.cdr;
+      operator = dr->cons.car;
+      args = dr->cons.cdr;
       if (object_type(operator) == SYMBOL) {
         if (!eval_symbol(&operator)) return;
       }
@@ -520,14 +509,14 @@ static void pop_eval_frame(void)
         case MACRO:
           gen0(EVAL_FRAME);
           gen1(APPLY_FRAME, operator);
-          reg[0] = args;
+          dr = args;
           return;
         case FUNC:
           gen1(APPLY_FRAME, operator);
           gen_eval_args_frame(args);
           return;
         default:
-          gen_trace(reg[0]);
+          gen_trace(dr);
           ip_throw(StateError, expected_operator);
           return;
       }
@@ -569,7 +558,7 @@ static void pop_break_continue_frame(int exit_p)
   while (fp != -1) {
     switch (fs_top()) {
       case LOOP_FRAME:
-        reg[0] = object_nil;
+        dr = object_nil;
         if (exit_p) pop_frame();
         return;
       case UNWIND_PROTECT_FRAME:
@@ -594,7 +583,7 @@ static void pop_unwind_protect_frame(void)
   object body;
   body = get_frame_var(fp, 0);
   pop_frame();
-  gen1(QUOTE_FRAME, reg[0]);
+  gen1(QUOTE_FRAME, dr);
   gen_eval_sequential_frame(body);
 }
 
@@ -602,11 +591,11 @@ static void pop_eval_args_frame(void)
 {
   object rest, acc;
   rest = get_frame_var(fp, 0);
-  acc = gc_new_cons(reg[0], get_frame_var(fp, 1));
+  acc = gc_new_cons(dr, get_frame_var(fp, 1));
   set_frame_var(fp, 1, acc);
   if (rest == object_nil) {
     pop_frame();
-    reg[0] = list_reverse(acc);
+    dr = list_reverse(acc);
   } else {
     set_frame_var(fp, 0, rest->cons.cdr);
     gen_eval_frame(rest->cons.car);
@@ -628,7 +617,7 @@ static void pop_if_frame(void)
   object args;
   args = get_frame_var(fp, 0);
   pop_frame();
-  if (reg[0] != object_nil) gen_eval_frame(args->cons.car);
+  if (dr != object_nil) gen_eval_frame(args->cons.car);
   else if ((args = args->cons.cdr) != object_nil) gen_if_frame(args);
 }
 
@@ -644,7 +633,7 @@ static void pop_return_frame(void)
         o = get_frame_var(fp, 0);
         pop_frame();
         gen0(RETURN_FRAME);
-        gen1(QUOTE_FRAME, reg[0]);
+        gen1(QUOTE_FRAME, dr);
         gen_eval_sequential_frame(o);
         return;
       default:
@@ -659,38 +648,27 @@ static object get_call_stack(void);
 
 static void pop_throw_frame(void)
 {
-  int i, j;
-  object o, cls_sym, handler, handlers;
+  int i;
+  object o, handler;
   i = fp;
   pop_frame();
-  if (!pos_is_a_p(reg[0], object_Exception)) {
-    ip_throw(ArgumentError, expected_instance_of_Exception_class);
-    return;
-  }
-  if (map_get(reg[0], object_stack_trace) == object_nil)
-    map_put(reg[0], object_stack_trace, get_call_stack());
+  if (object_type(dr) == DICT && map_get(dr, object_stack_trace) == object_nil)
+    map_put(dr, object_stack_trace, get_call_stack());
   while (fp != -1) {
     switch (fs_top()) {
       case UNWIND_PROTECT_FRAME:
         o = get_frame_var(fp, 0);
         pop_frame();
         gen0(THROW_FRAME);
-        gen1(QUOTE_FRAME, reg[0]);
+        gen1(QUOTE_FRAME, dr);
         gen_eval_sequential_frame(o);
         return;
-      case HANDLERS_FRAME:
-        handlers = get_frame_var(fp, 0);
-        xassert(object_type(handlers) == ARRAY);
+      case CATCH_FRAME:
+        handler = get_frame_var(fp, 0);
         pop_frame();
-        for (j = 0; j < handlers->array.size; j += 2) {
-          cls_sym = handlers->array.elt[j];
-          handler = handlers->array.elt[j + 1];
-          if (!pos_is_a_p(reg[0], cls_sym)) continue;
-          gen1(APPLY_FRAME, handler);
-          reg[0] = gc_new_cons(reg[0], object_nil);
-          return;
-        }
-        break;
+        gen1(APPLY_FRAME, handler);
+        dr = gc_new_cons(dr, object_nil);
+        return;
       default:
         pop_rewinding();
         break;
@@ -716,7 +694,7 @@ DEFUN(apply)
   object args;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_argv(BI_LIST, argv->cons.cdr->cons.car, &args)) return FALSE;
-  reg[0] = args;
+  dr = args;
   switch (object_type(argv->cons.car)) {
     case BFUNC:
       gen1(APPLY_BUILT_IN_FRAME, argv->cons.car);
@@ -733,16 +711,16 @@ DEFUN(macroexpand_2d_1)
 {
   object f, args;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  reg[0] = argv->cons.car;
-  if (object_type(reg[0]) != CONS) return TRUE;
-  f = reg[0]->cons.car;
-  args = reg[0]->cons.cdr;
+  dr = argv->cons.car;
+  if (object_type(dr) != CONS) return TRUE;
+  f = dr->cons.car;
+  args = dr->cons.cdr;
   if (object_type(f) == SYMBOL) {
-    if ((f = map_get_propagation(reg[1], f)) == NULL) return TRUE;
+    if ((f = map_get_propagation(cr, f)) == NULL) return TRUE;
   }
   if (object_type(f) != MACRO) return TRUE;
   gen1(APPLY_FRAME, f);
-  reg[0] = args;
+  dr = args;
   return TRUE;
 }
 
@@ -751,7 +729,7 @@ DEFUN(bound_3f_)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_SYM, argv->cons.car, &o)) return FALSE;
-  reg[0] = object_bool(map_get_propagation(reg[1], o) != NULL);
+  dr = object_bool(map_get_propagation(cr, o) != NULL);
   return TRUE;
 }
 
@@ -780,7 +758,7 @@ static int pos_class_p(object o)
 static int find_class(object cls_sym, object *result)
 {
   if (object_type(cls_sym) != SYMBOL) return FALSE;
-  if ((*result = map_get_propagation(reg[1], cls_sym)) == NULL) return FALSE;
+  if ((*result = map_get_propagation(cr, cls_sym)) == NULL) return FALSE;
   return pos_class_p(*result);
 }
 
@@ -811,17 +789,16 @@ static object find_class_method(object cls_sym, object mtd_sym)
   xbarray_reset(&bi_buf);
   xbarray_copy(&bi_buf, cls_sym->mem.elt, cls_sym->mem.size);
   xbarray_copy(&bi_buf, mtd_sym->mem.elt, mtd_sym->mem.size);
-  return map_get_propagation(reg[1], gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size));
+  return map_get_propagation(cr, gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size));
 }
 
 DEFUN(is_2d_a_3f_)
 {
-  object o, cls;
+  object cls;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  o = argv->cons.car;
-  if (!pos_class_p(cls = argv->cons.cdr->cons.car))
-    return ip_throw(ArgumentError, expected_instance_of_Class_class);
-  reg[0] = object_bool(pos_is_a_p(o, map_get(cls, object_symbol)));
+  dr = object_nil;
+  if (!pos_class_p(cls = argv->cons.cdr->cons.car)) return TRUE;
+  if (pos_is_a_p(argv->cons.car, map_get(cls, object_symbol))) dr = object_true;
   return TRUE;
 }
 
@@ -859,7 +836,7 @@ DEFUN(find_2d_method)
 
 DEFUN(cycle)
 {
-  reg[0] = gc_new_xint(cycle);
+  dr = gc_new_xint(cycle);
   return TRUE;
 }
 
@@ -985,7 +962,7 @@ DEFSP(let)
     gen_eval_sequential_frame(argv->cons.cdr);
     param_count = 0;
     if (!gen_bind_frames(BIND_FRAME, binds)) return FALSE;
-    reg[1] = gc_new_env(reg[1], param_count * 2);
+    cr = gc_new_env(cr, param_count * 2);
   }
   return TRUE;
 }
@@ -997,17 +974,17 @@ DEFSP(dynamic)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_SYM, argv->cons.car, &s)) return FALSE;
   i = fp;
-  e = reg[1];
-  if ((reg[0] = map_get(e, s)) != NULL) return TRUE;
+  e = cr;
+  if ((dr = map_get(e, s)) != NULL) return TRUE;
   while ((i = prev_fp(i)) != -1) {
     switch (fs_nth(i)) {
       case LET_FRAME: e = e->map.top; break;
       case FUNC_FRAME: e = get_frame_var(i, 0); break;
       default: continue;
     }
-    if ((reg[0] = map_get(e, s)) != NULL) return TRUE;
+    if ((dr = map_get(e, s)) != NULL) return TRUE;
   }
-  reg[0] = object_nil;
+  dr = object_nil;
   return ip_throw(ArgumentError, unbound_symbol);
 }
 
@@ -1032,7 +1009,7 @@ DEFSP(macro)
   if (!bi_argv(BI_LIST, argv->cons.car, &params)) return FALSE;
   param_count = 0;
   if (!parse_required_params(params)) return FALSE;
-  reg[0] = gc_new_macro(reg[1], param_count, params, argv->cons.cdr);
+  dr = gc_new_macro(cr, param_count, params, argv->cons.cdr);
   return TRUE;
 }
 
@@ -1043,14 +1020,14 @@ DEFSP(f)
   if (!bi_argv(BI_LIST, argv->cons.car, &params)) return FALSE;
   param_count = 0;
   if (!parse_required_params(params)) return FALSE;
-  reg[0] = gc_new_func(reg[1], param_count, params, argv->cons.cdr);
+  dr = gc_new_func(cr, param_count, params, argv->cons.cdr);
   return TRUE;
 }
 
 DEFSP(quote)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  reg[0] = argv->cons.car;
+  dr = argv->cons.car;
   return TRUE;
 }
 
@@ -1100,12 +1077,10 @@ DEFSP(throw)
 
 DEFSP(catch)
 {
-  object params;
-  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_argv(BI_LIST, argv->cons.car, &params)) return FALSE;
-  gen1(HANDLERS_FRAME, gc_new_array(list_len(params)));
-  gen_eval_sequential_frame(argv->cons.cdr);
-  return gen_bind_frames(BIND_HANDLER_FRAME, params);
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  gen1(BIND_HANDLER_FRAME, argv->cons.car);
+  gen_eval_frame(argv->cons.cdr->cons.car);
+  return TRUE;
 }
 
 DEFSP(return)
@@ -1128,7 +1103,7 @@ static int resolve_anonimous_proc(void)
 {
   object e;
   xassert(named_proc == NULL);
-  e = reg[1];
+  e = cr;
   while (e != object_nil) {
     map_foreach(e, find_named_proc);
     if (named_proc != NULL) return TRUE;
@@ -1183,10 +1158,10 @@ static void trap(void)
   gen0(THROW_FRAME);
   switch (ip_trap_code) {
     case TRAP_ERROR:
-      reg[0] = new_Error(e, em);
+      dr = new_Error(e, em);
       break;
     case TRAP_INTERRUPT:
-      reg[0] = new_Error(SystemExit, error_msg_nil);
+      dr = new_Error(SystemExit, error_msg_nil);
       break;
     default:
       xassert(FALSE);
@@ -1201,8 +1176,8 @@ static void trap(void)
 
 static void ip_main(object args)
 {
-  reg[0] = object_nil;
-  reg[1] = object_toplevel;
+  dr = object_nil;
+  cr = object_toplevel;
   gen_eval_sequential_frame(args);
   while (fp != -1) {
     xassert(fp >= 0);
@@ -1220,11 +1195,11 @@ static void ip_main(object args)
       case EVAL_FRAME: pop_eval_frame(); break;
       case EVAL_SEQUENTIAL_FRAME: pop_eval_sequential_frame(); break;
       case FUNC_FRAME: pop_func_frame(); break;
-      case HANDLERS_FRAME: pop_frame(); break;
+      case CATCH_FRAME: pop_frame(); break;
       case IF_FRAME: pop_if_frame(); break;
       case LET_FRAME: pop_let_frame(); break;
       case LOOP_FRAME: gen_eval_sequential_frame(get_frame_var(fp, 0)); break;
-      case QUOTE_FRAME: reg[0] = get_frame_var(fp, 0); pop_frame(); break;
+      case QUOTE_FRAME: dr = get_frame_var(fp, 0); pop_frame(); break;
       case RETURN_FRAME: pop_return_frame(); break;
       case THROW_FRAME: pop_throw_frame(); break;
       case UNWIND_PROTECT_FRAME: pop_unwind_protect_frame(); break;
@@ -1237,7 +1212,9 @@ static void ip_main(object args)
 void ip_mark_object(void)
 {
   int i;
-  for (i = 0; i < REG_SIZE; i++) gc_mark(reg[i]);
+  gc_mark(dr);
+  gc_mark(cr);
+  gc_mark(object_toplevel);
   for (i = 0; i < sp; i++) gc_mark(fs[i]);
   gc_mark(object_toplevel);
   gc_mark(object_nil);

@@ -1,8 +1,8 @@
-; unit test.
+; paren unit test.
 
 (import :optparse)
 
-(<- $paren-path (.to-s (.resolve $paren-home "paren"))
+(<- $paren (.to-s (.resolve $paren-home "paren"))
     $status-cd 0)
 
 (function testable-main? (tree)
@@ -21,22 +21,20 @@
 (function paren-file? (x)
   (&& (.file? x) (= (.suffix x) "p")))
 
-(function unit-test (dir :key recur?)
+(function punit (dir :key recur?)
   (dolist (file (.children dir))
-    (if (.dir? file) (if recur? (unit-test file :recur? true))
+    (if (.dir? file) (if recur? (punit file :recur? true))
         (paren-file? file)
-        (catch (Exception (f (e) (write-line (.to-s e))))
-          (let (file-name (.to-s file))
-            (write-bytes file-name) (write-bytes "\t")
-            (if (! (testable? file)) (write-bytes " -- skip ")
-                (let (sc (system (str $paren-path " " file-name)))
-                  (if (!= sc 0) (<- $status-cd sc))))
-            (write-line))))))
+        (let (file-name (.to-s file))
+          (write-bytes file-name) (write-bytes "\t")
+          (if (! (testable? file)) (write-bytes " -- skip ")
+              (<- $status-cd (max $status-cd (system (str $paren " " file-name)))))
+          (write-line))))))
 
 (function! main (args)
-  ; unit-test [OPTION]... [PATH]
+  ; punit [OPTION]... [PATH]
   ; Run unit tests for the specified PATH (the current directory by default).
   ;     -r test subdirectories recursively
   (let ((op args) (.parse (.init (.new OptionParser) "r") args))
-    (unit-test (path (|| (car args) ".")) :recur? (.get op "r"))
+    (punit (path (|| (car args) ".")) :recur? (.get op "r"))
     (exit $status-cd)))

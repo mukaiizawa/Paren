@@ -28,8 +28,6 @@ enum error_msg {
   expected_built_in_operator,
   expected_byte,
   expected_function,
-  expected_instance_of_Class_class,
-  expected_instance_of_Exception_class,
   expected_integer,
   expected_keyword_parameter_value,
   expected_list,

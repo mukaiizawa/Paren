@@ -27,7 +27,7 @@ The left-hand side values in the special operator `<-` are properly expanded int
 # RETURN VALUE
 Returns result of evaluation of the last `EXPR`.
 
-# Notes
+# NOTES
 The macro `with-arrow-syntax` is implicitly applied within the macro `method`.  Thus, it can be used as follows:
 
     (class Dog () name)

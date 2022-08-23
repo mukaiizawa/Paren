@@ -330,8 +330,10 @@
   (if (basic-string-var? var) "" 0))
 
 (function basic-coerce (var val)
-  (catch (Exception (f (e) (return (basic-default-value var))))
-    (if (basic-string-var? var) (str val) (float val))))
+  (catch
+    (if (basic-string-var? var) (str val)
+        (float val))
+    (f (e) (basic-default-value var))))
 
 (function basic-get-var (var)
   (let (val ([] $vars var))
@@ -342,13 +344,10 @@
   ([] $vars var (basic-coerce var val)))
 
 (function basic-array (name :opt message indices val)
-  (if (== message :at)
-      (let (val ([] (basic-array name) indices))
-        (if (nil? val) (basic-array name :put (basic-default-value name))
-            val))
-      (== message :put)
-      ([] (basic-array name) indices (basic-coerce name val))
-      :defualt
+  (if (== message :at) (let (val ([] (basic-array name) indices))
+                         (if (nil? val) (basic-array name :put (basic-default-value name))
+                             val))
+      (== message :put) ([] (basic-array name) indices (basic-coerce name val))
       (let (arr ([] $arrays name))
         (if (nil? arr) ([] $arrays name (dict))
             arr))))
@@ -368,10 +367,9 @@
 (function basic-read ()
   (if (nil? $dp) 0
       (let ((line-no :rest data) $dp)
-        (if (nil? data)
-            (begin
-              (basic-seek)
-              (basic-read))
+        (if (nil? data) (begin
+                          (basic-seek)
+                          (basic-read))
             (begin0
               (car data)
               (<- $dp (cons line-no (cdr data))))))))
@@ -385,10 +383,19 @@
 (function basic-bool (x)
   (if x $basic-true $basic-nil))
 
-(class BasicJump (Exception) ip sp)
+(class BasicJump (Exception)
+  ip sp)
+
+(method BasicJump .init (ip :opt sp)
+  (<- self->ip ip
+      self->sp (|| sp 0))
+  self)
+
+(method BasicJump .ctx ()
+  (list self->ip self->sp))
 
 (function basic-jump (ip :opt sp)
-  (throw (&sp! (&ip! (.new BasicJump) ip) (|| sp 0))))
+  (throw (.init (.new BasicJump) ip sp)))
 
 (function basic-goto (addr)
   (basic-jump (->ip addr) 0))
@@ -466,16 +473,20 @@
 
 (basic-built-in INPUT (:key prompt vars)
   (loop
-    (catch (Error (f (e) (basic-write (.to-s e)) (<- $sc 0)))
-      (if prompt (basic-write prompt))
-      (basic-write "\nINPUT> ")
-      (let (vals (split (upper (read-line)) ",") vlen (len vals))
-        (if (!= (len vars) vlen)
-            (raise Error (str "require " (len vars) " arguments, given " vlen " arguments")))
-        (dotimes (i vlen)
-          (let (var ([] vars i))
-            (basic-assign ([] vars i) ([] vals i)))))
-      (return nil))))
+    (catch
+      (begin
+        (if prompt (basic-write prompt))
+        (basic-write "\nINPUT> ")
+        (let (vals (split (upper (read-line)) ",") vlen (len vals))
+          (if (!= (len vars) vlen)
+              (raise Error (str "require " (len vars) " arguments, given " vlen " arguments")))
+          (dotimes (i vlen)
+            (let (var ([] vars i))
+              (basic-assign ([] vars i) ([] vals i)))))
+        (return nil))
+      (f (e)
+        (basic-write (.to-s e))
+        (<- $sc 0)))))
 
 (basic-built-in LET (:key var val)
   (basic-assign var (basic-eval-expr val)))
@@ -563,7 +574,7 @@
 (basic-built-in STR$ (x) (str x))
 (basic-built-in TAN (x) (tan x))
 (basic-built-in TAB (x) (make-space (- x $sc)))
-(basic-built-in VAL (x) (catch (Error (f (e) 0)) (float x)))
+(basic-built-in VAL (x) (catch (float x) (f (e) 0)))
 
 ;;; Operators.
 
@@ -591,19 +602,24 @@
 
 (function interpret ()
   (loop
-    (catch (BasicJump (f (e) (<- $ip (&ip e) $sp (&sp e))))
+    (catch
       (let ((line-no :rest stmts) ([] $code $ip))
         (dolist (stmt (slice stmts $sp))
           (basic-eval-stmt stmt)
           (<- $sp (++ $sp)))
-        (<- $ip (++ $ip) $sp 0)))))
+        (<- $ip (++ $ip) $sp 0))
+      (f (e)
+        (if (is-a? e BasicJump) (<- ($ip $sp) (.ctx e))
+            (throw e))))))
 
 ;; Loader.
 
 (function split-line (line)
-  (catch (Error (f (e) (list 0 (format "REM %s" line))))
+  (catch
     (let ((no code) (split-at line (index " " line)))
-      (list (int no) code))))
+      (list (int no) code))
+    (f (e)
+      (list 0 (format "REM invalid line: `%s`" line))))))
 
 (function load-code (file)
   (with-open ($in file :read)
