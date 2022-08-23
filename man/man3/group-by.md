@@ -18,7 +18,7 @@ Returns the `LIST` into sublists by function `FN` return value.
     ) (group-by odd? '(1 1 1 2 2 3 3))
     ((true 1 1 1 3 3) (nil 2 2))
     ) (group-by identity (list... "hello world"))
-    (("h" "h") ("e" "e") ("l" "l" "l" "l") ("o" "o" "o") (" " " ") ("w" "w ") ("r" "r") ("d" "d"))
+    (("h" "h") ("e" "e") ("l" "l" "l" "l") ("o" "o" "o") (" " " ") ("w" "w") ("r" "r") ("d" "d"))
     ) (group-by (f (x) (% x 3)) (.. 10))
     ((0 0 3 6 9) (1 1 4 7) (2 2 5 8))
 

@@ -8,6 +8,8 @@ fp - get a pointer to a standard I/O streams.
 # DESCRIPTION
 The function `fp` get a pointer to a standard I/O streams.
 
+This function is usually not used directly, but instead `$stdin(3), $stdout(3), $stderr(3)` is used.
+
 # RETURN VALUE
 Returns the file pointer associated with the file descriptor `FD`.
 
@@ -16,17 +18,6 @@ The argument `FD` can specify bellow value.
      0 -- stdin
      1 -- stdout
      2 -- stderr
-
-# EXAMPLES
-
-    ) (= (fp 0) (&fp $stdin))
-    true
-    
-    ) (= (fp 1) (&fp $stdout))
-    true
-    
-    ) (= (fp 2) (&fp $stderr))
-    true
 
 # SEE ALSO
 - `$stderr(3)`
