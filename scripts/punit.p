@@ -1,4 +1,4 @@
-; unit test.
+; paren unit test.
 
 (import :optparse)
 
@@ -21,9 +21,9 @@
 (function paren-file? (x)
   (&& (.file? x) (= (.suffix x) "p")))
 
-(function unit-test (dir :key recur?)
+(function punit (dir :key recur?)
   (dolist (file (.children dir))
-    (if (.dir? file) (if recur? (unit-test file :recur? true))
+    (if (.dir? file) (if recur? (punit file :recur? true))
         (paren-file? file)
         (let (file-name (.to-s file))
           (write-bytes file-name) (write-bytes "\t")
@@ -32,9 +32,9 @@
           (write-line))))))
 
 (function! main (args)
-  ; unit-test [OPTION]... [PATH]
+  ; punit [OPTION]... [PATH]
   ; Run unit tests for the specified PATH (the current directory by default).
   ;     -r test subdirectories recursively
   (let ((op args) (.parse (.init (.new OptionParser) "r") args))
-    (unit-test (path (|| (car args) ".")) :recur? (.get op "r"))
+    (punit (path (|| (car args) ".")) :recur? (.get op "r"))
     (exit $status-cd)))
