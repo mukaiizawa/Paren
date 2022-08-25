@@ -12,3 +12,4 @@ If the `YEAR` and `MONTH` are omitted, it is considered that the current year an
 
 # SEE ALSO
 - `date(1)`
+- `ldate(1)`
