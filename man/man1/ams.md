@@ -1,14 +1,14 @@
 # NAME
-manage-attendance - manage attendance and summarize.
+ams - attendance management system.
 
 # SYNOPSIS
 
-    manage-attendance [OPTION] ... [FILE] ...
+    ams [OPTION] ... [FILE] ...
 
 # DESCRIPTION
 Read attendance information from standard input or `FILE` and output summary to standard output.
 
-See `manage-attendance(5)` for attendance information format specifications.
+See `ams(5)` for attendance information format specifications.
 
 # OPTIONS
 
@@ -34,20 +34,21 @@ See `manage-attendance(5)` for attendance information format specifications.
 # EXAMPLES
 Reads attendance information from the file `attendance.p` and display a summary of time and attendance information.
 
-    $ paren manage-attendance attendance.p
+    $ paren ams attendance.p
 
 Reads attendance information from the file `attendance.p` and display only the hours worked per day.
 
-    $ paren manage-attendance -vs attendance.p
+    $ paren ams -vs attendance.p
 
 Reads attendance information from the file `attendance.p` and displays a summary of 160 hours per month of target working hours.
 
-    $ paren manage-attendance -l160 attendance.p
+    $ paren ams -l160 attendance.p
 
 Read attendance information from the file `attendance.p` and display data from `2020` to `2022` and `2024`.
 
-    $ paren manage-attendance -y2020-2022,2024 attendance.p
+    $ paren ams -y2020-2022,2024 attendance.p
 
 # SEE ALSO
 - `cal(1)`
 - `ldate(1)`
+- `ams(5)`

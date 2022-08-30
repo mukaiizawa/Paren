@@ -1,5 +1,5 @@
 # NAME
-manage-attendance - attendance infourmation for manage-attendance(1).
+ams - attendance infourmation for ams(1).
 
 # DESCRIPTION
 The data is the following S-expressions.
@@ -55,4 +55,4 @@ If `DEDUCTION-TIME` is omitted, `1` is assumed.
      (28 "09:45" "18:30"))
 
 # SEE ALSO
-- `manage-attendance(1)`
+- `ams(1)`
