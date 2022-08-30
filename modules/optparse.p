@@ -17,7 +17,7 @@
 
 (method OptionParser .lookup (opt)
   (let (record (select1 (f (x) (= opt (car x))) self->table))
-    (if (nil? record) (raise ArgumentError "unknown option")
+    (if (nil? record) (raise ArgumentError (format "unknown option `%s`, available options are %v" opt (sort! (map car self->table) :key lower)))
         record)))
 
 (method OptionParser .parse (args)
