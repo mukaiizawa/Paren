@@ -25,6 +25,8 @@ See `ams(5)` for attendance information format specifications.
         The default is this month.
     -s
         Suppress summary.
+    -t
+        Display a table of hours worked per day against the number of working days and exit.
     -y YEARS
         YEARS are considered as the year to be counted.
         The default is this year.

@@ -1,4 +1,4 @@
-; manage attendance.
+; attendance management system.
 
 (import :datetime)
 (import :optparse)
@@ -65,8 +65,22 @@
   (foreach (compose write-summary parse1)
            (collect read1)))
 
+(function show-table ()
+  (let (lo 100 hi 180 dh 10)
+    ;; header
+    (for (h lo) (<= h hi) (h (+ h dh))
+      (if (= h lo) (write-bytes "  "))
+      (write-bytes (format " %6d" h))
+      (if (= h hi) (write-line)))
+    ;; body
+    (for (days 1) (<= days 31) (days (++ days))
+      (write-bytes (format "%2d" days))
+      (for (h lo) (<= h hi) (h (+ h dh))
+        (write-bytes (format " %6.2f" (/ h days))))
+      (write-line))))
+
 (function! main (args)
-  (let ((op args) (.parse (.init (.new OptionParser) "aeE:m:h:sy:v") args) now (datetime.now))
+  (let ((op args) (.parse (.init (.new OptionParser) "aeE:m:h:sty:v") args) now (datetime.now))
     (<- $estimate-with (.get-float op "E")
         $estimate? (|| $estimate-with (.get op "e"))
         $target-working-hours (.get-int op "h" 140)
@@ -74,7 +88,8 @@
         $year (.get-ints op "y")
         $month (.get-ints op "m")
         $verbose? (.get op "v"))
-    (if (.get op "a") (<- $year nil $month nil)    ; target all.
+    (if (.get op "t") (begin (show-table) (return true))
+        (.get op "a") (<- $year nil $month nil)    ; target all.
         (&& (nil? $year) (nil? $month)) (<- $year (list (.year now)) $month (list (.month now)))
         (nil? $year) (<- $year (list (.year now))))
     (if (nil? args) (parse)
