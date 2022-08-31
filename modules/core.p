@@ -1079,7 +1079,7 @@
                               (if (< s e)
                                   (let (file (slice x s e))
                                     (if (= file ".") (if (nil? path) (push! file path))
-                                        (= file "..") (if (nil? path) (push! file path) (pop! path))
+                                        (= file "..") (if (|| (nil? path) (= (car path) "..")) (push! file path) (pop! path))
                                         (push! file path))))))
         (if (prefix? path-name "~") (<- path-name (concat home (slice path-name 1)) absolute? true)
             (|| (&& windows? (> (len path-name) 1) (= ([] path-name 1) ":"))
