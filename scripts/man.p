@@ -120,5 +120,5 @@
     (let ((section page) (man-parse-command-line-args args) indexes (man-indexes section))
       (if (nil? (man indexes section page)) (fuzzy-man indexes section page)))
     (f (e)
-      (if (is-a? OSError) nil
-          (is-a? Error) (throw e)))))
+      (if (is-a? e OSError) nil
+          (is-a? e Error) (throw e)))))
