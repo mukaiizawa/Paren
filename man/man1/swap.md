@@ -28,3 +28,9 @@ Replace files `a` and `b`.
 Replace file `x` with `y`, `y` with `z`, and `z` with `x`.
 
     $ paren swap x y y z
+    
+    $ cat swaps.csv # using -f option.
+    x,y
+    y,z
+    z,x
+    $ paren swap -fswaps.csv
