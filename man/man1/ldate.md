@@ -17,3 +17,4 @@ If the year and month are omitted, it is considered that the current year and mo
 # SEE ALSO
 - `cal(1)`
 - `date(1)`
+- `ltime(1)`
