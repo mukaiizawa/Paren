@@ -26,6 +26,7 @@ Unlike general dictionaries, pairs cannot be deleted. This limitation is because
 # SEE ALSO
 - `dict(3)`
 - `dict?(3)`
+- `in?(3)`
 - `keys(3)`
 - `vals(3)`
 - `with(3)`
