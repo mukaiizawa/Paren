@@ -61,4 +61,4 @@
         $silent? (.get op "s"))
     (if (nil? (.get op "f")) (swap-files (group args 2))
         (with-open ($in (.get op "f") :read)
-          (swap-files (group (collect (partial (.new CSVReader) .read)) 2))))))
+          (swap-files (collect (partial .read (.new CSVReader))))))))
