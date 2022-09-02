@@ -3,7 +3,7 @@
 (import :rand)
 
 (function tempfile.name (prefix dot suffix)
-  (str prefix (rand.str 12 :alnum? true) dot suffix))
+  (str prefix (rand.str 32 :alnum? true) dot suffix))
 
 (method Path .tempdir (:key prefix suffix)
   ; Create an temporary directory under the receiver.
