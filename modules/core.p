@@ -1188,10 +1188,8 @@
   (if (! (.none? self)) (remove (.to-s self)))
   self)
 
-(method Path .move (to)
-  (with-open ($out to :write)
-    (write-bytes (.contents self)))
-  (.remove self))
+(method Path .rename (to)
+  (rename (.to-s self) (if (string? to) to (.to-s to))))
 
 (method Path .stat ()
   ; Returns stat of the receiver.

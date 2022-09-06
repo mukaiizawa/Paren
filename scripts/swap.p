@@ -7,7 +7,7 @@
 (function move (src dst)
   (let ((src dst) (map path (list src dst)))
     (if (nil? $silent?) (write (list :src (.to-s src) :dst (.to-s dst))))
-    (if (nil? $dry-run?) (.move src dst))))
+    (if (nil? $dry-run?) (.rename src dst))))
 
 (function representative-node (node rd)
   ; (a b) => a
