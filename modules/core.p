@@ -1093,10 +1093,6 @@
           (if (nil? path) nil
               (.init (.new Path) (reverse! path) absolute?))))))
 
-(function path.getcwd ()
-  ; Returns the path corresponding to the current directory.
-  (path (getcwd)))
-
 (method Path .name ()
   ; Returns file name.
   (last self->path))
@@ -2071,7 +2067,7 @@
       (if (nil? args) (repl)
           (let (file-name (path (car args)) script (select1 .file?
                                                             (map (f (x) (apply .resolve x))
-                                                                 (product (cons (path.getcwd) $runtime-path)
+                                                                 (product (cons (path (getcwd)) $runtime-path)
                                                                           (list file-name (.suffix file-name "p"))))))
             (if (nil? script) (raise ArgumentError (str "unreadable file " file-name))
                 (&& (load script) (bound? 'main) main) (main (cdr args))))))
@@ -2088,7 +2084,7 @@
     $read-table (dict)
     ($stdin $stdout $stderr) (map (f (x) (.init (.new FileStream) (fp x))) (.. 3))
     ($in $out) (list $stdin $stdout)
-    $paren-home (.parent (.parent (.resolve (path.getcwd) core.p)))
+    $paren-home (.parent (.parent (.resolve (path (getcwd)) core.p)))    ; only the runtime knows if the `core.p` is a relative or absolute path.
     $parenrc (path "~/.parenrc")
     $runtime-path (map (f (p) (.resolve $paren-home p)) '("scripts")))
 

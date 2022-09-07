@@ -19,4 +19,4 @@
                               (cons (.name cfile) (parse-cfile cfile)))
                         " "))
                 (select (f (x) (= (.suffix x) "c"))
-                        (.children (path.getcwd))))))
+                        (.children (path "."))))))

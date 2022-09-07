@@ -33,6 +33,6 @@
                   c (.get op "c") o (.get op "o") p (.get op "p"))
     (if c (<- $except-classes (split c ",")))
     (if p (<- $except-packages (concat $std (split p ","))))
-    (.walk (path.getcwd) walker)
+    (.walk (path ".") walker)
     (if (nil? o) (write $edges)
         (graphviz.dot $edges `((T png) (o ,o))))))

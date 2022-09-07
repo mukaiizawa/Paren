@@ -23,7 +23,7 @@
     p))
 
 (function! main (args)
-  (let (dir (.tempdir (path.getcwd)) temp (.tempfile dir))
+  (let (dir (.tempdir (path ".")) temp (.tempfile dir))
     (assert (.dir? dir))
     (assert (.readable? temp))
     (with-open ($out temp :write) (write-line "foo"))
