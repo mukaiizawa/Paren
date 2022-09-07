@@ -1136,11 +1136,13 @@
 
 (method Path .relativize (p)
   ; Returns a relative path between the receiver and a given path.
-  (let (relative nil src self->path dst p->path)
-    (while src
-      (if (= (pop! src) (car dst)) (pop! dst)
-          (push! ".." relative)))
-    (.init (.new Path) (concat relative dst) nil)))
+  (if (!== (.absolute? self) (.absolute? p)) (raise ArgumentError "different type of Path")
+      (let (relative nil src self->path dst p->path)
+        (while src
+          (if (= (pop! src) (car dst)) (pop! dst)
+              (= (car dst) ".") (raise ArgumentError "unable compute relative path")
+              (push! ".." relative)))
+        (.init (.new Path) (concat relative dst) nil))))
 
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
@@ -1189,7 +1191,14 @@
   self)
 
 (method Path .rename (to)
-  (rename (.to-s self) (if (string? to) to (.to-s to))))
+  (if (.none? self) (raise ArgumentError (format "missing file `%s`" (.to-s self)))
+      (! (.none? (<- to (path to)))) (raise ArgumentError (format "file `%s` already exists" (.to-s to)))
+      (.dir? self) (dolist (file (.children self))
+                     (.rename file (.resolve to (.name file))))
+      (let (dir (.parent to))
+        (if (! (.dir? dir)) (.mkdir dir))
+        (.rename (.to-s self) (.to-s to))))
+  self)
 
 (method Path .stat ()
   ; Returns stat of the receiver.
