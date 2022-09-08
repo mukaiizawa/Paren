@@ -797,11 +797,7 @@
 (built-in-function clock)
 (built-in-function cycle)
 (built-in-function utcoffset)
-
-(built-in-function sleep (sec)
-  ; Sleep for a specified number of seconds.
-  ; Returns nil.
-  )
+(built-in-function sleep)
 
 (built-in-function popen)
 (built-in-function pclose)
