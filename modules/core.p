@@ -1104,7 +1104,7 @@
 
 (method Path .suffix (:opt new-suffix)
   ; Returns the suffix (the string after the last dot).
-  ; If not including dot, returns nil.
+  ; If not including dot, returns empty string.
   (if (nil? new-suffix) (let (name (.name self) pos (last-index "." name))
                           (if (nil? pos) ""
                               (slice name (++ pos))))
