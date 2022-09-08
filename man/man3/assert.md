@@ -9,10 +9,10 @@ assert - abort the program if assertion is false.
 The macro `assert` evaluates `EXPR` and aborts if the result is `nil`.
 
 # RETURN VALUE
-Returns the `true`.
+Returns the evaluation result of the `EXPR`.
 
 # ERRORS
-Error if, `EXPR` is evaluated to `nil`.
+AssertException if, `EXPR` is evaluated to `nil`.
 
 # SEE ALSO
 - `raise(3)`

@@ -96,8 +96,10 @@
                                    :cycle (list '- '(cycle) cycle-offset)))))))
 
 (macro assert (expr)
-  (list if expr true
-        (list 'raise 'AssertException (list 'str (list 'quote expr)))))
+  (with-gensyms (result)
+    (list 'let (list result expr)
+          (list 'if (list 'nil? result) (list 'raise 'AssertException (list 'format "expected `%v`, actual `%v`" (list 'quote expr) result))
+                result))))
 
 (built-in-function macroexpand-1)
 
