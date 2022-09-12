@@ -115,7 +115,7 @@
                          (if (cdr x) (cons (ignore (car x))
                                            (cons (macroexpand (cadr x) :ignores ignores)
                                                  (expand2 (cddr x))))
-                             x (raise SyntaxError (str "missing value for variable " expr)))))
+                             x (raise SyntaxError (format "missing value for `%v`, expression `%v`" (car x) expr)))))
     (if (! (cons? expr)) expr
         (let ((ope :rest args) expr)
           (if (in? ope ignores) (cons ope (expand1 args))
