@@ -235,12 +235,8 @@
     (rec start stop step)))
 
 (function join (lis :opt separator)
-  (if (nil? lis) ""
-      (nil? (cdr lis)) (car lis)
-      (nil? separator) (apply concat lis)
-      (with-memory-stream ($out)
-        (write-bytes (car lis))
-        (dolist (x (cdr lis)) (write-bytes separator) (write-bytes x)))))
+  (with-memory-stream ($out)
+    (print (car lis)) (dolist (x (cdr lis)) (print separator x))))
 
 (function split (s :opt separator)
   (if (empty? s) nil
@@ -637,10 +633,7 @@
 
 (function str (:rest args)
   (with-memory-stream ($out)
-    (dolist (arg args)
-      (if (nil? arg) :continue
-          (|| (symbol? arg) (keyword? arg) (string? arg) (bytes? arg)) (write-bytes arg)
-          (write arg :end "")))))
+    (apply print args)))
 
 (function bin (x)
   (format "2x%b" x))
@@ -651,7 +644,7 @@
 (function hex (x)
   (if (bytes? x)
       (with-memory-stream ($out)
-        (doarray (i x) (write-bytes (format "%02x" i))))
+        (doarray (i x) (printf "%02x" i)))
       (format "0x%x" x)))
 
 (function empty? (x)
@@ -696,15 +689,10 @@
                write-times (f (ch n) (dotimes (_ n) (write-bytes ch)))
                substr (f (x n) (if (|| (nil? n) (> n (len x))) x (slice x 0 n)))
                format1 (f (flags width prefix val)
-                         (let (padding-width (- width (wcwidth val) (wcwidth prefix)))
-                           (if (in? "-" flags)
-                               (begin
-                                 (write-bytes prefix) (write-bytes val) (write-times " " padding-width))
-                               (in? "0" flags)
-                               (begin
-                                 (write-bytes prefix) (write-times "0" padding-width) (write-bytes val))
-                               (begin
-                                 (write-times " " padding-width) (write-bytes prefix) (write-bytes val))))))
+                         (let (n (- width (wcwidth val) (wcwidth prefix)))
+                           (if (in? "-" flags) (begin (write-bytes prefix) (write-bytes val) (write-times " " n))
+                               (in? "0" flags) (begin (write-bytes prefix) (write-times "0" n) (write-bytes val))
+                               (begin (write-times " " n) (write-bytes prefix) (write-bytes val))))))
         (while (.next rd)
           (if (!= (.next rd) "%") (write-bytes (.skip rd))
               (begin
@@ -995,10 +983,9 @@
   ; Display stack trace.
   ; Returns nil.
   (let ($out $stderr)
-    (write-bytes (.to-s self))
-    (write-line)
+    (println (.to-s self))
     (dolist (x (.stack-trace self))
-      (write-bytes "\tat: ") (write x))))
+      (printf "  at: %-.80v\n" x))))
 
 (class SystemExit (Exception)
   ; Dispatched to shut down the Paren system.
@@ -1478,8 +1465,8 @@
         (.write-bytes self "#[ ")
         (dotimes (i (len x)) (.write self ([] x i) :end " "))
         (.write-byte self 0x5d))
-      (function? x) (.write self (cons 'f (cons (params x) (body x))))
-      (macro? x) (.write self (cons 'macro (cons (params x) (body x))))
+      (function? x) (.write self (cons 'f (cons (params x) (body x))) :end "")
+      (macro? x) (.write self (cons 'macro (cons (params x) (body x))) :end "")
       (assert nil))
   (.write-bytes self (|| end "\n"))
   x)
@@ -1957,12 +1944,18 @@
   (.write (dynamic $out) x :start start :end end))
 
 (function print (:rest args)
-  (foreach (compose write-bytes str) args))
+  (dolist (x args)
+    (if (nil? x) nil
+        (|| (symbol? x) (keyword? x) (string? x) (bytes? x)) (.write-bytes (dynamic $out) x)
+        (.write (dynamic $out) x :end ""))))
 
 (function println (:rest args)
-  (begin0
-    (apply print args)
-    (write-line)))
+  (apply print args)
+  (write-line))
+
+(function printf (:rest args)
+  (.write-bytes (dynamic $out) (apply format args))
+  nil)
 
 (macro with-memory-stream ((ms :opt s) :rest body)
   ; Create memory stream context.
