@@ -134,4 +134,5 @@ Returns a string with the arguments `ARGS` formatted according to the `FORMATTER
 - `bin(3)`
 - `hex(3)`
 - `oct(3)`
+- `printf(3)`
 - `str(3)`

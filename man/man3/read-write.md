@@ -1,5 +1,5 @@
 # NAME
-read, read-byte, read-bytes, read-char, read-line, write, write-byte, write-bytes, write-line, print, println - input and output functions.
+read, read-byte, read-bytes, read-char, read-line, write, write-byte, write-bytes, write-line, print, println, printf - input and output functions.
 
 # SYNOPSIS
 
@@ -8,15 +8,20 @@ read, read-byte, read-bytes, read-char, read-line, write, write-byte, write-byte
     (read-bytes [BYTES [FROM [SIZE]]])
     (read-char)
     (read-line)
+    
     (write-byte BYTE)
     (write-bytes BYTES [FROM [SIZE]])
     (write-line [BYTES])
     (write EXPR [:start START] [:end END])
+    
     (print EXPR ...)
     (println EXPR ...)
+    (printf FORMAT ARG ...)
 
 # DESCRIPTION
-These functions read from the stream to which $in is bound and write to the stream to which $out is bound.
+These functions read from the stream to which `$in` is bound and write to the stream to which `$out` is bound.
+
+The `read family` and `write family` correspond to basic input and output.  The `print family` outputs the `write family` in a human-readable format.
 
     $in
         read -- read S-expression.
@@ -30,7 +35,9 @@ These functions read from the stream to which $in is bound and write to the stre
         write-byte -- write a byte BYTE.
         write-bytes -- if BYTES is not specified write a bytes BYTES. Otherwise, write the length SIZE from the FROMth of BYTES.
         write-line -- write a bytes BYTES and new line(LF -- 0x0a).
+        
         print -- print multiple S-expressions in a more human-readable format.
+        printf -- print multiple S-expressions using formatter.
         println -- print multiple S-expressions in a more human-readable format and new line(LF -- 0x0a).
 
 The initial values of `FROM`, `SIZE`, `START` and `END` are `0`, `(len BYTES)`, `""` and `"\n"` respectively.
@@ -58,9 +65,12 @@ The function print returns `nil`.
 
 The function println returns `nil`.
 
+The function printf returns `nil`.
+
 # NOTES
 If a single buffer can be used, as socket programming, `BYTES` can be specified for `read-bytes` and `write-bytes`.
 
 # SEE ALSO
 - `$in(3)`
 - `$out(3)`
+- `format(3)`

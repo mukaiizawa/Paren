@@ -29,3 +29,4 @@ Returns the string whitch intended to look good to people.
 
 # SEE ALSO
 - `string(3)`
+- `print(3)`

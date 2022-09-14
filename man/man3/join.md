@@ -1,5 +1,5 @@
 # NAME
-join - concatenate strings using the separator string.
+join - concatenate all of the elements, separated by separator.
 
 # SYNOPSIS
 
@@ -10,10 +10,10 @@ The function `join` create string by concatenating all of the elements in the li
 
 If `SEPARATOR` is omitted, the `LIST` elements are just concatenated.
 
+Non-string elements are converted to human readable strings and then combined. Therefore, the `nil` is considered an empty string.
+
 # RETURN VALUE
 Returns a string by concatenating all of the elements in the `LIST`, separated by `SEPARATOR`.
-
-If `LIST` is `nil`, returns empty string.
 
 # EXAMPLES
 
@@ -29,5 +29,9 @@ If `LIST` is `nil`, returns empty string.
     ) (join '("foo" "bar" "buzz") "::")
     "foo::bar::buzz"
 
+    ) (join '(1 nil "buzz") ",")
+    "1,,buzz"
+
 # SEE ALSO
 - `split(3)`
+- `print(3)`
