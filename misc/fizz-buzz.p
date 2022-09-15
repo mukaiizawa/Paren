@@ -6,8 +6,8 @@
     (foreach (f (x)
                (if (|| (fizz? x) (buzz? x))
                    (begin
-                     (if (fizz? x) (write-bytes "fizz"))
-                     (if (buzz? x) (write-bytes "buzz"))
-                     (write-line))
-                   (write x)))
+                     (if (fizz? x) (print "fizz"))
+                     (if (buzz? x) (print "buzz"))
+                     (println))
+                   (println x)))
              (.. 1 100))))

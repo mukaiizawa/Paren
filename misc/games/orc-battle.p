@@ -38,7 +38,7 @@
 
 (method Player .double-swing ()
   (let (x (rand1-n (// self->strength 6)))
-    (write-line (str "Your double swing has a strength of " x))
+    (println "Your double swing has a strength of " x)
     (.hit (.pick-monster self) x)
     (if (! (monsters-dead?)) (.hit (.pick-monster self) x))))
 
@@ -48,14 +48,14 @@
         (.hit (.pick-monster-randomly self) 1))))
 
 (method Player .attack ()
-  (write-line)
-  (write-bytes "Attack style: [s]tab [d]ouble swing [r]oundhouse:")
+  (println)
+  (print "Attack style: [s]tab [d]ouble swing [r]oundhouse:")
   (let (cmd (read))
     (if (= cmd 's) (.stab self)
         (= cmd 'd) (.double-swing self)
         (= cmd 'r) (.round-house self)
         (begin
-          (write-line "That is not a valid attack style.")
+          (println "That is not a valid attack style.")
           (.attack self)))))
 
 (method Player .hit (x :key type)
@@ -65,11 +65,11 @@
       (assert nil)))
 
 (method Player .pick-monster ()
-  (write-line)
-  (write-bytes "Monster #:")
+  (println)
+  (print "Monster #:")
   (let (x (read) m nil)
-    (if (! (&& (int? x) (<= 0 x (-- $monster-count)))) (write-line "That is not a valid monster number.")
-        (.dead? (<- m ([] $monsters x))) (write-line "That monster is alread dead.")
+    (if (! (&& (int? x) (<= 0 x (-- $monster-count)))) (println "That is not a valid monster number.")
+        (.dead? (<- m ([] $monsters x))) (println "That monster is alread dead.")
         (return m))
     (.pick-monster self)))
 
@@ -100,17 +100,19 @@
 (method Monster .dead? ()
   (<= self->health 0))
 
+(method Monster .name ()
+  (.symbol (.class self)))
+
 (method Monster .hit (x)
   (<- self->health (- self->health x))
-  (write-line
-    (if (.dead? self) (str "You killed the " (.symbol (.class self)) "!")
-        (str "You hit the " (.symbol (.class self)) ", knocking off " x  " health points!"))))
+  (if (.dead? self) (println "You killed the " (.name self) "!")
+      (println "You hit the " (.name self) ", knocking off " x  " health points!")))
 
 (method Monster .attack ()
-  (assert nil))
+  (raise NotImplementedError))
 
 (method Monster .describe ()
-  (str "A fierce " (.symbol (.class self))))
+  (str "A fierce " (.name self)))
 
 (method Monster .to-s ()
   (if (.dead? self) "**dead**"
@@ -125,7 +127,7 @@
 
 (method Orc .attack ()
   (let (x (rand1-n self->club-level))
-    (write-line (str "An orc swings his club at you and knocks off " x " of your health points."))
+    (println "An orc swings his club at you and knocks off " x " of your health points.")
     (.hit $player x :type :health)))
 
 (method Orc .describe ()
@@ -135,15 +137,14 @@
 
 (method Hydra .attack ()
   (let (x (rand1-n (>> (.health self) 1)))
-    (write-line (str "A hydra attacks you with " x " of its heads! It also grows back one more head!"))
+    (println "A hydra attacks you with " x " of its heads! It also grows back one more head!")
     (<- self->health (++ self->health))
     (.hit $player x :type :health)))
 
 (method Hydra .hit (x)
   (<- self->health (- self->health x))
-  (write-line
-    (if (.dead? self) "The corpse of the fully decapitated and decapacitated hydra falls to the floor!"
-        (str "You lop off " x " of the hydra's heads!"))))
+  (if (.dead? self) (println "The corpse of the fully decapitated and decapacitated hydra falls to the floor!")
+      (println "You lop off " x " of the hydra's heads!")))
 
 (method Hydra .describe ()
   (str "A malicious hydra with " (.health self) " heads."))
@@ -157,10 +158,10 @@
 
 (method Slime .attack ()
   (let (x (rand1-n self->sliminess))
-    (write-line (str "A slime mold wraps around your legs and decreases your agility by " x "!"))
+    (println (str "A slime mold wraps around your legs and decreases your agility by " x "!"))
     (.hit $player x :type :agility)
     (when (rand.bool)
-      (write-line "It also squirts in your face, taking away a health point!")
+      (println "It also squirts in your face, taking away a health point!")
       (.hit $player 1 :type :health))))
 
 (method Slime .describe ()
@@ -172,15 +173,15 @@
   (let (x (max (.health $player) (.agility $player) (.strength $player)))
     (if (= x (.health $player))
         (begin
-          (write-line "A brigand hits you with his slingshot, taking off 2 health points!")
+          (println "A brigand hits you with his slingshot, taking off 2 health points!")
           (.hit $player 2 :type :health))
         (= x (.agility $player))
         (begin
-          (write-line "A brigand catches your leg with his whip, taking off 2 agility points!")
+          (println "A brigand catches your leg with his whip, taking off 2 agility points!")
           (.hit $player 2 :type :agility))
         (= x (.strength $player))
         (begin
-          (write-line "A brigand cuts your arm with his whip, taking off 2 strength points!")
+          (println "A brigand cuts your arm with his whip, taking off 2 strength points!")
           (.hit $player 2 :type :strength))
         (assert nil))))
 
@@ -192,21 +193,21 @@
   true)
 
 (function show-monsters ()
-  (write-line)
-  (write-line "Your foes:")
+  (println)
+  (println "Your foes:")
   (dotimes (i $monster-count)
     (let (m ([] $monsters i))
-      (write-line (str i ". " (.to-s m))))))
+      (println i ". " (.to-s m)))))
 
 (function game-loop ()
   (if (|| (.dead? $player) (monsters-dead?)) (return nil))
-  (write-line)
-  (write-line (.to-s $player))
+  (println)
+  (println (.to-s $player))
   (dotimes (k (.action-point $player))
     (show-monsters)
     (.attack $player)
     (if (monsters-dead?) (return nil)))
-  (write-line)
+  (println)
   (doarray (m $monsters)
     (if (! (.dead? m)) (.attack m)))
   (game-loop))
@@ -219,5 +220,5 @@
 (function! main (args)
   (init-game)
   (game-loop)
-  (if (.dead? $player) (write-line "You have been killed. Game Over.")
-      (write-line "Congratulations! You have vanquished all of your foes.")))
+  (if (.dead? $player) (println "You have been killed. Game Over.")
+      (println "Congratulations! You have vanquished all of your foes.")))

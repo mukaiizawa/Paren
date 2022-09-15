@@ -8,12 +8,11 @@
   (position (f (x) (prefix? x c)) $choices))
 
 (function user-choice ()
-  (write-line "r(ock), p(aper), s(cissors):")
-  (write-bytes "> ")
+  (print "r(ock), p(aper), s(cissors):\n>>")
   (let (choice (choice->index (read-line)))
     (if choice choice
         (begin
-          (write-line "illegal choice")
+          (println "illegal choice")
           (user-choice)))))
 
 (function computer-choice ()
@@ -21,10 +20,10 @@
 
 (function rcp ()
   (let (user-choice (user-choice) computer-choice (computer-choice))
-    (write-line (str "computer: " ([] $choices computer-choice)))
-    (if (= user-choice computer-choice) (write-line "draw")
-        (= (% (++ user-choice) 3) computer-choice) (write-line "lose")
-        (write-line "win"))
+    (println "computer: " ([] $choices computer-choice))
+    (if (= user-choice computer-choice) (println "draw")
+        (= (% (++ user-choice) 3) computer-choice) (println "lose")
+        (println "win"))
     (rcp)))
 
 (function! main (args)

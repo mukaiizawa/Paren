@@ -72,8 +72,9 @@
   (sleep 1)
   (console.clear)
   (domatrix (p universe)
-    (if (= (cadr p) 0) (write-line))
-    (write-bytes (if (.at universe p) "#" " "))))
+    (if (= (cadr p) 0) (println))
+    (if (.at universe p) (print "#")
+        (print " "))))
 
 (function neighbor-count (universe p)
   (len (reject nil? (map (f (q)

@@ -1,154 +1,131 @@
 ; mine sweeper.
 
-(import :console)
 (import :matrix)
 (import :rand)
-
-(<- $height 6 $width 5
-    $cell-count (* $height $width)
-    $mine-count (// (* $cell-count 0.2))
-    $mark-count 0
-    $covered-count $cell-count
-    $board (matrix (list $height $width)))
-
-; cell
 
 (class Cell ()
   state mine?)
 
-(method Cell .init ()
-  (.state! self :close))
-
-(method Cell .state ()
-  self->state)
-
-(method Cell .state! (state)
-  (assert (in? state '(:open :close :mark)))
-  (<- self->state state)
+(method Cell .init (:key mine?)
+  (<- self->mine? mine?
+      self->state :close)
   self)
-
-(method Cell .set-mine! ()
-  (<- self->mine? true))
 
 (method Cell .mine? ()
   self->mine?)
 
-(function cell (p)
-  (if (.inside? $board p) (.at $board p)))
+(method Cell .open! ()
+  (<- self->state :open))
 
-(function put-mine (p)
-  (.set-mine! (cell p)))
+(method Cell .close! ()
+  (<- self->state :close))
 
-(function mine? (p)
-  (.mine? (cell p)))
+(method Cell .mark! ()
+  (<- self->state :mark))
 
-(function open? (p)
-  (== (.state (cell p)) :open))
+(method Cell .open? ()
+  (== self->state :open))
 
-(function close? (p)
-  (== (.state (cell p)) :close))
+(method Cell .close? ()
+  (== self->state :close))
 
-(function mark? (p)
-  (== (.state (cell p)) :mark))
+(method Cell .mark? ()
+  (== self->state :mark))
 
-(function open! (p)
-  (assert (! (open? p)))
-  (if (mark? p) (<- $mark-count (-- $mark-count)))
-  (<- $covered-count (-- $covered-count))
-  (.state! (cell p) :open))
+(class GameExit (SystemExit))
 
-(function close! (p)
-  (assert (! (open? p)))
-  (if (mark? p) (<- $mark-count (-- $mark-count)))
-  (.state! (cell p) :close))
+(class Game ()
+  height
+  width
+  mine-count
+  mark-count
+  covered-count
+  board)
 
-(function mark! (p)
-  (assert (! (open? p)))
-  (if (! (mark? p)) (<- $mark-count (++ $mark-count)))
-  (.state! (cell p) :mark))
-
-; game
-
-(function neighbor-coods (p)
-  (select cell
-          (map (f (q) (map + p q))
-               '((-1 -1) (-1 0) (-1 1) (0 -1)
-                         (0 1) (1 -1) (1 0) (1 1)))))
-
-(function count-neighbor-mine (p)
-  (count mine? (neighbor-coods p)))
-
-(function mark (p)
-  (if (mark? p) (close! p)
-      (close? p) (mark! p)))
-
-(function sweep (p)
-  (if (mine? p)
-      (begin
-        (write-line "game over")
-        (quit))
-      (! (open? p))
-      (begin
-        (open! p)
-        (if (zero? (count-neighbor-mine p)) (foreach sweep (neighbor-coods p))))))
-
-(function show ()
-  (console.clear)
-  (write (list :mines $mine-count :marked $mark-count :covered $covered-count))
-  (write-bytes "  ") (dotimes (y $width) (write-bytes (format "%-2d" y)))
-  (write-line)
-  (dotimes (x $height)
-    (dotimes (y $width)
-      (if (= y 0) (write-bytes (format "%-2d" x)))
-      (let (p (list x y))
-        (write-bytes (format "%-2s"
-                             (if (close? p) "#"
-                                 (mark? p) "?"
-                                 (let (n (count-neighbor-mine p))
-                                   (if (= n 0) "."
-                                       (str n))))))))
-    (write-line)))
-
-(function input ()
-  (write-line "command")
-  (write-line "  s(weep) x y")
-  (write-line "  m(ark) x y")
-  (write-bytes ">> ")
-  (let (cmd (read) x (read) y (read) p (list x y))
-    (if (|| (! (int? x)) (! (int? y)) (nil? (cell p)))
-        (begin
-          (write-line "illegal coordinate")
-          (input))
-        (= cmd 's) (list :sweep p)
-        (= cmd 'm) (list :mark p)
-        (begin
-          (write-line "illegal command")
-          (input)))))
-
-(function solved? ()
-  (= $covered-count $mine-count))
-
-(function step ()
-  (show)
-  (if (solved?) (write-line "win")
-      (let ((cmd p) (input))
-        (if (= cmd :sweep) (sweep p)
-            (= cmd :mark) (mark p)
-            (assert nil))
-        (step))))
-
-(function init ()
-  (let (fill-mine (f (n)
-                    (if (> n 0)
-                        (let (p (list (rand.int $height) (rand.int $width)))
-                          (if (mine? p) (fill-mine n)    ; collision
-                              (begin
-                                (put-mine p)
-                                (fill-mine (-- n))))))))
+(method Game .init (height width)
   (rand.seed (time))
-  (domatrix (p $board) (.put $board p (.new Cell)))
-  (fill-mine $mine-count)))
+  (<- self->height height
+      self->width width
+      self->covered-count (* height width)
+      self->mark-count 0
+      self->mine-count (// (* self->covered-count 0.2))
+      self->board (matrix (list height width)))
+  (let (n self->mine-count)
+    (dolist (p (rand.shuffle! (product (.. 0 height) (.. 0 width))))
+      (.put self->board p (.init (.new Cell) :mine? (>= (<- n (-- n)) 0)))))
+  self)
+
+(method Game .neighbors (p)
+  (keep (f (q)
+          (let (r (map + p q))
+            (if (.inside? self->board r) r)))
+        '((-1 -1) (-1 0) (-1 1) (0 -1)
+                  (0 1) (1 -1) (1 0) (1 1))))
+
+(method Game .count-neighbor-mines (p)
+  (count .mine?
+         (map (partial .at self->board)
+              (.neighbors self p))))
+
+(method Game .input ()
+  (catch
+    (begin
+      (println "s(weep) x y")
+      (println "m(ark) x y")
+      (print ">> ")
+      (let ((cmd x y) (reject empty? (split (read-line) " ")) p (map int (list x y)))
+        (if (! (.inside? self->board p)) (raise ArgumentError "illegal coordinates")
+            (prefix? "sweep" cmd) (list :sweep p)
+            (prefix? "mark" cmd) (list :mark p)
+            (raise ArgumentError "unkown command"))))
+    (f (e)
+      (if (! (is-a? e ArgumentError)) (throw e))
+      (println (.to-s e) ", again")
+      (.input self))))
+
+(method Game .sweep (p)
+  (let (*p (.at self->board p))
+    (if (.mine? *p) (raise GameExit "game over")
+        (.open? *p) (return nil)
+        (.mark? *p) (<- self->mark-count (-- self->mark-count)))
+    (.open! *p)
+    (if (= (<- self->covered-count (-- self->covered-count)) self->mine-count) (raise GameExit "win")
+        (= (.count-neighbor-mines self p) 0) (foreach (partial .sweep self) (.neighbors self p)))))
+
+(method Game .mark (p)
+  (let (*p (.at self->board p))
+    (if (.close? *p) (begin (.mark! *p) (<- self->mark-count (++ self->mark-count)))
+        (.mark? *p) (begin (.close! *p) (<- self->mark-count (-- self->mark-count))))))
+
+(method Game .step ()
+  (let ((cmd p) (.input self))
+    (if (= cmd :sweep) (.sweep self p)
+        (.mark self p))
+    (.step (.show self))))
+
+(method Game .show (:opt display-mine?)
+  (printf "mines: %d, marked: %d, covered: %d\n" self->mine-count self->mark-count self->covered-count)
+  (print "  ") (dotimes (y self->width) (printf "%2d" y))
+  (println)
+  (domatrix (p self->board)
+            (let ((x y) p *p (.at self->board p))
+              (if (= y 0) (printf "%2d" x))
+              (printf "%2s" (if (.mine? *p) (if display-mine? "*" "#")
+                                (.mark? *p) "?"
+                                (.close? *p) "#"
+                                (let (n (.count-neighbor-mines self p))
+                                  (if (= n 0) "." (str n)))))
+              (if (= y (-- self->width)) (println))))
+  self)
+
+(method Game .start ()
+  (catch
+    (.step (.show self))
+    (f (e)
+      (if (! (is-a? e GameExit)) (throw e))
+      (.show self :display-mine)
+      (println (.to-s e)))))
 
 (function! main (args)
-  (init)
-  (step))
+  (let ((:opt height width) (map int args))
+    (.start (.init (.new Game) (|| height 6) (|| width 5)))))

@@ -5,7 +5,7 @@
     $selection '(h l e))
 
 (function input (n)
-  (write-line (str "Is the number " n "? "  $selection))
+  (println "Is the number " n "? " $selection)
   (let (x (read))
     (if (in? x $selection) x
         (input n))))
@@ -16,5 +16,5 @@
         (= x 'l) (guess l (-- m)))))
 
 (function! main (args)
-  (write-line (str "Choose a number between " $min " and " $max "."))
+  (println "Choose a number between " $min " and " $max ".")
   (guess 0 100))

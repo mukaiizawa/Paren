@@ -55,24 +55,22 @@ PIT   :  'I FEEL A DRAFT'
 (function neighbours (room)
   ([] $neigbor-rooms room))
 
-(function input-int (s choices)
-  (int (input s (map str choices))))
+(function input-int (message choices)
+  (int (input message (map str choices))))
 
-(function input (s choices)
-  (catch (Error (f (e)
-                  (output "NOT POSSIBLE")
-                  (input s choices)))
-    (write-bytes s)
-    (let (text (read-line))
-      (if (in? text choices) text
-          (raise Error)))))
+(function input (message choices)
+  (print message)
+  (let (line (read-line))
+    (if (in? line choices) line
+        (begin
+          (output "NOT POSSIBLE")
+          (input message choices)))))
 
-(function output (s :opt end?)
-  (write-line s)
+(function output (message :opt end?)
+  (println message)
   (when end?
-    (write-line (if (== end? :win)
-                    "HEE HEE HEE - THE WUMPUS'LL GET YOU NEXT TIME!!"
-                    "HA HA HA - YOU LOSE!"))
+    (if (== end? :win) (println "HEE HEE HEE - THE WUMPUS'LL GET YOU NEXT TIME!!")
+        (println "HA HA HA - YOU LOSE!"))
     (quit)))
 
 (function shoot ()

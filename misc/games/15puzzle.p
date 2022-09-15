@@ -17,8 +17,9 @@
   (let ((row-counts col-counts) (.shape board))
     (dotimes (x row-counts)
       (dotimes (y col-counts)
-        (write-bytes (if (= p (list x y)) "[  ]" (format "[%2d]" (.at board (list x y)))))
-        (if (= (++ y) row-counts) (write-line))))))
+        (if (= p (list x y)) (print "[  ]")
+            (printf "[%2d]" (.at board (list x y))))
+        (if (= (++ y) row-counts) (println))))))
 
 (function move (board p direction)
   (let (q (map + p direction))
