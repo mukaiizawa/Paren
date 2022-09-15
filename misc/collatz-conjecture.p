@@ -1,7 +1,7 @@
 ; Collatz conjecture.
 
 (function step (n)
-  (write n)
+  (println n)
   (if (= (% n 2) 0) (step (/ n 2))
       (!= n 1) (step (++ (* 3 n)))))
 

@@ -66,5 +66,5 @@
 (assert (= (->pig-latin1 "I")"Iyay"))
 
 (function! main (args)
-  (if (nil? args) (loop (write-line (->pig-latin (split (read-line) " "))))
-      (write-line (->pig-latin args))))
+  (if (nil? args) (loop (println (->pig-latin (split (read-line) " "))))
+      (println (->pig-latin args))))

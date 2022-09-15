@@ -10,5 +10,4 @@
       (let (prize-pos (rand.int 3) choice (rand.int 3))
         (if (= prize-pos choice) (<- stay-win-count (++ stay-win-count))
             (<- switch-win-count (++ switch-win-count)))))
-    (write (list :without-change (/ stay-win-count N)
-                 :change (/ switch-win-count N)))))
+    (println "without-change: " (/ stay-win-count N) ", change:" (/ switch-win-count N))))

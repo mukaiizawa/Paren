@@ -7,4 +7,4 @@
       (gcd (- m n) n)))
 
 (function! main (args)
-  (timeit (write (gcd 540001 2))))
+  (timeit (println (gcd 540001 2))))

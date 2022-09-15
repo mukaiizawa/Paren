@@ -7,8 +7,8 @@
 
 (function show-table (table)
   (doarray (x table)
-    (write-bytes (if (= x 0) " " "*")))
-  (write-line))
+    (print (if (= x 0) " " "*")))
+  (println))
 
 (function next-generation (table0 table1)
   (let (size (len table0))

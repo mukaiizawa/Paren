@@ -26,4 +26,4 @@
 
 (function! main (args)
   (rand.seed (time))
-  (write-line (rand.choice $answers)))
+  (println (rand.choice $answers)))

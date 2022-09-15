@@ -7,8 +7,8 @@
 
 (function show (board)
   (domatrix (p board)
-    (if (= (cadr p) 0) (write-line))
-    (write-bytes (format "%3d" (.at board p))))
+    (if (= (cadr p) 0) (println))
+    (printf "%3d" (.at board p)))
   (quit))    ; only the first one solution.
 
 (function neighbors (p)

@@ -7,9 +7,9 @@
 
 (function show ()
   (domatrix (p $board)
-    (if (= (cadr p) 0) (write-line))
-    (write-bytes (if (.at $board p) "Q" "*")))
-  (write-line))
+    (if (= (cadr p) 0) (println))
+    (print (if (.at $board p) "Q" "*")))
+  (println))
 
 (function putable? (p)
   (let ((x y) p)

@@ -27,5 +27,4 @@
     (list->tsv (list income tax (- income tax)))))
 
 (function! main (args)
-  (foreach write-line
-           (map income->tsv (.. 0 $income-upper $income-step))))
+  (foreach write-line (map income->tsv (.. 0 $income-upper $income-step))))

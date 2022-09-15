@@ -8,7 +8,7 @@
 
 (function draw (x y ch)
   (console.cursor :x x :y y)
-  (write-bytes ch))
+  (print ch))
 
 (function! main (args)
   (loop

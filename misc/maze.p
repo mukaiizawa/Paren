@@ -12,9 +12,9 @@
   (let ((width height) (.shape $map))
     (dotimes (x width)
       (dotimes (y height)
-        (if (.at $map (list x y)) (write-bytes $path)
-            (write-bytes $wall)))
-      (write-line))))
+        (if (.at $map (list x y)) (print $path)
+            (print $wall)))
+      (println))))
 
 (function generate-maze (p)
   ;; Generate a maze, using the simple Depth-first search algorithm.

@@ -16,8 +16,9 @@
 (function display (data)
   (let (stem-leaf-list (->stem-leaf data) (lo hi) (apply (juxt min max) (map car stem-leaf-list)))
     (for (i lo) (<= i hi) (i (++ i))
-      (print (format "%5d|" i))
-      (foreach (partial print " ") (->leafs i stem-leaf-list))
+      (printf "%5d|" i)
+      (dolist (leaf (->leafs i stem-leaf-list))
+        (printf " %d" leaf))
       (println))))
 
 (function! main (args)

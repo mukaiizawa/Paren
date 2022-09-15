@@ -9,13 +9,13 @@
 
 (function show ()
   (dotimes (i $size)
-    (if (= (% i 3) 0) (write-line "+---+---+---+"))
+    (if (= (% i 3) 0) (println "+---+---+---+"))
     (dotimes (j $size)
-      (if (= (% j 3) 0) (write-bytes "|"))
+      (if (= (% j 3) 0) (print "|"))
       (let (val (.at $board (list i j)))
-        (write-bytes (if (nil? val) " " (str val)))))
-    (write-line "|"))
-  (write-line "+---+---+---+"))
+        (print (if (nil? val) " " (str val)))))
+    (println "|"))
+  (println "+---+---+---+"))
 
 (function choices (p)
   (let ((row col) p)
@@ -92,7 +92,6 @@
   ;     | 17|   |   |
   ;     |   | 36| 4 |
   ;     +---+---+---+
-  ;
   (if (nil? args) (raise ArgumentError)
       (load-file (car args)))
   (show)

@@ -10,9 +10,9 @@
 
 (function show (canvas)
   (domatrix (p canvas)
-    (if (= (cadr p) 0) (write-line))
-    (write-bytes (|| (.at canvas p) "　")))
-  (write-line))
+    (if (= (cadr p) 0) (println))
+    (print (|| (.at canvas p) "　")))
+  (println))
 
 (function draw-line (dir)
   (if (= dir :up)

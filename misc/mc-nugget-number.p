@@ -12,5 +12,5 @@
   (let (x nil max 0)
     (dolist (n (cdr (.. 100)))
       (if (nil? (<- x (combination $nuggets n))) (<- max n))
-      (write-line (format "%3d: %v" n x)))
-    (write-line (format "largest non-McNuggets number is %d" max))))
+      (printf "%3d: %v\n" n x))
+    (printf "largest non-McNuggets number is %d\n" max)))

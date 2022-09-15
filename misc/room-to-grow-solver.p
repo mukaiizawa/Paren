@@ -59,16 +59,16 @@
      (dotimes (i x)
        (dotimes (j y)
          (let (p (list i j) val (.at $board p))
-           (write-bytes (if (== val :wall) "#"
-                            (in? p $head-vertexes) "@"
-                            (in? p $body-vertexes) "o"
-                            (|| (in? p $cuctus-vertexes) (in? p $cuctus-coods)) "C"
-                            (|| (in? p $goal-vertexes) (in? p $goal-coods)) "G"
-                            (in? p $branches) "%"
-                            (== val :path) (if (vertex? p) "+" (even? i) "-" "|")
-                            " "))))
-       (write-line))
-     (write-line)))
+           (print (if (== val :wall) "#"
+                      (in? p $head-vertexes) "@"
+                      (in? p $body-vertexes) "o"
+                      (|| (in? p $cuctus-vertexes) (in? p $cuctus-coods)) "C"
+                      (|| (in? p $goal-vertexes) (in? p $goal-coods)) "G"
+                      (in? p $branches) "%"
+                      (== val :path) (if (vertex? p) "+" (even? i) "-" "|")
+                      " "))))
+       (println))
+     (println)))
 
 (class BackTrackSignal (Error))
 (method BackTrackSignal .init () self)

@@ -3,8 +3,9 @@
 (import :rand)
 
 (function dates->str (dates)
-  (map (f (x) (join (map str x) "/"))
-       dates))
+  (join (map (f (x) (join x "/"))
+             dates)
+        ", "))
 
 (function rand.date ()
   (let (month (++ (rand.int 12)))
@@ -23,6 +24,6 @@
           birthdays (rand.dates n)
           shared-birthdays (uniq (select (f (x) (> (count (partial = x) birthdays) 1))
                                          birthdays)))
-    (write (list :number-of-people n
-                 :birthdays (dates->str birthdays)
-                 :shared-birthdays (dates->str shared-birthdays)))))
+    (println "number-of-people: " n)
+    (println "birthdays: " (dates->str birthdays))
+    (println "shared-birthdays: " (dates->str shared-birthdays))))

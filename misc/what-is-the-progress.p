@@ -7,7 +7,7 @@
              rec (f (rest)
                    (when rest
                      (let (next (rand.choice lis0))
-                       (write-bytes next)
+                       (print next)
                        (if (= next (car rest)) (rec (cdr rest))
                            (rec lis0))))))
     (rec lis0)))
