@@ -26,7 +26,7 @@
   (let (dir (.tempdir (path ".")) temp (.tempfile dir))
     (assert (.dir? dir))
     (assert (.readable? temp))
-    (with-open ($out temp :write) (write-line "foo"))
+    (with-open ($out temp :write) (println "foo"))
     (with-open ($in temp :read) (assert (= (read-line) "foo")))
     (.remove temp)
     (.remove dir)

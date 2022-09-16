@@ -69,15 +69,15 @@
   (let (lo 100 hi 180 dh 10)
     ;; header
     (for (h lo) (<= h hi) (h (+ h dh))
-      (if (= h lo) (write-bytes "  "))
-      (write-bytes (format " %6d" h))
-      (if (= h hi) (write-line)))
+      (if (= h lo) (print "  "))
+      (printf " %6d" h)
+      (if (= h hi) (println)))
     ;; body
     (for (days 1) (<= days 31) (days (++ days))
-      (write-bytes (format "%2d" days))
+      (printf "%2d" days)
       (for (h lo) (<= h hi) (h (+ h dh))
-        (write-bytes (format " %6.2f" (/ h days))))
-      (write-line))))
+        (printf " %6.2f" (/ h days)))
+      (println))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "aeE:m:h:sty:v") args) now (datetime.now))

@@ -2093,9 +2093,7 @@
 
 (reader-macro "[" (reader)
   ; Define array literal reader.
-  (let ($G-l nil $G-v nil)
-    (while (!= (<- $G-v (.read reader)) ']) (push! $G-v $G-l))
-  (array (reverse! $G-l))))
+  (array (collect (f () (let ($G (.read reader)) (if (!== $G ']) $G))))))
 
 (reader-macro "{" (reader)
   ; Define dictionary literal reader.
