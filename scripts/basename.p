@@ -3,11 +3,8 @@
 (import :optparse)
 
 (function basename (remove-suffix?)
-  (foreach write-line
-           (map (f (x)
-                  (if (! remove-suffix?) (.name (path x))
-                      (.base-name (path x))))
-                (collect read-line))))
+  (dolist (file (map path (collect read-line)))
+    (write-line (if (! remove-suffix?) (.name file) (.base-name file)))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "s") args))

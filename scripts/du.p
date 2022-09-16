@@ -15,12 +15,12 @@
               print (f (file size level)
                       ;; Returns size.
                       (if (! (&& summary? (!= level 0)))
-                          (write-line (format "%11d %s" size (.to-s file))))
+                          (printf "%11d %s\n" size (.to-s file)))
                       size))
     (print dir (sweep (.children dir) 0) 0)))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "as") args))
-    (du (path (if args (car args) "."))
+    (du (path (|| (car args) "."))
         :all? (.get op "a")
         :summary? (.get op "s"))))

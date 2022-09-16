@@ -7,11 +7,11 @@
           (map int (split x.x.x.x "."))))
 
 (function i32->x.x.x.x (x)
-  (format "%d.%d.%d.%d"
-          (& (>> x 24) 0xff)
-          (& (>> x 16) 0xff)
-          (& (>> x 8) 0xff)
-          (& x 0xff)))
+  (join (list (& (>> x 24) 0xff)
+              (& (>> x 16) 0xff)
+              (& (>> x 8) 0xff)
+              (& x 0xff))
+        "."))
 
 (function parse-cidr (cidr)
   (let ((x.x.x.x prefix-length) (split cidr "/")

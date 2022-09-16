@@ -2,31 +2,29 @@
 
 (import :optparse)
 
-(<- $outline-hex? nil)
-
-(function write1 (addr buf size)
-  (write-bytes (format (if $outline-hex? "0x%05x " "% 7d ") addr))
-  (dotimes (i (len buf))
-    (write-bytes (if (< i size) (format "%02x " ([] buf i)) "   ")))
-  (dotimes (i size)
-    (write-bytes (let (ch (chr ([] buf i))) (if (print? ch) ch "."))))
-  (write-line))
-
-(function skip (size)
-  (let (n nil buf (bytes 4096))
+(function seek (size)
+  (let (addr size n nil buf (bytes 4096))
     (while (!= (<- n (read-bytes buf 0 (min size (len buf)))) 0)
-      (<- size (- size n)))))
+      (<- size (- size n)))
+    addr))
 
-(function hexdump (addr size)
+(function hexdump (addr size hex?)
   (let (n nil buf (bytes 16))
     (while (!= (<- n (read-bytes buf 0 (min size (len buf)))) 0)
-      (write1 addr buf n)
+      ;; address
+      (printf (if hex? "%7x" "%7d") addr)
+      ;; contents
+      (dotimes (i (min n (len buf)))
+        (printf " %02x" ([] buf i)))
+      (dotimes (i (++ (* (- (len buf) n) 3)))
+        (printf " "))
+      ;; character
+      (dotimes (i n)
+        (print (let (ch (chr ([] buf i))) (if (print? ch) ch "."))))
+      (println)
       (<- size (- size n)
           addr (+ addr n)))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "n:s:h") args))
-    (let (size (.get-int op "n" 256) skip-size (.get-int op "s" 0))
-      (<- $outline-hex? (.get op "h"))
-      (skip skip-size)
-      (hexdump skip-size size))))
+    (hexdump (seek (.get-int op "s" 0)) (.get-int op "n" 256) (.get op "h"))))
