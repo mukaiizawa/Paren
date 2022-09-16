@@ -9,4 +9,4 @@ asctable - display ASCII code table.
 Print a ASCII table to standard ouput.
 
 # SEE ALSO
-- `multable(1)`
+- `sjistable(1)`

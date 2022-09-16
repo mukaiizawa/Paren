@@ -9,4 +9,4 @@ multable - multiplication table.
  Print a multiplication table to standard ouput.
 
 # SEE ALSO
-- `asctable(1)`
+- `calc(1)`
