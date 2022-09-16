@@ -17,7 +17,6 @@
                           read-char
                           read-line
                           symbol
-                          symcmp
                           timeit
                           write
                           write-byte
@@ -28,9 +27,6 @@
   `(function! main (args)
      ,@(map (f (x) `(assert (= ,@x)))
             exprs)))
-
-(function write-log (key)
-  (.write-line $stdout (str (dynamic file-name) " -- " key)))
 
 (function parse-example ()
   (let (exprs nil ch nil)
@@ -47,7 +43,7 @@
       (while (<- line (read-line))
         (when (= line "# EXAMPLES")
           (with-open ($out (.suffix (.resolve $root file-name) "p") :write)
-            (write-line (str "; " file-name))
+            (println "; " file-name)
             (write (xmain (parse-example)))
             (return :succeed))))
       (return :skip))))

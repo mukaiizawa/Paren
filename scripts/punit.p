@@ -26,15 +26,12 @@
     (if (.dir? file) (if recur? (punit file :recur? true))
         (paren-file? file)
         (let (file-name (.to-s file))
-          (write-bytes file-name) (write-bytes "\t")
-          (if (! (testable? file)) (write-bytes " -- skip ")
+          (print file-name "\t")
+          (if (! (testable? file)) (print " -- skip ")
               (<- $status-cd (max $status-cd (system (str $paren " " file-name)))))
-          (write-line))))))
+          (println))))))
 
 (function! main (args)
-  ; punit [OPTION]... [PATH]
-  ; Run unit tests for the specified PATH (the current directory by default).
-  ;     -r test subdirectories recursively
   (let ((op args) (.parse (.init (.new OptionParser) "r") args))
     (punit (path (|| (car args) ".")) :recur? (.get op "r"))
     (exit $status-cd)))

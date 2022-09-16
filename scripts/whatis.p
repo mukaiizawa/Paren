@@ -15,10 +15,9 @@
       (dolist (index (cdr indexes))
         (let ((pages one-line-desc hash-value) index)
           (if (matcher section pages)
-              (write-line
-                (format "%-20s - %s"
-                        (lhs (map (f (x) (str x "(" section ")")) pages))
-                        one-line-desc))))))))
+              (printf "%-20s - %s\n"
+                      (lhs (map (f (x) (str x "(" section ")")) pages))
+                      one-line-desc)))))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "s:") args)

@@ -12,7 +12,7 @@
     (let (line (read-line) (pages one-line-desc) (man-parse-name line))
       (while (<- line (read-line))
         (if (= line "# SEE ALSO") (break)))
-      (cons (car pages)
+      (cons (car pages)    ; representative page
             (map (f (x) (slice x (++ (index "`" x)) (last-index "`" x)))
                  (collect read-line))))))
 

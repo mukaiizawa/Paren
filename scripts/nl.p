@@ -5,8 +5,8 @@
 (function nl (:opt start :key csv?)
   (let (n (if start (int start) 1))
     (dolist (line (collect read-line))
-      (if (nil? csv?) (write-line (format "%7d %s" n line))
-          (write-line (str n "," line)))
+      (if (nil? csv?) (printf "%7d %s\n" n line)
+          (println n "," line))
       (<- n (++ n)))))
 
 (function! main (args)

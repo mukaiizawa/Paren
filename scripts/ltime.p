@@ -2,16 +2,14 @@
 
 (import :optparse)
 
-(function hhmm->min (hhmm)
-  (if (nil? hhmm) nil
+(function hhmm->min (hhmm default)
+  (if (nil? hhmm) default
       (let ((hh mm) (map int (split hhmm ":")))
         (+ (* 60 hh) mm))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "e:d:s:") args))
-    (let (m (|| (hhmm->min (.get op "s")) 0)
-            e (|| (hhmm->min (.get op "e")) (* 24 60))
-            dm (|| (.get-int op "d") 60))
-      (while (<= m e)
-        (write-line (format "%02d:%02d" (// m 60) (% m 60)))
-        (<- m (+ m dm))))))
+    (for (s (hhmm->min (.get op "s") 0)
+            e (hhmm->min (.get op "e") (* 24 60))
+            dt (.get-int op "d" 60)) (<= s e) (s (+ s dt))
+        (printf "%02d:%02d\n" (// s 60) (% s 60)))))

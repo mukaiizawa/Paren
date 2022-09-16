@@ -20,10 +20,7 @@
   (let ((op args) (.parse (.init (.new OptionParser) "bclw") args)
                   (lc? wc? cc? bc?) (list (.get op "l") (.get op "w") (.get op "c") (.get op "b"))
                   (lc wc cc bc) (word-count))
-    (if (|| lc? wc? cc? bc?)
-        (begin
-          (if lc? (write lc :end " "))
-          (if wc? (write wc :end " "))
-          (if cc? (write cc :end " "))
-          (if bc? (write bc :end " ")))
-        (write-line (format "%d %d %d" lc wc bc)))))
+    (println (join
+               (if (|| lc? wc? cc? bc?) (reject nil? (list (if lc? lc) (if wc? wc) (if cc? cc) (if bc? bc)))
+                   (list lc wc bc))
+               " "))))

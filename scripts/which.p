@@ -3,9 +3,8 @@
 (import :optparse)
 
 (function get-path ()
-  (map path
-       (reject empty?
-               (split (getenv "PATH") (if (== $hostname :windows) ";" ":")))))
+  (keep (f (x) (if (! (empty? x)) (path x)))
+        (split (getenv "PATH") (if (== $hostname :windows) ";" ":"))))
 
 (function which (cmd :opt all? strict?)
   (let (name (if strict? .name .base-name))
@@ -17,5 +16,5 @@
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "as") args))
-    (if (nil? args) (write-line "missing argument.")
+    (if (nil? args) (raise ArgumentError "missing argument")
         (foreach (f (x) (which x (.get op "a") (.get op "s"))) args))))

@@ -56,7 +56,7 @@ th:nth-child(1), td:nth-child(1) { border-right:1.2px solid #ccc; }
   (with-memory-stream ($out)
     (doarray (x contents-index)
       (if (= x 0) (break))
-      (write-bytes (str x ".")))))
+      (print x "."))))
 
 (function parse-header (contents-index node)
   (let ((hx hx-attr :rest hx-text) node x (int ([] (str hx) 1)))

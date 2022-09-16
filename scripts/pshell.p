@@ -2,4 +2,4 @@
 
 (function! main (args)
   (loop
-    (write-bytes "$ ") (system (str "paren " (read-line)))))
+    (print "$ ") (system (str "paren " (read-line)))))

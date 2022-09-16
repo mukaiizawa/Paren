@@ -13,5 +13,5 @@
       (<- i (++ i)))))
 
 (function! main (args)
-  (let ((op args) (.parse (.init (.new OptionParser) "n:") args) n (.get op "n"))
-    (tail (if n (int n) 10))))
+  (let ((op args) (.parse (.init (.new OptionParser) "n:") args))
+    (tail (.get-int op "n" 10))))

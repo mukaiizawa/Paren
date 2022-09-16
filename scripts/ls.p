@@ -3,26 +3,26 @@
 (import :optparse)
 (import :datetime)
 
-(function ls (path :key long? recur? only-file? only-dir? full-path?)
+(function ls (file :key long? recur? only-file? only-dir? full-path?)
   (let (ls.d
-         (f (path)
-           (if (.dir? path) (foreach ls.f (.children path))))
+         (f (file)
+           (if (.dir? file) (foreach ls.f (.children file))))
          ls.f
-         (f (path)
-           (if (&& only-file? (! (.file? path))) (return nil)
-               (&& only-dir? (! (.dir? path))) (return nil)
-               (write1 path))
-           (if recur? (ls.d path)))
+         (f (file)
+           (if (&& only-file? (! (.file? file))) (return nil)
+               (&& only-dir? (! (.dir? file))) (return nil)
+               (write1 file))
+           (if recur? (ls.d file)))
          write1
-         (f (path)
-           (if long? (write-bytes (format "%s%s%s %11d %s "
-                                          (if (.dir? path) "d" (.other? path) "?" "-")
-                                          (if (.readable? path) "r" "-")
-                                          (if (.writable? path) "w" "-")
-                                          (.size path)
-                                          (.to-s (.init (.new DateTime) (.mtime path))))))
-           (write-line (if full-path? (.to-s path) (.name path)))))
-    (ls.d path)))
+         (f (file)
+           (if long? (printf "%s%s%s %11d %s "
+                             (if (.dir? file) "d" (.other? file) "?" "-")
+                             (if (.readable? file) "r" "-")
+                             (if (.writable? file) "w" "-")
+                             (.size file)
+                             (.to-s (.init (.new DateTime) (.mtime file)))))
+           (println (if full-path? (.to-s file) (.name file)))))
+    (ls.d file)))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "lrfdF") args))
