@@ -35,6 +35,9 @@
   ; Returns the month (1-12).
   self->month)
 
+(method DateTime .days-in-month ()
+  (datetime.days-in-month self->year self->month))
+
 (method DateTime .day ()
   ; Returns the day (1-31).
   self->day)
@@ -45,7 +48,7 @@
 
 (method DateTime .week-of-month ()
   ; Returns the week of month of the receiver.
-  (++ (// (+ self->day -1 (.day-week (datetime self->year self->month 1))) 7)))
+  (++ (// (+ (.day self) -1 (.day-week (datetime self->year self->month 1))) 7)))
 
 (method DateTime .hour ()
   ; Returns the hour (0-23).
@@ -62,9 +65,6 @@
 (method DateTime .unix-time ()
   ; Returns the number of seconds relative to the receiver's unix epoch (January 1, 1970, 00:00:00 UTC).
   self->unix-time)
-
-(method DateTime .days-in-month ()
-  (datetime.days-in-month self->year self->month))
 
 (method DateTime .msdos-date ()
   ; Returns the msdos date.
@@ -84,9 +84,14 @@
     (if days (<- offset (* days 24 60 60)))
     (.init (.new DateTime) (+ (.unix-time self) offset))))
 
-(method DateTime .weekend? ()
-  ; Returns whether the receiver is Saturday or Sunday.
-  (in? (.day-week self) '(0 6)))
+(method DateTime .sunday? () (= (.day-week self) 0))
+(method DateTime .monday? () (= (.day-week self) 1))
+(method DateTime .tuesday? () (= (.day-week self) 2))
+(method DateTime .wednesday? () (= (.day-week self) 3))
+(method DateTime .thursday? () (= (.day-week self) 4))
+(method DateTime .friday? () (= (.day-week self) 5))
+(method DateTime .saturday? () (= (.day-week self) 6))
+(method DateTime .weekend? () (|| (.sunday? self) (.saturday? self)))
 
 (method DateTime .holiday? ()
   ; Returns whether the receiver is Saturday, Sunday, or a public holiday.
@@ -97,7 +102,7 @@
   ;; https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
   ; Do not use for strict judgment due to sloppy construction.
   (let (y self->year m self->month d self->day
-          y-1980 (- y 1980) monday? (= (.day-week self) 1) nth-monday (++ (// (-- d) 7)))
+          y-1980 (- y 1980) monday? (.monday? self) nth-monday (++ (// (-- d) 7)))
     (|| (&& (= m 1) (= d 1))
         (&& (= m 1) monday? (= nth-monday 2))
         (&& (= m 2) (= d 11))
@@ -196,6 +201,8 @@
     (assert (= (.month dt) 8))
     (assert (= (.day dt) 11))
     (assert (= (.day-week dt) 1))
+    (assert (.monday? dt))
+    (assert (= (.week-of-month dt) 3))
     (assert (= (.hour dt) 6))
     (assert (= (.minute dt) 18))
     (assert (= (.second dt) 9))
@@ -207,7 +214,7 @@
       (assert (= (.hour dt) (.hour msdt)))
       (assert (= (.minute dt) (.minute msdt)))
       (assert (= (.second dt) (++ (.second msdt))))))
-  (let (dt (datetime 2020 08 06 12 10 30))
+  (let (dt (datetime 2020 8 6 12 10 30))
     (assert (! (.weekend? dt)))
     (assert (= (.to-s.date dt) "2020-08-06"))
     (assert (= (.to-s.time dt) "12:10:30"))
