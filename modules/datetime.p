@@ -1,75 +1,35 @@
 ; date and time module.
 
-; Process the date and time of the time zone set in the host system.
-; The UTC to local time difference is always calculated to the current value, even during daylight savings times.
-; After creating with new, you need to clear and initialize it using the method starting with init.
-
 (class DateTime (Object)
-  unix-time year month day day-week hour minute second)
-
-(function datetime.offset-0001-01-01 (y m d)
-  ;; Returns the difference date from 0001-01-01 for yyyy-mm-dd.
-  (if (<= m 2) (<- y (-- y) m (+ m 12)))
-  (+ (* 365 (-- y))
-     (// y 4) (- (// y 100)) (// y 400)
-     (// (- (* 306 m) 324) 10)
-     d -1))
+  unix-time year month day hour minute second)
 
 (method DateTime .init (unix-time)
-  (let (t nil y nil offset nil)
-    (<- self->unix-time unix-time
-        t (+ unix-time (utcoffset) 62135596800) ;; utc to localtime and offset from 0001-01-01
+  (let (t nil ordinal nil days nil)
+    (<- self->unix-time unix-time t (+ unix-time 62135683200)
         self->second (% t 60) t (// t 60)
         self->minute (% t 60) t (// t 60)
         self->hour (% t 24) t (// t 24)
-        self->day-week (% (+ t 1) 7)    ; 0001-01-01 is Mon
-        y (++ (// t 365)))
-    (while (> (<- offset (datetime.offset-0001-01-01 y 1 1)) t)
-      (<- y (-- y)))
-    (<- self->year y
-        self->month (++ (// (- t offset) 31))
-        offset (datetime.offset-0001-01-01 y self->month 1))
-    (let (mlen (.monthlen self))
-      (when (<= (+ offset mlen) t)
-        (<- self->month (++ self->month)
-            offset (+ offset mlen)))
-      (<- self->day (+ t (- offset) 1)))
+        self->year (++ (// t 365)))
+    (while (> (<- ordinal (datetime.ordinal self->year 1 1)) t)
+      (<- self->year (-- self->year)))
+    (<- self->month (++ (// (- t ordinal) 31))
+        days (datetime.days-in-month self->year self->month)
+        ordinal (datetime.ordinal self->year self->month 1))
+    (when (<= (+ ordinal days) t)
+      (<- self->month (++ self->month)
+          ordinal (+ ordinal days)))
+    (<- self->day (+ t (- ordinal) 1))
     self))
 
-(function datetime.parse-msdos-datetime (date time)
-  ; Returns the DateTime instance corresponding to the msdos date/time.
-  (datetime (+ (>> date 9) 1980)
-            (& (>> date 5) 0xf)
-            (& date 0x1f)
-            (& (>> time 11) 0x1f)
-            (& (>> time 5) 0x3f)
-            (* (& time 0x1f) 2)))
-
-(function datetime.parse-unix-time (unix-time)
-  ; Returns the DateTime instance corresponding to the unix-time.
-  (.init (.new DateTime) unix-time))
-
-(function datetime (year month day :opt hour minute second)
-  ; Returns the DateTime instance corresponding to the specified argument.
-  (.init (.new DateTime)
-         ;; day count 1970-01-01
-         (+ (* (+ (datetime.offset-0001-01-01 year month day) -719162) 24 60 60)
-            (if hour (* hour 60 60) 0)
-            (if minute (* minute 60) 0)
-            (- (|| second 0) (utcoffset)))))
-
-(function datetime.now ()
-  ; Returns a DateTime instance corresponding to the current time.
-  (.init (.new DateTime) (time)))
+(method DateTime .ordinal ()
+  (datetime.ordinal self->year self->month self->day))
 
 (method DateTime .year ()
   ; Returns the year.
   self->year)
 
 (method DateTime .leap-year? ()
-    (&& (= (% self->year 4) 0)
-        (|| (!= (% self->year 100) 0)
-            (== (% self->year 400) 0))))
+  (datetime.leap-year? self->year))
 
 (method DateTime .month ()
   ; Returns the month (1-12).
@@ -81,12 +41,11 @@
 
 (method DateTime .day-week ()
   ; Returns the index of the day of the week (0:sun, 1:mon, ... , 6: sat).
-  self->day-week)
+  (% (.ordinal self) 7))
 
 (method DateTime .week-of-month ()
   ; Returns the week of month of the receiver.
-  (let (first-day-of-month (datetime self->year self->month 1))
-    (++ (// (+ self->day -1 first-day-of-month->day-week) 7))))
+  (++ (// (+ self->day -1 (.day-week (datetime self->year self->month 1))) 7)))
 
 (method DateTime .hour ()
   ; Returns the hour (0-23).
@@ -104,19 +63,8 @@
   ; Returns the number of seconds relative to the receiver's unix epoch (January 1, 1970, 00:00:00 UTC).
   self->unix-time)
 
-(method DateTime .cmp (o)
-  (let (x self->unix-time y o)->unix-time
-    (if (= x y) 0
-        (< x y) -1
-        1)))
-
-(method DateTime .monthlen ()
-  ; Returns the number of days in the year
-  (let (m self->month)
-    (if (= m 2) (- (datetime.offset-0001-01-01 self->year 3 1)
-                   (datetime.offset-0001-01-01 self->year 2 1))
-        (in? m '(4 6 9 11)) 30
-        31)))
+(method DateTime .days-in-month ()
+  (datetime.days-in-month self->year self->month))
 
 (method DateTime .msdos-date ()
   ; Returns the msdos date.
@@ -133,12 +81,12 @@
 (method DateTime .offset (:key days)
   ; Returns an instance at the specified offset from the receiver.
   (let (offset 0)
-    (if days (<- offset (* days 60 60 24)))
+    (if days (<- offset (* days 24 60 60)))
     (.init (.new DateTime) (+ (.unix-time self) offset))))
 
 (method DateTime .weekend? ()
   ; Returns whether the receiver is Saturday or Sunday.
-  (in? self->day-week '(0 6)))
+  (in? (.day-week self) '(0 6)))
 
 (method DateTime .holiday? ()
   ; Returns whether the receiver is Saturday, Sunday, or a public holiday.
@@ -149,7 +97,7 @@
   ;; https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
   ; Do not use for strict judgment due to sloppy construction.
   (let (y self->year m self->month d self->day
-          y-1980 (- y 1980) monday? (= self->day-week 1) nth-monday (++ (// (-- d) 7)))
+          y-1980 (- y 1980) monday? (= (.day-week self) 1) nth-monday (++ (// (-- d) 7)))
     (|| (&& (= m 1) (= d 1))
         (&& (= m 1) monday? (= nth-monday 2))
         (&& (= m 2) (= d 11))
@@ -180,13 +128,70 @@
   (str (.to-s.date self) " " (.to-s.time self)))
 
 (method DateTime .to-s.day-week ()
-  ([] '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat") self->day-week))
+  ([] '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat") (.day-week self)))
 
 (method DateTime .to-s ()
   (join (list (.to-s.date self) (.to-s.day-week self) (.to-s.time self)) " "))
 
+;; API.
+
+(function datetime (year month day :opt hour minute second)
+  ; Returns the DateTime instance corresponding to the specified argument.
+  (datetime.from-unix-time
+    (+ (* (- (datetime.ordinal year month day) 719163) 24 60 60)
+       (if hour (* hour 60 60) 0)
+       (if minute (* minute 60) 0)
+       (|| second 0))))
+
+(function datetime.from-unix-time (unix-time)
+  (.init (.new DateTime) unix-time))
+
+(function datetime.from-ordinal (ordinal)
+  (datetime.from-unix-time (* (- ordinal 719163) 24 60 60)))
+
+(function datetime.ordinal (year month day)
+  ; Return proleptic Gregorian ordinal for the year, month and day.
+  ; January 1 of year 1 is day 1.
+  ; based on Zeller's congruence.
+  (if (<= month 2) (<- year (-- year) month (+ month 12)))
+  (+ (* 365 year) (// year 4) (- (// year 100)) (// year 400)
+     (// (* 306 (++ month)) 10)
+     (- day 428)))
+
+(function datetime.leap-year? (year)
+  (&& (= (% year 4) 0)
+      (|| (!= (% year 100) 0)
+          (== (% year 400) 0))))
+
+(function datetime.days-in-month (year month)
+  (if (! (<= 1 month 12)) (raise ArgumentError "invalid month")
+      (= month 2) (if (datetime.leap-year? year) 29 28)
+      (in? month '(4 6 9 11)) 30
+      31))
+
+(function datetime.parse-msdos-datetime (date time)
+  ; Returns the DateTime instance corresponding to the msdos date/time.
+  (datetime (+ (>> date 9) 1980)
+            (& (>> date 5) 0xf)
+            (& date 0x1f)
+            (& (>> time 11) 0x1f)
+            (& (>> time 5) 0x3f)
+            (* (& time 0x1f) 2)))
+
+(function datetime.now ()
+  ; Returns a DateTime instance corresponding to the current time of the time zone set in the host system.
+  (datetime.from-unix-time (+ (time) (utcoffset))))
+
 (function! main (args)
-  (let (dt (datetime.parse-unix-time (- 1407737889 (utcoffset))))    ; 2014-08-11 Mon 06:18:09
+  (assert (! (datetime.leap-year? 1900)))
+  (assert (! (datetime.leap-year? 1901)))
+  (assert (datetime.leap-year? 1904))
+  (assert (datetime.leap-year? 2000))
+  (assert (= (datetime.ordinal 1 1 1) 1))
+  (assert (= (datetime.ordinal 1970 1 1) 719163))
+  (assert (= (datetime.from-ordinal 719163) (datetime 1970 1 1)))
+  (assert (= (* (datetime.ordinal 1970 1 1) 24 60 60) 62135683200))
+  (let (dt (datetime.from-unix-time 1407737889))    ; 2014-08-11 Mon 06:18:09
     (assert (= (.year dt) 2014))
     (assert (= (.month dt) 8))
     (assert (= (.day dt) 11))
@@ -194,7 +199,7 @@
     (assert (= (.hour dt) 6))
     (assert (= (.minute dt) 18))
     (assert (= (.second dt) 9))
-    (assert (= (.unix-time dt) (- 1407737889 (utcoffset))))
+    (assert (= (.unix-time dt) 1407737889))
     (let (msdt (datetime.parse-msdos-datetime (.msdos-date dt) (.msdos-time dt)))
       (assert (= (.year dt) (.year msdt)))
       (assert (= (.month dt) (.month msdt)))

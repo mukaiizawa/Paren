@@ -5,7 +5,7 @@
 
 (function ldate (y m :key long?)
   (let (dt (datetime y m 1))
-    (dotimes (i (.monthlen dt))
+    (dotimes (i (.days-in-month dt))
       (if (nil? long?) (println (.to-s.date dt))
           (println (.to-s.date dt) " " (.to-s.day-week dt)))
       (<- dt (.offset dt :days 1)))))
