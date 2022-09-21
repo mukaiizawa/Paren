@@ -66,6 +66,11 @@
   ; Returns the year.
   self->year)
 
+(method DateTime .leap-year? ()
+    (&& (= (% self->year 4) 0)
+        (|| (!= (% self->year 100) 0)
+            (== (% self->year 400) 0))))
+
 (method DateTime .month ()
   ; Returns the month (1-12).
   self->month)
@@ -131,10 +136,13 @@
     (if days (<- offset (* days 60 60 24)))
     (.init (.new DateTime) (+ (.unix-time self) offset))))
 
+(method DateTime .weekend? ()
+  ; Returns whether the receiver is Saturday or Sunday.
+  (in? self->day-week '(0 6)))
+
 (method DateTime .holiday? ()
   ; Returns whether the receiver is Saturday, Sunday, or a public holiday.
-  (let (day-week self->day-week)
-    (|| (= day-week 0) (= day-week 6) (.public-holiday? self))))
+  (|| (.weekend? self) (.public-holiday? self)))
 
 (method DateTime .public-holiday? ()
   ; Returns whether the receiver is a public holiday.
@@ -172,7 +180,7 @@
   (str (.to-s.date self) " " (.to-s.time self)))
 
 (method DateTime .to-s.day-week ()
-  ([] '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat") (.day-week self)))
+  ([] '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat") self->day-week))
 
 (method DateTime .to-s ()
   (join (list (.to-s.date self) (.to-s.day-week self) (.to-s.time self)) " "))
@@ -195,6 +203,7 @@
       (assert (= (.minute dt) (.minute msdt)))
       (assert (= (.second dt) (++ (.second msdt))))))
   (let (dt (datetime 2020 08 06 12 10 30))
+    (assert (! (.weekend? dt)))
     (assert (= (.to-s.date dt) "2020-08-06"))
     (assert (= (.to-s.time dt) "12:10:30"))
     (assert (= (.to-s.datetime dt) "2020-08-06 12:10:30"))
