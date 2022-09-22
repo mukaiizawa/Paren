@@ -8,7 +8,7 @@
     (dotimes (i (.days-in-month dt))
       (if (nil? long?) (println (.to-s.date dt))
           (println (.to-s.date dt) " " (.to-s.day-week dt)))
-      (<- dt (.offset dt :days 1)))))
+      (<- dt (.tomorrow dt)))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "l") args)

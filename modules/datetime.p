@@ -78,11 +78,16 @@
      (| (<< (.minute self) 5)
         (// (.second self) 2))))
 
-(method DateTime .offset (:key days)
+(method DateTime .offset (:key weeks days hours minutes seconds)
   ; Returns an instance at the specified offset from the receiver.
-  (let (offset 0)
-    (if days (<- offset (* days 24 60 60)))
-    (.init (.new DateTime) (+ (.unix-time self) offset))))
+  (if weeks (<- days (+ (|| days 0) (* weeks 7))))
+  (if days (<- hours (+ (|| hours 0) (* days 24))))
+  (if hours (<- minutes (+ (|| minutes 0) (* hours 60))))
+  (if minutes (<- seconds (+ (|| seconds 0) (* minutes 60))))
+  (if seconds (datetime.from-unix-time (+ (.unix-time self) seconds)) self))
+
+(method DateTime .tomorrow () (.offset self :days 1))
+(method DateTime .yesterday () (.offset self :days -1))
 
 (method DateTime .sunday? () (= (.day-week self) 0))
 (method DateTime .monday? () (= (.day-week self) 1))
@@ -196,6 +201,9 @@
   (assert (= (datetime.ordinal 1970 1 1) 719163))
   (assert (= (datetime.from-ordinal 719163) (datetime 1970 1 1)))
   (assert (= (* (datetime.ordinal 1970 1 1) 24 60 60) 62135683200))
+  (assert (= (.tomorrow (datetime 1970 1 1)) (datetime 1970 1 2)))
+  (assert (= (.yesterday (datetime 1970 2 1)) (datetime 1970 1 31)))
+  (assert (= (.offset (datetime 1970 1 1) :days 31 :hours 1 :minutes 1 :seconds 1) (datetime 1970 2 1 1 1 1)))
   (let (dt (datetime.from-unix-time 1407737889))    ; 2014-08-11 Mon 06:18:09
     (assert (= (.year dt) 2014))
     (assert (= (.month dt) 8))
