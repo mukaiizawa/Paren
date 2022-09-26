@@ -1364,7 +1364,7 @@
                                       (fraction-writer :write1)
                                       (if (&& (>= i decimal-point) (= val 0) remove-zero?) (break)
                                           (= i decimal-point) (.write-bytes self "."))))
-                                  (assert nil))))
+                                  (raise StateError))))
           style-g (f (:key upper?)
                     (if (<= -4 exponent 5) (style-f :remove-zero? true)
                         (style-e :remove-zero? true :upper? upper?)))
@@ -1992,14 +1992,8 @@
 
 ;; execution.
 
-(built-in-function eval (expr)
-  ; Evaluates the specified expression and returns a value.
-  (assert (nil? (eval 'nil))))
-
-(built-in-function apply (fn args)
-  ; Evaluates the specified expression and returns a value.
-  ; Applies the function to the args.
-  (assert (= (apply car '((1))) 1)))
+(built-in-function eval)
+(built-in-function apply)
 
 (function repl ()
   ; Enter repl(read eval print loop) mode.
