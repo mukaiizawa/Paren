@@ -47,3 +47,5 @@ If you want to split using a regular expression, refer to the `re(3)` module.
 # SEE ALSO
 - `join(3)`
 - `re(3)`
+- `split-at(3)`
+- `split-with(3)`
