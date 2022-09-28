@@ -1288,11 +1288,12 @@
   ; Returns read line.
   ; If stream reached eof, returns nil.
   (with-memory-stream (out)
-    (let (c nil)
-      (loop
-        (if (= (<- c (.read-byte self)) -1) (return nil)
-            (= c 0x0a) (break)
-            (.write-byte out c))))))
+    (loop
+      (let (ch (.read-byte self))
+        (if (= ch -1) (return nil)
+            (= ch 0x0a) (break)
+            (= ch 0x0d) (begin (if (= (.peek-byte self) 0x0a) (.read-byte self)) (break))
+            (.write-byte out ch))))))
 
 (method Stream .write-byte (byte)
   ; Write byte to the receiver.
