@@ -86,10 +86,9 @@
       self->buf (read-bytes))
   self)
 
-(method ZipReader .skip-data-descriptor (n)
-  (while (! (in? (.peek-u32 self) $zip.headers))
-    (.skip 4))
-  self)    ; 4 or 8
+(method ZipReader .skip-data-descriptor ()
+  (while (! (in? (.peek-u32 self) $zip.headers)) (.skip self 4))    ; 4 or 8
+  self)
 
 (method ZipReader .read-u16 ()
   (begin0
