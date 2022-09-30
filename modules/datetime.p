@@ -137,6 +137,9 @@
 (method DateTime .to-s.datetime ()
   (str (.to-s.date self) " " (.to-s.time self)))
 
+(method DateTime .to-s.month ()
+  ([] '("January" "February" "March" "April" "May" "June" "July" "August" "September" "October" "November" "December") (-- (.month self))))
+
 (method DateTime .to-s.day-week ()
   ([] '("Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat") (.day-week self)))
 
@@ -228,4 +231,5 @@
     (assert (= (.to-s.time dt) "12:10:30"))
     (assert (= (.to-s.datetime dt) "2020-08-06 12:10:30"))
     (assert (= (.to-s.day-week dt) "Thu"))
+    (assert (= (.to-s.month dt) "August"))
     (assert (= (.to-s dt) "2020-08-06 Thu 12:10:30"))))
