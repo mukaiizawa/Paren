@@ -1,7 +1,6 @@
 ; socket module.
 
-(if (! (bound? 'client-socket))
-    (raise StateError "Requires sock option at compile time"))
+(if (! (bound? 'client-socket)) (raise StateError "Requires sock option at compile time"))
 
 (built-in-function gethostname ()
   ; Returns the local host name.
@@ -68,6 +67,50 @@
          (let (,sock (<- ,gsock (client-socket ,host ,port)))
            ,@body)
          (if ,gsock (closesocket ,gsock))))))
+
+(class SocketStream (Stream)
+  sock pos size buf)
+
+(method SocketStream .init (sock :key buf-size)
+  (<- self->sock sock
+      self->pos 0
+      self->size 0
+      self->buf (bytes (|| buf-size 1024)))
+  self)
+
+(method SocketStream .fetch-bytes ()
+  ;; Returns remain bytes.
+  (let (remain (- self->size self->pos))
+    (if (> remain 0) remain
+        (<- self->pos 0
+            self->size (recvall self->buf self->sock)))))
+
+(method SocketStream .peek-byte ()
+  (if (= (.fetch-bytes self) 0) -1
+      ([] self->buf self->pos)))
+
+(method SocketStream .read-byte ()
+  (begin0
+    (.peek-byte self)
+    (<- self->pos (++ self->pos))))
+
+(method SocketStream .read-bytes (:opt buf from size)
+  (if (nil? buf) (with-memory-stream ($out)
+                   (while (> (<- size (.fetch-bytes self)) 0)
+                     (write-bytes self->buf self->pos size)))
+      (fread buf from size self->fp)))
+
+(method SocketStream .write-byte (byte)
+  (let (buf (bytes 1))
+    ([] buf 0 byte)
+    (.write-bytes self buf)))
+
+(method SocketStream .write-bytes (x :opt from size)
+  (send x (|| from 0) (|| size (byte-len x)) self->sock)
+  (if from size x))
+
+(method SocketStream .close ()
+  (closesocket self->sock))
 
 (function! main (args)
   true)
