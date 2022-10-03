@@ -22,4 +22,5 @@
 
 (function! main (args)
   (assert (= (url.encode "012あ") "%30%31%32%E3%81%82"))
+  (assert (= (url.decode "012%E3%81%82") "012あ"))
   (assert (= (url.decode "%30%31%32%E3%81%82") "012あ")))
