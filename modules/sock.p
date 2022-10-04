@@ -68,7 +68,7 @@
            ,@body)
          (if ,gsock (closesocket ,gsock))))))
 
-(class SocketStream (Stream)
+(class SocketStream (Object Stream)
   sock pos size buf)
 
 (method SocketStream .init (sock :key buf-size)
