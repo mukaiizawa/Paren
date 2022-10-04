@@ -1488,7 +1488,7 @@
     (.seek self pos)
     ch))
 
-(class MemoryStream (Stream)
+(class MemoryStream (Object Stream)
   ; A stream whose contents are held in memory.
   buf rdpos wrpos)
 
@@ -1571,7 +1571,7 @@
       self->wrpos 0)
   self)
 
-(class FileStream (Stream)
+(class FileStream (Object Stream)
   ; Provides I/O functions for files.
   ; Construct with methods such as File.open-read, File.open-write.
   ; It should not be construct by new.
