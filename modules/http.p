@@ -70,7 +70,7 @@
 (class HTTPError (Error))
 
 ;; Stream.
-(class HTTPStream (Stream))
+(class HTTPStream (SocketStream))
 
 (method HTTPStream .write-line (:opt args)
   (if args (.write-bytes self args))
