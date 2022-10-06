@@ -36,9 +36,11 @@
 
 (function day-expr->working-hour (day-expr)
   (let ((day start end :opt deduction-time) day-expr
-        working-hour (min->hour (- (hhmm->min end) (hhmm->min start)
-                                   (hour->min (|| deduction-time $default-deduction-time)))))
-    (write-verbosely (list :year (dynamic year) :month (dynamic month) :day day :hour working-hour))
+            working-hour (min->hour (- (hhmm->min end) (hhmm->min start)
+                                       (hour->min (<- deduction-time (|| deduction-time $default-deduction-time))))))
+    (write-verbosely (list :year (dynamic year) :month (dynamic month) :day day
+                           :start start :end end :deduction deduction-time
+                           :hour working-hour))
     working-hour))
 
 (function summarize (title day hour)
