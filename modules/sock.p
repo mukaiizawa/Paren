@@ -90,9 +90,9 @@
       ([] self->buf self->pos)))
 
 (method SocketStream .read-byte ()
-  (begin0
-    (.peek-byte self)
-    (<- self->pos (++ self->pos))))
+  (let (next (.peek-byte self))
+    (if (!= next -1) (<- self->pos (++ self->pos)))
+    next))
 
 (method SocketStream .read-bytes (:opt buf from size)
   (if (nil? buf) (with-memory-stream ($out)
