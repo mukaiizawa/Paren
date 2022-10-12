@@ -1289,11 +1289,11 @@ static int cons_slice(object o, int start, int stop, object *result)
 static int str_slice(object o, int start, int stop, object *result)
 {
   int i, s, t;
-  for (i = s = 0; i < start; i++)
+  for (i = s = 0; i < start && s < o->mem.size; i++)
     if (!ch_len(LC(o->mem.elt + s), &s)) return FALSE;
   if (stop == -1) t = o->mem.size;
   else {
-    for (i = start, t = s; i < stop; i++)
+    for (i = start, t = s; i < stop && t < o->mem.size; i++)
       if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
     if (t > o->mem.size) return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
   }
