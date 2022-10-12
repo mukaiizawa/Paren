@@ -1680,7 +1680,7 @@ int string_rindex(object o, object p, int s, int e, object *result)
   int i, ri, n;
   if (!bi_argv(BI_STR, p, &p)) return FALSE;
   for (i = n = 0, ri = -1; i < o->mem.size && (o->mem.size - i >= p->mem.size) && n != e; n++) {
-    if (n >= s && memcmp(o->mem.elt + i, p->mem.elt, p->mem.size) == 0) ri = i;
+    if (n >= s && memcmp(o->mem.elt + i, p->mem.elt, p->mem.size) == 0) ri = n;
     if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
   }
   if (ri == -1) *result = object_nil;
