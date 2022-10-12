@@ -20,6 +20,8 @@ See `ams(5)` for attendance information format specifications.
         Estimate the change in working hours if working HOUR hours per day.
     -h HOUR
         Specify HOUR for the target monthly working hours instead of 140.
+    -l
+        Output in long format when -v option is enabled.
     -m MONTHS
         MONTHS are considered as the month to be counted.
         The default is this month.

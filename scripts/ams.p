@@ -38,9 +38,9 @@
   (let ((day start end :opt deduction-time) day-expr
             working-hour (min->hour (- (hhmm->min end) (hhmm->min start)
                                        (hour->min (<- deduction-time (|| deduction-time $default-deduction-time))))))
-    (write-verbosely (list :year (dynamic year) :month (dynamic month) :day day
-                           :start start :end end :deduction deduction-time
-                           :hour working-hour))
+    (write-verbosely `(:year ,(dynamic year) :month ,(dynamic month) :day ,day
+                             ,@(if $long? `(:start ,start :end ,end :deduction ,deduction-time))
+                             :hour ,working-hour))
     working-hour))
 
 (function summarize (title day hour)
@@ -82,11 +82,12 @@
       (println))))
 
 (function! main (args)
-  (let ((op args) (.parse (.init (.new OptionParser) "aeE:m:h:sty:v") args) now (datetime.now))
+  (let ((op args) (.parse (.init (.new OptionParser) "aeE:m:h:lsty:v") args) now (datetime.now))
     (<- $estimate-with (.get-float op "E")
         $estimate? (|| $estimate-with (.get op "e"))
         $target-working-hours (.get-int op "h" 140)
         $suppress-summary? (.get op "s")
+        $long? (.get op "l")
         $year (.get-ints op "y")
         $month (.get-ints op "m")
         $verbose? (.get op "v"))
