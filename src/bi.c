@@ -1195,7 +1195,7 @@ DEFUN(upper)
 
 // array.
 
-static int string_to_array(object o, object *result)
+static int str_to_array(object o, object *result)
 {
   int i, j, size;
   if (!str_len(o, &size)) return FALSE;
@@ -1231,7 +1231,7 @@ DEFUN(array)
       xassert(o == object_nil);
       return TRUE;
     case STRING:
-      return string_to_array(o, result);
+      return str_to_array(o, result);
     case BYTES:
       size = o->mem.size;
       *result = gc_new_array(o->mem.size);
@@ -1418,7 +1418,7 @@ static int cons_access(int argc, object argv, object o, object *result)
   return TRUE;
 }
 
-static int string_access(int argc, object argv, object o, object *result)
+static int str_access(int argc, object argv, object o, object *result)
 {
   int i;
   if (!bi_cpint(argv->cons.car, &i)) return FALSE;
@@ -1472,7 +1472,7 @@ DEFUN(_5b__5d_)
     case CONS:
       return cons_access(argc, argv->cons.cdr, o, result);
     case STRING:
-      return string_access(argc, argv->cons.cdr, o, result);
+      return str_access(argc, argv->cons.cdr, o, result);
     case BYTES:
       return bytes_access(argc, argv->cons.cdr, o, result);
     case ARRAY:
