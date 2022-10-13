@@ -1236,8 +1236,11 @@
 
 (method Path .children ()
   ; Returns a list of the contents of the directory corresponding to the receiver.
-  (map (f (x) (.resolve self x))
-       (sort! (split (readdir (.to-s self)) "\n"))))
+  (sort! (map (f (x) (.resolve self x))
+              (split (readdir (.to-s self)) "\n"))
+         :sorter (f (x y)
+                   (if (== (.dir? x) (.dir? y)) (< (.name x) (.name y))
+                       (.dir? x)))))
 
 (method Path .walk (fn)
   (if (.dir? self) (foreach (f (x) (.walk x fn)) (.children self))
