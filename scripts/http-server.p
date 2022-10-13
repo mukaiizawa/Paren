@@ -27,7 +27,9 @@
                    (title () ,title))
              (body ()
                    (h1 () ,title)
-                   ,@body)))))
+                   (hr ())
+                   ,@body
+                   (hr ()))))))
 
 (function handle-file (req res file)
   (.status-code! res 200)
@@ -37,13 +39,13 @@
 (function handle-dir (req res dir)
   (let (index.html (.resolve dir "index.html"))
     (if (.file? index.html) (handle-file req res index.html)
-        (begin
+        (let (relative (.relativize $context-root dir))
           (.status-code! res 200)
           (.set-header res "Content-Type" "text/html")
-          (.set-body res (make-html (format "Directory listing for %s" (.to-s (.relativize $context-root dir)))
+          (.set-body res (make-html (format "Directory listing for %s" (.to-s relative))
                                     `((ul ()
-                                          ,@(if (.parent dir)
-                                                `((li () (a (:href ,(local-path->uri (.parent dir))) "../"))))
+                                          ,@(if (!= relative (path "."))
+                                                `((li () (a (:href ,(local-path->uri (.parent dir))) ".."))))
                                           ,@(map (f (x)
                                                    `(li () (a (:href ,(local-path->uri x))
                                                               ,(str (.name x) (if (.dir? x) "/")))))
