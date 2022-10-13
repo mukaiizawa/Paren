@@ -1039,10 +1039,11 @@
   ; It should not be construct by new.
   ; The corresponding file does not have to exist.
   ; You can read and write files to the corresponding path as needed.
-  path absolute?)
+  path)
 
-(method Path .init (path absolute?)
-  (<- self->path path self->absolute? absolute?)
+(method Path .init (path)
+  (assert path)
+  (<- self->path path)
   self)
 
 (function path (path-name)
@@ -1053,31 +1054,31 @@
   ; The first `~` expands to the home directory using the environment variable.
   ;     (path "~/.vimrc") <=> ("home" "foo" ".vimrc")
   ; Path class places the highest priority on keeping the implementation simple, and assumes that these features are implemente where necessary.
-  ;     (path "foo/bar/../buzz") <=> ("foo" "buzz")
+  ;     (path "foo/bar/../buzz") <=> ("." "foo" "buzz")
   ; Two or more consecutive `/`s or trailing `/`s are ignored.
-  ;     (path "foo//bar/") <=> ("foo" "bar")
+  ;     (path "foo//bar/") <=> ("." "foo" "bar")
   (if (is-a? path-name Path) path-name
-      (let (files nil absolute? nil windows? (== $hostname :windows)
-                 home (if windows? (concat (getenv "HOMEDRIVE") (getenv "HOMEPATH")) (getenv "HOME"))
-                 sepr? (if windows? (f (x) (in? x '("/" "\\"))) (f (x) (= x "/")))
-                 parse-file (f (x s e)
-                              (if (< s e)
-                                  (let (file (slice x s e))
-                                    (if (= file ".") :ignore
-                                        (= file "..") (begin (if (= files '(".")) (pop! files))
-                                                             (if (|| (nil? files) (= (car files) "..")) (push! file files) (pop! files)))
-                                        (push! file files))))))
-        (if (prefix? path-name "~") (<- path-name (concat home (slice path-name 1)) absolute? true)
-            (|| (&& windows? (> (len path-name) 1) (= ([] path-name 1) ":"))
-                (&& (! windows?) (prefix? path-name "/"))) (<- absolute? true)
-            (push! "." files))
+      (let (files nil windows? (== $hostname :windows)
+                  home (if windows? (concat (getenv "HOMEDRIVE") (getenv "HOMEPATH")) (getenv "HOME"))
+                  sepr? (if windows? (f (x) (in? x '("/" "\\"))) (f (x) (= x "/")))
+                  next-file (f (x s e)
+                              (when (< s e)
+                                (let (file (slice x s e))
+                                  (if (= file "..") (begin
+                                                      (if (= files '(".")) (pop! files))
+                                                      (if (|| (nil? files) (= (car files) "..")) (push! file files)
+                                                          (pop! files)))
+                                      (!= file ".") (push! file files))))))
+        (if (prefix? path-name "~") (<- path-name (concat home (slice path-name 1)))
+            (! (|| (&& windows? (> (len path-name) 1) (= ([] path-name 1) ":"))
+                   (&& (! windows?) (prefix? path-name "/")))) (push! "." files))
         (let (s 0 e (len path-name))
           (for (i 0) (< i e) (i (++ i))
             (when (sepr? ([] path-name i))
-              (parse-file path-name s i)
+              (next-file path-name s i)
               (<- s (++ i))))
-          (parse-file path-name s e)
-          (.init (.new Path) (reverse! files) absolute?)))))
+          (next-file path-name s e)
+          (.init (.new Path) (reverse! files))))))
 
 (method Path .name ()
   ; Returns file name.
@@ -1118,22 +1119,23 @@
 
 (method Path .relativize (p)
   ; Returns a relative path between the receiver and a given path.
-  (if (!== (.absolute? self) (.absolute? p)) (raise ArgumentError "different type of Path")
+  (if (!== (.relative? self) (.relative? (<- p (path p)))) (raise ArgumentError "different type of Path")
       (let (relative nil src self->path dst p->path)
         (while src
-          (if (= (pop! src) (car dst)) (pop! dst)
+          (if (= (car src) (car dst)) (begin (pop! src) (pop! dst))
+              (= (car src) ".") (begin (pop! src) (assert (= (car dst) "..")))
               (= (car dst) ".") (raise ArgumentError "unable compute relative path")
-              (push! ".." relative)))
+              (begin (pop! src) (push! ".." relative))))
         (path (join (concat relative dst) "/")))))
 
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
   ; Same as `(! (.relative? self))`.
-  self->absolute?)
+  (! (.relative? self)))
 
 (method Path .relative? ()
   ; Same as `(! (.absolute? self))`.
-  (! (.absolute? self)))
+  (in? (car self->path) '("." "..")))
 
 (method Path .contents ()
   ; Returns file contents of the receiver.
@@ -2058,14 +2060,14 @@
                                                                           (list file-name (.suffix file-name "p"))))))
             (if (nil? script) (raise ArgumentError (str "unreadable file " (.to-s file-name)))
                 (&& (load script) (bound? 'main) main) (main (cdr args))))))
-      (f (e)
-        (if (is-a? e SystemExit) (exit 0)
-            (is-a? e Exception) (begin 
-                                  (.print-stack-trace e)
-                                  (exit (.status-cd e)))
-            (begin
-              (.write-bytes $stderr "uncaught error:")
-              (.write $stderr e))))))
+    (f (e)
+      (if (is-a? e SystemExit) (exit 0)
+          (is-a? e Exception) (begin
+                                (.print-stack-trace e)
+                                (exit (.status-cd e)))
+          (begin
+            (.write-bytes $stderr "uncaught error:")
+            (.write $stderr e))))))
 
 (<- $import '(:core)
     $read-table (dict)
