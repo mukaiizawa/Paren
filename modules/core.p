@@ -1078,7 +1078,7 @@
               (next-file path-name s i)
               (<- s (++ i))))
           (next-file path-name s e)
-          (.init (.new Path) (reverse! files))))))
+          (if files (.init (.new Path) (reverse! files)))))))
 
 (method Path .name ()
   ; Returns file name.
