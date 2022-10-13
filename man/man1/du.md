@@ -16,6 +16,7 @@ If the `DIRECTORY` is omitted, the usage below the current directory is displaye
         Display for all elements, including files.
     -s
         Limit the display to one level below the specified `DIRECTORY`.
+        Not subject to display, but regarded as subject to aggregation.
 
 # SEE ALSO
 - `ls(1)`

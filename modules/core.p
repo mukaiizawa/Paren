@@ -1057,26 +1057,27 @@
   ; Two or more consecutive `/`s or trailing `/`s are ignored.
   ;     (path "foo//bar/") <=> ("foo" "bar")
   (if (is-a? path-name Path) path-name
-      (let (path nil absolute? nil windows? (== $hostname :windows)
+      (let (files nil absolute? nil windows? (== $hostname :windows)
                  home (if windows? (concat (getenv "HOMEDRIVE") (getenv "HOMEPATH")) (getenv "HOME"))
                  sepr? (if windows? (f (x) (in? x '("/" "\\"))) (f (x) (= x "/")))
                  parse-file (f (x s e)
                               (if (< s e)
                                   (let (file (slice x s e))
-                                    (if (= file ".") (if (nil? path) (push! file path))
-                                        (= file "..") (if (|| (nil? path) (= (car path) "..")) (push! file path) (pop! path))
-                                        (push! file path))))))
+                                    (if (= file ".") :ignore
+                                        (= file "..") (begin (if (= files '(".")) (pop! files))
+                                                             (if (|| (nil? files) (= (car files) "..")) (push! file files) (pop! files)))
+                                        (push! file files))))))
         (if (prefix? path-name "~") (<- path-name (concat home (slice path-name 1)) absolute? true)
             (|| (&& windows? (> (len path-name) 1) (= ([] path-name 1) ":"))
-                (&& (! windows?) (prefix? path-name "/"))) (<- absolute? true))
+                (&& (! windows?) (prefix? path-name "/"))) (<- absolute? true)
+            (push! "." files))
         (let (s 0 e (len path-name))
           (for (i 0) (< i e) (i (++ i))
             (when (sepr? ([] path-name i))
               (parse-file path-name s i)
               (<- s (++ i))))
           (parse-file path-name s e)
-          (if (nil? path) nil
-              (.init (.new Path) (reverse! path) absolute?))))))
+          (.init (.new Path) (reverse! files) absolute?)))))
 
 (method Path .name ()
   ; Returns file name.
@@ -1123,7 +1124,7 @@
           (if (= (pop! src) (car dst)) (pop! dst)
               (= (car dst) ".") (raise ArgumentError "unable compute relative path")
               (push! ".." relative)))
-        (.init (.new Path) (concat relative dst) nil))))
+        (path (join (concat relative dst) "/")))))
 
 (method Path .absolute? ()
   ; Returns whether this path regarded as the absolute path.
@@ -2055,7 +2056,7 @@
                                                             (map (f (x) (apply .resolve x))
                                                                  (product (cons (path (getcwd)) $runtime-path)
                                                                           (list file-name (.suffix file-name "p"))))))
-            (if (nil? script) (raise ArgumentError (str "unreadable file " file-name))
+            (if (nil? script) (raise ArgumentError (str "unreadable file " (.to-s file-name)))
                 (&& (load script) (bound? 'main) main) (main (cdr args))))))
       (f (e)
         (if (is-a? e SystemExit) (exit 0)
