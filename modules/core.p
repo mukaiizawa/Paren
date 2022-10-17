@@ -720,7 +720,8 @@
                                                              :padding precision))))
                             (format1 flags width prefix val))
                           (raise ArgumentError (str "unexpected conversion specifier " conv)))
-                      (<- args (cdr args)))))))))))
+                      (<- args (cdr args)))))))
+        (if args (raise ArgumentError "too many arguments"))))))
 
 (function strip (s :opt fn)
   (rstrip (lstrip s fn) fn))
