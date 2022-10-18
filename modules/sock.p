@@ -2,6 +2,10 @@
 
 (if (! (bound? 'client-socket)) (raise StateError "Requires sock option at compile time"))
 
+(<- $sock.SHUT_RD 0
+    $sock.SHUT_WR 1
+    $sock.SHUT_RDWR 2)
+
 (built-in-function gethostname ()
   ; Returns the local host name.
   )
@@ -40,6 +44,11 @@
 (function sendall (buf sock)
   ; Same as (send buf 0 (len buf) sock)).
   (send buf 0 (len buf) sock))
+
+(built-in-function shutdown (sock how)
+  ; Shut down one or both halves of the connection.
+  ; Returns nil.
+  )
 
 (built-in-function close (sock)
   ; Closes the socket.

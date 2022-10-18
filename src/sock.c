@@ -11,15 +11,17 @@ static int sock_count = 0;
 
 #if UNIX_P
 #define xsocket(x, y, z) socket(x, y, z)
-#define xclose(x) close(x)
 #define xstartup() {}
 #define xcleanup() {}
 #endif
 
 #if WINDOWS_P
+#define SHUT_RD SD_RECEIVE
+#define SHUT_WR SD_SEND
+#define SHUT_RDWR SD_BOTH
 static int startup_p = FALSE;
 #define xsocket(x, y, z) WSASocket(x, y, z, NULL, 0, 0)
-#define xclose(x) closesocket(x)
+#define close(x) closesocket(x)
 #define xstartup() \
 { \
   int st; \
@@ -69,7 +71,7 @@ DEFUN(client_2d_socket)
   for (q = p; q != NULL; q = q->ai_next) {
     if ((fd = xsocket(q->ai_family, q->ai_socktype, q->ai_protocol)) == -1) continue;
     if (connect(fd, q->ai_addr, q->ai_addrlen) != -1) break;
-    xclose(fd);
+    close(fd);
   }
   freeaddrinfo(p);
   if (q == NULL) return ip_throw(OSError, connection_failed);
@@ -148,13 +150,28 @@ DEFUN(send)
   return TRUE;
 }
 
+static int how_table[] = { SHUT_RD, SHUT_WR, SHUT_RDWR };
+
+DEFUN(shutdown)
+{
+  int fd, how;
+  xstartup();
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_cint(argv->cons.car, &fd)) return FALSE;
+  if (!bi_cint(argv->cons.cdr->cons.car, &how)) return FALSE;
+  if (!bi_range(0, how, 2)) return FALSE;
+  shutdown(fd, how_table[how]);
+  *result = object_nil;
+  return TRUE;
+}
+
 DEFUN(close)
 {
   int fd;
   xstartup();
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cint(argv->cons.car, &fd)) return FALSE;
-  xclose(fd);
+  close(fd);
   xcleanup();
   *result = object_nil;
   return TRUE;
