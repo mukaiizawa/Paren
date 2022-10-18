@@ -41,7 +41,7 @@
   ; Same as (send buf 0 (len buf) sock)).
   (send buf 0 (len buf) sock))
 
-(built-in-function closesocket (sock)
+(built-in-function close (sock)
   ; Closes the socket.
   ; Returns nil.
   )
@@ -55,7 +55,7 @@
        (unwind-protect
          (let (,sock (<- ,gsock (server-socket ,port)))
            ,@body)
-         (if ,gsock (closesocket ,gsock))))))
+         (if ,gsock (close ,gsock))))))
 
 (macro with-client-socket ((sock host port) :rest body)
   ; Create a client socket context with the specified host name and port number.
@@ -66,7 +66,7 @@
        (unwind-protect
          (let (,sock (<- ,gsock (client-socket ,host ,port)))
            ,@body)
-         (if ,gsock (closesocket ,gsock))))))
+         (if ,gsock (close ,gsock))))))
 
 (class SocketStream (Object Stream)
   sock pos size buf)
@@ -110,7 +110,7 @@
   (if from size x))
 
 (method SocketStream .close ()
-  (closesocket self->sock))
+  (close self->sock))
 
 (function! main (args)
   true)

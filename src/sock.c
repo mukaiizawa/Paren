@@ -148,7 +148,7 @@ DEFUN(send)
   return TRUE;
 }
 
-DEFUN(closesocket)
+DEFUN(close)
 {
   int fd;
   xstartup();
