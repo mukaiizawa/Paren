@@ -96,14 +96,7 @@
                                    :cycle (list '- '(cycle) cycle-offset)))))))
 
 (macro assert (expr)
-  (if (atom? expr)
-      ;; atom
-      (with-gensyms (result)
-        (list 'let (list result expr)
-              (list 'if result result
-                    (list 'raise 'AssertException
-                          (list 'format "expression: %v" (list 'quote expr))))))
-      ;; cons
+  (if (&& (cons? expr) (if (bound? (car expr)) (! (special-operator? (eval (car expr)))) true))
       (with-gensyms (result argv message)
         (let ((ope :rest args) expr)
           (list 'let (list (list :rest argv) (cons 'list args) result (list 'apply ope argv))
@@ -113,7 +106,12 @@
                                   (list 'quote expr)
                                   (list 'join (list 'map '(f (x) (format "%v -> %v" (car x) (cadr x)))
                                                     (list 'zip (list 'quote args) argv))
-                                        ", ")))))))))
+                                        ", ")))))))
+      (with-gensyms (result)
+        (list 'let (list result expr)
+              (list 'if result result
+                    (list 'raise 'AssertException
+                          (list 'format "expression: %v" (list 'quote expr))))))))
 
 (built-in-function macroexpand-1)
 
