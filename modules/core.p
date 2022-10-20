@@ -972,11 +972,10 @@
   ; The Exception class is the superclass of all exceptions.
   ; It is recommended that new exceptions derive from the Error class or one of its subclasses.
   ; Do not derive from Exception.
-  message status-cd stack-trace)
+  message stack-trace)
 
-(method Exception .init (:opt message :key status-cd)
-  (<- self->message message
-      self->status-cd (|| status-cd 1))
+(method Exception .init (:opt message)
+  (<- self->message message)
   self)
 
 (method Exception .to-s ()
@@ -984,9 +983,6 @@
   (let (class-name (string self->class) msg self->message)
     (if (nil? msg) class-name
         (concat class-name " -- " msg))))
-
-(method Exception .status-cd ()
-  self->status-cd)
 
 (method Exception .stack-trace ()
   ; Returns stack trace.
@@ -1004,10 +1000,6 @@
   ; Dispatched to shut down the Paren system.
   ; In principle, this exception is not caught.
   )
-
-(method SystemExit .init ()
-  (<- self->status-cd 0)
-  self)
 
 (class AssertException (Exception))
 
@@ -2043,7 +2035,7 @@
 (function quit ()
   (raise SystemExit))
 
-(built-in-function exit (status-cd))
+(built-in-function exit)
 
 (function load (file)
   (if (keyword? file) (<- file (str file ".p")))
@@ -2078,9 +2070,7 @@
                 (&& (load script) (bound? 'main) main) (main (cdr args))))))
     (f (e)
       (if (is-a? e SystemExit) (exit 0)
-          (is-a? e Exception) (begin
-                                (.print-stack-trace e)
-                                (exit (.status-cd e)))
+          (is-a? e Exception) (begin (.print-stack-trace e) (exit 1))
           (begin
             (.write-bytes $stderr "uncaught error:")
             (.write $stderr e))))))

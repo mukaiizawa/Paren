@@ -23,7 +23,6 @@ object object_fields;
 object object_Exception;
 object object_message;
 object object_stack_trace;
-object object_status_cd;
 
 int object_hash(object o)
 {

@@ -1149,7 +1149,6 @@ static object new_Error(enum error e, enum error_msg em)
   if ((msg = error_msg(em)) != NULL)
     map_put(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
   map_put(o, object_stack_trace, object_nil);
-  map_put(o, object_status_cd, gc_new_xint(1));
   return o;
 }
 

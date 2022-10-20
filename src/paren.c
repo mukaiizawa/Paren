@@ -179,7 +179,6 @@ static void make_initial_objects(int argc, char *argv[])
   object_Exception = new_symbol("Exception");
   object_message = new_keyword("message");
   object_stack_trace = new_keyword("stack-trace");
-  object_status_cd = new_keyword("status-cd");
   map_put(object_toplevel, new_symbol("$args"), parse_args(argc, argv));
   map_put(object_toplevel, new_symbol("core.p"), new_string(core_fn));
 #if WINDOWS_P
