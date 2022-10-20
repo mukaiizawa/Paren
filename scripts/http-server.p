@@ -9,7 +9,8 @@
 (<- $context-root (path (getcwd)))
 
 (function uri->local-path (uri)
-  (if (! (.readable? (<- uri (car (split uri "?"))
+  (if (! (.readable? (<- uri (str "." uri)
+                         uri (car (split uri "?"))
                          uri (car (split uri "#"))
                          uri (.resolve $context-root (http.decode-url uri))))) (throw '(404))
       uri))
