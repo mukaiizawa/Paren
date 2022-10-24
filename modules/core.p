@@ -801,14 +801,9 @@
 (built-in-function cycle)
 (built-in-function utcoffset)
 (built-in-function sleep)
-
 (built-in-function popen)
 (built-in-function pclose)
-
-(built-in-function system (command)
-  ; Execute host system commands.
-  ; Returns the termination status of the child shell used to execute command.
-  )
+(built-in-function system)
 
 (built-in-function getenv (name)
   ; Looks up the environment variable named name in the environment list and returns value string.

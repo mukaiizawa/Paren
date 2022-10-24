@@ -17,6 +17,7 @@
                           read-char
                           read-line
                           symbol
+                          system
                           timeit
                           write
                           write-byte
