@@ -8,7 +8,7 @@ fopen - open the file.
 # DESCRIPTION
 Opens the `FILE` in the specified `MODE`.
 
-The argument mode can specify bellow value.
+The argument `MODE` can specify bellow value.
 
      0 -- Open file for reading.
      1 -- Open file for writing.
@@ -26,5 +26,6 @@ Returns file poiner for the opened `FILE`.
     nil
 
 # SEE ALSO
-- `fclose(3)`
+- `popen(3)`
+- `pclose(3)`
 - `with-open(3)`

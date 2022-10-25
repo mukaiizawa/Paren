@@ -11,6 +11,8 @@
                           fopen
                           foreach
                           macroexpand
+                          pclose
+                          popen
                           read
                           read-byte
                           read-bytes
