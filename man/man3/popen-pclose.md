@@ -21,6 +21,9 @@ The function `popen` returns a pointer to an open stream that can be used to rea
 
 The function `pclose` returns the `nil`.
 
+# NOTES
+In general, the `with-process` macro is used, so it is not called directly.
+
 # EXAMPLES
 
     ) (let (fp (popen "paren echo foo" 0) line (fgets fp))
