@@ -89,7 +89,7 @@
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "p:") args)
                   root (car args) port (.get-int op "p" 8080))
-    (if (&& root (! (.dir? (<- $context-root (.resolve $context-root root))))) (raise ArgumentError (format "invalid context root: %s" (.to-s $context-root)))
+    (if (&& root (! (.dir? (<- $context-root (.resolve $context-root root))))) (raise ArgumentError "invalid context root: %s" (.to-s $context-root))
         (with-server-socket (server-sock port)
           (printf "Serving HTTP on http://127.0.0.1:%d/\n" port)
           (loop

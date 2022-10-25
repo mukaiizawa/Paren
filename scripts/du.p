@@ -8,7 +8,7 @@
                 (apply + (map (f (file)
                                 (if (.dir? file) (print file (sweep (.children file) (++ level)) level)
                                     (let (size (.size file))
-                                      (if (nil? size) (raise OSError (str "illegal file " (.to-s file)))
+                                      (if (nil? size) (raise OSError "illegal file `%s`" (.to-s file))
                                           all? (print file size level)
                                           size))))
                               files)))

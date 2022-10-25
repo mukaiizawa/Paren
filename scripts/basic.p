@@ -74,7 +74,7 @@
         (.next? self digit?) (list :number (.skip-number self))
         (.next? self alpha?) (.lex-identifier self)
         (in? (symbol next) $operators) (symbol (.skip self))
-        (raise SyntaxError (str "illegal token " next)))))
+        (raise SyntaxError "illegal token `%s`" next))))
 
 (method BasicLexer .lex ()
   (let ((key :opt val) (->list (.lex0 self)))
@@ -84,7 +84,7 @@
 
 (function get-token (rd :opt expected)
   (let (token (if (nil? $token) (.lex rd) (pop! $token)))
-    (if (&& expected (!= token expected)) (raise SyntaxError (str "unexpected token " token " expected " expected))
+    (if (&& expected (!= token expected)) (raise SyntaxError "unexpected token: `%s`, expected: `%s`" token expected)
         token)))
 
 (function get-token-value (rd)
@@ -165,7 +165,7 @@
         (== token :number) (parse-number rd)
         (== token :string) (parse-string rd)
         (in? token $functions) (cons (get-token rd) (parse-paren rd (f (rd) (parse-csv rd parse-expr))))
-        (raise SyntaxError (str "unknown token " token)))))
+        (raise SyntaxError "unknown token `%s`" token))))
 
 (function parse-expr (rd)
   (parse-0 rd))
@@ -301,7 +301,7 @@
         (in? stmt '(GOTO GOSUB)) (parse-goxx rd stmt)
         (in? stmt '(END RETURN STOP)) (list stmt)
         (== stmt :identifier) (begin (unget-token stmt) (parse-let rd))    ; implicit let.
-        (raise SyntaxError (str "unknown statement " stmt (get-token-value rd))))))
+        (raise SyntaxError "unknown statement %v %s" stmt (get-token-value rd)))))
 
 (function parse-line (x)
   (let ((line-no line) x)
@@ -321,7 +321,7 @@
   (dotimes (i (len $code))
     (let ((line-no :rest stmts) ([] $code i))
       (if (= lno line-no) (return i))))
-  (raise ArgumentError (str "missing code:" lno)))
+  (raise ArgumentError "missing code `%s`" lno))
 
 (function basic-string-var? (name)
   (= (last (list... (str name))) "$"))
@@ -479,7 +479,7 @@
         (basic-write "\nINPUT> ")
         (let (vals (split (upper (read-line)) ",") vlen (len vals))
           (if (!= (len vars) vlen)
-              (raise Error (str "require " (len vars) " arguments, given " vlen " arguments")))
+              (raise Error "require `%d` arguments, given `%v` arguments" (len vars) vlen)))
           (dotimes (i vlen)
             (let (var ([] vars i))
               (basic-assign ([] vars i) ([] vals i)))))

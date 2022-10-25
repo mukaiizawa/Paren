@@ -154,7 +154,7 @@
 (method HTTPStream .write-start-line (message)
   (if (is-a? message HTTPRequest) (.write-line self (.request-line message))
       (is-a? message HTTPResponse) (.write-line self (.status-line message))
-      (raise ArgumentError (format "%v is not a HTTPMessage" message))))
+      (raise ArgumentError "`%v` is not a HTTPMessage" message)))
 
 (method HTTPStream .write-headers (message)
   (dolist (header (.headers message))

@@ -87,7 +87,7 @@
                    (let (ch (next-ch rd) next-branch (select1 (f (y) (= (car y) ch)) x))
                      (if next-branch (step (cdr next-branch) (cons (car next-branch) acc))
                          (nil? ch) (raise EOFError "unexpected EOF")
-                         (raise SyntaxError (str "unknown instruction " (reverse (cons ch acc)))))))))
+                         (raise SyntaxError "unknown instruction `%v`" (reverse (cons ch acc))))))))
     (if (peek-ch rd) (step $IMP))))
 
 (function parse (rd)
@@ -105,7 +105,7 @@
 
 (function ws-apply (inst req fx)
   (if (<= req (len $stack)) (fx)
-      (raise StateError (str inst "/not enough elements on the stack"))))
+      (raise StateError "%v/not enough elements on the stack" inst)))
 
 (function ws-apply-binary (inst fx)
   (ws-apply inst 2 (f () (let (x (pop! $stack) y (pop! $stack)) (push! (fx y x) $stack)))))
@@ -128,7 +128,7 @@
             (begin
               (<- ip i)
               (break)))))
-    (if (nil? ip) (raise StateError (str inst "/missing label")))
+    (if (nil? ip) (raise StateError "%v/missing label" inst))
     (ws-apply inst req (f () (fx ip)))
     (when cond
       (<- $ip ip)

@@ -34,7 +34,7 @@
                   (begin
                     (while (<- child (.read-element self))
                       (if (= name child) (break)
-                          (symbol? child) (raise SyntaxError (str "unexpected close tag " child " expected " name))
+                          (symbol? child) (raise SyntaxError "unexpected close tag: %v, expected: %v" child name)
                           (push! child children)))
                     (concat val (reverse! children)))))))))
 

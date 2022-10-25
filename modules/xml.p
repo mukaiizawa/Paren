@@ -97,12 +97,12 @@
         (= ch "/") (begin
                      (.skip self)
                      (let (name (.read-ident self))
-                       (if (!= (.skip self) ">") (raise SyntaxError (str "missing close tag " name " '>'"))
+                       (if (!= (.skip self) ">") (raise SyntaxError "missing `>`")
                            (list :close name))))
         (let (type :open name (.read-ident self) attrs (.read-attrs self))
           (<- ch (.skip (.skip-space self)))
           (if (= ch "/") (<- type :single ch (.skip self)))
-          (if (!= ch ">") (raise SyntaxError (str "missing close tag " (list name attrs) " '>'"))
+          (if (!= ch ">") (raise SyntaxError "missing `>`")
               (list type (list name attrs)))))))
 
 (method XML.Reader .text-node? ()
@@ -123,7 +123,7 @@
             (in? type '(:close :single)) val    ; make sense
             (let (name (car val) node nil children nil)
               (while (!== name (<- node (.read-element self)))
-                (if (symbol? node) (raise SyntaxError (str "unexpected close tag " node " expected " name))
+                (if (symbol? node) (raise SyntaxError "unexpected close tag: `%v`, expected: `%v`" node name)
                     (push! node children)))
               (concat val (reverse! children)))))))
 

@@ -101,17 +101,15 @@
         (let ((ope :rest args) expr)
           (list 'let (list (list :rest argv) (cons 'list args) result (list 'apply ope argv))
                 (list 'if result result
-                      (list 'raise 'AssertException
-                            (list 'format "expression: %v, evaluated: %s"
-                                  (list 'quote expr)
-                                  (list 'join (list 'map '(f (x) (format "%v -> %v" (car x) (cadr x)))
-                                                    (list 'zip (list 'quote args) argv))
-                                        ", ")))))))
+                      (list 'raise 'AssertException "expression: %v, evaluated: %s"
+                            (list 'quote expr)
+                            (list 'join (list 'map '(f (x) (format "%v -> %v" (car x) (cadr x)))
+                                              (list 'zip (list 'quote args) argv))
+                                  ", "))))))
       (with-gensyms (result)
         (list 'let (list result expr)
               (list 'if result result
-                    (list 'raise 'AssertException
-                          (list 'format "expression: %v" (list 'quote expr))))))))
+                    (list 'raise 'AssertException "expression: %v" (list 'quote expr)))))))
 
 (built-in-function macroexpand-1)
 
@@ -127,7 +125,7 @@
                          (if (cdr x) (cons (ignore (car x))
                                            (cons (macroexpand (cadr x) :ignores ignores)
                                                  (expand2 (cddr x))))
-                             x (raise SyntaxError (format "missing value for `%v`, expression `%v`" (car x) expr)))))
+                             x (raise SyntaxError "missing value for `%v`, expression `%v`" (car x) expr))))
     (if (! (cons? expr)) expr
         (let ((ope :rest args) expr)
           (if (in? ope ignores) (cons ope (expand1 args))
@@ -143,7 +141,7 @@
 (macro function (name args :rest body)
   (let (expand-body (f (x) (if x (cons (macroexpand (car x)) (expand-body (cdr x))))))
     (list 'if
-          (list 'bound? (list 'quote name)) '(raise ArgumentError "symbol already bound")
+          (list 'bound? (list 'quote name)) (list 'raise 'ArgumentError "function name `%v` already bound" (list quote name))
           (list '<- name (cons 'f (cons args (expand-body body)))) (list 'quote name))))
 
 ;; fundamental function.
@@ -731,7 +729,7 @@
                                                              :upper? (upper? conv)
                                                              :padding precision))))
                             (format1 flags width prefix val))
-                          (raise ArgumentError (str "unexpected conversion specifier " conv)))
+                          (raise ArgumentError "unexpected conversion specifier `%v`" conv))
                       (<- args (cdr args)))))))
         (if args (raise ArgumentError "too many arguments"))))))
 
@@ -872,10 +870,10 @@
                      gfeatures (list 'quote features)
                      gfields (list 'quote fields))
           (list 'if
-                (list 'bound? gcls-sym) '(raise ArgumentError "symbol already bound")
-                (list '! (list 'bound? gsuper)) '(raise ArgumentError "undefined super class")
-                (list '! (list 'every? 'bound? gfeatures)) '(raise ArgumentError "undefined feature class")
-                (list '! (list 'every? 'symbol? gfields)) '(raise ArgumentError "invalid fields")
+                (list 'bound? gcls-sym) (list 'raise 'ArgumentError "class name `%v` already bound" gcls-sym)
+                (list '! (list 'bound? gsuper)) (list 'raise 'ArgumentError "undefined super class `%v`" gsuper)
+                (list '! (list 'every? 'bound? gfeatures)) (list 'raise 'ArgumentError "any feature classes `%v` is undefined" gfeatures)
+                (list '! (list 'every? 'symbol? gfields)) (list 'raise 'ArgumentError "any fields `%v` is not symbol" gfields)
                 (cons 'begin
                       (cons (list '<- cls-sym '(dict))
                             (map (f (k v) (list '[] cls-sym k v))
@@ -892,8 +890,8 @@
   ; Returns method symbol.
   (let (global-method-name (concat cls-sym method-sym))
     (list 'if
-          (list '! (list 'find-class (list 'quote cls-sym))) '(raise ArgumentError "class not found")
-          (list 'bound? (list 'quote global-method-name)) '(raise ArgumentError "symbol already bound")
+          (list '! (list 'find-class (list 'quote cls-sym))) (list 'raise 'ArgumentError "class `%v` not found" (list 'quote cls-sym))
+          (list 'bound? (list 'quote global-method-name)) (list 'raise 'ArgumentError "method name `%v` already bound" (list 'quote global-method-name))
           (list 'with-arrow-syntax
                 (list 'function! method-sym '(self :rest args)
                       (list 'apply
@@ -1175,8 +1173,8 @@
   self)
 
 (method Path .rename (to)
-  (if (.none? self) (raise ArgumentError (format "missing file `%s`" (.to-s self)))
-      (! (.none? (<- to (path to)))) (raise ArgumentError (format "file `%s` already exists" (.to-s to)))
+  (if (.none? self) (raise ArgumentError "missing file `%s`" (.to-s self))
+      (! (.none? (<- to (path to)))) (raise ArgumentError "file `%s` already exists" (.to-s to))
       (.dir? self) (dolist (file (.children self))
                      (.rename file (.resolve to (.name file))))
       (let (dir (.parent to))
@@ -1654,7 +1652,7 @@
   ; Error if expected is specified and the next character is not the same as the expected.
   (let (next self->next)
     (if (nil? next) (raise EOFError "unexpected EOF")
-        (&& expected (!= next expected)) (raise StateError (str "unexpected character '" next "`"))
+        (&& expected (!= next expected)) (raise StateError "unexpected character `%s`" next)
         (= next "\n") (<- self->lineno (++ self->lineno)))
     (<- self->next (.read-char self->stream))
     next))
@@ -1885,10 +1883,10 @@
         (raise SyntaxError))))
 
 (macro unquote (expr)
-  (list 'raise 'SyntaxError (str "unexpected unquote -- ," expr)))
+  (list 'raise 'SyntaxError "unexpected unquote -- ,%v" expr))
 
 (macro unquote-splicing (expr)
-  (list 'raise 'SyntaxError (str "unexpected unquote-splicing -- ,@" expr)))
+  (list 'raise 'SyntaxError "unexpected unquote-splicing -- ,@%v" expr))
 
 (macro quasiquote (expr)
   (let (descend
@@ -2025,7 +2023,9 @@
 
 (function raise (cls :rest args)
   ; Throw the cls Class instance which initialized with argument args.
-  (throw (apply .init (cons (.new cls) args))))
+  (let (e (.new cls))
+    (throw (if (nil? args) e
+               (.init e (apply format args))))))
 
 (function quit ()
   (raise SystemExit))
@@ -2042,7 +2042,7 @@
   (if (in? key $import) key
       (let ($G-module (.resolve (if dir (path dir) (.resolve $paren-home "modules"))
                                 (concat (string key) ".p")))
-        (if (! (.file? $G-module)) (raise OSError (str "unreadable module " (.to-s $G-module)))
+        (if (! (.file? $G-module)) (raise OSError "unreadable module `%s`" (.to-s $G-module))
             (begin
               (load $G-module)
               (<- main nil)
@@ -2061,7 +2061,7 @@
                                                             (map (f (x) (apply .resolve x))
                                                                  (product (cons (path (getcwd)) $runtime-path)
                                                                           (list file-name (.suffix file-name "p"))))))
-            (if (nil? script) (raise ArgumentError (str "unreadable file " (.to-s file-name)))
+            (if (nil? script) (raise ArgumentError "unreadable file `%s`" (.to-s file-name))
                 (&& (load script) (bound? 'main) main) (main (cdr args))))))
     (f (e)
       (if (is-a? e SystemExit) (exit 0)

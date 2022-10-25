@@ -17,7 +17,7 @@
 
 (method OptionParser .lookup (opt)
   (let (record (select1 (f (x) (= opt (car x))) self->table))
-    (if (nil? record) (raise ArgumentError (format "unknown option `%s`, available options are %v" opt (sort! (map car self->table) :key lower)))
+    (if (nil? record) (raise ArgumentError "unknown option `%s`, available options are %v" opt (sort! (map car self->table) :key lower))
         record)))
 
 (method OptionParser .parse (args)
@@ -31,11 +31,11 @@
             (let (record (.lookup self ([] arg i))
                          (opt optarg? optval) record
                          put (f (record val) (car! (cddr record) val)))
-              (if optval (raise SyntaxError (str "duplicate option " opt))
+              (if optval (raise SyntaxError "duplicate option `%v`" opt)
                   (nil? optarg?) (begin (put record true) (continue))
                   (< (++ i) end) (begin (put record (slice arg (++ i))) (break))
                   (<- args (cdr args)) (begin (put record (car args)) (break))
-                  (raise SyntaxError (str "required option argument of " opt))))))
+                  (raise SyntaxError "required option argument of `%v`" opt)))))
       (<- args (cdr args))))
   (list self args))
 

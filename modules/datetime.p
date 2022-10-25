@@ -170,9 +170,9 @@
   ; Return proleptic Gregorian ordinal for the year, month and day.
   ; January 1 of year 1 is day 1.
   ; based on Zeller's congruence.
-  (if (! (<= 0 year)) (raise ArgumentError (format "invalid year `%d`" month))
-      (! (<= 1 month 12)) (raise ArgumentError (format "invalid month `%d`" month))
-      (! (<= 0 day 31)) (raise ArgumentError (format "invalid day `%d`" day))
+  (if (! (<= 0 year)) (raise ArgumentError "invalid year `%d`" month)
+      (! (<= 1 month 12)) (raise ArgumentError "invalid month `%d`" month)
+      (! (<= 0 day 31)) (raise ArgumentError "invalid day `%d`" day)
       (<= month 2) (<- year (-- year) month (+ month 12)))
   (+ (* 365 year) (// year 4) (- (// year 100)) (// year 400)
      (// (* 306 (++ month)) 10)

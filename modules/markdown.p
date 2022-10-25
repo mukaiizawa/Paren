@@ -114,7 +114,7 @@
                                 (.skip self))))
       (skip-quote)
       (while (!= (<- ch (.peek-char self->stream)) quote)
-        (if (nil? ch) (raise SyntaxError (str "missing " quote))
+        (if (nil? ch) (raise SyntaxError "missing quote `%v`" quote)
             (.write-bytes text (.read-char self->stream))))
       (skip-quote))))
 

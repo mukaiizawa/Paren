@@ -67,7 +67,7 @@
           (let (vals (split (re.replace expr (pop! lines) "")))
             (dotimes (j $size)
               (let (val (pop! vals))
-                (if (nil? val) (raise ArgumentError (list "illegal line" vals))
+                (if (nil? val) (raise ArgumentError "illegal line `%s`" vals)
                     (.put $board (list i j) (&& (! (space? val)) (int val))))))))))))
 
 (function! main (args)
