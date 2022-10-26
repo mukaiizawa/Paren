@@ -10,6 +10,7 @@
                           fgets
                           fopen
                           foreach
+                          load
                           macroexpand
                           pclose
                           popen

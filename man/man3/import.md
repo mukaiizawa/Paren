@@ -12,6 +12,8 @@ If `DIR` is omitted, read from `$paren-home/modules`.
 
 If the `MODULE` has already been loaded, nothing is done, so calling the `MODULE` with the same name multiple times will work properly.
 
+See also `load(3)` for side effects, since it is called internally.
+
 # RETURN VALUE
 Returns the `MODULE`.
 
@@ -25,5 +27,4 @@ The symbol `main(3)` is bound to `nil` so that the `main` function is not execut
 
 # SEE ALSO
 - `load(3)`
-- `main(3)`
 - `module(7)`

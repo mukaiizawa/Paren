@@ -2,10 +2,11 @@
 
 ;; Inspired by Python.
 
-(write-line "
+(function paren.startup ()
+  (write-line "
 The Paren philosophy, by Shintaro Mukai.
     Practical simplicity.
-")
+"))
 
 (function! main (args)
   (quit))

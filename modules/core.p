@@ -2033,19 +2033,20 @@
 (built-in-function exit)
 
 (function load (file)
-  (if (keyword? file) (<- file (str file ".p")))
+  (<- main nil startup nil cleanup nil)
   (with-open ($in file :read)
-    (foreach eval (collect read))
-    true))
+    (foreach eval (collect read)))
+  (if startup (apply startup nil))
+  (if cleanup (push! cleanup $on-quit))
+  main)
 
 (function import (key :opt dir)
   (if (in? key $import) key
-      (let ($G-module (.resolve (if dir (path dir) (.resolve $paren-home "modules"))
-                                (concat (string key) ".p")))
-        (if (! (.file? $G-module)) (raise OSError "unreadable module `%s`" (.to-s $G-module))
+      (let (module (if (nil? dir) (.resolve $paren-home (str "modules/" key ".p"))
+                       (.resolve dir (str key ".p"))))
+        (if (! (.file? module)) (raise OSError "unreadable module `%s`" (.to-s module))
             (begin
-              (load $G-module)
-              (<- main nil)
+              (load module)
               (push! key $import))))))
 
 (function boot (args)
@@ -2054,15 +2055,18 @@
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
   ; Can be omitted if the script file has a `p` extension.
   (catch
-    (begin
-      (if (.file? $parenrc) (load $parenrc))
-      (if (nil? args) (repl)
-          (let (file-name (path (car args)) script (select1 .file?
-                                                            (map (f (x) (apply .resolve x))
-                                                                 (product (cons (path (getcwd)) $runtime-path)
-                                                                          (list file-name (.suffix file-name "p"))))))
-            (if (nil? script) (raise ArgumentError "unreadable file `%s`" (.to-s file-name))
-                (&& (load script) (bound? 'main) main) (main (cdr args))))))
+    (unwind-protect
+      (begin
+        (if (.file? $parenrc) (load $parenrc))
+        (if (nil? args) (repl)
+            (let (name (path (car args)) script (select1 .file?
+                                                         (map (f (x) (apply .resolve x))
+                                                              (product (cons (path (getcwd)) $runtime-path)
+                                                                       (list name (.suffix name "p"))))))
+              (if (nil? script) (raise ArgumentError "unreadable file `%s`" (.to-s name))
+                  (load script) (main (cdr args))))))
+      (foreach (f (x) (apply x nil))
+               $on-quit))
     (f (e)
       (if (is-a? e SystemExit) (exit 0)
           (is-a? e Exception) (begin (.print-stack-trace e) (exit 1))
@@ -2076,7 +2080,8 @@
     ($in $out) (list $stdin $stdout)
     $paren-home (.parent (.parent (.resolve (path (getcwd)) core.p)))    ; only the runtime knows if the `core.p` is a relative or absolute path.
     $parenrc (path "~/.parenrc")
-    $runtime-path (map (f (p) (.resolve $paren-home p)) '("scripts")))
+    $runtime-path (map (f (p) (.resolve $paren-home p)) '("scripts"))
+    $on-quit nil)
 
 (reader-macro "<" (reader)
   ; Define bytes literal reader.

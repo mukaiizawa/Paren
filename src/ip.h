@@ -19,7 +19,6 @@ enum error {
 
 enum error_msg {
   bi_buf_msg,
-  assert_failed,
   built_in_failed,
   clip_failed,
   connection_failed,
@@ -44,6 +43,7 @@ enum error_msg {
   fseek_failed,
   ftell_failed,
   fwrite_failed,
+  getaddrinfo_failed,
   gethostname_failed,
   incomplete_utf8_byte_sequence,
   index_out_of_range,
@@ -62,7 +62,8 @@ enum error_msg {
   undeclared_class,
   undeclared_keyword_param,
   unexpected_keyword_parameter,
-  unexpected_mode,
+  unknown_af_family,
+  unknown_socktype,
   unexpected_utf8_leading_byte,
   error_msg_nil
 };

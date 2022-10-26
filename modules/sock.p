@@ -1,10 +1,19 @@
 ; socket module.
 
-(if (! (bound? 'client-socket)) (raise StateError "Requires sock option at compile time"))
-
 (<- $sock.SHUT_RD 0
     $sock.SHUT_WR 1
     $sock.SHUT_RDWR 2)
+
+(function! startup ()
+  (if (! (bound? 'sock._startup)) (raise StateError "Requires sock option at compile time")
+      (sock._startup)))
+
+(function! cleanup ()
+  (sock._cleanup))
+
+(built-in-function getaddrinfo ()
+  ; Return the host/port argument as a list containing all arguments necessary to create a socket to connect to that service.
+  )
 
 (built-in-function gethostname ()
   ; Returns the local host name.

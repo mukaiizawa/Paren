@@ -96,6 +96,7 @@ static char *error_msg(enum error_msg em) {
     case fseek_failed: return "fseek failed";
     case ftell_failed: return "ftell failed";
     case fwrite_failed: return "fwrite failed";
+    case getaddrinfo_failed: return "getaddrinfo failed";
     case gethostname_failed: return "gethostname failed";
     case incomplete_utf8_byte_sequence: return "incomplete utf8 byte sequence";
     case index_out_of_range: return "index out of range";
@@ -105,6 +106,7 @@ static char *error_msg(enum error_msg em) {
     case readdir_failed: return "readdir failed";
     case recv_failed: return "recv failed";
     case send_failed: return "send failed";
+    case socket_startup_failed: return "socket startup failed";
     case stack_over_flow: return "stack over flow";
     case stat_failed: return "stat failed";
     case too_few_arguments: return "too few arguments";
@@ -113,6 +115,8 @@ static char *error_msg(enum error_msg em) {
     case undeclared_class: return "undeclared class";
     case undeclared_keyword_param: return "undeclared keyword parameter";
     case unexpected_keyword_parameter: return "unexpected keyword parameter";
+    case unknown_af_family: return "unknown address family";
+    case unknown_socktype: return "unknown socket type";
     case unexpected_utf8_leading_byte: return "unexpected utf8 leading byte";
     default: xassert(FALSE); return NULL;
   }
