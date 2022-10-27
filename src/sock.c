@@ -39,7 +39,7 @@ DEFUN(gethostname)
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   if (gethostname(buf, MAX_STR_LEN) != 0)
     return ip_throw(OSError, gethostname_failed);
-  *result = gc_new_mem_from(STRING, buf, strlen(buf));
+  *result = gc_new_mem_from_cstr(STRING, buf);
   return TRUE;
 }
 

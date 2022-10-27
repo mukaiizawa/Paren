@@ -32,6 +32,6 @@ DEFUN(iconv_2e_encode)
     enc0 = XICONV_UTF8;
   } else if (!object_to_encoding(argv->cons.cdr->cons.car, &enc1)) return FALSE;
   if (!xiconv(enc0, enc1, s0, &s1)) return FALSE;
-  *result = gc_new_mem_from(STRING, s1, strlen(s1));
+  *result = gc_new_mem_from_cstr(STRING, s1);
   return TRUE;
 }

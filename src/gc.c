@@ -186,6 +186,11 @@ object gc_new_mem_from(int type, char *val, int size)
   }
 }
 
+object gc_new_mem_from_cstr(int type, char *cstr)
+{
+  return gc_new_mem_from(type, cstr, strlen(cstr));
+}
+
 static object new_array(int size)
 {
   object o;

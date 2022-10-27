@@ -1149,9 +1149,9 @@ static object new_Error(enum error e, enum error_msg em)
   object o;
   o = gc_new_dict();
   err = error_name(e);
-  map_put(o, object_class, gc_new_mem_from(SYMBOL, err, strlen(err)));
+  map_put(o, object_class, gc_new_mem_from_cstr(SYMBOL, err));
   if ((msg = error_msg(em)) != NULL)
-    map_put(o, object_message, gc_new_mem_from(STRING, msg, strlen(msg)));
+    map_put(o, object_message, gc_new_mem_from_cstr(STRING, msg));
   map_put(o, object_stack_trace, object_nil);
   return o;
 }

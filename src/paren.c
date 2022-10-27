@@ -106,32 +106,17 @@ static object load(void)
   return o;
 }
 
-static object new_symbol(char *name)
-{
-  return gc_new_mem_from(SYMBOL, name, strlen(name));
-}
-
-static object new_keyword(char *name)
-{
-  return gc_new_mem_from(KEYWORD, name, strlen(name));
-}
-
-static object new_string(char *name)
-{
-  return gc_new_mem_from(STRING, name, strlen(name));
-}
-
 static void make_built_in(void)
 {
   int i;
   char buf[MAX_STR_LEN];
   object o;
   for (i = 0; bi_as_symbol_name(special_name_table[i], buf) != NULL; i++) {
-    o = gc_new_native(SPECIAL, new_symbol(buf), special_table[i]);
+    o = gc_new_native(SPECIAL, gc_new_mem_from_cstr(SYMBOL, buf), special_table[i]);
     map_put(object_toplevel, o->native.name, o);
   }
   for (i = 0; bi_as_symbol_name(function_name_table[i], buf) != NULL; i++) {
-    o = gc_new_native(BFUNC, new_symbol(buf), function_table[i]);
+    o = gc_new_native(BFUNC, gc_new_mem_from_cstr(SYMBOL, buf), function_table[i]);
     map_put(object_toplevel, o->native.name, o);
   }
 }
@@ -148,12 +133,12 @@ static object parse_args(int argc, char *argv[])
   while (argc-- > 1) {
     if (!xiconv_wc2mb(XICONV_UTF8, wc_args[argc], &mb_arg))
       xerror("parse_args/failed.");
-    o = gc_new_cons(new_string(mb_arg), o);
+    o = gc_new_cons(gc_new_mem_from_cstr(STRING, mb_arg), o);
   }
   LocalFree(wc_args);
 #else
   o = object_nil;
-  while (argc-- > 1) o = gc_new_cons(new_string(argv[argc]), o);
+  while (argc-- > 1) o = gc_new_cons(gc_new_mem_from_cstr(STRING, argv[argc]), o);
 #endif
   return o;
 }
@@ -161,26 +146,26 @@ static object parse_args(int argc, char *argv[])
 static void make_initial_objects(int argc, char *argv[])
 {
   char *host_name;
-  object_nil = new_symbol("nil");
-  object_true = new_symbol("true");
+  object_nil = gc_new_mem_from_cstr(SYMBOL, "nil");
+  object_true = gc_new_mem_from_cstr(SYMBOL, "true");
   object_toplevel = gc_new_env(object_nil, 1 << 11);
   map_put(object_toplevel, object_nil, object_nil);
   map_put(object_toplevel, object_true, object_true);
-  object_key = new_keyword("key");
-  object_opt = new_keyword("opt");
-  object_rest = new_keyword("rest");
-  object_quote = new_symbol("quote");
-  object_Class = new_symbol("Class");
-  object_class = new_keyword("class");
-  object_symbol = new_keyword("symbol");
-  object_super = new_keyword("super");
-  object_features = new_keyword("features");
-  object_fields = new_keyword("fields");
-  object_Exception = new_symbol("Exception");
-  object_message = new_keyword("message");
-  object_stack_trace = new_keyword("stack-trace");
-  map_put(object_toplevel, new_symbol("$args"), parse_args(argc, argv));
-  map_put(object_toplevel, new_symbol("core.p"), new_string(core_fn));
+  object_key = gc_new_mem_from_cstr(KEYWORD, "key");
+  object_opt = gc_new_mem_from_cstr(KEYWORD, "opt");
+  object_rest = gc_new_mem_from_cstr(KEYWORD, "rest");
+  object_quote = gc_new_mem_from_cstr(SYMBOL, "quote");
+  object_Class = gc_new_mem_from_cstr(SYMBOL, "Class");
+  object_class = gc_new_mem_from_cstr(KEYWORD, "class");
+  object_symbol = gc_new_mem_from_cstr(KEYWORD, "symbol");
+  object_super = gc_new_mem_from_cstr(KEYWORD, "super");
+  object_features = gc_new_mem_from_cstr(KEYWORD, "features");
+  object_fields = gc_new_mem_from_cstr(KEYWORD, "fields");
+  object_Exception = gc_new_mem_from_cstr(SYMBOL, "Exception");
+  object_message = gc_new_mem_from_cstr(KEYWORD, "message");
+  object_stack_trace = gc_new_mem_from_cstr(KEYWORD, "stack-trace");
+  map_put(object_toplevel, gc_new_mem_from_cstr(SYMBOL, "$args"), parse_args(argc, argv));
+  map_put(object_toplevel, gc_new_mem_from_cstr(SYMBOL, "core.p"), gc_new_mem_from_cstr(STRING, core_fn));
 #if WINDOWS_P
   host_name = "windows";
 #elif OS_CODE == OS_LINUX
@@ -192,7 +177,7 @@ static void make_initial_objects(int argc, char *argv[])
 #else
   xassert(FALSE);
 #endif
-  map_put(object_toplevel, new_symbol("$hostname"), new_keyword(host_name));
+  map_put(object_toplevel, gc_new_mem_from_cstr(SYMBOL, "$hostname"), gc_new_mem_from_cstr(KEYWORD, host_name));
   make_built_in();
 }
 

@@ -44,7 +44,7 @@ static int clip_paste(object *result)
   if ((ansi_text = GlobalLock(h)) == NULL) return FALSE;
   if (!CloseClipboard()) return FALSE;
   if (!xiconv(XICONV_ANSI, XICONV_UTF8, ansi_text, &text)) return FALSE;
-  *result = gc_new_mem_from(STRING, text, strlen(text));
+  *result = gc_new_mem_from_cstr(STRING, text);
   return TRUE;
 }
 

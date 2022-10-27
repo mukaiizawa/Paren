@@ -9,6 +9,7 @@ extern object gc_new_cons(object car, object cdr);
 extern object gc_copy_cons(object o, object *tail);
 extern object gc_new_mem(int type, int size);
 extern object gc_new_mem_from(int type, char *val, int size);
+extern object gc_new_mem_from_cstr(int type, char *cstr);
 extern object gc_new_array(int size);
 extern object gc_new_array_from(object *o, int size);
 extern object gc_new_dict(void);

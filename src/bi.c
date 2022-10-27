@@ -2064,7 +2064,7 @@ DEFUN(getcwd)
   char buf[MAX_STR_LEN];
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   pf_getcwd(buf);
-  *result = gc_new_mem_from(STRING, buf, strlen(buf));
+  *result = gc_new_mem_from_cstr(STRING, buf);
   return TRUE;
 }
 
@@ -2207,7 +2207,7 @@ DEFUN(getenv)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv, &s)) return FALSE;
   if ((s = getenv(s)) == NULL) *result = object_nil;
-  else *result = gc_new_mem_from(STRING, s, strlen(s));
+  else *result = gc_new_mem_from_cstr(STRING, s);
   return TRUE;
 }
 
