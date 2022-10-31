@@ -802,18 +802,8 @@
 (built-in-function popen)
 (built-in-function pclose)
 (built-in-function system)
-
-(built-in-function getenv (name)
-  ; Looks up the environment variable named name in the environment list and returns value string.
-  ; Returns nil if not found.
-  )
-
-(built-in-function putenv (name value)
-  ; Add environment variables or change values.
-  ; If name does not exist in the environment, name-value is added to the environment.
-  ; If name exists in the environment, the value of name is changed to value.
-  ; Returns nil.
-  )
+(built-in-function getenv)
+(built-in-function putenv)
 
 ;; Paren object system.
 
