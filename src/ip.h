@@ -70,4 +70,4 @@ enum error_msg {
 
 extern int ip_throw(enum error e, enum error_msg em);
 extern void ip_mark_object(void);
-extern void ip_start(object args);
+extern int ip_start(object args);

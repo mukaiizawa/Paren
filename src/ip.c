@@ -686,6 +686,12 @@ static void pop_throw_frame(void)
 
 // fundamental built in functions
 
+DEFUN(cycle)
+{
+  dr = gc_new_xint(cycle);
+  return TRUE;
+}
+
 DEFUN(eval)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -836,21 +842,6 @@ DEFUN(find_2d_method)
       return ip_throw(StateError, unbound_symbol);
     cls_sym = map_get(cls, object_symbol);
   }
-}
-
-DEFUN(cycle)
-{
-  dr = gc_new_xint(cycle);
-  return TRUE;
-}
-
-DEFUN(exit)
-{
-  int sc;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cint(argv->cons.car, &sc)) return FALSE;
-  exit(sc);
-  return TRUE;
 }
 
 // special operator
@@ -1237,7 +1228,7 @@ void ip_mark_object(void)
   gc_mark(object_message);
 }
 
-void ip_start(object args)
+int ip_start(object args)
 {
   sp = 0;
   fp = -1;
@@ -1246,4 +1237,6 @@ void ip_start(object args)
   ip_trap_code = TRAP_NONE;
   intr_init();
   ip_main(args);
+  if (sint_p(dr)) return sint_val(dr);
+  return 1;
 }

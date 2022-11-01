@@ -982,7 +982,13 @@
 (class SystemExit (Exception)
   ; Dispatched to shut down the Paren system.
   ; In principle, this exception is not caught.
-  )
+  status-cd)
+
+(method SystemExit .status-cd (:opt val)
+  (if (nil? val) (|| self->status-cd 0)
+      (begin
+        (<- self->status-cd val)
+        self)))
 
 (class AssertException (Exception))
 
@@ -2017,10 +2023,12 @@
     (throw (if (nil? args) e
                (.init e (apply format args))))))
 
-(function quit ()
-  (raise SystemExit))
+(function exit (status-cd)
+  (if (! (byte? status-cd)) (raise ArgumentError "invalid status cd: %v" status-cd)
+      (throw (.status-cd (.new SystemExit) status-cd))))
 
-(built-in-function exit)
+(function quit ()
+  (exit 0))
 
 (function load (file)
   (<- main nil startup nil cleanup nil)
@@ -2044,25 +2052,30 @@
   ; Invoke repl if there are no command line arguments that bound to the symbol $args.
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
   ; Can be omitted if the script file has a `p` extension.
-  (catch
+  (let (status-cd 0 on-error (f (e)
+                               (if (is-a? e SystemExit) (<- status-cd (.status-cd e))
+                                   (is-a? e Exception) (begin (<- status-cd 1) (.print-stack-trace e))
+                                   (begin
+                                     (<- status-cd 1)
+                                     (.write-bytes $stderr "uncaught error:")
+                                     (.write $stderr e)))))
     (unwind-protect
-      (begin
-        (if (.file? $parenrc) (load $parenrc))
-        (if (nil? args) (repl)
-            (let (name (path (car args)) script (select1 .file?
-                                                         (map (f (x) (apply .resolve x))
-                                                              (product (cons (path (getcwd)) $runtime-path)
-                                                                       (list name (.suffix name "p"))))))
-              (if (nil? script) (raise ArgumentError "unreadable file `%s`" (.to-s name))
-                  (load script) (main (cdr args))))))
-      (foreach (f (x) (apply x nil))
-               $on-quit))
-    (f (e)
-      (if (is-a? e SystemExit) (exit 0)
-          (is-a? e Exception) (begin (.print-stack-trace e) (exit 1))
-          (begin
-            (.write-bytes $stderr "uncaught error:")
-            (.write $stderr e))))))
+      (catch
+        (begin
+          (if (.file? $parenrc) (load $parenrc))
+          (if (nil? args) (repl)
+              (let (name (path (car args)) script (select1 .file?
+                                                           (map (f (x) (apply .resolve x))
+                                                                (product (cons (path (getcwd)) $runtime-path)
+                                                                         (list name (.suffix name "p"))))))
+                (if (nil? script) (raise ArgumentError "unreadable file `%s`" (.to-s name))
+                    (load script) (main (cdr args))))))
+        on-error)
+      (catch
+        (foreach (f (x) (apply x nil))
+                 $on-quit)
+        on-error))
+    status-cd))
 
 (<- $import '(:core)
     $read-table (dict)

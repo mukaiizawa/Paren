@@ -209,6 +209,5 @@ int main(int argc, char *argv[])
   core_fn = strcat(buf, "modules/core.p");
   gc_init();
   make_initial_objects(argc, argv);
-  ip_start(load());
-  return 0;
+  return ip_start(load());
 }

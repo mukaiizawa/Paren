@@ -5,18 +5,19 @@
 (<- $root (.mkdir (path "./wk"))
     $ignore-pages (map string
                        '(f
-                         fgetc fgets
-                         fopen fclose
-                         foreach
-                         getenv putenv
-                         load
-                         macroexpand
-                         popen pclose
-                         read read-byte read-bytes read-char read-line
-                         symbol
-                         system
-                         timeit
-                         write write-byte write-bytes write-line)))
+                          exit quit
+                          fgetc fgets
+                          fopen fclose
+                          foreach
+                          getenv putenv
+                          load
+                          macroexpand
+                          popen pclose
+                          read read-byte read-bytes read-char read-line
+                          symbol
+                          system
+                          timeit
+                          write write-byte write-bytes write-line)))
 
 (function xmain (exprs)
   `(function! main (args)
