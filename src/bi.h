@@ -24,7 +24,6 @@ extern char *special_name_table[];
 extern char *function_name_table[];
 extern int (*special_table[])(int argc, object argv);
 extern int (*function_table[])(int argc, object argv, object *result);
-extern char *bi_as_symbol_name(char *name, char *buf);
 
 extern int bi_argc_range(int argc, int min, int max);
 extern int bi_argv(int expected_types, object o, object *result);

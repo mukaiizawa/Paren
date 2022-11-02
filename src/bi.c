@@ -2259,27 +2259,3 @@ int (*function_table[])(int argc, object argv, object *result) = {
 #undef DEFUN
   NULL
 };
-
-static int digit_val(char ch)
-{
-  if (isdigit(ch)) return ch - '0';
-  return ch - 'a' + 10;
-}
-
-char *bi_as_symbol_name(char *name, char *buf)
-{
-  char len;
-  int s, t;
-  if (name == NULL) return NULL;
-  s = t = 0;
-  len = strlen(name);
-  while (s < len) {
-    if (name[s] != '_') buf[t++] = name[s++];
-    else {
-      buf[t++] = 16 * digit_val(name[s + 1]) + digit_val(name[s + 2]);
-      s += 4;
-    }
-  }
-  buf[t] = '\0';
-  return buf;
-}

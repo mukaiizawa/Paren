@@ -106,16 +106,40 @@ static object load(void)
   return o;
 }
 
+static int digit_val(char ch)
+{
+  if (isdigit(ch)) return ch - '0';
+  return ch - 'a' + 10;
+}
+
+static char *builtin_name(char *name, char *buf)
+{
+  char len;
+  int s, t;
+  if (name == NULL) return NULL;
+  s = t = 0;
+  len = strlen(name);
+  while (s < len) {
+    if (name[s] != '_') buf[t++] = name[s++];
+    else {
+      buf[t++] = 16 * digit_val(name[s + 1]) + digit_val(name[s + 2]);
+      s += 4;
+    }
+  }
+  buf[t] = '\0';
+  return buf;
+}
+
 static void make_built_in(void)
 {
   int i;
   char buf[MAX_STR_LEN];
   object o;
-  for (i = 0; bi_as_symbol_name(special_name_table[i], buf) != NULL; i++) {
+  for (i = 0; builtin_name(special_name_table[i], buf) != NULL; i++) {
     o = gc_new_native(SPECIAL, gc_new_mem_from_cstr(SYMBOL, buf), special_table[i]);
     map_put(object_toplevel, o->native.name, o);
   }
-  for (i = 0; bi_as_symbol_name(function_name_table[i], buf) != NULL; i++) {
+  for (i = 0; builtin_name(function_name_table[i], buf) != NULL; i++) {
     o = gc_new_native(BFUNC, gc_new_mem_from_cstr(SYMBOL, buf), function_table[i]);
     map_put(object_toplevel, o->native.name, o);
   }
