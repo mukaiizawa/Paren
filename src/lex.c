@@ -175,6 +175,7 @@ static int identifier_symbol_alpha_p(void)
     case '*':
     case '.':
     case '/':
+    case ':':
     case '<':
     case '=':
     case '>':
@@ -235,13 +236,6 @@ static int lex_symbol(void)
   return LEX_SYMBOL;
 }
 
-static int lex_keyword(void)
-{
-  skip();
-  lex_identifier();
-  return LEX_KEYWORD;
-}
-
 static int lex_sign(void)
 {
   int sign, token_type;
@@ -285,8 +279,6 @@ int lex(void)
       return lex_comment();
     case '"':
       return lex_string();
-    case ':':
-      return lex_keyword();
     case '+':
     case '-':
       return lex_sign();

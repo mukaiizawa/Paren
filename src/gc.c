@@ -21,7 +21,6 @@ static object link0, link1;
 static struct xarray *table, *work_table, table0, table1;
 
 static struct st symbol_table;
-static struct st keyword_table;
 
 static void *gc_alloc(int size)
 {
@@ -162,17 +161,13 @@ object gc_new_mem_from(int type, char *val, int size)
 {
   int hval;
   object o;
-  struct st *s;
   switch (type) {
     case SYMBOL:
-    case KEYWORD:
-      if (type == SYMBOL) s = &symbol_table;
-      else s = &keyword_table;
       hval = object_mem_hash(val, size);
-      if ((o = st_get(s, val, size, hval)) != NULL) return o;
+      if ((o = st_get(&symbol_table, val, size, hval)) != NULL) return o;
       o = new_mem_from(type, val, size);
       object_set_hash(o, hval);
-      return st_put(s, o);
+      return st_put(&symbol_table, o);
     case STRING:
       o = new_mem_from(type, val, size);
       object_set_hash(o, object_mem_hash(val, size));
@@ -353,7 +348,6 @@ static void sweep_s_expr(void)
   switch_table();
   xarray_reset(table);
   st_reset(&symbol_table);
-  st_reset(&keyword_table);
   for (i = 0; i < work_table->size; i++) {
     o = work_table->elt[i];
     if (!object_alive_p(o)) gc_free(o);
@@ -361,7 +355,6 @@ static void sweep_s_expr(void)
       object_set_dead(o);
       switch (object_type(o)) {
         case SYMBOL: st_put(&symbol_table, o); break;
-        case KEYWORD: st_put(&keyword_table, o); break;
         default: break;
       }
       regist(o);
@@ -388,5 +381,4 @@ void gc_init(void)
   table = &table0;
   work_table = &table1;
   st_init(&symbol_table);
-  st_init(&keyword_table);
 }

@@ -31,8 +31,6 @@ static int type_bits(object o)
     case SYMBOL:
       if (o == object_nil) return BI_SYM | BI_LIST;
       return BI_SYM;
-    case KEYWORD:
-      return BI_KEY;
     case STRING:
       return BI_STR;
     case BYTES:
@@ -66,7 +64,6 @@ static char *type_name(int type) {
     case BI_FUNC: return "function";
     case BI_MACRO: return "macro";
     case BI_SP: return "special operator";
-    case BI_KEY: return "keyword";
     case BI_LIST: return "list";
     case BI_NUM: return "number";
     default: xassert(FALSE); return NULL;
@@ -210,13 +207,6 @@ int bi_cstring(object argv, char **ss)
 
 // fundamental functions.
 
-static int bi_type(int type, int argc, object argv, object *result)
-{
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(object_type(argv->cons.car) == type);
-  return TRUE;
-}
-
 DEFUN(int_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
@@ -247,49 +237,58 @@ DEFUN(number_3f_)
   }
 }
 
+static int xtype_p(int type, int argc, object argv, object *result)
+{
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  *result = object_bool(object_type(argv->cons.car) == type);
+  return TRUE;
+}
+
 DEFUN(cons_3f_)
 {
-  return bi_type(CONS, argc, argv, result);
+  return xtype_p(CONS, argc, argv, result);
 }
 
 DEFUN(symbol_3f_)
 {
-  return bi_type(SYMBOL, argc, argv, result);
+  return xtype_p(SYMBOL, argc, argv, result);
 }
 
 DEFUN(keyword_3f_)
 {
-  return bi_type(KEYWORD, argc, argv, result);
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  *result = object_bool(keyword_p(argv->cons.car));
+  return TRUE;
 }
 
 DEFUN(string_3f_)
 {
-  return bi_type(STRING, argc, argv, result);
+  return xtype_p(STRING, argc, argv, result);
 }
 
 DEFUN(bytes_3f_)
 {
-  return bi_type(BYTES, argc, argv, result);
+  return xtype_p(BYTES, argc, argv, result);
 }
 
 DEFUN(array_3f_)
 {
-  return bi_type(ARRAY, argc, argv, result);
+  return xtype_p(ARRAY, argc, argv, result);
 }
 
 DEFUN(dict_3f_)
 {
-  return bi_type(DICT, argc, argv, result);
+  return xtype_p(DICT, argc, argv, result);
 }
 
 DEFUN(macro_3f_)
 {
-  return bi_type(MACRO, argc, argv, result);
+  return xtype_p(MACRO, argc, argv, result);
 }
 
 DEFUN(special_2d_operator_3f_)
 {
-  return bi_type(SPECIAL, argc, argv, result);
+  return xtype_p(SPECIAL, argc, argv, result);
 }
 
 DEFUN(function_3f_)
@@ -950,11 +949,6 @@ DEFUN(symbol)
   return bytes_like_to(SYMBOL, argc, argv, result);
 }
 
-DEFUN(keyword)
-{
-  return bytes_like_to(KEYWORD, argc, argv, result);
-}
-
 DEFUN(string)
 {
   return bytes_like_to(STRING, argc, argv, result);
@@ -1390,7 +1384,6 @@ DEFUN(concat)
     case CONS:
       return cons_concat(argv, result);
     case SYMBOL:
-    case KEYWORD:
     case BYTES:
     case STRING:
       return bytes_like_concat(o, argv->cons.cdr, result);
@@ -1854,7 +1847,6 @@ DEFUN(_3c_)
     case XFLOAT:
       return num_lt(o, argv->cons.cdr, result);
     case SYMBOL:
-    case KEYWORD:
     case BYTES:
       return bytes_lt(o, argv->cons.cdr, result);
     case STRING:

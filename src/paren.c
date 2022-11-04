@@ -61,10 +61,6 @@ static object parse_expr(void)
       o = gc_new_mem_from(SYMBOL, lex_str.elt, lex_str.size);
       parse_skip();
       return o;
-    case LEX_KEYWORD:
-      o = gc_new_mem_from(KEYWORD, lex_str.elt, lex_str.size);
-      parse_skip();
-      return o;
     case LEX_STRING:
       o = gc_new_mem_from(STRING, lex_str.elt, lex_str.size);
       parse_skip();
@@ -175,33 +171,33 @@ static void make_initial_objects(int argc, char *argv[])
   object_toplevel = gc_new_env(object_nil, 1 << 11);
   map_put(object_toplevel, object_nil, object_nil);
   map_put(object_toplevel, object_true, object_true);
-  object_key = gc_new_mem_from_cstr(KEYWORD, "key");
-  object_opt = gc_new_mem_from_cstr(KEYWORD, "opt");
-  object_rest = gc_new_mem_from_cstr(KEYWORD, "rest");
+  object_key = gc_new_mem_from_cstr(SYMBOL, ":key");
+  object_opt = gc_new_mem_from_cstr(SYMBOL, ":opt");
+  object_rest = gc_new_mem_from_cstr(SYMBOL, ":rest");
   object_quote = gc_new_mem_from_cstr(SYMBOL, "quote");
   object_Class = gc_new_mem_from_cstr(SYMBOL, "Class");
-  object_class = gc_new_mem_from_cstr(KEYWORD, "class");
-  object_symbol = gc_new_mem_from_cstr(KEYWORD, "symbol");
-  object_super = gc_new_mem_from_cstr(KEYWORD, "super");
-  object_features = gc_new_mem_from_cstr(KEYWORD, "features");
-  object_fields = gc_new_mem_from_cstr(KEYWORD, "fields");
+  object_class = gc_new_mem_from_cstr(SYMBOL, ":class");
+  object_symbol = gc_new_mem_from_cstr(SYMBOL, ":symbol");
+  object_super = gc_new_mem_from_cstr(SYMBOL, ":super");
+  object_features = gc_new_mem_from_cstr(SYMBOL, ":features");
+  object_fields = gc_new_mem_from_cstr(SYMBOL, ":fields");
   object_Exception = gc_new_mem_from_cstr(SYMBOL, "Exception");
-  object_message = gc_new_mem_from_cstr(KEYWORD, "message");
-  object_stack_trace = gc_new_mem_from_cstr(KEYWORD, "stack-trace");
+  object_message = gc_new_mem_from_cstr(SYMBOL, ":message");
+  object_stack_trace = gc_new_mem_from_cstr(SYMBOL, ":stack-trace");
   map_put(object_toplevel, gc_new_mem_from_cstr(SYMBOL, "$args"), parse_args(argc, argv));
   map_put(object_toplevel, gc_new_mem_from_cstr(SYMBOL, "core.p"), gc_new_mem_from_cstr(STRING, core_fn));
 #if WINDOWS_P
-  host_name = "windows";
+  host_name = ":windows";
 #elif OS_CODE == OS_LINUX
-  host_name = "linux";
+  host_name = ":linux";
 #elif OS_CODE == OS_ANDROID
-  host_name = "android";
+  host_name = ":android";
 #elif OS_CODE == OS_MACOSX
-  host_name = "mac";
+  host_name = ":mac";
 #else
   xassert(FALSE);
 #endif
-  map_put(object_toplevel, gc_new_mem_from_cstr(SYMBOL, "$hostname"), gc_new_mem_from_cstr(KEYWORD, host_name));
+  map_put(object_toplevel, gc_new_mem_from_cstr(SYMBOL, "$hostname"), gc_new_mem_from_cstr(SYMBOL, host_name));
   make_built_in();
 }
 

@@ -612,13 +612,17 @@
 (built-in-function pow)
 (built-in-function sqrt)
 
-;; symbol & keyword.
+;; symbol.
 
-(built-in-function symbol?)
-(built-in-function keyword?)
 (built-in-function bound?)
+(built-in-function symbol?)
 (built-in-function symbol)
-(built-in-function keyword)
+(built-in-function keyword?)
+
+(function keyword (o)
+  (if (keyword? o) o
+      (symbol? o) (concat ': o)
+      (raise ArgumentError)))
 
 ;; string.
 
@@ -1402,8 +1406,7 @@
   ; Write the specified x as a readable format.
   ; Returns x.
   (if start (.write-bytes self start))
-  (if (nil? x) (.write-bytes self :nil)
-      (built-in? x) (.write-bytes self (built-in-name x))
+  (if (built-in? x) (.write-bytes self (built-in-name x))
       (symbol? x) (.write-bytes self x)
       (int? x) (.write-int self x)
       (number? x) (.write-float self x)
@@ -1442,10 +1445,6 @@
               (= c "\"") (.write-bytes self "\\\"")
               (.write-bytes self c)))
         (.write-byte self 0x22))
-      (keyword? x)
-      (begin
-        (.write-byte self 0x3a)
-        (.write-bytes self x))
       (dict? x)
       (begin
         (.write-bytes self "#{ ")
@@ -1778,7 +1777,7 @@
 (class ParenLexer (AheadReader))
 
 (method ParenLexer .identifier-symbol-alpha? ()
-  (|| (in? self->next "!#$%&*./<=>?^[]_{|}~")
+  (|| (in? self->next "!#$%&*./:<=>?^[]_{|}~")
       (.next? self alpha?)))
 
 (method ParenLexer .identifier-sign? ()
@@ -1818,10 +1817,6 @@
 (method ParenLexer .lex-symbol ()
   (symbol (.token (.get-identifier self))))
 
-(method ParenLexer .lex-keyword ()
-  (.skip self)
-  (keyword (.token (.get-identifier self))))
-
 (method ParenLexer .lex-string ()
   (.skip self)
   (while (!= self->next "\"") (.get-escape self))
@@ -1838,7 +1833,6 @@
         (= next "`") (begin (.skip self) '(:backquote))
         (= next ",") (begin (.skip self) (if (= self->next "@") (begin (.skip self) '(:unquote-splicing)) '(:unquote)))
         (= next "\"") (list :atom (.lex-string self))
-        (= next ":") (list :atom (.lex-keyword self))
         (= next ";") (begin (.skip-line self) (.lex self))
         (= next "#") (begin (.skip self) (list :reader-macro (symbol (.skip self))))
         (in? next "+-") (list :atom (.lex-sign self))
@@ -1947,7 +1941,7 @@
 (function print (:rest args)
   (dolist (x args)
     (if (nil? x) nil
-        (|| (symbol? x) (keyword? x) (string? x) (bytes? x)) (.write-bytes (dynamic $out) x)
+        (|| (symbol? x) (string? x) (bytes? x)) (.write-bytes (dynamic $out) x)
         (.write (dynamic $out) x :end ""))))
 
 (function println (:rest args)
@@ -2039,9 +2033,10 @@
   main)
 
 (function import (key :opt dir)
-  (if (in? key $import) key
-      (let (module (if (nil? dir) (.resolve $paren-home (str "modules/" key ".p"))
-                       (.resolve dir (str key ".p"))))
+  (if (! (keyword? key)) (raise ArgumentError "%v is not a keyword" key)
+      (in? key $import) key
+      (let (name (slice (string key) 1) module (if (nil? dir) (.resolve $paren-home (str "modules/" name ".p"))
+                                                        (.resolve dir (str name ".p"))))
         (if (! (.file? module)) (raise OSError "unreadable module `%s`" (.to-s module))
             (begin
               (load module)
