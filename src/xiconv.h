@@ -1,13 +1,11 @@
 // xiconv.
 
 #if UNIX_P
-#define XICONV_UNSUPPORTED -1
 #define XICONV_UTF8 1
 #define XICONV_SJIS 2
 #endif
 
 #if WINDOWS_P
-#define XICONV_UNSUPPORTED -1
 #define XICONV_ANSI CP_ACP
 #define XICONV_UTF8 CP_UTF8
 #define XICONV_SJIS 932
