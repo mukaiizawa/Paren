@@ -170,10 +170,9 @@
   (let (write-attr (f (x)
                      (if (! (list? x)) (raise SyntaxError "attributes must be list")
                          (map-group (f (k v)
-                                      (if (! (keyword? k)) (raise SyntaxError "attribute name must be keyword")
-                                          (! (string? v)) (raise SyntaxError "attribute value must be string")
-                                          (foreach write-bytes
-                                                   (list " " k "='" v "'"))))
+                                      (if (! (keyword? k)) (raise SyntaxError "attribute name `%v` must be keyword" k)
+                                          (! (string? v)) (raise SyntaxError "attribute value `%v` must be string" v)
+                                          (print " " (slice (string k) 1) "='" v "'")))
                                     x 2)))
                    write1 (f (x)
                             (if (nil? x) nil
@@ -188,7 +187,7 @@
                                             (write-bytes "<") (write-bytes name) (write-attr attrs) (write-bytes ">")
                                             (foreach write1 children)
                                             (write-bytes "</") (write-bytes name) (write-bytes ">"))
-                                (raise SyntaxError "unexpected expression"))))
+                                (raise SyntaxError "unexpected expression `%v`" x))))
     (write1 x)
     (write-line)
     x))

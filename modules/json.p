@@ -80,10 +80,10 @@
                      (write-bytes (json->str ([] x i))))
                    (write-bytes "]"))
       (nil? x) "null"
-      (= x 'true) "true"
-      (= x 'false) "false"
+      (== x 'true) "true"
+      (== x 'false) "false"
       (number? x) (str x)
-      (str "\"" x "\"")))
+      (str "\"" (if (keyword? x) (slice (string x) 1) x) "\"")))
 
 (function! main (args)
   (let (json-str (str "{"
@@ -96,16 +96,16 @@
     (with-memory-stream ($in json-str)
       (let (json (.read (.new JSONReader))
                  (nodes-key nodes-val literal-key literal-val) json)
-        (assert (= nodes-key :nodes))
+        (assert (== nodes-key :nodes))
         (assert (array? nodes-val))
         (let (nodes0 ([] nodes-val 0) nodes1 ([] nodes-val 1))
-          (assert (= (car nodes0) :id))
+          (assert (== (car nodes0) :id))
           (assert (= (cadr nodes0) 49))
-          (assert (= (caddr nodes0) :name))
+          (assert (== (caddr nodes0) :name))
           (assert (= (cadddr nodes0) "object_p")))
-        (assert (= ([] literal-val 0) true))
-        (assert (= ([] literal-val 1) 'false))
-        (assert (= ([] literal-val 2) nil))
+        (assert (== ([] literal-val 0) true))
+        (assert (== ([] literal-val 1) 'false))
+        (assert (== ([] literal-val 2) nil))
         (assert (= ([] literal-val 3) 3.14))
         (assert (= ([] literal-val 4) "string"))
         (assert (= (json->str json)

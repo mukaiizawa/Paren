@@ -199,7 +199,7 @@
                                                       0 nil (.new MemoryStream)))
     (str "Option Explicit\n"
          (join subroutines)
-         (vba.sub :main
+         (vba.sub "main"
                   "Application.ScreenUpdating = False\n"
                   "Application.DisplayAlerts = False\n"
                   (join (map (f (x) (str "Call sub" x "\n"))

@@ -621,8 +621,7 @@
 
 (function keyword (o)
   (if (keyword? o) o
-      (symbol? o) (concat ': o)
-      (raise ArgumentError)))
+      (concat ': (symbol o))))
 
 ;; string.
 
