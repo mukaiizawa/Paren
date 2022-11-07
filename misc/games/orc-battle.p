@@ -51,17 +51,17 @@
   (println)
   (print "Attack style: [s]tab [d]ouble swing [r]oundhouse:")
   (let (cmd (read))
-    (if (= cmd 's) (.stab self)
-        (= cmd 'd) (.double-swing self)
-        (= cmd 'r) (.round-house self)
+    (if (== cmd 's) (.stab self)
+        (== cmd 'd) (.double-swing self)
+        (== cmd 'r) (.round-house self)
         (begin
           (println "That is not a valid attack style.")
           (.attack self)))))
 
 (method Player .hit (x :key type)
-  (if (= type :health) (<- self->health (- self->health x))
-      (= type :agility) (<- self->agility (- self->agility x))
-      (= type :strength) (<- self->strength (- self->strength x))
+  (if (== type :health) (<- self->health (- self->health x))
+      (== type :agility) (<- self->agility (- self->agility x))
+      (== type :strength) (<- self->strength (- self->strength x))
       (assert nil)))
 
 (method Player .pick-monster ()
