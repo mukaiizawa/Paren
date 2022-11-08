@@ -316,17 +316,16 @@ static void gen_trace(object o)
 static int same_symbol_keyword_p(object sym, object key)
 {
   xassert(object_type(sym) == SYMBOL);
-  xassert(object_type(key) == KEYWORD);
-  if (sym->mem.size != key->mem.size) return FALSE;
-  return memcmp(sym->mem.elt, key->mem.elt, sym->mem.size) == 0;
+  xassert(keyword_p(key));
+  if (sym->mem.size != key->mem.size - 1) return FALSE;
+  return memcmp(sym->mem.elt, key->mem.elt + 1, sym->mem.size) == 0;
 }
 
 static int valid_keyword_args(object params, object args)
 {
   object p;
   while (args != object_nil) {
-    if (object_type(args->cons.car) != KEYWORD)
-      return ip_throw(ArgumentError, error_msg_nil);
+    if (!keyword_p(args->cons.car)) return ip_throw(ArgumentError, error_msg_nil);
     p = params;
     while (p != object_nil) {
       if (same_symbol_keyword_p(p->cons.car, args->cons.car)) break;
@@ -348,7 +347,7 @@ static int parse_args(void (*f)(object, object, object), object params, object a
     return ip_throw(ArgumentError, expected_list);
   // required args
   while (params != object_nil) {
-    if (object_type(params->cons.car) == KEYWORD) break;
+    if (keyword_p(params->cons.car)) break;
     if (args == object_nil)
       return ip_throw(ArgumentError, too_few_arguments);
     if (object_type(params->cons.car) == SYMBOL)
@@ -361,7 +360,7 @@ static int parse_args(void (*f)(object, object, object), object params, object a
   if (params->cons.car == object_opt) {
     params = params->cons.cdr;
     while (params != object_nil) {
-      if (object_type(params->cons.car) == KEYWORD) break;
+      if (keyword_p(params->cons.car)) break;
       k = params->cons.car;
       if (args == object_nil) (*f)(cr, k, object_nil);
       else {
@@ -476,10 +475,13 @@ static void pop_bind_propagation_frame(void)
 
 static int eval_symbol(object *result)
 {
-  object o;
-  o = *result;
-  if ((*result = map_get_propagation(cr, *result)) == NULL) {
-    gen_trace(o);
+  object sym;
+  if ((*result = map_get_propagation(cr, (sym = *result))) == NULL) {
+    if (keyword_p(sym)) {
+      *result = sym;
+      return TRUE;
+    }
+    gen_trace(sym);
     return ip_throw(StateError, unbound_symbol);
   }
   return TRUE;
@@ -528,7 +530,6 @@ static void pop_eval_frame(void)
     case SINT:
     case XINT:
     case XFLOAT:
-    case KEYWORD:
     case STRING:
     case BYTES:
     case ARRAY:
@@ -739,7 +740,7 @@ DEFUN(bound_3f_)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_SYM, argv->cons.car, &o)) return FALSE;
-  dr = object_bool(map_get_propagation(cr, o) != NULL);
+  dr = object_bool(keyword_p(o) || map_get_propagation(cr, o) != NULL);
   return TRUE;
 }
 
@@ -882,11 +883,12 @@ static int parse_optional_params(object params)
   while (params != object_nil) {
     p = params->cons.car;
     switch (object_type(params->cons.car)) {
-      case KEYWORD:
-        if (p == object_key) return parse_keyword_params(params->cons.cdr);
-        if (p == object_rest) return parse_rest_param(params->cons.cdr);
-        return ip_throw(SyntaxError, unexpected_keyword_parameter);
       case SYMBOL:
+        if (keyword_p(p)) {
+          if (p == object_key) return parse_keyword_params(params->cons.cdr);
+          if (p == object_rest) return parse_rest_param(params->cons.cdr);
+          return ip_throw(SyntaxError, unexpected_keyword_parameter);
+        }
         params = params->cons.cdr;
         param_count++;
         break;
@@ -903,16 +905,17 @@ static int parse_required_params(object params)
   while (params != object_nil) {
     p = params->cons.car;
     switch (object_type(params->cons.car)) {
-      case KEYWORD:
-        if (p == object_opt) return parse_optional_params(params->cons.cdr);
-        if (p == object_key) return parse_keyword_params(params->cons.cdr);
-        if (p == object_rest) return parse_rest_param(params->cons.cdr);
-        return ip_throw(SyntaxError, unexpected_keyword_parameter);
       case CONS:
         if (!parse_required_params(params->cons.car)) return FALSE;
         params = params->cons.cdr;
         break;
       case SYMBOL:
+        if (keyword_p(p)) {
+          if (p == object_opt) return parse_optional_params(params->cons.cdr);
+          if (p == object_key) return parse_keyword_params(params->cons.cdr);
+          if (p == object_rest) return parse_rest_param(params->cons.cdr);
+          return ip_throw(SyntaxError, unexpected_keyword_parameter);
+        }
         params = params->cons.cdr;
         param_count++;
         break;

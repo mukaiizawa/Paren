@@ -10,16 +10,15 @@ typedef union _object *object;
 #define     XFLOAT       0x2
 #define     CONS         0x3
 #define     SYMBOL       0x4
-#define     KEYWORD      0x5
-#define     STRING       0x6
-#define     BYTES        0x7
-#define     ARRAY        0x8
-#define     DICT         0x9
-#define     MACRO        0xa
-#define     FUNC         0xb
-#define     SPECIAL      0xc
-#define     BFUNC        0xd
-#define     ENV          0xe
+#define     STRING       0x5
+#define     BYTES        0x6
+#define     ARRAY        0x7
+#define     DICT         0x8
+#define     MACRO        0x9
+#define     FUNC         0xa
+#define     SPECIAL      0xb
+#define     BFUNC        0xc
+#define     ENV          0xd
 
 #define SINT_BITS 30
 #define SINT_MAX 0x3fffffff
@@ -121,6 +120,7 @@ extern int object_eq_p(object o, object p);
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
 #define sint(i) ((object)((((intptr_t)i) << 1) | 1))
 #define list_p(o) (o == object_nil || (object_type(o) == CONS))
+#define keyword_p(o) (object_type(o) == SYMBOL && (o)->mem.elt[0] == ':')
 
 extern int list_len(object o);
 extern object list_reverse(object o);

@@ -25,6 +25,6 @@ If `START` is omitted, a keyword whose name is `NAME` is returned.
     :oo
 
 # SEE ALSO
-- `keyword(3)`
+- `symbol(3)`
+- `symbol(7)`
 - `with-gensyms(3)`
-- `keyword(7)`

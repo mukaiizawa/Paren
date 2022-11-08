@@ -97,7 +97,6 @@ int object_byte_size(object o)
     case CONS:
       return sizeof(struct cons);
     case SYMBOL:
-    case KEYWORD:
     case STRING:
     case BYTES:
       return sizeof(struct mem) + o->mem.size - 1;
@@ -200,10 +199,6 @@ static void describe_s_expr(object o, struct xbarray *x)
       xbarray_add(x, '"');
       xbarray_add_mem(x, o);
       xbarray_add(x, '"');
-      break;
-    case KEYWORD:
-      xbarray_add(x, ':');
-      xbarray_add_mem(x, o);
       break;
     case BFUNC:
     case SPECIAL:

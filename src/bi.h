@@ -14,9 +14,8 @@
 #define BI_FUNC   0x040
 #define BI_MACRO  0x080
 #define BI_SP     0x100
-#define BI_KEY    0x200
-#define BI_LIST   0x400
-#define BI_NUM    0x800
+#define BI_LIST   0x200
+#define BI_NUM    0x400
 
 extern struct xbarray bi_buf;
 

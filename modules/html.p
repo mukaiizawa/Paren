@@ -57,7 +57,7 @@
                              (if (! (keyword? curr)) (raise SyntaxError "attribute name must be keyword")
                                  (begin
                                    (write-bytes " ")
-                                   (write-bytes curr)
+                                   (write-bytes (slice (string curr) 1))
                                    (<- rest (cdr rest)
                                        curr (car rest))
                                    (if (nil? curr) (break)

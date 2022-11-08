@@ -16,7 +16,7 @@ Reads the whitespace program from a `FILE` and interpret.
     -L CHAR
         Use the CHAR instead of LF.
     -s
-        Display the list of supported IMPs and exit the program.
+        Display the list of supported Instruction Modification Parameters(IMP) and exit the program.
     -S CHAR
         Use the CHAR instead of space.
     -T CHAR

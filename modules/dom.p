@@ -69,7 +69,7 @@
   (lower (string (car node))))
 
 (function dom.attributes (node)
-  (keep (f (x) (if (keyword? x) (string x)))
+  (keep (f (x) (if (keyword? x) (slice (string x) 1)))
         (cadr node)))
 
 (function dom.attribute (node attr)
