@@ -22,3 +22,4 @@ The `nil` is bound itself.
 # SEE ALSO
 - `if(3)`
 - `true(3)`
+- `symbol(7)`

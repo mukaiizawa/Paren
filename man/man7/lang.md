@@ -31,7 +31,6 @@ A list without elements is called an empty list and is represented by symbol `ni
 An atom is the following data types.
 
 - symbol
-- keyword
 - array
 - dictionary
 - bytes
@@ -41,14 +40,17 @@ An atom is the following data types.
 - string
 
 #### Symbols
-A symbol is a data type for holding a reference to an S-expression.
+A symbol is a data type that has references to other data (variables in general programming languages).
 
-A symbol is an object representing a string, the symbol's name.
+Symbols with the same name are guaranteed to be identical.
 
-Unlike strings, two symbols whose names are spelled the same way are never distinguishable.
+When a symbol is evaluated, it returns the value it holds. If it does not hold a value (initial state), an error occurs.
 
-#### Keywords
-Keywords are the same as symbols, except that they cannot hold references to other S-expression.
+The following symbols are exceptions, which themselves are retained from the beginning.
+
+- nil (the only value treated as false)
+- true (representative value of true)
+- Symbols beginning with `:` (called keywords)
 
 #### Arrays
 An array is a data type in which any S-expression is placed in continuous memory.
@@ -105,18 +107,17 @@ The lexical rules determines how a character sequence is split into a sequence o
 
 This rule is the minimum rule required to read core.p. This is because paren can overwrite the reader by paren itself.
 
-    lexeme = symbol | keyword | string | number | '(' | ')' | '\''
+    lexeme = symbol | string | number | '(' | ')' | '\''
     comment = ';' [~\n]*
     space = [\t\n ]
     symbol = identifier
-    keyword = ':' identifier
     string = '"' ([~"\\] | escape-sequence)* '"'
     number = sign? (integer | float)
     identifier = symbol-alpha identifier-rest*
                  | sign ((symbol-alpha | sign) identifier-rest* )?
     identifier-rest = symbol-alpha | digit | sign
     escape-sequence = '\\' ([~cx] | 'c' [@-_a-z] | 'x' hexDigit hexDigit)
-    symbol-alpha = [!#$%&*./<=>?A-Z[\]^_a-z{|}~]
+    symbol-alpha = [!#$%&*./:<=>?A-Z[\]^_a-z{|}~]
     sign = '+' | '-'
     integer = (digit+ 'x')? [0-9a-z]+
     float = digit+ '.' digit+ ('E' [+-]? digit+)?
@@ -133,7 +134,7 @@ It is possible to write a comment or a space arbitrarily at a break point in the
     list = '(' s-expression* ')' | abbrev-list
     abbrev-list = abbrev-prefix s-expression
     abbrev-prefix = '\''
-    atom = symbol | keyword | number | string
+    atom = symbol | number | string
 
 ## Evaluation rules
 If the S-expression is one of the following, it is considered evaluable.

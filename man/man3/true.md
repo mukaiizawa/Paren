@@ -16,3 +16,4 @@ The `true` is bound itself.
 # SEE ALSO
 - `if(3)`
 - `nil(3)`
+- `symbol(7)`

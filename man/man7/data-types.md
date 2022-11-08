@@ -10,7 +10,6 @@ Paren defines the primitive data types enumerated bellow. Every data belongs to 
 - dictionary
 - function
 - macro
-- keyword
 - number
 - special-operator
 - string
@@ -24,7 +23,6 @@ In particular, anything other than cons is called atom.
 - `cons(7)`
 - `dictionary(7)`
 - `function(7)`
-- `keyword(7)`
 - `macro(7)`
 - `number(7)`
 - `object-system(7)`
