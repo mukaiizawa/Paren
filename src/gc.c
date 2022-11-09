@@ -8,8 +8,7 @@
 #include "ip.h"
 #include "gc.h"
 
-int gc_used_memory;
-int gc_max_used_memory;
+static int gc_used_memory;
 
 static struct heap heap;
 
@@ -41,7 +40,6 @@ static void *gc_alloc(int size)
     }
   } else o = xmalloc(size);
   gc_used_memory += size;
-  if (gc_used_memory > gc_max_used_memory) gc_max_used_memory = gc_used_memory;
   o->header &= 0;
   return o;
 }
@@ -373,7 +371,7 @@ void gc_chance(void)
 
 void gc_init(void)
 {
-  gc_used_memory = gc_max_used_memory = 0;
+  gc_used_memory = 0;
   link0 = link1 = NULL;
   heap_init(&heap);
   xarray_init(&table0);
