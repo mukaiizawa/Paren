@@ -166,11 +166,10 @@
     (.skip self size)))
 
 (method ZipWriter .add (file :opt alias)
-  (let (file (path file)
-             file-name (bytes (|| alias (.name file)))
-             mtime (.init (.new DateTime) (.mtime file))
-             file-data (.contents file)
-             entry (.new ZipEntry))
+  (let (file-name (bytes (|| alias (.name file)))
+                  mtime (.init (.new DateTime) (.mtime file))
+                  file-data (.contents file)
+                  entry (.new ZipEntry))
     (<- entry->general-purpose-bit-flag 0
         entry->compression-method 0
         entry->last-mod-file-time (.msdos-time mtime)
