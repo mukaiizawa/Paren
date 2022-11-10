@@ -1178,7 +1178,7 @@
                      (.rename file (.resolve to (.name file))))
       (let (dir (.parent to))
         (if (! (.dir? dir)) (.mkdir dir))
-        (.rename (.to-s self) (.to-s to))))
+        (rename (.to-s self) (.to-s to))))
   self)
 
 (method Path .stat ()
