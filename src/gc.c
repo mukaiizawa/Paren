@@ -4,22 +4,83 @@
 #include "heap.h"
 #include "xarray.h"
 #include "object.h"
-#include "st.h"
 #include "ip.h"
 #include "gc.h"
 
 static int gc_used_memory;
 
 static struct heap heap;
+static struct symbol_table st;
 
 #define LINK0_SIZE (sizeof(struct cons))
 #define LINK1_SIZE (sizeof(struct map))
 static object link0, link1;
 
 #define regist(o) (xarray_add(table, o))
-static struct xarray *table, *work_table, table0, table1;
+static struct xarray *table, *table_wk, table0, table1;
 
-static struct st symbol_table;
+static void *gc_alloc(int size);
+
+// symbol table
+
+#define SYMBOL_TABLE_LOAD_FACTOR 0.5
+#define symbol_table_index(st, i) ((i) % st->alloc_size)
+#define symbol_table_alloc(size) (gc_alloc(sizeof(object) * (size)))
+
+struct symbol_table {
+  int size;
+  int alloc_size;
+  object *table;
+};
+
+static void symbol_table_reset(struct symbol_table *st)
+{
+  int i;
+  st->size = 0;
+  for (i = 0; i < st->alloc_size; i++) st->table[i] = NULL;
+}
+
+static object symbol_table_put(struct symbol_table *st, object sym);
+static void symbol_table_extend(struct symbol_table *st)
+{
+  int i, alloc_size;
+  object o, *table;
+  alloc_size = st->alloc_size;
+  table = st->table;
+  st->table = symbol_table_alloc(st->alloc_size += st->alloc_size + 1);
+  symbol_table_reset(st);
+  for (i = 0; i < alloc_size; i++)
+    if ((o = table[i]) != NULL) symbol_table_put(st, o);
+  xfree(table);
+}
+
+static void symbol_table_init(struct symbol_table *st)
+{
+  st->table = symbol_table_alloc(st->alloc_size = 0xff);
+  symbol_table_reset(st);
+}
+
+static object symbol_table_get(struct symbol_table *st, char *val, int size, int hval)
+{
+  object o;
+  while ((o = st->table[symbol_table_index(st, hval)]) != NULL) {
+    if (o->mem.size == size && memcmp(o->mem.elt, val, size) == 0) return o;
+    hval++;
+  }
+  return NULL;
+}
+
+static object symbol_table_put(struct symbol_table *st, object sym)
+{
+  int i;
+  if (st->size++ > st->alloc_size * SYMBOL_TABLE_LOAD_FACTOR) symbol_table_extend(st);
+  i = symbol_table_index(st, object_hash(sym));
+  while (st->table[i] != NULL) i = symbol_table_index(st, i + 1);
+  st->table[i] = sym;
+  return sym;
+}
+
+// memory allocater & garbage collector
 
 static void *gc_alloc(int size)
 {
@@ -162,10 +223,10 @@ object gc_new_mem_from(int type, char *val, int size)
   switch (type) {
     case SYMBOL:
       hval = object_mem_hash(val, size);
-      if ((o = st_get(&symbol_table, val, size, hval)) != NULL) return o;
+      if ((o = symbol_table_get(&st, val, size, hval)) != NULL) return o;
       o = new_mem_from(type, val, size);
       object_set_hash(o, hval);
-      return st_put(&symbol_table, o);
+      return symbol_table_put(&st, o);
     case STRING:
       o = new_mem_from(type, val, size);
       object_set_hash(o, object_mem_hash(val, size));
@@ -334,8 +395,8 @@ void gc_mark(object o)
 static void switch_table(void)
 {
   struct xarray *p;
-  p = work_table;
-  work_table = table;
+  p = table_wk;
+  table_wk = table;
   table = p;
 }
 
@@ -345,14 +406,14 @@ static void sweep_s_expr(void)
   object o;
   switch_table();
   xarray_reset(table);
-  st_reset(&symbol_table);
-  for (i = 0; i < work_table->size; i++) {
-    o = work_table->elt[i];
+  symbol_table_reset(&st);
+  for (i = 0; i < table_wk->size; i++) {
+    o = table_wk->elt[i];
     if (!object_alive_p(o)) gc_free(o);
     else {
       object_set_dead(o);
       switch (object_type(o)) {
-        case SYMBOL: st_put(&symbol_table, o); break;
+        case SYMBOL: symbol_table_put(&st, o); break;
         default: break;
       }
       regist(o);
@@ -373,10 +434,10 @@ void gc_init(void)
 {
   gc_used_memory = 0;
   link0 = link1 = NULL;
+  symbol_table_init(&st);
   heap_init(&heap);
   xarray_init(&table0);
   xarray_init(&table1);
   table = &table0;
-  work_table = &table1;
-  st_init(&symbol_table);
+  table_wk = &table1;
 }
