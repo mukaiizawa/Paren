@@ -20,11 +20,12 @@ static object link0, link1;
 static struct xarray *table, *table_wk, table0, table1;
 
 static void *gc_alloc(int size);
+static void gc_free0(int size, void *p);
 
 // symbol table
 
-#define SYMBOL_TABLE_LOAD_FACTOR 0.5
 #define symbol_table_index(st, i) ((i) % st->alloc_size)
+#define symbol_table_bytelen(st) (gc_alloc(sizeof(object) * (st->size)))
 #define symbol_table_alloc(size) (gc_alloc(sizeof(object) * (size)))
 
 struct symbol_table {
@@ -40,23 +41,10 @@ static void symbol_table_reset(struct symbol_table *st)
   for (i = 0; i < st->alloc_size; i++) st->table[i] = NULL;
 }
 
-static object symbol_table_put(struct symbol_table *st, object sym);
-static void symbol_table_extend(struct symbol_table *st)
-{
-  int i, alloc_size;
-  object o, *table;
-  alloc_size = st->alloc_size;
-  table = st->table;
-  st->table = symbol_table_alloc(st->alloc_size += st->alloc_size + 1);
-  symbol_table_reset(st);
-  for (i = 0; i < alloc_size; i++)
-    if ((o = table[i]) != NULL) symbol_table_put(st, o);
-  xfree(table);
-}
-
 static void symbol_table_init(struct symbol_table *st)
 {
-  st->table = symbol_table_alloc(st->alloc_size = 0xff);
+  st->alloc_size = 0x1000;    // rule of thumb.
+  st->table = gc_alloc(sizeof(object) * st->alloc_size);
   symbol_table_reset(st);
 }
 
@@ -72,8 +60,17 @@ static object symbol_table_get(struct symbol_table *st, char *val, int size, int
 
 static object symbol_table_put(struct symbol_table *st, object sym)
 {
-  int i;
-  if (st->size++ > st->alloc_size * SYMBOL_TABLE_LOAD_FACTOR) symbol_table_extend(st);
+  int i, alloc_size;
+  object o, *table;
+  if (st->size++ > (alloc_size = st->alloc_size) * 0.5) {
+    table = st->table;
+    st->alloc_size *= 2;
+    st->table = gc_alloc(sizeof(object) * st->alloc_size);
+    symbol_table_reset(st);
+    for (i = 0; i < alloc_size; i++)
+      if ((o = table[i]) != NULL) symbol_table_put(st, o);
+    gc_free0(alloc_size, table);
+  }
   i = symbol_table_index(st, object_hash(sym));
   while (st->table[i] != NULL) i = symbol_table_index(st, i + 1);
   st->table[i] = sym;
@@ -424,10 +421,10 @@ static void sweep_s_expr(void)
 void gc_chance(void)
 {
   if (gc_used_memory < GC_CHANCE_MEMORY) return;
-  if (GC_LOG_P) printf("before gc(used memory %d[byte])\n", gc_used_memory);
+  if (GC_LOG_P) fprintf(stderr, "before gc(used memory %d[byte])\n", gc_used_memory);
   ip_mark_object();
   sweep_s_expr();
-  if (GC_LOG_P) printf("after gc(used memory %d[byte])\n", gc_used_memory);
+  if (GC_LOG_P) fprintf(stderr, "after gc(used memory %d[byte])\n", gc_used_memory);
 }
 
 void gc_init(void)
