@@ -2035,7 +2035,7 @@
   (if (! (keyword? key)) (raise ArgumentError "%v is not a keyword" key)
       (in? key $import) key
       (let (name (slice (string key) 1) module (if (nil? dir) (.resolve $paren-home (str "modules/" name ".p"))
-                                                        (.resolve dir (str name ".p"))))
+                                                   (.resolve (path dir) (str name ".p"))))
         (if (! (.file? module)) (raise OSError "unreadable module `%s`" (.to-s module))
             (begin
               (load module)
