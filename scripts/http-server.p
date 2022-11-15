@@ -22,9 +22,9 @@
 (function make-html (title body)
   (with-memory-stream ($out)
     (html.write
-      `(html (:lang "ja")
+      `(html (lang "ja")
              (head ()
-                   (meta (:charset "UTF-8"))
+                   (meta (charset "UTF-8"))
                    (title () ,title))
              (body ()
                    (h1 () ,title)
@@ -46,9 +46,9 @@
           (.set-body res (make-html (format "Directory listing for %s" (.to-s relative))
                                     `((ul ()
                                           ,@(if (!= relative (path "."))
-                                                `((li () (a (:href ,(local-path->uri (.parent dir))) ".."))))
+                                                `((li () (a (href ,(local-path->uri (.parent dir))) ".."))))
                                           ,@(map (f (x)
-                                                   `(li () (a (:href ,(local-path->uri x))
+                                                   `(li () (a (href ,(local-path->uri x))
                                                               ,(str (.name x) (if (.dir? x) "/")))))
                                                  (.children dir))))))))))
 

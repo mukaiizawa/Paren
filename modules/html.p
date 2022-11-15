@@ -2,7 +2,7 @@
 
 (import :xml)
 
-(<- $dom.singleton '(area base br col command embed hr img input keygen link meta param source track wbr))
+(<- $html.singleton-tags '(area base br col command embed hr img input keygen link meta param source track wbr))
 
 ;; reader.
 
@@ -16,7 +16,7 @@
   (let (ch nil attrs nil)
     (while (! (in? (<- ch (.next (.skip-space self))) '("/" ">")))
       (if (nil? ch) (raise EOFError "missing '>'")
-          (push! (keyword (.read-ident self)) attrs))
+          (push! (symbol (.read-ident self)) attrs))
       (.skip-space self)
       (if (= (.next self) "=") (.skip self)
           (continue))    ; Unlike xml, single attribute is allowed.
@@ -30,7 +30,7 @@
         (if (== type :comment) (.read-element self)
             (in? type '(:close :single)) val    ; make sense
             (let (name (car val) node nil children nil)
-              (if (in? name $dom.singleton) val
+              (if (in? name $html.singleton-tags) val
                   (begin
                     (while (<- child (.read-element self))
                       (if (= name child) (break)
@@ -54,16 +54,15 @@
                          (! (cons? x)) (raise SyntaxError "attributes must be list")
                          (let (rest x curr (car x))
                            (while rest
-                             (if (! (keyword? curr)) (raise SyntaxError "attribute name must be keyword")
+                             (if (! (symbol? curr)) (raise SyntaxError "attribute name must be symbol")
                                  (begin
-                                   (write-bytes " ")
-                                   (write-bytes (slice (string curr) 1))
+                                   (write-bytes " ") (write-bytes curr)
                                    (<- rest (cdr rest)
                                        curr (car rest))
                                    (if (nil? curr) (break)
-                                       (keyword? curr) (continue)
+                                       (symbol? curr) (continue)
                                        (string? curr) (begin
-                                                        (foreach write-bytes (list "='" curr "'"))
+                                                        (write-bytes "='") (write-bytes curr) (write-bytes "'")
                                                         (<- rest (cdr rest)
                                                             curr (car rest)))
                                        (raise SyntaxError "attribute value must be string"))))))))
@@ -78,7 +77,7 @@
                                                                ch)))
                                 (cons? x) (let ((name attrs :rest children) x)
                                             (write-bytes "<") (write-bytes name) (write-attr attrs) (write-bytes ">")
-                                            (when (! (in? name $dom.singleton))
+                                            (when (! (in? name $html.singleton-tags))
                                               (foreach write1 children)
                                               (write-bytes "</") (write-bytes name) (write-bytes ">")))
                                 (raise SyntaxError "unexpected expression"))))
@@ -94,17 +93,17 @@
   ;; Reader.
   (assert (= (with-memory-stream ($in "<!DOCTYPE html>\n<html lang='ja'>hello html</html>")
                (html.read))
-             '(html (:lang "ja") "hello html")))
+             '(html (lang "ja") "hello html")))
   (assert (= (with-memory-stream ($in "<img src='./x.png'>")
                (html.read))
-             '(img (:src "./x.png"))))
+             '(img (src "./x.png"))))
   ;; Writer.
   (assert (= (with-memory-stream ($out)
-               (html.write '(html (:lang "ja") "hello html")))
+               (html.write '(html (lang "ja") "hello html")))
              "<!DOCTYPE html>\n<html lang='ja'>hello html</html>\n"))
   (assert (= (with-memory-stream ($out)
-               (html.write-element '(html (:lang "ja") "hello html")))
+               (html.write-element '(html (lang "ja") "hello html")))
              "<html lang='ja'>hello html</html>\n"))
   (assert (= (with-memory-stream ($out)
-               (html.write-element '(img (:src "./x.png"))))
+               (html.write-element '(img (src "./x.png"))))
              "<img src='./x.png'>\n")))

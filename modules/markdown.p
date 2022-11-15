@@ -134,12 +134,12 @@
       (return `(blockquote () ,@(collect (partial .read (.new MarkdownReader))))))))
 
 (method MarkdownReader .read-link0 (text)
-  `(a (:id ,(str "fnreferr" text) :href ,(str "#fnrefere" text))
+  `(a (id ,(str "fnreferr" text) href ,(str "#fnrefere" text))
       ,(str "[" text "]")))
 
 (method MarkdownReader .read-link1 (text)
-  `(sup (:id ,(str "fnrefere" text))
-        (a (:href ,(str "#fnreferr" text)) ,text)))
+  `(sup (id ,(str "fnrefere" text))
+        (a (href ,(str "#fnreferr" text)) ,text)))
 
 (method MarkdownReader .read-link2 (text)
   (let (ch nil href (.new MemoryStream))
@@ -148,7 +148,7 @@
       (if (nil? ch) (raise SyntaxError "invalid link expression")
           (.write-bytes href (.read-char self->stream))))
     (.skip self)
-    `(a (:href ,(.to-s href)) ,text)))
+    `(a (href ,(.to-s href)) ,text)))
 
 (method MarkdownReader .read-link ()
   (let (ch nil text (.new MemoryStream) caret? nil colon? nil)
@@ -205,11 +205,11 @@
     (let (rd (.new MarkdownReader))
       (assert (= (.read rd) '(p () "abc")))
       (assert (= (.read rd) '(p () "a" (em () "b") "c")))
-      (assert (= (.read rd) '(p () "link to " (a (:href "https://google.com") "google"))))))
+      (assert (= (.read rd) '(p () "link to " (a (href "https://google.com") "google"))))))
   (with-memory-stream ($in "paragraph[^1]\n\n[^1]: reference\n")
     (let (rd (.new MarkdownReader))
-      (assert (= (.read rd) '(p () "paragraph" (sup (:id "fnrefere1") (a (:href "#fnreferr1") "1")))))
-      (assert (= (.read rd) '(p () (a (:id "fnreferr1" :href "#fnrefere1") "[1]") " reference")))))
+      (assert (= (.read rd) '(p () "paragraph" (sup (id "fnrefere1") (a (href "#fnreferr1") "1")))))
+      (assert (= (.read rd) '(p () (a (id "fnreferr1" href "#fnrefere1") "[1]") " reference")))))
   ;; header
   (with-memory-stream ($in "# header1\n\n###### header6\n")
     (let (rd (.new MarkdownReader))
@@ -234,7 +234,7 @@
   (with-memory-stream ($in "--- html start\n<span style='color:red'>foo</span>\n--- html end\n")
     (let (rd (.new MarkdownReader))
       (assert (= (.read rd) '(hr ())))
-      (assert (= (.read rd) '(span (:style "color:red") "foo")))
+      (assert (= (.read rd) '(span (style "color:red") "foo")))
       (assert (= (.read rd) '(hr ())))))
   ;; list
   (with-memory-stream ($in "- a\n- b\n- c\n-------\n- a\n    - a1\n    - a2\n- b\n1. c\n")
