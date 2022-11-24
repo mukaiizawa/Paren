@@ -1,7 +1,5 @@
 // built-in.
 
-#include "xbarray.h"
-
 #define DEFSP(name) int special_##name(int argc, object argv)
 #define DEFUN(name) int function_##name(int argc, object argv, object *result)
 

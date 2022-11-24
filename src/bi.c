@@ -74,21 +74,13 @@ static char *type_name(int type) {
   if (t & bits) {\
     if (n != 1) {\
       if (i != 0) {\
-        if (i + 1 != n) xbarray_adds(&bi_buf, ", ");\
-        else xbarray_adds(&bi_buf, " or ");\
+        if (i + 1 != n) xbarray_adds(&ip_sigmsg, ", ");\
+        else xbarray_adds(&ip_sigmsg, " or ");\
       }\
     }\
-    xbarray_adds(&bi_buf, type_name(t));\
+    xbarray_adds(&ip_sigmsg, type_name(t));\
     i++;\
   }\
-}
-
-static int bit_count (int bits) {
-  bits = (bits & 0x55555555) + (bits >> 1 & 0x55555555);
-  bits = (bits & 0x33333333) + (bits >> 2 & 0x33333333);
-  bits = (bits & 0x0f0f0f0f) + (bits >> 4 & 0x0f0f0f0f);
-  bits = (bits & 0x00ff00ff) + (bits >> 8 & 0x00ff00ff);
-  return (bits & 0x0000ffff) + (bits >>16 & 0x0000ffff);
 }
 
 int bi_argv(int bits, object o, object *result)
@@ -96,9 +88,9 @@ int bi_argv(int bits, object o, object *result)
   int i, n;
   *result = o;
   if (type_bits(o) & bits) return TRUE;
-  i = 0, n = bit_count(bits);
-  xbarray_reset(&bi_buf);
-  xbarray_adds(&bi_buf, "expected ");
+  i = 0, n = xbitc(bits);
+  xbarray_reset(&ip_sigmsg);
+  xbarray_adds(&ip_sigmsg, "expected ");
   CHECK(BI_SYM);
   CHECK(BI_STR);
   CHECK(BI_ARRAY);
@@ -110,8 +102,7 @@ int bi_argv(int bits, object o, object *result)
   CHECK(BI_SP);
   CHECK(BI_LIST);
   CHECK(BI_NUM);
-  xbarray_add(&bi_buf, '\0');
-  return ip_throw(ArgumentError, bi_buf_msg);
+  return ip_sigerr(ArgumentError);
 }
 
 int bi_range(int min, int x, int max)

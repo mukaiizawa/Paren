@@ -7,19 +7,25 @@
 #include "ip.h"
 
 static long cycle;
-
 static object dr;    // data register.
 static object cr;    // context register.
+struct xbarray ip_sigmsg;
+
+enum TrapType {
+  TRAP_NONE,
+  TRAP_ERROR,
+  TRAP_ERROR2,    // TODO
+  TRAP_INTERRUPT
+};
+static enum TrapType trap_type;
 
 // interrupt
-
-int ip_trap_code;
 
 #if UNIX_P
 
 static void intr_handler(int signo)
 {
-  ip_trap_code = TRAP_INTERRUPT;
+  trap_type = TRAP_INTERRUPT;
 }
 
 static void intr_init(void)
@@ -35,7 +41,7 @@ static void intr_init(void)
 static BOOL intr_handler(DWORD dwCtrlType)
 {
   if (dwCtrlType == CTRL_C_EVENT) {
-    ip_trap_code = TRAP_INTERRUPT;
+    trap_type = TRAP_INTERRUPT;
     return TRUE;
   }
   return FALSE;
@@ -70,7 +76,6 @@ static char *error_name(enum error e) {
 
 static char *error_msg(enum error_msg em) {
   switch (em) {
-    case bi_buf_msg: return bi_buf.elt;
     case built_in_failed: return "built-in function failed";
     case clip_failed: return "clip failed";
     case connection_failed: return "connection failed";
@@ -122,11 +127,19 @@ static char *error_msg(enum error_msg em) {
   }
 };
 
+// TODO
 int ip_throw(enum error err, enum error_msg msg)
 {
-  ip_trap_code = TRAP_ERROR;
+  trap_type = TRAP_ERROR;
   e = err;
   em = msg;
+  return FALSE;
+}
+
+int ip_sigerr(enum error err)
+{
+  trap_type = TRAP_ERROR2;
+  e = err;
   return FALSE;
 }
 
@@ -437,7 +450,7 @@ static void pop_apply_built_in_frame(void)
   pop_frame();
   if ((*function)(list_len(args), args, &(dr))) return;
   gen_trace(gc_new_cons(f->native.name, args));
-  if (ip_trap_code == TRAP_NONE) ip_throw(Error, built_in_failed);
+  if (trap_type == TRAP_NONE) ip_throw(Error, built_in_failed);
 }
 
 static void pop_bind_frame(void)
@@ -1137,6 +1150,7 @@ static object get_call_stack(void)
   return o;
 }
 
+// TODO
 static object new_Error(enum error e, enum error_msg em)
 {
   char *err, *msg;
@@ -1150,23 +1164,34 @@ static object new_Error(enum error e, enum error_msg em)
   return o;
 }
 
+static object new_Error2(enum error e, object message)
+{
+  object o;
+  o = gc_new_dict();
+  map_put(o, object_class, gc_new_mem_from_cstr(SYMBOL, error_name(e)));
+  map_put(o, object_message, message);
+  map_put(o, object_stack_trace, object_nil);
+  return o;
+}
+
 static void trap(void)
 {
   gen0(THROW_FRAME);
-  switch (ip_trap_code) {
+  switch (trap_type) {
     case TRAP_ERROR:
       dr = new_Error(e, em);
       break;
+    case TRAP_ERROR2:
+      dr = new_Error2(e, gc_new_mem_from_xbarray(STRING, &ip_sigmsg));
+      break;
     case TRAP_INTERRUPT:
-      dr = new_Error(SystemExit, error_msg_nil);
+      dr = new_Error2(SystemExit, object_nil);
       break;
     default:
       xassert(FALSE);
       break;
   }
-  ip_trap_code = TRAP_NONE;
-  e = error_nil;
-  em = error_msg_nil;
+  trap_type = TRAP_NONE;
 }
 
 // main
@@ -1178,7 +1203,7 @@ static void ip_main(object args)
   gen_eval_sequential_frame(args);
   while (fp != -1) {
     xassert(fp >= 0);
-    if (ip_trap_code != TRAP_NONE) trap();
+    if (trap_type != TRAP_NONE) trap();
     if (cycle % IP_POLLING_INTERVAL == 0) gc_chance();
     switch (fs_top()) {
       case APPLY_BUILT_IN_FRAME: pop_apply_built_in_frame(); break;
@@ -1237,7 +1262,8 @@ int ip_start(object args)
   fp = -1;
   cycle = 0;
   xbarray_init(&bi_buf);
-  ip_trap_code = TRAP_NONE;
+  xbarray_init(&ip_sigmsg);
+  trap_type = TRAP_NONE;
   intr_init();
   ip_main(args);
   if (sint_p(dr)) return sint_val(dr);

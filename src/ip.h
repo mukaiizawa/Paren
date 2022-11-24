@@ -1,9 +1,6 @@
 // interpreter.
 
-#define TRAP_NONE 0
-#define TRAP_ERROR 1
-#define TRAP_INTERRUPT 2 // Ctrl-c
-extern int ip_trap_code;
+extern struct xbarray ip_sigmsg;
 
 enum error {
   Exception,
@@ -13,12 +10,10 @@ enum error {
       ArithmeticError,
       StateError,
       OSError,
-      SyntaxError,
-  error_nil
+      SyntaxError
 };
 
 enum error_msg {
-  bi_buf_msg,
   built_in_failed,
   clip_failed,
   connection_failed,
@@ -68,6 +63,8 @@ enum error_msg {
   error_msg_nil
 };
 
+// TODO
 extern int ip_throw(enum error e, enum error_msg em);
+extern int ip_sigerr(enum error e);
 extern void ip_mark_object(void);
 extern int ip_start(object args);
