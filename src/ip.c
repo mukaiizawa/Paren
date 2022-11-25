@@ -55,12 +55,12 @@ static void intr_init(void)
 
 #endif
 
-// error
+// Exception
 
-static enum error e;
+static enum Exception e;
 static enum error_msg em;
 
-static char *error_name(enum error e) {
+static char *error_name(enum Exception e) {
   switch (e) {
     case Exception: return "Exception";
     case SystemExit: return "SystemExit";
@@ -128,7 +128,7 @@ static char *error_msg(enum error_msg em) {
 };
 
 // TODO
-int ip_throw(enum error err, enum error_msg msg)
+int ip_throw(enum Exception err, enum error_msg msg)
 {
   trap_type = TRAP_ERROR;
   e = err;
@@ -136,7 +136,7 @@ int ip_throw(enum error err, enum error_msg msg)
   return FALSE;
 }
 
-int ip_sigerr(enum error err)
+int ip_sigerr(enum Exception err)
 {
   trap_type = TRAP_ERROR2;
   e = err;
@@ -1151,7 +1151,7 @@ static object get_call_stack(void)
 }
 
 // TODO
-static object new_Error(enum error e, enum error_msg em)
+static object new_Error(enum Exception e, enum error_msg em)
 {
   char *err, *msg;
   object o;
@@ -1164,7 +1164,7 @@ static object new_Error(enum error e, enum error_msg em)
   return o;
 }
 
-static object new_Error2(enum error e, object message)
+static object new_Error2(enum Exception e, object message)
 {
   object o;
   o = gc_new_dict();

@@ -2,7 +2,7 @@
 
 extern struct xbarray ip_sigmsg;
 
-enum error {
+enum Exception {
   Exception,
     SystemExit,
     Error,
@@ -64,7 +64,7 @@ enum error_msg {
 };
 
 // TODO
-extern int ip_throw(enum error e, enum error_msg em);
-extern int ip_sigerr(enum error e);
+extern int ip_throw(enum Exception e, enum error_msg em);
+extern int ip_sigerr(enum Exception e);
 extern void ip_mark_object(void);
 extern int ip_start(object args);
