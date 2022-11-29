@@ -26,8 +26,6 @@ SOFTWARE.
 #include "std.h"
 #include "heap.h"
 
-struct heap heap_perm = {NULL, NULL};
-
 void heap_init(struct heap *h)
 {
   h->block=NULL;
