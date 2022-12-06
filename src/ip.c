@@ -76,7 +76,6 @@ static char *error_name(enum Exception e) {
 
 static char *error_msg2(enum error_msg2 em) {
   switch (em) {
-    case clip_failed: return "clip failed";
     case connection_failed: return "connection failed";
     case division_by_zero: return "division by zero";
     case error_msg_nil: return NULL;
