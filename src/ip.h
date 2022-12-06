@@ -12,7 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  built_in_failed,
   clip_failed,
   connection_failed,
   division_by_zero,

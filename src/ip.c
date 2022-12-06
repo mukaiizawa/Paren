@@ -76,7 +76,6 @@ static char *error_name(enum Exception e) {
 
 static char *error_msg2(enum error_msg2 em) {
   switch (em) {
-    case built_in_failed: return "built-in function failed";
     case clip_failed: return "clip failed";
     case connection_failed: return "connection failed";
     case division_by_zero: return "division by zero";
@@ -459,7 +458,7 @@ static void pop_apply_built_in_frame(void)
   pop_frame();
   if ((*function)(list_len(args), args, &(dr))) return;
   gen_trace(gc_new_cons(f->native.name, args));
-  if (trap_type == TRAP_NONE) ip_throw(Error, built_in_failed);
+  xassert(trap_type != TRAP_NONE);
 }
 
 static void pop_bind_frame(void)
