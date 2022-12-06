@@ -8,8 +8,6 @@
 #include "pf.h"
 #include "ip.h"
 
-struct xbarray bi_buf;
-
 int bi_argc_range(int argc, int min, int max)
 {
   if (argc < min)
@@ -70,45 +68,31 @@ static char *type_name(int type) {
   }
 }
 
-#define CHECK(t) {\
-  if (t & bits) {\
-    if (n != 1) {\
-      if (i != 0) {\
-        if (i + 1 != n) xbarray_adds(&ip_sigmsg, ", ");\
-        else xbarray_adds(&ip_sigmsg, " or ");\
-      }\
-    }\
-    xbarray_adds(&ip_sigmsg, type_name(t));\
-    i++;\
-  }\
-}
-
+#define TYPE_MIN BI_SYM
+#define TYPE_MAX BI_NUM
 int bi_argv(int bits, object o, object *result)
 {
-  int i, n;
-  *result = o;
-  if (type_bits(o) & bits) return TRUE;
-  i = 0, n = xbitc(bits);
-  xbarray_reset(&ip_sigmsg);
-  xbarray_adds(&ip_sigmsg, "expected ");
-  CHECK(BI_SYM);
-  CHECK(BI_STR);
-  CHECK(BI_ARRAY);
-  CHECK(BI_BYTES);
-  CHECK(BI_CONS);
-  CHECK(BI_DICT);
-  CHECK(BI_FUNC);
-  CHECK(BI_MACRO);
-  CHECK(BI_SP);
-  CHECK(BI_LIST);
-  CHECK(BI_NUM);
-  return ip_sigerr(ArgumentError);
+  if (type_bits(o) & bits) {
+    *result = o;
+    return TRUE;
+  }
+  char buf[MAX_STR_LEN];
+  int n = xbitc(bits);
+  strcpy(buf, "expected ");
+  for (int i = TYPE_MIN; i <= TYPE_MAX; i = i << 1) {
+    if (i & bits) {
+      strcat(buf, type_name(i));
+      if (n == 2) strcat(buf, " or ");
+      else if (n > 2) strcat(buf, ", ");
+      n--;
+    }
+  }
+  return ip_sigerr_msg(ArgumentError, buf);
 }
 
 int bi_range(int min, int x, int max)
 {
-  if (x < min || x > max)
-    return ip_throw(ArgumentError, index_out_of_range);
+  if (x < min || x > max) return ip_throw(ArgumentError, index_out_of_range);
   return TRUE;
 }
 
@@ -169,31 +153,10 @@ int bi_cdouble(object o, double *p)
   return FALSE;
 }
 
-#define MAX_STRINGS 2
-
-int bi_cstrings(int n, object argv, char **ss)
+int bi_cstring(object o, char **p)
 {
-  int i, offset[MAX_STRINGS]; // xbarray use realloc.
-  object o;
-  xassert(n <= MAX_STRINGS);
-  xassert(object_type(argv) == CONS);
-  xbarray_reset(&bi_buf);
-  for (i = 0; i < n; i++) {
-    if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
-    argv = argv->cons.cdr;
-    offset[i] = bi_buf.size;
-    memcpy(xbarray_reserve(&bi_buf, o->mem.size), o->mem.elt, o->mem.size);
-    xbarray_add(&bi_buf, '\0');
-  }
-  for (i = 0; i < n; i++) ss[i] = bi_buf.elt + offset[i];
-  return TRUE;
-}
-
-int bi_cstring(object argv, char **ss)
-{
-  char *result;
-  if (!bi_cstrings(1, argv, &result)) return FALSE;
-  *ss = result;
+  if (!bi_argv(BI_STR, o, &o)) return FALSE;
+  *p = (gc_new_cstring(o))->mem.elt;
   return TRUE;
 }
 
@@ -932,10 +895,10 @@ DEFUN(bytes)
 DEFUN(symbol)
 {
   static int c = 0;
+  char buf[MAX_STR_LEN];
   if (argc == 0) {
-    xbarray_reset(&bi_buf);
-    xbarray_addf(&bi_buf, "$G-%d", ++c);
-    *result = gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size);
+    xsprintf(buf, "$G-%d", ++c);
+    *result = gc_new_mem_from_cstr(SYMBOL, buf);
     return TRUE;
   }
   return bytes_like_to(SYMBOL, argc, argv, result);
@@ -1880,7 +1843,7 @@ DEFUN(fopen)
   int mode;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstring(argv, &fn)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
   if (!bi_cpint(argv->cons.cdr->cons.car, &mode)) return FALSE;
   if (mode >= sizeof(fopen_mode_table) / sizeof(char *))
     return ip_throw(ArgumentError, invalid_args);
@@ -2017,7 +1980,7 @@ DEFUN(stat)
   char *fn;
   struct pf_stat statbuf;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &fn)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
   mode = pf_stat(fn, &statbuf);
   if (mode == PF_ERROR) return ip_throw(OSError, stat_failed);
   if (mode == PF_NONE) {
@@ -2036,7 +1999,7 @@ DEFUN(utime)
   char *fn;
   int64_t tv;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstring(argv, &fn)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
   if (!bi_cint64(argv->cons.cdr->cons.car, &tv)) return ip_throw(ArgumentError, expected_integer);
   if (!pf_utime(fn, tv)) return ip_throw(OSError, error_msg_nil);
   *result = object_nil;
@@ -2056,7 +2019,7 @@ DEFUN(chdir)
 {
   char *fn;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &fn)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
   *result = object_nil;
   if (!pf_chdir(fn)) return ip_throw(OSError, error_msg_nil);
   return TRUE;
@@ -2067,7 +2030,7 @@ DEFUN(readdir)
   char *path;
   struct xbarray files;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &path)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &path)) return FALSE;
   xbarray_init(&files);
   if (!pf_readdir(path, &files))
     return ip_throw(OSError, readdir_failed);
@@ -2080,7 +2043,7 @@ DEFUN(remove)
 {
   char *fn;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &fn)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
   *result = object_nil;
   return pf_remove(fn);
 }
@@ -2089,18 +2052,20 @@ DEFUN(mkdir)
 {
   char *path;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &path)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &path)) return FALSE;
   *result = object_nil;
   return pf_mkdir(path);
 }
 
 DEFUN(rename)
 {
-  char *src_dst[2];
+  char *src, *dst;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstrings(2, argv, src_dst)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &src)) return FALSE;
+  if (!bi_cstring(argv->cons.cdr->cons.car, &dst)) return FALSE;
+  if (rename(src, dst) != 0) return ip_sigerr_msg(OSError, "rename failed");
   *result = object_nil;
-  return rename(src_dst[0], src_dst[1]) == 0;
+  return TRUE;
 }
 
 DEFUN(time)
@@ -2158,7 +2123,7 @@ DEFUN(popen)
   int mode;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstring(argv, &s)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &s)) return FALSE;
   if (!bi_cpint(argv->cons.cdr->cons.car, &mode)) return FALSE;
   if (mode >= sizeof(popen_mode_table) / sizeof(char *)) return ip_throw(ArgumentError, invalid_args);
   if ((fp = popen(s, popen_mode_table[mode])) == NULL) return ip_throw(OSError, fopen_failed);
@@ -2180,7 +2145,7 @@ DEFUN(system)
 {
   char *s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &s)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &s)) return FALSE;
   *result = gc_new_xint(system(s));
   return TRUE;
 }
@@ -2189,7 +2154,7 @@ DEFUN(getenv)
 {
   char *s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &s)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &s)) return FALSE;
   if ((s = getenv(s)) == NULL) *result = object_nil;
   else *result = gc_new_mem_from_cstr(STRING, s);
   return TRUE;
@@ -2197,12 +2162,23 @@ DEFUN(getenv)
 
 DEFUN(putenv)
 {
-  char *kv[2];
+  char *key, *val;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstrings(2, argv, kv)) return FALSE;
-  *strchr(kv[0], '\0') = '=';
+  if (!bi_cstring(argv->cons.car, &key)) return FALSE;
+  if (!bi_cstring(argv->cons.cdr->cons.car, &val)) return FALSE;
   *result = object_nil;
-  return putenv(xstrdup(kv[0])) == 0;
+  struct xbarray buf;
+  xbarray_init(&buf);
+  xbarray_adds(&buf, key);
+  xbarray_add(&buf, '=');
+  xbarray_adds(&buf, val);
+  xbarray_add(&buf, '\0');
+  if (putenv(xstrdup(buf.elt)) != 0) {
+    xbarray_free(&buf);
+    return ip_sigerr_msg(OSError, "putenv failed");
+  }
+  xbarray_free(&buf);
+  return TRUE;
 }
 
 #undef DEFSP

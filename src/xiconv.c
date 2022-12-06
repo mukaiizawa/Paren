@@ -21,7 +21,7 @@ DEFUN(iconv_2e_encode)
   char *s0, *s1;
   from = to = XICONV_UTF8;    // supress maybe-uninitialized
   if (!bi_argc_range(argc, 2, 3)) return FALSE;
-  if (!bi_cstring(argv, &s0)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &s0)) return FALSE;
   if (!object_to_encoding((argv = argv->cons.cdr)->cons.car, &to)) return FALSE;
   if (argc == 3) {
     from = to;

@@ -28,9 +28,9 @@ DEFUN(clip_2e_copy)
 {
   char *p;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = argv->cons.car;
-  if (!bi_cstring(argv, &p)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &p)) return FALSE;
   if (!clip_copy(p)) return ip_throw(OSError, clip_failed);
+  *result = argv->cons.car;
   return TRUE;
 }
 

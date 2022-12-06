@@ -49,7 +49,7 @@ DEFUN(client_2d_socket)
   char *host, sport[MAX_STR_LEN];
   struct addrinfo hints, *p, *q;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstring(argv, &host)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &host)) return FALSE;
   if (!bi_cint(argv->cons.cdr->cons.car, &port)) return FALSE;
   xsprintf(sport, "%d", port);
   memset(&hints, 0, sizeof(struct addrinfo));

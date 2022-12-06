@@ -9,7 +9,7 @@
 static long cycle;
 static object dr;    // data register.
 static object cr;    // context register.
-struct xbarray ip_sigmsg;
+char error_msg[MAX_STR_LEN];
 
 enum TrapType {
   TRAP_NONE,
@@ -58,7 +58,7 @@ static void intr_init(void)
 // Exception
 
 static enum Exception e;
-static enum error_msg em;
+static enum error_msg2 em;
 
 static char *error_name(enum Exception e) {
   switch (e) {
@@ -74,7 +74,7 @@ static char *error_name(enum Exception e) {
   }
 };
 
-static char *error_msg(enum error_msg em) {
+static char *error_msg2(enum error_msg2 em) {
   switch (em) {
     case built_in_failed: return "built-in function failed";
     case clip_failed: return "clip failed";
@@ -128,7 +128,7 @@ static char *error_msg(enum error_msg em) {
 };
 
 // TODO
-int ip_throw(enum Exception err, enum error_msg msg)
+int ip_throw(enum Exception err, enum error_msg2 msg)
 {
   trap_type = TRAP_ERROR;
   e = err;
@@ -138,8 +138,15 @@ int ip_throw(enum Exception err, enum error_msg msg)
 
 int ip_sigerr(enum Exception err)
 {
-  trap_type = TRAP_ERROR2;
+  return ip_sigerr_msg(err, NULL);
+}
+
+int ip_sigerr_msg(enum Exception err, char *msg)
+{
   e = err;
+  trap_type = TRAP_ERROR2;
+  if (msg == NULL) error_msg[0] = '\0';
+  else strcpy(error_msg, msg);
   return FALSE;
 }
 
@@ -258,6 +265,7 @@ static void dump_fs(void)
 {
   int i, j, frame_type;
   char buf[MAX_STR_LEN];
+  fprintf(stderr, "!stack trace\n");
   for (i = 0; i <= fp; i = next_fp(i)) {
     frame_type = sint_val(fs[i]);
     fprintf(stderr, "+-----------------------------\n");
@@ -266,9 +274,10 @@ static void dump_fs(void)
     for (j = 0; j < frame_size(frame_type) - 2; j++)
       fprintf(stderr, "|%d: %s\n", i + j + 2, object_describe(get_frame_var(i, j), buf));
   }
-  fprintf(stderr, "dr: %s", object_describe(dr, buf));
-  fprintf(stderr, "cr: %s", object_describe(cr, buf));
-  xerror("illegal state");
+  fprintf(stderr, "!registers\n");
+  fprintf(stderr, "dr: %s\n", object_describe(dr, buf));
+  fprintf(stderr, "cr: %s\n", object_describe(cr, buf));
+  exit(1);
 }
 #endif
 
@@ -793,7 +802,6 @@ static int find_super_class(object cls_sym, object *result)
   return find_class(map_get(cls, object_super), result);
 }
 
-
 static int pos_is_a_p(object o, object cls_sym) {
   object o_cls_sym;
   xassert(object_type(cls_sym) == SYMBOL);
@@ -808,12 +816,16 @@ static int pos_is_a_p(object o, object cls_sym) {
 
 static object find_class_method(object cls_sym, object mtd_sym)
 {
+  object o;
+  struct xbarray buf;
   xassert(object_type(cls_sym) == SYMBOL);
   xassert(object_type(mtd_sym) == SYMBOL);
-  xbarray_reset(&bi_buf);
-  xbarray_copy(&bi_buf, cls_sym->mem.elt, cls_sym->mem.size);
-  xbarray_copy(&bi_buf, mtd_sym->mem.elt, mtd_sym->mem.size);
-  return map_get_propagation(cr, gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size));
+  xbarray_init(&buf);
+  xbarray_copy(&buf, cls_sym->mem.elt, cls_sym->mem.size);
+  xbarray_copy(&buf, mtd_sym->mem.elt, mtd_sym->mem.size);
+  o = map_get_propagation(cr, gc_new_mem_from(SYMBOL, buf.elt, buf.size));
+  xbarray_free(&buf);
+  return o;
 }
 
 DEFUN(is_2d_a_3f_)
@@ -1151,14 +1163,14 @@ static object get_call_stack(void)
 }
 
 // TODO
-static object new_Error(enum Exception e, enum error_msg em)
+static object new_Error(enum Exception e, enum error_msg2 em)
 {
   char *err, *msg;
   object o;
   o = gc_new_dict();
   err = error_name(e);
   map_put(o, object_class, gc_new_mem_from_cstr(SYMBOL, err));
-  if ((msg = error_msg(em)) != NULL)
+  if ((msg = error_msg2(em)) != NULL)
     map_put(o, object_message, gc_new_mem_from_cstr(STRING, msg));
   map_put(o, object_stack_trace, object_nil);
   return o;
@@ -1182,7 +1194,7 @@ static void trap(void)
       dr = new_Error(e, em);
       break;
     case TRAP_ERROR2:
-      dr = new_Error2(e, gc_new_mem_from_xbarray(STRING, &ip_sigmsg));
+      dr = new_Error2(e, gc_new_mem_from_cstr(STRING, error_msg));
       break;
     case TRAP_INTERRUPT:
       dr = new_Error2(SystemExit, object_nil);
@@ -1261,8 +1273,6 @@ int ip_start(object args)
   sp = 0;
   fp = -1;
   cycle = 0;
-  xbarray_init(&bi_buf);
-  xbarray_init(&ip_sigmsg);
   trap_type = TRAP_NONE;
   intr_init();
   ip_main(args);

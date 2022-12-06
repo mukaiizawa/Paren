@@ -35,9 +35,8 @@ int xbitc (int bits) {
 
 void xvsprintf(char *buf, char *fmt, va_list va)
 {
-  int len;
-  len = vsnprintf(buf, MAX_STR_LEN, fmt, va);
-  if (len + 1 > MAX_STR_LEN) xerror("xvsprintf/buffer overflow");
+  if (vsnprintf(buf, MAX_STR_LEN, fmt, va) + 1 > MAX_STR_LEN)
+    xerror("xvsprintf/buffer overflow");
 }
 
 void xsprintf(char *buf, char *fmt, ...)

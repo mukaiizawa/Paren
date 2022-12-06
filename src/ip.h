@@ -1,7 +1,5 @@
 // interpreter.
 
-extern struct xbarray ip_sigmsg;
-
 enum Exception {
   Exception,
     SystemExit,
@@ -13,7 +11,7 @@ enum Exception {
       SyntaxError
 };
 
-enum error_msg {
+enum error_msg2 {
   built_in_failed,
   clip_failed,
   connection_failed,
@@ -64,7 +62,8 @@ enum error_msg {
 };
 
 // TODO
-extern int ip_throw(enum Exception e, enum error_msg em);
+extern int ip_throw(enum Exception e, enum error_msg2 em);
 extern int ip_sigerr(enum Exception e);
+extern int ip_sigerr_msg(enum Exception e, char *msg);
 extern void ip_mark_object(void);
 extern int ip_start(object args);
