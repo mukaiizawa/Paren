@@ -610,8 +610,7 @@ static int double_divide(double dx, object argv, object *result)
   if (bi_cint64(argv->cons.car, &iy)) dy = (double)iy;
   else if (!bi_cdouble(argv->cons.car, &dy))
     return ip_throw(ArgumentError, expected_number);
-  if (dy == 0)
-    return ip_throw(ArithmeticError, division_by_zero);
+  if (dy == 0) return ip_sigerr_msg(ArithmeticError, "division by zero");
   return double_divide(dx / dy, argv->cons.cdr, result);
 }
 
@@ -623,8 +622,7 @@ static int int64_divide(int64_t ix, object argv, object *result)
     return TRUE;
   }
   if (bi_cint64(argv->cons.car, &iy)) {
-    if (iy == 0)
-      return ip_throw(ArithmeticError, division_by_zero);
+    if (iy == 0) return ip_sigerr_msg(ArithmeticError, "division by zero");
     if (ix == INT64_MIN && iy == -1)
       return ip_throw(ArithmeticError, numeric_overflow);
     if (ix % iy == 0)
@@ -669,8 +667,7 @@ DEFUN(_2f__2f_)
       return ip_throw(ArgumentError, expected_integer);
     if (!bi_cint64(argv->cons.cdr->cons.car, &iy))
       return ip_throw(ArgumentError, expected_integer);
-    if (iy == 0)
-      return ip_throw(ArithmeticError, division_by_zero);
+    if (iy == 0) return ip_sigerr_msg(ArithmeticError, "division by zero");
     *result = gc_new_xint(ix / iy);
     return TRUE;
   }
@@ -684,8 +681,7 @@ DEFUN(_25_)
     return ip_throw(ArgumentError, expected_integer);
   if (!bi_cint64(argv->cons.cdr->cons.car, &y))
     return ip_throw(ArgumentError, expected_integer);
-  if (y == 0)
-    return ip_throw(ArithmeticError, division_by_zero);
+  if (y == 0) return ip_sigerr_msg(ArithmeticError, "division by zero");
   *result = gc_new_xint(x % y);
   return TRUE;
 }

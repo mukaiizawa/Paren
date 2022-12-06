@@ -12,8 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  connection_failed,
-  division_by_zero,
   expected_binding_value,
   expected_built_in_operator,
   expected_byte,
