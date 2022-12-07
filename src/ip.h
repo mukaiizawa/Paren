@@ -12,7 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  expected_binding_value,
   expected_built_in_operator,
   expected_byte,
   expected_function,

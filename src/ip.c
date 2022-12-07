@@ -77,7 +77,6 @@ static char *error_name(enum Exception e) {
 static char *error_msg2(enum error_msg2 em) {
   switch (em) {
     case error_msg_nil: return NULL;
-    case expected_binding_value: return "expected binding value";
     case expected_built_in_operator: return "expected built-in operator";
     case expected_byte: return "expected byte";
     case expected_function: return "expected function";
@@ -962,7 +961,7 @@ static int gen_bind_frames(int frame_type, object args)
       return ip_throw(SyntaxError, invalid_binding_expr);
   }
   if ((args = args->cons.cdr) == object_nil)
-    return ip_throw(ArgumentError, expected_binding_value);
+    return ip_sigerr_msg(ArgumentError, "expected binding value");
   if (!gen_bind_frames(frame_type, args->cons.cdr)) return FALSE;
   gen1(frame_type, o->cons.car);
   gen0(EVAL_FRAME);
