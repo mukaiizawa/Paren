@@ -12,14 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  expected_built_in_operator,
-  expected_byte,
-  expected_function,
-  expected_integer,
-  expected_keyword_parameter_value,
-  expected_list,
-  expected_loop_context,
-  expected_number,
   expected_operator,
   expected_positive_integer,
   expected_positive_integer_or_sequence,

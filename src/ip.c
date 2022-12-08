@@ -77,14 +77,6 @@ static char *error_name(enum Exception e) {
 static char *error_msg2(enum error_msg2 em) {
   switch (em) {
     case error_msg_nil: return NULL;
-    case expected_built_in_operator: return "expected built-in operator";
-    case expected_byte: return "expected byte";
-    case expected_function: return "expected function";
-    case expected_integer: return "expected integer";
-    case expected_keyword_parameter_value: return "expected keyword parameter value";
-    case expected_list: return "expected list";
-    case expected_loop_context: return "expected loop context";
-    case expected_number: return "expected number";
     case expected_operator: return "expected operator";
     case expected_positive_integer: return "expected positive integer";
     case expected_positive_integer_or_sequence: return "expected positive integer, array, bytes, list, or string";
@@ -348,10 +340,8 @@ static int valid_keyword_args(object params, object args)
       if (same_symbol_keyword_p(p->cons.car, args->cons.car)) break;
       p = p->cons.cdr;
     }
-    if (p == object_nil)
-      return ip_throw(ArgumentError, undeclared_keyword_param);
-    if ((args = args->cons.cdr) == object_nil)
-      return ip_throw(ArgumentError, expected_keyword_parameter_value);
+    if (p == object_nil) return ip_throw(ArgumentError, undeclared_keyword_param);
+    if ((args = args->cons.cdr) == object_nil) return ip_sigerr_msg(ArgumentError, "expected keyword parameter value");
     args = args->cons.cdr;
   }
   return TRUE;
@@ -360,8 +350,7 @@ static int valid_keyword_args(object params, object args)
 static int parse_args(void (*f)(object, object, object), object params, object args)
 {
   object o, k, v;
-  if (!list_p(params) || !list_p(args))
-    return ip_throw(ArgumentError, expected_list);
+  if (!list_p(params) || !list_p(args)) return ip_sigerr_msg(ArgumentError, "expected list");
   // required args
   while (params != object_nil) {
     if (keyword_p(params->cons.car)) break;
@@ -595,9 +584,8 @@ static void pop_break_continue_frame(int exit_p)
         break;
     }
   }
-  ip_throw(StateError, expected_loop_context);
   set_fp(i);
-  return;
+  ip_sigerr_msg(StateError, "missing loop context");
 }
 
 static void pop_unwind_protect_frame(void)
@@ -724,14 +712,9 @@ DEFUN(apply)
   if (!bi_argv(BI_LIST, argv->cons.cdr->cons.car, &args)) return FALSE;
   dr = args;
   switch (object_type(argv->cons.car)) {
-    case BFUNC:
-      gen1(APPLY_BUILT_IN_FRAME, argv->cons.car);
-      return TRUE;
-    case FUNC:
-      gen1(APPLY_FRAME, argv->cons.car);
-      return TRUE;
-    default:
-      return ip_throw(ArgumentError, expected_function);
+    case BFUNC: gen1(APPLY_BUILT_IN_FRAME, argv->cons.car); return TRUE;
+    case FUNC: gen1(APPLY_FRAME, argv->cons.car); return TRUE;
+    default: return ip_sigerr_msg(ArgumentError, "expected function");
   }
 }
 
