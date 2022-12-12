@@ -10,12 +10,12 @@ len - get the length of the collection.
     (len DICTIONARY)
 
 # DESCRIPTION
-The function `len` get the length of the collection.
+The function `len` get the length of the argument.
 
 # RETURN VALUE
-Returns the length of `COLLECTION`.
+Returns the length of argument.
 
-If the `COLLECTION` is `nil`, `0` is returned.
+If the argument is `nil`, `0` is returned.
 
 # EXAMPLES
 
