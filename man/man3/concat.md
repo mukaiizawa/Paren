@@ -34,7 +34,7 @@ Error if the argument data types are not all the same. However, the symbol `nil`
     #[ nil nil nil ]
 
     ) (concat :foo :bar)
-    :foobar
+    :foo:bar
 
     ) (concat nil)
     nil
