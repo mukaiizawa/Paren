@@ -261,15 +261,15 @@ static int double_eq_p(double x, object p)
 {
   int64_t i;
   double d;
-  if (bi_cint64(p, &i)) return fabs(x - (double)i) < DBL_EPSILON;
-  if (bi_cdouble(p, &d)) return fabs(x - d) < DBL_EPSILON;
+  if (bi_may_cint64(p, &i)) return fabs(x - (double)i) < DBL_EPSILON;
+  if (bi_may_cdouble(p, &d)) return fabs(x - d) < DBL_EPSILON;
   return FALSE;
 }
 
 static int int64_eq_p(int64_t x, object p)
 {
   int64_t y;
-  if (bi_cint64(p, &y)) return x == y;
+  if (bi_may_cint64(p, &y)) return x == y;
   return double_eq_p((double)x, p);
 }
 
@@ -277,8 +277,8 @@ static int number_eq_p(object o, object p)
 {
   int64_t i;
   double d;
-  if (bi_cint64(o, &i)) return int64_eq_p(i, p);
-  if (bi_cdouble(o, &d)) return double_eq_p(d, p);
+  if (bi_may_cint64(o, &i)) return int64_eq_p(i, p);
+  if (bi_may_cdouble(o, &d)) return double_eq_p(d, p);
   return FALSE;
 }
 
