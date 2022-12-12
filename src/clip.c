@@ -29,7 +29,7 @@ DEFUN(clip_2e_copy)
   char *p;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv->cons.car, &p)) return FALSE;
-  if (!clip_copy(p)) return ip_sigerr_msg(OSError, "copy failed");
+  if (!clip_copy(p)) return ip_sigerr(OSError, "copy failed");
   *result = argv->cons.car;
   return TRUE;
 }
@@ -51,6 +51,6 @@ static int clip_paste(object *result)
 DEFUN(clip_2e_paste)
 {
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
-  if (!clip_paste(result)) return ip_sigerr_msg(OSError, "paste failed");
+  if (!clip_paste(result)) return ip_sigerr(OSError, "paste failed");
   return TRUE;
 }

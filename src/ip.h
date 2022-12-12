@@ -12,7 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  expected_operator,
   expected_positive_integer,
   expected_positive_integer_or_sequence,
   fgetc_failed,
@@ -50,7 +49,6 @@ enum error_msg2 {
 
 // TODO
 extern int ip_throw(enum Exception e, enum error_msg2 em);
-extern int ip_sigerr(enum Exception e);
-extern int ip_sigerr_msg(enum Exception e, char *msg);
+extern int ip_sigerr(enum Exception e, char *msg);
 extern void ip_mark_object(void);
 extern int ip_start(object args);

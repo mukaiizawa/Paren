@@ -85,7 +85,7 @@ int bi_argv(int bits, object o, object *result)
       n--;
     }
   }
-  return ip_sigerr_msg(ArgumentError, buf);
+  return ip_sigerr(ArgumentError, buf);
 }
 
 int bi_range(int min, int x, int max)
@@ -98,7 +98,7 @@ int bi_cbyte(object o, int *p)
 {
   if (!bi_cint(o, p) || *p < 0 || *p > 0xff) {
     *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
-    return ip_sigerr_msg(ArgumentError, "expected byte");
+    return ip_sigerr(ArgumentError, "expected byte");
   }
   return TRUE;
 }
@@ -107,7 +107,7 @@ int bi_cint(object o, int *p)
 {
   if (!sint_p(o)) {
     *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
-    return ip_sigerr_msg(ArgumentError, "expected integer");
+    return ip_sigerr(ArgumentError, "expected integer");
   }
   *p = sint_val(o);
   return TRUE;
@@ -148,7 +148,7 @@ int bi_cint64(object o, int64_t *p)
 {
   if (!bi_may_cint64(o, p)) {
     *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
-    return ip_sigerr_msg(ArgumentError, "expected integer");
+    return ip_sigerr(ArgumentError, "expected integer");
   }
   return TRUE;
 }
@@ -166,7 +166,7 @@ static int bi_cintptr(object o, intptr_t *p)
 
 static int bi_fp(object o, FILE **p)
 {
-  if (!bi_cintptr(o, (intptr_t *)p)) return ip_sigerr_msg(ArgumentError, "invalid fp");
+  if (!bi_cintptr(o, (intptr_t *)p)) return ip_sigerr(ArgumentError, "invalid fp");
   return TRUE;
 }
 
@@ -188,7 +188,7 @@ int bi_cdouble(object o, double *p)
 {
   if (!bi_may_cdouble(o, p)) {
     *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
-    return ip_sigerr_msg(ArgumentError, "expected number");
+    return ip_sigerr(ArgumentError, "expected number");
   }
   return TRUE;
 }
@@ -626,7 +626,7 @@ static int double_divide(double x, object argv, object *result)
     return TRUE;
   }
   if (!bi_cdouble(argv->cons.car, &y)) return FALSE;
-  if (y == 0) return ip_sigerr_msg(ArithmeticError, "division by zero");
+  if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
   return double_divide(x / y, argv->cons.cdr, result);
 }
 
@@ -638,7 +638,7 @@ static int int64_divide(int64_t x, object argv, object *result)
     return TRUE;
   }
   if (bi_may_cint64(argv->cons.car, &y)) {
-    if (y == 0) return ip_sigerr_msg(ArithmeticError, "division by zero");
+    if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
     if (x == INT64_MIN && y == -1) return ip_throw(ArithmeticError, numeric_overflow);
     if (x % y == 0) return int64_divide(x / y, argv->cons.cdr, result);
     return double_divide((double)x / y, argv->cons.cdr, result);
@@ -676,7 +676,7 @@ DEFUN(_2f__2f_)
   }
   if (!bi_cint64(argv->cons.car, &x)) return FALSE;
   if (!bi_cint64(argv->cons.cdr->cons.car, &y)) return FALSE;
-  if (y == 0) return ip_sigerr_msg(ArithmeticError, "division by zero");
+  if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
   *result = gc_new_xint(x / y);
   return TRUE;
 }
@@ -687,7 +687,7 @@ DEFUN(_25_)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cint64(argv->cons.car, &x)) return FALSE;
   if (!bi_cint64(argv->cons.cdr->cons.car, &y)) return FALSE;
-  if (y == 0) return ip_sigerr_msg(ArithmeticError, "division by zero");
+  if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
   *result = gc_new_xint(x % y);
   return TRUE;
 }
@@ -754,7 +754,7 @@ DEFUN(_3c__3c_)
   int64_t x, y;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_may_cint64(argv->cons.car, &x) || x < 0) return ip_throw(ArgumentError, expected_positive_integer);
-  if (!bi_may_cint64(argv->cons.cdr->cons.car, &y)) return ip_sigerr_msg(ArgumentError, "expected integer");
+  if (!bi_may_cint64(argv->cons.cdr->cons.car, &y)) return ip_sigerr(ArgumentError, "expected integer");
   if (x != 0) {
     if (y > 0) {
       if ((bits(x) + y) > XINT_BITS)
@@ -2050,7 +2050,7 @@ DEFUN(rename)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cstring(argv->cons.car, &src)) return FALSE;
   if (!bi_cstring(argv->cons.cdr->cons.car, &dst)) return FALSE;
-  if (rename(src, dst) != 0) return ip_sigerr_msg(OSError, "rename failed");
+  if (rename(src, dst) != 0) return ip_sigerr(OSError, "rename failed");
   *result = object_nil;
   return TRUE;
 }
@@ -2162,7 +2162,7 @@ DEFUN(putenv)
   xbarray_add(&buf, '\0');
   if (putenv(xstrdup(buf.elt)) != 0) {
     xbarray_free(&buf);
-    return ip_sigerr_msg(OSError, "putenv failed");
+    return ip_sigerr(OSError, "putenv failed");
   }
   xbarray_free(&buf);
   return TRUE;
