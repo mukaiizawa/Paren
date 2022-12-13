@@ -96,7 +96,6 @@ static char *error_msg2(enum error_msg2 em) {
     case unexpected_keyword_parameter: return "unexpected keyword parameter";
     case unknown_af_family: return "unknown address family";
     case unknown_socktype: return "unknown socket type";
-    case unexpected_utf8_leading_byte: return "unexpected utf8 leading byte";
     default: xassert(FALSE); return NULL;
   }
 };

@@ -31,7 +31,6 @@ enum error_msg2 {
   unexpected_keyword_parameter,
   unknown_af_family,
   unknown_socktype,
-  unexpected_utf8_leading_byte,
   error_msg_nil
 };
 
