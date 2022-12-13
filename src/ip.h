@@ -12,7 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  gethostname_failed,
   incomplete_utf8_byte_sequence,
   index_out_of_range,
   invalid_args,

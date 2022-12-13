@@ -77,7 +77,6 @@ static char *error_name(enum Exception e) {
 static char *error_msg2(enum error_msg2 em) {
   switch (em) {
     case error_msg_nil: return NULL;
-    case gethostname_failed: return "gethostname failed";
     case incomplete_utf8_byte_sequence: return "incomplete utf8 byte sequence";
     case index_out_of_range: return "index out of range";
     case invalid_args: return "invalid arguments";

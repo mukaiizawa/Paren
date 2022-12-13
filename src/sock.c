@@ -37,8 +37,7 @@ DEFUN(gethostname)
 {
   char buf[MAX_STR_LEN];
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
-  if (gethostname(buf, MAX_STR_LEN) != 0)
-    return ip_throw(OSError, gethostname_failed);
+  if (gethostname(buf, MAX_STR_LEN) != 0) return ip_sigerr(OSError, "gethostname failed");
   *result = gc_new_mem_from_cstr(STRING, buf);
   return TRUE;
 }
