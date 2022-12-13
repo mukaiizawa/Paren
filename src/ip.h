@@ -12,7 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  expected_positive_integer,
   expected_positive_integer_or_sequence,
   fgetc_failed,
   fopen_failed,

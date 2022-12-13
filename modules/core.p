@@ -592,9 +592,7 @@
 (built-in-function |)
 (built-in-function ^)
 (built-in-function <<)
-
-(function >> (x y)
-  (<< x (- y)))
+(built-in-function >>)
 
 ;;;; mathematical functions.
 

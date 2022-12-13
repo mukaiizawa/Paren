@@ -20,7 +20,6 @@ typedef union _object *object;
 #define     BFUNC        0xc
 #define     ENV          0xd
 
-#define SINT_BITS 30
 #define SINT_MAX 0x3fffffff
 #define SINT_MIN (- SINT_MAX - 1)
 #define XINT_BITS 63

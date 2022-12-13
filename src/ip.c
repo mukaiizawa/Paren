@@ -77,7 +77,6 @@ static char *error_name(enum Exception e) {
 static char *error_msg2(enum error_msg2 em) {
   switch (em) {
     case error_msg_nil: return NULL;
-    case expected_positive_integer: return "expected positive integer";
     case expected_positive_integer_or_sequence: return "expected positive integer, array, bytes, list, or string";
     case fgetc_failed: return "fgetc failed";
     case fopen_failed: return "fopen failed";
