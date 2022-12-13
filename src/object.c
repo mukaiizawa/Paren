@@ -365,39 +365,6 @@ object list_reverse(object o)
   return acc;
 }
 
-int ch_len(unsigned char ch, int *len)
-{
-  if (ch < 0x80) (*len) += 1;
-  else if (ch < 0xe0) (*len) += 2;
-  else if (ch < 0xf0) (*len) += 3;
-  else if (ch < 0xf8) (*len) += 4;
-  else return ip_throw(ArgumentError, unexpected_utf8_leading_byte);
-  return TRUE;
-}
-
-int ch_at(object o, int *i, object *result)
-{
-  int size;
-  size = 0;
-  if (!ch_len(LC(o->mem.elt + (*i)), &size)) return FALSE;
-  if ((*i) + size > o->mem.size) return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
-  *result = gc_new_mem_from(STRING, o->mem.elt + (*i), size);
-  (*i) += size;
-  return TRUE;
-}
-
-int str_len(object o, int *len)
-{
-  int i;
-  i = *len = 0;
-  while (i < o->mem.size) {
-    if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
-    (*len)++;
-  }
-  if (i != o->mem.size) return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
-  return TRUE;
-}
-
 object map_get(object o, object s)
 {
   int i;
