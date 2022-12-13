@@ -77,16 +77,6 @@ static char *error_name(enum Exception e) {
 static char *error_msg2(enum error_msg2 em) {
   switch (em) {
     case error_msg_nil: return NULL;
-    case expected_positive_integer_or_sequence: return "expected positive integer, array, bytes, list, or string";
-    case fgetc_failed: return "fgetc failed";
-    case fopen_failed: return "fopen failed";
-    case fp_failed: return "fp failed";
-    case fputc_failed: return "fputc failed";
-    case fread_failed: return "fread failed";
-    case fseek_failed: return "fseek failed";
-    case ftell_failed: return "ftell failed";
-    case fwrite_failed: return "fwrite failed";
-    case getaddrinfo_failed: return "getaddrinfo failed";
     case gethostname_failed: return "gethostname failed";
     case incomplete_utf8_byte_sequence: return "incomplete utf8 byte sequence";
     case index_out_of_range: return "index out of range";

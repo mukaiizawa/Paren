@@ -12,16 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  expected_positive_integer_or_sequence,
-  fgetc_failed,
-  fopen_failed,
-  fp_failed,
-  fputc_failed,
-  fread_failed,
-  fseek_failed,
-  ftell_failed,
-  fwrite_failed,
-  getaddrinfo_failed,
   gethostname_failed,
   incomplete_utf8_byte_sequence,
   index_out_of_range,

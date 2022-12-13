@@ -749,7 +749,6 @@ DEFUN(_3e__3e_)
 
 static int left_most_bit(int64_t x)
 {
-  xassert(x > 0);
   for (int i = 0; i < XINT_BITS; i++)
     if (x < (1LL << i)) return i;
   return XINT_BITS;
@@ -1152,7 +1151,7 @@ static int str_to_array(object o, object *result)
 
 DEFUN(array)
 {
-  int i, size;
+  int size;
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if ((o = argv->cons.car) == object_nil) {
@@ -1168,7 +1167,7 @@ DEFUN(array)
     case CONS:
       size = list_len(o);
       *result = gc_new_array(size);
-      for (i = 0; i < size; i++) {
+      for (int i = 0; i < size; i++) {
         (*result)->array.elt[i] = o->cons.car;
         o = o->cons.cdr;
       }
@@ -1179,14 +1178,14 @@ DEFUN(array)
     case BYTES:
       size = o->mem.size;
       *result = gc_new_array(o->mem.size);
-      for (i = 0; i < size; i++)
+      for (int i = 0; i < size; i++)
         (*result)->array.elt[i] = gc_new_xint(o->mem.elt[i]);
       return TRUE;
     case ARRAY:
       *result = gc_new_array_from(o->array.elt, o->array.size);
       return TRUE;
     default:
-      return ip_throw(ArgumentError, expected_positive_integer_or_sequence);
+      return ip_sigerr(ArgumentError, "expected positive integer, array, bytes, list, or string");
   }
 }
 
@@ -1806,41 +1805,42 @@ DEFUN(_3c_)
 
 // os.
 
-DEFUN(fp)
+static int fp_error_p(FILE *fp)
 {
-  int fd;
-  FILE *fp;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cint(argv->cons.car, &fd)) return FALSE;
-  switch (fd) {
-    case 0: fp = stdin; break;
-    case 1: fp = stdout; break;
-    case 2: fp = stderr; break;
-    default: return ip_throw(OSError, fp_failed);
-  }
-  *result = gc_new_xint((intptr_t)fp);
-  return TRUE;
+  int error_p = ferror(fp);
+  clearerr(fp);
+  return error_p;
 }
 
-static char *fopen_mode_table[] = {
-  "rb",
-  "wb",
-  "ab",
-  "rb+"
-};
+DEFUN(fp)
+{
+  int64_t fd;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_may_cint64(argv->cons.car, &fd)) fd = -1;
+  switch (fd) {
+    case 0: *result = gc_new_xint((intptr_t)stdin); return TRUE;
+    case 1: *result = gc_new_xint((intptr_t)stdout); return TRUE;
+    case 2: *result = gc_new_xint((intptr_t)stderr); return TRUE;
+    default: return ip_sigerr(OSError, "invalid file descriptor");
+  }
+}
 
 DEFUN(fopen)
 {
-  char *fn;
-  int mode;
+  int64_t i;
+  char *fn, *mode;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
-  if (!bi_cpint(argv->cons.cdr->cons.car, &mode)) return FALSE;
-  if (mode >= sizeof(fopen_mode_table) / sizeof(char *))
-    return ip_throw(ArgumentError, invalid_args);
-  if ((fp = pf_fopen(fn, fopen_mode_table[mode])) == NULL)
-    return ip_throw(OSError, fopen_failed);
+  if (!bi_may_cint64(argv->cons.cdr->cons.car, &i)) i = -1;
+  switch (i) {
+    case 0: mode = "rb"; break;
+    case 1: mode = "wb"; break;
+    case 2: mode = "ab"; break;
+    case 3: mode = "rb+"; break;
+    default: return ip_sigerr(ArgumentError, "invalid fopen mode");
+  }
+  if ((fp = pf_fopen(fn, mode)) == NULL) return ip_sigerr(OSError, "fopen failed");
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;
 }
@@ -1851,10 +1851,7 @@ DEFUN(fgetc)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_fp(argv->cons.car, &fp)) return FALSE;
   int ch = fgetc(fp);
-  if (ch == EOF && ferror(fp)) {
-    clearerr(fp);
-    return ip_throw(OSError, fgetc_failed);
-  }
+  if (ch == EOF && fp_error_p(fp)) return ip_sigerr(OSError, "fgetc failed");
   *result = gc_new_xint(ch);
   return TRUE;
 }
@@ -1864,10 +1861,10 @@ DEFUN(fputc)
   int byte;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  *result = argv->cons.car;
   if (!bi_cbyte(argv->cons.car, &byte)) return FALSE;
   if (!bi_fp(argv->cons.cdr->cons.car, &fp)) return FALSE;
-  if (fputc(byte, fp) == EOF) return ip_throw(OSError, fputc_failed);
+  if (fputc(byte, fp) == EOF) return ip_sigerr(OSError, "fputc failed");
+  *result = argv->cons.car;
   return TRUE;
 }
 
@@ -1900,11 +1897,7 @@ DEFUN(fread)
   if (!bi_cint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_fp(argv->cons.cdr->cons.car, &fp)) return FALSE;
-  size = fread(o->mem.elt + from, 1, size, fp);
-  if (size == 0 && ferror(fp)) {
-    clearerr(fp);
-    return ip_throw(OSError, fread_failed);
-  }
+  if ((size = fread(o->mem.elt + from, 1, size, fp)) == 0 && fp_error_p(fp)) return ip_sigerr(OSError, "fread failed");
   *result = gc_new_xint(size);
   return TRUE;
 }
@@ -1920,26 +1913,22 @@ DEFUN(fwrite)
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_fp(argv->cons.cdr->cons.car, &fp)) return FALSE;
-  size = fwrite(o->mem.elt + from, 1, size, fp);
-  if (size == 0 && ferror(fp)) {
-    clearerr(fp);
-    return ip_throw(OSError, fwrite_failed);
-  }
+  if ((size = fwrite(o->mem.elt + from, 1, size, fp)) == 0 && fp_error_p(fp)) return ip_sigerr(OSError, "fwrite failed");
   *result = gc_new_xint(size);
   return TRUE;
 }
 
 DEFUN(fseek)
 {
-  int st, off;
+  int offset;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_fp(argv->cons.car, &fp)) return FALSE;
-  if (!bi_cint(argv->cons.cdr->cons.car, &off)) return FALSE;
+  if (!bi_cint(argv->cons.cdr->cons.car, &offset)) return FALSE;
+  if (offset == -1?
+      fseek(fp, 0, SEEK_END):
+      fseek(fp, offset, SEEK_SET) != 0) return ip_sigerr(OSError, "fseek failed");
   *result = object_nil;
-  if (off == -1) st = fseek(fp, 0, SEEK_END);
-  else st = fseek(fp, off, SEEK_SET);
-  if (st != 0) return ip_throw(OSError, fseek_failed);
   return TRUE;
 }
 
@@ -1949,7 +1938,7 @@ DEFUN(ftell)
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_fp(argv->cons.car, &fp)) return FALSE;
-  if ((pos = ftell(fp)) == -1) return ip_throw(OSError, ftell_failed);
+  if ((pos = ftell(fp)) == -1) return ip_sigerr(OSError, "ftell failed");
   *result = gc_new_xint(pos);
   return TRUE;
 }
@@ -2102,21 +2091,20 @@ DEFUN(utcoffset)
   return TRUE;
 }
 
-static char *popen_mode_table[] = {
-  "r",
-  "w"
-};
-
 DEFUN(popen)
 {
-  char *s;
-  int mode;
+  char *cmd, *mode;
+  intptr_t i;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstring(argv->cons.car, &s)) return FALSE;
-  if (!bi_cpint(argv->cons.cdr->cons.car, &mode)) return FALSE;
-  if (mode >= sizeof(popen_mode_table) / sizeof(char *)) return ip_throw(ArgumentError, invalid_args);
-  if ((fp = popen(s, popen_mode_table[mode])) == NULL) return ip_throw(OSError, fopen_failed);
+  if (!bi_cstring(argv->cons.car, &cmd)) return FALSE;
+  if (!bi_may_cint64(argv->cons.cdr->cons.car, &i)) i = -1;
+  switch (i) {
+    case 0: mode = "r"; break;
+    case 1: mode = "w"; break;
+    default: return ip_sigerr(ArgumentError, "invalid popen mode");
+  }
+  if ((fp = popen(cmd, mode)) == NULL) return ip_sigerr(OSError, "popen failed");
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;
 }
