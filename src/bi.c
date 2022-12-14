@@ -1040,43 +1040,33 @@ DEFUN(chr)
   return TRUE;
 }
 
-static int ord(object o, int from, int len, int *val)
+#define LCP(i, mask) (LC(p->mem.elt + i) & mask)
+#define LCPS(i, mask, shift) (LCP(i, mask) << shift)
+static int ord(object o, int *i, int *val)
 {
-  xassert(object_type(o) == STRING);
-  if (from + len > o->mem.size) len = -1;
-  switch (len) {
-    case 1:
-      *val = LC(o->mem.elt + from);
-      return TRUE;
-    case 2:
-      *val = ((LC(o->mem.elt + from) & 0x3f) << 6)
-        | (LC(o->mem.elt + from + 1) & 0x3f);
-      return TRUE;
-    case 3:
-      *val = ((LC(o->mem.elt + from) & 0xf) << 12)
-        | ((LC(o->mem.elt + from + 1) & 0x3f) << 6)
-        | (LC(o->mem.elt + from + 2) & 0x3f);
-      return TRUE;
-    case 4:
-      *val = ((LC(o->mem.elt + from) & 0x3) << 18)
-        | ((LC(o->mem.elt + from + 1) & 0x3f) << 12)
-        | ((LC(o->mem.elt + from + 2) & 0x3f) << 6)
-        | (LC(o->mem.elt + from + 3) & 0x3f);
-      return TRUE;
-    default:
-      *val = -1;
-      return ip_sigerr(ArgumentError, "incomplete UTF-8 byte sequence");
+  object p;
+  if (!ch_at(o, i, &p)) return FALSE;
+  switch (p->mem.size) {
+    case 1: *val = LC(p->mem.elt); return TRUE;
+    case 2: *val = LCPS(0, 0x3f, 6) | LCP(1, 0x3f); return TRUE;
+    case 3: *val = LCPS(0, 0xf, 12) | LCPS(1, 0x3f, 6) | LCP(2, 0x3f); return TRUE;
+    case 4: *val = LCPS(0, 0x3, 18) | LCPS(1, 0x3f, 12) | LCPS(2, 0x3f, 6) | LCP(3, 0x3f); return TRUE;
+    default: xassert(FALSE); return FALSE;    // see ch_len;
   }
 }
+#undef LCP
+#undef LCPS
 
 DEFUN(ord)
 {
-  int x;
+  int i = 0, val;
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
-  if (!ord(o, 0, o->mem.size, &x)) return FALSE;
-  *result = gc_new_xint(x);
+  if (o->mem.size == 0) return ip_sigerr(ArgumentError, "expected a character, but empty string");
+  if (!ord(o, &i, &val)) return FALSE;
+  if (o->mem.size != i) return ip_sigerr(ArgumentError, "expected a character, but string");
+  *result = gc_new_xint(val);
   return TRUE;
 }
 
@@ -1781,17 +1771,12 @@ static int bytes_lt(object o, object argv, object *result)
   return  TRUE;
 }
 
-static int chcmp(object o, int *oi, object p, int *pi, int *x)
+static int chcmp(object o, int *oi, object p, int *pi, int *cmp)
 {
-  int olen, plen, oord, pord;
-  olen = plen = 0;
-  if (!ch_len(LC(o->mem.elt + *oi), &olen)) return FALSE;
-  if (!ch_len(LC(p->mem.elt + *pi), &plen)) return FALSE;
-  if (!ord(o, *oi, olen, &oord)) return FALSE;
-  if (!ord(p, *pi, plen, &pord)) return FALSE;
-  *oi += olen;
-  *pi += plen;
-  *x = oord - pord;
+  int x, y;
+  if (!ord(o, oi, &x)) return FALSE;
+  if (!ord(p, pi, &y)) return FALSE;
+  *cmp = x - y;
   return TRUE;
 }
 
