@@ -1797,21 +1797,21 @@ static int chcmp(object o, int *oi, object p, int *pi, int *x)
 
 static int str_lt(object o, object argv, object *result)
 {
-  int oi, pi, x;
+  int oi, pi, cmp;
   object p;
   if (argv == object_nil) {
     *result = object_true;
     return TRUE;
   }
   if (!bi_argv(BI_STR, argv->cons.car, &p)) return FALSE;
-  oi = pi = 0;
-  while (pi < p->mem.size) {
-    if (oi == o->mem.size) x = -1;
-    else if (!chcmp(o, &oi, p, &pi, &x)) return FALSE;
-    if (x < 0) return str_lt(p, argv->cons.cdr, result);
-    if (x > 0) break;
+  cmp = oi = pi = 0;
+  while (cmp == 0) {
+    if (pi == p->mem.size) cmp = 1;
+    else if (oi == o->mem.size) cmp = -1;
+    else if (!chcmp(o, &oi, p, &pi, &cmp)) return FALSE;
   }
-  return  TRUE;
+  if (cmp < 0) return str_lt(p, argv->cons.cdr, result);
+  return TRUE;
 }
 
 DEFUN(_3c_)
