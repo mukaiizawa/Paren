@@ -11,10 +11,11 @@ The function `fseek` sets the file position indicator of the stream pointed to b
 If `-1` is specified, move to the end of the file.
 
 # RETURN VALUE
-Returns `nil`.
+Returns the `nil`.
 
 # ERRORS
-OSError may occur for some reason.
+## OSError
+May occur for some reason.
 
 # NOTES
 `FP` is created by `fopen` or `fp`.

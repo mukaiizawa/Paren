@@ -12,7 +12,8 @@ The function `fputc` write the byte specified by `CH` to the output stream point
 Returns `CH`.
 
 # ERRORS
-OSError may occur for some reason.
+## OSError
+May occur for some reason.
 
 # NOTES
 `FP` is created by `fopen` or `fp`.

@@ -25,9 +25,11 @@ Returns the `DST`.
     #< 0x01 0x02 0x03 0x04 0x05 0x06 >
 
 # ERRORS
-ArgumentError if `SRC` is not a bytes-like or `DST` is not a bytes.
+## ArgumentError
+If `SRC` is not a bytes-like or `DST` is not a bytes.
 
-IndexError if the reference range of the `SRC` or `DST` is incorrect.
+## IndexError
+If the reference range of the `SRC` or `DST` is incorrect.
 
 # NOTES
 Unlike the C language, it works correctly even if the areas to be copied overlap.

@@ -14,6 +14,7 @@ Returns the last cons of the `LIST`.
 If `LIST` is `nil`, returns `nil`.
 
 # ERRORS
+## ArgumentError
 Error if `LIST` is not a list.
 
 # EXAMPLES

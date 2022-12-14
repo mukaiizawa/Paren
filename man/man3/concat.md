@@ -23,7 +23,8 @@ If there is no argument, `nil` is returned.
 The return value will be created anew and none of the arguments will be changed.
 
 # ERRORS
-Error if the argument data types are not all the same. However, the symbol `nil` also behaves as an empty list.
+## ArgumentError
+If the argument data types are not all the same. However, the symbol `nil` also behaves as an empty list.
 
 # EXAMPLES
 

@@ -12,7 +12,8 @@ The function `chdir` change the current working directory to the directory speci
 Returns the `nil`.
 
 # ERRORS
-OSError may occur for some reason.
+## OSError
+May occur for some reason.
 
 # SEE ALSO
 - `getcwd(3)`

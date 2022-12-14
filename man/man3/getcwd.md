@@ -12,7 +12,8 @@ The function `getcwd` returns a string containing the absolute filename of the c
 Returns a string containing the absolute filename of the current working directory.
 
 # ERRORS
-OSError may occur for some reason.
+## OSError
+May occur for some reason.
 
 # SEE ALSO
 - `chdir(3)`

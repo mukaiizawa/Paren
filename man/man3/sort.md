@@ -1,27 +1,27 @@
 # NAME
-sort! - sorting a sequence.
+sort! - sorting the argument.
 
 # SYNOPSIS
 
-    (sort! SEQUENCE [ :sorter SORTER ] [ :key KEY ] [ :start START ] [ :end END ])
+    (sort! LIST [ :sorter SORTER ] [ :key KEY ] [ :start START ] [ :end END ])
+    (sort! ARRAY [ :sorter SORTER ] [ :key KEY ] [ :start START ] [ :end END ])
+    (sort! BYTES [ :sorter SORTER ] [ :key KEY ] [ :start START ] [ :end END ])
+    (sort! STRING [ :sorter SORTER ] [ :key KEY ] [ :start START ] [ :end END ])
 
 # DESCRIPTION
-The function `sort!` destructively sort the `SEQUENCE`.
+The function `sort!` destructively sort the argument.
 
-The `SORTER` parameter can specify a comparison function to determine the order. The sorted sequence will be in such an order that two adjacent elements are the same or the comparison function returns `true`. By default, the comparison function `<` is used.
+The `SORTER` parameter can specify a comparison function to determine the order. The sorted object will be in such an order that two adjacent elements are the same or the comparison function returns `true`. By default, the comparison function `<` is used.
 
 The `KEY` parameter can be used to specify the function to be applied before comparison for sorting.
 
-The `START` and `END` parameters can be used to specify the range to sort. If specified, the range from the `START-th` to the `(END - 1)-th` is targeted. By default, the entire sequence is target. In other words, `START` is `0` and `END` is same as `(len SEQUENCE)`.
+The `START` and `END` parameters can be used to specify the range to sort. If specified, the range from the `START-th` to the `(END - 1)-th` is targeted. By default, the entire argument is target. In other words, `START` is `0` and `END` is same as the length of the argument.
 
 # RETURN VALUE
-Returns sorted sequence.
-
-# ERRORS
-Error if `SEQUENCE` is not a mutable sequence.
+Returns sorted argument.
 
 # NOTES
-The `SEQUENCE` is modified. If you want to keep the original sequence, copy it like `(sort! (slice seq))`.
+The argument is modified. If you want to keep the original argument, copy it like `(sort! (slice x))`.
 
 # EXAMPLES
 

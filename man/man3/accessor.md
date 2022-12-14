@@ -22,9 +22,11 @@ If `VAL` is not specified, the value corresponding to `KEY` or `INDEX` is return
 If `VAL` is specified, update the value corresponding to `KEY` or `INDEX`. Returns `VAL`.
 
 # ERRORS
-IndexError if `INDEX` is out of range. For a list, return `nil`.
+## IndexError
+If `INDEX` is out of range. For a list, return `nil`.
 
-ArgumentError if `X` is a string data type and `VAL` is specified.
+## ArgumentError
+If `X` is a string data type and `VAL` is specified.
 
 # EXAMPLES
 

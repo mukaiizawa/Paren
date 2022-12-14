@@ -17,7 +17,8 @@ The function `car!` returns `X`.
 The function `cdr!` returns `Y`.
 
 # ERRORS
-Error if `CONS` or `Y` is not a cons. See `cons(7)` for `Y` must be cons.
+## ArgumentError
+If `CONS` or `Y` is not a cons. See `cons(7)` for `Y` must be cons.
 
 # NOTES
 The `CONS` is modified.

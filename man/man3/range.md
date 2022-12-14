@@ -19,7 +19,8 @@ If `START` is omitted, it is assumed that `0` is specified.
 If `STEP` is omitted, it is assumed that `1` is specified.
 
 # ERRORS
-Error if `STEP` is not positive integer.
+## ArgumentError
+If `STEP` is not positive integer.
 
 # NOTES
 

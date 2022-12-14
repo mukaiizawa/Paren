@@ -19,7 +19,8 @@ Returns a list with the elements of `LIST` reversed.
 If `LIST` is `nil`, returns `nil`.
 
 # ERRORS
-Error if `LIST` is not a list.
+## ArgumentError
+If `LIST` is not a list.
 
 # NOTES
 The function `reverse!` generally faster than `reverse`.

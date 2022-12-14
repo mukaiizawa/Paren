@@ -53,7 +53,8 @@ The macros `function!` create and returns named function whether `NAME` is alrea
 The macros `function` binds the specified `NAME` to the function. At this time, the `EXPRs` are expanded. Returns the `NAME`.
 
 # ERRORS
-The macro `function` error if, the symbol is already bound.
+## ArgumentError
+The macro `function` error if, the symbol `NAME` is already bound.
 
 # NOTES
 
