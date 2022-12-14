@@ -204,33 +204,33 @@ int bi_cstring(object o, char **p)
 
 static int ch_len(unsigned char ch, int *len)
 {
-  if (ch < 0x80) *len += 1;
-  else if (ch < 0xe0) *len += 2;
-  else if (ch < 0xf0) *len += 3;
-  else if (ch < 0xf8) *len += 4;
-  else return ip_sigerr(ArgumentError, "unexpected utf8 leading byte");
-  return TRUE;
+  if (ch < 0x80) return *len += 1;
+  if (ch < 0xe0) return *len += 2;
+  if (ch < 0xf0) return *len += 3;
+  if (ch < 0xf8) return *len += 4;
+  *len = -1;
+  return ip_sigerr(ArgumentError, "unexpected utf8 leading byte");
 }
 
 static int ch_at(object o, int *i, object *result)
 {
-  int size = 0;
-  if (!ch_len(LC(o->mem.elt + *i), &size)) return FALSE;
-  if (*i + size > o->mem.size) return ip_sigerr(ArgumentError, "incomplete utf8 byte sequence");
-  *result = gc_new_mem_from(STRING, o->mem.elt + *i, size);
-  *i += size;
+  int len = 0;
+  if (!ch_len(LC(o->mem.elt + *i), &len)) return FALSE;
+  if (*i + len > o->mem.size) return ip_sigerr(ArgumentError, "incomplete UTF-8 byte sequence");
+  *result = gc_new_mem_from(STRING, o->mem.elt + *i, len);
+  *i += len;
   return TRUE;
 }
 
 static int str_len(object o, int *len)
 {
-  int i;
-  i = *len = 0;
+  int i = 0;
+  *len = 0;
   while (i < o->mem.size) {
     if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
     *len += 1;
   }
-  if (i != o->mem.size) return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
+  if (i != o->mem.size) return ip_sigerr(ArgumentError, "incomplete UTF-8 byte sequence");
   return TRUE;
 }
 
@@ -459,8 +459,7 @@ DEFUN(list)
 
 DEFUN(list_2e__2e__2e_)
 {
-  int i;
-  object o, p;
+  object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
   *result = object_nil;
@@ -474,18 +473,18 @@ DEFUN(list_2e__2e__2e_)
       }
       break;
     case STRING:
-      i = 0;
-      while (i < o->mem.size) {
+      object p = NULL;
+      for (int i = 0; i < o->mem.size;) {
         if (!ch_at(o, &i, &p)) return FALSE;
         *result = gc_new_cons(p, *result);
       }
       break;
     case BYTES:
-      for (i = 0; i < o->mem.size; i++)
+      for (int i = 0; i < o->mem.size; i++)
         *result = gc_new_cons(gc_new_xint(LC(o->mem.elt + i)), *result);
       break;
     case ARRAY:
-      for (i = 0; i < o->array.size; i++)
+      for (int i = 0; i < o->array.size; i++)
         *result = gc_new_cons(o->array.elt[i], *result);
       break;
     default:
@@ -1044,7 +1043,7 @@ DEFUN(chr)
 static int ord(object o, int from, int len, int *val)
 {
   xassert(object_type(o) == STRING);
-  if (from + len > o->mem.size) return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
+  if (from + len > o->mem.size) len = -1;
   switch (len) {
     case 1:
       *val = LC(o->mem.elt + from);
@@ -1066,7 +1065,7 @@ static int ord(object o, int from, int len, int *val)
       return TRUE;
     default:
       *val = -1;
-      return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
+      return ip_sigerr(ArgumentError, "incomplete UTF-8 byte sequence");
   }
 }
 
@@ -1272,7 +1271,7 @@ static int str_slice(object o, int start, int stop, object *result)
   else {
     for (i = start, t = s; i < stop && t < o->mem.size; i++)
       if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
-    if (t > o->mem.size) return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
+    if (t > o->mem.size) return ip_sigerr(ArgumentError, "incomplete UTF-8 byte sequence");
   }
   if (!bi_range(0, s, t)) return FALSE;
   *result = gc_new_mem_from(STRING, o->mem.elt + s, t - s);

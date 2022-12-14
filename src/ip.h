@@ -12,7 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  incomplete_utf8_byte_sequence,
   index_out_of_range,
   invalid_args,
   invalid_binding_expr,
