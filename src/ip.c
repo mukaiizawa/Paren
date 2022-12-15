@@ -896,7 +896,13 @@ static int parse_required_params(object params)
   return TRUE;
 }
 
-static int gen_bind_frames(int frame_type, object args)
+static int parse_params(object params)
+{
+  param_count = 0;
+  return parse_required_params(params);
+}
+
+static int gen_bind_frame(int frame_type, object args)
 {
   object o;
   if ((o = args) == object_nil) return TRUE;
@@ -911,11 +917,17 @@ static int gen_bind_frames(int frame_type, object args)
       return ip_sigerr(SyntaxError, "expected symbol or list in binding expression");
   }
   if ((args = args->cons.cdr) == object_nil) return ip_sigerr(ArgumentError, "missing binding value");
-  if (!gen_bind_frames(frame_type, args->cons.cdr)) return FALSE;
+  if (!gen_bind_frame(frame_type, args->cons.cdr)) return FALSE;
   gen1(frame_type, o->cons.car);
   gen0(EVAL_FRAME);
   gen1(QUOTE_FRAME, o->cons.cdr->cons.car);
   return TRUE;
+}
+
+static int gen_bind_frames(int frame_type, object args)
+{
+  param_count = 0;
+  return gen_bind_frame(frame_type, args);
 }
 
 DEFSP(let)
@@ -927,7 +939,6 @@ DEFSP(let)
   else {
     gen0(LET_FRAME);
     gen_eval_sequential_frame(argv->cons.cdr);
-    param_count = 0;
     if (!gen_bind_frames(BIND_FRAME, binds)) return FALSE;
     cr = gc_new_env(cr, param_count * 2);
   }
@@ -974,8 +985,7 @@ DEFSP(macro)
   gen1(BIND_PROPAGATION_FRAME, o);
   argv = argv->cons.cdr;
   if (!bi_argv(BI_LIST, argv->cons.car, &params)) return FALSE;
-  param_count = 0;
-  if (!parse_required_params(params)) return FALSE;
+  if (!parse_params(params)) return FALSE;
   dr = gc_new_macro(cr, param_count, params, argv->cons.cdr);
   return TRUE;
 }
@@ -985,8 +995,7 @@ DEFSP(f)
   object params;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_argv(BI_LIST, argv->cons.car, &params)) return FALSE;
-  param_count = 0;
-  if (!parse_required_params(params)) return FALSE;
+  if (!parse_params(params)) return FALSE;
   dr = gc_new_func(cr, param_count, params, argv->cons.cdr);
   return TRUE;
 }
