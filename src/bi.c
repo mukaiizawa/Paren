@@ -90,7 +90,7 @@ int bi_argv(int bits, object o, object *result)
 
 int bi_range(int min, int x, int max)
 {
-  if (x < min || x > max) return ip_throw(ArgumentError, index_out_of_range);
+  if (x < min || x > max) return ip_sigerr(ArgumentError, "index out of range");
   return TRUE;
 }
 
@@ -780,7 +780,7 @@ DEFUN(_3e__3e_)
   return TRUE;
 }
 
-static int left_most_bit(int64_t x)
+static int leftmost_one_pos(int64_t x)
 {
   for (int i = 0; i < XINT_BITS; i++)
     if (x < (1LL << i)) return i;
@@ -794,7 +794,7 @@ DEFUN(_3c__3c_)
   if (!bi_cpint64(argv->cons.car, &x)) return FALSE;
   if (!bi_cpint64(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (y != 0) {
-    if (left_most_bit(x) + y > XINT_BITS) return ip_sigerr(ArithmeticError, "numeric overflow");
+    if (leftmost_one_pos(x) + y > XINT_BITS) return ip_sigerr(ArithmeticError, "numeric overflow");
     x <<= y;
   }
   *result = gc_new_xint(x);
@@ -1035,7 +1035,7 @@ DEFUN(chr)
     buf[1] = 0x80 | ((x >> 12) & 0x3f);
     buf[2] = 0x80 | ((x >> 6) & 0x3f);
     buf[3] = 0x80 | (x & 0x3f);
-  } else return ip_throw(ArgumentError, index_out_of_range);
+  } else return ip_sigerr(ArgumentError, "invalid code point");
   *result = gc_new_mem_from(STRING, buf, size);
   return TRUE;
 }
@@ -1044,7 +1044,7 @@ DEFUN(chr)
 #define LCPS(i, mask, shift) (LCP(i, mask) << shift)
 static int ord(object o, int *i, int *val)
 {
-  object p;
+  object p = NULL;
   if (!ch_at(o, i, &p)) return FALSE;
   switch (p->mem.size) {
     case 1: *val = LC(p->mem.elt); return TRUE;
@@ -1376,7 +1376,7 @@ static int cons_access(int argc, object argv, object o, object *result)
     if (o == object_nil) *result = o;
     else *result = o->cons.car;
   } else {
-    if (o == object_nil) return ip_throw(ArgumentError, index_out_of_range);
+    if (o == object_nil) return ip_sigerr(ArgumentError, "index out of range");
     *result = argv->cons.cdr->cons.car;
     o->cons.car = *result;
   }

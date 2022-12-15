@@ -12,9 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  index_out_of_range,
-  invalid_args,
-  invalid_binding_expr,
   numeric_overflow,
   readdir_failed,
   recv_failed,

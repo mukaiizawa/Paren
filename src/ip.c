@@ -77,9 +77,6 @@ static char *error_name(enum Exception e) {
 static char *error_msg2(enum error_msg2 em) {
   switch (em) {
     case error_msg_nil: return NULL;
-    case index_out_of_range: return "index out of range";
-    case invalid_args: return "invalid arguments";
-    case invalid_binding_expr: return "invalid binding expression";
     case numeric_overflow: return "numeric overflow";
     case readdir_failed: return "readdir failed";
     case recv_failed: return "recv failed";
@@ -834,77 +831,67 @@ static int param_count;
 
 static int parse_rest_param(object params)
 {
-  switch (object_type(params->cons.car)) {
-    case SYMBOL:
-      param_count++;
-      if (params->cons.cdr == object_nil) return TRUE;
-      break;
-    default:
-      break;
+  if (object_type(params->cons.car) == SYMBOL && params->cons.cdr == object_nil) {
+    param_count++;
+    return TRUE;
   }
-  return ip_throw(SyntaxError, invalid_binding_expr);
+  return ip_sigerr(SyntaxError, "only one symbol can be specified for rest parameter");
 }
 
 static int parse_keyword_params(object params)
 {
   while (params != object_nil) {
-    switch (object_type(params->cons.car)) {
+    object p = params->cons.car;
+    switch (object_type(p)) {
       case SYMBOL:
-        params = params->cons.cdr;
+        if (p == object_opt) return ip_sigerr(SyntaxError, "optional parameter cannot be specified after keyword parameter");
+        if (p == object_rest) return ip_sigerr(SyntaxError, "keyword parmeter and rest parameter cannot be mixed");
         param_count++;
         break;
       default:
-        return ip_throw(SyntaxError, invalid_binding_expr);
+        return ip_sigerr(SyntaxError, "expected symbol for keyword parameter");
     }
+    params = params->cons.cdr;
   }
   return TRUE;
 }
 
 static int parse_optional_params(object params)
 {
-  object p;
   while (params != object_nil) {
-    p = params->cons.car;
-    switch (object_type(params->cons.car)) {
+    object p = params->cons.car;
+    switch (object_type(p)) {
       case SYMBOL:
-        if (keyword_p(p)) {
-          if (p == object_key) return parse_keyword_params(params->cons.cdr);
-          if (p == object_rest) return parse_rest_param(params->cons.cdr);
-          return ip_throw(SyntaxError, unexpected_keyword_parameter);
-        }
-        params = params->cons.cdr;
+        if (p == object_key) return parse_keyword_params(params->cons.cdr);
+        if (p == object_rest) return parse_rest_param(params->cons.cdr);
         param_count++;
         break;
       default:
-        return ip_throw(SyntaxError, invalid_binding_expr);
+        return ip_sigerr(SyntaxError, "expected symbol for optional parameter");
     }
+    params = params->cons.cdr;
   }
   return TRUE;
 }
 
 static int parse_required_params(object params)
 {
-  object p;
   while (params != object_nil) {
-    p = params->cons.car;
-    switch (object_type(params->cons.car)) {
+    object p = params->cons.car;
+    switch (object_type(p)) {
       case CONS:
-        if (!parse_required_params(params->cons.car)) return FALSE;
-        params = params->cons.cdr;
+        if (!parse_required_params(p)) return FALSE;
         break;
       case SYMBOL:
-        if (keyword_p(p)) {
-          if (p == object_opt) return parse_optional_params(params->cons.cdr);
-          if (p == object_key) return parse_keyword_params(params->cons.cdr);
-          if (p == object_rest) return parse_rest_param(params->cons.cdr);
-          return ip_throw(SyntaxError, unexpected_keyword_parameter);
-        }
-        params = params->cons.cdr;
+        if (p == object_opt) return parse_optional_params(params->cons.cdr);
+        if (p == object_key) return parse_keyword_params(params->cons.cdr);
+        if (p == object_rest) return parse_rest_param(params->cons.cdr);
         param_count++;
         break;
       default:
-        return ip_throw(SyntaxError, invalid_binding_expr);
+        return ip_sigerr(SyntaxError, "expected symbol or list in binding expression");
     }
+    params = params->cons.cdr;
   }
   return TRUE;
 }
@@ -921,10 +908,9 @@ static int gen_bind_frames(int frame_type, object args)
       if (!parse_required_params(o->cons.car)) return FALSE;
       break;
     default:
-      return ip_throw(SyntaxError, invalid_binding_expr);
+      return ip_sigerr(SyntaxError, "expected symbol or list in binding expression");
   }
-  if ((args = args->cons.cdr) == object_nil)
-    return ip_sigerr(ArgumentError, "expected binding value");
+  if ((args = args->cons.cdr) == object_nil) return ip_sigerr(ArgumentError, "missing binding value");
   if (!gen_bind_frames(frame_type, args->cons.cdr)) return FALSE;
   gen1(frame_type, o->cons.car);
   gen0(EVAL_FRAME);
