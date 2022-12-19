@@ -153,6 +153,12 @@ int bi_cint64(object o, int64_t *p)
   return TRUE;
 }
 
+static int bi_finite(double x)
+{
+  if (!isfinite(x)) return ip_sigerr(ArithmeticError, "numeric overflow");
+  return TRUE;
+}
+
 static int bi_cintptr(object o, intptr_t *p)
 {
   int64_t i;
@@ -564,13 +570,13 @@ DEFUN(reverse_21_)
 static int double_add(double x, object argv, object *result)
 {
   double y;
-  if (!isfinite(x)) return ip_throw(ArithmeticError, numeric_overflow);
   if (argv == object_nil) {
     *result = gc_new_xfloat(x);
     return TRUE;
   }
   if (!bi_cdouble(argv->cons.car, &y)) return FALSE;
-  return double_add(x + y, argv->cons.cdr, result);
+  if (!bi_finite(x += y)) return FALSE;
+  return double_add(x, argv->cons.cdr, result);
 }
 
 static int int64_add(int64_t x, object argv, object *result)
@@ -581,7 +587,7 @@ static int int64_add(int64_t x, object argv, object *result)
     return TRUE;
   }
   if (bi_may_cint64(argv->cons.car, &y)) {
-    if (y > 0? (x > INT64_MAX - y): (x < INT64_MIN - y)) return ip_throw(ArithmeticError, numeric_overflow);
+    if (y > 0? (x > INT64_MAX - y): (x < INT64_MIN - y)) return ip_sigerr(ArithmeticError, "numeric overflow");
     return int64_add(x + y, argv->cons.cdr, result);
   }
   return double_add((double)x, argv, result);
@@ -611,13 +617,13 @@ DEFUN(_2d__2d_)
 static int double_multiply(double x, object argv, object *result)
 {
   double y;
-  if (!isfinite(x)) return ip_throw(ArithmeticError, numeric_overflow);
   if (argv == object_nil) {
     *result = gc_new_xfloat(x);
     return TRUE;
   }
   if (!bi_cdouble(argv->cons.car, &y)) return FALSE;
-  return double_multiply(x * y, argv->cons.cdr, result);
+  if (!bi_finite(x *= y)) return FALSE;
+  return double_multiply(x, argv->cons.cdr, result);
 }
 
 static int int64_multiply(int64_t x, object argv, object *result)
@@ -635,7 +641,7 @@ static int int64_multiply(int64_t x, object argv, object *result)
          (y < INT64_MIN / x)):
         (y > 0?
          (x < INT64_MIN / y):
-         (y < INT64_MAX / x))) return ip_throw(ArithmeticError, numeric_overflow);
+         (y < INT64_MAX / x))) return ip_sigerr(ArithmeticError, "numeric overflow");
     return int64_multiply(x * y, argv->cons.cdr, result);
   }
   return double_multiply((double)x, argv, result);
@@ -653,14 +659,14 @@ DEFUN(_2a_)
 static int double_divide(double x, object argv, object *result)
 {
   double y;
-  if (!isfinite(x)) return ip_throw(ArithmeticError, numeric_overflow);
   if (argv == object_nil) {
     *result = gc_new_xfloat(x);
     return TRUE;
   }
   if (!bi_cdouble(argv->cons.car, &y)) return FALSE;
   if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
-  return double_divide(x / y, argv->cons.cdr, result);
+  if (!bi_finite(x /= y)) return FALSE;
+  return double_divide(x, argv->cons.cdr, result);
 }
 
 static int int64_divide(int64_t x, object argv, object *result)
@@ -672,7 +678,7 @@ static int int64_divide(int64_t x, object argv, object *result)
   }
   if (bi_may_cint64(argv->cons.car, &y)) {
     if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
-    if (x == INT64_MIN && y == -1) return ip_throw(ArithmeticError, numeric_overflow);
+    if (x == INT64_MIN && y == -1) return ip_sigerr(ArithmeticError, "numeric overflow");
     if (x % y == 0) return int64_divide(x / y, argv->cons.cdr, result);
     return double_divide((double)x / y, argv->cons.cdr, result);
   }
@@ -703,7 +709,7 @@ DEFUN(_2f__2f_)
       return TRUE;
     }
     if (!bi_cdouble(argv->cons.car, &z)) return FALSE;
-    if (z < (double)DBL_MIN_INT || z > (double)DBL_MAX_INT) return ip_throw(ArithmeticError, numeric_overflow);
+    if (z < (double)DBL_MIN_INT || z > (double)DBL_MAX_INT) return ip_sigerr(ArithmeticError, "numeric overflow");
     *result = gc_new_xint((int64_t)z);
     return TRUE;
   }
@@ -808,7 +814,7 @@ static int xmath(int argc, object argv, double (*f)(double c), object *result)
   double x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cdouble(argv->cons.car, &x)) return FALSE;
-  if (!isfinite(x = f(x))) return ip_throw(ArithmeticError, numeric_overflow);
+  if (!bi_finite(x = f(x))) return FALSE;
   *result = gc_new_xfloat(x);
   return TRUE;
 }
@@ -870,7 +876,7 @@ DEFUN(log)
   if (argc == 1) return xmath(argc, argv, log, result);
   if (!bi_cdouble(argv->cons.car, &x)) return FALSE;
   if (!bi_cdouble(argv->cons.cdr->cons.car, &y)) return FALSE;
-  if (!isfinite(x = log(y) / log(x))) return ip_throw(ArithmeticError, numeric_overflow);
+  if (!bi_finite(x = log(y) / log(x))) return FALSE;
   *result = gc_new_xfloat(x);
   return TRUE;
 }
@@ -886,7 +892,7 @@ DEFUN(pow)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cdouble(argv->cons.car, &x)) return FALSE;
   if (!bi_cdouble(argv->cons.cdr->cons.car, &y)) return FALSE;
-  if (!isfinite(x = pow(x, y))) return ip_throw(ArithmeticError, numeric_overflow);
+  if (!bi_finite(x = pow(x, y))) return FALSE;
   *result = gc_new_xfloat(x);
   return TRUE;
 }

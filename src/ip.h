@@ -12,7 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  numeric_overflow,
   readdir_failed,
   recv_failed,
   send_failed,

@@ -77,7 +77,6 @@ static char *error_name(enum Exception e) {
 static char *error_msg2(enum error_msg2 em) {
   switch (em) {
     case error_msg_nil: return NULL;
-    case numeric_overflow: return "numeric overflow";
     case readdir_failed: return "readdir failed";
     case recv_failed: return "recv failed";
     case send_failed: return "send failed";
