@@ -20,7 +20,7 @@ DEFUN(sock_2e__5f_startup)
 #if WINDOWS_P
   int st;
   WSADATA data;
-  if ((st = WSAStartup(MAKEWORD(2, 0), &data)) != 0) return ip_throw(OSError, socket_startup_failed);
+  if ((st = WSAStartup(MAKEWORD(2, 0), &data)) != 0) return ip_sigerr(OSError, "WSAStartup failed");
 #endif
   return TRUE;
 }

@@ -14,7 +14,6 @@ char error_msg[MAX_STR_LEN];
 enum TrapType {
   TRAP_NONE,
   TRAP_ERROR,
-  TRAP_ERROR2,    // TODO
   TRAP_INTERRUPT
 };
 static enum TrapType trap_type;
@@ -58,7 +57,6 @@ static void intr_init(void)
 // Exception
 
 static enum Exception e;
-static enum error_msg2 em;
 
 static char *error_name(enum Exception e) {
   switch (e) {
@@ -74,37 +72,10 @@ static char *error_name(enum Exception e) {
   }
 };
 
-static char *error_msg2(enum error_msg2 em) {
-  switch (em) {
-    case error_msg_nil: return NULL;
-    case socket_startup_failed: return "socket startup failed";
-    case stack_over_flow: return "stack over flow";
-    case stat_failed: return "stat failed";
-    case too_few_arguments: return "too few arguments";
-    case too_many_arguments: return "too many arguments";
-    case unbound_symbol: return "unbound symbol";
-    case undeclared_class: return "undeclared class";
-    case undeclared_keyword_param: return "undeclared keyword parameter";
-    case unexpected_keyword_parameter: return "unexpected keyword parameter";
-    case unknown_af_family: return "unknown address family";
-    case unknown_socktype: return "unknown socket type";
-    default: xassert(FALSE); return NULL;
-  }
-};
-
-// TODO
-int ip_throw(enum Exception err, enum error_msg2 msg)
-{
-  trap_type = TRAP_ERROR;
-  e = err;
-  em = msg;
-  return FALSE;
-}
-
 int ip_sigerr(enum Exception err, char *msg)
 {
   e = err;
-  trap_type = TRAP_ERROR2;
+  trap_type = TRAP_ERROR;
   if (msg == NULL) error_msg[0] = '\0';
   else strcpy(error_msg, msg);
   return FALSE;
@@ -243,7 +214,7 @@ static void dump_fs(void)
 
 static void gen(int frame_type)
 {
-  if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_throw(StateError, stack_over_flow);
+  if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_sigerr(StateError, "stack over flow");
   fs[sp + 1] = sint(fp);
   fs[sp] = sint(frame_type);
   set_fp(sp);
@@ -305,15 +276,14 @@ static int same_symbol_keyword_p(object sym, object key)
 
 static int valid_keyword_args(object params, object args)
 {
-  object p;
   while (args != object_nil) {
-    if (!keyword_p(args->cons.car)) return ip_throw(ArgumentError, error_msg_nil);
-    p = params;
+    if (!keyword_p(args->cons.car)) return ip_sigerr(ArgumentError, "expected keyword argument");
+    object p = params;
     while (p != object_nil) {
       if (same_symbol_keyword_p(p->cons.car, args->cons.car)) break;
       p = p->cons.cdr;
     }
-    if (p == object_nil) return ip_throw(ArgumentError, undeclared_keyword_param);
+    if (p == object_nil) return ip_sigerr(ArgumentError, "undeclared keyword parameter");
     if ((args = args->cons.cdr) == object_nil) return ip_sigerr(ArgumentError, "expected keyword parameter value");
     args = args->cons.cdr;
   }
@@ -327,8 +297,7 @@ static int parse_args(void (*f)(object, object, object), object params, object a
   // required args
   while (params != object_nil) {
     if (keyword_p(params->cons.car)) break;
-    if (args == object_nil)
-      return ip_throw(ArgumentError, too_few_arguments);
+    if (args == object_nil) return ip_sigerr(ArgumentError, "too few arguments");
     if (object_type(params->cons.car) == SYMBOL)
       (*f)(cr, params->cons.car, args->cons.car);
     else if (!parse_args(f, params->cons.car, args->cons.car)) return FALSE;
@@ -375,8 +344,7 @@ static int parse_args(void (*f)(object, object, object), object params, object a
     }
     return TRUE;
   }
-  if (args != object_nil)
-    return ip_throw(ArgumentError, too_many_arguments);
+  if (args != object_nil) return ip_sigerr(ArgumentError, "too many arguments");
   return TRUE;
 }
 
@@ -461,7 +429,7 @@ static int eval_symbol(object *result)
       return TRUE;
     }
     gen_trace(sym);
-    return ip_throw(StateError, unbound_symbol);
+    return ip_sigerr(StateError, "unbound symbol");
   }
   return TRUE;
 }
@@ -808,15 +776,14 @@ DEFUN(find_2d_method)
     // class method
     if ((*result = find_class_method(cls_sym, mtd_sym)) != NULL) return TRUE;
     // feature method
-    if (!find_class(cls_sym, &cls)) return ip_throw(ArgumentError, undeclared_class);
+    if (!find_class(cls_sym, &cls)) return ip_sigerr(ArgumentError, "undeclared class");
     features = map_get(cls, object_features);
     while (features != object_nil) {
       if ((*result = find_class_method(features->cons.car, mtd_sym)) != NULL) return TRUE;
       features = features->cons.cdr;
     }
     // super class method
-    if (!find_super_class(cls_sym, &cls))
-      return ip_throw(StateError, unbound_symbol);
+    if (!find_super_class(cls_sym, &cls)) return ip_sigerr(StateError, "undeclared super class");
     cls_sym = map_get(cls, object_symbol);
   }
 }
@@ -959,7 +926,7 @@ DEFSP(dynamic)
     if ((dr = map_get(e, s)) != NULL) return TRUE;
   }
   dr = object_nil;
-  return ip_throw(ArgumentError, unbound_symbol);
+  return ip_sigerr(ArgumentError, "unbound symbol");
 }
 
 DEFSP(_3c__2d_)
@@ -1111,21 +1078,7 @@ static object get_call_stack(void)
   return o;
 }
 
-// TODO
-static object new_Error(enum Exception e, enum error_msg2 em)
-{
-  char *err, *msg;
-  object o;
-  o = gc_new_dict();
-  err = error_name(e);
-  map_put(o, object_class, gc_new_mem_from_cstr(SYMBOL, err));
-  if ((msg = error_msg2(em)) != NULL)
-    map_put(o, object_message, gc_new_mem_from_cstr(STRING, msg));
-  map_put(o, object_stack_trace, object_nil);
-  return o;
-}
-
-static object new_Error2(enum Exception e, object message)
+static object new_Error(enum Exception e, object message)
 {
   object o;
   o = gc_new_dict();
@@ -1140,13 +1093,10 @@ static void trap(void)
   gen0(THROW_FRAME);
   switch (trap_type) {
     case TRAP_ERROR:
-      dr = new_Error(e, em);
-      break;
-    case TRAP_ERROR2:
-      dr = new_Error2(e, gc_new_mem_from_cstr(STRING, error_msg));
+      dr = new_Error(e, gc_new_mem_from_cstr(STRING, error_msg));
       break;
     case TRAP_INTERRUPT:
-      dr = new_Error2(SystemExit, object_nil);
+      dr = new_Error(SystemExit, object_nil);
       break;
     default:
       xassert(FALSE);

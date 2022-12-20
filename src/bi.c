@@ -10,8 +10,8 @@
 
 int bi_argc_range(int argc, int min, int max)
 {
-  if (argc < min) return ip_throw(ArgumentError, too_few_arguments);
-  if ((!min && !max && argc != 0) || (max && argc > max)) return ip_throw(ArgumentError, too_many_arguments);
+  if (argc < min) return ip_sigerr(ArgumentError, "too few arguments");
+  if ((!min && !max && argc != 0) || (max && argc > max)) return ip_sigerr(ArgumentError, "too many arguments");
   return TRUE;
 }
 
@@ -1394,7 +1394,7 @@ static int str_access(int argc, object argv, object o, object *result)
   int i;
   if (!bi_cpint(argv->cons.car, &i)) return FALSE;
   if (argc == 2) return str_slice(o, i, i + 1, result);
-  return ip_throw(ArgumentError, too_many_arguments);
+  return ip_sigerr(ArgumentError, "string data type is immutable");
 }
 
 static int bytes_access(int argc, object argv, object o, object *result)
@@ -1979,13 +1979,12 @@ DEFUN(fclose)
 
 DEFUN(stat)
 {
-  int mode;
   char *fn;
   struct pf_stat statbuf;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
-  mode = pf_stat(fn, &statbuf);
-  if (mode == PF_ERROR) return ip_throw(OSError, stat_failed);
+  int mode = pf_stat(fn, &statbuf);
+  if (mode == PF_ERROR) return ip_sigerr(OSError, "stat failed");
   if (mode == PF_NONE) {
     *result = object_nil;
     return TRUE;
@@ -2004,7 +2003,7 @@ DEFUN(utime)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
   if (!bi_cint64(argv->cons.cdr->cons.car, &tv)) return FALSE;
-  if (!pf_utime(fn, tv)) return ip_throw(OSError, error_msg_nil);
+  if (!pf_utime(fn, tv)) return ip_sigerr(OSError, "utime failed");
   *result = object_nil;
   return TRUE;
 }
@@ -2024,7 +2023,7 @@ DEFUN(chdir)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
   *result = object_nil;
-  if (!pf_chdir(fn)) return ip_throw(OSError, error_msg_nil);
+  if (!pf_chdir(fn)) return ip_sigerr(OSError, "chdir failed");
   return TRUE;
 }
 
