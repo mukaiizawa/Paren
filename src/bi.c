@@ -946,9 +946,7 @@ DEFUN(string_21_)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_BYTES, argv->cons.car, &o)) return FALSE;
-  om_reset_type(o, STRING);
-  om_set_hash(o, om_mem_hash(o->mem.elt, o->mem.size));
-  *result = o;
+  *result = om_coerce_mem_string(o);
   return TRUE;
 }
 

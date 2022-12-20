@@ -7,7 +7,7 @@
 #include "bi.h"
 #include "ip.h"
 
-static int gc_used_memory;
+static int used_memory;
 
 static struct heap heap;
 static struct symbol_table st;
@@ -19,8 +19,8 @@ static object link0, link1;
 #define regist(o) (xarray_add(table, o))
 static struct xarray *table, *table_wk, table0, table1;
 
-static void *gc_alloc(int size);
-static void gc_free0(int size, void *p);
+static void *om_alloc(int size);
+static void om_free0(int size, void *p);
 
 object om_toplevel;
 object om_nil;
@@ -46,28 +46,28 @@ int om_hash(object o)
   return o->header & HASH_MASK;
 }
 
-void om_set_hash(object o, int hval)
-{
-  xassert(om_hash(o) == 0);
-  xassert((hval & ~HASH_MASK) == 0);
-  o->header |= hval;
-}
-
-int om_mem_hash(char *p, int size)
+static int mem_hash(char *p, int size)
 {
   int i, hval;
   for (i = hval = 0; i < size; i++) hval = hval * 137 + LC(p + i);
   return hval & HASH_MASK;
 }
 
-static int om_number_hash(double val)
+static int num_hash(double val)
 {
   int i;
   if (SINT_MIN <= val && val <= SINT_MAX) {
     i = (int)val;
     if (i == val) return i & HASH_MASK;
   }
-  return om_mem_hash((char *)&val, sizeof(double));
+  return mem_hash((char *)&val, sizeof(double));
+}
+
+static void set_hash(object o, int hval)
+{
+  xassert(om_hash(o) == 0);
+  xassert((hval & ~HASH_MASK) == 0);
+  o->header |= hval;
 }
 
 int om_type(object o)
@@ -95,12 +95,6 @@ static void set_type(object o, int type)
 {
   xassert((o->header & TYPE_MASK) == 0);
   o->header |= type;
-}
-
-void om_reset_type(object o, int type)
-{
-  o->header &= ~TYPE_MASK;
-  set_type(o, type);
 }
 
 static void xbarray_add_mem(struct xbarray *x, object o)
@@ -386,11 +380,11 @@ static void rehash(object o)
   half_size = o->map.half_size;
   o->map.entry_count = 0;
   o->map.half_size *= 2;
-  o->map.table = gc_alloc(sizeof(object) * o->map.half_size * 2);
+  o->map.table = om_alloc(sizeof(object) * o->map.half_size * 2);
   for (i = 0; i < o->map.half_size; i++) o->map.table[i] = NULL;
   for (i = 0; i < half_size; i++)
     if (table[i] != NULL) map_put(o, table[i], table[i + half_size]);
-  gc_free0(sizeof(object) * half_size * 2, table);
+  om_free0(sizeof(object) * half_size * 2, table);
 }
 
 void map_put(object o, object s, object v)
@@ -448,8 +442,8 @@ object map_keys(object o)
 // symbol table
 
 #define symbol_table_index(st, i) ((i) % st->alloc_size)
-#define symbol_table_bytelen(st) (gc_alloc(sizeof(object) * (st->size)))
-#define symbol_table_alloc(size) (gc_alloc(sizeof(object) * (size)))
+#define symbol_table_bytelen(st) (om_alloc(sizeof(object) * (st->size)))
+#define symbol_table_alloc(size) (om_alloc(sizeof(object) * (size)))
 
 struct symbol_table {
   int size;
@@ -467,7 +461,7 @@ static void symbol_table_reset(struct symbol_table *st)
 static void symbol_table_init(struct symbol_table *st)
 {
   st->alloc_size = 0x1000;    // rule of thumb.
-  st->table = gc_alloc(sizeof(object) * st->alloc_size);
+  st->table = om_alloc(sizeof(object) * st->alloc_size);
   symbol_table_reset(st);
 }
 
@@ -488,11 +482,11 @@ static object symbol_table_put(struct symbol_table *st, object sym)
   if (st->size++ > (alloc_size = st->alloc_size) * 0.5) {
     table = st->table;
     st->alloc_size *= 2;
-    st->table = gc_alloc(sizeof(object) * st->alloc_size);
+    st->table = om_alloc(sizeof(object) * st->alloc_size);
     symbol_table_reset(st);
     for (i = 0; i < alloc_size; i++)
       if ((o = table[i]) != NULL) symbol_table_put(st, o);
-    gc_free0(alloc_size, table);
+    om_free0(alloc_size, table);
   }
   i = symbol_table_index(st, om_hash(sym));
   while (st->table[i] != NULL) i = symbol_table_index(st, i + 1);
@@ -502,7 +496,7 @@ static object symbol_table_put(struct symbol_table *st, object sym)
 
 // memory allocater & garbage collector
 
-static void *gc_alloc(int size)
+static void *om_alloc(int size)
 {
   object o;
   if (size <= LINK0_SIZE) {
@@ -520,12 +514,12 @@ static void *gc_alloc(int size)
       link1 = o->next;
     }
   } else o = xmalloc(size);
-  gc_used_memory += size;
+  used_memory += size;
   o->header &= 0;
   return o;
 }
 
-static void gc_free0(int size, void *p)
+static void om_free0(int size, void *p)
 {
   object o;
   o = p;
@@ -538,7 +532,7 @@ static void gc_free0(int size, void *p)
     o->next = link1;
     link1 = o;
   } else xfree(o);
-  gc_used_memory -= size;
+  used_memory -= size;
 }
 
 static int om_byte_size(object o)
@@ -573,21 +567,21 @@ void gc_free(object o)
   switch (om_type(o)) {
     case DICT:
     case ENV:
-      if (o->map.half_size != 0) gc_free0(sizeof(object) * o->map.half_size * 2, o->map.table);
+      if (o->map.half_size != 0) om_free0(sizeof(object) * o->map.half_size * 2, o->map.table);
       break;
     default:
       break;
   }
-  gc_free0(om_byte_size(o), o);
+  om_free0(om_byte_size(o), o);
 }
 
 object om_new_xint(int64_t val)
 {
   object o;
   if (SINT_MIN <= val && val <= SINT_MAX) return sint((int)val);
-  o = gc_alloc(sizeof(struct xint));
+  o = om_alloc(sizeof(struct xint));
   set_type(o, XINT);
-  om_set_hash(o, om_number_hash((double)val));
+  set_hash(o, num_hash((double)val));
   o->xint.val = val;
   regist(o);
   return o;
@@ -596,9 +590,9 @@ object om_new_xint(int64_t val)
 object om_new_xfloat(double val)
 {
   object o;
-  o = gc_alloc(sizeof(struct xfloat));
+  o = om_alloc(sizeof(struct xfloat));
   set_type(o, XFLOAT);
-  om_set_hash(o, om_number_hash(val));
+  set_hash(o, num_hash(val));
   o->xfloat.val = val;
   regist(o);
   return o;
@@ -607,7 +601,7 @@ object om_new_xfloat(double val)
 static object new_cons(void)
 {
   object o;
-  o = gc_alloc(sizeof(struct cons));
+  o = om_alloc(sizeof(struct cons));
   set_type(o, CONS);
   regist(o);
   return o;
@@ -636,11 +630,20 @@ object om_copy_cons(object o, object *tail)
   return head;
 }
 
+object om_coerce_mem_string(object o)
+{
+  xassert(om_type(o) == BYTES);
+  o->header &= ~TYPE_MASK;
+  set_type(o, STRING);
+  set_hash(o, mem_hash(o->mem.elt, o->mem.size));
+  return o;
+}
+
 static object new_mem(int type, int size)
 {
   object o;
   xassert(size >= 0);
-  o = gc_alloc(sizeof(struct mem) + size - 1);
+  o = om_alloc(sizeof(struct mem) + size - 1);
   set_type(o, type);
   o->mem.size = size;
   regist(o);
@@ -669,14 +672,14 @@ object om_new_mem_from(int type, char *val, int size)
   object o;
   switch (type) {
     case SYMBOL:
-      hval = om_mem_hash(val, size);
+      hval = mem_hash(val, size);
       if ((o = symbol_table_get(&st, val, size, hval)) != NULL) return o;
       o = new_mem_from(type, val, size);
-      om_set_hash(o, hval);
+      set_hash(o, hval);
       return symbol_table_put(&st, o);
     case STRING:
       o = new_mem_from(type, val, size);
-      om_set_hash(o, om_mem_hash(val, size));
+      set_hash(o, mem_hash(val, size));
       return o;
     case BYTES:
       o = new_mem_from(type, val, size);
@@ -709,7 +712,7 @@ static object new_array(int size)
 {
   object o;
   xassert(size >= 0);
-  o = gc_alloc(sizeof(struct array) + sizeof(object) * (size - 1));
+  o = om_alloc(sizeof(struct array) + sizeof(object) * (size - 1));
   set_type(o, ARRAY);
   o->array.size = size;
   regist(o);
@@ -737,12 +740,12 @@ static object new_map(int type, int half_size, object top)
 {
   int i;
   object o;
-  o = gc_alloc(sizeof(struct map));
+  o = om_alloc(sizeof(struct map));
   set_type(o, type);
   o->map.top = top;
   o->map.entry_count = 0;
   o->map.half_size = half_size;
-  if (half_size != 0) o->map.table = gc_alloc(sizeof(object) * half_size * 2);
+  if (half_size != 0) o->map.table = om_alloc(sizeof(object) * half_size * 2);
   for (i = 0; i < half_size; i++) o->map.table[i] = NULL;
   regist(o);
   return o;
@@ -757,7 +760,7 @@ static object new_proc(int type, object env, int param_count, object params, obj
 {
   object o;
   xassert(om_type(env) == ENV);
-  o = gc_alloc(sizeof(struct proc));
+  o = om_alloc(sizeof(struct proc));
   o->proc.env = env;
   o->proc.param_count = param_count;
   o->proc.params = params;
@@ -780,7 +783,7 @@ object om_new_func(object env, int param_count, object params, object body)
 object om_new_native(int type, object name, void *p)
 {
   object o;
-  o = gc_alloc(sizeof(struct native));
+  o = om_alloc(sizeof(struct native));
   o->native.name = name;
   o->native.u.p = p;
   set_type(o, type);
@@ -868,16 +871,16 @@ static void sweep_s_expr(void)
 
 void om_gc_chance(void)
 {
-  if (gc_used_memory < om_gc_chance_MEMORY) return;
-  if (GC_LOG_P) fprintf(stderr, "before gc(used memory %d[byte])\n", gc_used_memory);
+  if (used_memory < om_gc_chance_MEMORY) return;
+  if (GC_LOG_P) fprintf(stderr, "before gc(used memory %d[byte])\n", used_memory);
   ip_mark_object();
   sweep_s_expr();
-  if (GC_LOG_P) fprintf(stderr, "after gc(used memory %d[byte])\n", gc_used_memory);
+  if (GC_LOG_P) fprintf(stderr, "after gc(used memory %d[byte])\n", used_memory);
 }
 
 void om_init(void)
 {
-  gc_used_memory = 0;
+  used_memory = 0;
   link0 = link1 = NULL;
   symbol_table_init(&st);
   heap_init(&heap);

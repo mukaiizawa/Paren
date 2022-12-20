@@ -114,6 +114,7 @@ extern object om_new_mem_from(int type, char *val, int size);
 extern object om_new_mem_from_cstr(int type, char *cstr);
 extern object om_new_mem_from_xbarray(int type, struct xbarray *x);
 extern object om_new_cstring(object o);
+extern object om_coerce_mem_string(object o);
 extern object om_new_array(int size);
 extern object om_new_array_from(object *o, int size);
 extern object om_new_dict(void);
@@ -128,10 +129,7 @@ extern void om_gc_chance(void);
 
 // object manipulation.
 extern int om_hash(object o);
-extern int om_mem_hash(char *p, int size);
-extern void om_set_hash(object o, int hval);
 extern int om_type(object o);
-extern void om_reset_type(object o, int type);
 extern int om_eq_p(object o, object p);
 extern object om_bool(int b);
 extern char *om_describe(object o, char *buf);
