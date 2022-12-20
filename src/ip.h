@@ -12,7 +12,6 @@ enum Exception {
 };
 
 enum error_msg2 {
-  readdir_failed,
   recv_failed,
   send_failed,
   socket_startup_failed,

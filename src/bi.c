@@ -2031,12 +2031,11 @@ DEFUN(chdir)
 DEFUN(readdir)
 {
   char *path;
-  struct xbarray files;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv->cons.car, &path)) return FALSE;
+  struct xbarray files;
   xbarray_init(&files);
-  if (!pf_readdir(path, &files))
-    return ip_throw(OSError, readdir_failed);
+  if (!pf_readdir(path, &files)) return ip_sigerr(OSError, "readdir failed");
   *result = gc_new_mem_from(STRING, files.elt, files.size);
   xbarray_free(&files);
   return TRUE;
