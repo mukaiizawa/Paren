@@ -12,7 +12,8 @@ The function `readdir` retrieves the directory entries as a string separated by 
 Return the contents of the directory indicated by `PATH` as a character string delimited by a newline character.
 
 # ERRORS
-OSError may occur for some reason.
+## OSError
+May occur for some reason.
 
 # SEE ALSO
 - `path(3)`

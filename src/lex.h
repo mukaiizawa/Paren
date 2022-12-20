@@ -1,7 +1,5 @@
 // lexical analysis.
 
-#include "xbarray.h"
-
 // token types -- -1..255 as single character
 #define LEX_SYMBOL 256
 #define LEX_STRING 257

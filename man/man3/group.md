@@ -12,6 +12,7 @@ The function `group` grouping list into sublists.
 Returns a list in which the elements `LIST` are grouped into sublists of length `N`.
 
 # ERRORS
+## ArgumentError
 Error if `N` is not positive integer.
 
 # NOTES

@@ -59,6 +59,7 @@ The function `sqrt` returns  the square root of `X`.
 These functions call the C standard math library.
 
 # ERRORS
+## ArithmeticError
 These functions error if result is not finite.
 
 # EXAMPLES

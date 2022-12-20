@@ -15,7 +15,8 @@ The function `fread` reads up to `SIZE` bytes from the stream associated with th
 Returns the number of bytes read and written.
 
 # ERRORS
-OSError may occur for some reason.
+## OSError
+May occur for some reason.
 
 # NOTES
 `FP` is created by `fopen` or `fp`.

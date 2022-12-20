@@ -9,7 +9,7 @@ foreach - apply the function to each element of the list.
 The function `foreach` executes a provided function once for each list element.
 
 # RETURN VALUE
-Returns `nil`.
+Returns the `nil`.
 
 # NOTES
 In general, `foreach` is faster than `map`, because it doesn't create cons.

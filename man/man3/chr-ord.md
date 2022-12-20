@@ -14,6 +14,10 @@ The function `chr` returns a string representing a character whose Unicode code 
 
 The function `oct` returns an integer representing the Unicode code point of the character.
 
+# ERRORS
+## ArgumentError
+If `CHAR` is not a string representing a character.
+
 # NOTES
 
     (ord (chr x)) <=> x
@@ -28,4 +32,4 @@ The function `oct` returns an integer representing the Unicode code point of the
 
 # SEE ALSO
 - `int(3)`
-- `str(3)`
+e `str(3)`

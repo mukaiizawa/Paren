@@ -108,7 +108,7 @@ static int digit_val(char ch)
   return ch - 'a' + 10;
 }
 
-static char *builtin_name(char *name, char *buf)
+static char *built_in_name(char *name, char *buf)
 {
   char len;
   int s, t;
@@ -131,11 +131,11 @@ static void make_built_in(void)
   int i;
   char buf[MAX_STR_LEN];
   object o;
-  for (i = 0; builtin_name(special_name_table[i], buf) != NULL; i++) {
+  for (i = 0; built_in_name(special_name_table[i], buf) != NULL; i++) {
     o = gc_new_native(SPECIAL, gc_new_mem_from_cstr(SYMBOL, buf), special_table[i]);
     map_put(object_toplevel, o->native.name, o);
   }
-  for (i = 0; builtin_name(function_name_table[i], buf) != NULL; i++) {
+  for (i = 0; built_in_name(function_name_table[i], buf) != NULL; i++) {
     o = gc_new_native(BFUNC, gc_new_mem_from_cstr(SYMBOL, buf), function_table[i]);
     map_put(object_toplevel, o->native.name, o);
   }

@@ -8,14 +8,10 @@
 #include "pf.h"
 #include "ip.h"
 
-struct xbarray bi_buf;
-
 int bi_argc_range(int argc, int min, int max)
 {
-  if (argc < min)
-    return ip_throw(ArgumentError, too_few_arguments);
-  if ((!min && !max && argc != 0) || (max && argc > max))
-    return ip_throw(ArgumentError, too_many_arguments);
+  if (argc < min) return ip_sigerr(ArgumentError, "too few arguments");
+  if ((!min && !max && argc != 0) || (max && argc > max)) return ip_sigerr(ArgumentError, "too many arguments");
   return TRUE;
 }
 
@@ -70,104 +66,120 @@ static char *type_name(int type) {
   }
 }
 
-#define CHECK(t) {\
-  if (t & bits) {\
-    if (n != 1) {\
-      if (i != 0) {\
-        if (i + 1 != n) xbarray_adds(&bi_buf, ", ");\
-        else xbarray_adds(&bi_buf, " or ");\
-      }\
-    }\
-    xbarray_adds(&bi_buf, type_name(t));\
-    i++;\
-  }\
-}
-
-static int bit_count (int bits) {
-  bits = (bits & 0x55555555) + (bits >> 1 & 0x55555555);
-  bits = (bits & 0x33333333) + (bits >> 2 & 0x33333333);
-  bits = (bits & 0x0f0f0f0f) + (bits >> 4 & 0x0f0f0f0f);
-  bits = (bits & 0x00ff00ff) + (bits >> 8 & 0x00ff00ff);
-  return (bits & 0x0000ffff) + (bits >>16 & 0x0000ffff);
-}
-
+#define TYPE_MIN BI_SYM
+#define TYPE_MAX BI_NUM
 int bi_argv(int bits, object o, object *result)
 {
-  int i, n;
-  *result = o;
-  if (type_bits(o) & bits) return TRUE;
-  i = 0, n = bit_count(bits);
-  xbarray_reset(&bi_buf);
-  xbarray_adds(&bi_buf, "expected ");
-  CHECK(BI_SYM);
-  CHECK(BI_STR);
-  CHECK(BI_ARRAY);
-  CHECK(BI_BYTES);
-  CHECK(BI_CONS);
-  CHECK(BI_DICT);
-  CHECK(BI_FUNC);
-  CHECK(BI_MACRO);
-  CHECK(BI_SP);
-  CHECK(BI_LIST);
-  CHECK(BI_NUM);
-  xbarray_add(&bi_buf, '\0');
-  return ip_throw(ArgumentError, bi_buf_msg);
+  if (type_bits(o) & bits) {
+    *result = o;
+    return TRUE;
+  }
+  char buf[MAX_STR_LEN];
+  int n = xbitc(bits);
+  strcpy(buf, "expected ");
+  for (int i = TYPE_MIN; i <= TYPE_MAX; i = i << 1) {
+    if (i & bits) {
+      strcat(buf, type_name(i));
+      if (n == 2) strcat(buf, " or ");
+      else if (n > 2) strcat(buf, ", ");
+      n--;
+    }
+  }
+  return ip_sigerr(ArgumentError, buf);
 }
 
 int bi_range(int min, int x, int max)
 {
-  if (x < min || x > max)
-    return ip_throw(ArgumentError, index_out_of_range);
+  if (x < min || x > max) return ip_sigerr(ArgumentError, "index out of range");
   return TRUE;
 }
 
 int bi_cbyte(object o, int *p)
 {
-  if (!bi_cint(o, p) || *p < 0 || *p > 0xff)
-    return ip_throw(ArgumentError, expected_byte);
+  if (!bi_cint(o, p) || *p < 0 || *p > 0xff) {
+    *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
+    return ip_sigerr(ArgumentError, "expected byte");
+  }
   return TRUE;
 }
 
 int bi_cint(object o, int *p)
 {
+  if (!sint_p(o)) {
+    *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
+    return ip_sigerr(ArgumentError, "expected integer");
+  }
   *p = sint_val(o);
-  if (!sint_p(o))
-    return ip_throw(ArgumentError, expected_integer);
   return TRUE;
 }
 
 int bi_cpint(object o, int *p)
 {
-  if (!bi_cint(o, p) || *p < 0)
-    return ip_throw(ArgumentError, expected_positive_integer);
+  if (!bi_cint(o, p) || *p < 0) {
+    *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
+    return ip_sigerr(ArgumentError, "expected positive integer");
+  }
   return TRUE;
+}
+
+int bi_cpint64(object o, int64_t *p)
+{
+  if (!bi_cint64(o, p) || *p < 0) {
+    *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
+    return ip_sigerr(ArgumentError, "expected positive integer");
+  }
+  return TRUE;
+}
+
+int bi_may_cint64(object o, int64_t *p)
+{
+  if (sint_p(o)) {
+    *p = sint_val(o);
+    return TRUE;
+  }
+  if (object_type(o) == XINT) {
+    *p = o->xint.val;
+    return TRUE;
+  }
+  return FALSE;
 }
 
 int bi_cint64(object o, int64_t *p)
 {
-  if (sint_p(o)) *p = sint_val(o);
-  else if (object_type(o) == XINT) *p = o->xint.val;
-  else return FALSE;
+  if (!bi_may_cint64(o, p)) {
+    *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
+    return ip_sigerr(ArgumentError, "expected integer");
+  }
   return TRUE;
 }
 
-int bi_cintptr(object o, intptr_t *p)
+static int bi_finite(double x)
 {
-  int64_t i;
-  if (bi_cint64(o, &i)) {
-    if (INTPTR_MIN <= i && i <= INTPTR_MAX) {
-      *p = (intptr_t)i;
-      return TRUE;
-    }
-  }
-  *p = (intptr_t)0;
-  return ip_throw(ArgumentError, expected_integer);
+  if (!isfinite(x)) return ip_sigerr(ArithmeticError, "numeric overflow");
+  return TRUE;
 }
 
-int bi_cdouble(object o, double *p)
+static int bi_cintptr(object o, intptr_t *p)
 {
   int64_t i;
-  if (bi_cint64(o, &i)) {
+  if (!bi_cint64(o, &i) || i < INTPTR_MIN || i > INTPTR_MAX) {
+    *p = 0;
+    return FALSE;
+  }
+  *p = (intptr_t)i;
+  return TRUE;
+}
+
+static int bi_fp(object o, FILE **p)
+{
+  if (!bi_cintptr(o, (intptr_t *)p)) return ip_sigerr(ArgumentError, "invalid fp");
+  return TRUE;
+}
+
+int bi_may_cdouble(object o, double *p)
+{
+  int64_t i;
+  if (bi_may_cint64(o, &i)) {
     *p = (double)i;
     return TRUE;
   }
@@ -178,31 +190,53 @@ int bi_cdouble(object o, double *p)
   return FALSE;
 }
 
-#define MAX_STRINGS 2
-
-int bi_cstrings(int n, object argv, char **ss)
+int bi_cdouble(object o, double *p)
 {
-  int i, offset[MAX_STRINGS]; // xbarray use realloc.
-  object o;
-  xassert(n <= MAX_STRINGS);
-  xassert(object_type(argv) == CONS);
-  xbarray_reset(&bi_buf);
-  for (i = 0; i < n; i++) {
-    if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
-    argv = argv->cons.cdr;
-    offset[i] = bi_buf.size;
-    memcpy(xbarray_reserve(&bi_buf, o->mem.size), o->mem.elt, o->mem.size);
-    xbarray_add(&bi_buf, '\0');
+  if (!bi_may_cdouble(o, p)) {
+    *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
+    return ip_sigerr(ArgumentError, "expected number");
   }
-  for (i = 0; i < n; i++) ss[i] = bi_buf.elt + offset[i];
   return TRUE;
 }
 
-int bi_cstring(object argv, char **ss)
+int bi_cstring(object o, char **p)
 {
-  char *result;
-  if (!bi_cstrings(1, argv, &result)) return FALSE;
-  *ss = result;
+  if (!bi_argv(BI_STR, o, &o)) return FALSE;
+  *p = (gc_new_cstring(o))->mem.elt;
+  return TRUE;
+}
+
+// auxiliary functions for string types.
+
+static int ch_len(unsigned char ch, int *len)
+{
+  if (ch < 0x80) return *len += 1;
+  if (ch < 0xe0) return *len += 2;
+  if (ch < 0xf0) return *len += 3;
+  if (ch < 0xf8) return *len += 4;
+  *len = -1;
+  return ip_sigerr(ArgumentError, "unexpected utf8 leading byte");
+}
+
+static int ch_at(object o, int *i, object *result)
+{
+  int len = 0;
+  if (!ch_len(LC(o->mem.elt + *i), &len)) return FALSE;
+  if (*i + len > o->mem.size) return ip_sigerr(ArgumentError, "incomplete UTF-8 byte sequence");
+  *result = gc_new_mem_from(STRING, o->mem.elt + *i, len);
+  *i += len;
+  return TRUE;
+}
+
+static int str_len(object o, int *len)
+{
+  int i = 0;
+  *len = 0;
+  while (i < o->mem.size) {
+    if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
+    *len += 1;
+  }
+  if (i != o->mem.size) return ip_sigerr(ArgumentError, "incomplete UTF-8 byte sequence");
   return TRUE;
 }
 
@@ -431,8 +465,7 @@ DEFUN(list)
 
 DEFUN(list_2e__2e__2e_)
 {
-  int i;
-  object o, p;
+  object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
   *result = object_nil;
@@ -446,18 +479,18 @@ DEFUN(list_2e__2e__2e_)
       }
       break;
     case STRING:
-      i = 0;
-      while (i < o->mem.size) {
+      object p = NULL;
+      for (int i = 0; i < o->mem.size;) {
         if (!ch_at(o, &i, &p)) return FALSE;
         *result = gc_new_cons(p, *result);
       }
       break;
     case BYTES:
-      for (i = 0; i < o->mem.size; i++)
+      for (int i = 0; i < o->mem.size; i++)
         *result = gc_new_cons(gc_new_xint(LC(o->mem.elt + i)), *result);
       break;
     case ARRAY:
-      for (i = 0; i < o->array.size; i++)
+      for (int i = 0; i < o->array.size; i++)
         *result = gc_new_cons(o->array.elt[i], *result);
       break;
     default:
@@ -536,19 +569,14 @@ DEFUN(reverse_21_)
 
 static int double_add(double x, object argv, object *result)
 {
-  int64_t i;
-  double d;
-  if (!isfinite(x))
-    return ip_throw(ArithmeticError, numeric_overflow);
+  double y;
   if (argv == object_nil) {
     *result = gc_new_xfloat(x);
     return TRUE;
   }
-  if (bi_cint64(argv->cons.car, &i))
-    return double_add(x + (double)i, argv->cons.cdr, result);
-  if (bi_cdouble(argv->cons.car, &d))
-    return double_add(x + d, argv->cons.cdr, result);
-  return ip_throw(ArgumentError, expected_number);
+  if (!bi_cdouble(argv->cons.car, &y)) return FALSE;
+  if (!bi_finite(x += y)) return FALSE;
+  return double_add(x, argv->cons.cdr, result);
 }
 
 static int int64_add(int64_t x, object argv, object *result)
@@ -558,9 +586,8 @@ static int int64_add(int64_t x, object argv, object *result)
     *result = gc_new_xint(x);
     return TRUE;
   }
-  if (bi_cint64(argv->cons.car, &y)) {
-    if ((y > 0 && x > INT64_MAX - y) || (y < 0 && x < INT64_MIN - y))
-      return ip_throw(ArithmeticError, numeric_overflow);
+  if (bi_may_cint64(argv->cons.car, &y)) {
+    if (y > 0? (x > INT64_MAX - y): (x < INT64_MIN - y)) return ip_sigerr(ArithmeticError, "numeric overflow");
     return int64_add(x + y, argv->cons.cdr, result);
   }
   return double_add((double)x, argv, result);
@@ -587,51 +614,37 @@ DEFUN(_2d__2d_)
   return int64_add(-1, argv, result);
 }
 
-static int double_multiply(double dx, object argv, object *result)
+static int double_multiply(double x, object argv, object *result)
 {
-  int64_t iy;
-  double dy;
-  if (!isfinite(dx))
-    return ip_throw(ArithmeticError, numeric_overflow);
+  double y;
   if (argv == object_nil) {
-    *result = gc_new_xfloat(dx);
+    *result = gc_new_xfloat(x);
     return TRUE;
   }
-  if (bi_cint64(argv->cons.car, &iy))
-    return double_multiply(dx * iy, argv->cons.cdr, result);
-  if (bi_cdouble(argv->cons.car, &dy))
-    return double_multiply(dx * dy, argv->cons.cdr, result);
-  return ip_throw(ArgumentError, expected_number);
+  if (!bi_cdouble(argv->cons.car, &y)) return FALSE;
+  if (!bi_finite(x *= y)) return FALSE;
+  return double_multiply(x, argv->cons.cdr, result);
 }
 
-static int int64_multiply(int64_t ix, object argv, object *result)
+static int int64_multiply(int64_t x, object argv, object *result)
 {
-  int64_t iy;
+  int64_t y;
   if (argv == object_nil) {
-    *result = gc_new_xint(ix);
+    *result = gc_new_xint(x);
     return TRUE;
   }
-  if (bi_cint64(argv->cons.car, &iy)) {
-    if (ix > 0) {
-      if (iy > 0) {
-        if (ix > INT64_MAX / iy)
-          return ip_throw(ArithmeticError, numeric_overflow);
-      } else {
-        if (iy < INT64_MIN / ix)
-          return ip_throw(ArithmeticError, numeric_overflow);
-      }
-    } else {
-      if (iy > 0) {
-        if (ix < INT64_MIN / iy)
-          return ip_throw(ArithmeticError, numeric_overflow);
-      } else {
-        if (ix != 0 && iy < INT64_MAX / ix)
-          return ip_throw(ArithmeticError, numeric_overflow);
-      }
-    }
-    return int64_multiply(ix * iy, argv->cons.cdr, result);
+  if (bi_may_cint64(argv->cons.car, &y)) {
+    if (x == 0 || y == 0) return int64_multiply(0, argv->cons.cdr, result);
+    if (x > 0?
+        (y > 0?
+         (x > INT64_MAX / y):
+         (y < INT64_MIN / x)):
+        (y > 0?
+         (x < INT64_MIN / y):
+         (y < INT64_MAX / x))) return ip_sigerr(ArithmeticError, "numeric overflow");
+    return int64_multiply(x * y, argv->cons.cdr, result);
   }
-  return double_multiply((double)ix, argv, result);
+  return double_multiply((double)x, argv, result);
 }
 
 DEFUN(_2a_)
@@ -643,95 +656,77 @@ DEFUN(_2a_)
   return int64_multiply(1, argv, result);
 }
 
-static int double_divide(double dx, object argv, object *result)
+static int double_divide(double x, object argv, object *result)
 {
-  int64_t iy;
-  double dy;
-  if (!isfinite(dx))
-    return ip_throw(ArithmeticError, numeric_overflow);
+  double y;
   if (argv == object_nil) {
-    *result = gc_new_xfloat(dx);
+    *result = gc_new_xfloat(x);
     return TRUE;
   }
-  if (bi_cint64(argv->cons.car, &iy)) dy = (double)iy;
-  else if (!bi_cdouble(argv->cons.car, &dy))
-    return ip_throw(ArgumentError, expected_number);
-  if (dy == 0)
-    return ip_throw(ArithmeticError, division_by_zero);
-  return double_divide(dx / dy, argv->cons.cdr, result);
+  if (!bi_cdouble(argv->cons.car, &y)) return FALSE;
+  if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
+  if (!bi_finite(x /= y)) return FALSE;
+  return double_divide(x, argv->cons.cdr, result);
 }
 
-static int int64_divide(int64_t ix, object argv, object *result)
+static int int64_divide(int64_t x, object argv, object *result)
 {
-  int64_t iy;
+  int64_t y;
   if (argv == object_nil) {
-    *result = gc_new_xint(ix);
+    *result = gc_new_xint(x);
     return TRUE;
   }
-  if (bi_cint64(argv->cons.car, &iy)) {
-    if (iy == 0)
-      return ip_throw(ArithmeticError, division_by_zero);
-    if (ix == INT64_MIN && iy == -1)
-      return ip_throw(ArithmeticError, numeric_overflow);
-    if (ix % iy == 0)
-      return int64_divide(ix / iy, argv->cons.cdr, result);
-    return double_divide((double)ix/iy, argv->cons.cdr, result);
+  if (bi_may_cint64(argv->cons.car, &y)) {
+    if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
+    if (x == INT64_MIN && y == -1) return ip_sigerr(ArithmeticError, "numeric overflow");
+    if (x % y == 0) return int64_divide(x / y, argv->cons.cdr, result);
+    return double_divide((double)x / y, argv->cons.cdr, result);
   }
-  return double_divide((double)ix, argv, result);
+  return double_divide((double)x, argv, result);
 }
 
 DEFUN(_2f_)
 {
-  int64_t ix;
-  double dx;
+  int64_t x;
+  double y;
   object o;
   if (!bi_argc_range(argc, 1, FALSE)) return FALSE;
   if (argc == 1) return int64_divide(1, argv, result);
   o = argv->cons.car;
-  if (bi_cint64(o, &ix)) return int64_divide(ix, argv->cons.cdr, result);
-  if (bi_cdouble(o, &dx)) return double_divide(dx, argv->cons.cdr, result);
-  return ip_throw(ArgumentError, expected_number);
+  if (bi_may_cint64(o, &x)) return int64_divide(x, argv->cons.cdr, result);
+  if (!bi_cdouble(o, &y)) return FALSE;
+  return double_divide(y, argv->cons.cdr, result);
 }
 
 DEFUN(_2f__2f_)
 {
-  int64_t ix, iy;
-  double dx;
+  int64_t x, y;
+  double z;
   if (!bi_argc_range(argc, 1, 2)) return FALSE;
   if (argc == 1) {
-    if (bi_cint64(argv->cons.car, &ix)) {
+    if (bi_may_cint64(argv->cons.car, &x)) {
       *result = argv->cons.car;
       return TRUE;
     }
-    if (bi_cdouble(argv->cons.car, &dx)) {
-      if ((double)DBL_MIN_INT <= dx && dx <= (double)DBL_MAX_INT) {
-        *result = gc_new_xint((int64_t)dx);
-        return TRUE;
-      }
-    }
-    return ip_throw(ArithmeticError, numeric_overflow);
-  } else {
-    if (!bi_cint64(argv->cons.car, &ix))
-      return ip_throw(ArgumentError, expected_integer);
-    if (!bi_cint64(argv->cons.cdr->cons.car, &iy))
-      return ip_throw(ArgumentError, expected_integer);
-    if (iy == 0)
-      return ip_throw(ArithmeticError, division_by_zero);
-    *result = gc_new_xint(ix / iy);
+    if (!bi_cdouble(argv->cons.car, &z)) return FALSE;
+    if (z < (double)DBL_MIN_INT || z > (double)DBL_MAX_INT) return ip_sigerr(ArithmeticError, "numeric overflow");
+    *result = gc_new_xint((int64_t)z);
     return TRUE;
   }
+  if (!bi_cint64(argv->cons.car, &x)) return FALSE;
+  if (!bi_cint64(argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
+  *result = gc_new_xint(x / y);
+  return TRUE;
 }
 
 DEFUN(_25_)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cint64(argv->cons.car, &x))
-    return ip_throw(ArgumentError, expected_integer);
-  if (!bi_cint64(argv->cons.cdr->cons.car, &y))
-    return ip_throw(ArgumentError, expected_integer);
-  if (y == 0)
-    return ip_throw(ArithmeticError, division_by_zero);
+  if (!bi_cint64(argv->cons.car, &x)) return FALSE;
+  if (!bi_cint64(argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
   *result = gc_new_xint(x % y);
   return TRUE;
 }
@@ -742,61 +737,58 @@ DEFUN(_7e_)
 {
   int64_t x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cint64(argv->cons.car, &x) || x < 0)
-    return ip_throw(ArgumentError, expected_positive_integer);
+  if (!bi_cpint64(argv->cons.car, &x)) return FALSE;
   *result = gc_new_xint(~x & INT64_MAX);
+  return TRUE;
+}
+
+static int64_t xbitwise_and(int64_t x, int64_t y) { return x & y; }
+static int64_t xbitwise_or(int64_t x, int64_t y) { return x | y; }
+static int64_t xbitwise_xor(int64_t x, int64_t y) { return x ^ y; }
+
+static int xbitwise(int argc, object argv, int64_t (*f)(int64_t x, int64_t y), object *result)
+{
+  int64_t x, y;
+  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
+  if (!bi_cpint64(argv->cons.car, &x)) return FALSE;
+  while ((argv = argv->cons.cdr) != object_nil) {
+    if (!bi_cpint64(argv->cons.car, &y)) return FALSE;
+    x = f(x, y);
+  }
+  *result = gc_new_xint(x);
   return TRUE;
 }
 
 DEFUN(_26_)
 {
-  int64_t x, y;
-  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_cint64(argv->cons.car, &x) || x < 0)
-    return ip_throw(ArgumentError, expected_positive_integer);
-  while ((argv = argv->cons.cdr) != object_nil) {
-    if (!bi_cint64(argv->cons.car, &y) || y < 0)
-      return ip_throw(ArgumentError, expected_positive_integer);
-    x &= y;
-  }
-  *result = gc_new_xint(x);
-  return TRUE;
+  return xbitwise(argc, argv, xbitwise_and, result);
 }
 
 DEFUN(_7c_)
 {
-  int64_t x, y;
-  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_cint64(argv->cons.car, &x) || x < 0)
-    return ip_throw(ArgumentError, expected_positive_integer);
-  while ((argv = argv->cons.cdr) != object_nil) {
-    if (!bi_cint64(argv->cons.car, &y) || y < 0)
-      return ip_throw(ArgumentError, expected_positive_integer);
-    x |= y;
-  }
-  *result = gc_new_xint(x);
-  return TRUE;
+  return xbitwise(argc, argv, xbitwise_or, result);
 }
 
 DEFUN(_5e_)
 {
+  return xbitwise(argc, argv, xbitwise_xor, result);
+}
+
+DEFUN(_3e__3e_)
+{
   int64_t x, y;
-  if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
-  if (!bi_cint64(argv->cons.car, &x) || x < 0)
-    return ip_throw(ArgumentError, expected_positive_integer);
-  while ((argv = argv->cons.cdr) != object_nil) {
-    if (!bi_cint64(argv->cons.car, &y) || y < 0)
-      return ip_throw(ArgumentError, expected_positive_integer);
-    x ^= y;
-  }
+  if (!bi_argc_range(argc, 2, 2)) return FALSE;
+  if (!bi_cpint64(argv->cons.car, &x)) return FALSE;
+  if (!bi_cpint64(argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (y < XINT_BITS) x >>= y;
+  else x = 0;
   *result = gc_new_xint(x);
   return TRUE;
 }
 
-static int bits(int64_t x)
+static int leftmost_one_pos(int64_t x)
 {
-  int i;
-  for (i = 0; i < XINT_BITS; i++)
+  for (int i = 0; i < XINT_BITS; i++)
     if (x < (1LL << i)) return i;
   return XINT_BITS;
 }
@@ -805,16 +797,11 @@ DEFUN(_3c__3c_)
 {
   int64_t x, y;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cint64(argv->cons.car, &x) || x < 0)
-    return ip_throw(ArgumentError, expected_positive_integer);
-  if (!bi_cint64(argv->cons.cdr->cons.car, &y))
-    return ip_throw(ArgumentError, expected_integer);
-  if (x != 0) {
-    if (y > 0) {
-      if ((bits(x) + y) > XINT_BITS)
-        return ip_throw(ArithmeticError, numeric_overflow);
-      x <<= y;
-    } else x >>= -y;
+  if (!bi_cpint64(argv->cons.car, &x)) return FALSE;
+  if (!bi_cpint64(argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (y != 0) {
+    if (leftmost_one_pos(x) + y > XINT_BITS) return ip_sigerr(ArithmeticError, "numeric overflow");
+    x <<= y;
   }
   *result = gc_new_xint(x);
   return TRUE;
@@ -826,8 +813,8 @@ static int xmath(int argc, object argv, double (*f)(double c), object *result)
 {
   double x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cdouble(argv->cons.car, &x)) return ip_throw(ArgumentError, expected_number);
-  if (!isfinite(x = f(x))) return ip_throw(ArithmeticError, numeric_overflow);
+  if (!bi_cdouble(argv->cons.car, &x)) return FALSE;
+  if (!bi_finite(x = f(x))) return FALSE;
   *result = gc_new_xfloat(x);
   return TRUE;
 }
@@ -887,9 +874,9 @@ DEFUN(log)
   double x, y;
   if (!bi_argc_range(argc, 1, 2)) return FALSE;
   if (argc == 1) return xmath(argc, argv, log, result);
-  if (!bi_cdouble(argv->cons.car, &x)) return ip_throw(ArgumentError, expected_number);
-  if (!bi_cdouble(argv->cons.cdr->cons.car, &y)) return ip_throw(ArgumentError, expected_number);
-  if (!isfinite(x = log(y) / log(x))) return ip_throw(ArithmeticError, numeric_overflow);
+  if (!bi_cdouble(argv->cons.car, &x)) return FALSE;
+  if (!bi_cdouble(argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (!bi_finite(x = log(y) / log(x))) return FALSE;
   *result = gc_new_xfloat(x);
   return TRUE;
 }
@@ -903,9 +890,9 @@ DEFUN(pow)
 {
   double x, y;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cdouble(argv->cons.car, &x)) return ip_throw(ArgumentError, expected_number);
-  if (!bi_cdouble(argv->cons.cdr->cons.car, &y)) return ip_throw(ArgumentError, expected_number);
-  if (!isfinite(x = pow(x, y))) return ip_throw(ArithmeticError, numeric_overflow);
+  if (!bi_cdouble(argv->cons.car, &x)) return FALSE;
+  if (!bi_cdouble(argv->cons.cdr->cons.car, &y)) return FALSE;
+  if (!bi_finite(x = pow(x, y))) return FALSE;
   *result = gc_new_xfloat(x);
   return TRUE;
 }
@@ -941,10 +928,10 @@ DEFUN(bytes)
 DEFUN(symbol)
 {
   static int c = 0;
+  char buf[MAX_STR_LEN];
   if (argc == 0) {
-    xbarray_reset(&bi_buf);
-    xbarray_addf(&bi_buf, "$G-%d", ++c);
-    *result = gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size);
+    xsprintf(buf, "$G-%d", ++c);
+    *result = gc_new_mem_from_cstr(SYMBOL, buf);
     return TRUE;
   }
   return bytes_like_to(SYMBOL, argc, argv, result);
@@ -1054,48 +1041,38 @@ DEFUN(chr)
     buf[1] = 0x80 | ((x >> 12) & 0x3f);
     buf[2] = 0x80 | ((x >> 6) & 0x3f);
     buf[3] = 0x80 | (x & 0x3f);
-  } else return ip_throw(ArgumentError, index_out_of_range);
+  } else return ip_sigerr(ArgumentError, "invalid code point");
   *result = gc_new_mem_from(STRING, buf, size);
   return TRUE;
 }
 
-static int ord(object o, int from, int len, int *val)
+#define LCP(i, mask) (LC(p->mem.elt + i) & mask)
+#define LCPS(i, mask, shift) (LCP(i, mask) << shift)
+static int ord(object o, int *i, int *val)
 {
-  xassert(object_type(o) == STRING);
-  if (from + len > o->mem.size) return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
-  switch (len) {
-    case 1:
-      *val = LC(o->mem.elt + from);
-      return TRUE;
-    case 2:
-      *val = ((LC(o->mem.elt + from) & 0x3f) << 6)
-        | (LC(o->mem.elt + from + 1) & 0x3f);
-      return TRUE;
-    case 3:
-      *val = ((LC(o->mem.elt + from) & 0xf) << 12)
-        | ((LC(o->mem.elt + from + 1) & 0x3f) << 6)
-        | (LC(o->mem.elt + from + 2) & 0x3f);
-      return TRUE;
-    case 4:
-      *val = ((LC(o->mem.elt + from) & 0x3) << 18)
-        | ((LC(o->mem.elt + from + 1) & 0x3f) << 12)
-        | ((LC(o->mem.elt + from + 2) & 0x3f) << 6)
-        | (LC(o->mem.elt + from + 3) & 0x3f);
-      return TRUE;
-    default:
-      *val = -1;
-      return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
+  object p = NULL;
+  if (!ch_at(o, i, &p)) return FALSE;
+  switch (p->mem.size) {
+    case 1: *val = LC(p->mem.elt); return TRUE;
+    case 2: *val = LCPS(0, 0x3f, 6) | LCP(1, 0x3f); return TRUE;
+    case 3: *val = LCPS(0, 0xf, 12) | LCPS(1, 0x3f, 6) | LCP(2, 0x3f); return TRUE;
+    case 4: *val = LCPS(0, 0x3, 18) | LCPS(1, 0x3f, 12) | LCPS(2, 0x3f, 6) | LCP(3, 0x3f); return TRUE;
+    default: xassert(FALSE); return FALSE;    // see ch_len;
   }
 }
+#undef LCP
+#undef LCPS
 
 DEFUN(ord)
 {
-  int x;
+  int i = 0, val;
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
-  if (!ord(o, 0, o->mem.size, &x)) return FALSE;
-  *result = gc_new_xint(x);
+  if (o->mem.size == 0) return ip_sigerr(ArgumentError, "expected a character, but empty string");
+  if (!ord(o, &i, &val)) return FALSE;
+  if (o->mem.size != i) return ip_sigerr(ArgumentError, "expected a character, but string");
+  *result = gc_new_xint(val);
   return TRUE;
 }
 
@@ -1203,7 +1180,7 @@ static int str_to_array(object o, object *result)
 
 DEFUN(array)
 {
-  int i, size;
+  int size;
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if ((o = argv->cons.car) == object_nil) {
@@ -1219,7 +1196,7 @@ DEFUN(array)
     case CONS:
       size = list_len(o);
       *result = gc_new_array(size);
-      for (i = 0; i < size; i++) {
+      for (int i = 0; i < size; i++) {
         (*result)->array.elt[i] = o->cons.car;
         o = o->cons.cdr;
       }
@@ -1230,14 +1207,14 @@ DEFUN(array)
     case BYTES:
       size = o->mem.size;
       *result = gc_new_array(o->mem.size);
-      for (i = 0; i < size; i++)
+      for (int i = 0; i < size; i++)
         (*result)->array.elt[i] = gc_new_xint(o->mem.elt[i]);
       return TRUE;
     case ARRAY:
       *result = gc_new_array_from(o->array.elt, o->array.size);
       return TRUE;
     default:
-      return ip_throw(ArgumentError, expected_positive_integer_or_sequence);
+      return ip_sigerr(ArgumentError, "expected positive integer, array, bytes, list, or string");
   }
 }
 
@@ -1290,7 +1267,7 @@ static int str_slice(object o, int start, int stop, object *result)
   else {
     for (i = start, t = s; i < stop && t < o->mem.size; i++)
       if (!ch_len(LC(o->mem.elt + t), &t)) return FALSE;
-    if (t > o->mem.size) return ip_throw(ArgumentError, incomplete_utf8_byte_sequence);
+    if (t > o->mem.size) return ip_sigerr(ArgumentError, "incomplete UTF-8 byte sequence");
   }
   if (!bi_range(0, s, t)) return FALSE;
   *result = gc_new_mem_from(STRING, o->mem.elt + s, t - s);
@@ -1405,7 +1382,7 @@ static int cons_access(int argc, object argv, object o, object *result)
     if (o == object_nil) *result = o;
     else *result = o->cons.car;
   } else {
-    if (o == object_nil) return ip_throw(ArgumentError, index_out_of_range);
+    if (o == object_nil) return ip_sigerr(ArgumentError, "index out of range");
     *result = argv->cons.cdr->cons.car;
     o->cons.car = *result;
   }
@@ -1417,7 +1394,7 @@ static int str_access(int argc, object argv, object o, object *result)
   int i;
   if (!bi_cpint(argv->cons.car, &i)) return FALSE;
   if (argc == 2) return str_slice(o, i, i + 1, result);
-  return ip_throw(ArgumentError, too_many_arguments);
+  return ip_sigerr(ArgumentError, "string data type is immutable");
 }
 
 static int bytes_access(int argc, object argv, object o, object *result)
@@ -1750,15 +1727,13 @@ static int double_lt(double x, object argv, object *result)
     *result = object_true;
     return TRUE;
   }
-  if (bi_cint64(argv->cons.car, &i)) {
+  if (bi_may_cint64(argv->cons.car, &i)) {
     if (x >= (double)i) return TRUE;
     return double_lt((double)i, argv->cons.cdr, result);
   }
-  if (bi_cdouble(argv->cons.car, &d)) {
-    if (x >= d) return TRUE;
-    return double_lt(d, argv->cons.cdr, result);
-  }
-  return ip_throw(ArgumentError, expected_number);
+  if (!bi_cdouble(argv->cons.car, &d)) return FALSE;
+  if (x >= d) return TRUE;
+  return double_lt(d, argv->cons.cdr, result);
 }
 
 static int int64_lt(int64_t x, object argv, object *result)
@@ -1768,7 +1743,7 @@ static int int64_lt(int64_t x, object argv, object *result)
     *result = object_true;
     return TRUE;
   }
-  if (bi_cint64(argv->cons.car, &y)) {
+  if (bi_may_cint64(argv->cons.car, &y)) {
     if (x >= y) return TRUE;
     return int64_lt(y, argv->cons.cdr, result);
   }
@@ -1779,10 +1754,9 @@ static int num_lt(object o, object argv, object *result)
 {
   int64_t i;
   double d;
-  if (bi_cint64(o, &i)) return int64_lt(i, argv, result);
-  if (bi_cdouble(o, &d)) return double_lt(d, argv, result);
-  xassert(FALSE);
-  return FALSE;
+  if (bi_may_cint64(o, &i)) return int64_lt(i, argv, result);
+  if (!bi_cdouble(o, &d)) return FALSE;
+  return double_lt(d, argv, result);
 }
 
 static int bytes_lt(object o, object argv, object *result)
@@ -1803,37 +1777,32 @@ static int bytes_lt(object o, object argv, object *result)
   return  TRUE;
 }
 
-static int chcmp(object o, int *oi, object p, int *pi, int *x)
+static int chcmp(object o, int *oi, object p, int *pi, int *cmp)
 {
-  int olen, plen, oord, pord;
-  olen = plen = 0;
-  if (!ch_len(LC(o->mem.elt + *oi), &olen)) return FALSE;
-  if (!ch_len(LC(p->mem.elt + *pi), &plen)) return FALSE;
-  if (!ord(o, *oi, olen, &oord)) return FALSE;
-  if (!ord(p, *pi, plen, &pord)) return FALSE;
-  *oi += olen;
-  *pi += plen;
-  *x = oord - pord;
+  int x, y;
+  if (!ord(o, oi, &x)) return FALSE;
+  if (!ord(p, pi, &y)) return FALSE;
+  *cmp = x - y;
   return TRUE;
 }
 
 static int str_lt(object o, object argv, object *result)
 {
-  int oi, pi, x;
+  int oi, pi, cmp;
   object p;
   if (argv == object_nil) {
     *result = object_true;
     return TRUE;
   }
   if (!bi_argv(BI_STR, argv->cons.car, &p)) return FALSE;
-  oi = pi = 0;
-  while (pi < p->mem.size) {
-    if (oi == o->mem.size) x = -1;
-    else if (!chcmp(o, &oi, p, &pi, &x)) return FALSE;
-    if (x < 0) return str_lt(p, argv->cons.cdr, result);
-    if (x > 0) break;
+  cmp = oi = pi = 0;
+  while (cmp == 0) {
+    if (pi == p->mem.size) cmp = 1;
+    else if (oi == o->mem.size) cmp = -1;
+    else if (!chcmp(o, &oi, p, &pi, &cmp)) return FALSE;
   }
-  return  TRUE;
+  if (cmp < 0) return str_lt(p, argv->cons.cdr, result);
+  return TRUE;
 }
 
 DEFUN(_3c_)
@@ -1860,56 +1829,53 @@ DEFUN(_3c_)
 
 // os.
 
-DEFUN(fp)
+static int fp_error_p(FILE *fp)
 {
-  int fd;
-  FILE *fp;
-  if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cint(argv->cons.car, &fd)) return FALSE;
-  switch (fd) {
-    case 0: fp = stdin; break;
-    case 1: fp = stdout; break;
-    case 2: fp = stderr; break;
-    default: return ip_throw(OSError, fp_failed);
-  }
-  *result = gc_new_xint((intptr_t)fp);
-  return TRUE;
+  int error_p = ferror(fp);
+  clearerr(fp);
+  return error_p;
 }
 
-static char *fopen_mode_table[] = {
-  "rb",
-  "wb",
-  "ab",
-  "rb+"
-};
+DEFUN(fp)
+{
+  int64_t fd;
+  if (!bi_argc_range(argc, 1, 1)) return FALSE;
+  if (!bi_may_cint64(argv->cons.car, &fd)) fd = -1;
+  switch (fd) {
+    case 0: *result = gc_new_xint((intptr_t)stdin); return TRUE;
+    case 1: *result = gc_new_xint((intptr_t)stdout); return TRUE;
+    case 2: *result = gc_new_xint((intptr_t)stderr); return TRUE;
+    default: return ip_sigerr(OSError, "invalid file descriptor");
+  }
+}
 
 DEFUN(fopen)
 {
-  char *fn;
-  int mode;
+  int64_t i;
+  char *fn, *mode;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstring(argv, &fn)) return FALSE;
-  if (!bi_cpint(argv->cons.cdr->cons.car, &mode)) return FALSE;
-  if (mode >= sizeof(fopen_mode_table) / sizeof(char *))
-    return ip_throw(ArgumentError, invalid_args);
-  if ((fp = pf_fopen(fn, fopen_mode_table[mode])) == NULL)
-    return ip_throw(OSError, fopen_failed);
+  if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
+  if (!bi_may_cint64(argv->cons.cdr->cons.car, &i)) i = -1;
+  switch (i) {
+    case 0: mode = "rb"; break;
+    case 1: mode = "wb"; break;
+    case 2: mode = "ab"; break;
+    case 3: mode = "rb+"; break;
+    default: return ip_sigerr(ArgumentError, "invalid fopen mode");
+  }
+  if ((fp = pf_fopen(fn, mode)) == NULL) return ip_sigerr(OSError, "fopen failed");
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;
 }
 
 DEFUN(fgetc)
 {
-  int ch;
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
-  ch = fgetc(fp);
-  if (ch == EOF && ferror(fp)) {
-    clearerr(fp);
-    return ip_throw(OSError, fgetc_failed);
-  }
+  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
+  int ch = fgetc(fp);
+  if (ch == EOF && fp_error_p(fp)) return ip_sigerr(OSError, "fgetc failed");
   *result = gc_new_xint(ch);
   return TRUE;
 }
@@ -1919,11 +1885,10 @@ DEFUN(fputc)
   int byte;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  *result = argv->cons.car;
   if (!bi_cbyte(argv->cons.car, &byte)) return FALSE;
-  if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
-  if (fputc(byte, fp) == EOF)
-    return ip_throw(OSError, fputc_failed);
+  if (!bi_fp(argv->cons.cdr->cons.car, &fp)) return FALSE;
+  if (fputc(byte, fp) == EOF) return ip_sigerr(OSError, "fputc failed");
+  *result = argv->cons.car;
   return TRUE;
 }
 
@@ -1933,7 +1898,7 @@ DEFUN(fgets)
   FILE *fp;
   struct xbarray x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
   xbarray_init(&x);
   s = xbarray_fgets(&x, fp);
   if (s == NULL) *result = object_nil;
@@ -1955,12 +1920,8 @@ DEFUN(fread)
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_cint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
-  if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
-  size = fread(o->mem.elt + from, 1, size, fp);
-  if (size == 0 && ferror(fp)) {
-    clearerr(fp);
-    return ip_throw(OSError, fread_failed);
-  }
+  if (!bi_fp(argv->cons.cdr->cons.car, &fp)) return FALSE;
+  if ((size = fread(o->mem.elt + from, 1, size, fp)) == 0 && fp_error_p(fp)) return ip_sigerr(OSError, "fread failed");
   *result = gc_new_xint(size);
   return TRUE;
 }
@@ -1975,27 +1936,23 @@ DEFUN(fwrite)
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
-  if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
-  size = fwrite(o->mem.elt + from, 1, size, fp);
-  if (size == 0 && ferror(fp)) {
-    clearerr(fp);
-    return ip_throw(OSError, fwrite_failed);
-  }
+  if (!bi_fp(argv->cons.cdr->cons.car, &fp)) return FALSE;
+  if ((size = fwrite(o->mem.elt + from, 1, size, fp)) == 0 && fp_error_p(fp)) return ip_sigerr(OSError, "fwrite failed");
   *result = gc_new_xint(size);
   return TRUE;
 }
 
 DEFUN(fseek)
 {
-  int st, off;
+  int offset;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
-  if (!bi_cint(argv->cons.cdr->cons.car, &off)) return FALSE;
+  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
+  if (!bi_cint(argv->cons.cdr->cons.car, &offset)) return FALSE;
+  if (offset == -1?
+      fseek(fp, 0, SEEK_END):
+      fseek(fp, offset, SEEK_SET) != 0) return ip_sigerr(OSError, "fseek failed");
   *result = object_nil;
-  if (off == -1) st = fseek(fp, 0, SEEK_END);
-  else st = fseek(fp, off, SEEK_SET);
-  if (st != 0) return ip_throw(OSError, fseek_failed);
   return TRUE;
 }
 
@@ -2004,8 +1961,8 @@ DEFUN(ftell)
   int pos;
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
-  if ((pos = ftell(fp)) == -1) return ip_throw(OSError, ftell_failed);
+  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
+  if ((pos = ftell(fp)) == -1) return ip_sigerr(OSError, "ftell failed");
   *result = gc_new_xint(pos);
   return TRUE;
 }
@@ -2014,7 +1971,7 @@ DEFUN(fclose)
 {
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
   fclose(fp);
   *result = object_nil;
   return TRUE;
@@ -2022,13 +1979,12 @@ DEFUN(fclose)
 
 DEFUN(stat)
 {
-  int mode;
   char *fn;
   struct pf_stat statbuf;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &fn)) return FALSE;
-  mode = pf_stat(fn, &statbuf);
-  if (mode == PF_ERROR) return ip_throw(OSError, stat_failed);
+  if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
+  int mode = pf_stat(fn, &statbuf);
+  if (mode == PF_ERROR) return ip_sigerr(OSError, "stat failed");
   if (mode == PF_NONE) {
     *result = object_nil;
     return TRUE;
@@ -2045,9 +2001,9 @@ DEFUN(utime)
   char *fn;
   int64_t tv;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstring(argv, &fn)) return FALSE;
-  if (!bi_cint64(argv->cons.cdr->cons.car, &tv)) return ip_throw(ArgumentError, expected_integer);
-  if (!pf_utime(fn, tv)) return ip_throw(OSError, error_msg_nil);
+  if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
+  if (!bi_cint64(argv->cons.cdr->cons.car, &tv)) return FALSE;
+  if (!pf_utime(fn, tv)) return ip_sigerr(OSError, "utime failed");
   *result = object_nil;
   return TRUE;
 }
@@ -2065,21 +2021,20 @@ DEFUN(chdir)
 {
   char *fn;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &fn)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
   *result = object_nil;
-  if (!pf_chdir(fn)) return ip_throw(OSError, error_msg_nil);
+  if (!pf_chdir(fn)) return ip_sigerr(OSError, "chdir failed");
   return TRUE;
 }
 
 DEFUN(readdir)
 {
   char *path;
-  struct xbarray files;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &path)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &path)) return FALSE;
+  struct xbarray files;
   xbarray_init(&files);
-  if (!pf_readdir(path, &files))
-    return ip_throw(OSError, readdir_failed);
+  if (!pf_readdir(path, &files)) return ip_sigerr(OSError, "readdir failed");
   *result = gc_new_mem_from(STRING, files.elt, files.size);
   xbarray_free(&files);
   return TRUE;
@@ -2089,7 +2044,7 @@ DEFUN(remove)
 {
   char *fn;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &fn)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
   *result = object_nil;
   return pf_remove(fn);
 }
@@ -2098,18 +2053,20 @@ DEFUN(mkdir)
 {
   char *path;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &path)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &path)) return FALSE;
   *result = object_nil;
   return pf_mkdir(path);
 }
 
 DEFUN(rename)
 {
-  char *src_dst[2];
+  char *src, *dst;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstrings(2, argv, src_dst)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &src)) return FALSE;
+  if (!bi_cstring(argv->cons.cdr->cons.car, &dst)) return FALSE;
+  if (rename(src, dst) != 0) return ip_sigerr(OSError, "rename failed");
   *result = object_nil;
-  return rename(src_dst[0], src_dst[1]) == 0;
+  return TRUE;
 }
 
 DEFUN(time)
@@ -2156,21 +2113,20 @@ DEFUN(utcoffset)
   return TRUE;
 }
 
-static char *popen_mode_table[] = {
-  "r",
-  "w"
-};
-
 DEFUN(popen)
 {
-  char *s;
-  int mode;
+  char *cmd, *mode;
+  intptr_t i;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstring(argv, &s)) return FALSE;
-  if (!bi_cpint(argv->cons.cdr->cons.car, &mode)) return FALSE;
-  if (mode >= sizeof(popen_mode_table) / sizeof(char *)) return ip_throw(ArgumentError, invalid_args);
-  if ((fp = popen(s, popen_mode_table[mode])) == NULL) return ip_throw(OSError, fopen_failed);
+  if (!bi_cstring(argv->cons.car, &cmd)) return FALSE;
+  if (!bi_may_cint64(argv->cons.cdr->cons.car, &i)) i = -1;
+  switch (i) {
+    case 0: mode = "r"; break;
+    case 1: mode = "w"; break;
+    default: return ip_sigerr(ArgumentError, "invalid popen mode");
+  }
+  if ((fp = popen(cmd, mode)) == NULL) return ip_sigerr(OSError, "popen failed");
   *result = gc_new_xint((intptr_t)fp);
   return TRUE;
 }
@@ -2179,7 +2135,7 @@ DEFUN(pclose)
 {
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
+  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
   pclose(fp);
   *result = object_nil;
   return TRUE;
@@ -2189,7 +2145,7 @@ DEFUN(system)
 {
   char *s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &s)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &s)) return FALSE;
   *result = gc_new_xint(system(s));
   return TRUE;
 }
@@ -2198,7 +2154,7 @@ DEFUN(getenv)
 {
   char *s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_cstring(argv, &s)) return FALSE;
+  if (!bi_cstring(argv->cons.car, &s)) return FALSE;
   if ((s = getenv(s)) == NULL) *result = object_nil;
   else *result = gc_new_mem_from_cstr(STRING, s);
   return TRUE;
@@ -2206,12 +2162,23 @@ DEFUN(getenv)
 
 DEFUN(putenv)
 {
-  char *kv[2];
+  char *key, *val;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_cstrings(2, argv, kv)) return FALSE;
-  *strchr(kv[0], '\0') = '=';
+  if (!bi_cstring(argv->cons.car, &key)) return FALSE;
+  if (!bi_cstring(argv->cons.cdr->cons.car, &val)) return FALSE;
   *result = object_nil;
-  return putenv(xstrdup(kv[0])) == 0;
+  struct xbarray buf;
+  xbarray_init(&buf);
+  xbarray_adds(&buf, key);
+  xbarray_add(&buf, '=');
+  xbarray_adds(&buf, val);
+  xbarray_add(&buf, '\0');
+  if (putenv(xstrdup(buf.elt)) != 0) {
+    xbarray_free(&buf);
+    return ip_sigerr(OSError, "putenv failed");
+  }
+  xbarray_free(&buf);
+  return TRUE;
 }
 
 #undef DEFSP

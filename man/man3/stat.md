@@ -22,7 +22,8 @@ Returns the file status array of length `3` indicated `PATH`.
     2 -- modification timestamp
 
 # ERRORS
-OSError may occur for some reason.
+## OSError
+May occur for some reason.
 
 # SEE ALSO
 - `path(3)`

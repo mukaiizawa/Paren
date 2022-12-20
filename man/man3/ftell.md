@@ -12,7 +12,8 @@ The function `ftell` obtains of the file position indicator for the stream point
 Returns the current value of the file position indicator for the stream pointed to by `FP`.
 
 # ERRORS
-OSError may occur for some reason.
+## OSError
+May occur for some reason.
 
 # NOTES
 `FP` is created by `fopen` or `fp`.

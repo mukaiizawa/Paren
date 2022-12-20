@@ -20,7 +20,6 @@ typedef union _object *object;
 #define     BFUNC        0xc
 #define     ENV          0xd
 
-#define SINT_BITS 30
 #define SINT_MAX 0x3fffffff
 #define SINT_MIN (- SINT_MAX - 1)
 #define XINT_BITS 63
@@ -124,10 +123,6 @@ extern int object_eq_p(object o, object p);
 
 extern int list_len(object o);
 extern object list_reverse(object o);
-
-extern int ch_at(object o, int *i, object *result);
-extern int ch_len(unsigned char ch, int *len);
-extern int str_len(object o, int *len);
 
 extern object map_get(object o, object s);
 extern object map_get_propagation(object o, object s);

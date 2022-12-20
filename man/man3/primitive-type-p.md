@@ -62,8 +62,6 @@ The function `bytes?` returns true only if `X` is exactly bytes, even if `X` is 
 
     ) (symbol? 'foo)
     true
-    ) (symbol? :foo)
-    nil
     ) (symbol? (bytes 3))
     nil
 

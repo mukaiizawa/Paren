@@ -43,6 +43,9 @@
 #include <ws2tcpip.h>
 #endif
 
+#include "xbarray.h"
+
+extern int xbitc(int bits);
 extern void xvsprintf(char *buf, char *fmt, va_list va);
 extern void xsprintf(char *buf, char *fmt, ...);
 extern void xerror(char *fmt, ...);

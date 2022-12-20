@@ -9,10 +9,11 @@ utime - set file access and modification times.
 The function `utime` changes the access time and modification time of the file specified by `PATH` to the specified `UNIX-TIME`.
 
 # RETURN VALUE
-Returns `nil`.
+Returns the `nil`.
 
 # ERRORS
-OSError may occur for some reason.
+## OSError
+May occur for some reason.
 
 # SEE ALSO
 - `path(3)`

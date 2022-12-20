@@ -7,19 +7,24 @@
 #include "ip.h"
 
 static long cycle;
-
 static object dr;    // data register.
 static object cr;    // context register.
+char error_msg[MAX_STR_LEN];
+
+enum TrapType {
+  TRAP_NONE,
+  TRAP_ERROR,
+  TRAP_INTERRUPT
+};
+static enum TrapType trap_type;
 
 // interrupt
-
-int ip_trap_code;
 
 #if UNIX_P
 
 static void intr_handler(int signo)
 {
-  ip_trap_code = TRAP_INTERRUPT;
+  trap_type = TRAP_INTERRUPT;
 }
 
 static void intr_init(void)
@@ -35,7 +40,7 @@ static void intr_init(void)
 static BOOL intr_handler(DWORD dwCtrlType)
 {
   if (dwCtrlType == CTRL_C_EVENT) {
-    ip_trap_code = TRAP_INTERRUPT;
+    trap_type = TRAP_INTERRUPT;
     return TRUE;
   }
   return FALSE;
@@ -49,12 +54,11 @@ static void intr_init(void)
 
 #endif
 
-// error
+// Exception
 
-static enum error e;
-static enum error_msg em;
+static enum Exception e;
 
-static char *error_name(enum error e) {
+static char *error_name(enum Exception e) {
   switch (e) {
     case Exception: return "Exception";
     case SystemExit: return "SystemExit";
@@ -68,65 +72,12 @@ static char *error_name(enum error e) {
   }
 };
 
-static char *error_msg(enum error_msg em) {
-  switch (em) {
-    case bi_buf_msg: return bi_buf.elt;
-    case built_in_failed: return "built-in function failed";
-    case clip_failed: return "clip failed";
-    case connection_failed: return "connection failed";
-    case division_by_zero: return "division by zero";
-    case error_msg_nil: return NULL;
-    case expected_binding_value: return "expected binding value";
-    case expected_built_in_operator: return "expected built-in operator";
-    case expected_byte: return "expected byte";
-    case expected_function: return "expected function";
-    case expected_integer: return "expected integer";
-    case expected_keyword_parameter_value: return "expected keyword parameter value";
-    case expected_list: return "expected list";
-    case expected_loop_context: return "expected loop context";
-    case expected_number: return "expected number";
-    case expected_operator: return "expected operator";
-    case expected_positive_integer: return "expected positive integer";
-    case expected_positive_integer_or_sequence: return "expected positive integer, array, bytes, list, or string";
-    case fgetc_failed: return "fgetc failed";
-    case fopen_failed: return "fopen failed";
-    case fp_failed: return "fp failed";
-    case fputc_failed: return "fputc failed";
-    case fread_failed: return "fread failed";
-    case fseek_failed: return "fseek failed";
-    case ftell_failed: return "ftell failed";
-    case fwrite_failed: return "fwrite failed";
-    case getaddrinfo_failed: return "getaddrinfo failed";
-    case gethostname_failed: return "gethostname failed";
-    case incomplete_utf8_byte_sequence: return "incomplete utf8 byte sequence";
-    case index_out_of_range: return "index out of range";
-    case invalid_args: return "invalid arguments";
-    case invalid_binding_expr: return "invalid binding expression";
-    case numeric_overflow: return "numeric overflow";
-    case readdir_failed: return "readdir failed";
-    case recv_failed: return "recv failed";
-    case send_failed: return "send failed";
-    case socket_startup_failed: return "socket startup failed";
-    case stack_over_flow: return "stack over flow";
-    case stat_failed: return "stat failed";
-    case too_few_arguments: return "too few arguments";
-    case too_many_arguments: return "too many arguments";
-    case unbound_symbol: return "unbound symbol";
-    case undeclared_class: return "undeclared class";
-    case undeclared_keyword_param: return "undeclared keyword parameter";
-    case unexpected_keyword_parameter: return "unexpected keyword parameter";
-    case unknown_af_family: return "unknown address family";
-    case unknown_socktype: return "unknown socket type";
-    case unexpected_utf8_leading_byte: return "unexpected utf8 leading byte";
-    default: xassert(FALSE); return NULL;
-  }
-};
-
-int ip_throw(enum error err, enum error_msg msg)
+int ip_sigerr(enum Exception err, char *msg)
 {
-  ip_trap_code = TRAP_ERROR;
   e = err;
-  em = msg;
+  trap_type = TRAP_ERROR;
+  if (msg == NULL) error_msg[0] = '\0';
+  else strcpy(error_msg, msg);
   return FALSE;
 }
 
@@ -245,6 +196,7 @@ static void dump_fs(void)
 {
   int i, j, frame_type;
   char buf[MAX_STR_LEN];
+  fprintf(stderr, "!stack trace\n");
   for (i = 0; i <= fp; i = next_fp(i)) {
     frame_type = sint_val(fs[i]);
     fprintf(stderr, "+-----------------------------\n");
@@ -253,15 +205,16 @@ static void dump_fs(void)
     for (j = 0; j < frame_size(frame_type) - 2; j++)
       fprintf(stderr, "|%d: %s\n", i + j + 2, object_describe(get_frame_var(i, j), buf));
   }
-  fprintf(stderr, "dr: %s", object_describe(dr, buf));
-  fprintf(stderr, "cr: %s", object_describe(cr, buf));
-  xerror("illegal state");
+  fprintf(stderr, "!registers\n");
+  fprintf(stderr, "dr: %s\n", object_describe(dr, buf));
+  fprintf(stderr, "cr: %s\n", object_describe(cr, buf));
+  exit(1);
 }
 #endif
 
 static void gen(int frame_type)
 {
-  if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_throw(StateError, stack_over_flow);
+  if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_sigerr(StateError, "stack over flow");
   fs[sp + 1] = sint(fp);
   fs[sp] = sint(frame_type);
   set_fp(sp);
@@ -323,18 +276,15 @@ static int same_symbol_keyword_p(object sym, object key)
 
 static int valid_keyword_args(object params, object args)
 {
-  object p;
   while (args != object_nil) {
-    if (!keyword_p(args->cons.car)) return ip_throw(ArgumentError, error_msg_nil);
-    p = params;
+    if (!keyword_p(args->cons.car)) return ip_sigerr(ArgumentError, "expected keyword argument");
+    object p = params;
     while (p != object_nil) {
       if (same_symbol_keyword_p(p->cons.car, args->cons.car)) break;
       p = p->cons.cdr;
     }
-    if (p == object_nil)
-      return ip_throw(ArgumentError, undeclared_keyword_param);
-    if ((args = args->cons.cdr) == object_nil)
-      return ip_throw(ArgumentError, expected_keyword_parameter_value);
+    if (p == object_nil) return ip_sigerr(ArgumentError, "undeclared keyword parameter");
+    if ((args = args->cons.cdr) == object_nil) return ip_sigerr(ArgumentError, "expected keyword parameter value");
     args = args->cons.cdr;
   }
   return TRUE;
@@ -343,13 +293,11 @@ static int valid_keyword_args(object params, object args)
 static int parse_args(void (*f)(object, object, object), object params, object args)
 {
   object o, k, v;
-  if (!list_p(params) || !list_p(args))
-    return ip_throw(ArgumentError, expected_list);
+  if (!list_p(params) || !list_p(args)) return ip_sigerr(ArgumentError, "expected list");
   // required args
   while (params != object_nil) {
     if (keyword_p(params->cons.car)) break;
-    if (args == object_nil)
-      return ip_throw(ArgumentError, too_few_arguments);
+    if (args == object_nil) return ip_sigerr(ArgumentError, "too few arguments");
     if (object_type(params->cons.car) == SYMBOL)
       (*f)(cr, params->cons.car, args->cons.car);
     else if (!parse_args(f, params->cons.car, args->cons.car)) return FALSE;
@@ -396,8 +344,7 @@ static int parse_args(void (*f)(object, object, object), object params, object a
     }
     return TRUE;
   }
-  if (args != object_nil)
-    return ip_throw(ArgumentError, too_many_arguments);
+  if (args != object_nil) return ip_sigerr(ArgumentError, "too many arguments");
   return TRUE;
 }
 
@@ -437,7 +384,7 @@ static void pop_apply_built_in_frame(void)
   pop_frame();
   if ((*function)(list_len(args), args, &(dr))) return;
   gen_trace(gc_new_cons(f->native.name, args));
-  if (ip_trap_code == TRAP_NONE) ip_throw(Error, built_in_failed);
+  xassert(trap_type != TRAP_NONE);
 }
 
 static void pop_bind_frame(void)
@@ -482,7 +429,7 @@ static int eval_symbol(object *result)
       return TRUE;
     }
     gen_trace(sym);
-    return ip_throw(StateError, unbound_symbol);
+    return ip_sigerr(StateError, "unbound symbol");
   }
   return TRUE;
 }
@@ -523,7 +470,7 @@ static void pop_eval_frame(void)
           return;
         default:
           gen_trace(dr);
-          ip_throw(StateError, expected_operator);
+          ip_sigerr(StateError, "expected operator");
           return;
       }
       break;
@@ -578,9 +525,8 @@ static void pop_break_continue_frame(int exit_p)
         break;
     }
   }
-  ip_throw(StateError, expected_loop_context);
   set_fp(i);
-  return;
+  ip_sigerr(StateError, "missing loop context");
 }
 
 static void pop_unwind_protect_frame(void)
@@ -707,14 +653,9 @@ DEFUN(apply)
   if (!bi_argv(BI_LIST, argv->cons.cdr->cons.car, &args)) return FALSE;
   dr = args;
   switch (object_type(argv->cons.car)) {
-    case BFUNC:
-      gen1(APPLY_BUILT_IN_FRAME, argv->cons.car);
-      return TRUE;
-    case FUNC:
-      gen1(APPLY_FRAME, argv->cons.car);
-      return TRUE;
-    default:
-      return ip_throw(ArgumentError, expected_function);
+    case BFUNC: gen1(APPLY_BUILT_IN_FRAME, argv->cons.car); return TRUE;
+    case FUNC: gen1(APPLY_FRAME, argv->cons.car); return TRUE;
+    default: return ip_sigerr(ArgumentError, "expected function");
   }
 }
 
@@ -780,7 +721,6 @@ static int find_super_class(object cls_sym, object *result)
   return find_class(map_get(cls, object_super), result);
 }
 
-
 static int pos_is_a_p(object o, object cls_sym) {
   object o_cls_sym;
   xassert(object_type(cls_sym) == SYMBOL);
@@ -795,12 +735,16 @@ static int pos_is_a_p(object o, object cls_sym) {
 
 static object find_class_method(object cls_sym, object mtd_sym)
 {
+  object o;
+  struct xbarray buf;
   xassert(object_type(cls_sym) == SYMBOL);
   xassert(object_type(mtd_sym) == SYMBOL);
-  xbarray_reset(&bi_buf);
-  xbarray_copy(&bi_buf, cls_sym->mem.elt, cls_sym->mem.size);
-  xbarray_copy(&bi_buf, mtd_sym->mem.elt, mtd_sym->mem.size);
-  return map_get_propagation(cr, gc_new_mem_from(SYMBOL, bi_buf.elt, bi_buf.size));
+  xbarray_init(&buf);
+  xbarray_copy(&buf, cls_sym->mem.elt, cls_sym->mem.size);
+  xbarray_copy(&buf, mtd_sym->mem.elt, mtd_sym->mem.size);
+  o = map_get_propagation(cr, gc_new_mem_from(SYMBOL, buf.elt, buf.size));
+  xbarray_free(&buf);
+  return o;
 }
 
 DEFUN(is_2d_a_3f_)
@@ -832,15 +776,14 @@ DEFUN(find_2d_method)
     // class method
     if ((*result = find_class_method(cls_sym, mtd_sym)) != NULL) return TRUE;
     // feature method
-    if (!find_class(cls_sym, &cls)) return ip_throw(ArgumentError, undeclared_class);
+    if (!find_class(cls_sym, &cls)) return ip_sigerr(ArgumentError, "undeclared class");
     features = map_get(cls, object_features);
     while (features != object_nil) {
       if ((*result = find_class_method(features->cons.car, mtd_sym)) != NULL) return TRUE;
       features = features->cons.cdr;
     }
     // super class method
-    if (!find_super_class(cls_sym, &cls))
-      return ip_throw(StateError, unbound_symbol);
+    if (!find_super_class(cls_sym, &cls)) return ip_sigerr(StateError, "undeclared super class");
     cls_sym = map_get(cls, object_symbol);
   }
 }
@@ -851,82 +794,78 @@ static int param_count;
 
 static int parse_rest_param(object params)
 {
-  switch (object_type(params->cons.car)) {
-    case SYMBOL:
-      param_count++;
-      if (params->cons.cdr == object_nil) return TRUE;
-      break;
-    default:
-      break;
+  if (object_type(params->cons.car) == SYMBOL && params->cons.cdr == object_nil) {
+    param_count++;
+    return TRUE;
   }
-  return ip_throw(SyntaxError, invalid_binding_expr);
+  return ip_sigerr(SyntaxError, "only one symbol can be specified for rest parameter");
 }
 
 static int parse_keyword_params(object params)
 {
   while (params != object_nil) {
-    switch (object_type(params->cons.car)) {
+    object p = params->cons.car;
+    switch (object_type(p)) {
       case SYMBOL:
-        params = params->cons.cdr;
+        if (p == object_opt) return ip_sigerr(SyntaxError, "optional parameter cannot be specified after keyword parameter");
+        if (p == object_rest) return ip_sigerr(SyntaxError, "keyword parmeter and rest parameter cannot be mixed");
         param_count++;
         break;
       default:
-        return ip_throw(SyntaxError, invalid_binding_expr);
+        return ip_sigerr(SyntaxError, "expected symbol for keyword parameter");
     }
+    params = params->cons.cdr;
   }
   return TRUE;
 }
 
 static int parse_optional_params(object params)
 {
-  object p;
   while (params != object_nil) {
-    p = params->cons.car;
-    switch (object_type(params->cons.car)) {
+    object p = params->cons.car;
+    switch (object_type(p)) {
       case SYMBOL:
-        if (keyword_p(p)) {
-          if (p == object_key) return parse_keyword_params(params->cons.cdr);
-          if (p == object_rest) return parse_rest_param(params->cons.cdr);
-          return ip_throw(SyntaxError, unexpected_keyword_parameter);
-        }
-        params = params->cons.cdr;
+        if (p == object_key) return parse_keyword_params(params->cons.cdr);
+        if (p == object_rest) return parse_rest_param(params->cons.cdr);
         param_count++;
         break;
       default:
-        return ip_throw(SyntaxError, invalid_binding_expr);
+        return ip_sigerr(SyntaxError, "expected symbol for optional parameter");
     }
+    params = params->cons.cdr;
   }
   return TRUE;
 }
 
 static int parse_required_params(object params)
 {
-  object p;
   while (params != object_nil) {
-    p = params->cons.car;
-    switch (object_type(params->cons.car)) {
+    object p = params->cons.car;
+    switch (object_type(p)) {
       case CONS:
-        if (!parse_required_params(params->cons.car)) return FALSE;
-        params = params->cons.cdr;
+        if (!parse_required_params(p)) return FALSE;
         break;
       case SYMBOL:
-        if (keyword_p(p)) {
-          if (p == object_opt) return parse_optional_params(params->cons.cdr);
-          if (p == object_key) return parse_keyword_params(params->cons.cdr);
-          if (p == object_rest) return parse_rest_param(params->cons.cdr);
-          return ip_throw(SyntaxError, unexpected_keyword_parameter);
-        }
-        params = params->cons.cdr;
+        if (p == object_opt) return parse_optional_params(params->cons.cdr);
+        if (p == object_key) return parse_keyword_params(params->cons.cdr);
+        if (p == object_rest) return parse_rest_param(params->cons.cdr);
         param_count++;
         break;
       default:
-        return ip_throw(SyntaxError, invalid_binding_expr);
+        return ip_sigerr(SyntaxError, "expected symbol or list in binding expression");
     }
+    params = params->cons.cdr;
   }
   return TRUE;
 }
 
-static int gen_bind_frames(int frame_type, object args)
+static int parse_params(object params)
+{
+  param_count = 0;
+  return parse_required_params(params);
+}
+
+static int gen_bind_frame(int frame_type, object args)
 {
   object o;
   if ((o = args) == object_nil) return TRUE;
@@ -938,15 +877,20 @@ static int gen_bind_frames(int frame_type, object args)
       if (!parse_required_params(o->cons.car)) return FALSE;
       break;
     default:
-      return ip_throw(SyntaxError, invalid_binding_expr);
+      return ip_sigerr(SyntaxError, "expected symbol or list in binding expression");
   }
-  if ((args = args->cons.cdr) == object_nil)
-    return ip_throw(ArgumentError, expected_binding_value);
-  if (!gen_bind_frames(frame_type, args->cons.cdr)) return FALSE;
+  if ((args = args->cons.cdr) == object_nil) return ip_sigerr(ArgumentError, "missing binding value");
+  if (!gen_bind_frame(frame_type, args->cons.cdr)) return FALSE;
   gen1(frame_type, o->cons.car);
   gen0(EVAL_FRAME);
   gen1(QUOTE_FRAME, o->cons.cdr->cons.car);
   return TRUE;
+}
+
+static int gen_bind_frames(int frame_type, object args)
+{
+  param_count = 0;
+  return gen_bind_frame(frame_type, args);
 }
 
 DEFSP(let)
@@ -958,7 +902,6 @@ DEFSP(let)
   else {
     gen0(LET_FRAME);
     gen_eval_sequential_frame(argv->cons.cdr);
-    param_count = 0;
     if (!gen_bind_frames(BIND_FRAME, binds)) return FALSE;
     cr = gc_new_env(cr, param_count * 2);
   }
@@ -983,7 +926,7 @@ DEFSP(dynamic)
     if ((dr = map_get(e, s)) != NULL) return TRUE;
   }
   dr = object_nil;
-  return ip_throw(ArgumentError, unbound_symbol);
+  return ip_sigerr(ArgumentError, "unbound symbol");
 }
 
 DEFSP(_3c__2d_)
@@ -1005,8 +948,7 @@ DEFSP(macro)
   gen1(BIND_PROPAGATION_FRAME, o);
   argv = argv->cons.cdr;
   if (!bi_argv(BI_LIST, argv->cons.car, &params)) return FALSE;
-  param_count = 0;
-  if (!parse_required_params(params)) return FALSE;
+  if (!parse_params(params)) return FALSE;
   dr = gc_new_macro(cr, param_count, params, argv->cons.cdr);
   return TRUE;
 }
@@ -1016,8 +958,7 @@ DEFSP(f)
   object params;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_argv(BI_LIST, argv->cons.car, &params)) return FALSE;
-  param_count = 0;
-  if (!parse_required_params(params)) return FALSE;
+  if (!parse_params(params)) return FALSE;
   dr = gc_new_func(cr, param_count, params, argv->cons.cdr);
   return TRUE;
 }
@@ -1137,15 +1078,12 @@ static object get_call_stack(void)
   return o;
 }
 
-static object new_Error(enum error e, enum error_msg em)
+static object new_Error(enum Exception e, object message)
 {
-  char *err, *msg;
   object o;
   o = gc_new_dict();
-  err = error_name(e);
-  map_put(o, object_class, gc_new_mem_from_cstr(SYMBOL, err));
-  if ((msg = error_msg(em)) != NULL)
-    map_put(o, object_message, gc_new_mem_from_cstr(STRING, msg));
+  map_put(o, object_class, gc_new_mem_from_cstr(SYMBOL, error_name(e)));
+  map_put(o, object_message, message);
   map_put(o, object_stack_trace, object_nil);
   return o;
 }
@@ -1153,20 +1091,18 @@ static object new_Error(enum error e, enum error_msg em)
 static void trap(void)
 {
   gen0(THROW_FRAME);
-  switch (ip_trap_code) {
+  switch (trap_type) {
     case TRAP_ERROR:
-      dr = new_Error(e, em);
+      dr = new_Error(e, gc_new_mem_from_cstr(STRING, error_msg));
       break;
     case TRAP_INTERRUPT:
-      dr = new_Error(SystemExit, error_msg_nil);
+      dr = new_Error(SystemExit, object_nil);
       break;
     default:
       xassert(FALSE);
       break;
   }
-  ip_trap_code = TRAP_NONE;
-  e = error_nil;
-  em = error_msg_nil;
+  trap_type = TRAP_NONE;
 }
 
 // main
@@ -1178,7 +1114,7 @@ static void ip_main(object args)
   gen_eval_sequential_frame(args);
   while (fp != -1) {
     xassert(fp >= 0);
-    if (ip_trap_code != TRAP_NONE) trap();
+    if (trap_type != TRAP_NONE) trap();
     if (cycle % IP_POLLING_INTERVAL == 0) gc_chance();
     switch (fs_top()) {
       case APPLY_BUILT_IN_FRAME: pop_apply_built_in_frame(); break;
@@ -1236,8 +1172,7 @@ int ip_start(object args)
   sp = 0;
   fp = -1;
   cycle = 0;
-  xbarray_init(&bi_buf);
-  ip_trap_code = TRAP_NONE;
+  trap_type = TRAP_NONE;
   intr_init();
   ip_main(args);
   if (sint_p(dr)) return sint_val(dr);

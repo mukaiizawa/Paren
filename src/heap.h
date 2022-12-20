@@ -10,8 +10,6 @@ struct heap {
   char *tail;
 };
 
-extern struct heap heap_perm;
-
 extern void heap_init(struct heap *h);
 extern void *heap_alloc_align(struct heap *h, int size, int align);
 extern void *heap_alloc(struct heap *h, int size);

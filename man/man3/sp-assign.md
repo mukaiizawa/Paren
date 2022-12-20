@@ -18,9 +18,8 @@ If `BOUND-EXPR` is a tree rather than symbol, binds the symbols specified in tre
 Returns the last evaluation result.
 
 # ERRORS
-Error if, `BOUND-EXPR` is not a symbol or a symbol tree expression.
-
-Or When the return value of `BINDING-EXPR` does not match `BOUND-EXPR`.
+## ArgumentError
+If, `BOUND-EXPR` is not a symbol or a symbol tree expression or the return value of `BINDING-EXPR` does not match `BOUND-EXPR`.
 
 # EXAMPLES
 

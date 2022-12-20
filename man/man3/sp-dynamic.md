@@ -12,7 +12,8 @@ The special operator `dynamic` dynamically resolve the `SYMBOL`.
 Returns the result of dynamically resolving the `SYMBOL.`
 
 # ERRORS
-Error if, `SYMBOL` is not bound.
+## ArgumentError
+If `SYMBOL` is not bound.
 
 # EXAMPLES
 

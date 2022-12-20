@@ -22,7 +22,7 @@ Returns the string whitch intended to look good to people.
     ""
     ) (str nil)
     ""
-    ) (str 1 "2" :three)
+    ) (str 1 "2" 'three)
     "12three"
     ) (str (.. 3))
     "(0 1 2)"

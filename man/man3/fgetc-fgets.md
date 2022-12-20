@@ -15,7 +15,8 @@ The function `fgetc` returns read byte. If the stream reaches EOF, return `-1`.
 The function `fgets` returns read line. The return value does not include the newline character. If the stream reaches EOF, returl `nil`.
 
 # ERRORS
-OSError may occur for some reason.
+## OSError
+May occur for some reason.
 
 # NOTES
 `FP` is created by `fopen` or `fp`.

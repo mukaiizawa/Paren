@@ -15,19 +15,21 @@ Returns the `DST`.
 
 # EXAMPLES
 
-    ) (<- foo :foo bar :bar)
-    :bar
-    ) (string (memcpy (bytes foo) 0 (bytes bar) 0 3))
-    "foo"
-    ) (string (memcpy (bytes foo) 1 (bytes bar) 1 2))
-    "boo"
-    ) (string (memcpy (bytes foo) 1 (bytes bar) 2 1))
-    "bao"
+    ) (<- src #< 0x01 0x02 0x03 0x04 0x05 0x06 > dst (bytes 6))
+    #< 0x00 0x00 0x00 0x00 0x00 0x00 >
+    ) (memcpy src 0 dst 0 3)
+    #< 0x01 0x02 0x03 0x00 0x00 0x00 >
+    ) (memcpy src 3 dst 3 3)
+    #< 0x01 0x02 0x03 0x04 0x05 0x06 >
+    ) dst
+    #< 0x01 0x02 0x03 0x04 0x05 0x06 >
 
 # ERRORS
-ArgumentError if `SRC` is not a bytes-like or `DST` is not a bytes.
+## ArgumentError
+If `SRC` is not a bytes-like or `DST` is not a bytes.
 
-IndexError if the reference range of the `SRC` or `DST` is incorrect.
+## IndexError
+If the reference range of the `SRC` or `DST` is incorrect.
 
 # NOTES
 Unlike the C language, it works correctly even if the areas to be copied overlap.

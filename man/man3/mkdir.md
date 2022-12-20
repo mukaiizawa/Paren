@@ -9,12 +9,11 @@ mkdir - make a directory.
 The function `mkdir` shall create a new directory with name `PATH`.
 
 # RETURN VALUE
-Returns `nil`.
+Returns the `nil`.
 
 # ERRORS
-OSError may occur for some reason.
-
-Error if `PATH` already exists.
+## OSError
+May occur if the `PATH` already exists or for some other reason.
 
 # SEE ALSO
 - `path(3)`

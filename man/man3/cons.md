@@ -12,7 +12,8 @@ The function `cons` creates a cons.
 Returns a cons, the car of which is `X` and the cdr of which is `Y`.
 
 # ERRORS
-Error if `Y` is not cons.
+## ArgumentError
+If `Y` is not cons.
 
 # EXAMPLES
 

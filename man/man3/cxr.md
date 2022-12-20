@@ -47,7 +47,8 @@ The function `cdr` returns the cdr of that cons `X`.
 If `X` is nil, `car` and `cdr` returns `nil`.
 
 # ERRORS
-Error if `X` is not a list.
+## ArgumentError
+If `X` is not a list.
 
 # NOTES
 

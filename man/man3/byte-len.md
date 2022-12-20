@@ -19,7 +19,7 @@ Returns the byte length.
     ) (byte-len "foo")
     3
     ) (byte-len :foo)
-    3
+    4
     ) (byte-len 'foo)
     3
     ) (byte-len "あ")

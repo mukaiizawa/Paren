@@ -4,20 +4,21 @@
 
 (class JSON.Reader (AheadReader))
 
+(method JSON.Reader .parse-object-prop ()
+  (let (key (symbol (.parse-string (.skip-space self))))
+    (.skip (.skip-space self) ":")
+    (list key (.read self))))
+
 (method JSON.Reader .parse-object ()
-  (let (object nil)
+  (let (object (dict))
     (.skip self "{")
     (when (!= (.next (.skip-space self)) "}")
-      (push! (symbol (.parse-string (.skip-space self))) object)
-      (.skip (.skip-space self) ":")
-      (push! (.read self) object))
-    (while (!= (.next (.skip-space self)) "}")
-      (.skip self ",")
-      (push! (symbol (.parse-string (.skip-space self))) object)
-      (.skip (.skip-space self) ":")
-      (push! (.read self) object))
-    (.skip self)
-    (reverse! object)))
+      (apply [] (cons object (.parse-object-prop self)))
+      (while (!= (.next (.skip-space self)) "}")
+        (.skip self ",")
+        (apply [] (cons object (.parse-object-prop self)))))
+    (.skip self "}")
+    object))
 
 (method JSON.Reader .parse-array ()
   (let (a (.new Array))
@@ -66,11 +67,13 @@
 (function json.write (x)
   ; Output json corresponding to the argument.
   ; Returns the argument.
-  (if (cons? x) (let (i 0 pairs (group x 2))
-                  (dolist (pair pairs)
+  (if (dict? x) (let (i 0)
+                  (dolist (key (keys x))
                     (write-bytes (if (= i 0) "{" ","))
-                    (printf "\"%v\":" (car pair))
-                    (json.write (cadr pair))
+                    (if (! (symbol? key)) (raise ArgumentError "invalid object property: %v" key)
+                        (json.write (string key)))
+                    (write-bytes ":")
+                    (json.write ([] x key))
                     (<- i (++ i)))
                   (write-bytes "}"))
       (array? x) (begin
@@ -81,10 +84,15 @@
       (nil? x) (write-bytes "null")
       (== x 'true) (write-bytes "true")
       (== x 'false) (write-bytes "false")
-      (write x :end "")))
+      (|| (symbol? x) (number? x) (string? x)) (write x :end "")
+      (raise ArgumentError "unexpected value: %v" x)))
 
 (function! main (args)
-  (let (json '(nodes #[ (id 49 name "object_p" time 0.73) (id 49 name "object_p" time 0.73) ] literal #[ true false nil 3.14 "string" ] )
-             json-str "{\"nodes\":[{\"id\":49,\"name\":\"object_p\",\"time\":0.73},{\"id\":49,\"name\":\"object_p\",\"time\":0.73}],\"literal\":[true,false,null,3.14,\"string\"]}")
-    (assert (= (with-memory-stream ($out) (json.write json)) json-str))
-    (assert (= (with-memory-stream ($in json-str) (json.read)) json))))
+  (let (json #{
+             nodes #[
+                     #{ id 1 name "foo" time 0.1 }
+                     #{ id 2 name "bar" time 0.22 }
+                     ]
+             literal #[ true false nil 3.14 "string" ]
+             })
+    (assert (= (with-memory-stream ($in (with-memory-stream ($out) (json.write json))) (json.read)) json))))
