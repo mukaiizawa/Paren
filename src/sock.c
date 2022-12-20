@@ -71,9 +71,9 @@ DEFUN(client_2d_socket)
 DEFUN(server_2d_socket)
 {
   int port, fd;
-  struct sockaddr_in addr;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cint(argv->cons.car, &port)) return FALSE;
+  struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin_port = htons(port);
   addr.sin_family = AF_INET;
@@ -88,11 +88,10 @@ DEFUN(server_2d_socket)
 DEFUN(accept)
 {
   int sfd, cfd;
-  socklen_t size;
-  struct sockaddr_in addr;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cint(argv->cons.car, &sfd)) return FALSE;
-  size = sizeof(addr);
+  struct sockaddr_in addr;
+  socklen_t size = sizeof(addr);
   if ((cfd = accept(sfd, (struct sockaddr *) &addr, &size)) == -1) return ip_sigerr(OSError, "accept failed");
   *result = gc_new_xint(cfd);
   return TRUE;
@@ -108,8 +107,7 @@ DEFUN(recv)
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_cint(argv->cons.cdr->cons.car, &fd)) return FALSE;
-  if ((size = recv(fd, o->mem.elt + from, size, 0)) < 0)
-    return ip_throw(OSError, recv_failed);
+  if ((size = recv(fd, o->mem.elt + from, size, 0)) < 0) return ip_sigerr(OSError, "recv failed");
   *result = gc_new_xint(size);
   return TRUE;
 }
@@ -124,8 +122,7 @@ DEFUN(send)
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_cint(argv->cons.cdr->cons.car, &fd)) return FALSE;
-  if ((size = send(fd, o->mem.elt + from, size, 0)) < 0)
-    return ip_throw(OSError, send_failed);
+  if ((size = send(fd, o->mem.elt + from, size, 0)) < 0) return ip_sigerr(OSError, "send failed");
   *result = gc_new_xint(size);
   return TRUE;
 }

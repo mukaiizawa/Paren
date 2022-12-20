@@ -77,8 +77,6 @@ static char *error_name(enum Exception e) {
 static char *error_msg2(enum error_msg2 em) {
   switch (em) {
     case error_msg_nil: return NULL;
-    case recv_failed: return "recv failed";
-    case send_failed: return "send failed";
     case socket_startup_failed: return "socket startup failed";
     case stack_over_flow: return "stack over flow";
     case stat_failed: return "stat failed";
