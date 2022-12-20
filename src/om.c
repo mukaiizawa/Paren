@@ -2,117 +2,105 @@
 
 #include "std.h"
 #include "heap.h"
-#include "object.h"
+#include "om.h"
 #include "xarray.h"
 #include "bi.h"
 #include "ip.h"
 
-object object_toplevel;
-object object_nil;
-object object_true;
-object object_key;
-object object_opt;
-object object_rest;
-object object_quote;
+static int gc_used_memory;
 
-object object_Class;
-object object_class;
-object object_symbol;
-object object_super;
-object object_features;
-object object_fields;
-object object_Exception;
-object object_message;
-object object_stack_trace;
+static struct heap heap;
+static struct symbol_table st;
 
-int object_hash(object o)
+#define LINK0_SIZE (sizeof(struct cons))
+#define LINK1_SIZE (sizeof(struct map))
+static object link0, link1;
+
+#define regist(o) (xarray_add(table, o))
+static struct xarray *table, *table_wk, table0, table1;
+
+static void *gc_alloc(int size);
+static void gc_free0(int size, void *p);
+
+object om_toplevel;
+object om_nil;
+object om_true;
+object om_key;
+object om_opt;
+object om_rest;
+object om_quote;
+
+object om_Class;
+object om_class;
+object om_symbol;
+object om_super;
+object om_features;
+object om_fields;
+object om_Exception;
+object om_message;
+object om_stack_trace;
+
+int om_hash(object o)
 {
   if (sint_p(o)) return sint_val(o) & HASH_MASK;
   return o->header & HASH_MASK;
 }
 
-void object_set_hash(object o, int hval)
+void om_set_hash(object o, int hval)
 {
-  xassert(object_hash(o) == 0);
+  xassert(om_hash(o) == 0);
   xassert((hval & ~HASH_MASK) == 0);
   o->header |= hval;
 }
 
-int object_mem_hash(char *p, int size)
+int om_mem_hash(char *p, int size)
 {
   int i, hval;
   for (i = hval = 0; i < size; i++) hval = hval * 137 + LC(p + i);
   return hval & HASH_MASK;
 }
 
-int object_number_hash(double val)
+static int om_number_hash(double val)
 {
   int i;
   if (SINT_MIN <= val && val <= SINT_MAX) {
     i = (int)val;
     if (i == val) return i & HASH_MASK;
   }
-  return object_mem_hash((char *)&val, sizeof(double));
+  return om_mem_hash((char *)&val, sizeof(double));
 }
 
-int object_type(object o)
+int om_type(object o)
 {
   if (sint_p(o)) return SINT;
   return o->header & TYPE_MASK;
 }
 
-void object_set_alive(object o)
+static void set_alive(object o)
 {
   o->header |= ALIVE_BIT;
 }
 
-void object_set_dead(object o)
+static void set_dead(object o)
 {
   o->header &= ~ALIVE_BIT;
 }
 
-int object_alive_p(object o)
+static int alive_p(object o)
 {
   return o->header & ALIVE_BIT;
 }
 
-void object_set_type(object o, int type)
+static void set_type(object o, int type)
 {
   xassert((o->header & TYPE_MASK) == 0);
   o->header |= type;
 }
 
-void object_reset_type(object o, int type)
+void om_reset_type(object o, int type)
 {
   o->header &= ~TYPE_MASK;
-  object_set_type(o, type);
-}
-
-int object_byte_size(object o)
-{
-  switch (object_type(o)) {
-    case XINT:
-      return sizeof(struct xint);
-    case XFLOAT:
-      return sizeof(struct xfloat);
-    case CONS:
-      return sizeof(struct cons);
-    case SYMBOL:
-    case STRING:
-    case BYTES:
-      return sizeof(struct mem) + o->mem.size - 1;
-    case ARRAY:
-      return sizeof(struct array) + sizeof(object) * (o->array.size - 1);
-    case MACRO:
-    case FUNC:
-      return sizeof(struct proc);
-    case ENV:
-    case DICT:
-      return sizeof(struct map);
-    default:
-      xassert(FALSE);
-      return -1;
-  }
+  set_type(o, type);
 }
 
 static void xbarray_add_mem(struct xbarray *x, object o)
@@ -124,7 +112,7 @@ static void describe_s_expr(object o, struct xbarray *x);
 static void describe_cons(object o, struct xbarray *x)
 {
   describe_s_expr(o->cons.car, x);
-  while ((o = o->cons.cdr) != object_nil) {
+  while ((o = o->cons.cdr) != om_nil) {
     xbarray_add(x, ' ');
     describe_s_expr(o->cons.car, x);
     if (x->size > MAX_STR_LEN) return;
@@ -181,7 +169,7 @@ static void describe_map(object o, struct xbarray *x)
 static void describe_s_expr(object o, struct xbarray *x)
 {
   if (x->size > MAX_STR_LEN) return;
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case SINT:
       xbarray_addf(x, "%d", sint_val(o));
       break;
@@ -218,11 +206,11 @@ static void describe_s_expr(object o, struct xbarray *x)
       break;
     case MACRO:
     case FUNC:
-      if (object_type(o) == MACRO) xbarray_adds(x, "(macro ");
+      if (om_type(o) == MACRO) xbarray_adds(x, "(macro ");
       else xbarray_adds(x, "(f ");
-      if (o->proc.params == object_nil) xbarray_adds(x, "()");
+      if (o->proc.params == om_nil) xbarray_adds(x, "()");
       else describe_s_expr(o->proc.params, x);
-      if (o->proc.body != object_nil) {
+      if (o->proc.body != om_nil) {
         xbarray_add(x, ' ');
         describe_cons(o->proc.body, x);
       }
@@ -236,7 +224,7 @@ static void describe_s_expr(object o, struct xbarray *x)
   }
 }
 
-char *object_describe(object o, char *buf)
+char *om_describe(object o, char *buf)
 {
   struct xbarray x;
   xassert(o != NULL);
@@ -252,10 +240,10 @@ char *object_describe(object o, char *buf)
   return buf;
 }
 
-object object_bool(int b)
+object om_bool(int b)
 {
-  if (b) return object_true;
-  return object_nil;
+  if (b) return om_true;
+  return om_nil;
 }
 
 static int double_eq_p(double x, object p)
@@ -285,11 +273,11 @@ static int number_eq_p(object o, object p)
 
 static int cons_eq_p(object o, object p)
 {
-  if (object_type(p) != CONS) return FALSE;
+  if (om_type(p) != CONS) return FALSE;
   while (TRUE) {
-    if (o == object_nil) return p == object_nil;
-    if (p == object_nil) return o == object_nil;
-    if (!object_eq_p(o->cons.car, p->cons.car)) return FALSE;
+    if (o == om_nil) return p == om_nil;
+    if (p == om_nil) return o == om_nil;
+    if (!om_eq_p(o->cons.car, p->cons.car)) return FALSE;
     o = o->cons.cdr;
     p = p->cons.cdr;
   }
@@ -297,7 +285,7 @@ static int cons_eq_p(object o, object p)
 
 static int bytes_eq_p(object o, object p)
 {
-  if (object_type(o) != object_type(p)) return FALSE;
+  if (om_type(o) != om_type(p)) return FALSE;
   if (o->mem.size != p->mem.size) return FALSE;
   return memcmp(o->mem.elt, p->mem.elt, o->mem.size) == 0;
 }
@@ -305,31 +293,31 @@ static int bytes_eq_p(object o, object p)
 static int array_eq_p(object o, object p)
 {
   int i;
-  if (object_type(p) != ARRAY) return FALSE;
+  if (om_type(p) != ARRAY) return FALSE;
   if (o->array.size != p->array.size) return FALSE;
   for (i = 0; i < o->array.size; i++)
-    if (!object_eq_p(o->array.elt[i], p->array.elt[i])) return FALSE;
+    if (!om_eq_p(o->array.elt[i], p->array.elt[i])) return FALSE;
   return TRUE;
 }
 
 static int dict_eq_p(object o, object p)
 {
   object v, keys;
-  if (object_type(p) != DICT) return FALSE;
+  if (om_type(p) != DICT) return FALSE;
   if (o->map.entry_count != p->map.entry_count) return FALSE;
   keys = map_keys(o);
-  while (keys != object_nil) {
+  while (keys != om_nil) {
     if ((v = map_get(p, keys->cons.car)) == NULL) return FALSE;
-    if (!object_eq_p(map_get(o, keys->cons.car), v)) return FALSE;
+    if (!om_eq_p(map_get(o, keys->cons.car), v)) return FALSE;
     keys = keys->cons.cdr;
   }
   return TRUE;
 }
 
-int object_eq_p(object o, object p)
+int om_eq_p(object o, object p)
 {
   if (o == p) return TRUE;
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case SINT:
     case XINT:
     case XFLOAT:
@@ -348,7 +336,7 @@ int list_len(object o)
 {
   int i;
   xassert(list_p(o));
-  for (i = 0; object_type(o) == CONS; i++) o = o->cons.cdr;
+  for (i = 0; om_type(o) == CONS; i++) o = o->cons.cdr;
   return i;
 }
 
@@ -356,8 +344,8 @@ object list_reverse(object o)
 {
   object p, acc;
   xassert(list_p(o));
-  acc = object_nil;
-  while (o != object_nil) {
+  acc = om_nil;
+  while (o != om_nil) {
     p = o->cons.cdr;
     o->cons.cdr = acc;
     acc = o;
@@ -371,9 +359,9 @@ object map_get(object o, object s)
   int i;
   object p;
   if (o->map.half_size != 0) {
-    i = object_hash(s) % o->map.half_size;
+    i = om_hash(s) % o->map.half_size;
     while ((p = o->map.table[i]) != NULL) {
-      if (object_eq_p(p, s)) return o->map.table[i + o->map.half_size];
+      if (om_eq_p(p, s)) return o->map.table[i + o->map.half_size];
       if (++i == o->map.half_size) i = 0;
     }
   }
@@ -383,11 +371,26 @@ object map_get(object o, object s)
 object map_get_propagation(object o, object s)
 {
   object p;
-  while (o != object_nil) {
+  while (o != om_nil) {
     if ((p = map_get(o, s)) != NULL) return p;
     o = o->map.top;
   }
   return NULL;
+}
+
+static void rehash(object o)
+{
+  int i, half_size;
+  object *table;
+  table = o->map.table;
+  half_size = o->map.half_size;
+  o->map.entry_count = 0;
+  o->map.half_size *= 2;
+  o->map.table = gc_alloc(sizeof(object) * o->map.half_size * 2);
+  for (i = 0; i < o->map.half_size; i++) o->map.table[i] = NULL;
+  for (i = 0; i < half_size; i++)
+    if (table[i] != NULL) map_put(o, table[i], table[i + half_size]);
+  gc_free0(sizeof(object) * half_size * 2, table);
 }
 
 void map_put(object o, object s, object v)
@@ -395,9 +398,9 @@ void map_put(object o, object s, object v)
   int i;
   object p;
   xassert(o->map.half_size != 0);
-  i = object_hash(s) % o->map.half_size;
+  i = om_hash(s) % o->map.half_size;
   while ((p = o->map.table[i]) != NULL) {
-    if (object_eq_p(p, s)) {
+    if (om_eq_p(p, s)) {
       o->map.table[i + o->map.half_size] = v;
       return;
     }
@@ -406,19 +409,19 @@ void map_put(object o, object s, object v)
   o->map.table[i] = s;
   o->map.table[i + o->map.half_size] = v;
   o->map.entry_count++;
-  if (o->map.entry_count * 2 > o->map.half_size) gc_extend_table(o);
+  if (o->map.entry_count * 2 > o->map.half_size) rehash(o);
 }
 
 void map_put_propagation(object o, object s, object v)
 {
-  while (o != object_toplevel) {
+  while (o != om_toplevel) {
     if (map_get(o, s) != NULL) {
       map_put(o, s, v);
       return;
     }
     o = o->map.top;
   }
-  map_put(object_toplevel, s, v);
+  map_put(om_toplevel, s, v);
 }
 
 void map_foreach(object o, void (*f)(void *s, void *v))
@@ -434,28 +437,13 @@ object map_keys(object o)
 {
   int i;
   object keys, *table;
-  xassert(object_type(o) == DICT);
+  xassert(om_type(o) == DICT);
   table = o->map.table;
-  keys = object_nil;
+  keys = om_nil;
   for (i = 0; i < o->map.half_size; i++)
-    if (table[i] != NULL) keys = gc_new_cons(table[i], keys);
+    if (table[i] != NULL) keys = om_new_cons(table[i], keys);
   return keys;
 }
-
-static int gc_used_memory;
-
-static struct heap heap;
-static struct symbol_table st;
-
-#define LINK0_SIZE (sizeof(struct cons))
-#define LINK1_SIZE (sizeof(struct map))
-static object link0, link1;
-
-#define regist(o) (xarray_add(table, o))
-static struct xarray *table, *table_wk, table0, table1;
-
-static void *gc_alloc(int size);
-static void gc_free0(int size, void *p);
 
 // symbol table
 
@@ -506,7 +494,7 @@ static object symbol_table_put(struct symbol_table *st, object sym)
       if ((o = table[i]) != NULL) symbol_table_put(st, o);
     gc_free0(alloc_size, table);
   }
-  i = symbol_table_index(st, object_hash(sym));
+  i = symbol_table_index(st, om_hash(sym));
   while (st->table[i] != NULL) i = symbol_table_index(st, i + 1);
   st->table[i] = sym;
   return sym;
@@ -553,9 +541,36 @@ static void gc_free0(int size, void *p)
   gc_used_memory -= size;
 }
 
+static int om_byte_size(object o)
+{
+  switch (om_type(o)) {
+    case XINT:
+      return sizeof(struct xint);
+    case XFLOAT:
+      return sizeof(struct xfloat);
+    case CONS:
+      return sizeof(struct cons);
+    case SYMBOL:
+    case STRING:
+    case BYTES:
+      return sizeof(struct mem) + o->mem.size - 1;
+    case ARRAY:
+      return sizeof(struct array) + sizeof(object) * (o->array.size - 1);
+    case MACRO:
+    case FUNC:
+      return sizeof(struct proc);
+    case ENV:
+    case DICT:
+      return sizeof(struct map);
+    default:
+      xassert(FALSE);
+      return -1;
+  }
+}
+
 void gc_free(object o)
 {
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case DICT:
     case ENV:
       if (o->map.half_size != 0) gc_free0(sizeof(object) * o->map.half_size * 2, o->map.table);
@@ -563,27 +578,27 @@ void gc_free(object o)
     default:
       break;
   }
-  gc_free0(object_byte_size(o), o);
+  gc_free0(om_byte_size(o), o);
 }
 
-object gc_new_xint(int64_t val)
+object om_new_xint(int64_t val)
 {
   object o;
   if (SINT_MIN <= val && val <= SINT_MAX) return sint((int)val);
   o = gc_alloc(sizeof(struct xint));
-  object_set_type(o, XINT);
-  object_set_hash(o, object_number_hash((double)val));
+  set_type(o, XINT);
+  om_set_hash(o, om_number_hash((double)val));
   o->xint.val = val;
   regist(o);
   return o;
 }
 
-object gc_new_xfloat(double val)
+object om_new_xfloat(double val)
 {
   object o;
   o = gc_alloc(sizeof(struct xfloat));
-  object_set_type(o, XFLOAT);
-  object_set_hash(o, object_number_hash(val));
+  set_type(o, XFLOAT);
+  om_set_hash(o, om_number_hash(val));
   o->xfloat.val = val;
   regist(o);
   return o;
@@ -593,12 +608,12 @@ static object new_cons(void)
 {
   object o;
   o = gc_alloc(sizeof(struct cons));
-  object_set_type(o, CONS);
+  set_type(o, CONS);
   regist(o);
   return o;
 }
 
-object gc_new_cons(object car, object cdr)
+object om_new_cons(object car, object cdr)
 {
   object o;
   o = new_cons();
@@ -607,17 +622,17 @@ object gc_new_cons(object car, object cdr)
   return o;
 }
 
-object gc_copy_cons(object o, object *tail)
+object om_copy_cons(object o, object *tail)
 {
   object head;
-  if (o == object_nil) return object_nil;
+  if (o == om_nil) return om_nil;
   head = *tail = new_cons();
   (*tail)->cons.car = o->cons.car;
-  while ((o = o->cons.cdr) != object_nil) {
+  while ((o = o->cons.cdr) != om_nil) {
     *tail = (*tail)->cons.cdr = new_cons();
     (*tail)->cons.car = o->cons.car;
   }
-  (*tail)->cons.cdr = object_nil;
+  (*tail)->cons.cdr = om_nil;
   return head;
 }
 
@@ -626,13 +641,13 @@ static object new_mem(int type, int size)
   object o;
   xassert(size >= 0);
   o = gc_alloc(sizeof(struct mem) + size - 1);
-  object_set_type(o, type);
+  set_type(o, type);
   o->mem.size = size;
   regist(o);
   return o;
 }
 
-object gc_new_mem(int type, int size)
+object om_new_mem(int type, int size)
 {
   object o;
   o = new_mem(type, size);
@@ -648,20 +663,20 @@ static object new_mem_from(int type, char *val, int size)
   return o;
 }
 
-object gc_new_mem_from(int type, char *val, int size)
+object om_new_mem_from(int type, char *val, int size)
 {
   int hval;
   object o;
   switch (type) {
     case SYMBOL:
-      hval = object_mem_hash(val, size);
+      hval = om_mem_hash(val, size);
       if ((o = symbol_table_get(&st, val, size, hval)) != NULL) return o;
       o = new_mem_from(type, val, size);
-      object_set_hash(o, hval);
+      om_set_hash(o, hval);
       return symbol_table_put(&st, o);
     case STRING:
       o = new_mem_from(type, val, size);
-      object_set_hash(o, object_mem_hash(val, size));
+      om_set_hash(o, om_mem_hash(val, size));
       return o;
     case BYTES:
       o = new_mem_from(type, val, size);
@@ -672,20 +687,20 @@ object gc_new_mem_from(int type, char *val, int size)
   }
 }
 
-object gc_new_mem_from_cstr(int type, char *cstr)
+object om_new_mem_from_cstr(int type, char *cstr)
 {
-  return gc_new_mem_from(type, cstr, strlen(cstr));
+  return om_new_mem_from(type, cstr, strlen(cstr));
 }
 
-object gc_new_mem_from_xbarray(int type, struct xbarray *x)
+object om_new_mem_from_xbarray(int type, struct xbarray *x)
 {
-  return gc_new_mem_from(type, x->elt, x->size);
+  return om_new_mem_from(type, x->elt, x->size);
 }
 
-object gc_new_cstring(object o)
+object om_new_cstring(object o)
 {
   object p;
-  p = gc_new_mem_from(STRING, o->mem.elt, o->mem.size + 1);
+  p = om_new_mem_from(STRING, o->mem.elt, o->mem.size + 1);
   SC(p->mem.elt + o->mem.size, '\0');
   return p;
 }
@@ -695,22 +710,22 @@ static object new_array(int size)
   object o;
   xassert(size >= 0);
   o = gc_alloc(sizeof(struct array) + sizeof(object) * (size - 1));
-  object_set_type(o, ARRAY);
+  set_type(o, ARRAY);
   o->array.size = size;
   regist(o);
   return o;
 }
 
-object gc_new_array(int size)
+object om_new_array(int size)
 {
   int i;
   object o;
   o = new_array(size);
-  for (i = 0; i < size; i++) o->array.elt[i] = object_nil;
+  for (i = 0; i < size; i++) o->array.elt[i] = om_nil;
   return o;
 }
 
-object gc_new_array_from(object *o, int size)
+object om_new_array_from(object *o, int size)
 {
   object p;
   p = new_array(size);
@@ -723,7 +738,7 @@ static object new_map(int type, int half_size, object top)
   int i;
   object o;
   o = gc_alloc(sizeof(struct map));
-  object_set_type(o, type);
+  set_type(o, type);
   o->map.top = top;
   o->map.entry_count = 0;
   o->map.half_size = half_size;
@@ -733,104 +748,89 @@ static object new_map(int type, int half_size, object top)
   return o;
 }
 
-object gc_new_dict(void)
+object om_new_dict(void)
 {
-  return new_map(DICT, 8, object_nil);
+  return new_map(DICT, 8, om_nil);
 }
 
 static object new_proc(int type, object env, int param_count, object params, object body)
 {
   object o;
-  xassert(object_type(env) == ENV);
+  xassert(om_type(env) == ENV);
   o = gc_alloc(sizeof(struct proc));
   o->proc.env = env;
   o->proc.param_count = param_count;
   o->proc.params = params;
   o->proc.body = body;
-  object_set_type(o, type);
+  set_type(o, type);
   regist(o);
   return o;
 }
 
-object gc_new_macro(object env, int param_count, object params, object body)
+object om_new_macro(object env, int param_count, object params, object body)
 {
   return new_proc(MACRO, env, param_count, params, body);
 }
 
-object gc_new_func(object env, int param_count, object params, object body)
+object om_new_func(object env, int param_count, object params, object body)
 {
   return new_proc(FUNC, env, param_count, params, body);
 }
 
-object gc_new_native(int type, object name, void *p)
+object om_new_native(int type, object name, void *p)
 {
   object o;
   o = gc_alloc(sizeof(struct native));
   o->native.name = name;
   o->native.u.p = p;
-  object_set_type(o, type);
+  set_type(o, type);
   regist(o);
   return o;
 }
 
-object gc_new_env(object top, int half_size)
+object om_new_env(object top, int half_size)
 {
   return new_map(ENV, half_size, top);
 }
 
-void gc_extend_table(object o)
-{
-  int i, half_size;
-  object *table;
-  table = o->map.table;
-  half_size = o->map.half_size;
-  o->map.entry_count = 0;
-  o->map.half_size *= 2;
-  o->map.table = gc_alloc(sizeof(object) * o->map.half_size * 2);
-  for (i = 0; i < o->map.half_size; i++) o->map.table[i] = NULL;
-  for (i = 0; i < half_size; i++)
-    if (table[i] != NULL) map_put(o, table[i], table[i + half_size]);
-  gc_free0(sizeof(object) * half_size * 2, table);
-}
-
 static void mark_binding(void *key, void *val)
 {
-  gc_mark(key);
-  gc_mark(val);
+  om_mark(key);
+  om_mark(val);
 }
 
-void gc_mark(object o)
+void om_mark(object o)
 {
   int i;
   if (sint_p(o)) return;
-  if (object_alive_p(o)) return;
-  object_set_alive(o);
-  switch (object_type(o)) {
+  if (alive_p(o)) return;
+  set_alive(o);
+  switch (om_type(o)) {
     case CONS:
-      while (o != object_nil) {
-        gc_mark(o->cons.car);
+      while (o != om_nil) {
+        om_mark(o->cons.car);
         o = o->cons.cdr;
-        object_set_alive(o);    // for stack overflow
+        set_alive(o);    // for stack overflow
       }
       break;
     case ARRAY:
-      for (i = 0; i < o->array.size; i++) gc_mark(o->array.elt[i]);
+      for (i = 0; i < o->array.size; i++) om_mark(o->array.elt[i]);
       break;
     case DICT:
       map_foreach(o, mark_binding);
       break;
     case SPECIAL:
     case BFUNC:
-      gc_mark(o->native.name);
+      om_mark(o->native.name);
       break;
     case MACRO:
     case FUNC:
-      gc_mark(o->proc.env);
-      gc_mark(o->proc.params);
-      gc_mark(o->proc.body);
+      om_mark(o->proc.env);
+      om_mark(o->proc.params);
+      om_mark(o->proc.body);
       break;
     case ENV:
-      gc_mark(o->map.top);
+      om_mark(o->map.top);
       map_foreach(o, mark_binding);
     default:
       break;
@@ -854,10 +854,10 @@ static void sweep_s_expr(void)
   symbol_table_reset(&st);
   for (i = 0; i < table_wk->size; i++) {
     o = table_wk->elt[i];
-    if (!object_alive_p(o)) gc_free(o);
+    if (!alive_p(o)) gc_free(o);
     else {
-      object_set_dead(o);
-      switch (object_type(o)) {
+      set_dead(o);
+      switch (om_type(o)) {
         case SYMBOL: symbol_table_put(&st, o); break;
         default: break;
       }
@@ -866,16 +866,16 @@ static void sweep_s_expr(void)
   }
 }
 
-void gc_chance(void)
+void om_gc_chance(void)
 {
-  if (gc_used_memory < GC_CHANCE_MEMORY) return;
+  if (gc_used_memory < om_gc_chance_MEMORY) return;
   if (GC_LOG_P) fprintf(stderr, "before gc(used memory %d[byte])\n", gc_used_memory);
   ip_mark_object();
   sweep_s_expr();
   if (GC_LOG_P) fprintf(stderr, "after gc(used memory %d[byte])\n", gc_used_memory);
 }
 
-void gc_init(void)
+void om_init(void)
 {
   gc_used_memory = 0;
   link0 = link1 = NULL;

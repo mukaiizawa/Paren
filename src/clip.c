@@ -2,7 +2,7 @@
 
 #include "std.h"
 #include "xiconv.h"
-#include "object.h"
+#include "om.h"
 #include "bi.h"
 #include "ip.h"
 
@@ -43,7 +43,7 @@ static int clip_paste(object *result)
   if ((ansi_text = GlobalLock(h)) == NULL) return FALSE;
   if (!CloseClipboard()) return FALSE;
   if (!xiconv(XICONV_ANSI, XICONV_UTF8, ansi_text, &text)) return FALSE;
-  *result = gc_new_mem_from_cstr(STRING, text);
+  *result = om_new_mem_from_cstr(STRING, text);
   return TRUE;
 }
 

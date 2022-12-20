@@ -1,7 +1,7 @@
 // socket.
 
 #include "std.h"
-#include "object.h"
+#include "om.h"
 #include "bi.h"
 #include "pf.h"
 #include "ip.h"
@@ -37,7 +37,7 @@ DEFUN(gethostname)
   char buf[MAX_STR_LEN];
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   if (gethostname(buf, MAX_STR_LEN) != 0) return ip_sigerr(OSError, "gethostname failed");
-  *result = gc_new_mem_from_cstr(STRING, buf);
+  *result = om_new_mem_from_cstr(STRING, buf);
   return TRUE;
 }
 
@@ -63,7 +63,7 @@ DEFUN(client_2d_socket)
   }
   freeaddrinfo(p);
   if (q == NULL) return ip_sigerr(OSError, "connect failed");
-  *result = gc_new_xint(fd);
+  *result = om_new_xint(fd);
   return TRUE;
 }
 
@@ -80,7 +80,7 @@ DEFUN(server_2d_socket)
   if ((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) return ip_sigerr(OSError, "socket failed");
   if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) return ip_sigerr(OSError, "bind failed");
   if (listen(fd, 1) == -1) return ip_sigerr(OSError, "listen failed");
-  *result = gc_new_xint(fd);
+  *result = om_new_xint(fd);
   return TRUE;
 }
 
@@ -92,7 +92,7 @@ DEFUN(accept)
   struct sockaddr_in addr;
   socklen_t size = sizeof(addr);
   if ((cfd = accept(sfd, (struct sockaddr *) &addr, &size)) == -1) return ip_sigerr(OSError, "accept failed");
-  *result = gc_new_xint(cfd);
+  *result = om_new_xint(cfd);
   return TRUE;
 }
 
@@ -107,7 +107,7 @@ DEFUN(recv)
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_cint(argv->cons.cdr->cons.car, &fd)) return FALSE;
   if ((size = recv(fd, o->mem.elt + from, size, 0)) < 0) return ip_sigerr(OSError, "recv failed");
-  *result = gc_new_xint(size);
+  *result = om_new_xint(size);
   return TRUE;
 }
 
@@ -122,7 +122,7 @@ DEFUN(send)
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_cint(argv->cons.cdr->cons.car, &fd)) return FALSE;
   if ((size = send(fd, o->mem.elt + from, size, 0)) < 0) return ip_sigerr(OSError, "send failed");
-  *result = gc_new_xint(size);
+  *result = om_new_xint(size);
   return TRUE;
 }
 
@@ -136,7 +136,7 @@ DEFUN(shutdown)
   if (!bi_cint(argv->cons.cdr->cons.car, &how)) return FALSE;
   if (!bi_range(0, how, 2)) return FALSE;
   shutdown(fd, how_table[how]);
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -146,6 +146,6 @@ DEFUN(close)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cint(argv->cons.car, &fd)) return FALSE;
   close(fd);
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }

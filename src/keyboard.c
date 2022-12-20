@@ -1,7 +1,7 @@
 // keyboard.
 
 #include "std.h"
-#include "object.h"
+#include "om.h"
 #include "bi.h"
 #include "ip.h"
 
@@ -14,6 +14,6 @@ DEFUN(keyboard_2e_send)
   if (dir == 1) dir = KEYEVENTF_KEYUP;
   else if (dir != 0) return ip_sigerr(ArgumentError, "invalid direction");
   keybd_event(keycode, 0, dir, 0);
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }

@@ -60,7 +60,7 @@ lib+=$(dl_user)
 lib+=$(dl_ws)
 endif
 
-obj+=std.o xarray.o xbarray.o heap.o object.o lex.o ip.o bi.o xiconv.o paren.o
+obj+=std.o xarray.o xbarray.o heap.o om.o lex.o ip.o bi.o xiconv.o paren.o
 uflags=-Wall -Werror
 cflags=$(uflags) -c
 lflags=$(uflags)
