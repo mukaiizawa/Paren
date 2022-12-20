@@ -3,7 +3,6 @@
 #include "std.h"
 #include "xiconv.h"
 #include "object.h"
-#include "gc.h"
 #include "bi.h"
 #include "ip.h"
 

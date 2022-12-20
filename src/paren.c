@@ -5,7 +5,6 @@
 #include "pf.h"
 #include "object.h"
 #include "lex.h"
-#include "gc.h"
 #include "ip.h"
 #include "bi.h"
 
