@@ -90,11 +90,18 @@ defun.wk: $(obj:%.o=%.c)
 $(paren): $(obj)
 	$(link) && mv $(paren) ../$(paren)
 
-cdep:
-	paren cdep > make.d
+punit: $(paren)
+	$(paren) manunit
+	$(paren) punit -r ./wk
 
-rw.vim:
-	paren rw | sort | sed -e 's/|/\\|/g' -e '/\[/d' -e 's/^/syn keyword ParenBuiltIn /' > rw.wk
+mandb: $(paren)
+	$(paren) mandb
+
+cdep: $(paren)
+	$(paren) cdep > make.d
+
+rw.vim: $(paren)
+	$(paren) rw | sort | sed -e 's/|/\\|/g' -e '/\[/d' -e 's/^/syn keyword ParenBuiltIn /' > rw.wk
 
 clean:
 	rm -f *.o *.out *.a *.wk $(paren)

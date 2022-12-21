@@ -5,9 +5,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: make os=unix
+      - run: make os=unix mandb
         working-directory: ./src
-      - run: ./paren mandb
       - run: |
           git config --local user.email "shintaro@mukai.systems"
           git config --local user.name "Shintaro Mukai"

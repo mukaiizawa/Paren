@@ -5,7 +5,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: make os=unix debug=on
+      - run: make os=unix debug=on punit
         working-directory: ./src
-      - run: ./paren manunit
-      - run: ./paren punit -r ./wk
