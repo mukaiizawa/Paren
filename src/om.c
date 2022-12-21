@@ -14,7 +14,7 @@ static struct symbol_table st;
 
 #define LINK0_SIZE (sizeof(struct cons))
 #define LINK1_SIZE (sizeof(struct map))
-static object link0, link1;
+static object heap_link0, heap_link1;
 
 #define regist(o) (xarray_add(table, o))
 static struct xarray *table, *table_wk, table0, table1;
@@ -29,7 +29,6 @@ object om_key;
 object om_opt;
 object om_rest;
 object om_quote;
-
 object om_Class;
 object om_class;
 object om_symbol;
@@ -42,7 +41,7 @@ object om_stack_trace;
 
 int om_hash(object o)
 {
-  if (sint_p(o)) return sint_val(o) & HASH_MASK;
+  if (om_sint_p(o)) return sint_val(o) & HASH_MASK;
   return o->header & HASH_MASK;
 }
 
@@ -72,7 +71,7 @@ static void set_hash(object o, int hval)
 
 int om_type(object o)
 {
-  if (sint_p(o)) return SINT;
+  if (om_sint_p(o)) return SINT;
   return o->header & TYPE_MASK;
 }
 
@@ -501,17 +500,17 @@ static void *om_alloc(int size)
   object o;
   if (size <= LINK0_SIZE) {
     size = LINK0_SIZE;
-    if (link0 == NULL) o = heap_alloc(&heap, size);
+    if (heap_link0 == NULL) o = heap_alloc(&heap, size);
     else {
-      o = link0;
-      link0 = o->next;
+      o = heap_link0;
+      heap_link0 = o->next;
     }
   } else if (size <= LINK1_SIZE) {
     size = LINK1_SIZE;
-    if (link1 == NULL) o = heap_alloc(&heap, size);
+    if (heap_link1 == NULL) o = heap_alloc(&heap, size);
     else {
-      o = link1;
-      link1 = o->next;
+      o = heap_link1;
+      heap_link1 = o->next;
     }
   } else o = xmalloc(size);
   used_memory += size;
@@ -525,12 +524,12 @@ static void om_free0(int size, void *p)
   o = p;
   if (size <= LINK0_SIZE) {
     size = LINK0_SIZE;
-    o->next = link0;
-    link0 = o;
+    o->next = heap_link0;
+    heap_link0 = o;
   } else if (size <= LINK1_SIZE) {
     size = LINK1_SIZE;
-    o->next = link1;
-    link1 = o;
+    o->next = heap_link1;
+    heap_link1 = o;
   } else xfree(o);
   used_memory -= size;
 }
@@ -805,7 +804,7 @@ static void mark_binding(void *key, void *val)
 void om_mark(object o)
 {
   int i;
-  if (sint_p(o)) return;
+  if (om_sint_p(o)) return;
   if (alive_p(o)) return;
   set_alive(o);
   switch (om_type(o)) {
@@ -881,7 +880,7 @@ void om_gc_chance(void)
 void om_init(void)
 {
   used_memory = 0;
-  link0 = link1 = NULL;
+  heap_link0 = heap_link1 = NULL;
   symbol_table_init(&st);
   heap_init(&heap);
   xarray_init(&table0);

@@ -1174,6 +1174,6 @@ int ip_start(object args)
   trap_type = TRAP_NONE;
   intr_init();
   ip_main(args);
-  if (sint_p(dr)) return sint_val(dr);
+  if (om_sint_p(dr)) return sint_val(dr);
   return 1;
 }

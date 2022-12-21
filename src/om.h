@@ -29,7 +29,7 @@ typedef union om *object;
 #define LC(p) (*(unsigned char *)(p))
 #define SC(p, v) (*(unsigned char *)(p) = (unsigned char)(v))
 
-#define sint_p(o) ((((intptr_t)o) & 1) == 1)
+#define om_sint_p(o) ((((intptr_t)o) & 1) == 1)
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
 #define sint(i) ((object)((((intptr_t)i) << 1) | 1))
 #define list_p(o) (o == om_nil || (om_type(o) == CONS))

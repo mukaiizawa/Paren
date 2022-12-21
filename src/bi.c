@@ -104,7 +104,7 @@ int bi_cbyte(object o, int *p)
 
 int bi_cint(object o, int *p)
 {
-  if (!sint_p(o)) {
+  if (!om_sint_p(o)) {
     *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
     return ip_sigerr(ArgumentError, "expected integer");
   }
@@ -132,7 +132,7 @@ int bi_cpint64(object o, int64_t *p)
 
 int bi_may_cint64(object o, int64_t *p)
 {
-  if (sint_p(o)) {
+  if (om_sint_p(o)) {
     *p = sint_val(o);
     return TRUE;
   }
