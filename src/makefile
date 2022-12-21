@@ -78,7 +78,7 @@ endif
 .c.o:
 	$(cc) $(cflags) $<
 
-paren=paren$(exe)
+paren=../paren$(exe)
 all: $(paren)
 
 defsp.wk: $(obj:%.o=%.c)
@@ -88,7 +88,7 @@ defun.wk: $(obj:%.o=%.c)
 	cat $+ | grep ^DEFUN > $@
 
 $(paren): $(obj)
-	$(link) && mv $(paren) ../$(paren)
+	$(link)
 
 punit: $(paren)
 	$(paren) manunit
