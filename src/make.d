@@ -6,7 +6,7 @@ ip.o: ip.c ip.h bi.h om.h xbarray.h config.h std.h
 keyboard.o: keyboard.c ip.h bi.h om.h xbarray.h config.h std.h
 lex.o: lex.c lex.h xbarray.h config.h std.h
 mouse.o: mouse.c ip.h bi.h om.h xbarray.h config.h std.h
-om.o: om.c ip.h bi.h om.h xbarray.h config.h std.h
+om.o: om.c ip.h bi.h xarray.h om.h heap.h xbarray.h config.h std.h
 paren.o: paren.c bi.h ip.h lex.h om.h pf.h xiconv.h xbarray.h config.h std.h
 pf.u.o: pf.u.c pf.h xbarray.h config.h std.h
 pf.w.o: pf.w.c pf.h xiconv.h xbarray.h config.h std.h
