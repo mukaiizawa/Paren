@@ -132,11 +132,11 @@ static void make_built_in(void)
   object o;
   for (i = 0; built_in_name(special_name_table[i], buf) != NULL; i++) {
     o = om_new_native(SPECIAL, om_new_mem_from_cstr(SYMBOL, buf), special_table[i]);
-    map_put(om_toplevel, o->native.name, o);
+    om_map_put(om_toplevel, o->native.name, o);
   }
   for (i = 0; built_in_name(function_name_table[i], buf) != NULL; i++) {
     o = om_new_native(BFUNC, om_new_mem_from_cstr(SYMBOL, buf), function_table[i]);
-    map_put(om_toplevel, o->native.name, o);
+    om_map_put(om_toplevel, o->native.name, o);
   }
 }
 
@@ -168,8 +168,8 @@ static void make_initial_objects(int argc, char *argv[])
   om_nil = om_new_mem_from_cstr(SYMBOL, "nil");
   om_true = om_new_mem_from_cstr(SYMBOL, "true");
   om_toplevel = om_new_env(om_nil, 1 << 11);
-  map_put(om_toplevel, om_nil, om_nil);
-  map_put(om_toplevel, om_true, om_true);
+  om_map_put(om_toplevel, om_nil, om_nil);
+  om_map_put(om_toplevel, om_true, om_true);
   om_key = om_new_mem_from_cstr(SYMBOL, ":key");
   om_opt = om_new_mem_from_cstr(SYMBOL, ":opt");
   om_rest = om_new_mem_from_cstr(SYMBOL, ":rest");
@@ -183,8 +183,8 @@ static void make_initial_objects(int argc, char *argv[])
   om_Exception = om_new_mem_from_cstr(SYMBOL, "Exception");
   om_message = om_new_mem_from_cstr(SYMBOL, ":message");
   om_stack_trace = om_new_mem_from_cstr(SYMBOL, ":stack-trace");
-  map_put(om_toplevel, om_new_mem_from_cstr(SYMBOL, "$args"), parse_args(argc, argv));
-  map_put(om_toplevel, om_new_mem_from_cstr(SYMBOL, "core.p"), om_new_mem_from_cstr(STRING, core_fn));
+  om_map_put(om_toplevel, om_new_mem_from_cstr(SYMBOL, "$args"), parse_args(argc, argv));
+  om_map_put(om_toplevel, om_new_mem_from_cstr(SYMBOL, "core.p"), om_new_mem_from_cstr(STRING, core_fn));
 #if WINDOWS_P
   host_name = ":windows";
 #elif OS_CODE == OS_LINUX
@@ -196,7 +196,7 @@ static void make_initial_objects(int argc, char *argv[])
 #else
   xassert(FALSE);
 #endif
-  map_put(om_toplevel, om_new_mem_from_cstr(SYMBOL, "$hostname"), om_new_mem_from_cstr(SYMBOL, host_name));
+  om_map_put(om_toplevel, om_new_mem_from_cstr(SYMBOL, "$hostname"), om_new_mem_from_cstr(SYMBOL, host_name));
   make_built_in();
 }
 

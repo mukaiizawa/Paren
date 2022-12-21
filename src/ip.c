@@ -370,7 +370,7 @@ static void pop_apply_frame(void)
   else gen2(FUNC_FRAME, cr, trace);
   cr = om_new_env(f->proc.env, f->proc.param_count * 2);
   gen_eval_sequential_frame(f->proc.body);
-  parse_args(&map_put, f->proc.params, dr);
+  parse_args(&om_map_put, f->proc.params, dr);
 }
 
 static void pop_apply_built_in_frame(void)
@@ -381,7 +381,7 @@ static void pop_apply_built_in_frame(void)
   args = dr;
   function = f->native.u.function;
   pop_frame();
-  if ((*function)(list_len(args), args, &(dr))) return;
+  if ((*function)(om_list_len(args), args, &(dr))) return;
   gen_trace(om_new_cons(f->native.name, args));
   xassert(trap_type != TRAP_NONE);
 }
@@ -390,8 +390,8 @@ static void pop_bind_frame(void)
 {
   object o;
   o = get_frame_var(fp, 0);
-  if (om_type(o) == SYMBOL) map_put(cr, o, dr);
-  else parse_args(&map_put, o, dr);
+  if (om_type(o) == SYMBOL) om_map_put(cr, o, dr);
+  else parse_args(&om_map_put, o, dr);
   pop_frame();
 }
 
@@ -414,15 +414,15 @@ static void pop_bind_propagation_frame(void)
 {
   object o;
   o = get_frame_var(fp, 0);
-  if (om_type(o) == SYMBOL) map_put_propagation(cr, o, dr);
-  else parse_args(&map_put_propagation, o, dr);
+  if (om_type(o) == SYMBOL) om_map_put_propagation(cr, o, dr);
+  else parse_args(&om_map_put_propagation, o, dr);
   pop_frame();
 }
 
 static int eval_symbol(object *result)
 {
   object sym;
-  if ((*result = map_get_propagation(cr, (sym = *result))) == NULL) {
+  if ((*result = om_map_get_propagation(cr, (sym = *result))) == NULL) {
     if (om_keyword_p(sym)) {
       *result = sym;
       return TRUE;
@@ -451,7 +451,7 @@ static void pop_eval_frame(void)
       switch (om_type(operator)) {
         case SPECIAL:
           special = operator->native.u.special;
-          if ((*special)(list_len(args), args)) return;
+          if ((*special)(om_list_len(args), args)) return;
           gen_trace(om_new_cons(operator->native.name, args));
           return;
         case BFUNC:
@@ -545,7 +545,7 @@ static void pop_eval_args_frame(void)
   set_frame_var(fp, 1, acc);
   if (rest == om_nil) {
     pop_frame();
-    dr = list_reverse(acc);
+    dr = om_list_reverse(acc);
   } else {
     set_frame_var(fp, 0, rest->cons.cdr);
     gen_eval_frame(rest->cons.car);
@@ -602,8 +602,8 @@ static void pop_throw_frame(void)
   object o, handler;
   i = fp;
   pop_frame();
-  if (om_type(dr) == DICT && map_get(dr, om_stack_trace) == om_nil)
-    map_put(dr, om_stack_trace, get_call_stack());
+  if (om_type(dr) == DICT && om_map_get(dr, om_stack_trace) == om_nil)
+    om_map_put(dr, om_stack_trace, get_call_stack());
   while (fp != -1) {
     switch (fs_top()) {
       case UNWIND_PROTECT_FRAME:
@@ -667,7 +667,7 @@ DEFUN(macroexpand_2d_1)
   f = dr->cons.car;
   args = dr->cons.cdr;
   if (om_type(f) == SYMBOL) {
-    if ((f = map_get_propagation(cr, f)) == NULL) return TRUE;
+    if ((f = om_map_get_propagation(cr, f)) == NULL) return TRUE;
   }
   if (om_type(f) != MACRO) return TRUE;
   gen1(APPLY_FRAME, f);
@@ -680,7 +680,7 @@ DEFUN(bound_3f_)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_SYM, argv->cons.car, &o)) return FALSE;
-  dr = om_bool(om_keyword_p(o) || map_get_propagation(cr, o) != NULL);
+  dr = om_bool(om_keyword_p(o) || om_map_get_propagation(cr, o) != NULL);
   return TRUE;
 }
 
@@ -688,28 +688,28 @@ DEFUN(bound_3f_)
 
 static int pos_om_p(object o)
 {
-  return om_type(o) == DICT && map_get(o, om_class) != NULL;
+  return om_type(o) == DICT && om_map_get(o, om_class) != NULL;
 }
 
 static int pos_class_p(object o)
 {
   object p;
   return om_type(o) == DICT
-    && map_get(o, om_class) == om_Class
-    && (p = map_get(o, om_symbol)) != NULL
+    && om_map_get(o, om_class) == om_Class
+    && (p = om_map_get(o, om_symbol)) != NULL
     && om_type(p) == SYMBOL
-    && (p = map_get(o, om_super)) != NULL
+    && (p = om_map_get(o, om_super)) != NULL
     && om_type(p) == SYMBOL
-    && (p = map_get(o, om_features)) != NULL
+    && (p = om_map_get(o, om_features)) != NULL
     && om_list_p(p)
-    && (p = map_get(o, om_fields)) != NULL
+    && (p = om_map_get(o, om_fields)) != NULL
     && om_list_p(p);
 }
 
 static int find_class(object cls_sym, object *result)
 {
   if (om_type(cls_sym) != SYMBOL) return FALSE;
-  if ((*result = map_get_propagation(cr, cls_sym)) == NULL) return FALSE;
+  if ((*result = om_map_get_propagation(cr, cls_sym)) == NULL) return FALSE;
   return pos_class_p(*result);
 }
 
@@ -717,17 +717,17 @@ static int find_super_class(object cls_sym, object *result)
 {
   object cls;
   if (!find_class(cls_sym, &cls)) return FALSE;
-  return find_class(map_get(cls, om_super), result);
+  return find_class(om_map_get(cls, om_super), result);
 }
 
 static int pos_is_a_p(object o, object cls_sym) {
   object o_cls_sym;
   xassert(om_type(cls_sym) == SYMBOL);
   if (!pos_om_p(o)) return FALSE;
-  o_cls_sym = map_get(o, om_class);
+  o_cls_sym = om_map_get(o, om_class);
   while (o_cls_sym != cls_sym) {
     if (!find_super_class(o_cls_sym, &o)) return FALSE;
-    o_cls_sym = map_get(o, om_symbol);
+    o_cls_sym = om_map_get(o, om_symbol);
   }
   return TRUE;
 }
@@ -741,7 +741,7 @@ static object find_class_method(object cls_sym, object mtd_sym)
   xbarray_init(&buf);
   xbarray_copy(&buf, cls_sym->mem.elt, cls_sym->mem.size);
   xbarray_copy(&buf, mtd_sym->mem.elt, mtd_sym->mem.size);
-  o = map_get_propagation(cr, om_new_mem_from(SYMBOL, buf.elt, buf.size));
+  o = om_map_get_propagation(cr, om_new_mem_from(SYMBOL, buf.elt, buf.size));
   xbarray_free(&buf);
   return o;
 }
@@ -752,7 +752,7 @@ DEFUN(is_2d_a_3f_)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   dr = om_nil;
   if (!pos_class_p(cls = argv->cons.cdr->cons.car)) return TRUE;
-  if (pos_is_a_p(argv->cons.car, map_get(cls, om_symbol))) dr = om_true;
+  if (pos_is_a_p(argv->cons.car, om_map_get(cls, om_symbol))) dr = om_true;
   return TRUE;
 }
 
@@ -776,14 +776,14 @@ DEFUN(find_2d_method)
     if ((*result = find_class_method(cls_sym, mtd_sym)) != NULL) return TRUE;
     // feature method
     if (!find_class(cls_sym, &cls)) return ip_sigerr(ArgumentError, "undeclared class");
-    features = map_get(cls, om_features);
+    features = om_map_get(cls, om_features);
     while (features != om_nil) {
       if ((*result = find_class_method(features->cons.car, mtd_sym)) != NULL) return TRUE;
       features = features->cons.cdr;
     }
     // super class method
     if (!find_super_class(cls_sym, &cls)) return ip_sigerr(StateError, "undeclared super class");
-    cls_sym = map_get(cls, om_symbol);
+    cls_sym = om_map_get(cls, om_symbol);
   }
 }
 
@@ -915,14 +915,14 @@ DEFSP(dynamic)
   if (!bi_argv(BI_SYM, argv->cons.car, &s)) return FALSE;
   i = fp;
   e = cr;
-  if ((dr = map_get(e, s)) != NULL) return TRUE;
+  if ((dr = om_map_get(e, s)) != NULL) return TRUE;
   while ((i = prev_fp(i)) != -1) {
     switch (fs_nth(i)) {
       case LET_FRAME: e = e->map.top; break;
       case FUNC_FRAME: e = get_frame_var(i, 0); break;
       default: continue;
     }
-    if ((dr = map_get(e, s)) != NULL) return TRUE;
+    if ((dr = om_map_get(e, s)) != NULL) return TRUE;
   }
   dr = om_nil;
   return ip_sigerr(ArgumentError, "unbound symbol");
@@ -1043,7 +1043,7 @@ static int resolve_anonimous_proc(void)
   xassert(named_proc == NULL);
   e = cr;
   while (e != om_nil) {
-    map_foreach(e, find_named_proc);
+    om_map_foreach(e, find_named_proc);
     if (named_proc != NULL) return TRUE;
     e = e->map.top;
   }
@@ -1081,9 +1081,9 @@ static object new_Error(enum Exception e, object message)
 {
   object o;
   o = om_new_dict();
-  map_put(o, om_class, om_new_mem_from_cstr(SYMBOL, error_name(e)));
-  map_put(o, om_message, message);
-  map_put(o, om_stack_trace, om_nil);
+  om_map_put(o, om_class, om_new_mem_from_cstr(SYMBOL, error_name(e)));
+  om_map_put(o, om_message, message);
+  om_map_put(o, om_stack_trace, om_nil);
   return o;
 }
 

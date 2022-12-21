@@ -496,7 +496,7 @@ DEFUN(list_2e__2e__2e_)
       xassert(FALSE);
       return FALSE;
   }
-  *result = list_reverse(*result);
+  *result = om_list_reverse(*result);
   return TRUE;
 }
 
@@ -560,7 +560,7 @@ DEFUN(reverse_21_)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_LIST, argv->cons.car, &o)) return FALSE;
   if (o == om_nil) *result = om_nil;
-  else *result = list_reverse(o);
+  else *result = om_list_reverse(o);
   return TRUE;
 }
 
@@ -1191,7 +1191,7 @@ DEFUN(array)
       *result = om_new_array(size);
       return TRUE;
     case CONS:
-      size = list_len(o);
+      size = om_list_len(o);
       *result = om_new_array(size);
       for (int i = 0; i < size; i++) {
         (*result)->array.elt[i] = o->cons.car;
@@ -1229,7 +1229,7 @@ DEFUN(keys)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_DICT, argv->cons.car, &o)) return FALSE;
-  *result = map_keys(o);
+  *result = om_map_keys(o);
   return TRUE;
 }
 
@@ -1319,7 +1319,7 @@ static int cons_concat(object argv, object *result)
     }
     argv = argv->cons.cdr;
   }
-  *result = list_reverse(*result);
+  *result = om_list_reverse(*result);
   return TRUE;
 }
 
@@ -1422,10 +1422,10 @@ static int dict_access(int argc, object argv, object o, object *result)
   object key;
   key = argv->cons.car;
   if (argc == 2) {
-    if ((*result = map_get(o, key)) == NULL) *result = om_nil;
+    if ((*result = om_map_get(o, key)) == NULL) *result = om_nil;
   } else {
     *result = argv->cons.cdr->cons.car;
-    map_put(o, key, *result);
+    om_map_put(o, key, *result);
   }
   return TRUE;
 }
@@ -1506,7 +1506,7 @@ int array_in_p(object o, object p, object *result)
 
 int dict_in_p(object o, object p, object *result)
 {
-  *result = om_bool(map_get(o, p) != NULL);
+  *result = om_bool(om_map_get(o, p) != NULL);
   return TRUE;
 }
 
@@ -1705,7 +1705,7 @@ DEFUN(len)
   if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
   switch (om_type(o)) {
     case SYMBOL: len = 0; break;
-    case CONS: len = list_len(o); break;
+    case CONS: len = om_list_len(o); break;
     case BYTES: len = o->mem.size; break;
     case STRING: if (!str_len(o, &len)) return FALSE; break;
     case ARRAY: len = o->array.size; break;

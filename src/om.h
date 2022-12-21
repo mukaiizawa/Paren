@@ -142,16 +142,16 @@ extern void om_gc_chance(void);
 extern int om_hash(object o);
 extern int om_type(object o);
 extern int om_eq_p(object o, object p);
-extern object om_bool(int b);
+extern int om_list_len(object o);
 extern char *om_describe(object o, char *buf);
-extern int list_len(object o);
-extern object list_reverse(object o);
-extern object map_get(object o, object s);
-extern object map_get_propagation(object o, object s);
-extern void map_put(object o, object s, object v);
-extern void map_put_propagation(object o, object s, object v);
-extern object map_keys(object o);
-extern void map_foreach(object o, void (*f)(void *s, void *v));
+extern object om_bool(int b);
+extern object om_list_reverse(object o);
+extern object om_map_keys(object o);
+extern object om_map_get(object o, object s);
+extern object om_map_get_propagation(object o, object s);
+extern void om_map_put(object o, object s, object v);
+extern void om_map_put_propagation(object o, object s, object v);
+extern void om_map_foreach(object o, void (*f)(void *s, void *v));
 
 // initializer.
 extern void om_init(void);

@@ -298,10 +298,10 @@ static int dict_eq_p(object o, object p)
   object v, keys;
   if (om_type(p) != DICT) return FALSE;
   if (o->map.entry_count != p->map.entry_count) return FALSE;
-  keys = map_keys(o);
+  keys = om_map_keys(o);
   while (keys != om_nil) {
-    if ((v = map_get(p, keys->cons.car)) == NULL) return FALSE;
-    if (!om_eq_p(map_get(o, keys->cons.car), v)) return FALSE;
+    if ((v = om_map_get(p, keys->cons.car)) == NULL) return FALSE;
+    if (!om_eq_p(om_map_get(o, keys->cons.car), v)) return FALSE;
     keys = keys->cons.cdr;
   }
   return TRUE;
@@ -325,7 +325,7 @@ int om_eq_p(object o, object p)
   }
 }
 
-int list_len(object o)
+int om_list_len(object o)
 {
   int i;
   xassert(om_list_p(o));
@@ -333,7 +333,7 @@ int list_len(object o)
   return i;
 }
 
-object list_reverse(object o)
+object om_list_reverse(object o)
 {
   object p, acc;
   xassert(om_list_p(o));
@@ -347,7 +347,7 @@ object list_reverse(object o)
   return acc;
 }
 
-object map_get(object o, object s)
+object om_map_get(object o, object s)
 {
   int i;
   object p;
@@ -361,11 +361,11 @@ object map_get(object o, object s)
   return NULL;
 }
 
-object map_get_propagation(object o, object s)
+object om_map_get_propagation(object o, object s)
 {
   object p;
   while (o != om_nil) {
-    if ((p = map_get(o, s)) != NULL) return p;
+    if ((p = om_map_get(o, s)) != NULL) return p;
     o = o->map.top;
   }
   return NULL;
@@ -382,11 +382,11 @@ static void rehash(object o)
   o->map.table = om_alloc(sizeof(object) * o->map.half_size * 2);
   for (i = 0; i < o->map.half_size; i++) o->map.table[i] = NULL;
   for (i = 0; i < half_size; i++)
-    if (table[i] != NULL) map_put(o, table[i], table[i + half_size]);
+    if (table[i] != NULL) om_map_put(o, table[i], table[i + half_size]);
   om_free0(sizeof(object) * half_size * 2, table);
 }
 
-void map_put(object o, object s, object v)
+void om_map_put(object o, object s, object v)
 {
   int i;
   object p;
@@ -405,19 +405,19 @@ void map_put(object o, object s, object v)
   if (o->map.entry_count * 2 > o->map.half_size) rehash(o);
 }
 
-void map_put_propagation(object o, object s, object v)
+void om_map_put_propagation(object o, object s, object v)
 {
   while (o != om_toplevel) {
-    if (map_get(o, s) != NULL) {
-      map_put(o, s, v);
+    if (om_map_get(o, s) != NULL) {
+      om_map_put(o, s, v);
       return;
     }
     o = o->map.top;
   }
-  map_put(om_toplevel, s, v);
+  om_map_put(om_toplevel, s, v);
 }
 
-void map_foreach(object o, void (*f)(void *s, void *v))
+void om_map_foreach(object o, void (*f)(void *s, void *v))
 {
   int i;
   object *table;
@@ -426,7 +426,7 @@ void map_foreach(object o, void (*f)(void *s, void *v))
     if (table[i] != NULL) (*f)(table[i], table[i + o->map.half_size]);
 }
 
-object map_keys(object o)
+object om_map_keys(object o)
 {
   int i;
   object keys, *table;
@@ -819,7 +819,7 @@ void om_mark(object o)
       for (i = 0; i < o->array.size; i++) om_mark(o->array.elt[i]);
       break;
     case DICT:
-      map_foreach(o, mark_binding);
+      om_map_foreach(o, mark_binding);
       break;
     case SPECIAL:
     case BFUNC:
@@ -833,7 +833,7 @@ void om_mark(object o)
       break;
     case ENV:
       om_mark(o->map.top);
-      map_foreach(o, mark_binding);
+      om_map_foreach(o, mark_binding);
     default:
       break;
   }
