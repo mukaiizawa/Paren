@@ -27,7 +27,7 @@ typedef union om *object;
 #define DBL_MIN_INT (- DBL_MAX_INT - 1)
 
 #define LC(p) (*(unsigned char *)(p))
-#define SC(p,v) (*(unsigned char *)(p) = (unsigned char)(v))
+#define SC(p, v) (*(unsigned char *)(p) = (unsigned char)(v))
 
 #define sint_p(o) ((((intptr_t)o) & 1) == 1)
 #define sint_val(o) ((int)(((intptr_t)o) >> 1))
@@ -103,6 +103,17 @@ extern object om_fields;
 extern object om_Exception;
 extern object om_message;
 extern object om_stack_trace;
+
+enum Exception {
+  Exception,
+    SystemExit,
+    Error,
+      ArgumentError,
+      ArithmeticError,
+      StateError,
+      OSError,
+      SyntaxError
+};
 
 // memory allocater.
 extern object om_new_xint(int64_t val);
