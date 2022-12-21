@@ -233,211 +233,6 @@ char *om_describe(object o, char *buf)
   return buf;
 }
 
-object om_bool(int b)
-{
-  if (b) return om_true;
-  return om_nil;
-}
-
-static int double_eq_p(double x, object p)
-{
-  int64_t i;
-  double d;
-  if (bi_may_cint64(p, &i)) return fabs(x - (double)i) < DBL_EPSILON;
-  if (bi_may_cdouble(p, &d)) return fabs(x - d) < DBL_EPSILON;
-  return FALSE;
-}
-
-static int int64_eq_p(int64_t x, object p)
-{
-  int64_t y;
-  if (bi_may_cint64(p, &y)) return x == y;
-  return double_eq_p((double)x, p);
-}
-
-static int number_eq_p(object o, object p)
-{
-  int64_t i;
-  double d;
-  if (bi_may_cint64(o, &i)) return int64_eq_p(i, p);
-  if (bi_may_cdouble(o, &d)) return double_eq_p(d, p);
-  return FALSE;
-}
-
-static int cons_eq_p(object o, object p)
-{
-  if (om_type(p) != CONS) return FALSE;
-  while (TRUE) {
-    if (o == om_nil) return p == om_nil;
-    if (p == om_nil) return o == om_nil;
-    if (!om_eq_p(o->cons.car, p->cons.car)) return FALSE;
-    o = o->cons.cdr;
-    p = p->cons.cdr;
-  }
-}
-
-static int bytes_eq_p(object o, object p)
-{
-  if (om_type(o) != om_type(p)) return FALSE;
-  if (o->mem.size != p->mem.size) return FALSE;
-  return memcmp(o->mem.elt, p->mem.elt, o->mem.size) == 0;
-}
-
-static int array_eq_p(object o, object p)
-{
-  int i;
-  if (om_type(p) != ARRAY) return FALSE;
-  if (o->array.size != p->array.size) return FALSE;
-  for (i = 0; i < o->array.size; i++)
-    if (!om_eq_p(o->array.elt[i], p->array.elt[i])) return FALSE;
-  return TRUE;
-}
-
-static int dict_eq_p(object o, object p)
-{
-  object v, keys;
-  if (om_type(p) != DICT) return FALSE;
-  if (o->map.entry_count != p->map.entry_count) return FALSE;
-  keys = om_map_keys(o);
-  while (keys != om_nil) {
-    if ((v = om_map_get(p, keys->cons.car)) == NULL) return FALSE;
-    if (!om_eq_p(om_map_get(o, keys->cons.car), v)) return FALSE;
-    keys = keys->cons.cdr;
-  }
-  return TRUE;
-}
-
-int om_eq_p(object o, object p)
-{
-  if (o == p) return TRUE;
-  switch (om_type(o)) {
-    case SINT:
-    case XINT:
-    case XFLOAT:
-      return number_eq_p(o, p);
-    case BYTES:
-    case STRING:
-      return bytes_eq_p(o, p);
-    case CONS: return cons_eq_p(o, p);
-    case ARRAY: return array_eq_p(o, p);
-    case DICT: return dict_eq_p(o, p);
-    default: return FALSE;
-  }
-}
-
-int om_list_len(object o)
-{
-  int i;
-  xassert(om_list_p(o));
-  for (i = 0; om_type(o) == CONS; i++) o = o->cons.cdr;
-  return i;
-}
-
-object om_list_reverse(object o)
-{
-  object p, acc;
-  xassert(om_list_p(o));
-  acc = om_nil;
-  while (o != om_nil) {
-    p = o->cons.cdr;
-    o->cons.cdr = acc;
-    acc = o;
-    o = p;
-  }
-  return acc;
-}
-
-object om_map_get(object o, object s)
-{
-  int i;
-  object p;
-  if (o->map.half_size != 0) {
-    i = om_hash(s) % o->map.half_size;
-    while ((p = o->map.table[i]) != NULL) {
-      if (om_eq_p(p, s)) return o->map.table[i + o->map.half_size];
-      if (++i == o->map.half_size) i = 0;
-    }
-  }
-  return NULL;
-}
-
-object om_map_get_propagation(object o, object s)
-{
-  object p;
-  while (o != om_nil) {
-    if ((p = om_map_get(o, s)) != NULL) return p;
-    o = o->map.top;
-  }
-  return NULL;
-}
-
-static void rehash(object o)
-{
-  int i, half_size;
-  object *table;
-  table = o->map.table;
-  half_size = o->map.half_size;
-  o->map.entry_count = 0;
-  o->map.half_size *= 2;
-  o->map.table = om_alloc(sizeof(object) * o->map.half_size * 2);
-  for (i = 0; i < o->map.half_size; i++) o->map.table[i] = NULL;
-  for (i = 0; i < half_size; i++)
-    if (table[i] != NULL) om_map_put(o, table[i], table[i + half_size]);
-  om_free0(sizeof(object) * half_size * 2, table);
-}
-
-void om_map_put(object o, object s, object v)
-{
-  int i;
-  object p;
-  xassert(o->map.half_size != 0);
-  i = om_hash(s) % o->map.half_size;
-  while ((p = o->map.table[i]) != NULL) {
-    if (om_eq_p(p, s)) {
-      o->map.table[i + o->map.half_size] = v;
-      return;
-    }
-    if (++i == o->map.half_size) i = 0;
-  }
-  o->map.table[i] = s;
-  o->map.table[i + o->map.half_size] = v;
-  o->map.entry_count++;
-  if (o->map.entry_count * 2 > o->map.half_size) rehash(o);
-}
-
-void om_map_put_propagation(object o, object s, object v)
-{
-  while (o != om_toplevel) {
-    if (om_map_get(o, s) != NULL) {
-      om_map_put(o, s, v);
-      return;
-    }
-    o = o->map.top;
-  }
-  om_map_put(om_toplevel, s, v);
-}
-
-void om_map_foreach(object o, void (*f)(void *s, void *v))
-{
-  int i;
-  object *table;
-  table = o->map.table;
-  for (i = 0; i < o->map.half_size; i++)
-    if (table[i] != NULL) (*f)(table[i], table[i + o->map.half_size]);
-}
-
-object om_map_keys(object o)
-{
-  int i;
-  object keys, *table;
-  xassert(om_type(o) == DICT);
-  table = o->map.table;
-  keys = om_nil;
-  for (i = 0; i < o->map.half_size; i++)
-    if (table[i] != NULL) keys = om_new_cons(table[i], keys);
-  return keys;
-}
-
 // symbol table
 
 #define symbol_table_index(st, i) ((i) % st->alloc_size)
@@ -877,12 +672,218 @@ void om_gc_chance(void)
   if (GC_LOG_P) fprintf(stderr, "after gc(used memory %d[byte])\n", used_memory);
 }
 
+// object manipulation.
+
+object om_bool(int b)
+{
+  if (b) return om_true;
+  return om_nil;
+}
+
+static int double_eq_p(double x, object p)
+{
+  int64_t i;
+  double d;
+  if (bi_may_cint64(p, &i)) return fabs(x - (double)i) < DBL_EPSILON;
+  if (bi_may_cdouble(p, &d)) return fabs(x - d) < DBL_EPSILON;
+  return FALSE;
+}
+
+static int int64_eq_p(int64_t x, object p)
+{
+  int64_t y;
+  if (bi_may_cint64(p, &y)) return x == y;
+  return double_eq_p((double)x, p);
+}
+
+static int number_eq_p(object o, object p)
+{
+  int64_t i;
+  double d;
+  if (bi_may_cint64(o, &i)) return int64_eq_p(i, p);
+  if (bi_may_cdouble(o, &d)) return double_eq_p(d, p);
+  return FALSE;
+}
+
+static int cons_eq_p(object o, object p)
+{
+  if (om_type(p) != CONS) return FALSE;
+  while (TRUE) {
+    if (o == om_nil) return p == om_nil;
+    if (p == om_nil) return o == om_nil;
+    if (!om_eq_p(o->cons.car, p->cons.car)) return FALSE;
+    o = o->cons.cdr;
+    p = p->cons.cdr;
+  }
+}
+
+static int bytes_eq_p(object o, object p)
+{
+  if (om_type(o) != om_type(p)) return FALSE;
+  if (o->mem.size != p->mem.size) return FALSE;
+  return memcmp(o->mem.elt, p->mem.elt, o->mem.size) == 0;
+}
+
+static int array_eq_p(object o, object p)
+{
+  if (om_type(p) != ARRAY) return FALSE;
+  if (o->array.size != p->array.size) return FALSE;
+  for (int i = 0; i < o->array.size; i++)
+    if (!om_eq_p(o->array.elt[i], p->array.elt[i])) return FALSE;
+  return TRUE;
+}
+
+static int dict_eq_p(object o, object p)
+{
+  if (om_type(p) != DICT) return FALSE;
+  if (o->map.entry_count != p->map.entry_count) return FALSE;
+  object v;
+  object keys = om_map_keys(o);
+  while (keys != om_nil) {
+    if ((v = om_map_get(p, keys->cons.car)) == NULL) return FALSE;
+    if (!om_eq_p(om_map_get(o, keys->cons.car), v)) return FALSE;
+    keys = keys->cons.cdr;
+  }
+  return TRUE;
+}
+
+int om_eq_p(object o, object p)
+{
+  if (o == p) return TRUE;
+  switch (om_type(o)) {
+    case SINT:
+    case XINT:
+    case XFLOAT:
+      return number_eq_p(o, p);
+    case BYTES:
+    case STRING:
+      return bytes_eq_p(o, p);
+    case CONS: return cons_eq_p(o, p);
+    case ARRAY: return array_eq_p(o, p);
+    case DICT: return dict_eq_p(o, p);
+    default: return FALSE;
+  }
+}
+
+int om_list_len(object o)
+{
+  int i = 0;
+  xassert(om_list_p(o));
+  while (o != om_nil) {
+    o = o->cons.cdr;
+    i++;
+  }
+  return i;
+}
+
+object om_list_reverse(object o)
+{
+  xassert(om_list_p(o));
+  object head = om_nil;
+  while (o != om_nil) {
+    object p = o->cons.cdr;
+    o->cons.cdr = head;
+    head = o;
+    o = p;
+  }
+  return head;
+}
+
+object om_map_get(object o, object s)
+{
+  if (o->map.half_size != 0) {
+    object p;
+    int i = om_hash(s) % o->map.half_size;
+    while ((p = o->map.table[i]) != NULL) {
+      if (om_eq_p(p, s)) return o->map.table[i + o->map.half_size];
+      if (++i == o->map.half_size) i = 0;
+    }
+  }
+  return NULL;
+}
+
+object om_map_get_propagation(object o, object s)
+{
+  object p;
+  while (o != om_nil) {
+    if ((p = om_map_get(o, s)) != NULL) return p;
+    o = o->map.top;
+  }
+  return NULL;
+}
+
+object om_map_keys(object o)
+{
+  int i;
+  object keys, *table;
+  xassert(om_type(o) == DICT);
+  table = o->map.table;
+  keys = om_nil;
+  for (i = 0; i < o->map.half_size; i++)
+    if (table[i] != NULL) keys = om_new_cons(table[i], keys);
+  return keys;
+}
+
+static void rehash(object o)
+{
+  int i, half_size;
+  object *table;
+  table = o->map.table;
+  half_size = o->map.half_size;
+  o->map.entry_count = 0;
+  o->map.half_size *= 2;
+  o->map.table = om_alloc(sizeof(object) * o->map.half_size * 2);
+  for (i = 0; i < o->map.half_size; i++) o->map.table[i] = NULL;
+  for (i = 0; i < half_size; i++)
+    if (table[i] != NULL) om_map_put(o, table[i], table[i + half_size]);
+  om_free0(sizeof(object) * half_size * 2, table);
+}
+
+void om_map_put(object o, object s, object v)
+{
+  object p;
+  xassert(o->map.half_size != 0);
+  int i = om_hash(s) % o->map.half_size;
+  while ((p = o->map.table[i]) != NULL) {
+    if (om_eq_p(p, s)) {
+      o->map.table[i + o->map.half_size] = v;
+      return;
+    }
+    if (++i == o->map.half_size) i = 0;
+  }
+  o->map.table[i] = s;
+  o->map.table[i + o->map.half_size] = v;
+  o->map.entry_count++;
+  if (o->map.entry_count * 2 > o->map.half_size) rehash(o);
+}
+
+void om_map_put_propagation(object o, object s, object v)
+{
+  while (o != om_toplevel) {
+    if (om_map_get(o, s) != NULL) {
+      om_map_put(o, s, v);
+      return;
+    }
+    o = o->map.top;
+  }
+  om_map_put(om_toplevel, s, v);
+}
+
+void om_map_foreach(object o, void (*f)(void *s, void *v))
+{
+  object *table = o->map.table;
+  for (int i = 0; i < o->map.half_size; i++)
+    if (table[i] != NULL) (*f)(table[i], table[i + o->map.half_size]);
+}
+
+// initializer.
+
 void om_init(void)
 {
   used_memory = 0;
+  heap_init(&heap);
   heap_link0 = heap_link1 = NULL;
   symbol_table_init(&st);
-  heap_init(&heap);
   xarray_init(&table0);
   xarray_init(&table1);
   table = &table0;
