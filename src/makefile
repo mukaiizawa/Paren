@@ -104,6 +104,6 @@ rw.vim: $(paren)
 	$(paren) rw | sort | sed -e 's/|/\\|/g' -e '/\[/d' -e 's/^/syn keyword ParenBuiltIn /' > rw.wk
 
 clean:
-	rm -f *.o *.out *.a *.wk $(paren)
+	rm -rf wk *.wk *.o *.out *.a $(paren)
 
 include make.d
