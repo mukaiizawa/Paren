@@ -108,7 +108,7 @@ int bi_cint(object o, int *p)
     *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
     return ip_sigerr(ArgumentError, "expected integer");
   }
-  *p = sint_val(o);
+  *p = om_sint_val(o);
   return TRUE;
 }
 
@@ -133,7 +133,7 @@ int bi_cpint64(object o, int64_t *p)
 int bi_may_cint64(object o, int64_t *p)
 {
   if (om_sint_p(o)) {
-    *p = sint_val(o);
+    *p = om_sint_val(o);
     return TRUE;
   }
   if (om_type(o) == XINT) {
@@ -291,7 +291,7 @@ DEFUN(symbol_3f_)
 DEFUN(keyword_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = om_bool(keyword_p(argv->cons.car));
+  *result = om_bool(om_keyword_p(argv->cons.car));
   return TRUE;
 }
 
@@ -1399,7 +1399,7 @@ static int bytes_access(int argc, object argv, object o, object *result)
   int i, byte;
   if (!bi_cpint(argv->cons.car, &i)) return FALSE;
   if (!bi_range(0, i, o->mem.size - 1)) return FALSE;
-  if (argc == 2) *result = sint(LC(o->mem.elt + i));
+  if (argc == 2) *result = om_new_xint(LC(o->mem.elt + i));
   else {
     if (!bi_cbyte((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
     SC(o->mem.elt + i, byte);

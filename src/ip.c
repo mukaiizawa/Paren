@@ -137,14 +137,14 @@ int ip_sigerr(enum Exception err, char *msg)
 #define   THROW_FRAME            0x112
 #define   UNWIND_PROTECT_FRAME   0x123
 
-#define fs_top() (sint_val(fs[fp]))
-#define fs_nth(i) (sint_val(fs[i]))
+#define fs_top() (om_sint_val(fs[fp]))
+#define fs_nth(i) (om_sint_val(fs[i]))
 #define set_fp(i) { fp = i; sp = next_fp(fp); }
 #define get_frame_var(base_fp, n) (fs[base_fp + 2 + n])
 #define set_frame_var(base_fp, n, o) (fs[base_fp + 2 + n] = o)
 #define frame_size(frame_type) (frame_type & FRAME_SIZE_MASK)
-#define next_fp(base_fp) (base_fp + frame_size(sint_val(fs[base_fp])))
-#define prev_fp(base_fp) (sint_val(fs[base_fp + 1]))
+#define next_fp(base_fp) (base_fp + frame_size(om_sint_val(fs[base_fp])))
+#define prev_fp(base_fp) (om_sint_val(fs[base_fp + 1]))
 #define gen0(frame_type) gen(frame_type);
 #define gen1(frame_type, lv0) \
 { \
@@ -197,10 +197,10 @@ static void dump_fs(void)
   char buf[MAX_STR_LEN];
   fprintf(stderr, "!stack trace\n");
   for (i = 0; i <= fp; i = next_fp(i)) {
-    frame_type = sint_val(fs[i]);
+    frame_type = om_sint_val(fs[i]);
     fprintf(stderr, "+-----------------------------\n");
     fprintf(stderr, "|%d: %s\n", i, frame_name(frame_type));
-    fprintf(stderr, "|%d: %d\n", i + 1, sint_val(fs[i + 1]));
+    fprintf(stderr, "|%d: %d\n", i + 1, om_sint_val(fs[i + 1]));
     for (j = 0; j < frame_size(frame_type) - 2; j++)
       fprintf(stderr, "|%d: %s\n", i + j + 2, om_describe(get_frame_var(i, j), buf));
   }
@@ -214,8 +214,8 @@ static void dump_fs(void)
 static void gen(int frame_type)
 {
   if (sp > FRAME_STACK_SIZE - STACK_GAP) ip_sigerr(StateError, "stack over flow");
-  fs[sp + 1] = sint(fp);
-  fs[sp] = sint(frame_type);
+  fs[sp + 1] = om_sint(fp);
+  fs[sp] = om_sint(frame_type);
   set_fp(sp);
 }
 
@@ -265,10 +265,10 @@ static void gen_trace(object o)
   gen2(FUNC_FRAME, cr, o);
 }
 
-static int same_symbol_keyword_p(object sym, object key)
+static int same_symbol_om_keyword_p(object sym, object key)
 {
   xassert(om_type(sym) == SYMBOL);
-  xassert(keyword_p(key));
+  xassert(om_keyword_p(key));
   if (sym->mem.size != key->mem.size - 1) return FALSE;
   return memcmp(sym->mem.elt, key->mem.elt + 1, sym->mem.size) == 0;
 }
@@ -276,10 +276,10 @@ static int same_symbol_keyword_p(object sym, object key)
 static int valid_keyword_args(object params, object args)
 {
   while (args != om_nil) {
-    if (!keyword_p(args->cons.car)) return ip_sigerr(ArgumentError, "expected keyword argument");
+    if (!om_keyword_p(args->cons.car)) return ip_sigerr(ArgumentError, "expected keyword argument");
     object p = params;
     while (p != om_nil) {
-      if (same_symbol_keyword_p(p->cons.car, args->cons.car)) break;
+      if (same_symbol_om_keyword_p(p->cons.car, args->cons.car)) break;
       p = p->cons.cdr;
     }
     if (p == om_nil) return ip_sigerr(ArgumentError, "undeclared keyword parameter");
@@ -292,10 +292,10 @@ static int valid_keyword_args(object params, object args)
 static int parse_args(void (*f)(object, object, object), object params, object args)
 {
   object o, k, v;
-  if (!list_p(params) || !list_p(args)) return ip_sigerr(ArgumentError, "expected list");
+  if (!om_list_p(params) || !om_list_p(args)) return ip_sigerr(ArgumentError, "expected list");
   // required args
   while (params != om_nil) {
-    if (keyword_p(params->cons.car)) break;
+    if (om_keyword_p(params->cons.car)) break;
     if (args == om_nil) return ip_sigerr(ArgumentError, "too few arguments");
     if (om_type(params->cons.car) == SYMBOL)
       (*f)(cr, params->cons.car, args->cons.car);
@@ -307,7 +307,7 @@ static int parse_args(void (*f)(object, object, object), object params, object a
   if (params->cons.car == om_opt) {
     params = params->cons.cdr;
     while (params != om_nil) {
-      if (keyword_p(params->cons.car)) break;
+      if (om_keyword_p(params->cons.car)) break;
       k = params->cons.car;
       if (args == om_nil) (*f)(cr, k, om_nil);
       else {
@@ -332,7 +332,7 @@ static int parse_args(void (*f)(object, object, object), object params, object a
       v = om_nil;
       args = o;
       while (args != om_nil) {
-        if (same_symbol_keyword_p(k, args->cons.car)) {
+        if (same_symbol_om_keyword_p(k, args->cons.car)) {
           v = args->cons.cdr->cons.car;
           break;
         }
@@ -423,7 +423,7 @@ static int eval_symbol(object *result)
 {
   object sym;
   if ((*result = map_get_propagation(cr, (sym = *result))) == NULL) {
-    if (keyword_p(sym)) {
+    if (om_keyword_p(sym)) {
       *result = sym;
       return TRUE;
     }
@@ -680,7 +680,7 @@ DEFUN(bound_3f_)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_SYM, argv->cons.car, &o)) return FALSE;
-  dr = om_bool(keyword_p(o) || map_get_propagation(cr, o) != NULL);
+  dr = om_bool(om_keyword_p(o) || map_get_propagation(cr, o) != NULL);
   return TRUE;
 }
 
@@ -701,9 +701,9 @@ static int pos_class_p(object o)
     && (p = map_get(o, om_super)) != NULL
     && om_type(p) == SYMBOL
     && (p = map_get(o, om_features)) != NULL
-    && list_p(p)
+    && om_list_p(p)
     && (p = map_get(o, om_fields)) != NULL
-    && list_p(p);
+    && om_list_p(p);
 }
 
 static int find_class(object cls_sym, object *result)
@@ -800,7 +800,7 @@ static int parse_rest_param(object params)
   return ip_sigerr(SyntaxError, "only one symbol can be specified for rest parameter");
 }
 
-static int parse_keyword_params(object params)
+static int parse_om_keyword_params(object params)
 {
   while (params != om_nil) {
     object p = params->cons.car;
@@ -824,7 +824,7 @@ static int parse_optional_params(object params)
     object p = params->cons.car;
     switch (om_type(p)) {
       case SYMBOL:
-        if (p == om_key) return parse_keyword_params(params->cons.cdr);
+        if (p == om_key) return parse_om_keyword_params(params->cons.cdr);
         if (p == om_rest) return parse_rest_param(params->cons.cdr);
         param_count++;
         break;
@@ -846,7 +846,7 @@ static int parse_required_params(object params)
         break;
       case SYMBOL:
         if (p == om_opt) return parse_optional_params(params->cons.cdr);
-        if (p == om_key) return parse_keyword_params(params->cons.cdr);
+        if (p == om_key) return parse_om_keyword_params(params->cons.cdr);
         if (p == om_rest) return parse_rest_param(params->cons.cdr);
         param_count++;
         break;
@@ -1174,6 +1174,6 @@ int ip_start(object args)
   trap_type = TRAP_NONE;
   intr_init();
   ip_main(args);
-  if (om_sint_p(dr)) return sint_val(dr);
+  if (om_sint_p(dr)) return om_sint_val(dr);
   return 1;
 }

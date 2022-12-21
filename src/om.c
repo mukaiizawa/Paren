@@ -41,7 +41,7 @@ object om_stack_trace;
 
 int om_hash(object o)
 {
-  if (om_sint_p(o)) return sint_val(o) & HASH_MASK;
+  if (om_sint_p(o)) return om_sint_val(o) & HASH_MASK;
   return o->header & HASH_MASK;
 }
 
@@ -164,7 +164,7 @@ static void describe_s_expr(object o, struct xbarray *x)
   if (x->size > MAX_STR_LEN) return;
   switch (om_type(o)) {
     case SINT:
-      xbarray_addf(x, "%d", sint_val(o));
+      xbarray_addf(x, "%d", om_sint_val(o));
       break;
     case XINT:
       xbarray_addf(x, "%" PRId64, o->xint.val);
@@ -328,7 +328,7 @@ int om_eq_p(object o, object p)
 int list_len(object o)
 {
   int i;
-  xassert(list_p(o));
+  xassert(om_list_p(o));
   for (i = 0; om_type(o) == CONS; i++) o = o->cons.cdr;
   return i;
 }
@@ -336,7 +336,7 @@ int list_len(object o)
 object list_reverse(object o)
 {
   object p, acc;
-  xassert(list_p(o));
+  xassert(om_list_p(o));
   acc = om_nil;
   while (o != om_nil) {
     p = o->cons.cdr;
@@ -577,7 +577,7 @@ void gc_free(object o)
 object om_new_xint(int64_t val)
 {
   object o;
-  if (SINT_MIN <= val && val <= SINT_MAX) return sint((int)val);
+  if (SINT_MIN <= val && val <= SINT_MAX) return om_sint((int)val);
   o = om_alloc(sizeof(struct xint));
   set_type(o, XINT);
   set_hash(o, num_hash((double)val));
