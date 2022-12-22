@@ -1235,9 +1235,8 @@ DEFUN(keys)
 
 static int cons_slice(object o, int start, int stop, object *result)
 {
-  int i;
   object tail;
-  for (i = 0; i < start; i++)
+  for (int i = 0; i < start; i++)
     if ((o = o->cons.cdr) == om_nil) break;
   if (o == om_nil) {
     *result = om_nil;
@@ -1247,7 +1246,7 @@ static int cons_slice(object o, int start, int stop, object *result)
   if (stop != -1) {
     if (start == stop) *result = om_nil;
     else {
-      for (i = start + 1; i < stop; i++)
+      for (int i = start + 1; i < stop; i++)
         if ((tail = tail->cons.cdr) == om_nil) return TRUE;
       tail->cons.cdr = om_nil;
     }
