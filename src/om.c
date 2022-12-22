@@ -682,9 +682,9 @@ object om_bool(int b)
 
 static int double_eq_p(double x, object p)
 {
-  double d;
-  if (!bi_may_cdouble(p, &d)) return FALSE;
-  return fabs(x - d) < DBL_EPSILON;
+  double y;
+  if (!bi_may_cdouble(p, &y)) return FALSE;
+  return fabs(x - y) < DBL_EPSILON;
 }
 
 static int int64_eq_p(int64_t x, object p)
