@@ -356,7 +356,7 @@ static int om_byte_size(object o)
   }
 }
 
-void gc_free(object o)
+void om_free(object o)
 {
   switch (om_type(o)) {
     case DICT:
@@ -412,9 +412,8 @@ object om_new_cons(object car, object cdr)
 
 object om_copy_cons(object o, object *tail)
 {
-  object head;
   if (o == om_nil) return om_nil;
-  head = *tail = new_cons();
+  object head = *tail = new_cons();
   (*tail)->cons.car = o->cons.car;
   while ((o = o->cons.cdr) != om_nil) {
     *tail = (*tail)->cons.cdr = new_cons();
@@ -435,9 +434,8 @@ object om_coerce_mem_string(object o)
 
 static object new_mem(int type, int size)
 {
-  object o;
   xassert(size >= 0);
-  o = om_alloc(sizeof(struct mem) + size - 1);
+  object o = om_alloc(sizeof(struct mem) + size - 1);
   set_type(o, type);
   o->mem.size = size;
   regist(o);
@@ -446,27 +444,24 @@ static object new_mem(int type, int size)
 
 object om_new_mem(int type, int size)
 {
-  object o;
-  o = new_mem(type, size);
+  object o = new_mem(type, size);
   memset(o->mem.elt, 0, size);
   return o;
 }
 
 static object new_mem_from(int type, char *val, int size)
 {
-  object o;
-  o = new_mem(type, size);
+  object o = new_mem(type, size);
   memcpy(o->mem.elt, val, size);
   return o;
 }
 
 object om_new_mem_from(int type, char *val, int size)
 {
-  int hval;
   object o;
   switch (type) {
     case SYMBOL:
-      hval = mem_hash(val, size);
+      int hval = mem_hash(val, size);
       if ((o = symbol_table_get(&st, val, size, hval)) != NULL) return o;
       o = new_mem_from(type, val, size);
       set_hash(o, hval);
@@ -476,8 +471,7 @@ object om_new_mem_from(int type, char *val, int size)
       set_hash(o, mem_hash(val, size));
       return o;
     case BYTES:
-      o = new_mem_from(type, val, size);
-      return o;
+      return new_mem_from(type, val, size);
     default:
       xassert(FALSE);
       return NULL;
@@ -496,8 +490,7 @@ object om_new_mem_from_xbarray(int type, struct xbarray *x)
 
 object om_new_cstring(object o)
 {
-  object p;
-  p = om_new_mem_from(STRING, o->mem.elt, o->mem.size + 1);
+  object p = om_new_mem_from(STRING, o->mem.elt, o->mem.size + 1);
   SC(p->mem.elt + o->mem.size, '\0');
   return p;
 }
@@ -515,32 +508,27 @@ static object new_array(int size)
 
 object om_new_array(int size)
 {
-  int i;
-  object o;
-  o = new_array(size);
-  for (i = 0; i < size; i++) o->array.elt[i] = om_nil;
+  object o = new_array(size);
+  for (int i = 0; i < size; i++) o->array.elt[i] = om_nil;
   return o;
 }
 
 object om_new_array_from(object *o, int size)
 {
-  object p;
-  p = new_array(size);
+  object p = new_array(size);
   memcpy(p->array.elt, o, size * sizeof(object));
   return p;
 }
 
 static object new_map(int type, int half_size, object top)
 {
-  int i;
-  object o;
-  o = om_alloc(sizeof(struct map));
+  object o = om_alloc(sizeof(struct map));
   set_type(o, type);
   o->map.top = top;
   o->map.entry_count = 0;
   o->map.half_size = half_size;
   if (half_size != 0) o->map.table = om_alloc(sizeof(object) * half_size * 2);
-  for (i = 0; i < half_size; i++) o->map.table[i] = NULL;
+  for (int i = 0; i < half_size; i++) o->map.table[i] = NULL;
   regist(o);
   return o;
 }
@@ -552,9 +540,8 @@ object om_new_dict(void)
 
 static object new_proc(int type, object env, int param_count, object params, object body)
 {
-  object o;
   xassert(om_type(env) == ENV);
-  o = om_alloc(sizeof(struct proc));
+  object o = om_alloc(sizeof(struct proc));
   o->proc.env = env;
   o->proc.param_count = param_count;
   o->proc.params = params;
@@ -576,8 +563,7 @@ object om_new_func(object env, int param_count, object params, object body)
 
 object om_new_native(int type, object name, void *p)
 {
-  object o;
-  o = om_alloc(sizeof(struct native));
+  object o = om_alloc(sizeof(struct native));
   o->native.name = name;
   o->native.u.p = p;
   set_type(o, type);
@@ -598,9 +584,7 @@ static void mark_binding(void *key, void *val)
 
 void om_mark(object o)
 {
-  int i;
-  if (om_sint_p(o)) return;
-  if (alive_p(o)) return;
+  if (om_sint_p(o) || alive_p(o)) return;
   set_alive(o);
   switch (om_type(o)) {
     case CONS:
@@ -611,7 +595,8 @@ void om_mark(object o)
       }
       break;
     case ARRAY:
-      for (i = 0; i < o->array.size; i++) om_mark(o->array.elt[i]);
+      for (int i = 0; i < o->array.size; i++)
+        om_mark(o->array.elt[i]);
       break;
     case DICT:
       om_map_foreach(o, mark_binding);
@@ -642,22 +627,18 @@ static void switch_table(void)
   table = p;
 }
 
-static void sweep_s_expr(void)
+static void mark_and_sweep(void)
 {
-  int i;
-  object o;
+  ip_mark_object();
   switch_table();
   xarray_reset(table);
   symbol_table_reset(&st);
-  for (i = 0; i < table_wk->size; i++) {
-    o = table_wk->elt[i];
-    if (!alive_p(o)) gc_free(o);
+  for (int i = 0; i < table_wk->size; i++) {
+    object o = table_wk->elt[i];
+    if (!alive_p(o)) om_free(o);
     else {
       set_dead(o);
-      switch (om_type(o)) {
-        case SYMBOL: symbol_table_put(&st, o); break;
-        default: break;
-      }
+      if (om_type(o) == SYMBOL) symbol_table_put(&st, o);
       regist(o);
     }
   }
@@ -667,8 +648,7 @@ void om_gc_chance(void)
 {
   if (used_memory < om_gc_chance_MEMORY) return;
   if (GC_LOG_P) fprintf(stderr, "before gc(used memory %d[byte])\n", used_memory);
-  ip_mark_object();
-  sweep_s_expr();
+  mark_and_sweep();
   if (GC_LOG_P) fprintf(stderr, "after gc(used memory %d[byte])\n", used_memory);
 }
 
