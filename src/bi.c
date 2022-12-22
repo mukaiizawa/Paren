@@ -1235,22 +1235,13 @@ DEFUN(keys)
 
 static int cons_slice(object o, int start, int stop, object *result)
 {
-  object tail;
+  int size, ignore_size_p;
+  *result = om_nil;
+  if (!(ignore_size_p = (stop == -1)) && (size = stop - start) == 0) return TRUE;
   for (int i = 0; i < start; i++)
-    if ((o = o->cons.cdr) == om_nil) break;
-  if (o == om_nil) {
-    *result = om_nil;
-    return TRUE;
-  }
-  *result = tail = om_copy_cons(o, &tail);
-  if (stop != -1) {
-    if (start == stop) *result = om_nil;
-    else {
-      for (int i = start + 1; i < stop; i++)
-        if ((tail = tail->cons.cdr) == om_nil) return TRUE;
-      tail->cons.cdr = om_nil;
-    }
-  }
+    if ((o = o->cons.cdr) == om_nil) return TRUE;
+  if (o == om_nil) return TRUE;
+  *result = om_copy_cons(o, size, ignore_size_p);
   return TRUE;
 }
 

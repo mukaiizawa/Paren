@@ -410,16 +410,18 @@ object om_new_cons(object car, object cdr)
   return o;
 }
 
-object om_copy_cons(object o, object *tail)
+object om_copy_cons(object o, int size, int ignore_size_p)
 {
-  if (o == om_nil) return om_nil;
-  object head = *tail = new_cons();
-  (*tail)->cons.car = o->cons.car;
+  xassert(om_type(o) == CONS && (ignore_size_p || size != 0));
+  object head = new_cons();
+  object tail = head;
+  tail->cons.car = o->cons.car;
   while ((o = o->cons.cdr) != om_nil) {
-    *tail = (*tail)->cons.cdr = new_cons();
-    (*tail)->cons.car = o->cons.car;
+    if (!ignore_size_p && --size == 0) break;
+    tail = tail->cons.cdr = new_cons();
+    tail->cons.car = o->cons.car;
   }
-  (*tail)->cons.cdr = om_nil;
+  tail->cons.cdr = om_nil;
   return head;
 }
 
@@ -755,7 +757,6 @@ object om_list_reverse(object o)
 
 object om_map_get(object o, object s)
 {
-  xassert(om_type(o) == DICT);
   if (o->map.half_size != 0) {
     object p;
     int i = om_hash(s) % o->map.half_size;
