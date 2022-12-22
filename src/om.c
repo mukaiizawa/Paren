@@ -288,7 +288,7 @@ static object symbol_table_put(struct symbol_table *st, object sym)
   return sym;
 }
 
-// memory allocater & garbage collector
+// constructor & garbage collector
 
 static void *om_alloc(int size)
 {

@@ -115,7 +115,7 @@ enum Exception {
       SyntaxError
 };
 
-// memory allocater.
+// constructor.
 extern object om_new_xint(int64_t val);
 extern object om_new_xfloat(double val);
 extern object om_new_cons(object car, object cdr);
