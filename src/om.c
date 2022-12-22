@@ -410,14 +410,14 @@ object om_new_cons(object car, object cdr)
   return o;
 }
 
-object om_copy_cons(object o, int size, int ignore_size_p)
+object om_copy_cons(object o, int size)
 {
-  xassert(om_type(o) == CONS && (ignore_size_p || size != 0));
+  xassert(om_type(o) == CONS);
   object head = new_cons();
   object tail = head;
   tail->cons.car = o->cons.car;
   while ((o = o->cons.cdr) != om_nil) {
-    if (!ignore_size_p && --size == 0) break;
+    if (size && --size == 0) break;    // if size == 0, entire cons.
     tail = tail->cons.cdr = new_cons();
     tail->cons.car = o->cons.car;
   }
