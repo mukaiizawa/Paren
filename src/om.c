@@ -499,9 +499,8 @@ object om_new_cstring(object o)
 
 static object new_array(int size)
 {
-  object o;
   xassert(size >= 0);
-  o = om_alloc(sizeof(struct array) + sizeof(object) * (size - 1));
+  object o = om_alloc(sizeof(struct array) + sizeof(object) * (size - 1));
   set_type(o, ARRAY);
   o->array.size = size;
   regist(o);
@@ -530,7 +529,8 @@ static object new_map(int type, int half_size, object top)
   o->map.entry_count = 0;
   o->map.half_size = half_size;
   if (half_size != 0) o->map.table = om_alloc(sizeof(object) * half_size * 2);
-  for (int i = 0; i < half_size; i++) o->map.table[i] = NULL;
+  for (int i = 0; i < half_size; i++)
+    o->map.table[i] = NULL;
   regist(o);
   return o;
 }
