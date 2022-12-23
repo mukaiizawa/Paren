@@ -462,42 +462,50 @@ DEFUN(list)
   return TRUE;
 }
 
+static int str_to_list(object o, object *result)
+{
+  int i = 0;
+  object ch;
+  object p = om_nil;
+  while (i < o->mem.size) {
+    if (!ch_at(o, &i, &ch)) return FALSE;
+    p = om_new_cons(ch, p);
+  }
+  *result = om_list_reverse(p);
+  return TRUE;
+}
+
+static int bytes_to_list(object o, object *result)
+{
+  object p = om_nil;
+  for (int i = 0; i < o->mem.size; i++)
+    p = om_new_cons(om_sint(LC(o->mem.elt + i)), p);
+  *result = om_list_reverse(p);
+  return TRUE;
+}
+
+static int array_to_list(object o, object *result)
+{
+  object p = om_nil;
+  for (int i = 0; i < o->array.size; i++)
+    p = om_new_cons(o->array.elt[i], p);
+  *result = om_list_reverse(p);
+  return TRUE;
+}
+
 DEFUN(list_2e__2e__2e_)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
-  *result = om_nil;
   switch (om_type(o)) {
-    case SYMBOL:
-      break;
-    case CONS:
-      while (o != om_nil) {
-        *result = om_new_cons(o->cons.car, *result);
-        o = o->cons.cdr;
-      }
-      break;
-    case STRING:
-      object p = NULL;
-      for (int i = 0; i < o->mem.size;) {
-        if (!ch_at(o, &i, &p)) return FALSE;
-        *result = om_new_cons(p, *result);
-      }
-      break;
-    case BYTES:
-      for (int i = 0; i < o->mem.size; i++)
-        *result = om_new_cons(om_new_xint(LC(o->mem.elt + i)), *result);
-      break;
-    case ARRAY:
-      for (int i = 0; i < o->array.size; i++)
-        *result = om_new_cons(o->array.elt[i], *result);
-      break;
-    default:
-      xassert(FALSE);
-      return FALSE;
+    case SYMBOL: *result = om_nil; return TRUE;
+    case CONS: *result = om_copy_cons(o, -1); return TRUE;
+    case STRING: return str_to_list(o, result);
+    case BYTES: return bytes_to_list(o, result);
+    case ARRAY: return array_to_list(o, result);
+    default: xassert(FALSE); return FALSE;
   }
-  *result = om_list_reverse(*result);
-  return TRUE;
 }
 
 DEFUN(car)
@@ -1171,7 +1179,6 @@ static int str_to_array(object o, object *result)
   *result = om_new_array(size);
   for (i = 0, j = 0; i < size; i++)
     ch_at(o, &j, ((*result)->array.elt + i));
-  xassert(j == o->mem.size);
   return TRUE;
 }
 
