@@ -500,7 +500,7 @@ DEFUN(list_2e__2e__2e_)
   if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
   switch (om_type(o)) {
     case SYMBOL: *result = om_nil; return TRUE;
-    case CONS: *result = om_copy_cons(o, -1); return TRUE;
+    case CONS: *result = om_copy_cons(o, 0); return TRUE;
     case STRING: return str_to_list(o, result);
     case BYTES: return bytes_to_list(o, result);
     case ARRAY: return array_to_list(o, result);
