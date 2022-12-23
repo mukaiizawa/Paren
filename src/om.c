@@ -312,8 +312,7 @@ static void *om_alloc(int size)
 
 static void om_free0(void *p, int size)
 {
-  object o;
-  o = p;
+  object o = p;
   if (size <= LINK0_SIZE) {
     size = LINK0_SIZE;
     o->next = heap_link0;
