@@ -465,7 +465,7 @@ DEFUN(list)
 static int str_to_list(object o, object *result)
 {
   int i = 0;
-  object ch;
+  object ch = NULL;
   object p = om_nil;
   while (i < o->mem.size) {
     if (!ch_at(o, &i, &ch)) return FALSE;
