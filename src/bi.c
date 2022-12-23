@@ -1888,18 +1888,13 @@ DEFUN(fputc)
 
 DEFUN(fgets)
 {
-  char *s;
   FILE *fp;
-  struct xbarray x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_fp(argv->cons.car, &fp)) return FALSE;
+  struct xbarray x;
   xbarray_init(&x);
-  s = xbarray_fgets(&x, fp);
-  if (s == NULL) *result = om_nil;
-  else {
-    *result = om_new_mem(STRING, --x.size);    // remove last NUL
-    memcpy((*result)->mem.elt, x.elt, x.size);
-  }
+  if (xbarray_fgets(&x, fp) == NULL) *result = om_nil;
+  else *result = om_new_mem_from_cstr(STRING, x.elt);
   xbarray_free(&x);
   return TRUE;
 }
