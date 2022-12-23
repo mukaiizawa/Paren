@@ -120,7 +120,7 @@ extern object om_new_xint(int64_t val);
 extern object om_new_xfloat(double val);
 extern object om_new_cons(object car, object cdr);
 extern object om_copy_cons(object o, int size);
-extern object om_new_mem(int type, int size);
+extern object om_new_bytes(int size);
 extern object om_new_mem_from(int type, char *val, int size);
 extern object om_new_mem_from_cstr(int type, char *cstr);
 extern object om_new_mem_from_xbarray(int type, struct xbarray *x);

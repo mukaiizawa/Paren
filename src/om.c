@@ -236,20 +236,17 @@ char *om_describe(object o, char *buf)
 // symbol table
 
 #define symbol_table_index(st, i) ((i) % st->alloc_size)
-#define symbol_table_bytelen(st) (om_alloc(sizeof(object) * (st->size)))
-#define symbol_table_alloc(size) (om_alloc(sizeof(object) * (size)))
 
 struct symbol_table {
-  int size;
-  int alloc_size;
+  int size, alloc_size;
   object *table;
 };
 
 static void symbol_table_reset(struct symbol_table *st)
 {
-  int i;
   st->size = 0;
-  for (i = 0; i < st->alloc_size; i++) st->table[i] = NULL;
+  for (int i = 0; i < st->alloc_size; i++)
+    st->table[i] = NULL;
 }
 
 static void symbol_table_init(struct symbol_table *st)
@@ -425,15 +422,6 @@ object om_copy_cons(object o, int size)
   return head;
 }
 
-object om_coerce_mem_string(object o)
-{
-  xassert(om_type(o) == BYTES);
-  o->header &= ~TYPE_MASK;
-  set_type(o, STRING);
-  set_hash(o, mem_hash(o->mem.elt, o->mem.size));
-  return o;
-}
-
 static object new_mem(int type, int size)
 {
   xassert(size >= 0);
@@ -444,9 +432,9 @@ static object new_mem(int type, int size)
   return o;
 }
 
-object om_new_mem(int type, int size)
+object om_new_bytes(int size)
 {
-  object o = new_mem(type, size);
+  object o = new_mem(BYTES, size);
   memset(o->mem.elt, 0, size);
   return o;
 }
@@ -495,6 +483,15 @@ object om_new_cstring(object o)
   object p = om_new_mem_from(STRING, o->mem.elt, o->mem.size + 1);
   SC(p->mem.elt + o->mem.size, '\0');
   return p;
+}
+
+object om_coerce_mem_string(object o)
+{
+  xassert(om_type(o) == BYTES);
+  o->header &= ~TYPE_MASK;
+  set_type(o, STRING);
+  set_hash(o, mem_hash(o->mem.elt, o->mem.size));
+  return o;
 }
 
 static object new_array(int size)

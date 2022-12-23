@@ -926,7 +926,7 @@ DEFUN(bytes)
   int i;
   if (argc == 1 && om_type(argv->cons.car) == SINT) {
     if (!bi_cpint(argv->cons.car, &i)) return FALSE;
-    *result = om_new_mem(BYTES, i);
+    *result = om_new_bytes(i);
     return TRUE;
   }
   return bytes_like_to(BYTES, argc, argv, result);
