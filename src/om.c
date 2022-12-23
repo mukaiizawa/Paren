@@ -448,24 +448,15 @@ static object new_mem_from(int type, char *val, int size)
 
 object om_new_mem_from(int type, char *val, int size)
 {
+  xassert(type == BYTES || type == STRING || type == SYMBOL);
+  if (type == BYTES) return new_mem_from(BYTES, val, size);
+  int hval = mem_hash(val, size);
   object o;
-  switch (type) {
-    case SYMBOL:
-      int hval = mem_hash(val, size);
-      if ((o = symbol_table_get(&st, val, size, hval)) != NULL) return o;
-      o = new_mem_from(type, val, size);
-      set_hash(o, hval);
-      return symbol_table_put(&st, o);
-    case STRING:
-      o = new_mem_from(type, val, size);
-      set_hash(o, mem_hash(val, size));
-      return o;
-    case BYTES:
-      return new_mem_from(type, val, size);
-    default:
-      xassert(FALSE);
-      return NULL;
-  }
+  if (type == SYMBOL && (o = symbol_table_get(&st, val, size, hval)) != NULL) return o;
+  o = new_mem_from(type, val, size);
+  set_hash(o, hval);
+  if (type == STRING) return o;
+  return symbol_table_put(&st, o);
 }
 
 object om_new_mem_from_cstr(int type, char *cstr)

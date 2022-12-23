@@ -1894,7 +1894,7 @@ DEFUN(fgets)
   struct xbarray x;
   xbarray_init(&x);
   if (xbarray_fgets(&x, fp) == NULL) *result = om_nil;
-  else *result = om_new_mem_from_cstr(STRING, x.elt);
+  else *result = om_new_mem_from(STRING, x.elt, x.size - 1);    // remove last NUL
   xbarray_free(&x);
   return TRUE;
 }
