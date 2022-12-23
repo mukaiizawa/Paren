@@ -368,9 +368,8 @@ void om_free(object o)
 
 object om_new_xint(int64_t val)
 {
-  object o;
   if (SINT_MIN <= val && val <= SINT_MAX) return om_sint((int)val);
-  o = om_alloc(sizeof(struct xint));
+  object o = om_alloc(sizeof(struct xint));
   set_type(o, XINT);
   set_hash(o, num_hash((double)val));
   o->xint.val = val;
@@ -380,8 +379,7 @@ object om_new_xint(int64_t val)
 
 object om_new_xfloat(double val)
 {
-  object o;
-  o = om_alloc(sizeof(struct xfloat));
+  object o = om_alloc(sizeof(struct xfloat));
   set_type(o, XFLOAT);
   set_hash(o, num_hash(val));
   o->xfloat.val = val;
@@ -391,8 +389,7 @@ object om_new_xfloat(double val)
 
 static object new_cons(void)
 {
-  object o;
-  o = om_alloc(sizeof(struct cons));
+  object o = om_alloc(sizeof(struct cons));
   set_type(o, CONS);
   regist(o);
   return o;
@@ -400,8 +397,7 @@ static object new_cons(void)
 
 object om_new_cons(object car, object cdr)
 {
-  object o;
-  o = new_cons();
+  object o = new_cons();
   o->cons.car = car;
   o->cons.cdr = cdr;
   return o;
