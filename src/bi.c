@@ -2110,7 +2110,7 @@ DEFUN(utcoffset)
 DEFUN(popen)
 {
   char *cmd, *mode;
-  intptr_t i;
+  int64_t i;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cstring(argv->cons.car, &cmd)) return FALSE;
