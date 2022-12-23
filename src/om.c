@@ -20,7 +20,7 @@ static object heap_link0, heap_link1;
 static struct xarray *table, *table_wk, table0, table1;
 
 static void *om_alloc(int size);
-static void om_free0(int size, void *p);
+static void om_free0(void *p, int size);
 
 object om_toplevel;
 object om_nil;
@@ -277,7 +277,7 @@ static object symbol_table_put(struct symbol_table *st, object sym)
     symbol_table_reset(st);
     for (i = 0; i < alloc_size; i++)
       if ((o = table[i]) != NULL) symbol_table_put(st, o);
-    om_free0(alloc_size, table);
+    om_free0(table, sizeof(object) * alloc_size);
   }
   i = symbol_table_index(st, om_hash(sym));
   while (st->table[i] != NULL) i = symbol_table_index(st, i + 1);
@@ -310,7 +310,7 @@ static void *om_alloc(int size)
   return o;
 }
 
-static void om_free0(int size, void *p)
+static void om_free0(void *p, int size)
 {
   object o;
   o = p;
@@ -326,44 +326,39 @@ static void om_free0(int size, void *p)
   used_memory -= size;
 }
 
-static int om_byte_size(object o)
-{
-  switch (om_type(o)) {
-    case XINT:
-      return sizeof(struct xint);
-    case XFLOAT:
-      return sizeof(struct xfloat);
-    case CONS:
-      return sizeof(struct cons);
-    case SYMBOL:
-    case STRING:
-    case BYTES:
-      return sizeof(struct mem) + o->mem.size - 1;
-    case ARRAY:
-      return sizeof(struct array) + sizeof(object) * (o->array.size - 1);
-    case MACRO:
-    case FUNC:
-      return sizeof(struct proc);
-    case ENV:
-    case DICT:
-      return sizeof(struct map);
-    default:
-      xassert(FALSE);
-      return -1;
-  }
-}
-
 void om_free(object o)
 {
   switch (om_type(o)) {
-    case DICT:
+    case XINT:
+      om_free0(o, sizeof(struct xint));
+      break;
+    case XFLOAT:
+      om_free0(o, sizeof(struct xfloat));
+      break;
+    case CONS:
+      om_free0(o, sizeof(struct cons));
+      break;
+    case SYMBOL:
+    case STRING:
+    case BYTES:
+      om_free0(o, sizeof(struct mem) + o->mem.size - 1);
+      break;
+    case ARRAY:
+      om_free0(o, sizeof(struct array) + sizeof(object) * (o->array.size - 1));
+      break;
+    case MACRO:
+    case FUNC:
+      om_free0(o, sizeof(struct proc));
+      break;
     case ENV:
-      if (o->map.half_size != 0) om_free0(sizeof(object) * o->map.half_size * 2, o->map.table);
+    case DICT:
+      if (o->map.half_size != 0) om_free0(o->map.table, sizeof(object) * o->map.half_size * 2);
+      om_free0(o, sizeof(struct map));
       break;
     default:
+      xassert(FALSE);
       break;
   }
-  om_free0(om_byte_size(o), o);
 }
 
 object om_new_xint(int64_t val)
@@ -783,7 +778,7 @@ static void rehash(object o)
     o->map.table[i] = NULL;
   for (int i = 0; i < half_size; i++)
     if (table[i] != NULL) om_map_put(o, table[i], table[i + half_size]);
-  om_free0(sizeof(object) * half_size * 2, table);
+  om_free0(table, sizeof(object) * half_size * 2);
 }
 
 void om_map_put(object o, object s, object v)
