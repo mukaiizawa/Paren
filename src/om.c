@@ -781,8 +781,8 @@ object om_map_get_propagation(object o, object s)
 object om_map_keys(object o)
 {
   xassert(om_type(o) == DICT);
-  object *table = o->map.table;
   object keys = om_nil;
+  object *table = o->map.table;
   for (int i = 0; i < o->map.half_size; i++)
     if (table[i] != NULL) keys = om_new_cons(table[i], keys);
   return keys;
@@ -795,7 +795,8 @@ static void rehash(object o)
   o->map.entry_count = 0;
   o->map.half_size *= 2;
   o->map.table = om_alloc(sizeof(object) * o->map.half_size * 2);
-  for (int i = 0; i < o->map.half_size; i++) o->map.table[i] = NULL;
+  for (int i = 0; i < o->map.half_size; i++)
+    o->map.table[i] = NULL;
   for (int i = 0; i < half_size; i++)
     if (table[i] != NULL) om_map_put(o, table[i], table[i + half_size]);
   om_free0(sizeof(object) * half_size * 2, table);
@@ -803,8 +804,8 @@ static void rehash(object o)
 
 void om_map_put(object o, object s, object v)
 {
-  object p;
   xassert(o->map.half_size != 0);
+  object p;
   int i = om_hash(s) % o->map.half_size;
   while ((p = o->map.table[i]) != NULL) {
     if (om_eq_p(p, s)) {
