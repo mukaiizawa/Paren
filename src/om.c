@@ -114,9 +114,8 @@ static void describe_cons(object o, struct xbarray *x)
 
 static void describe_mem(object o, struct xbarray *x)
 {
-  int i;
   xbarray_adds(x, "#<");
-  for (i = 0; i < o->mem.size; i++) {
+  for (int i = 0; i < o->mem.size; i++) {
     if (i == 5) {
       xbarray_adds(x, "...");
       break;
@@ -129,9 +128,8 @@ static void describe_mem(object o, struct xbarray *x)
 
 static void describe_array(object o, struct xbarray *x)
 {
-  int i;
   xbarray_adds(x, "#[ ");
-  for (i = 0; i < o->array.size; i++) {
+  for (int i = 0; i < o->array.size; i++) {
     if (i == 5) {
       xbarray_adds(x, "...");
       break;
@@ -145,10 +143,9 @@ static void describe_array(object o, struct xbarray *x)
 
 static void describe_map(object o, struct xbarray *x)
 {
-  int i;
   object p;
   xbarray_adds(x, "#{ ");
-  for (i = 0; i < o->map.half_size; i++) {
+  for (int i = 0; i < o->map.half_size; i++) {
     if ((p = o->map.table[i]) == NULL) continue;
     describe_s_expr(o->map.table[i], x);
     xbarray_add(x, ' ');
