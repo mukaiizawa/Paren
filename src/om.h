@@ -141,10 +141,10 @@ extern void om_gc_chance(void);
 // object manipulation.
 extern int om_hash(object o);
 extern int om_type(object o);
-extern int om_eq_p(object o, object p);
-extern int om_list_len(object o);
 extern char *om_describe(object o, char *buf);
+extern int om_eq_p(object o, object p);
 extern object om_bool(int b);
+extern int om_list_len(object o);
 extern object om_list_reverse(object o);
 extern object om_map_keys(object o);
 extern object om_map_get(object o, object s);

@@ -39,6 +39,8 @@ object om_Exception;
 object om_message;
 object om_stack_trace;
 
+// header access
+
 int om_hash(object o)
 {
   if (om_sint_p(o)) return om_sint_val(o) & HASH_MASK;
@@ -47,8 +49,9 @@ int om_hash(object o)
 
 static int mem_hash(char *p, int size)
 {
-  int i, hval;
-  for (i = hval = 0; i < size; i++) hval = hval * 137 + LC(p + i);
+  int hval;
+  for (int i = hval = 0; i < size; i++)
+    hval = hval * 137 + LC(p + i);
   return hval & HASH_MASK;
 }
 
@@ -94,140 +97,6 @@ static void set_type(object o, int type)
 {
   xassert((o->header & TYPE_MASK) == 0);
   o->header |= type;
-}
-
-static void xbarray_add_mem(struct xbarray *x, object o)
-{
-  memcpy(xbarray_reserve(x, o->mem.size), o->mem.elt, o->mem.size);
-}
-
-static void describe_s_expr(object o, struct xbarray *x);
-static void describe_cons(object o, struct xbarray *x)
-{
-  describe_s_expr(o->cons.car, x);
-  while ((o = o->cons.cdr) != om_nil) {
-    xbarray_add(x, ' ');
-    describe_s_expr(o->cons.car, x);
-    if (x->size > MAX_STR_LEN) return;
-  }
-}
-
-static void describe_mem(object o, struct xbarray *x)
-{
-  xbarray_adds(x, "#<");
-  for (int i = 0; i < o->mem.size; i++) {
-    if (i == 5) {
-      xbarray_adds(x, "...");
-      break;
-    }
-    xbarray_addf(x, "0x%02x ", LC(o->mem.elt + i));
-    if (x->size > MAX_STR_LEN) return;
-  }
-  xbarray_add(x, '>');
-}
-
-static void describe_array(object o, struct xbarray *x)
-{
-  xbarray_adds(x, "#[ ");
-  for (int i = 0; i < o->array.size; i++) {
-    if (i == 5) {
-      xbarray_adds(x, "...");
-      break;
-    }
-    describe_s_expr(o->array.elt[i], x);
-    xbarray_add(x, ' ');
-    if (x->size > MAX_STR_LEN) return;
-  }
-  xbarray_add(x, ']');
-}
-
-static void describe_map(object o, struct xbarray *x)
-{
-  object p;
-  xbarray_adds(x, "#{ ");
-  for (int i = 0; i < o->map.half_size; i++) {
-    if ((p = o->map.table[i]) == NULL) continue;
-    describe_s_expr(o->map.table[i], x);
-    xbarray_add(x, ' ');
-    describe_s_expr(o->map.table[i + o->map.half_size], x);
-    xbarray_add(x, ' ');
-    if (x->size > MAX_STR_LEN) return;
-  }
-  xbarray_add(x, '}');
-}
-
-static void describe_s_expr(object o, struct xbarray *x)
-{
-  if (x->size > MAX_STR_LEN) return;
-  switch (om_type(o)) {
-    case SINT:
-      xbarray_addf(x, "%d", om_sint_val(o));
-      break;
-    case XINT:
-      xbarray_addf(x, "%" PRId64, o->xint.val);
-      break;
-    case XFLOAT:
-      xbarray_addf(x, "%g", o->xfloat.val);
-      break;
-    case CONS:
-      xbarray_add(x, '(');
-      describe_cons(o, x);
-      xbarray_add(x, ')');
-      break;
-    case STRING:
-      xbarray_add(x, '"');
-      xbarray_add_mem(x, o);
-      xbarray_add(x, '"');
-      break;
-    case BFUNC:
-    case SPECIAL:
-      o = o->native.name;
-    case SYMBOL:
-      xbarray_add_mem(x, o);
-      break;
-    case BYTES:
-      describe_mem(o, x);
-      break;
-    case ARRAY:
-      describe_array(o, x);
-      break;
-    case DICT:
-      describe_map(o, x);
-      break;
-    case MACRO:
-    case FUNC:
-      if (om_type(o) == MACRO) xbarray_adds(x, "(macro ");
-      else xbarray_adds(x, "(f ");
-      if (o->proc.params == om_nil) xbarray_adds(x, "()");
-      else describe_s_expr(o->proc.params, x);
-      if (o->proc.body != om_nil) {
-        xbarray_add(x, ' ');
-        describe_cons(o->proc.body, x);
-      }
-      xbarray_add(x, ')');
-      break;
-    case ENV:
-      xbarray_addf(x, "#(:environment 0x%p :top 0x%p)", o, o->map.top);
-      break;
-    default:
-      xassert(FALSE);
-  }
-}
-
-char *om_describe(object o, char *buf)
-{
-  struct xbarray x;
-  xassert(o != NULL);
-  xbarray_init(&x);
-  describe_s_expr(o, &x);
-  xbarray_add(&x,'\0');
-  if (x.size <= MAX_STR_LEN) memcpy(buf, x.elt, x.size);
-  else {
-    memcpy(buf, x.elt, MAX_STR_LEN - 4);
-    strcpy(buf + MAX_STR_LEN - 4, "...");
-  }
-  xbarray_free(&x);
-  return buf;
 }
 
 // symbol table
@@ -630,6 +499,140 @@ void om_gc_chance(void)
 }
 
 // object manipulation.
+
+static void xbarray_add_mem(struct xbarray *x, object o)
+{
+  memcpy(xbarray_reserve(x, o->mem.size), o->mem.elt, o->mem.size);
+}
+
+static void describe_s_expr(object o, struct xbarray *x);
+static void describe_cons(object o, struct xbarray *x)
+{
+  describe_s_expr(o->cons.car, x);
+  while ((o = o->cons.cdr) != om_nil) {
+    xbarray_add(x, ' ');
+    describe_s_expr(o->cons.car, x);
+    if (x->size > MAX_STR_LEN) return;
+  }
+}
+
+static void describe_mem(object o, struct xbarray *x)
+{
+  xbarray_adds(x, "#<");
+  for (int i = 0; i < o->mem.size; i++) {
+    if (i == 5) {
+      xbarray_adds(x, "...");
+      break;
+    }
+    xbarray_addf(x, "0x%02x ", LC(o->mem.elt + i));
+    if (x->size > MAX_STR_LEN) return;
+  }
+  xbarray_add(x, '>');
+}
+
+static void describe_array(object o, struct xbarray *x)
+{
+  xbarray_adds(x, "#[ ");
+  for (int i = 0; i < o->array.size; i++) {
+    if (i == 5) {
+      xbarray_adds(x, "...");
+      break;
+    }
+    describe_s_expr(o->array.elt[i], x);
+    xbarray_add(x, ' ');
+    if (x->size > MAX_STR_LEN) return;
+  }
+  xbarray_add(x, ']');
+}
+
+static void describe_map(object o, struct xbarray *x)
+{
+  object p;
+  xbarray_adds(x, "#{ ");
+  for (int i = 0; i < o->map.half_size; i++) {
+    if ((p = o->map.table[i]) == NULL) continue;
+    describe_s_expr(o->map.table[i], x);
+    xbarray_add(x, ' ');
+    describe_s_expr(o->map.table[i + o->map.half_size], x);
+    xbarray_add(x, ' ');
+    if (x->size > MAX_STR_LEN) return;
+  }
+  xbarray_add(x, '}');
+}
+
+static void describe_s_expr(object o, struct xbarray *x)
+{
+  if (x->size > MAX_STR_LEN) return;
+  switch (om_type(o)) {
+    case SINT:
+      xbarray_addf(x, "%d", om_sint_val(o));
+      break;
+    case XINT:
+      xbarray_addf(x, "%" PRId64, o->xint.val);
+      break;
+    case XFLOAT:
+      xbarray_addf(x, "%g", o->xfloat.val);
+      break;
+    case CONS:
+      xbarray_add(x, '(');
+      describe_cons(o, x);
+      xbarray_add(x, ')');
+      break;
+    case STRING:
+      xbarray_add(x, '"');
+      xbarray_add_mem(x, o);
+      xbarray_add(x, '"');
+      break;
+    case BFUNC:
+    case SPECIAL:
+      o = o->native.name;
+    case SYMBOL:
+      xbarray_add_mem(x, o);
+      break;
+    case BYTES:
+      describe_mem(o, x);
+      break;
+    case ARRAY:
+      describe_array(o, x);
+      break;
+    case DICT:
+      describe_map(o, x);
+      break;
+    case MACRO:
+    case FUNC:
+      if (om_type(o) == MACRO) xbarray_adds(x, "(macro ");
+      else xbarray_adds(x, "(f ");
+      if (o->proc.params == om_nil) xbarray_adds(x, "()");
+      else describe_s_expr(o->proc.params, x);
+      if (o->proc.body != om_nil) {
+        xbarray_add(x, ' ');
+        describe_cons(o->proc.body, x);
+      }
+      xbarray_add(x, ')');
+      break;
+    case ENV:
+      xbarray_addf(x, "#(:environment 0x%p :top 0x%p)", o, o->map.top);
+      break;
+    default:
+      xassert(FALSE);
+  }
+}
+
+char *om_describe(object o, char *buf)
+{
+  xassert(o != NULL);
+  struct xbarray x;
+  xbarray_init(&x);
+  describe_s_expr(o, &x);
+  xbarray_add(&x,'\0');
+  if (x.size <= MAX_STR_LEN) memcpy(buf, x.elt, x.size);
+  else {
+    memcpy(buf, x.elt, MAX_STR_LEN - 4);
+    strcpy(buf + MAX_STR_LEN - 4, "...");
+  }
+  xbarray_free(&x);
+  return buf;
+}
 
 object om_bool(int b)
 {
