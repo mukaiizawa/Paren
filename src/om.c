@@ -49,19 +49,17 @@ int om_hash(object o)
 
 static int mem_hash(char *p, int size)
 {
-  int hval;
-  for (int i = hval = 0; i < size; i++)
+  int hval = 0;
+  for (int i = 0; i < size; i++)
     hval = hval * 137 + LC(p + i);
   return hval & HASH_MASK;
 }
 
 static int num_hash(double val)
 {
-  int i;
-  if (SINT_MIN <= val && val <= SINT_MAX) {
-    i = (int)val;
-    if (i == val) return i & HASH_MASK;
-  }
+  int ival;
+  if (SINT_MIN <= val && val <= SINT_MAX)
+    if ((ival = (int)val) == val) return ival & HASH_MASK;
   return mem_hash((char *)&val, sizeof(double));
 }
 
