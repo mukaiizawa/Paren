@@ -12,12 +12,12 @@ static int used_memory;
 static struct heap heap;
 static struct symbol_table st;
 
-#define LINK0_SIZE (sizeof(struct cons))
-#define LINK1_SIZE (sizeof(struct map))
+#define HEAP_LINK_SIZE0 (sizeof(struct cons))
+#define HEAP_LINK_SIZE1 (sizeof(struct map))
 static object heap_link0, heap_link1;
 
-#define regist(o) (xarray_add(table, o))
-static struct xarray *table, *table_wk, table0, table1;
+#define regist(o) (xarray_add(&om_table, o))
+static struct xarray om_table;
 
 static void *om_alloc(int size);
 static void om_free0(void *p, int size);
@@ -154,15 +154,15 @@ static object symbol_table_put(struct symbol_table *st, object sym)
 static void *om_alloc(int size)
 {
   object o;
-  if (size <= LINK0_SIZE) {
-    size = LINK0_SIZE;
+  if (size <= HEAP_LINK_SIZE0) {
+    size = HEAP_LINK_SIZE0;
     if (heap_link0 == NULL) o = heap_alloc(&heap, size);
     else {
       o = heap_link0;
       heap_link0 = o->next;
     }
-  } else if (size <= LINK1_SIZE) {
-    size = LINK1_SIZE;
+  } else if (size <= HEAP_LINK_SIZE1) {
+    size = HEAP_LINK_SIZE1;
     if (heap_link1 == NULL) o = heap_alloc(&heap, size);
     else {
       o = heap_link1;
@@ -177,12 +177,12 @@ static void *om_alloc(int size)
 static void om_free0(void *p, int size)
 {
   object o = p;
-  if (size <= LINK0_SIZE) {
-    size = LINK0_SIZE;
+  if (size <= HEAP_LINK_SIZE0) {
+    size = HEAP_LINK_SIZE0;
     o->next = heap_link0;
     heap_link0 = o;
-  } else if (size <= LINK1_SIZE) {
-    size = LINK1_SIZE;
+  } else if (size <= HEAP_LINK_SIZE1) {
+    size = HEAP_LINK_SIZE1;
     o->next = heap_link1;
     heap_link1 = o;
   } else xfree(o);
@@ -463,37 +463,30 @@ void om_mark(object o)
   }
 }
 
-static void switch_table(void)
-{
-  struct xarray *p;
-  p = table_wk;
-  table_wk = table;
-  table = p;
-}
-
 static void mark_and_sweep(void)
 {
   ip_mark_object();
-  switch_table();
-  xarray_reset(table);
   symbol_table_reset(&st);
-  for (int i = 0; i < table_wk->size; i++) {
-    object o = table_wk->elt[i];
+  int n = 0;
+  for (int i = 0; i < om_table.size; i++) {
+    object o = om_table.elt[i];
     if (!alive_p(o)) om_free(o);
     else {
       set_dead(o);
       if (om_type(o) == SYMBOL) symbol_table_put(&st, o);
-      regist(o);
+      om_table.elt[n] = o;
+      n++;
     }
   }
+  om_table.size = n;
 }
 
 void om_gc_chance(void)
 {
   if (used_memory < om_gc_chance_MEMORY) return;
-  if (GC_LOG_P) fprintf(stderr, "before gc(used memory %d[byte])\n", used_memory);
+  if (GC_LOG_P) fprintf(stderr, "before gc(used memory %d[byte], object count %d)\n", used_memory, om_table.size);
   mark_and_sweep();
-  if (GC_LOG_P) fprintf(stderr, "after gc(used memory %d[byte])\n", used_memory);
+  if (GC_LOG_P) fprintf(stderr, "after gc(used memory %d[byte], object count %d)\n", used_memory, om_table.size);
 }
 
 // object manipulation.
@@ -822,9 +815,6 @@ void om_init(void)
   used_memory = 0;
   heap_init(&heap);
   heap_link0 = heap_link1 = NULL;
+  xarray_init(&om_table);
   symbol_table_init(&st);
-  xarray_init(&table0);
-  xarray_init(&table1);
-  table = &table0;
-  table_wk = &table1;
 }
