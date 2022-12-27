@@ -2,8 +2,7 @@
 
 #include "std.h"
 #include "xsleep.h"
-#include "object.h"
-#include "gc.h"
+#include "om.h"
 #include "bi.h"
 #include "pf.h"
 #include "ip.h"
@@ -17,7 +16,7 @@ int bi_argc_range(int argc, int min, int max)
 
 static int type_bits(object o)
 {
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case SINT:
     case XINT:
     case XFLOAT:
@@ -25,7 +24,7 @@ static int type_bits(object o)
     case CONS:
       return BI_LIST | BI_CONS;
     case SYMBOL:
-      if (o == object_nil) return BI_SYM | BI_LIST;
+      if (o == om_nil) return BI_SYM | BI_LIST;
       return BI_SYM;
     case STRING:
       return BI_STR;
@@ -105,11 +104,11 @@ int bi_cbyte(object o, int *p)
 
 int bi_cint(object o, int *p)
 {
-  if (!sint_p(o)) {
+  if (!om_sint_p(o)) {
     *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
     return ip_sigerr(ArgumentError, "expected integer");
   }
-  *p = sint_val(o);
+  *p = om_sint_val(o);
   return TRUE;
 }
 
@@ -133,11 +132,11 @@ int bi_cpint64(object o, int64_t *p)
 
 int bi_may_cint64(object o, int64_t *p)
 {
-  if (sint_p(o)) {
-    *p = sint_val(o);
+  if (om_sint_p(o)) {
+    *p = om_sint_val(o);
     return TRUE;
   }
-  if (object_type(o) == XINT) {
+  if (om_type(o) == XINT) {
     *p = o->xint.val;
     return TRUE;
   }
@@ -183,7 +182,7 @@ int bi_may_cdouble(object o, double *p)
     *p = (double)i;
     return TRUE;
   }
-  if (object_type(o) == XFLOAT) {
+  if (om_type(o) == XFLOAT) {
     *p = o->xfloat.val;
     return TRUE;
   }
@@ -202,7 +201,7 @@ int bi_cdouble(object o, double *p)
 int bi_cstring(object o, char **p)
 {
   if (!bi_argv(BI_STR, o, &o)) return FALSE;
-  *p = (gc_new_cstring(o))->mem.elt;
+  *p = (om_new_cstring(o))->mem.elt;
   return TRUE;
 }
 
@@ -223,7 +222,7 @@ static int ch_at(object o, int *i, object *result)
   int len = 0;
   if (!ch_len(LC(o->mem.elt + *i), &len)) return FALSE;
   if (*i + len > o->mem.size) return ip_sigerr(ArgumentError, "incomplete UTF-8 byte sequence");
-  *result = gc_new_mem_from(STRING, o->mem.elt + *i, len);
+  *result = om_new_mem_from(STRING, o->mem.elt + *i, len);
   *i += len;
   return TRUE;
 }
@@ -245,13 +244,13 @@ static int str_len(object o, int *len)
 DEFUN(int_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
+  switch (om_type(argv->cons.car)) {
     case SINT:
     case XINT:
-      *result = object_true;
+      *result = om_true;
       return TRUE;
     default:
-      *result = object_nil;
+      *result = om_nil;
       return TRUE;
   }
   return TRUE;
@@ -260,14 +259,14 @@ DEFUN(int_3f_)
 DEFUN(number_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
+  switch (om_type(argv->cons.car)) {
     case SINT:
     case XINT:
     case XFLOAT:
-      *result = object_true;
+      *result = om_true;
       return TRUE;
     default:
-      *result = object_nil;
+      *result = om_nil;
       return TRUE;
   }
 }
@@ -275,7 +274,7 @@ DEFUN(number_3f_)
 static int xtype_p(int type, int argc, object argv, object *result)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(object_type(argv->cons.car) == type);
+  *result = om_bool(om_type(argv->cons.car) == type);
   return TRUE;
 }
 
@@ -292,7 +291,7 @@ DEFUN(symbol_3f_)
 DEFUN(keyword_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(keyword_p(argv->cons.car));
+  *result = om_bool(om_keyword_p(argv->cons.car));
   return TRUE;
 }
 
@@ -329,13 +328,13 @@ DEFUN(special_2d_operator_3f_)
 DEFUN(function_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
+  switch (om_type(argv->cons.car)) {
     case BFUNC:
     case FUNC:
-      *result = object_bool(TRUE);
+      *result = om_bool(TRUE);
       break;
     default:
-      *result = object_bool(FALSE);
+      *result = om_bool(FALSE);
       break;
   }
   return TRUE;
@@ -344,48 +343,48 @@ DEFUN(function_3f_)
 DEFUN(hash)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = gc_new_xint(object_hash(argv->cons.car));
+  *result = om_new_xint(om_hash(argv->cons.car));
   return TRUE;
 }
 
 DEFUN(address)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = gc_new_xint((intptr_t)argv->cons.car);
+  *result = om_new_xint((intptr_t)argv->cons.car);
   return TRUE;
 }
 
 DEFUN(_21_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = object_bool(argv->cons.car == object_nil);
+  *result = om_bool(argv->cons.car == om_nil);
   return TRUE;
 }
 
 DEFUN(_3d_)
 {
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  *result = object_bool(object_eq_p(argv->cons.car, argv->cons.cdr->cons.car));
+  *result = om_bool(om_eq_p(argv->cons.car, argv->cons.cdr->cons.car));
   return TRUE;
 }
 
 DEFUN(_3d__3d_)
 {
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  *result = object_bool(argv->cons.car == argv->cons.cdr->cons.car);
+  *result = om_bool(argv->cons.car == argv->cons.cdr->cons.car);
   return TRUE;
 }
 
 DEFUN(built_2d_in_3f_)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
+  switch (om_type(argv->cons.car)) {
     case BFUNC:
     case SPECIAL:
-      *result = object_true;
+      *result = om_true;
       break;
     default:
-      *result = object_nil;
+      *result = om_nil;
       break;
   }
   return TRUE;
@@ -394,13 +393,13 @@ DEFUN(built_2d_in_3f_)
 DEFUN(built_2d_in_2d_name)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  switch (object_type(argv->cons.car)) {
+  switch (om_type(argv->cons.car)) {
     case BFUNC:
     case SPECIAL:
       *result = argv->cons.car->native.name;
       break;
     default:
-      *result = object_nil;
+      *result = om_nil;
       break;
   }
   return TRUE;
@@ -411,9 +410,9 @@ DEFUN(params)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_FUNC | BI_MACRO, argv->cons.car, &o)) return FALSE;
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case BFUNC:
-      *result = object_nil;
+      *result = om_nil;
       break;
     case MACRO:
     case FUNC:
@@ -431,9 +430,9 @@ DEFUN(body)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_FUNC | BI_MACRO, argv->cons.car, &o)) return FALSE;
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case BFUNC:
-      *result = object_nil;
+      *result = om_nil;
       break;
     case MACRO:
     case FUNC:
@@ -453,7 +452,7 @@ DEFUN(cons)
   object o;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_argv(BI_LIST, argv->cons.cdr->cons.car, &o)) return FALSE;
-  *result = gc_new_cons(argv->cons.car, o);
+  *result = om_new_cons(argv->cons.car, o);
   return TRUE;
 }
 
@@ -463,42 +462,50 @@ DEFUN(list)
   return TRUE;
 }
 
+static int str_to_list(object o, object *result)
+{
+  int i = 0;
+  object ch = NULL;
+  object p = om_nil;
+  while (i < o->mem.size) {
+    if (!ch_at(o, &i, &ch)) return FALSE;
+    p = om_new_cons(ch, p);
+  }
+  *result = om_list_reverse(p);
+  return TRUE;
+}
+
+static int bytes_to_list(object o, object *result)
+{
+  object p = om_nil;
+  for (int i = 0; i < o->mem.size; i++)
+    p = om_new_cons(om_sint(LC(o->mem.elt + i)), p);
+  *result = om_list_reverse(p);
+  return TRUE;
+}
+
+static int array_to_list(object o, object *result)
+{
+  object p = om_nil;
+  for (int i = 0; i < o->array.size; i++)
+    p = om_new_cons(o->array.elt[i], p);
+  *result = om_list_reverse(p);
+  return TRUE;
+}
+
 DEFUN(list_2e__2e__2e_)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
-  *result = object_nil;
-  switch (object_type(o)) {
-    case SYMBOL:
-      break;
-    case CONS:
-      while (o != object_nil) {
-        *result = gc_new_cons(o->cons.car, *result);
-        o = o->cons.cdr;
-      }
-      break;
-    case STRING:
-      object p = NULL;
-      for (int i = 0; i < o->mem.size;) {
-        if (!ch_at(o, &i, &p)) return FALSE;
-        *result = gc_new_cons(p, *result);
-      }
-      break;
-    case BYTES:
-      for (int i = 0; i < o->mem.size; i++)
-        *result = gc_new_cons(gc_new_xint(LC(o->mem.elt + i)), *result);
-      break;
-    case ARRAY:
-      for (int i = 0; i < o->array.size; i++)
-        *result = gc_new_cons(o->array.elt[i], *result);
-      break;
-    default:
-      xassert(FALSE);
-      return FALSE;
+  switch (om_type(o)) {
+    case SYMBOL: *result = om_nil; return TRUE;
+    case CONS: *result = om_copy_cons(o, 0); return TRUE;
+    case STRING: return str_to_list(o, result);
+    case BYTES: return bytes_to_list(o, result);
+    case ARRAY: return array_to_list(o, result);
+    default: xassert(FALSE); return FALSE;
   }
-  *result = list_reverse(*result);
-  return TRUE;
 }
 
 DEFUN(car)
@@ -506,7 +513,7 @@ DEFUN(car)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_LIST, argv->cons.car, &o)) return FALSE;
-  if (o == object_nil) *result = object_nil;
+  if (o == om_nil) *result = om_nil;
   else *result = o->cons.car;
   return TRUE;
 }
@@ -527,7 +534,7 @@ DEFUN(cdr)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_LIST, argv->cons.car, &o)) return FALSE;
-  if (o == object_nil) *result = object_nil;
+  if (o == om_nil) *result = om_nil;
   else *result = o->cons.cdr;
   return TRUE;
 }
@@ -548,8 +555,8 @@ DEFUN(last_2d_cons)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_LIST, argv->cons.car, &o)) return FALSE;
-  if (o != object_nil) {
-    while (o->cons.cdr != object_nil) o = o->cons.cdr;
+  if (o != om_nil) {
+    while (o->cons.cdr != om_nil) o = o->cons.cdr;
   }
   *result = o;
   return TRUE;
@@ -560,8 +567,8 @@ DEFUN(reverse_21_)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_LIST, argv->cons.car, &o)) return FALSE;
-  if (o == object_nil) *result = object_nil;
-  else *result = list_reverse(o);
+  if (o == om_nil) *result = om_nil;
+  else *result = om_list_reverse(o);
   return TRUE;
 }
 
@@ -570,8 +577,8 @@ DEFUN(reverse_21_)
 static int double_add(double x, object argv, object *result)
 {
   double y;
-  if (argv == object_nil) {
-    *result = gc_new_xfloat(x);
+  if (argv == om_nil) {
+    *result = om_new_xfloat(x);
     return TRUE;
   }
   if (!bi_cdouble(argv->cons.car, &y)) return FALSE;
@@ -582,8 +589,8 @@ static int double_add(double x, object argv, object *result)
 static int int64_add(int64_t x, object argv, object *result)
 {
   int64_t y;
-  if (argv == object_nil) {
-    *result = gc_new_xint(x);
+  if (argv == om_nil) {
+    *result = om_new_xint(x);
     return TRUE;
   }
   if (bi_may_cint64(argv->cons.car, &y)) {
@@ -596,7 +603,7 @@ static int int64_add(int64_t x, object argv, object *result)
 DEFUN(_2b_)
 {
   if (argc == 0) {
-    *result = gc_new_xint(0);
+    *result = om_new_xint(0);
     return TRUE;
   }
   return int64_add(0, argv, result);
@@ -617,8 +624,8 @@ DEFUN(_2d__2d_)
 static int double_multiply(double x, object argv, object *result)
 {
   double y;
-  if (argv == object_nil) {
-    *result = gc_new_xfloat(x);
+  if (argv == om_nil) {
+    *result = om_new_xfloat(x);
     return TRUE;
   }
   if (!bi_cdouble(argv->cons.car, &y)) return FALSE;
@@ -629,8 +636,8 @@ static int double_multiply(double x, object argv, object *result)
 static int int64_multiply(int64_t x, object argv, object *result)
 {
   int64_t y;
-  if (argv == object_nil) {
-    *result = gc_new_xint(x);
+  if (argv == om_nil) {
+    *result = om_new_xint(x);
     return TRUE;
   }
   if (bi_may_cint64(argv->cons.car, &y)) {
@@ -650,7 +657,7 @@ static int int64_multiply(int64_t x, object argv, object *result)
 DEFUN(_2a_)
 {
   if (argc == 0) {
-    *result = gc_new_xint(1);
+    *result = om_new_xint(1);
     return TRUE;
   }
   return int64_multiply(1, argv, result);
@@ -659,8 +666,8 @@ DEFUN(_2a_)
 static int double_divide(double x, object argv, object *result)
 {
   double y;
-  if (argv == object_nil) {
-    *result = gc_new_xfloat(x);
+  if (argv == om_nil) {
+    *result = om_new_xfloat(x);
     return TRUE;
   }
   if (!bi_cdouble(argv->cons.car, &y)) return FALSE;
@@ -672,8 +679,8 @@ static int double_divide(double x, object argv, object *result)
 static int int64_divide(int64_t x, object argv, object *result)
 {
   int64_t y;
-  if (argv == object_nil) {
-    *result = gc_new_xint(x);
+  if (argv == om_nil) {
+    *result = om_new_xint(x);
     return TRUE;
   }
   if (bi_may_cint64(argv->cons.car, &y)) {
@@ -710,13 +717,13 @@ DEFUN(_2f__2f_)
     }
     if (!bi_cdouble(argv->cons.car, &z)) return FALSE;
     if (z < (double)DBL_MIN_INT || z > (double)DBL_MAX_INT) return ip_sigerr(ArithmeticError, "numeric overflow");
-    *result = gc_new_xint((int64_t)z);
+    *result = om_new_xint((int64_t)z);
     return TRUE;
   }
   if (!bi_cint64(argv->cons.car, &x)) return FALSE;
   if (!bi_cint64(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
-  *result = gc_new_xint(x / y);
+  *result = om_new_xint(x / y);
   return TRUE;
 }
 
@@ -727,7 +734,7 @@ DEFUN(_25_)
   if (!bi_cint64(argv->cons.car, &x)) return FALSE;
   if (!bi_cint64(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (y == 0) return ip_sigerr(ArithmeticError, "division by zero");
-  *result = gc_new_xint(x % y);
+  *result = om_new_xint(x % y);
   return TRUE;
 }
 
@@ -738,7 +745,7 @@ DEFUN(_7e_)
   int64_t x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cpint64(argv->cons.car, &x)) return FALSE;
-  *result = gc_new_xint(~x & INT64_MAX);
+  *result = om_new_xint(~x & INT64_MAX);
   return TRUE;
 }
 
@@ -751,11 +758,11 @@ static int xbitwise(int argc, object argv, int64_t (*f)(int64_t x, int64_t y), o
   int64_t x, y;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_cpint64(argv->cons.car, &x)) return FALSE;
-  while ((argv = argv->cons.cdr) != object_nil) {
+  while ((argv = argv->cons.cdr) != om_nil) {
     if (!bi_cpint64(argv->cons.car, &y)) return FALSE;
     x = f(x, y);
   }
-  *result = gc_new_xint(x);
+  *result = om_new_xint(x);
   return TRUE;
 }
 
@@ -782,7 +789,7 @@ DEFUN(_3e__3e_)
   if (!bi_cpint64(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (y < XINT_BITS) x >>= y;
   else x = 0;
-  *result = gc_new_xint(x);
+  *result = om_new_xint(x);
   return TRUE;
 }
 
@@ -803,7 +810,7 @@ DEFUN(_3c__3c_)
     if (leftmost_one_pos(x) + y > XINT_BITS) return ip_sigerr(ArithmeticError, "numeric overflow");
     x <<= y;
   }
-  *result = gc_new_xint(x);
+  *result = om_new_xint(x);
   return TRUE;
 }
 
@@ -815,7 +822,7 @@ static int xmath(int argc, object argv, double (*f)(double c), object *result)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cdouble(argv->cons.car, &x)) return FALSE;
   if (!bi_finite(x = f(x))) return FALSE;
-  *result = gc_new_xfloat(x);
+  *result = om_new_xfloat(x);
   return TRUE;
 }
 
@@ -877,7 +884,7 @@ DEFUN(log)
   if (!bi_cdouble(argv->cons.car, &x)) return FALSE;
   if (!bi_cdouble(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (!bi_finite(x = log(y) / log(x))) return FALSE;
-  *result = gc_new_xfloat(x);
+  *result = om_new_xfloat(x);
   return TRUE;
 }
 
@@ -893,7 +900,7 @@ DEFUN(pow)
   if (!bi_cdouble(argv->cons.car, &x)) return FALSE;
   if (!bi_cdouble(argv->cons.cdr->cons.car, &y)) return FALSE;
   if (!bi_finite(x = pow(x, y))) return FALSE;
-  *result = gc_new_xfloat(x);
+  *result = om_new_xfloat(x);
   return TRUE;
 }
 
@@ -910,16 +917,16 @@ static int bytes_like_to(int type, int argc, object argv, object *result)
   if (argc < 3) stop = o->mem.size;
   else if (!bi_cint(argv->cons.cdr->cons.car, &stop)) return FALSE;
   if (!bi_range(start, stop, o->mem.size)) return FALSE;
-  *result = gc_new_mem_from(type, o->mem.elt + start, stop - start);
+  *result = om_new_mem_from(type, o->mem.elt + start, stop - start);
   return TRUE;
 }
 
 DEFUN(bytes)
 {
   int i;
-  if (argc == 1 && object_type(argv->cons.car) == SINT) {
+  if (argc == 1 && om_type(argv->cons.car) == SINT) {
     if (!bi_cpint(argv->cons.car, &i)) return FALSE;
-    *result = gc_new_mem(BYTES, i);
+    *result = om_new_bytes(i);
     return TRUE;
   }
   return bytes_like_to(BYTES, argc, argv, result);
@@ -931,7 +938,7 @@ DEFUN(symbol)
   char buf[MAX_STR_LEN];
   if (argc == 0) {
     xsprintf(buf, "$G-%d", ++c);
-    *result = gc_new_mem_from_cstr(SYMBOL, buf);
+    *result = om_new_mem_from_cstr(SYMBOL, buf);
     return TRUE;
   }
   return bytes_like_to(SYMBOL, argc, argv, result);
@@ -947,9 +954,7 @@ DEFUN(string_21_)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_BYTES, argv->cons.car, &o)) return FALSE;
-  object_reset_type(o, STRING);
-  object_set_hash(o, object_mem_hash(o->mem.elt, o->mem.size));
-  *result = o;
+  *result = om_coerce_mem_string(o);
   return TRUE;
 }
 
@@ -975,7 +980,7 @@ DEFUN(byte_2d_len)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_BYTES | BI_STR | BI_SYM, argv->cons.car, &o)) return FALSE;
-  *result = gc_new_xint(o->mem.size);
+  *result = om_new_xint(o->mem.size);
   return TRUE;
 }
 
@@ -994,7 +999,7 @@ DEFUN(memcmp)
   }
   else if (val > 0) val = 1;    // normalize
   else val = -1;
-  *result = gc_new_xint(val);
+  *result = om_new_xint(val);
   return TRUE;
 }
 
@@ -1004,7 +1009,7 @@ static int bytes_like_concat(object o, object argv, object *result)
   struct xbarray x;
   xbarray_init(&x);
   xbarray_copy(&x, o->mem.elt, o->mem.size);
-  while (argv != object_nil) {
+  while (argv != om_nil) {
     if (!bi_argv(BI_BYTES | BI_STR | BI_SYM, argv->cons.car, &p)) {
       xbarray_free(&x);
       return FALSE;
@@ -1012,7 +1017,7 @@ static int bytes_like_concat(object o, object argv, object *result)
     xbarray_copy(&x, p->mem.elt, p->mem.size);
     argv = argv->cons.cdr;
   }
-  *result = gc_new_mem_from(object_type(o), x.elt, x.size);
+  *result = om_new_mem_from(om_type(o), x.elt, x.size);
   xbarray_free(&x);
   return TRUE;
 }
@@ -1042,7 +1047,7 @@ DEFUN(chr)
     buf[2] = 0x80 | ((x >> 6) & 0x3f);
     buf[3] = 0x80 | (x & 0x3f);
   } else return ip_sigerr(ArgumentError, "invalid code point");
-  *result = gc_new_mem_from(STRING, buf, size);
+  *result = om_new_mem_from(STRING, buf, size);
   return TRUE;
 }
 
@@ -1072,7 +1077,7 @@ DEFUN(ord)
   if (o->mem.size == 0) return ip_sigerr(ArgumentError, "expected a character, but empty string");
   if (!ord(o, &i, &val)) return FALSE;
   if (o->mem.size != i) return ip_sigerr(ArgumentError, "expected a character, but string");
-  *result = gc_new_xint(val);
+  *result = om_new_xint(val);
   return TRUE;
 }
 
@@ -1083,7 +1088,7 @@ DEFUN(ascii_3f_)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
   if (!str_len(o, &len)) return FALSE;
-  *result = object_bool(len == o->mem.size);
+  *result = om_bool(len == o->mem.size);
   return TRUE;
 }
 
@@ -1093,14 +1098,14 @@ static int xctype_p(int argc, object argv, int (*f)(int c), object *result)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
-  *result = object_nil;
+  *result = om_nil;
   if (o->mem.size == 0) return TRUE;
   i = 0;
   while (i < o->mem.size) {
     if (!f(LC(o->mem.elt + i))) return TRUE;
     if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
   }
-  *result = object_true;
+  *result = om_true;
   return TRUE;
 }
 
@@ -1145,7 +1150,7 @@ static int ch_conv_case(int argc, object argv, int (*f)(int c), int offset, obje
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_STR, argv->cons.car, &o)) return FALSE;
-  o = gc_new_mem_from(STRING, o->mem.elt, o->mem.size);
+  o = om_new_mem_from(STRING, o->mem.elt, o->mem.size);
   i = 0;
   while (i < o->mem.size) {
     if (f(ch = LC(o->mem.elt + i))) SC(o->mem.elt + i, ch + offset);
@@ -1171,10 +1176,9 @@ static int str_to_array(object o, object *result)
 {
   int i, j, size;
   if (!str_len(o, &size)) return FALSE;
-  *result = gc_new_array(size);
+  *result = om_new_array(size);
   for (i = 0, j = 0; i < size; i++)
     ch_at(o, &j, ((*result)->array.elt + i));
-  xassert(j == o->mem.size);
   return TRUE;
 }
 
@@ -1183,35 +1187,35 @@ DEFUN(array)
   int size;
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if ((o = argv->cons.car) == object_nil) {
-    *result = gc_new_array(0);
+  if ((o = argv->cons.car) == om_nil) {
+    *result = om_new_array(0);
     return TRUE;
   }
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case SINT:
     case XINT:
       if (!bi_cpint(o, &size)) return FALSE;
-      *result = gc_new_array(size);
+      *result = om_new_array(size);
       return TRUE;
     case CONS:
-      size = list_len(o);
-      *result = gc_new_array(size);
+      size = om_list_len(o);
+      *result = om_new_array(size);
       for (int i = 0; i < size; i++) {
         (*result)->array.elt[i] = o->cons.car;
         o = o->cons.cdr;
       }
-      xassert(o == object_nil);
+      xassert(o == om_nil);
       return TRUE;
     case STRING:
       return str_to_array(o, result);
     case BYTES:
       size = o->mem.size;
-      *result = gc_new_array(o->mem.size);
+      *result = om_new_array(o->mem.size);
       for (int i = 0; i < size; i++)
-        (*result)->array.elt[i] = gc_new_xint(o->mem.elt[i]);
+        (*result)->array.elt[i] = om_new_xint(o->mem.elt[i]);
       return TRUE;
     case ARRAY:
-      *result = gc_new_array_from(o->array.elt, o->array.size);
+      *result = om_new_array_from(o->array.elt, o->array.size);
       return TRUE;
     default:
       return ip_sigerr(ArgumentError, "expected positive integer, array, bytes, list, or string");
@@ -1223,7 +1227,7 @@ DEFUN(array)
 DEFUN(dict)
 {
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
-  *result = gc_new_dict();
+  *result = om_new_dict();
   return TRUE;
 }
 
@@ -1232,29 +1236,19 @@ DEFUN(keys)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_DICT, argv->cons.car, &o)) return FALSE;
-  *result = map_keys(o);
+  *result = om_map_keys(o);
   return TRUE;
 }
 
 static int cons_slice(object o, int start, int stop, object *result)
 {
-  int i;
-  object tail;
-  for (i = 0; i < start; i++)
-    if ((o = o->cons.cdr) == object_nil) break;
-  if (o == object_nil) {
-    *result = object_nil;
-    return TRUE;
-  }
-  *result = tail = gc_copy_cons(o, &tail);
-  if (stop != -1) {
-    if (start == stop) *result = object_nil;
-    else {
-      for (i = start + 1; i < stop; i++)
-        if ((tail = tail->cons.cdr) == object_nil) return TRUE;
-      tail->cons.cdr = object_nil;
-    }
-  }
+  int size = stop != -1;
+  *result = om_nil;
+  if (size && (size = stop - start) == 0)  return TRUE;
+  for (int i = 0; i < start; i++)
+    if ((o = o->cons.cdr) == om_nil) return TRUE;
+  if (o == om_nil) return TRUE;
+  *result = om_copy_cons(o, size);
   return TRUE;
 }
 
@@ -1270,7 +1264,7 @@ static int str_slice(object o, int start, int stop, object *result)
     if (t > o->mem.size) return ip_sigerr(ArgumentError, "incomplete UTF-8 byte sequence");
   }
   if (!bi_range(0, s, t)) return FALSE;
-  *result = gc_new_mem_from(STRING, o->mem.elt + s, t - s);
+  *result = om_new_mem_from(STRING, o->mem.elt + s, t - s);
   return TRUE;
 }
 
@@ -1285,24 +1279,24 @@ DEFUN(slice)
   if (argc < 3) stop = -1;
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &stop)) return FALSE;
   else if (!bi_range(0, start, stop)) return FALSE;
-  *result = object_nil;
-  switch (object_type(o)) {
+  *result = om_nil;
+  switch (om_type(o)) {
     case SYMBOL:
-      *result = object_nil;
+      *result = om_nil;
       return TRUE;
     case CONS:
       return cons_slice(o, start, stop, result);
     case BYTES:
       if (stop == -1) stop = o->mem.size;
       if (!bi_range(start, stop, o->mem.size)) return FALSE;
-      *result = gc_new_mem_from(BYTES, o->mem.elt + start, stop - start);
+      *result = om_new_mem_from(BYTES, o->mem.elt + start, stop - start);
       return TRUE;
     case STRING:
       return str_slice(o, start, stop, result);
     case ARRAY:
       if (stop == -1) stop = o->array.size;
       if (!bi_range(start, stop, o->mem.size)) return FALSE;
-      *result = gc_new_array_from(o->array.elt + start, stop - start);
+      *result = om_new_array_from(o->array.elt + start, stop - start);
       return TRUE;
     default:
       xassert(FALSE);
@@ -1313,16 +1307,16 @@ DEFUN(slice)
 static int cons_concat(object argv, object *result)
 {
   object o;
-  *result = object_nil;
-  while (argv != object_nil) {
+  *result = om_nil;
+  while (argv != om_nil) {
     if (!bi_argv(BI_LIST, argv->cons.car, &o)) return FALSE;
-    while (o != object_nil) {
-      *result = gc_new_cons(o->cons.car, *result);
+    while (o != om_nil) {
+      *result = om_new_cons(o->cons.car, *result);
       o = o->cons.cdr;
     }
     argv = argv->cons.cdr;
   }
-  *result = list_reverse(*result);
+  *result = om_list_reverse(*result);
   return TRUE;
 }
 
@@ -1332,15 +1326,15 @@ static int array_concat(object o, object argv, object *result)
   object p, q;
   size = o->array.size;
   p = argv;
-  while (p != object_nil) {
+  while (p != om_nil) {
     if (!bi_argv(BI_ARRAY, p->cons.car, &q)) return FALSE;
     size += q->array.size;
     p = p->cons.cdr;
   }
-  *result = gc_new_array(size);
+  *result = om_new_array(size);
   for (i = 0, j = 0; j < o->array.size; i++, j++)
     (*result)->array.elt[i] = o->array.elt[j];
-  while (argv != object_nil) {
+  while (argv != om_nil) {
     q = argv->cons.car;
     argv = argv->cons.cdr;
     for (j = 0; j < q->array.size; i++, j++)
@@ -1353,12 +1347,12 @@ DEFUN(concat)
 {
   object o;
   if (argc == 0) {
-    *result = object_nil;
+    *result = om_nil;
     return TRUE;
   }
   if (!bi_argv(BI_SYM | BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, argv->cons.car, &o)) return FALSE;
-  if (o == object_nil) return cons_concat(argv, result);
-  switch (object_type(o)) {
+  if (o == om_nil) return cons_concat(argv, result);
+  switch (om_type(o)) {
     case CONS:
       return cons_concat(argv, result);
     case SYMBOL:
@@ -1377,12 +1371,12 @@ static int cons_access(int argc, object argv, object o, object *result)
 {
   int i;
   if (!bi_cpint(argv->cons.car, &i)) return FALSE;
-  while (i-- > 0 && o != object_nil) o = o->cons.cdr;
+  while (i-- > 0 && o != om_nil) o = o->cons.cdr;
   if (argc == 2) {
-    if (o == object_nil) *result = o;
+    if (o == om_nil) *result = o;
     else *result = o->cons.car;
   } else {
-    if (o == object_nil) return ip_sigerr(ArgumentError, "index out of range");
+    if (o == om_nil) return ip_sigerr(ArgumentError, "index out of range");
     *result = argv->cons.cdr->cons.car;
     o->cons.car = *result;
   }
@@ -1402,7 +1396,7 @@ static int bytes_access(int argc, object argv, object o, object *result)
   int i, byte;
   if (!bi_cpint(argv->cons.car, &i)) return FALSE;
   if (!bi_range(0, i, o->mem.size - 1)) return FALSE;
-  if (argc == 2) *result = sint(LC(o->mem.elt + i));
+  if (argc == 2) *result = om_new_xint(LC(o->mem.elt + i));
   else {
     if (!bi_cbyte((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
     SC(o->mem.elt + i, byte);
@@ -1425,10 +1419,10 @@ static int dict_access(int argc, object argv, object o, object *result)
   object key;
   key = argv->cons.car;
   if (argc == 2) {
-    if ((*result = map_get(o, key)) == NULL) *result = object_nil;
+    if ((*result = om_map_get(o, key)) == NULL) *result = om_nil;
   } else {
     *result = argv->cons.cdr->cons.car;
-    map_put(o, key, *result);
+    om_map_put(o, key, *result);
   }
   return TRUE;
 }
@@ -1438,7 +1432,7 @@ DEFUN(_5b__5d_)
   object o;
   if (!bi_argc_range(argc, 2, 3)) return FALSE;
   if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case SYMBOL:
     case CONS:
       return cons_access(argc, argv->cons.cdr, o, result);
@@ -1458,9 +1452,9 @@ DEFUN(_5b__5d_)
 
 int cons_in_p(object o, object p, object *result)
 {
-  for (*result = object_true; o != object_nil; o = o->cons.cdr)
-    if (object_eq_p(o->cons.car, p)) return TRUE;
-  *result = object_nil;
+  for (*result = om_true; o != om_nil; o = o->cons.cdr)
+    if (om_eq_p(o->cons.car, p)) return TRUE;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -1470,11 +1464,11 @@ int bytes_in_p(object o, object p, object *result)
   if (!bi_cbyte(p, &byte)) return FALSE;
   for (i = 0; i < o->mem.size; i++) {
     if (LC(o->mem.elt + i) == byte) {
-      *result = object_true;
+      *result = om_true;
       return TRUE;
     }
   }
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -1485,12 +1479,12 @@ int string_in_p(object o, object p, object *result)
   i = 0;
   while (i < o->mem.size && (o->mem.size - i >= p->mem.size)) {
     if (memcmp(o->mem.elt + i, p->mem.elt, p->mem.size) == 0) {
-      *result = object_true;
+      *result = om_true;
       return TRUE;
     }
     if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
   }
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -1498,18 +1492,18 @@ int array_in_p(object o, object p, object *result)
 {
   int i;
   for (i = 0; i < o->array.size; i++) {
-    if (object_eq_p(o->array.elt[i], p)) {
-      *result = object_true;
+    if (om_eq_p(o->array.elt[i], p)) {
+      *result = om_true;
       return TRUE;
     }
   }
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
 int dict_in_p(object o, object p, object *result)
 {
-  *result = object_bool(map_get(o, p) != NULL);
+  *result = om_bool(om_map_get(o, p) != NULL);
   return TRUE;
 }
 
@@ -1518,7 +1512,7 @@ DEFUN(in_3f_)
   object o;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.cdr->cons.car, &o)) return FALSE;
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case SYMBOL:
     case CONS:
       return cons_in_p(o, argv->cons.car, result);
@@ -1539,14 +1533,14 @@ DEFUN(in_3f_)
 int cons_index(object o, object p, int s, int e, object *result)
 {
   int i;
-  for (i = 0; o != object_nil && i != e; i++, o = o->cons.cdr) {
+  for (i = 0; o != om_nil && i != e; i++, o = o->cons.cdr) {
     if (i < s) continue;
-    if (object_eq_p(o->cons.car, p)) {
-      *result = gc_new_xint(i);
+    if (om_eq_p(o->cons.car, p)) {
+      *result = om_new_xint(i);
       return TRUE;
     }
   }
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -1556,11 +1550,11 @@ int bytes_index(object o, object p, int s, int e, object *result)
   if (!bi_cbyte(p, &byte)) return FALSE;
   for (i = s; i < o->mem.size && i != e; i++) {
     if (LC(o->mem.elt + i) == byte) {
-      *result = gc_new_xint(i);
+      *result = om_new_xint(i);
       return TRUE;
     }
   }
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -1570,12 +1564,12 @@ int string_index(object o, object p, int s, int e, object *result)
   if (!bi_argv(BI_STR, p, &p)) return FALSE;
   for (i = n = 0; i < o->mem.size && (o->mem.size - i >= p->mem.size) && n != e; n++) {
     if (n >= s && (memcmp(o->mem.elt + i, p->mem.elt, p->mem.size) == 0)) {
-      *result = gc_new_xint(n);
+      *result = om_new_xint(n);
       return TRUE;
     }
     if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
   }
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -1583,12 +1577,12 @@ int array_index(object o, object p, int s, int e, object *result)
 {
   int i;
   for (i = s; i < o->array.size && i != e; i++) {
-    if (object_eq_p(o->array.elt[i], p)) {
-      *result = gc_new_xint(i);
+    if (om_eq_p(o->array.elt[i], p)) {
+      *result = om_new_xint(i);
       return TRUE;
     }
   }
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -1603,7 +1597,7 @@ DEFUN(index)
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
   if (argc < 4) e = -1;
   else if (!bi_cpint(argv->cons.cdr->cons.car, &e)) return FALSE;
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case SYMBOL:
     case CONS:
       return cons_index(o, p, s, e, result);
@@ -1622,12 +1616,12 @@ DEFUN(index)
 int cons_rindex(object o, object p, int s, int e, object *result)
 {
   int i, ri;
-  for (i = 0, ri = -1; o != object_nil && i != e; i++, o = o->cons.cdr) {
+  for (i = 0, ri = -1; o != om_nil && i != e; i++, o = o->cons.cdr) {
     if (i < s) continue;
-    if (object_eq_p(o->cons.car, p)) ri = i;
+    if (om_eq_p(o->cons.car, p)) ri = i;
   }
-  if (ri == -1) *result = object_nil;
-  else *result = gc_new_xint(ri);
+  if (ri == -1) *result = om_nil;
+  else *result = om_new_xint(ri);
   return TRUE;
 }
 
@@ -1638,11 +1632,11 @@ int bytes_rindex(object o, object p, int s, int e, object *result)
   if (e == -1) e = o->array.size;
   for (i = e - 1; i < o->mem.size && i >= s; i--) {
     if (LC(o->mem.elt + i) == byte) {
-      *result = gc_new_xint(i);
+      *result = om_new_xint(i);
       return TRUE;
     }
   }
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -1654,8 +1648,8 @@ int string_rindex(object o, object p, int s, int e, object *result)
     if (n >= s && memcmp(o->mem.elt + i, p->mem.elt, p->mem.size) == 0) ri = n;
     if (!ch_len(LC(o->mem.elt + i), &i)) return FALSE;
   }
-  if (ri == -1) *result = object_nil;
-  else *result = gc_new_xint(ri);
+  if (ri == -1) *result = om_nil;
+  else *result = om_new_xint(ri);
   return TRUE;
 }
 
@@ -1664,12 +1658,12 @@ int array_rindex(object o, object p, int s, int e, object *result)
   int i;
   if (e == -1) e = o->array.size;
   for (i = e - 1; i < o->array.size && i >= s; i--) {
-    if (object_eq_p(o->array.elt[i], p)) {
-      *result = gc_new_xint(i);
+    if (om_eq_p(o->array.elt[i], p)) {
+      *result = om_new_xint(i);
       return TRUE;
     }
   }
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -1684,7 +1678,7 @@ DEFUN(last_2d_index)
   else if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &s)) return FALSE;
   if (argc < 4) e = -1;
   else if (!bi_cpint(argv->cons.cdr->cons.car, &e)) return FALSE;
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case SYMBOL:
     case CONS:
       return cons_rindex(o, p, s, e, result);
@@ -1706,16 +1700,16 @@ DEFUN(len)
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
-  switch (object_type(o)) {
+  switch (om_type(o)) {
     case SYMBOL: len = 0; break;
-    case CONS: len = list_len(o); break;
+    case CONS: len = om_list_len(o); break;
     case BYTES: len = o->mem.size; break;
     case STRING: if (!str_len(o, &len)) return FALSE; break;
     case ARRAY: len = o->array.size; break;
     case DICT: len = o->map.entry_count; break;
     default: xassert(FALSE); return FALSE;
   }
-  *result = gc_new_xint(len);
+  *result = om_new_xint(len);
   return TRUE;
 }
 
@@ -1723,8 +1717,8 @@ static int double_lt(double x, object argv, object *result)
 {
   int64_t i;
   double d;
-  if (argv == object_nil) {
-    *result = object_true;
+  if (argv == om_nil) {
+    *result = om_true;
     return TRUE;
   }
   if (bi_may_cint64(argv->cons.car, &i)) {
@@ -1739,8 +1733,8 @@ static int double_lt(double x, object argv, object *result)
 static int int64_lt(int64_t x, object argv, object *result)
 {
   int64_t y;
-  if (argv == object_nil) {
-    *result = object_true;
+  if (argv == om_nil) {
+    *result = om_true;
     return TRUE;
   }
   if (bi_may_cint64(argv->cons.car, &y)) {
@@ -1763,8 +1757,8 @@ static int bytes_lt(object o, object argv, object *result)
 {
   int i, x;
   object p;
-  if (argv == object_nil) {
-    *result = object_true;
+  if (argv == om_nil) {
+    *result = om_true;
     return TRUE;
   }
   if (!bi_argv(BI_BYTES | BI_STR | BI_SYM, argv->cons.car, &p)) return FALSE;
@@ -1790,8 +1784,8 @@ static int str_lt(object o, object argv, object *result)
 {
   int oi, pi, cmp;
   object p;
-  if (argv == object_nil) {
-    *result = object_true;
+  if (argv == om_nil) {
+    *result = om_true;
     return TRUE;
   }
   if (!bi_argv(BI_STR, argv->cons.car, &p)) return FALSE;
@@ -1810,8 +1804,8 @@ DEFUN(_3c_)
   object o;
   if (!bi_argc_range(argc, 2, FALSE)) return FALSE;
   if (!bi_argv(BI_NUM | BI_SYM | BI_BYTES | BI_STR, argv->cons.car, &o)) return FALSE;
-  *result = object_nil;
-  switch (object_type(o)) {
+  *result = om_nil;
+  switch (om_type(o)) {
     case SINT:
     case XINT:
     case XFLOAT:
@@ -1842,9 +1836,9 @@ DEFUN(fp)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_may_cint64(argv->cons.car, &fd)) fd = -1;
   switch (fd) {
-    case 0: *result = gc_new_xint((intptr_t)stdin); return TRUE;
-    case 1: *result = gc_new_xint((intptr_t)stdout); return TRUE;
-    case 2: *result = gc_new_xint((intptr_t)stderr); return TRUE;
+    case 0: *result = om_new_xint((intptr_t)stdin); return TRUE;
+    case 1: *result = om_new_xint((intptr_t)stdout); return TRUE;
+    case 2: *result = om_new_xint((intptr_t)stderr); return TRUE;
     default: return ip_sigerr(OSError, "invalid file descriptor");
   }
 }
@@ -1865,7 +1859,7 @@ DEFUN(fopen)
     default: return ip_sigerr(ArgumentError, "invalid fopen mode");
   }
   if ((fp = pf_fopen(fn, mode)) == NULL) return ip_sigerr(OSError, "fopen failed");
-  *result = gc_new_xint((intptr_t)fp);
+  *result = om_new_xint((intptr_t)fp);
   return TRUE;
 }
 
@@ -1876,7 +1870,7 @@ DEFUN(fgetc)
   if (!bi_fp(argv->cons.car, &fp)) return FALSE;
   int ch = fgetc(fp);
   if (ch == EOF && fp_error_p(fp)) return ip_sigerr(OSError, "fgetc failed");
-  *result = gc_new_xint(ch);
+  *result = om_new_xint(ch);
   return TRUE;
 }
 
@@ -1894,18 +1888,13 @@ DEFUN(fputc)
 
 DEFUN(fgets)
 {
-  char *s;
   FILE *fp;
-  struct xbarray x;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_fp(argv->cons.car, &fp)) return FALSE;
+  struct xbarray x;
   xbarray_init(&x);
-  s = xbarray_fgets(&x, fp);
-  if (s == NULL) *result = object_nil;
-  else {
-    *result = gc_new_mem(STRING, --x.size);    // remove last NUL
-    memcpy((*result)->mem.elt, x.elt, x.size);
-  }
+  if (xbarray_fgets(&x, fp) == NULL) *result = om_nil;
+  else *result = om_new_mem_from(STRING, x.elt, x.size - 1);    // remove last NUL
   xbarray_free(&x);
   return TRUE;
 }
@@ -1922,7 +1911,7 @@ DEFUN(fread)
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_fp(argv->cons.cdr->cons.car, &fp)) return FALSE;
   if ((size = fread(o->mem.elt + from, 1, size, fp)) == 0 && fp_error_p(fp)) return ip_sigerr(OSError, "fread failed");
-  *result = gc_new_xint(size);
+  *result = om_new_xint(size);
   return TRUE;
 }
 
@@ -1938,7 +1927,7 @@ DEFUN(fwrite)
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
   if (!bi_fp(argv->cons.cdr->cons.car, &fp)) return FALSE;
   if ((size = fwrite(o->mem.elt + from, 1, size, fp)) == 0 && fp_error_p(fp)) return ip_sigerr(OSError, "fwrite failed");
-  *result = gc_new_xint(size);
+  *result = om_new_xint(size);
   return TRUE;
 }
 
@@ -1952,7 +1941,7 @@ DEFUN(fseek)
   if (offset == -1?
       fseek(fp, 0, SEEK_END):
       fseek(fp, offset, SEEK_SET) != 0) return ip_sigerr(OSError, "fseek failed");
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -1963,7 +1952,7 @@ DEFUN(ftell)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_fp(argv->cons.car, &fp)) return FALSE;
   if ((pos = ftell(fp)) == -1) return ip_sigerr(OSError, "ftell failed");
-  *result = gc_new_xint(pos);
+  *result = om_new_xint(pos);
   return TRUE;
 }
 
@@ -1973,7 +1962,7 @@ DEFUN(fclose)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_fp(argv->cons.car, &fp)) return FALSE;
   fclose(fp);
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -1986,13 +1975,13 @@ DEFUN(stat)
   int mode = pf_stat(fn, &statbuf);
   if (mode == PF_ERROR) return ip_sigerr(OSError, "stat failed");
   if (mode == PF_NONE) {
-    *result = object_nil;
+    *result = om_nil;
     return TRUE;
   }
-  *result = gc_new_array(3);
-  (*result)->array.elt[0] = gc_new_xint(mode);
-  (*result)->array.elt[1] = gc_new_xint(statbuf.size);
-  (*result)->array.elt[2] = gc_new_xint(statbuf.mtime);
+  *result = om_new_array(3);
+  (*result)->array.elt[0] = om_new_xint(mode);
+  (*result)->array.elt[1] = om_new_xint(statbuf.size);
+  (*result)->array.elt[2] = om_new_xint(statbuf.mtime);
   return TRUE;
 }
 
@@ -2004,7 +1993,7 @@ DEFUN(utime)
   if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
   if (!bi_cint64(argv->cons.cdr->cons.car, &tv)) return FALSE;
   if (!pf_utime(fn, tv)) return ip_sigerr(OSError, "utime failed");
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -2013,7 +2002,7 @@ DEFUN(getcwd)
   char buf[MAX_STR_LEN];
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   pf_getcwd(buf);
-  *result = gc_new_mem_from_cstr(STRING, buf);
+  *result = om_new_mem_from_cstr(STRING, buf);
   return TRUE;
 }
 
@@ -2022,7 +2011,7 @@ DEFUN(chdir)
   char *fn;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
-  *result = object_nil;
+  *result = om_nil;
   if (!pf_chdir(fn)) return ip_sigerr(OSError, "chdir failed");
   return TRUE;
 }
@@ -2035,7 +2024,7 @@ DEFUN(readdir)
   struct xbarray files;
   xbarray_init(&files);
   if (!pf_readdir(path, &files)) return ip_sigerr(OSError, "readdir failed");
-  *result = gc_new_mem_from(STRING, files.elt, files.size);
+  *result = om_new_mem_from(STRING, files.elt, files.size);
   xbarray_free(&files);
   return TRUE;
 }
@@ -2045,7 +2034,7 @@ DEFUN(remove)
   char *fn;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv->cons.car, &fn)) return FALSE;
-  *result = object_nil;
+  *result = om_nil;
   return pf_remove(fn);
 }
 
@@ -2054,7 +2043,7 @@ DEFUN(mkdir)
   char *path;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv->cons.car, &path)) return FALSE;
-  *result = object_nil;
+  *result = om_nil;
   return pf_mkdir(path);
 }
 
@@ -2065,21 +2054,21 @@ DEFUN(rename)
   if (!bi_cstring(argv->cons.car, &src)) return FALSE;
   if (!bi_cstring(argv->cons.cdr->cons.car, &dst)) return FALSE;
   if (rename(src, dst) != 0) return ip_sigerr(OSError, "rename failed");
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
 DEFUN(time)
 {
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
-  *result = gc_new_xint(time(NULL));
+  *result = om_new_xint(time(NULL));
   return TRUE;
 }
 
 DEFUN(clock)
 {
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
-  *result = gc_new_xfloat((double)clock() / CLOCKS_PER_SEC);
+  *result = om_new_xfloat((double)clock() / CLOCKS_PER_SEC);
   return TRUE;
 }
 
@@ -2089,7 +2078,7 @@ DEFUN(sleep)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cdouble(argv->cons.car, &t)) return FALSE;
   xsleep(t);
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -2109,14 +2098,14 @@ DEFUN(utcoffset)
   if (gtm.tm_yday == ltm.tm_yday) off = 0;
   else if (gtm.tm_yday == ltm.tm_yday + 1) off = -1;
   else off = 1;
-  *result = gc_new_xint(daysec(&ltm) + off * 24 * 60 * 60 - daysec(&gtm));
+  *result = om_new_xint(daysec(&ltm) + off * 24 * 60 * 60 - daysec(&gtm));
   return TRUE;
 }
 
 DEFUN(popen)
 {
   char *cmd, *mode;
-  intptr_t i;
+  int64_t i;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cstring(argv->cons.car, &cmd)) return FALSE;
@@ -2127,7 +2116,7 @@ DEFUN(popen)
     default: return ip_sigerr(ArgumentError, "invalid popen mode");
   }
   if ((fp = popen(cmd, mode)) == NULL) return ip_sigerr(OSError, "popen failed");
-  *result = gc_new_xint((intptr_t)fp);
+  *result = om_new_xint((intptr_t)fp);
   return TRUE;
 }
 
@@ -2137,7 +2126,7 @@ DEFUN(pclose)
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_fp(argv->cons.car, &fp)) return FALSE;
   pclose(fp);
-  *result = object_nil;
+  *result = om_nil;
   return TRUE;
 }
 
@@ -2146,7 +2135,7 @@ DEFUN(system)
   char *s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv->cons.car, &s)) return FALSE;
-  *result = gc_new_xint(system(s));
+  *result = om_new_xint(system(s));
   return TRUE;
 }
 
@@ -2155,8 +2144,8 @@ DEFUN(getenv)
   char *s;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
   if (!bi_cstring(argv->cons.car, &s)) return FALSE;
-  if ((s = getenv(s)) == NULL) *result = object_nil;
-  else *result = gc_new_mem_from_cstr(STRING, s);
+  if ((s = getenv(s)) == NULL) *result = om_nil;
+  else *result = om_new_mem_from_cstr(STRING, s);
   return TRUE;
 }
 
@@ -2166,7 +2155,7 @@ DEFUN(putenv)
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cstring(argv->cons.car, &key)) return FALSE;
   if (!bi_cstring(argv->cons.cdr->cons.car, &val)) return FALSE;
-  *result = object_nil;
+  *result = om_nil;
   struct xbarray buf;
   xbarray_init(&buf);
   xbarray_adds(&buf, key);

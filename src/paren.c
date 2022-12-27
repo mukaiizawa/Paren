@@ -3,9 +3,8 @@
 #include "std.h"
 #include "xiconv.h"
 #include "pf.h"
-#include "object.h"
+#include "om.h"
 #include "lex.h"
-#include "gc.h"
 #include "ip.h"
 #include "bi.h"
 
@@ -31,18 +30,18 @@ static int parse_token(int token)
 static object parse_cdr(void)
 {
   object o;
-  if (next_token == ')') return object_nil;
+  if (next_token == ')') return om_nil;
   o = parse_expr();
-  return gc_new_cons(o, parse_cdr());
+  return om_new_cons(o, parse_cdr());
 }
 
 static object parse_list(void)
 {
   object o;
-  if (parse_skip() == ')') o = object_nil;
+  if (parse_skip() == ')') o = om_nil;
   else {
     o = parse_expr();
-    o = gc_new_cons(o, parse_cdr());
+    o = om_new_cons(o, parse_cdr());
   }
   parse_token(')');
   return o;
@@ -56,21 +55,21 @@ static object parse_expr(void)
       return parse_list();
     case '\'':
       parse_skip();
-      return gc_new_cons(object_quote, gc_new_cons(parse_expr(), object_nil));
+      return om_new_cons(om_quote, om_new_cons(parse_expr(), om_nil));
     case LEX_SYMBOL:
-      o = gc_new_mem_from(SYMBOL, lex_str.elt, lex_str.size);
+      o = om_new_mem_from(SYMBOL, lex_str.elt, lex_str.size);
       parse_skip();
       return o;
     case LEX_STRING:
-      o = gc_new_mem_from(STRING, lex_str.elt, lex_str.size);
+      o = om_new_mem_from(STRING, lex_str.elt, lex_str.size);
       parse_skip();
       return o;
     case LEX_INT:
-      o = gc_new_xint(lex_ival);
+      o = om_new_xint(lex_ival);
       parse_skip();
       return o;
     case LEX_FLOAT:
-      o = gc_new_xfloat(lex_fval);
+      o = om_new_xfloat(lex_fval);
       parse_skip();
       return o;
     default:
@@ -84,9 +83,9 @@ static object parse_expr(void)
 static object load_rec(void)
 {
   object o;
-  if (next_token == EOF) return object_nil;
+  if (next_token == EOF) return om_nil;
   o = parse_expr();
-  return gc_new_cons(o, load_rec());
+  return om_new_cons(o, load_rec());
 }
 
 static object load(void)
@@ -132,12 +131,12 @@ static void make_built_in(void)
   char buf[MAX_STR_LEN];
   object o;
   for (i = 0; built_in_name(special_name_table[i], buf) != NULL; i++) {
-    o = gc_new_native(SPECIAL, gc_new_mem_from_cstr(SYMBOL, buf), special_table[i]);
-    map_put(object_toplevel, o->native.name, o);
+    o = om_new_native(SPECIAL, om_new_mem_from_cstr(SYMBOL, buf), special_table[i]);
+    om_map_put(om_toplevel, o->native.name, o);
   }
   for (i = 0; built_in_name(function_name_table[i], buf) != NULL; i++) {
-    o = gc_new_native(BFUNC, gc_new_mem_from_cstr(SYMBOL, buf), function_table[i]);
-    map_put(object_toplevel, o->native.name, o);
+    o = om_new_native(BFUNC, om_new_mem_from_cstr(SYMBOL, buf), function_table[i]);
+    om_map_put(om_toplevel, o->native.name, o);
   }
 }
 
@@ -147,18 +146,18 @@ static object parse_args(int argc, char *argv[])
 #if WINDOWS_P
   LPWSTR *wc_args;
   char *mb_arg;
-  o = object_nil;
+  o = om_nil;
   if ((wc_args = CommandLineToArgvW(GetCommandLineW(), &argc)) == NULL)
     xerror("CommandLineToArgvW/failed");
   while (argc-- > 1) {
     if (!xiconv_wc2mb(XICONV_UTF8, wc_args[argc], &mb_arg))
       xerror("parse_args/failed.");
-    o = gc_new_cons(gc_new_mem_from_cstr(STRING, mb_arg), o);
+    o = om_new_cons(om_new_mem_from_cstr(STRING, mb_arg), o);
   }
   LocalFree(wc_args);
 #else
-  o = object_nil;
-  while (argc-- > 1) o = gc_new_cons(gc_new_mem_from_cstr(STRING, argv[argc]), o);
+  o = om_nil;
+  while (argc-- > 1) o = om_new_cons(om_new_mem_from_cstr(STRING, argv[argc]), o);
 #endif
   return o;
 }
@@ -166,26 +165,26 @@ static object parse_args(int argc, char *argv[])
 static void make_initial_objects(int argc, char *argv[])
 {
   char *host_name;
-  object_nil = gc_new_mem_from_cstr(SYMBOL, "nil");
-  object_true = gc_new_mem_from_cstr(SYMBOL, "true");
-  object_toplevel = gc_new_env(object_nil, 1 << 11);
-  map_put(object_toplevel, object_nil, object_nil);
-  map_put(object_toplevel, object_true, object_true);
-  object_key = gc_new_mem_from_cstr(SYMBOL, ":key");
-  object_opt = gc_new_mem_from_cstr(SYMBOL, ":opt");
-  object_rest = gc_new_mem_from_cstr(SYMBOL, ":rest");
-  object_quote = gc_new_mem_from_cstr(SYMBOL, "quote");
-  object_Class = gc_new_mem_from_cstr(SYMBOL, "Class");
-  object_class = gc_new_mem_from_cstr(SYMBOL, ":class");
-  object_symbol = gc_new_mem_from_cstr(SYMBOL, ":symbol");
-  object_super = gc_new_mem_from_cstr(SYMBOL, ":super");
-  object_features = gc_new_mem_from_cstr(SYMBOL, ":features");
-  object_fields = gc_new_mem_from_cstr(SYMBOL, ":fields");
-  object_Exception = gc_new_mem_from_cstr(SYMBOL, "Exception");
-  object_message = gc_new_mem_from_cstr(SYMBOL, ":message");
-  object_stack_trace = gc_new_mem_from_cstr(SYMBOL, ":stack-trace");
-  map_put(object_toplevel, gc_new_mem_from_cstr(SYMBOL, "$args"), parse_args(argc, argv));
-  map_put(object_toplevel, gc_new_mem_from_cstr(SYMBOL, "core.p"), gc_new_mem_from_cstr(STRING, core_fn));
+  om_nil = om_new_mem_from_cstr(SYMBOL, "nil");
+  om_true = om_new_mem_from_cstr(SYMBOL, "true");
+  om_toplevel = om_new_env(om_nil, 1 << 11);
+  om_map_put(om_toplevel, om_nil, om_nil);
+  om_map_put(om_toplevel, om_true, om_true);
+  om_key = om_new_mem_from_cstr(SYMBOL, ":key");
+  om_opt = om_new_mem_from_cstr(SYMBOL, ":opt");
+  om_rest = om_new_mem_from_cstr(SYMBOL, ":rest");
+  om_quote = om_new_mem_from_cstr(SYMBOL, "quote");
+  om_Class = om_new_mem_from_cstr(SYMBOL, "Class");
+  om_class = om_new_mem_from_cstr(SYMBOL, ":class");
+  om_symbol = om_new_mem_from_cstr(SYMBOL, ":symbol");
+  om_super = om_new_mem_from_cstr(SYMBOL, ":super");
+  om_features = om_new_mem_from_cstr(SYMBOL, ":features");
+  om_fields = om_new_mem_from_cstr(SYMBOL, ":fields");
+  om_Exception = om_new_mem_from_cstr(SYMBOL, "Exception");
+  om_message = om_new_mem_from_cstr(SYMBOL, ":message");
+  om_stack_trace = om_new_mem_from_cstr(SYMBOL, ":stack-trace");
+  om_map_put(om_toplevel, om_new_mem_from_cstr(SYMBOL, "$args"), parse_args(argc, argv));
+  om_map_put(om_toplevel, om_new_mem_from_cstr(SYMBOL, "core.p"), om_new_mem_from_cstr(STRING, core_fn));
 #if WINDOWS_P
   host_name = ":windows";
 #elif OS_CODE == OS_LINUX
@@ -197,7 +196,7 @@ static void make_initial_objects(int argc, char *argv[])
 #else
   xassert(FALSE);
 #endif
-  map_put(object_toplevel, gc_new_mem_from_cstr(SYMBOL, "$hostname"), gc_new_mem_from_cstr(SYMBOL, host_name));
+  om_map_put(om_toplevel, om_new_mem_from_cstr(SYMBOL, "$hostname"), om_new_mem_from_cstr(SYMBOL, host_name));
   make_built_in();
 }
 
@@ -227,7 +226,7 @@ int main(int argc, char *argv[])
 #endif
   buf[strlen(buf) - strlen("paren")] = '\0';
   core_fn = strcat(buf, "modules/core.p");
-  gc_init();
+  om_init();
   make_initial_objects(argc, argv);
   return ip_start(load());
 }

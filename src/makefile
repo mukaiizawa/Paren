@@ -60,7 +60,7 @@ lib+=$(dl_user)
 lib+=$(dl_ws)
 endif
 
-obj+=std.o xarray.o xbarray.o heap.o object.o lex.o gc.o ip.o bi.o xiconv.o paren.o
+obj+=std.o xarray.o xbarray.o heap.o om.o lex.o ip.o bi.o xiconv.o paren.o
 uflags=-Wall -Werror
 cflags=$(uflags) -c
 lflags=$(uflags)
@@ -78,7 +78,7 @@ endif
 .c.o:
 	$(cc) $(cflags) $<
 
-paren=paren$(exe)
+paren=../paren$(exe)
 all: $(paren)
 
 defsp.wk: $(obj:%.o=%.c)
@@ -88,15 +88,22 @@ defun.wk: $(obj:%.o=%.c)
 	cat $+ | grep ^DEFUN > $@
 
 $(paren): $(obj)
-	$(link) && mv $(paren) ../$(paren)
+	$(link)
 
-cdep:
-	paren cdep > make.d
+punit: $(paren)
+	$(paren) manunit
+	$(paren) punit -r ./wk
 
-rw.vim:
-	paren rw | sort | sed -e 's/|/\\|/g' -e '/\[/d' -e 's/^/syn keyword ParenBuiltIn /' > rw.wk
+mandb: $(paren)
+	$(paren) mandb
+
+cdep: $(paren)
+	$(paren) cdep > make.d
+
+rw.vim: $(paren)
+	$(paren) rw | sort | sed -e 's/|/\\|/g' -e '/\[/d' -e 's/^/syn keyword ParenBuiltIn /' > rw.wk
 
 clean:
-	rm -f *.o *.out *.a *.wk $(paren)
+	rm -rf wk *.wk *.o *.out *.a $(paren)
 
 include make.d

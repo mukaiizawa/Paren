@@ -43,6 +43,10 @@ If `STOP` is omitted, it defaults to length of the first argument.
     (1)
     ) (slice (.. 3) 1 3)
     (1 2)
+    ) (slice (.. 3) 100)
+    nil
+    ) (slice (.. 3) 100 101)
+    nil
 
     ) (slice (array 3) 1 2)
     #[ nil ]
