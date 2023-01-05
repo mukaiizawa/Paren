@@ -15,35 +15,34 @@ static char *core_fn;
 static int next_token;
 static object parse_expr(void);
 
-static int parse_skip(void)
+static int scan(void)
 {
   return next_token = lex();
 }
 
-static int parse_token(int token)
+static int skip(int token)
 {
   char buf[MAX_STR_LEN];
   if (next_token != token) lex_error("missing %s", lex_token_name(buf, token));
-  return parse_skip();
+  return scan();
 }
 
 static object parse_cdr(void)
 {
-  object o;
   if (next_token == ')') return om_nil;
-  o = parse_expr();
+  object o = parse_expr();
   return om_new_cons(o, parse_cdr());
 }
 
 static object parse_list(void)
 {
   object o;
-  if (parse_skip() == ')') o = om_nil;
+  if (scan() == ')') o = om_nil;
   else {
     o = parse_expr();
     o = om_new_cons(o, parse_cdr());
   }
-  parse_token(')');
+  skip(')');
   return o;
 }
 
@@ -54,23 +53,23 @@ static object parse_expr(void)
     case '(':
       return parse_list();
     case '\'':
-      parse_skip();
+      scan();
       return om_new_cons(om_quote, om_new_cons(parse_expr(), om_nil));
     case LEX_SYMBOL:
       o = om_new_mem_from(SYMBOL, lex_str.elt, lex_str.size);
-      parse_skip();
+      scan();
       return o;
     case LEX_STRING:
       o = om_new_mem_from(STRING, lex_str.elt, lex_str.size);
-      parse_skip();
+      scan();
       return o;
     case LEX_INT:
       o = om_new_xint(lex_ival);
-      parse_skip();
+      scan();
       return o;
     case LEX_FLOAT:
       o = om_new_xfloat(lex_fval);
-      parse_skip();
+      scan();
       return o;
     default:
       lex_error("illegal token '%c'", (char)next_token);
@@ -82,21 +81,19 @@ static object parse_expr(void)
 
 static object load_rec(void)
 {
-  object o;
   if (next_token == EOF) return om_nil;
-  o = parse_expr();
+  object o = parse_expr();
   return om_new_cons(o, load_rec());
 }
 
 static object load(void)
 {
   FILE *fp;
-  object o;
   if ((fp = fopen(core_fn, "r")) == NULL)
     xerror("load/open %s failed", core_fn);
   lex_start(fp);
-  parse_skip();
-  o = load_rec();
+  scan();
+  object o = load_rec();
   fclose(fp);
   return o;
 }
@@ -109,44 +106,39 @@ static int digit_val(char ch)
 
 static char *built_in_name(char *name, char *buf)
 {
-  char len;
-  int s, t;
   if (name == NULL) return NULL;
-  s = t = 0;
-  len = strlen(name);
-  while (s < len) {
-    if (name[s] != '_') buf[t++] = name[s++];
+  int i = 0;
+  int j = 0;
+  char ch;
+  do {
+    if ((ch = name[i]) != '_') buf[j++] = name[i++];
     else {
-      buf[t++] = 16 * digit_val(name[s + 1]) + digit_val(name[s + 2]);
-      s += 4;
+      buf[j++] = 16 * digit_val(name[i + 1]) + digit_val(name[i + 2]);
+      i += 4;
     }
-  }
-  buf[t] = '\0';
+  } while (ch);
   return buf;
 }
 
 static void make_built_in(void)
 {
-  int i;
   char buf[MAX_STR_LEN];
-  object o;
-  for (i = 0; built_in_name(special_name_table[i], buf) != NULL; i++) {
-    o = om_new_native(SPECIAL, om_new_mem_from_cstr(SYMBOL, buf), special_table[i]);
+  for (int i = 0; built_in_name(special_name_table[i], buf) != NULL; i++) {
+    object o = om_new_native(SPECIAL, buf, special_table[i]);
     om_map_put(om_toplevel, o->native.name, o);
   }
-  for (i = 0; built_in_name(function_name_table[i], buf) != NULL; i++) {
-    o = om_new_native(BFUNC, om_new_mem_from_cstr(SYMBOL, buf), function_table[i]);
+  for (int i = 0; built_in_name(function_name_table[i], buf) != NULL; i++) {
+    object o = om_new_native(BFUNC, buf, function_table[i]);
     om_map_put(om_toplevel, o->native.name, o);
   }
 }
 
 static object parse_args(int argc, char *argv[])
 {
-  object o;
+  object o = om_nil;
 #if WINDOWS_P
   LPWSTR *wc_args;
   char *mb_arg;
-  o = om_nil;
   if ((wc_args = CommandLineToArgvW(GetCommandLineW(), &argc)) == NULL)
     xerror("CommandLineToArgvW/failed");
   while (argc-- > 1) {
@@ -156,8 +148,8 @@ static object parse_args(int argc, char *argv[])
   }
   LocalFree(wc_args);
 #else
-  o = om_nil;
-  while (argc-- > 1) o = om_new_cons(om_new_mem_from_cstr(STRING, argv[argc]), o);
+  while (argc-- > 1)
+    o = om_new_cons(om_new_mem_from_cstr(STRING, argv[argc]), o);
 #endif
   return o;
 }
@@ -203,11 +195,10 @@ static void make_initial_objects(int argc, char *argv[])
 static void init_console()
 {
 #if WINDOWS_P
-  HANDLE h;
   DWORD mode;
   _setmode(_fileno(stdin), _O_BINARY);
   _setmode(_fileno(stdout), _O_BINARY);
-  h = GetStdHandle(STD_OUTPUT_HANDLE);
+  HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
   GetConsoleMode(h, &mode);
   mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
   SetConsoleMode(h, mode);

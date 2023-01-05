@@ -405,10 +405,10 @@ object om_new_func(object env, int param_count, object params, object body)
   return new_proc(FUNC, env, param_count, params, body);
 }
 
-object om_new_native(int type, object name, void *p)
+object om_new_native(int type, char *name, void *p)
 {
   object o = om_alloc(sizeof(struct native));
-  o->native.name = name;
+  o->native.name = om_new_mem_from_cstr(SYMBOL, name);
   o->native.u.p = p;
   set_type(o, type);
   regist(o);

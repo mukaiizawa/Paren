@@ -131,7 +131,7 @@ extern object om_new_array_from(object *o, int size);
 extern object om_new_dict(void);
 extern object om_new_func(object env, int param_count, object params, object body);
 extern object om_new_macro(object env, int param_count, object params, object body);
-extern object om_new_native(int type, object name, void *p);
+extern object om_new_native(int type, char *name, void *p);
 extern object om_new_env(object top, int half_size);
 
 // garbage collector.

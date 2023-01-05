@@ -5,9 +5,9 @@
 #include "bi.h"
 #include "ip.h"
 
-static object point_to_object(POINT *p)
+static object point_to_om(POINT *p)
 {
-  return om_new_cons(om_new_xint(p->x), om_new_cons(om_new_xint(p->y), om_nil));
+  return om_new_cons(om_sint(p->x), om_new_cons(om_sint(p->y), om_nil));
 }
 
 static int om_to_point(object o, POINT *p)
@@ -28,7 +28,7 @@ DEFUN(mouse_2e_position)
   POINT p;
   if (!bi_argc_range(argc, FALSE, FALSE)) return FALSE;
   GetCursorPos(&p);
-  *result = point_to_object(&p);
+  *result = point_to_om(&p);
   return TRUE;
 }
 
