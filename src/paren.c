@@ -20,13 +20,6 @@ static int scan(void)
   return next_token = lex();
 }
 
-static int skip(int token)
-{
-  char buf[MAX_STR_LEN];
-  if (next_token != token) lex_error("missing %s", lex_token_name(buf, token));
-  return scan();
-}
-
 static object parse_cdr(void)
 {
   if (next_token == ')') return om_nil;
@@ -42,12 +35,13 @@ static object parse_list(void)
     o = parse_expr();
     o = om_new_cons(o, parse_cdr());
   }
-  skip(')');
+  scan();
   return o;
 }
 
 static object parse_expr(void)
 {
+  char buf[MAX_STR_LEN];
   object o;
   switch (next_token) {
     case '(':
@@ -72,7 +66,7 @@ static object parse_expr(void)
       scan();
       return o;
     default:
-      lex_error("illegal token '%c'", (char)next_token);
+      lex_error("unexpected token '%s'", lex_token_name(buf, next_token));
       return NULL;
   }
 }

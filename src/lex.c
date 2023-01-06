@@ -10,7 +10,6 @@ double lex_fval;
 static FILE *fp;
 static int line;
 static int column;
-
 static int next_ch;
 
 void lex_error(char *fmt, ...)
@@ -26,11 +25,11 @@ void lex_error(char *fmt, ...)
 static int skip(void)
 {
   int result;
-  result = next_ch;
-  if (result == '\n') {
+  if ((result = next_ch) != '\n') column++;
+  else {
     line++;
     column = 0;
-  } else column++;
+  }
   next_ch = fgetc(fp);
   return result;
 }
@@ -42,8 +41,7 @@ static void add(int ch)
 
 static int get(void)
 {
-  int ch;
-  ch = skip();
+  int ch = skip();
   add(ch);
   return ch;
 }
@@ -76,21 +74,20 @@ static int digit_val(int ch, int radix)
 
 static int lex_number(void)
 {
-  int radix;
-  double factor;
   lex_ival = 0;
-  while (isdigit(next_ch)) lex_ival = lex_ival * 10 + digit_val(skip(), 10);
+  while (isdigit(next_ch))
+    lex_ival = lex_ival * 10 + digit_val(skip(), 10);
   if (next_ch == 'x') {
-    skip();
-    radix = lex_ival;
+    int radix = lex_ival;
     lex_ival = 0;
+    skip();
     if (radix == 0) radix = 16;
     while (isalnum(next_ch))
       lex_ival = lex_ival * radix + digit_val(skip(), radix);
   } else if (next_ch == '.') {
-    skip();
+    double factor = 0.1;
     lex_fval = lex_ival;
-    factor = 0.1;
+    skip();
     while (isdigit(next_ch)) {
       lex_fval += factor * digit_val(skip(), 10);
       factor /= 10;
@@ -238,10 +235,9 @@ static int lex_symbol(void)
 
 static int lex_sign(void)
 {
-  int sign, token_type;
-  sign = get();
+  int sign = get();
   if (isdigit(next_ch)) {
-    token_type = lex_number();
+    int token_type = lex_number();
     if (sign == '-') {
       if (token_type == LEX_INT) lex_ival *= -1;
       else lex_fval *= -1;
@@ -255,8 +251,11 @@ static int lex_sign(void)
 char *lex_token_name(char *buf, int token)
 {
   char *name;
-  switch(token) {
+  switch (token) {
     case LEX_SYMBOL: name = "symbol"; break;
+    case LEX_STRING: name = "string"; break;
+    case LEX_INT: name = "integer"; break;
+    case LEX_FLOAT: name = "number"; break;
     case EOF: name = "EOF"; break;
     default: name = NULL; break;
   }
