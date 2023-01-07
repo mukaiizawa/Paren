@@ -25,7 +25,9 @@
     (with-memory-stream ($in expr)
       (let (rd (.new AheadReader))
         (eval (parse-expr rd))))
-    (f (e) 'NaN)))
+    (f (e)
+      (if (is-a? e SystemExit) (throw e)
+          'NaN))))
 
 (function! main (args)
   (if (nil? args) (loop (write (calc (read-line))))
