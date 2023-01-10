@@ -343,7 +343,7 @@ DEFUN(function_3f_)
 DEFUN(hash)
 {
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  *result = om_new_xint(om_hash(argv->cons.car));
+  *result = om_sint(om_hash(argv->cons.car));
   return TRUE;
 }
 
@@ -603,7 +603,7 @@ static int int64_add(int64_t x, object argv, object *result)
 DEFUN(_2b_)
 {
   if (argc == 0) {
-    *result = om_new_xint(0);
+    *result = om_sint(0);
     return TRUE;
   }
   return int64_add(0, argv, result);
@@ -657,7 +657,7 @@ static int int64_multiply(int64_t x, object argv, object *result)
 DEFUN(_2a_)
 {
   if (argc == 0) {
-    *result = om_new_xint(1);
+    *result = om_sint(1);
     return TRUE;
   }
   return int64_multiply(1, argv, result);
@@ -999,7 +999,7 @@ DEFUN(memcmp)
   }
   else if (val > 0) val = 1;    // normalize
   else val = -1;
-  *result = om_new_xint(val);
+  *result = om_sint(val);
   return TRUE;
 }
 
@@ -1212,7 +1212,7 @@ DEFUN(array)
       size = o->mem.size;
       *result = om_new_array(o->mem.size);
       for (int i = 0; i < size; i++)
-        (*result)->array.elt[i] = om_new_xint(o->mem.elt[i]);
+        (*result)->array.elt[i] = om_sint(LC(o->mem.elt + i));
       return TRUE;
     case ARRAY:
       *result = om_new_array_from(o->array.elt, o->array.size);
@@ -1396,7 +1396,7 @@ static int bytes_access(int argc, object argv, object o, object *result)
   int i, byte;
   if (!bi_cpint(argv->cons.car, &i)) return FALSE;
   if (!bi_range(0, i, o->mem.size - 1)) return FALSE;
-  if (argc == 2) *result = om_new_xint(LC(o->mem.elt + i));
+  if (argc == 2) *result = om_sint(LC(o->mem.elt + i));
   else {
     if (!bi_cbyte((*result = argv->cons.cdr->cons.car), &byte)) return FALSE;
     SC(o->mem.elt + i, byte);
