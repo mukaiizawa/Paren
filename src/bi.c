@@ -152,26 +152,9 @@ int bi_cint64(object o, int64_t *p)
   return TRUE;
 }
 
-static int bi_finite(double x)
+int bi_cintptr(object o, intptr_t *p)
 {
-  if (!isfinite(x)) return ip_sigerr(ArithmeticError, "numeric overflow");
-  return TRUE;
-}
-
-static int bi_cintptr(object o, intptr_t *p)
-{
-  int64_t i;
-  if (!bi_cint64(o, &i) || i < INTPTR_MIN || i > INTPTR_MAX) {
-    *p = 0;
-    return FALSE;
-  }
-  *p = (intptr_t)i;
-  return TRUE;
-}
-
-static int bi_fp(object o, FILE **p)
-{
-  if (!bi_cintptr(o, (intptr_t *)p)) return ip_sigerr(ArgumentError, "invalid fp");
+  if (!bi_cint64(o, (int64_t *)p) || *p < INTPTR_MIN || *p > INTPTR_MAX) return ip_sigerr(ArgumentError, "invalid pointer");
   return TRUE;
 }
 
@@ -195,6 +178,12 @@ int bi_cdouble(object o, double *p)
     *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
     return ip_sigerr(ArgumentError, "expected number");
   }
+  return TRUE;
+}
+
+static int bi_finite(double x)
+{
+  if (!isfinite(x)) return ip_sigerr(ArithmeticError, "numeric overflow");
   return TRUE;
 }
 
@@ -1867,7 +1856,7 @@ DEFUN(fgetc)
 {
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   int ch = fgetc(fp);
   if (ch == EOF && fp_error_p(fp)) return ip_sigerr(OSError, "fgetc failed");
   *result = om_new_xint(ch);
@@ -1880,7 +1869,7 @@ DEFUN(fputc)
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
   if (!bi_cbyte(argv->cons.car, &byte)) return FALSE;
-  if (!bi_fp(argv->cons.cdr->cons.car, &fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   if (fputc(byte, fp) == EOF) return ip_sigerr(OSError, "fputc failed");
   *result = argv->cons.car;
   return TRUE;
@@ -1890,7 +1879,7 @@ DEFUN(fgets)
 {
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   struct xbarray x;
   xbarray_init(&x);
   if (xbarray_fgets(&x, fp) == NULL) *result = om_nil;
@@ -1909,7 +1898,7 @@ DEFUN(fread)
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_cint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
-  if (!bi_fp(argv->cons.cdr->cons.car, &fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   if ((size = fread(o->mem.elt + from, 1, size, fp)) == 0 && fp_error_p(fp)) return ip_sigerr(OSError, "fread failed");
   *result = om_new_xint(size);
   return TRUE;
@@ -1925,7 +1914,7 @@ DEFUN(fwrite)
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &from)) return FALSE;
   if (!bi_cpint((argv = argv->cons.cdr)->cons.car, &size)) return FALSE;
   if (!bi_range(0, from + size, o->mem.size)) return FALSE;
-  if (!bi_fp(argv->cons.cdr->cons.car, &fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.cdr->cons.car, (intptr_t *)&fp)) return FALSE;
   if ((size = fwrite(o->mem.elt + from, 1, size, fp)) == 0 && fp_error_p(fp)) return ip_sigerr(OSError, "fwrite failed");
   *result = om_new_xint(size);
   return TRUE;
@@ -1936,7 +1925,7 @@ DEFUN(fseek)
   int offset;
   FILE *fp;
   if (!bi_argc_range(argc, 2, 2)) return FALSE;
-  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   if (!bi_cint(argv->cons.cdr->cons.car, &offset)) return FALSE;
   if (offset == -1?
       fseek(fp, 0, SEEK_END):
@@ -1950,7 +1939,7 @@ DEFUN(ftell)
   int pos;
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   if ((pos = ftell(fp)) == -1) return ip_sigerr(OSError, "ftell failed");
   *result = om_new_xint(pos);
   return TRUE;
@@ -1960,7 +1949,7 @@ DEFUN(fclose)
 {
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   fclose(fp);
   *result = om_nil;
   return TRUE;
@@ -2124,7 +2113,7 @@ DEFUN(pclose)
 {
   FILE *fp;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_fp(argv->cons.car, &fp)) return FALSE;
+  if (!bi_cintptr(argv->cons.car, (intptr_t *)&fp)) return FALSE;
   pclose(fp);
   *result = om_nil;
   return TRUE;
