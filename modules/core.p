@@ -734,16 +734,16 @@
                       (<- args (cdr args)))))))
         (if args (raise ArgumentError "too many arguments"))))))
 
-(function strip (s :opt fn)
-  (rstrip (lstrip s fn) fn))
+(function trim (s :opt fn)
+  (rtrim (ltrim s fn) fn))
 
-(function lstrip (s :opt fn)
+(function ltrim (s :opt fn)
   (let (i 0 a (array s) size (len a) fn (|| fn space?))
     (while (&& (< i size) (fn ([] a i))) (<- i (++ i)))
     (if (= i 0) s
         (slice s i))))
 
-(function rstrip (s :opt fn)
+(function rtrim (s :opt fn)
   (let (a (array s) i (len a) fn (|| fn space?))
     (while (&& (>= i 0) (fn ([] a (-- i)))) (<- i (-- i)))
     (slice s 0 i)))
