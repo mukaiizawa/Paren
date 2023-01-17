@@ -101,7 +101,7 @@ cdep: $(paren)
 	$(paren) cdep > make.d
 
 rw.vim: $(paren)
-	$(paren) rw | sort | sed -e 's/|/\\|/g' -e '/\[/d' -e 's/^/syn keyword ParenBuiltIn /' > rw.wk
+	$(paren) rw | sort | sed -e 's/|/\\|/g' -e '/\[/d' -e 's/^/sy keyword ParenBuiltIn /' > rw.wk
 
 clean:
 	rm -rf wk *.wk *.o *.out *.a $(paren)
