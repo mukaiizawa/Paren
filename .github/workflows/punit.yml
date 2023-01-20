@@ -5,5 +5,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - run: make os=unix mandb
+        working-directory: ./src
       - run: make os=unix debug=on punit
         working-directory: ./src
+      - run: |
+          git config --local user.email "shintaro@mukai.systems"
+          git config --local user.name "Shintaro Mukai"
+          git diff --quiet && git diff --staged --quiet || (git commit -am "Update by GitHub Action" && git push)
