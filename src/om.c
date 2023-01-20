@@ -215,7 +215,7 @@ void om_free(object o)
       break;
     case ENV:
     case DICT:
-      if (o->map.half_size != 0) om_free0(o->map.table, sizeof(object) * o->map.half_size * 2);
+      om_free0(o->map.table, sizeof(object) * o->map.half_size * 2);
       om_free0(o, sizeof(struct map));
       break;
     default:
@@ -365,12 +365,13 @@ object om_new_array_from(object *o, int size)
 
 static object new_map(int type, int half_size, object top)
 {
+  xassert(half_size != 0);
   object o = om_alloc(sizeof(struct map));
   set_type(o, type);
   o->map.top = top;
   o->map.entry_count = 0;
   o->map.half_size = half_size;
-  if (half_size != 0) o->map.table = om_alloc(sizeof(object) * half_size * 2);
+  o->map.table = om_alloc(sizeof(object) * half_size * 2);
   for (int i = 0; i < half_size; i++)
     o->map.table[i] = NULL;
   regist(o);
@@ -726,13 +727,11 @@ object om_list_reverse(object o)
 
 object om_map_get(object o, object s)
 {
-  if (o->map.half_size != 0) {
-    object p;
-    int i = om_hash(s) % o->map.half_size;
-    while ((p = o->map.table[i]) != NULL) {
-      if (om_eq_p(p, s)) return o->map.table[i + o->map.half_size];
-      if (++i == o->map.half_size) i = 0;
-    }
+  object p;
+  int i = om_hash(s) % o->map.half_size;
+  while ((p = o->map.table[i]) != NULL) {
+    if (om_eq_p(p, s)) return o->map.table[i + o->map.half_size];
+    if (++i == o->map.half_size) i = 0;
   }
   return NULL;
 }
@@ -773,7 +772,6 @@ static void rehash(object o)
 
 void om_map_put(object o, object s, object v)
 {
-  xassert(o->map.half_size != 0);
   object p;
   int i = om_hash(s) % o->map.half_size;
   while ((p = o->map.table[i]) != NULL) {

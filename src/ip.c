@@ -207,6 +207,7 @@ static void dump_fs(void)
   fprintf(stderr, "!registers\n");
   fprintf(stderr, "dr: %s\n", om_describe(dr, buf));
   fprintf(stderr, "cr: %s\n", om_describe(cr, buf));
+  fprintf(stderr, "om_toplevel: 0x%p\n", om_toplevel);
   exit(1);
 }
 #endif
@@ -368,7 +369,8 @@ static void pop_apply_frame(void)
   // optimize tail recursion
   if (fs_top() == FUNC_FRAME) set_frame_var(fp, 1, trace);
   else gen2(FUNC_FRAME, cr, trace);
-  cr = om_new_env(f->proc.env, f->proc.param_count * 2);
+  if (f->proc.param_count == 0) cr = f->proc.env;
+  else cr = om_new_env(f->proc.env, f->proc.param_count * 2);
   gen_eval_sequential_frame(f->proc.body);
   parse_args(&om_map_put, f->proc.params, dr);
 }
@@ -915,15 +917,23 @@ DEFSP(dynamic)
   if (!bi_argv(BI_SYM, argv->cons.car, &s)) return FALSE;
   i = fp;
   e = cr;
-  if ((dr = om_map_get(e, s)) != NULL) return TRUE;
-  while ((i = prev_fp(i)) != -1) {
+  while (i != -1) {
     switch (fs_nth(i)) {
-      case LET_FRAME: e = e->map.top; break;
-      case FUNC_FRAME: e = get_frame_var(i, 0); break;
-      default: continue;
+      case LET_FRAME:
+        xassert(e != om_toplevel);
+        if ((dr = om_map_get(e, s)) != NULL) return TRUE;
+        e = e->map.top;
+        break;
+      case FUNC_FRAME:
+        if (e != om_toplevel && (dr = om_map_get(e, s)) != NULL) return TRUE;    // see pop_apply_frame
+        e = get_frame_var(i, 0);
+        break;
+      default:
+        break;
     }
-    if ((dr = om_map_get(e, s)) != NULL) return TRUE;
+    i = prev_fp(i);
   }
+  if ((dr = om_map_get(om_toplevel, s)) != NULL) return TRUE;
   dr = om_nil;
   return ip_sigerr(ArgumentError, "unbound symbol");
 }
