@@ -154,7 +154,12 @@ int bi_cint64(object o, int64_t *p)
 
 int bi_cintptr(object o, intptr_t *p)
 {
-  if (!bi_cint64(o, (int64_t *)p) || *p < INTPTR_MIN || *p > INTPTR_MAX) return ip_sigerr(ArgumentError, "invalid pointer");
+  int64_t i64;
+  if (!bi_cint64(o, &i64) || i64 < (int64_t)INTPTR_MIN || i64 > (int64_t)INTPTR_MAX) {
+    *p = 0;    // Suppress maybe-uninitialized warnings with `-O3` optimization option
+    return ip_sigerr(ArgumentError, "invalid pointer");
+  }
+  *p = (intptr_t)i64;
   return TRUE;
 }
 
