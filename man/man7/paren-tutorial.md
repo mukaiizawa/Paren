@@ -2,1223 +2,796 @@
 paren-tutorial - a tutorial introduction to Paren.
 
 # DESCRIPTION
-## 概要
-このチュートリアルはParenの基本的な概念や文法を早巡りすることを目的とする。読者に計算機科学の初等的な知識があることを想定し、いくつかの専門用語は定義することなしに使用する。
+This is a brief tutorial on Paren, a dialect of Lisp. It's intended for readers with no Lisp experience.
 
-ParenはS式によって記述されるプログラミング言語LISPの方言である。
+Programs consist of expressions. The simplest expressions are things like numbers and strings, which evaluate to themselves.
 
-## Parenの実行
-引数なしでParenを実行するとREPLが起動し、対話的に式を評価できる。
+    ) 25
+    25
+    ) "foo"
+    "foo"
 
-    $ paren
-    ) 
+Several expressions enclosed within parentheses are also an expression. These are called lists. When a list is evaluated, the elements are evaluated from left to right, and the value of the first (presumably a function) is passed the values of the rest. Whatever it returns is returned as the value of the expression.
 
-`)`がプロンプトである。プロンプトに続けて式を入力すると評価され結果が印字される。
+    ) (+ 1 2)
+    3
 
-    ) 1
-    1
-    ) (+ 1 2 3 4)
-    10
-    ) (* (+ 1 2) 3 4)
-    36
+Here's what just happened. First `+`, `1`, and `2` were evaluated, returning the `plus function`, `1`, and `2` respectively. `1` and `2` were then passed to the `plus function`, which returned `3`, which was returned as the value of the whole expression. (Macros introduce a twist, because they transform lists before they're evaluated. We'll get to them later.)
 
-Parenのプログラムは演算子を前置し、被演算子と共に括弧で括る。このように演算子を前置する記法を前置記法という。
+Since expression and evaluation are both defined recursively, programs can be as complex as you want:
 
-あるプログラミング言語を習得する唯一の方法は、その言語でプログラムを書くことである。そしてそれは、慣習により次のプログラムを書くことから始まる。
+    ) (+ (+ 1 2) (+ 3 (+ 4 5)))
+    15
 
-    文字列`hello world`を印字せよ。
+Putting the `+` before the numbers looks odd when you're used to writing `1 + 2`, but it has the advantage that `+` can now take any number of arguments, not just two:
 
-文字列を印字するには`write`関数を使用する。
-
-    ) (write "hello world")
-    "hello world"
-    "hello world"
-
-上記のプログラムを評価すると二行出力される。一行目が`write`関数が印字した文字列であり、二行が`write`の返り値をREPLが印字したものである。
-
-コード片を評価するにはREPLは便利だが、一般に大きなプログラムを作る場合にはファイルに記述する。
-
-引数を与えてParenを実行すると、第一引数をファイル名と見做して読み込み、評価する。
-
-その後、`main`関数が定義されていた場合は`main`関数を実行する。このとき、第二引数以降が`main`関数の引数として渡される。
-
-    $ cat test.p
-    (function main (args)
-      (write args))
-    
-    $ paren test.p hello world
-    ("hello" "world")
-
-## コメント
-`;`から行末まではコメントと見做される。
-
-    ; 一行コメント
-
-Parenには複数行に跨がれるコメントは言語仕様として存在しない。ただし、そのような機能が必要になった場合は後述するリードマクロで容易に定義できる。
-
-## 数値
-すべての実数は数値型として扱われる。
-
-数値の前に`radix x`と前置することにより後続する数値の基数を`radix`に指定することができる。
-
-    ) 2x1010
-    10
-    ) 8x12
-    10
-
-例外的に0を前置した場合、16進数と見做す。
-
-    ) 0x30
-    48
-
-代表的な算術関数の使用例を以下に示す。
-
-    ) (= 1 1)
-    true
-    ) (+ 3 4 5)
-    12
-    ) (- 10 4 5)
-    1
-    ) (* 3 4 5)
-    60
-    ) (/ 3 4 5)
-    0.15
-    ) (/ 3)
-    0.3333333333333332
-    ) (// 5 4)
-    1
-    ) (% 6 4)
-    2
-
-## 文字列
-文字列はリテラルや文字列操作関数から生成される、イミュータブルな組み込み型である。
-
-文字列リテラルはダブルクォートで囲まれた文字の列である。
-
-    ) "hello world"
-    "hello world"
-
-代表的な文字列操作関数の使用例を以下に示す。
-
-    ) (= "foo" "foo")
-    true
-    ) (memcat "hello" " " "world")
-    "hello world"
-    ) (slice "hello world" 6)
-    "world"
-    ) (slice "hello world" 0 5)
-    "hello"
-    ) (strstr "foo" "foo")
+    ) (+)
     0
-    ) (strstr "foo" "oo" 1)
+    ) (+ 1) 
     1
-    ) (str "one:" 1)
-    "one:1"
-
-正規表現は`regex`モジュールを参照のこと。
-
-## シンボル
-シンボルは主にシンボルリテラルから生成される、イミュータブルな組み込み型である。
-
-同名のシンボルはシステム上でただ一つしか存在しないことが保証されているため、同一性はアドレス比較で高速に行える。
-
-シンボルは任意の値への参照を一つ保持でき、評価されると保持している値を返す。
-
-シンボルリテラルは数字以外の英文字と一部の記号から始まり、その後、英数字と一部の記号が続く。
-
-    var
-    x1
-
-複数の単語で構成される場合は、慣習としてチェインケースを利用する。
-
-    user-name
-    neighbor-node
-
-シンボルに値を対応付ける行為を束縛といい、スペシャルオペレーター`<-`を使用する。
-
-    ) (<- pi 3.14)
-    3.14
-    ) pi
-    3.14
-
-シンボルと値の対応を記録しておくために、内部的には何らかの記憶域を専有する必要がある。
-
-この記憶域のことを環境といい、シンボルに対応付けられた値がどのように解決されるかを理解するには環境の理解が不可欠である。
-
-## 環境
-環境は前述したシンボルと値の対応のほかに、外側の環境への参照を零または一つ持つ。
-
-    +-------------+
-    |E1           |
-    +-------------+
-    |foo:3.14     |
-    |bar:10       |
-    +-------------+
-         |  +-------------+
-         |- |E2           |
-         |  +-------------+
-         |  |foo:3        |
-         |  |buzz:0       |
-         |  +-------------+
-         |       |  +-------------+
-         |       |- |E3           |
-         |          +-------------+
-         |          |bar:1        |
-         |          +-------------+
-         |      ...
-         |  +-------------+
-         |- |E4           |
-            +-------------+
-            |foo:4        |
-            |buzz:1       |
-            +-------------+
-    
-         ...
-    
-    凡例
-    - 環境E1
-        - 外側の環境への参照を持たない
-        - シンボルと値の対(foo, 3.14)、(bar, 10)が存在する
-    - 環境E2
-        - 外側の環境への参照E1を持つ
-        - シンボルと値の対(foo, 3)、(buzz, 0)が存在する
-
-環境E1のように、外側の環境への参照を持たない環境のことを大域環境といいシステム内にただ一つだけ存在する。
-
-すべての環境は外側の環境をたどると大域環境に到達する。
-
-あらゆる式が評価されるとき、必ずどこかの環境の下で評価される。Parenを起動した直後の環境は大域環境である。
-
-前述したスペシャルオペレータ`<-`による束縛は次の手順で実行される。
-
-    現在の環境にシンボルが既に束縛されている場合、その値を更新する。
-    そうでない場合は外側の環境を再帰的に辿る。
-    大域環境にもシンボルが束縛されていない場合は、大域環境に新たにシンボルを束縛する。
-
-対照的に、シンボルの値の参照は次の手順で行われる。
-
-    現在の環境にシンボルが既に束縛されている場合、その値を返す。
-    そうでない場合、再帰的に外側の環境を辿る。
-    大域環境にも束縛されていない場合はエラーとなる。
-
-スペシャルオペレーター`let`は現在の環境を外側の環境に持つような新たな環境を作り、その環境下で評価を行う。
-
-第一引数には新たな環境に束縛するシンボルと値の対のリストを、第二引数以降には新たな環境下で評価する式を指定する。
-
-    ; 大域環境に対{ (a, 1), (b, 2) (c, 3) }を束縛
-    ) (<- a 1 b 2 c 3)
+    ) (+ 1 2)
     3
-    ) (list a b c)
-    (1 2 3)
-    
-    ; シンボルと値の対{ (a, 2), (b, 4) (c, 6), (d, 8) }を持つ環境を作り、
-    ; その環境下で式(list a b c d)を評価。
-    ) (let (a 2 b 4 c 6 d 8)
-        (list a b c d))
-    (2 4 6 8)
-    ) (list a b c)
-    (1 2 3)
-    
-    ; 大域環境にはdは束縛されていないため、エラー。
-    ) d
-    Error -- unbound symbol
-            at: d
-            at: (repl)
-            at: (boot nil)
+    ) (+ 1 2 3)
+    6
 
-このように、あるシンボルの保持する値は、どの環境下でシンボルが評価されたのかに依存する。
+This turns out to be a convenient property, especially when generating code, which is a common thing to do in Lisp.
 
-大域環境に束縛されたシンボルのことをグローバルシンボルという。
+Lisp dialects like Paren have a data type most languages don't: symbols.  We've already seen one: `+` is a symbol. Symbols don't evaluate to themselves the way numbers and strings do. They return whatever value they've been assigned.
 
-慣習として、グローバルシンボルは目立つように`$`を先頭につける。
+If we give foo the value 13, it will return 13 when evaluated:
 
-    $global-var
+    ) (<- foo 13)
+    13
+    ) foo
+    13
 
-## キーワード
-キーワードは主にキーワードリテラルから生成される、イミュータブルな組み込み型である。
+You can turn off evaluation by putting a single quote character before an expression. So `'foo` returns the symbol `foo`.
 
-評価されると常に自身を返す点を除いてシンボルと概ね同じである。
+    ) 'foo
+    foo
 
-その特性から、列挙型の要素や、辞書のキーなどに利用する。
+Particularly observant readers may be wondering how we got away with using `foo` as the first argument to `<-`  If the arguments are evaluated left to right, why didn't this cause an error when foo was evaluated?  There are some operators that violate the usual evaluation rule, and `<-` is one of them. Its first argument isn't evaluated.
 
-キーワードリテラルは`:`から始まる英数字と一部の記号の列である。
+If you quote a list, you get back the list itself.  
 
-    :foo
-    :bar
-
-## コンス
-コンスとは、二つのデータへの参照`car`及び`cdr`を持つデータ型である。
-
-`car`は任意のデータへの参照を保持し、`cdr`はコンスまたは`nil`への参照を保持する。
-
-リストとは、あるコンスの`cdr`を辿ったコンス全体のことをいう。
-
-このとき、辿ったコンスの`car`全体をリストの要素という。
-
-要素がないリストを空のリストといい、シンボル`nil`で表す。
-
-あるコンスの`cdr`を辿っていった終端が`nil`を指している場合、そのコンス全体は純リストであるという。定義により、Parenの任意のリストは純リストである。純リスト以外のリストが作れないという制約はほかのLISP方言と異なる特徴の一つである。
-
-コンスは組み込み関数`cons`で作ることができる。`cons`の第一引数、第二引数が、それぞれ作成されるコンスの`car`と`cdr`に対応する。
-
-    ) (cons 1 nil)
-    (1)
-    ) (cons 1 (cons 2 nil))
-    (1 2)
-    ) (cons (cons 1 nil) (cons 2 nil))
-    ((1) 2)
-
-コンスは次の規則で印字される。
-
-- 左括弧を印字する
-- `car`を印字する
-- `cdr`が`nil`でない間`car`を印字する
-- 右括弧を印字する
-
-    ) (cons 1 (cons 2 (cons 3 nil)))
-    (1 2 3)
-
-    +-----+-----+
-    | car | cdr |
-    +-----+-----+
-       |     |    +-----+-----+
-       |     +--->| car | cdr |
-       |          +-----+-----+
-       |             |     |    +-----+-----+
-       |             |     +--->| car | cdr |
-       |             |          +-----+-----+
-       |             |             |     |
-       |             |             |     +---> nil
-       1             2             3
-
-あるコンスの`car`がコンスを指している場合でもそのルールは再帰的に適用される。
-
-    ) (cons (cons 1 nil) (cons 2 (cons 3 nil)))
-    ((1) 2 3)
-
-    +-----+-----+
-    | car | cdr |
-    +-----+-----+
-       |     |    +-----+-----+
-       |     +--->| car | cdr |
-       |          +-----+-----+
-       |             |     |    +-----+-----+
-       |             |     +--->| car | cdr |
-       |             2          +-----+-----+
-       |                           |     |
-       |    +-----+-----+          |     +---> nil
-       +--->| car | cdr |          3
-            +-----+-----+
-               |     |
-               |     +---> nil
-               1
-
-任意のリストは`cons`関数で作ることができるが、複数の要素を持つようなリストを作ろうとすると、すぐに困ったことになる。
-
-    ) (cons 1 (cons 2 (cons 3 (cons 4 (cons 5 nil)))))
-    (1 2 3 4 5)
-
-そのため、引数を要素に持つようなリストを作成するための`list`関数が存在する。
-
-次のように、要素を引数にしてリストを作成できる。
-
-    ) (list 1 2 3 4 5)
-    (1 2 3 4 5)
-    ) (list (list 1 (list 2 3) 4 5))
-    ((1 (2 3)) 4 5)
-
-コンスの`car`及び`cdr`の指す場所を得る関数があり、それぞれ`car`と`cdr`という。
-
-    ) (<- lis (list 1 2))
-    (1 2)
-    ) (car lis)
-    1
-    ) (cdr lis)
-    (2)
-    ) (car (cdr lis))
-    2
-
-`car`と`cdr`は引数が空のリストである場合は`nil`を返す。
-
-    ) (car nil)
-    nil
-    ) (cdr nil)
-    nil
-    ) (car (cdr (cdr (list 1))))
-    nil
-
-リストの要素を参照するときに`car`と`cdr`を組み合わせることは頻繁にあるため、計四回までリストを辿るすべての組み合わせが定義されている。
-
-    caar cadr cdar cddr
-    caaar caadr cadar caddr cdaar cdadr cddar cdddr caaaar
-    caaadr caadar caaddr cadaar cadadr caddar cadddr cdaaar cdaadr cdadar
-    cdaddr cddaar cddadr cdddar cddddr
-
-これらの関数`(cx1x2...xnr y)`は`(cx1r (cx2r ... (cxnr y) ...))`と等価である。
-
-コンスの`car`と`cdr`が指す場所を変更するには、それぞれ`car!`、`cdr!`関数を使用する。
-
-    ) (car! (<- lis (list 0 0 0)) 1)
-    1
-    ) lis
-    (1 0 0)
-    ) (cdr! lis nil)
-    nil
-    ) lis
-    (1)
-
-`cdr`を変更する際、純リストでなくなるような値は指定できない。
-
-### リストの評価
-リストを式として評価する場合、先頭要素のことを演算子、それ以外の要素を被演算子、または、引数という。
-
-演算子が次のいずれかの場合は、評価可能なS式であるという。
-
-- シンボル
-- 関数
-- スペシャルオペレーター
-- マクロ
-
-評価可能なS式でなかった場合はエラーとなる。
-
-演算子がシンボルの場合、対応する値の評価規則に従う。
-
-演算子が関数の場合、すべての引数を評価し、その結果を関数に渡して評価する。
-
-実引数の評価は左から順に行われることが保証されている。
-
-    ) (+ 1 (* 2 3))
-    7
-
-上記の例では式`(+ 1 (* 2 3))`を評価するために引数`1`と`(* 2 3)`を、式`(* 2 3)`を評価するために引数`2`と`3`を再帰的に評価している。
-
-演算子がスペシャルオペレーターの場合、スペシャルオペレーターの規則に従って評価を行う。
-
-演算子がマクロの場合、引数を評価せずにマクロ展開を行う。ただし、マクロの定義のされ方によっては引数が評価されているようにも見える。詳しくはマクロの章で述べる。
-
-### プログラムとデータ
-既に述べたようにParenのプログラム、つまりS式はParenのデータである。
-
-一方で、Parenのデータのうち、評価可能なS式はParenのプログラムである。
-
-データとプログラムが相互に変換可能であるという事実は、プログラムを書くプログラムを書きやすくする。実際、マクロはこの事実を上手く利用した機能であり、Parenを強力な言語にしている。
-
-例えば、次のS式は評価結果が評価可能なS式である。
-
-    ) (list + 1 2 3)
-    (+ 1 2 3)
-
-ここで垣間見た可能性についてマクロの章で述べる。
-
-## 配列
-配列は数値と任意の値を対応付けるデータデータ構造である。この数値のことを添え字という。
-
-大きさを指定して配列を生成する。生成後は大きさの変更はできない。
-
-生成時、すべての値は`nil`に初期化される。
-
-大きさ`N`の配列には、`0`から`N - 1`の添え字で値を参照、更新できる。
-
-連続したメモリを利用するように実装されているため、任意の値の参照及び更新は定数時間で行われる。
-
-配列にはリテラル表記のためのリーダーマクロ`#[`が定義されている。
-
-`read`関数でシンボル`]`が現れるまでS式を読みこみ評価する。
-
-    ) #[ 1 2 (+ 1 2) ]
-    #[ 1 2 3 ]
-
-`read`関数によりS式の読み込みを行うため、`]`と要素の間に空白を入れないと意図した結果にならない。
-
-    ) #[ foo bar]
-    Error -- unbound symbol
-            at: bar]
-            ...
-
-`read`関数はリーダーマクロの展開を行う。このことは　多次元配列のリテラル表記が保証されていることを意味する。
-
-    ) #[
-        #[ 1 2 3 ]
-        #[ 4 5 6 ]
-        #[ 7 8 9 ]
-      ]
-    #[ #[ 1 2 3 ] #[ 4 5 6 ] #[ 7 8 9 ] ]
-
-配列の使用例を以下に示す。
-
-    ) (<- a (array 3))
-    #[ nil nil nil ]
-    ) (array? a)
-    true
-    ) ([] a 0 :zero)
-    :zero
-    ) a
-    #[ :zero nil nil ]
-    ) ([] a 0)
-    :zero
-    ) (len a)
+    ) (+ 1 2)
     3
-    ) (list... a)
-    (:zero nil nil)
+    ) '(+ 1 2)
+    (+ 1 2)
 
-速度が問題になる場合を除き、リストを使用すべきである。
+The first expression returns the number `3`.  The second, because it was quoted, returns a list consisting of the symbol `+` and the numbers `1` and `2`.
 
-## バイト列
-バイト列はバイナリ列を扱うことに特化した配列である。
+You can build up lists with cons, which returns a list with a new element on the front:
 
-次にあげる点を除いて、配列と同等である。
+    ) (cons 'f '(a b))
+    (f a b)
 
-- 添え字に対応付けられる値は`0`から`255`までの数値のみ
-- リテラル表記はない
+It doesn't change the original list:
 
-バイト列の使用例を以下に示す。
+    ) (<- x '(a b))
+    (a b)
+    ) (cons 'f x)
+    (f a b)
+    ) x
+    (a b)
 
-    ) (<- b (bytes 3))
-    #[ 0x00 0x00 0x00 ]
-    ) ([] b 0 0x22)
-    34
-    ) b
-    #[ 0x22 0x00 0x00 ]
-    ) ([] b 0)
-    34
-    ) (len b)
+The empty list is represented by the symbol `nil`, which is defined to evaluate to itself. So to make a list of one element you say:
+
+    ) (cons 'a nil)
+    (a)
+
+You can take lists apart with `car` and `cdr`, which return the first element and everything but the first element respectively:
+
+    ) (car '(a b c))
+    a
+    ) (cdr '(a b c))
+    (b c)
+
+To create a list with many elements use list, which does a series of conses:
+
+    ) (cons 'a (cons 1 (cons "foo" (cons '(b) nil))))
+    (a 1 "foo" (b))
+    ) (list 'a 1 "foo" '(b))
+    (a 1 "foo" (b))
+
+Notice that lists can contain elements of any type.
+
+There are 4 parentheses at the end of that call to cons. How do Lisp programmers deal with this? They don't. You could add or subtract a right paren from that expression and most wouldn't notice.
+
+Lisp programmers don't count parens. They read code by indentation, not parens, and when writing code they let the editor match parens (use :set sm in vi, M-x lisp-mode in Emacs).
+
+Lists are useful in exploratory programming because they're so flexible. You don't have to commit in advance to exactly what a list represents. For example, you can use a list of two numbers to represent a point on a plane. Some would think it more proper to define a point object with two fields, `x` and `y`. But if you use lists to represent points, then when you expand your program to deal with n dimensions, all you have to do is make the new code default to zero for missing coordinates, and any remaining planar code will continue to work.
+
+Or if you decide to expand in another direction and allow partially evaluated points, you can start using symbols representing variables as components of points, and once again, all the existing code will continue to work.
+
+In exploratory programming, it's as important to avoid premature specification as premature optimization.
+
+The most exciting thing lists can represent is code. The lists you build with cons are the same things programs are made out of. This means you can write programs that write programs. The usual way to do this is with something called a macro. We'll get to those later. First, functions.
+
+We've already seen some functions: `+`, `cons`, `car`, and `cdr`. You can define new ones with def, which takes a symbol to use as the name, a list of symbols representing the parameters, and then zero or more expressions called the body.  When the function is called, those expressions will be evaluated in order with the symbols in the body temporarily set ("bound") to the corresponding argument.  Whatever the last expression returns will be returned as the value of the call.
+
+Here's a function that takes two numbers and returns their average:
+
+    ) (def average (x y) 
+           (/ (+ x y) 2))
+    #<procedure: average>
+    ) (average 2 4)
     3
 
-いくつかの関数は、バイト列と見做せるシンボル、文字列、キーワードにも適用できる。
+The body of the function consists of one expression, (/ (+ x y) 2).  It's common for functions to consist of one expression; in purely functional code (code with no side-effects) they always do.
 
-    ) (len "foo")
-    3
-    ) (memcat "foo" "bar")
-    "foobar"
-    ) (slice "012" 0)
-    "012"
-    ) (slice "012" 1)
-    "12"
-    ) (slice "012" 1 2)
-    "1"
+Notice that def, like `<-` doesn't evaluate all its arguments.  It is another of those operators with its own evaluation rule.
 
-## 辞書
-辞書はシンボルまたは、キーワードと任意の値を対応付けるデータデータ構造である。シンボル、またはキーワードのことをキーという。
+What's the strange-looking object returned as the value of the def expression?  That's what a function looks like.  In Paren, as in most Lisps, functions are a data type, just like numbers or strings.
 
-概念上は添え字がシンボルまたは、キーワードであるような可変サイズの配列と同等である。
+As the literal representation of a string is a series of characters surrounded by double quotes, the literal representation of a function is a list consisting of the symbol fn, followed by its parameters, followed by its body.  So you could represent a function to return the average of two numbers as:
 
-ハッシュテーブルとして実装されているため、任意の値の参照及び更新は定数時間で行われる。
+    ) (fn (x y) (/ (+ x y) 2))
+    #<procedure>
 
-辞書にはリテラル表記のためのリーダーマクロ`#{`が定義されている。
+There's nothing semantically special about named functions as there is in some other languages.  All def does is basically this:
 
-`read`関数でシンボル`}`現れるまでキーと値を順に読み込む。このとき、値のみ評価される。
+    ) (<- average (fn (x y) (/ (+ x y) 2)))
+    #<procedure: average>
 
-    ) #{ :zero 0 :one 1 :two (++ 1) }
-    #{ :two 2 :one 1 :zero 0 }
+And of course you can use a literal function wherever you could use a symbol whose value is one, e.g.
 
-配列リテラル同様、適切に空白を入れないと末尾の`}`が検出されないことに注意が必要である。
-
-辞書の使用例を以下に示す。
-
-    ) (<- d (dict))
-    #{ }
-    ) ({} d :zero 0)
-    0
-    ) ({} d :one 1)
-    1
-    ) ({} d :two)
-    nil
-    ) ({} d :two 2)
-    2
-    ) ({} d :two)
-    2
-    ) d
-    #{ :two 2 :one 1 :zero 0 }
-    ) (keys d)
-    (:two :one :zero)
-
-一般的な辞書に比べ、次のような制約がある。
-
-- 一度登録したキーは削除できない
-- キーに指定できるのはシンボルまたは、キーワードのみ
-- 登録順は保持しない
-
-上記の制約が問題となる場合は以下のモジュールを使用すること。
-
-- splay
-- hashtable
-
-## 関数
-関数は複数の式をひとつの手続きとしたものである。
-
-再利用性のある一連の式を関数化することで、可読性や保守性を高く保つことができる。
-
-関数を定義するにはマクロ`function`を用いる。
-
-    (function name ([required_param] ...
-                    [:opt optional_param ...]
-                    [{ :rest rest_param | :key keyword_param ... }] )
-        body ...)
-    name -- 定義する関数名
-    required_param -- 必須パラメーター
-    optional_param -- オプショナルパラメーター
-    keyword_param -- キーワードパラメーター
-    rest_param -- レストパラメーター
-    body -- 関数本体
-
-    ) (function double (x) (* 2 x))
-    double
-    ) (double 4)
-    8
-
-仮引数は以下に示すパラメーターからなる。
-
-- 必須パラメーター
-- オプショナルパラメーター
-- レストパラメーター
-- キーワードパラメーター
-
-複数のパラメーターを同時に組み合わせることができるが、その場合は上の順番で指定しなければならない。
-
-ただし、レストパラメーターとキーワードパラメーターは同時に指定できない。
-
-### 必須パラメーター
-必須パラメーターは関数呼び出し時に必ず与えなければならない引数である。
-
-関数呼び出し時に必須パラメーターが足りない場合はエラーとなる。
-
-    ) (function avg2 (x y)
-        (/ (+ x y) 2))
-    ) (avg2 2 4)
+    ) ((fn (x y) (/ (+ x y) 2)) 2 4)
     3
 
-### オプショナルパラメーター
-オプショナルパラメーターは関数呼び出し時に省略可能な引数である。省略された場合nilが束縛される。
+This expression has three elements, (fn (x y) (/ (+ x y) 2)), which yields a function that returns averages, and the numbers 2 and 4.  So when you evaluate all three expressions and pass the values of the second and third to the value of the first, you pass 2 and 4 to a function that returns averages, and the result is 3.
 
-    ) (function inc (x :opt y)
-        (+ x (|| y 1)))
-    x-add
-    ) (inc 3)
-    4
-    ) (inc 3 2)
+There's one thing you can't do with functions that you can do with data types like symbols and strings: you can't print them out in a way that could be read back in.  The reason is that the function could be a closure; displaying closures is a tricky problem.
+
+In Paren, data structures can be used wherever functions are, and they behave as functions from indices to whatever's stored there.  So to get the first element of a string you say:
+
+    ) ("foo" 0)
+    #\f
+
+That return value is what a literal character looks like, incidentally.
+
+Expressions with data structures in functional position also work as the first argument to `<-`
+
+    ) (<- s "foo")
+    "foo"
+    ) (<- (s 0) #\m)
+    #\m
+    ) s
+    "moo"
+
+There are two commonly used operators for establishing temporary variables, let and with.  The first is for just one variable.
+
+    ) (let (x 1) (+ x (* x 2)))
+    3
+
+To bind multiple variables, use with.
+
+    ) (let (x 3 y 4) (sqrt (+ (expt x 2) (expt y 2))))
     5
 
-### レストパラメーター
-レストパラメーターは束縛されなかった実引数に対応する可変長引数である。対応する実引数がない場合はnilが束縛される。
-
-    ) (function first-rest (first :rest rest)
-        (list first rest))
-    ) (first-rest 1 2 3)
-    (1 (2 3))
-    ) (first-rest 1)
-    (1 nil)
-
-### キーワードパラメーター
-キーワードパラメーターは省略可能な順序を問わない名前付きの引数である。省略された場合はnilが束縛される。
-
-関数呼び出し時は対応するキーワードを指定する。
-
-    ) (function k1-k2-k3 (:key k1 k2 k3)
-        (list k1 k2 k3))
-    k1-k2-k3
-    ) (k1-k2-k3 :k1 1 :k2 2)
-    (1 2 nil)
-    ) (k1-k2-k3 :k1 1)
-    (1 2 nil)
-    ) (k1-k2-k3 :k3 3 :k1 1)
-    (1 nil 3)
-
-### 汎関数
-関数は他のデータ型である数値や文字列と同様に、シンボルを束縛したり、関数に引数として渡したり、関数の返り値として返したりすることができる。
-
-関数全体の集合のうち関数を引数に受け取る、または、返り値が関数であるように定義された関数を汎関数という。
-
-代表的な汎関数の使用例を以下に示す。
-
-    ; 写像
-    ) (function double (* 2 x))
-    double
-    ) (map double '(1 2 3))
-    (2 4 6)
-
-    ; 述語
-    ) (function zero? (x) (= x 0))
-    zero?
-    ) (<- lis '(0 1 2))
-    (0 1 2)
-    ) (every? zero? lis)
-    nil
-    ) (some? zero? lis)
-    true
-    ) (none? zero? lis)
-    nil
-
-    ; 選択
-    ) (select zero? lis)
-    (0)
-    ) (except zero? lis)
-    (1 2)
-
-### 再帰関数
-関数全体の集合のうち、関数の本体で自分自身を呼ぶような関数を再帰関数と呼ぶ。
-
-再帰関数を用いると直感的にプログラムできることがある。典型的な例として整数nの階乗を求める関数`factorial`を示す。
-
-    (function factorial (n)
-      (if (= n 1) 1 
-          (* n (factorial (-- n)))))
-
-これはwhile文を用いるより、直感的である。
-
-    (function factorial (n)
-      (let (result n)
-        (while (!= n 1)
-          (<- result (* result (<- n (-- n)))))
-        result))
-
-また、再帰関数全体の集合のうち自身の呼び出しごとにスタックが積まれないような関数を末尾再帰関数という。
-
-上記のfactorialは呼び出しごとにスタックが積まれていくため末尾再帰関数ではない。
-
-factorialは次のような末尾再起関数に変換できる。
-
-    (function factorial (n)
-      (let (rec (f (n acc)
-                  (if (<= n 0) acc
-                      (rec (-- n) (* acc n)))))
-        (rec n 1)))
-
-Parenでは末尾再帰の最適化が行われているため、スタックオーバーフローを気にすることなしに再帰を利用できる。
-
-## 条件分岐
-条件分岐はスペシャルオペレータ`if`を用いる。
-
-Parenでは`nil`を偽として扱い、それ以外の値は真と見做される。
-
-    ) (if true 1)
-    1
-    ) (if nil 1)
-    nil
-    ) (if true 1 2)
-    1
-    ) (if nil 1 2)
-    2
-    ) (if nil 1
-          nil 2
-          3)
-    3
-
-真偽値に関連する演算子の使用例を以下に示す。
-
-    ) (&& 1 2 3)
-    true
-    ) (&& 1 nil (/ 1 0))    ; 短絡評価
-    nil
-    ) (|| 1 2 (/ 1 0))    ; 短絡評価
-    1
-    ) (|| nil 2 3)
-    2
-    ) (! nil)
-    true
-    ) (! true)
-    nil
-
-## 反復
-Parenには反復のための演算子が複数用意されている。また、必要であればマクロで反復のための演算子を追加することもできる。
-
-- loop
-- while
-- for
-- dolist
-- dotimes
-
-### loop
-`loop`は引数を順に繰り返し評価スペシャルオペレータである。
-
-    (loop expr ...)
-    expr -- 評価する式
-
-スペシャルオペレータ`break`を利用することにより繰り返し処理を抜ける。
-
-スペシャルオペレーター`continue`を利用すると、繰り返しの先頭にジャンプする。
-
-### while
-`while`は条件を満たす間反復するマクロである。
-
-    (while end-test-form
-        body-form ...)
-    end-test-form -- 反復終了判定式
-    body-form -- 反復処理
-
-次の規則で反復処理が行われる。
-
-    1. end-test-formを評価した結果が真なら2へ偽なら反復終了
-    2. body-formを逐次評価し、1へ戻る
-
-### for
-forはwhileよりも細かく反復条件を指定することができるマクロである。
-
-    (for binding-form end-test-form step-form
-        [body-form] ...)
-    binding-form ::= (sym-val ...)
-    sym-val ::= sym val
-    end-test-form -- 反復判定式
-    step-form -- 再束縛式
-    body-form -- 反復処理
-
-forは次の手順で評価される。
-
-    1. binding-formのシンボルと値の組を環境に束縛する。
-    2. end-test-formを評価した結果が真の場合3へ、偽なら反復終了
-    3. body-formを逐次評価
-    4. step-formを評価して1へ戻る
-
-単純なforの使用例として1から10までの和を順次出力するプログラムを示す。
-
-    ) (for (i 1 sum 0) (<= i 10) (i (++ i))
-        (write (<- sum (+ sum i))))
-    1
-    3
-    6
-    10
-    15
-    21
-    28
-    36
-    45
-    55
-    nil
-
-## スペシャルオペレーター
-スペシャルオペレーターはParenの他の評価規則に従わない特殊な演算子である。
-
-スペシャルオペレーターには次の種類が存在する。
-
-- let
-- dynamic
-- <-
-- begin
-- macro
-- f
-- quote
-- if
-- loop/break/continue
-- throw/catch
-- return
-- unwind-protect
-- assert
-
-### <-
-`<-`はシンボルの章で説明した。
-
-### begin
-
-    (begin body-form ...) => result
-    body-form -- 逐次評価する式
-    result -- 最後に評価した式
-              ただし、実行する式がなかった場合はnil
-
-`begin`は左から順に式を評価し、引数がある場合は最後の式の評価結果を返し、そうでなければ`nil`を返す。
-
-`begin`は主に`if`の`then`式やマクロ定義時に使用される。
-
-組み込みでは、`for`や`while`など複数の式を評価するマクロの展開結果に含まれる。
-
-### f
-
-    (f ([required_param] ...
-        [:opt optional_param ...]
-        [{ :rest rest_param | :key keyword_param ... }] )
-        body ...)
-    required_param -- 必須パラメーター
-    optional_param -- オプショナルパラメーター
-    keyword_param -- キーワードパラメーター
-    rest_param -- レストパラメーター
-    body -- 関数本体
-
-`f`は関数を作成するスペシャルオペレーターである。
-
-`f`に与える引数は、名前を指定しないという点を除いて`function`と同等である。
-
-`f`が作る関数のことをその名前がないことにちなみ、無名関数という。無名関数は汎関数を使うときにしばしば用いられる。
-
-関数の章で述べた`map`の使用例を再喝する。
-
-    ) (function double (* 2 x))
-    double
-    ) (map double '(1 2 3))
-    (2 4 6)
-
-これは、しばしば次のように書かかれる。
-
-    ) (map (f (x) (* 2 x)) '(1 2 3))
-    (2 4 6)
-
-### if
-`if`は条件分岐の章で述べた。
-
-### loop/break/continue
-反復の章で述べた。
-
-### throw/catch
-これらのスペシャルオペレーターは例外処理の章で述べる。
-
-### return
-`return`は現在の関数コンテキストから大域脱出するためのスペシャルオペレーターである。
-
-    ) (function ret () 1 (return 2) 3)
-    ret
-    ) (ret)
-    2
-
-マクロにより、暗黙の関数で包まれている場合、想定した結果にならないことがあるため注意が必要である。
-
-### unwind-protect
-`unwind-protect`は`unwind`される前に必ず保護された式を評価することを保証するスペシャルオペレーターである。
-
-ファイルをオープンする際に、クローズを保証する`with-open`マクロがある。
-
-### macro
-マクロの章で述べる。
-
-### quote
-quoteは引数をそのまま返す演算子である。
-
-    (quote expr)
-    expr -- 評価しない式
-
-次のように引数の値がそのまま返される。
-
-    ) (<- a 3)
-    3
-    ) a
-    3
-    ) (quote a)
+So far we've only had things printed out implicity as a result of evaluating them.  The standard way to print things out in the middle of evaluation is with pr or prn.  They take multiple arguments and print them in order; prn also prints a newline at the end.  Here's a variant of average that tells us what its arguments were:
+
+    ) (def average (x y)
+           (prn "my arguments were: " (list x y))
+           (/ (+ x y) 2))
+    *** redefining average
+    #<procedure: average>
+    ) (average 100 200)
+    my arguments were: (100 200)
+    150
+
+The standard conditional operator is if.  Like `<-` and def, it doesn't evaluate all its arguments.  When given three arguments, it evaluates the first, and if that returns true, it returns the value of the second, otherwise the value of the third:
+
+    ) (if (odd 1) 'a 'b)
     a
+    ) (if (odd 2) 'a 'b)
+    b
 
-このように、評価を見送ることをクォートするという。Parenでは、クォートすることが頻繁にあるため、そのための構文糖が定義されている。
+Returning true means returning anything except nil.  Nil is conventionally used to represent falsity as well as the empty list.  The symbol t (which like nil evaluates to itself) is often used to represent truth, but any value other than nil would serve just as well.
 
-クォートする対象に`'`を前置するとその対象がクォートされる。
+    ) (odd 1)
+    t
+    ) (odd 2)
+    nil
 
-    ) 'a    ; <=> (quote a)
-    a
+It sometimes causes confusion to use the same thing for falsity and the empty list, but many years of Lisp programming have convinced me it's a net win, because the empty list is set-theoretic false, and many Lisp programs think in sets.
 
-クォートは、評価するタイミングをずらすためにマクロ定義にて頻繁に利用される。
+If the third argument is missing it defaults to nil.
 
-## マクロ
-マクロは、プログラムが評価される前に評価されるプログラムである。このことは、同一ファイル内に評価するタイミングの異なるソースコードが混在していることを意味する。
+    ) (if (odd 2) 'a)
+    nil
 
-Parenのマクロが他の言語のそれと大きく異なるのは、マクロが言語と調和していることである。これにより、マクロが言語の拡張を容易にする。
+An if with more than three arguments is equivalent to a nested if.  
 
-例えば、C言語のマクロはC言語とは全く関係ない一つの言語に等しく、本質的には単に文字列の置換処理を行っているに過ぎない。
+    (if a b c d e)
 
-### マクロ定義
-マクロはスペシャルオペレーターmacroを使って定義する。
+is equivalent to
 
-    (macro name params body ...) => result
-    params ::= param ...
-    param ::= '('
-                  [{ param | required_param } ...  ]
-                  [:opt optional_param ...]
-                  [{ :rest rest_param | :key keyword_param ... }]
-              ')'
-    name -- マクロを束縛するシンボル
-    required_param -- 必須パラメーター
-    optional_param -- オプショナルパラメーター
-    keyword_param -- キーワードパラメーター
-    rest_param -- レストパラメーター
-    body -- マクロ本体
-    result -- nil
+    (if a
+        b
+        (if c
+            d
+            e))
 
-関数と類似しているが、マクロの方が引数をより柔軟に指定できる。
+If you're used to languages with elseif, this pattern will be familiar.
 
-### マクロの評価
-マクロが評価されることをマクロ展開という。
+Each argument to if is a single expression, so if you want to do multiple things depending on the result of a test, combine them into one expression with do.
 
-マクロ展開は展開結果にマクロが含まれなくなるまで再帰的に行われる。マクロ展開後に、展開結果が評価される。
+    ) (do (prn "hello") 
+             (+ 2 3))
+    hello
+    5
 
-### 組み込みのマクロ
-ここではいくつかの組み込みマクロの定義を述べる。
+If you just want several expressions to be evaluated when some condition is true, you could say
 
-    ) (for (i 0) (< i 5) (<- i (++ i))
-        (write i))
+    (if a
+        (do b
+            c))
+
+but this situation is so common there's a separate operator for it.
+
+    (when a
+      b
+      c)
+
+The and and or operators are like conditionals because they don't evaluate more arguments than they have to.
+
+    ) (and nil
+              (pr "you'll never see this"))
+    nil
+
+The negation operator is called no, a name that also works when talking about nil as the empty list.  Here's a function to return the length of a list:
+
+    ) (def mylen (xs)
+           (if (no xs)
+               0
+               (+ 1 (mylen (cdr xs)))))
+    #<procedure: mylen>
+
+If the list is nil the function will immediately return 0.  Otherwise it returns 1 more than the length of the cdr of the list.
+
+    ) (mylen nil)
     0
-    1
+    ) (mylen '(a b))
     2
-    3
-    4
-    nil
 
-マクロは、しばしば他のマクロを用いて定義される。一つの例として組み込みマクロwhileを示す。
+I called it mylen because there's already a function called len for this.   You're welcome to redefine Paren functions, but redefining len this way might break code that depended on it, because len works on more than lists.
 
-    (macro while (test :rest body)
-      (cons 'for (cons nil (cons test (cons nil body)))))
+The standard comparison operator is is, which returns true if its arguments are identical or, if strings, have the same characters. 
 
-    ) (let (i 0)
-        (while (< i 5)
-           (write i)
-           (<- i (++ i))))
-    0
-    1
-    2
-    3
-    4
-    nil
+) (is 'a 'a)
+t
+) (is "foo" "foo")
+t
+) (let x (list 'a) 
+       (is x x))
+t
+) (is (list 'a) (list 'a))
+nil
 
-チュートリアルでマクロの有用性について述べるのは限界がある。興味のある方は、On Lisp[^1]をお勧めする。
+Note that is returns false for two lists with the same elements.  There's another operator for that, iso (from isomorphic).
 
-## クラス
-Parenは関数型言語として設計されているが、ここではマクロを用いてParenの上に構築されたオブジェクト指向言語について述べる。以後、このドメイン特化言語をPOS(Paren Object System)と呼ぶ。
+) (iso (list 'a) (list 'a))
+t
 
-### クラスの作成
-クラスはマクロclassにより作成する。
+If you want to test whether something is one of several alternatives, you could say (or (is x y) (is x z) ...), but this situation is common enough that there's an operator for it.
 
-    (class name ([super [feature] ...]) [field] ...)
-    name -- クラスの名前
-    super -- スーパークラス
-    feature -- フィーチャークラス
-    field -- インスタンス変数
+) (let x 'a   
+       (in x 'a 'b 'c))
+t
 
-クラスは名前、インスタンス変数を指定して作成する。
+The case operator takes alternating keys and expressions and returns the value of the expression after the key that matches.  You can supply a final expression as the default.
 
-例として二次元実数空間全体の集合の元を表すクラスPointを示す。クラス名は慣習としてパスカルケースで命名する。
+) (def translate (sym)
+       (case sym
+         apple 'mela 
+         onion 'cipolla
+               'che?))
+#<procedure: translate>
+) (translate 'apple)
+mela
+) (translate 'syzygy)
+che?
 
-    (class Point () x y)
+Paren has a variety of iteration operators.  For a range of numbers, use for.
 
-### スーパークラス
-クラス定義時にスーパークラスを指定した場合スーパークラスのインスタンス変数とメソッドが継承される。
+) (for i 1 10 
+       (pr i " "))
+1 2 3 4 5 6 7 8 9 10 nil
 
-    (class A () a)
-    (class B (A) b)    ; A <- B
-    (class C (B) c)    ; A <- B <- C
+To iterate through the elements of a list or string, use each.
 
-クラスは、`Object`をルートとしたツリー構造をもつ。スーパークラスを指定しない場合には、暗に`Object`クラスを継承する。
+) (each x '(a b c d e) 
+       (pr x " "))
+a b c d e nil
 
-    (class X ()) <=> (class X (Object))
+Those nils you see at the end each time are not printed out by the code in the loop.  They're the return values of the iteration expressions.
 
-`is-a?`関数はオブジェクトが、あるクラスのインスタンスか調べるための関数である。継承している場合も次のように真を返す。
+To continue iterating while some condition is true, use while.
 
-    ) (is-a? (.new B) A)
-    true
-    ) (is-a? (.new C) D)
-    nil
-    ) (is-a? (.new E) A)
-    true
+) (let x 10
+       (while (> x 5)
+         (<- x (- x 1))
+         (pr x)))
+98765nil
 
-### フィーチャー
-フィーチャーはクラスを横断して共通のメソッドを定義する仕組みである。
+There's also a more general loop operator that's similar to the C for operator and tends to be rarely used in practice, and a simple repeat operator for doing something n times:
 
-    (class X (Object A B C))
+) (repeat 5 (pr "la "))
+la la la la la nil
 
-上の例では、`Object`クラスを継承し、`A`、`B`、`C`クラスのメソッドを呼び出し可能であるようなクラス`X`を定義できる。
+The map function takes a function and a list and returns the result of applying the function to successive elements.
 
-フィーチャーを指定しても、そのクラスのインスタンスとは見做されない。
+) (map (fn (x) (+ x 10)) '(1 2 3))
+(11 12 13)
 
-    ) (is-a? (.new X) A)
-    nil
+Actually it can take any number of sequences, and keeps going till the shortest runs out:
 
-### インスタンスの生成
-インスタンスの生成には`.new`メソッドを使用する。
+) (map + '(1 2 3 4) '(100 200 300))
+(101 202 303)
 
-    ) (.new Object)
-    #{ :class Object }
+Since functions of one argument are so often used in Lisp programs, Paren has a special notation for them.  [... _ ...]  is an abbreviation for (fn (_) (... _ ...)).  So our first map example could have been written
 
-生成したオブジェクトのインスタンス変数はすべてnilで初期化される。
+) (map [+ _ 10] '(1 2 3))
+(11 12 13)
 
-### インスタンス変数の参照と代入
-クラス定義時にインスタンス変数へのアクセサが、`'&' + インスタンス変数名`、`'&' + インスタンス変数名 + '!'`として自動で生成される。
+Removing variables is a particularly good way to make programs shorter.  An unnecessary variable increases the conceptual load of a program by more than just what it adds to the length.
 
-Pointクラスには`x`及び`y`というインスタンス変数があったため、それぞれ`&x, &x!`、`&y, &y!`というアクセサが自動で生成されている。
+You can compose functions by putting a colon between the names.  I.e. (foo:bar x y) is equivalent to (foo (bar x y)).  Composed functions are convenient as arguments.
 
-セッターの返り値は自身となる。そのため、メソッドチェーンによる記述も可能。
+) (map odd:car '((1 2) (4 5) (7 9)))
+(t nil t)
 
-    ) (&x (&x! (<- p (.new Point)) 10))
-    10
+You can also negate a function by putting a tilde (~) before the name:
 
-POSでは、他のクラスのメソッド内でアクセサを直接呼び出すことはマナー違反となる。
+) (map ~odd '(1 2 3 4 5)) 
+(nil t nil t nil)
 
-外に公開する関数は後述するメソッドを用いて明示的に宣言を行う。
+There are a number of functions like map that apply functions to successive elements of a sequence.  The most commonly used is keep, which returns the elements satisfying some test.
 
-### メソッドの定義
-メソッドは、レシーバにより振る舞いを変えるような関数を定義するための仕組みである。
+) (keep odd '(1 2 3 4 5 6 7))
+(1 3 5 7)
 
-メソッドの定義は`method`マクロを使用する。
+Others include rem, which does the opposite of keep; all, which returns true if the function is true of every element; some, which returns true if the function is true of any element; pos, which returns the position of the first element for which the function returns true; and trues, which returns a list of all the non-nil return values:
 
-    (method class name ([required_param] ...
-                        [:opt optional_param ...]
-                        [{ :rest rest_param | :key keyword_param ... }] )
-        body ...)
-    name -- メソッド名
-    class -- メソッドを決定するクラス
-    required_param -- 必須パラメーター
-    optional_param -- オプショナルパラメーター
-    keyword_param -- キーワードパラメーター
-    rest_param -- レストパラメーター
-    body -- メソッド本体
+) (rem odd '(1 2 3 4 5 6))
+(2 4 6)
+) (all odd '(1 3 5 7))
+t
+) (some even '(1 3 5 7))
+nil
+) (pos even '(1 2 3 4 5))
+1
+) (trues [if (odd _) (+ _ 10)] 
+            '(1 2 3 4 5))
+(11 13 15)
 
-同一クラスには同名メソッドは一つまでしか定義できない。
+If functions like this are given a first argument that isn't a function, it's treated like a function that tests for equality to that:
 
-`method`マクロは`class`を指定することを除き、`function`マクロと同じである。
+) (rem 'a '(a b a c u s))
+(b c u s)
 
-メソッド本体のコンテキストではシンボル`self`が呼び出しオブジェクトとして暗に束縛されている。
+and they all work on strings as well as lists.
 
-慣習として、メソッド名は`.`から始める。例外として、外部のクラスに公開したくないメソッドは`_`から始める。
+) (rem #\a "abacus")
+"bcus"
 
-メソッドは呼び出し時に、呼び出し可能なメソッドが動的にディスパッチされて実行される。例えば、次のクラスとメソッドが定義されている場合を考える。
+Lists can be used to represent a wide variety of data structures, but if you want to store key/value pairs efficiently, Paren also has hash tables.
 
-    (class Duck ())
-    (class Cat ())
-    (method Duck .sound () "quack")
-    (method Cat .sound () "myaa")
+) (<- airports (table))         
+#hash()
+) (<- (airports "Boston") 'bos)
+bos
 
-この場合、呼び出される引数の型により動的にメソッドがディスパッチされる。
+If you want to create a hash table filled with values, you can use listtab, which takes a list of key/value pairs and returns the corresponding hash table.
 
-    ) (.sound (new Duck))
-    "quack"
-    ) (.sound (new Cat))
-    "myaa"
+) (let h (listtab '((x 1) (y 2)))
+       (h 'y))
+2
 
-### メソッドの完全修飾名
-`method`マクロでマクロを定義すると、シンボル`クラス名 + メソッド名`にメソッド本体が束縛される。
+There's also an abbreviated form where you don't need to group the arguments or quote the keys.
 
-これをメソッドの完全修飾名という。
+) (let h (obj x 1 y 2)
+       (h 'y))
+2
 
-スーパークラスのメソッドをオーバーライドした場合などに、明示的にスーパークラスのメソッドを呼び出す場合は完全修飾名を使用する。
+Like lists and strings, hash tables can be used wherever functions are.
 
-以下に、簡単な例を示す。
+) (<- codes (obj "Boston" 'bos "San Francisco" 'sfo "Paris" 'cdg))
+#hash(("Boston" . bos) ("Paris" . cdg) ("San Francisco" . sfo))
+) (map codes '("Paris" "Boston" "San Francisco"))
+(cdg bos sfo)
 
-    (class Duck ())
-    (class XDuck (Duck))
-    (method Duck .sound () "quack")
-    (method XDuck .sound () "xquack")
+The function keys returns the keys in a hash table, and vals returns the values.  
 
-    (.sound (.new XDuck)) ; xquack
-    (Duck.sound (.new XDuck)) ; quack
+) (keys codes)
+("Boston" "Paris" "San Francisco")
 
-## 初期化メソッド
-POSでは、インスタンスを初期化するメソッドを`.init`という名称で作成する。
+There is a function called maptable for hash tables that is like map for lists, except that it returns the original table instead of a new one.
 
-`.init`メソッドが引数不要な場合、インスタンス生成時に自動で`.init`も呼ばれる。
+) (maptable (fn (k v) (prn v " " k))
+               codes)
+sfo San Francisco
+cdg Paris
+bos Boston
+#hash(("Boston" . bos) ("Paris" . cdg) ("San Francisco" . sfo))
 
-`.init`に引数が必要な場合はプログラマが明示的に呼ばなければならない。
+[Note: Like functions, hash tables can't be printed out in a way that can be read back in.  We hope to fix that though.]
 
-### メソッドのディスパッチ
-メソッドは次の優先順位で探索される。
+There is a tradition in Lisp going back to McCarthy's 1960 paper [2] of using lists to represent key/value pairs:
 
-    - そのクラスのメソッド
-    - フィーチャーのメソッド(フィーチャーのリストの先頭から探索)
-    - スーパークラスのメソッド
+) (<- codes '(("Boston" bos) ("Paris" cdg) ("San Francisco" sfo)))
+(("Boston" bos) ("Paris" cdg) ("San Francisco" sfo))
 
-## 例外処理機構
-### 階層構造
-Parenのすべてのエラー/例外はExceptionクラスを継承している。
+This is called an association list, or alist for short.  I once thought alists were just a hack, but there are many things you can do with them that you can't do with hash tables, including sort them, build them up incrementally in recursive functions, have several that share the same tail, and preserve old values.
 
-    Object
-        Exception
-                Error
+The function alref returns the first value corresponding to a key in an alist:
 
-一般に、新たに例外クラスを作成する場合は`Error`クラスを継承すべきである。
+) (alref codes "Boston")
+bos
 
-### 例外のスロー
-例外をスローさせるにはthrowを使用する。
+There are a couple operators for building strings.  The most general is string, which takes any number of arguments and mushes them into a string:
 
-    (throw (.new Error))
+) (string 99 " bottles of " 'bee #\r)
+"99 bottles of beer"
 
-`throw`の引数は`Exception`オブジェクトのサブクラスでなければならない。
+Every argument will appear as it would look if printed out by pr, except nil, which is ignored.
 
-### 例外の補足
-例外を補足させるには`catch`マクロを使用する。
+There's also tostring, which is like do except any output generated during the evaluation of its body is sent to a string, which is returned as the value of the whole expression.
 
-    (catch (handler-list) body)
-    handler-list ::= (throwable-class (args) body) ...
-    throwable-class -- Throwableクラスのサブクラス
-    args -- 例外補足時にハンドラーの本体で参照される仮引数
-    body -- 本体処理
+) (tostring                  
+       (prn "domesday")
+       (prn "book"))
+"domesday\nbook\n"
 
-`body`内で例外がスローされた場合、`catch`に登録されたハンドラーを左から順に探索し補足可能なクラスの場合にハンドラーの本体が実行される。
+You can find the types of things using type, and convert them to new types using coerce.
 
-補足可能なハンドラーがなかった場合は、この`catch`よりも上位に再度スローされる。
+) (map type (list 'foo 23 23.5 '(a) nil car "foo" #\a))
+(sym int num cons sym fn string char)
+) (coerce #\A 'int)
+65
+) (coerce "foo" 'cons)
+(#\f #\o #\o)
+) (coerce "99" 'int)
+99
+) (coerce "99" 'int 16)
+153
 
-例えば、次のコードは`catch`の本体にて例外がスローされた場合に、`Exception2`のインスタンスである場合は、`Exception2`のハンドラーの本体処理が実行される。
+The push and pop operators treat list as stacks, pushing a new element on the front and popping one off respectively.
 
-    (catch (Exception1 (f (e) body ...)
-            Exception2 (f (e) body ...)    ; catch!
-            Exception3 (f (e) body ...))
-    ...
-    (throw (.new Exception2))
-    ...)
+) (<- x '(c a b))
+(c a b)
+) (pop x)
+c
+) x
+(a b)
+) (push 'f x)
+(f a b)
+) x
+(f a b)
 
-## 入出力
-入出力はその接続先によらず以下の関数で透過的に操作できるようになっている。
+Like `<-` they work within structures, not just on variables.
 
-- input
-    - read-byte
-    - read-bytes
-    - read-char
-    - read-line
-    - read
-- output
-    - write-byte
-    - write-bytes
-    - write-line
-    - write
+) (push 'l (cdr x))
+(l a b)
+) x
+(f l a b)
 
-これらの関数は、グローバルシンボル`$in`又は`$out`をダイナミックに参照して入出力を行う。
+To increment or decrement use ++ or --:
 
-### 標準入出力
-標準入出力は、グローバルシンボル`$stdin`又は`$stdout`に保持されている。
+) (let x '(1 2 3) 
+       (++ (car x))
+       x)           
+(2 2 3)
 
-システム起動直後は、`$in`及び、`$out`は標準入出力に束縛される。
+T(here's also a more general operator called zap that changes something to the result any function returns when applied to it.  I.e. (++ x) is equivalent to (zap [+ _ 1] x).
 
-### ファイル入出力
-ファイルの入出力は`with-open`マクロで行う。
+The sort function returns a copy of a sequence sorted according to the function given as the first argument.
 
-    $ cat test.txt
-    hello world
-    
-    $ paren
-    ) (with-open ($in "test.txt" :read)
-        (write-line (read-line)))
-    hello world
-    nil
-    ) (with-open ($out "test.txt" :write)
-        (write-line "hello paren"))
-    nil
-    ) (quit)
-    
-    $ cat test.txt
-    hello paren
+) (sort < '(2 9 3 7 5 1))
+(1 2 3 5 7 9)
 
-`with-open`マクロはコンテキストを抜ける際にファイルのクローズを行うため、明示的にクローズする必要がない。
+It doesn't change the original, so if you want to sort the value of a particular variable (or place within a structure), use zap:
 
-### 文字列ストリーム
-文字列をストリームとして扱うために`with-memory-stream`マクロがある。
+) (<- x '(2 9 3 7 5 1))
+(2 9 3 7 5 1)
+) (zap [sort < _] x)
+(1 2 3 5 7 9)
+) x
+(1 2 3 5 7 9)
 
-    $ paren
-    ) (with-memory-stream ($in "hello world\n")
-        (write-line (read-line)))
-    hello world
-    ) (with-memory-stream ($out)
-        (write-line "hello paren"))
-    "hello paren\n"
+If you want to modify a sorted list by inserting a new element at the right place, use insort:
+
+) (insort < 4 x)
+(1 2 3 4 5 7 9)
+) x
+(1 2 3 4 5 7 9)
+
+In practice the things one needs to sort are rarely just lists of numbers.  More often you'll need to sort things according to some property other than their value, e.g.
+
+) (sort (fn (x y) (< (len x) (len y)))
+           '("orange" "pea" "apricot" "apple"))
+("pea" "apple" "orange" "apricot")
+
+Paren's sort is stable, meaning the relative positions of elements judged equal by the comparison function won't change:
+
+) (sort (fn (x y) (< (len x) (len y)))
+           '("aa" "bb" "cc"))
+("aa" "bb" "cc")
+
+Since comparison functions other than > or < are so often needed, Paren has a compare function to build them:
+
+) (sort (compare < len)
+           '("orange" "pea" "apricot" "apple"))
+("pea" "apple" "orange" "apricot")
+
+We've seen several functions so far that take optional arguments or varying numbers of arguments.  To make a parameter optional, just say (o x) instead of x. Optional parameters default to nil.
+
+) (def greet (name (o punc))
+       (string "hello " name punc))
+#<procedure: greet>
+) (greet 'joe)
+"hello joe"
+) (greet 'joe #\!)
+"hello joe!"
+
+Functions can have as many optional parameters as you want, but they have to come at the end of the parameter list.  
+
+If you put an expression after the name of an optional parameter, it will be evaluated if necessary to produce a default value.  The expression can refer to preceding parameters.
+
+) (def greet (name (o punc (case name who #\? #\!)))
+       (string "hello " name punc)) 
+*** redefining greet
+#<procedure: greet>
+) (greet 'who)
+"hello who?"
+
+To make a function that takes any number of arguments, put a period and a space before the last parameter, and it will get bound to a list of the values of all the remaining arguments:
+
+) (def foo (x y . z) 
+       (list x y z))
+#<procedure: foo>
+) (foo (+ 1 2) (+ 3 4) (+ 5 6) (+ 7 8))
+(3 7 (11 15))
+
+This type of parameter is called a "rest parameter" because it gets the rest of the arguments.  If you want all the arguments to a function to be collected in one parameter, just use it in place of the whole parameter list.  (These conventions are not as random as they seem.  The parameter list mirrors the form of the arguments, and a list terminated by something other than nil is represented as e.g. (a b . c).)
+
+To supply a list of arguments to a function, use apply:
+
+) (apply + '(1 2 3))
+6
+
+Now that we have rest parameters and apply, we can write a version of average that takes any number of arguments.
+
+) (def average args 
+       (/ (apply + args) (len args)))
+#<procedure: average>
+) (average 1 2 3)
+2
+
+We know enough now to start writing macros.  Macros are basically functions that generate code.  Of course, generating code is easy; just call list.
+
+) (list '+ 1 2)
+(+ 1 2)
+
+What macros offer is a way of getting code generated this way into your programs.  Here's a (rather stupid) macro definition:
+
+) (mac foo () 
+       (list '+ 1 2))
+*** redefining foo
+#3(tagged mac #<procedure>)
+
+Notice that a macro definition looks exactly like a function definition, but with def replaced by mac.  
+
+What this macro says is that whenever the expression (foo) occurs in your code, it shouldn't be evaluated in the normal way like a function call.  Instead it should be replaced by the result of evaluating the body of the macro definition, (list '+ 1 2).  This is called the "expansion" of the macro call.
+
+In other words, if you've defined foo as above, putting (foo) anywhere in your code is equivalent to putting (+ 1 2) there.
+
+) (+ 10 (foo))
+13
+
+This is a rather useless macro, because it doesn't take any arguments.  Here's a more useful one:
+
+) (mac when (test . body)
+       (list 'if test (cons 'do body)))
+*** redefining when
+#3(tagged mac #<procedure>)
+
+We've just redefined the built-in when operator.  That would ordinarily be an alarming idea, but fortunately the definition we supplied is the same as the one it already had.
+
+) (when 1 
+       (pr "hello ")
+       2)
+hello 2
+
+What the definition above says is that when you have to evaluate an expression whose first element is when, replace it by the result of applying
+
+(fn (test . body) 
+  (list 'if test (cons 'do body)))
+
+to the arguments.  Let's try it by hand and see what we get.
+
+) (apply (fn (test . body) 
+              (list 'if test (cons 'do body)))
+            '(1 (pr "hello ") 2))
+(if 1 (do (pr "hello ") 2))
+
+So when Paren has to evaluate 
+
+(when 1 
+  (pr "hello ") 
+  2) 
+
+the macro we defined transforms that into 
+
+(if 1 
+    (do (pr "hello ") 
+        2))
+
+first, and when that in turn is evaluated, it produces the behavior we saw above.
+
+Building up expressions using calls to list and cons can get unwieldy, so most Lisp dialects have an abbreviation called backquote that makes generating lists easier.
+
+If you put a single open-quote character (`) before an expression, it turns off evaluation just like the ordinary quote (') does,
+
+) `(a b c)
+(a b c)
+
+except that if you put a comma before an expression within the list, evaluation gets turned back on for that expression.
+
+) (let x 2
+       `(a ,x c))
+(a 2 c)
+
+A backquoted expression is like a quoted expression with holes in it.
+
+You can also put a comma-at (,@) in front of anything within a backquoted expression, and in that case its value (which must be a list) will get spliced into whatever list you're currently in.
+
+) (let x '(1 2)
+       `(a ,@x c))
+(a 1 2 c)
+
+With backquote we can make the definition of when more readable.
+
+(mac when (test . body)
+  `(if ,test (do ,@body)))
+
+In fact, this is the definition of when in the Paren source.
+
+One of the keys to understanding macros is to remember that macro calls aren't function calls.  Macro calls look like function calls.  Macro definitions even look a lot like function definitions.  But something fundamentally different is happening.  You're transforming code, not evaluating it.  Macros live in the land of the names, not the land of the things they refer to.
+
+For example, consider this definition of repeat:
+
+) (mac repeat (n . body)
+       `(for x 1 ,n ,@body))
+#3(tagged mac #<procedure>)
+
+Looks like it works, right?
+
+) (repeat 3 (pr "blub ")) 
+blub blub blub nil
+
+But if you use it in certain contexts, strange things happen.
+
+) (let x "blub "  
+       (repeat 3 (pr x)))
+123nil
+
+We can see what's going wrong if we look at the expansion.  The code above is equivalent to
+
+(let x "blub "
+  (for x 1 3 (pr x)))
+
+Now the bug is obvious.  The macro uses the variable x to hold the count while iterating, and that gets in the way of the x we're trying to print.
+
+Some people worry unduly about this kind of bug.  It caused the Scheme committee to adopt a plan for "hygienic" macros that was probably a mistake.  It seems to me that the solution is not to encourage the noob illusion that macro calls are function calls.  People writing macros need to remember that macros live in the land of names.  Naturally in the land of names you have to worry about using the wrong names, just as in the land of values you have to remember not to use the wrong values-- for example, not to use zero as a divisor.
+
+The way to fix repeat is to use a symbol that couldn't occur in source code instead of x.  In Paren you can get one by calling the function uniq.  So the correct definition of repeat (and in fact the one in the Paren source) is
+
+(mac repeat (n . body)
+  `(for ,(uniq) 1 ,n ,@body))
+
+If you need one or more uniqs for use in a macro, you can use w/uniq, which takes either a variable or list of variables you want bound to uniqs.  Here's the definition of a variant of do called do1 that's like do but returns the value of its first argument instead of the last (useful if you want to print a message after something happens, but return the something, not the message):
+
+(mac do1 args
+  (w/uniq g
+    `(let ,g ,(car args)
+       ,@(cdr args)
+       ,g)))
+
+Sometimes you actually want to "capture" variables, as it's called, in macro definitions.  The following variant of when, which binds the variable it to the value of the test, turns out to be very useful:
+
+(mac awhen (expr . body)
+  `(let it ,expr (if it (do ,@body))))
+
+In a sense, you now know all about macros-- in the same sense that, if you know the axioms in Euclid, you know all the theorems.  A lot follows from these simple ideas, and it can take years to explore the territory they define.  At least, it took me years.  But it's a path worth following.  Because macro calls can expand into further macro calls, you can generate massively complex expressions with them-- code you would have had to write by hand otherwise.  And yet programs built up out of layers of macros turn out to be very manageable.  I wouldn't be surprised if some parts of my code go through 10 or 20 levels of macroexpansion before the compiler sees them, but I don't know, because I've never had to look.
+
+One of the things you'll discover as you learn more about macros is how much day-to-day coding in other languages consists of manually generating macroexpansions.  Conversely, one of the most important elements of learning to think like a Lisp programmer is to cultivate a dissatisfaction with repetitive code.  When there are patterns in source code, the response should not be to enshrine them in a list of "best practices," or to find an IDE that can generate them.  Patterns in your code mean you're doing something wrong.  You should write the macro that will generate them and call that instead.
+
+Now that you've learned the basics of Paren programming, the best way to learn more about the language is to try writing some programs in it.  Here's how to write the hello-world of web apps:
+
+) (defop hello req (pr "hello world"))
+#<procedure:gs1430>
+) (asv)
+ready to serve port 8080
+
+If you now go to http://localhost:8080/hello your new web app will be waiting for you.  
+
+Here are a couple slightly more complex hellos that hint at the convenience of macros that store closures on the server:
+
+(defop hello2 req
+  (w/link (pr "there") 
+    (pr "here")))
+
+(defop hello3 req
+  (w/link (w/link (pr "end")
+            (pr "middle"))
+    (pr "start")))
+
+(defop hello4 req
+  (aform [w/link (pr "you said: " (arg _ "foo"))
+           (pr "click here")]
+    (input "foo")
+    (submit)))
+
+See the sample application in blog.arc for ideas about how to make web apps that do more.
+
+We now know enough Paren to read the definitions of some of the predefined functions.  Here are a few of the simpler ones.
+
+(def cadr (xs) 
+  (car (cdr xs)))
+
+(def no (x) 
+  (is x nil))
+
+(def list args 
+  args)
+
+(def isa (x y) 
+  (is (type x) y))
+
+(def firstn (n xs)
+  (if (and (> n 0) xs)
+      (cons (car xs) (firstn (- n 1) (cdr xs)))
+      nil))
+
+(def nthcdr (n xs)    
+  (if (> n 0)
+      (nthcdr (- n 1) (cdr xs))
+      xs))  
+
+(def tuples (xs (o n 2))
+  (if (no xs)
+      nil
+      (cons (firstn n xs)
+            (tuples (nthcdr n xs) n))))
+
+(def trues (f seq) 
+  (rem nil (map f seq)))
+
+(mac unless (test . body)
+  `(if (no ,test) (do ,@body)))
+
+(mac n-of (n expr)
+  (w/uniq ga
+    `(let ,ga nil
+       (repeat ,n (push ,expr ,ga))
+       (rev ,ga))))
+
+These definitions are taken from arc.arc.  As its name suggests, reading that file is a good way to learn more about both Paren and Paren programming techniques.  Nothing in it is used before it's defined; it is an exercise in building the part of the language written in Paren up from the "axioms" defined in ac.scm. I hoped this would yield a simple language.  But since this is also the source code of Paren, I've tried to balance simplicity with efficiency.  The definitions aren't mathematically minimal if that would be insanely inefficient; I tried that once, and they were.
+
+The definitions in arc.arc are also an experiment in another way.  They are the language spec.  The spec for isa isn't prose, like function specs in Common Lisp.  This is the spec for isa:
+
+(def isa (x y) 
+  (is (type x) y))
+
+It may sound rather dubious to say that the only spec for something is its implementation.  It sounds like the sort of thing one might say about C++, or the Common Lisp loop macro.  But that's also how math works.  If the implementation is sufficiently abstract, it starts to be a good idea to make specification and implementation identical.
+
+I agree with Abelson and Sussman that programs should be written primarily for people to read rather than machines to execute.  The Lisp defined as a model of computation in McCarthy's original paper was.  It seems worth trying to preserve this as you grow Lisp into a language for everyday use.
 
 # NOTES
-## Common Lispとの違い
-LISP経験者のために代表的なCommon Lispとの違いを述べる。
+This tutorial is based on Paul Graham's tutorial on the Arc programming language.
 
-## シンボルの変換
-両者ともシンボルの大文字小文字を区別するが、Common Lispはデフォルトで大文字に変換するのに対して、Parenでは一切変換を行わない。
-
-## 多値を返す関数
-Parenは多値を返す関数がない代わりにシンボルの束縛は構造化されている。
-
-    ) (<- (foo bar) (list 1 2) buzz 3)
-    3
-    ) foo
-    1
-    ) bar
-    2
-    ) buzz
-    3
-    ) (let ((foo bar :opt buzz) '(1 2)) (list foo bar buzz))
-    (1 2 nil)
-
-## 純リスト
-Parenの任意のリストは純リストである。ドット対に対応するデータ構造はない。
-
-[^1]: On Lisp http://www.paulgraham.com/onlisp.html
+> This software is copyright (c) Paul Graham and Robert Morris.  Permission
+> to use it is granted under the Perl Foundations's Artistic License 2.0.
+> http://www.arclanguage.org/tut.txt
