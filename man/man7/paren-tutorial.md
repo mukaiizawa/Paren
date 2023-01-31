@@ -28,7 +28,7 @@ Putting the `+` before the numbers looks odd when you're used to writing `1 + 2`
 
     ) (+)
     0
-    ) (+ 1) 
+    ) (+ 1)
     1
     ) (+ 1 2)
     3
@@ -53,7 +53,7 @@ You can turn off evaluation by putting a single quote character before an expres
 
 Particularly observant readers may be wondering how we got away with using `foo` as the first argument to `<-`  If the arguments are evaluated left to right, why didn't this cause an error when `foo` was evaluated?  There are some operators that violate the usual evaluation rule, and `<-` is one of them. Its first argument isn't evaluated.
 
-If you quote a list, you get back the list itself. 
+If you quote a list, you get back the list itself.
 
     ) (+ 1 2)
     3
@@ -114,7 +114,7 @@ We've already seen some functions: `+`, `cons`, `car`, and `cdr`. You can define
 
 Here's a function that takes two numbers and returns their average:
 
-    ) (function average (x y) 
+    ) (function average (x y)
         (/ (+ x y) 2))
     average
     ) (average 2 4)
@@ -145,39 +145,39 @@ There is an operator `let` to set temporary variables.
         (sqrt (+ (pow x 2) (pow y 2))))
     5
 
-So far we've only had things printed out implicity as a result of evaluating them. The standard way to print things out in the middle of evaluation is with pr or prn. They take multiple arguments and print them in order; prn also prints a newline at the end. Here's a variant of average that tells us what its arguments were:
+So far we've only had things printed out implicity as a result of evaluating them. The standard way to print things out in the middle of evaluation is with `print` or `println`. They take multiple arguments and print them in order; `println` also prints a newline at the end. Here's a variant of average that tells us what its arguments were:
 
-    ) (function average (x y)
-           (prn "my arguments were: " (list x y))
-           (/ (+ x y) 2))
-    *** redefining average
-    #<procedure: average>
-    ) (average 100 200)
+    ) (function average2 (x y)
+            (println "my arguments were: " (list x y))
+            (/ (+ x y) 2))
+    average2
+    ) (average2 100 200)
     my arguments were: (100 200)
     150
 
-The standard conditional operator is if. Like `<-` and function, it doesn't evaluate all its arguments. When given three arguments, it evaluates the first, and if that returns true, it returns the value of the second, otherwise the value of the third:
+## Conditional operators
+The standard conditional operator is `if`. Like `<-` and `function`, it doesn't evaluate all its arguments. When given three arguments, it evaluates the first, and if that returns true, it returns the value of the second, otherwise the value of the third:
 
-    ) (if (odd 1) 'a 'b)
+    ) (if (odd? 1) 'a 'b)
     a
-    ) (if (odd 2) 'a 'b)
+    ) (if (odd? 2) 'a 'b)
     b
 
-Returning true means returning anything except nil. Nil is conventionally used to represent falsity as well as the empty list. The symbol t (which like nil evaluates to itself) is often used to represent truth, but any value other than nil would serve just as well.
+Returning `true` means returning anything except `nil`. Nil is conventionally used to represent falsity as well as the empty list. The symbol `true` (which like nil evaluates to itself) is often used to represent truth, but any value other than `nil` would serve just as well.
 
-    ) (odd 1)
-    t
-    ) (odd 2)
+    ) (odd? 1)
+    true
+    ) (odd? 2)
     nil
 
 It sometimes causes confusion to use the same thing for falsity and the empty list, but many years of Lisp programming have convinced me it's a net win, because the empty list is set-theoretic false, and many Lisp programs think in sets.
 
-If the third argument is missing it defaults to nil.
+If the third argument is missing it defaults to `nil`.
 
-    ) (if (odd 2) 'a)
+    ) (if (odd? 2) 'a)
     nil
 
-An if with more than three arguments is equivalent to a nested if. 
+An if with more than three arguments is equivalent to a nested if.
 
     (if a b c d e)
 
@@ -189,20 +189,19 @@ is equivalent to
             d
             e))
 
-If you're used to languages with elseif, this pattern will be familiar.
+If you're used to languages with `elseif`, this pattern will be familiar.
 
-Each argument to if is a single expression, so if you want to do multiple things depending on the result of a test, combine them into one expression with do.
+Each argument to `if` is a single expression, so if you want to do multiple things depending on the result of a test, combine them into one expression with `begin`.
 
-    ) (do (prn "hello") 
-             (+ 2 3))
+    ) (begin
+        (println "hello")
+        (+ 2 3))
     hello
     5
 
 If you just want several expressions to be evaluated when some condition is true, you could say
 
-    (if a
-        (do b
-            c))
+    (if a (begin b c))
 
 but this situation is so common there's a separate operator for it.
 
@@ -210,214 +209,122 @@ but this situation is so common there's a separate operator for it.
       b
       c)
 
-The and and or operators are like conditionals because they don't evaluate more arguments than they have to.
+The `&&` and `||` operators are like conditionals because they don't evaluate more arguments than they have to.
 
-    ) (and nil
-              (pr "you'll never see this"))
+    ) (&& nil (print "you'll never see this"))
     nil
 
-The negation operator is called no, a name that also works when talking about nil as the empty list. Here's a function to return the length of a list:
+The negation operator is `!`, a name that also works when talking about `nil` as the empty list. Here's a function to return the length of a list:
 
     ) (function mylen (xs)
-           (if (no xs)
-               0
-               (+ 1 (mylen (cdr xs)))))
-    #<procedure: mylen>
+        (if (! xs) 0
+            (+ 1 (mylen (cdr xs)))))
+    mylen
 
-If the list is nil the function will immediately return 0. Otherwise it returns 1 more than the length of the cdr of the list.
+If the list is `nil` the function will immediately return `0`. Otherwise it returns `1` more than the length of the rest of the list.
 
     ) (mylen nil)
     0
     ) (mylen '(a b))
     2
 
-I called it mylen because there's already a function called len for this.  You're welcome to redefine Paren functions, but redefining len this way might break code that depended on it, because len works on more than lists.
+I called it mylen because there's already a function called `len` for this.
 
-The standard comparison operator is is, which returns true if its arguments are identical or, if strings, have the same characters. 
+The standard comparison operator is `=`, which returns `true` if its arguments are identical or, if strings, have the same characters.
 
-) (is 'a 'a)
-t
-) (is "foo" "foo")
-t
-) (let x (list 'a) 
-       (is x x))
-t
-) (is (list 'a) (list 'a))
-nil
+    ) (= 'a 'a)
+    true
+    ) (= 'a 'b)
+    nil
+    ) (= "foo" "foo")
+    true
+    ) (= (list 'a) (list 'a))
+    true
 
-Note that is returns false for two lists with the same elements. There's another operator for that, iso (from isomorphic).
+If you want to test whether something is one of several alternatives, you could say `(|| (= x y) (= x z) ...)`, but this situation is common enough that there's an operator for it.
 
-) (iso (list 'a) (list 'a))
-t
+    ) (in 'a '(a b c))
+    true
 
-If you want to test whether something is one of several alternatives, you could say (or (is x y) (is x z) ...), but this situation is common enough that there's an operator for it.
+## Loops and iteration
+Paren has a variety of iteration operators. For a range of numbers, use `for`.
 
-) (let x 'a   
-       (in x 'a 'b 'c))
-t
+    ) (for (i 1) (<= i 10) (i (++ i))
+        (print i " "))
+    1 2 3 4 5 6 7 8 9 10 nil
 
-The case operator takes alternating keys and expressions and returns the value of the expression after the key that matches. You can supply a final expression as the default.
+To iterate through the elements of a list, use `dolist`.
 
-) (function translate (sym)
-       (case sym
-         apple 'mela 
-         onion 'cipolla
-               'che?))
-#<procedure: translate>
-) (translate 'apple)
-mela
-) (translate 'syzygy)
-che?
-
-Paren has a variety of iteration operators. For a range of numbers, use for.
-
-) (for i 1 10 
-       (pr i " "))
-1 2 3 4 5 6 7 8 9 10 nil
-
-To iterate through the elements of a list or string, use each.
-
-) (each x '(a b c d e) 
-       (pr x " "))
-a b c d e nil
+    ) (dolist (x '(a b c d e))
+        (print x " "))
+    a b c d e nil
 
 Those nils you see at the end each time are not printed out by the code in the loop. They're the return values of the iteration expressions.
 
-To continue iterating while some condition is true, use while.
+To continue iterating while some condition is true, use `while`.
 
-) (let x 10
-       (while (> x 5)
-         (<- x (- x 1))
-         (pr x)))
-98765nil
+    ) (let (x 10)
+        (while (> x 5)
+          (<- x (- x 1))
+          (print x)))
+    98765nil
 
-There's also a more general loop operator that's similar to the C for operator and tends to be rarely used in practice, and a simple repeat operator for doing something n times:
+The `map` function takes a function and a list and returns the result of applying the function to successive elements.
 
-) (repeat 5 (pr "la "))
-la la la la la nil
+    ) (map (f (x) (+ x 10)) '(1 2 3))
+    (11 12 13)
 
-The map function takes a function and a list and returns the result of applying the function to successive elements.
+There are a number of functions like `map` that apply functions to successive elements of a sequence. The most commonly used is `select`, which returns the elements satisfying some test.
 
-) (map (f (x) (+ x 10)) '(1 2 3))
-(11 12 13)
+    ) (select odd? '(1 2 3 4 5 6 7))
+    (1 3 5 7)
 
-Actually it can take any number of sequences, and keeps going till the shortest runs out:
+Others include `reject`, which does the opposite of `select`; `every?`, which returns true if the function is true of every element; `some?`, which returns true if the function is true of any element; `position`, which returns the position of the first element for which the function returns true; and `keep`, which returns a list of all the non-nil return values:
 
-) (map + '(1 2 3 4) '(100 200 300))
-(101 202 303)
-
-Since functions of one argument are so often used in Lisp programs, Paren has a special notation for them. [... _ ...]  is an abbreviation for ((f_) (... _ ...)). So our first map example could have been written
-
-) (map [+ _ 10] '(1 2 3))
-(11 12 13)
-
-Removing variables is a particularly good way to make programs shorter. An unnecessary variable increases the conceptual load of a program by more than just what it adds to the length.
-
-You can compose functions by putting a colon between the names. I.e. (foo:bar x y) is equivalent to (foo (bar x y)). Composed functions are convenient as arguments.
-
-) (map odd:car '((1 2) (4 5) (7 9)))
-(t nil t)
-
-You can also negate a function by putting a tilde (~) before the name:
-
-) (map ~odd '(1 2 3 4 5)) 
-(nil t nil t nil)
-
-There are a number of functions like map that apply functions to successive elements of a sequence. The most commonly used is keep, which returns the elements satisfying some test.
-
-) (keep odd '(1 2 3 4 5 6 7))
-(1 3 5 7)
-
-Others include rem, which does the opposite of keep; all, which returns true if the function is true of every element; some, which returns true if the function is true of any element; pos, which returns the position of the first element for which the function returns true; and trues, which returns a list of all the non-nil return values:
-
-) (rem odd '(1 2 3 4 5 6))
-(2 4 6)
-) (all odd '(1 3 5 7))
-t
-) (some even '(1 3 5 7))
-nil
-) (pos even '(1 2 3 4 5))
-1
-) (trues [if (odd _) (+ _ 10)] 
+    ) (reject odd? '(1 2 3 4 5 6))
+    (2 4 6)
+    ) (every? odd? '(1 3 5 7))
+    true
+    ) (some? even? '(1 3 5 7))
+    nil
+    ) (position even? '(1 2 3 4 5))
+    1
+    ) (keep (f (x) (if (odd? x) (+ x 10)))
             '(1 2 3 4 5))
-(11 13 15)
+    (11 13 15)
 
-If functions like this are given a first argument that isn't a function, it's treated like a function that tests for equality to that:
+## Dictionary
+Lists can be used to represent a wide variety of data structures, but if you want to store key/value pairs efficiently, Paren also has dictionary.
 
-) (rem 'a '(a b a c u s))
-(b c u s)
+    ) (<- airports (dict))
+    #{ }
+    ) ([] airports "Boston" 'bos)
+    bos
+    ) ([] airports "Boston")
+    bos
+    ) airports
+    #{ "Boston" bos }
 
-and they all work on strings as well as lists.
+The function `keys` returns the keys in a dictionary, and `vals` returns the values.
 
-) (rem #\a "abacus")
-"bcus"
+    ) (keys airports)
+    ("Boston")
+    ) (vals airports)
+    (bos)
 
-Lists can be used to represent a wide variety of data structures, but if you want to store key/value pairs efficiently, Paren also has hash tables.
+## String
+There are a couple operators for building strings. The most general is `str`, which takes any number of arguments and mushes them into a string:
 
-) (<- airports (table))         
-#hash()
-) (<- (airports "Boston") 'bos)
-bos
+    ) (str 99 " bottles of " 'beer)
+    "99 bottles of beer"
 
-If you want to create a hash table filled with values, you can use listtab, which takes a list of key/value pairs and returns the corresponding hash table.
+Every argument will appear as it would look if printed out by print, except nil, which is ignored.
 
-) (let h (listtab '((x 1) (y 2)))
-       (h 'y))
-2
+There's also tostring, which is like begin except any output generated during the evaluation of its body is sent to a string, which is returned as the value of the whole expression.
 
-There's also an abbreviated form where you don't need to group the arguments or quote the keys.
-
-) (let h (obj x 1 y 2)
-       (h 'y))
-2
-
-Like lists and strings, hash tables can be used wherever functions are.
-
-) (<- codes (obj "Boston" 'bos "San Francisco" 'sfo "Paris" 'cdg))
-#hash(("Boston" . bos) ("Paris" . cdg) ("San Francisco" . sfo))
-) (map codes '("Paris" "Boston" "San Francisco"))
-(cdg bos sfo)
-
-The function keys returns the keys in a hash table, and vals returns the values. 
-
-) (keys codes)
-("Boston" "Paris" "San Francisco")
-
-There is a function called maptable for hash tables that is like map for lists, except that it returns the original table instead of a new one.
-
-) (maptable (f (k v) (prn v " " k))
-               codes)
-sfo San Francisco
-cdg Paris
-bos Boston
-#hash(("Boston" . bos) ("Paris" . cdg) ("San Francisco" . sfo))
-
-[Note: Like functions, hash tables can't be printed out in a way that can be read back in. We hope to fix that though.]
-
-There is a tradition in Lisp going back to McCarthy's 1960 paper [2] of using lists to represent key/value pairs:
-
-) (<- codes '(("Boston" bos) ("Paris" cdg) ("San Francisco" sfo)))
-(("Boston" bos) ("Paris" cdg) ("San Francisco" sfo))
-
-This is called an association list, or alist for short. I once thought alists were just a hack, but there are many things you can do with them that you can't do with hash tables, including sort them, build them up incrementally in recursive functions, have several that share the same tail, and preserve old values.
-
-The function alref returns the first value corresponding to a key in an alist:
-
-) (alref codes "Boston")
-bos
-
-There are a couple operators for building strings. The most general is string, which takes any number of arguments and mushes them into a string:
-
-) (string 99 " bottles of " 'bee #\r)
-"99 bottles of beer"
-
-Every argument will appear as it would look if printed out by pr, except nil, which is ignored.
-
-There's also tostring, which is like do except any output generated during the evaluation of its body is sent to a string, which is returned as the value of the whole expression.
-
-) (tostring                  
-       (prn "domesday")
-       (prn "book"))
+) (tostring
+       (println "domesday")
+       (println "book"))
 "domesday\nbook\n"
 
 You can find the types of things using type, and convert them to new types using coerce.
@@ -455,9 +362,9 @@ Like `<-` they work within structures, not just on variables.
 
 To increment or decrement use ++ or --:
 
-) (let x '(1 2 3) 
+) (let x '(1 2 3)
        (++ (car x))
-       x)           
+       x)
 (2 2 3)
 
 T(here's also a more general operator called zap that changes something to the result any function returns when applied to it. I.e. (++ x) is equivalent to (zap [+ _ 1] x).
@@ -511,12 +418,12 @@ We've seen several functions so far that take optional arguments or varying numb
 ) (greet 'joe #\!)
 "hello joe!"
 
-Functions can have as many optional parameters as you want, but they have to come at the end of the parameter list. 
+Functions can have as many optional parameters as you want, but they have to come at the end of the parameter list.
 
 If you put an expression after the name of an optional parameter, it will be evaluated if necessary to produce a default value. The expression can refer to preceding parameters.
 
 ) (function greet (name (o punc (case name who #\? #\!)))
-       (string "hello " name punc)) 
+       (string "hello " name punc))
 *** redefining greet
 #<procedure: greet>
 ) (greet 'who)
@@ -524,7 +431,7 @@ If you put an expression after the name of an optional parameter, it will be eva
 
 To make a function that takes any number of arguments, put a period and a space before the last parameter, and it will get bound to a list of the values of all the remaining arguments:
 
-) (function foo (x y . z) 
+) (function foo (x y . z)
        (list x y z))
 #<procedure: foo>
 ) (foo (+ 1 2) (+ 3 4) (+ 5 6) (+ 7 8))
@@ -539,7 +446,7 @@ To supply a list of arguments to a function, use apply:
 
 Now that we have rest parameters and apply, we can write a version of average that takes any number of arguments.
 
-) (function average args 
+) (function average args
        (/ (apply + args) (len args)))
 #<procedure: average>
 ) (average 1 2 3)
@@ -552,12 +459,12 @@ We know enough now to start writing macros. Macros are basically functions that 
 
 What macros offer is a way of getting code generated this way into your programs. Here's a (rather stupid) macro definition:
 
-) (mac foo () 
+) (mac foo ()
        (list '+ 1 2))
 *** redefining foo
 #3(tagged mac #<procedure>)
 
-Notice that a macro definition looks exactly like a function definition, but with function replaced by mac. 
+Notice that a macro definition looks exactly like a function definition, but with function replaced by mac.
 
 What this macro says is that whenever the expression (foo) occurs in your code, it shouldn't be evaluated in the normal way like a function call. Instead it should be replaced by the result of evaluating the body of the macro definition, (list '+ 1 2). This is called the "expansion" of the macro call.
 
@@ -569,39 +476,39 @@ In other words, if you've defined foo as above, putting (foo) anywhere in your c
 This is a rather useless macro, because it doesn't take any arguments. Here's a more useful one:
 
 ) (mac when (test . body)
-       (list 'if test (cons 'do body)))
+       (list 'if test (cons 'begin body)))
 *** redefining when
 #3(tagged mac #<procedure>)
 
 We've just redefined the built-in when operator. That would ordinarily be an alarming idea, but fortunately the definition we supplied is the same as the one it already had.
 
-) (when 1 
-       (pr "hello ")
+) (when 1
+       (print "hello ")
        2)
 hello 2
 
 What the definition above says is that when you have to evaluate an expression whose first element is when, replace it by the result of applying
 
-(f (test . body) 
-  (list 'if test (cons 'do body)))
+(f (test . body)
+  (list 'if test (cons 'begin body)))
 
 to the arguments. Let's try it by hand and see what we get.
 
-) (apply (f (test . body) 
-              (list 'if test (cons 'do body)))
-            '(1 (pr "hello ") 2))
-(if 1 (do (pr "hello ") 2))
+) (apply (f (test . body)
+              (list 'if test (cons 'begin body)))
+            '(1 (print "hello ") 2))
+(if 1 (begin (print "hello ") 2))
 
-So when Paren has to evaluate 
+So when Paren has to evaluate
 
-(when 1 
-  (pr "hello ") 
-  2) 
+(when 1
+  (print "hello ")
+  2)
 
-the macro we defined transforms that into 
+the macro we defined transforms that into
 
-(if 1 
-    (do (pr "hello ") 
+(if 1
+    (begin (print "hello ")
         2))
 
 first, and when that in turn is evaluated, it produces the behavior we saw above.
@@ -630,7 +537,7 @@ You can also put a comma-at (,@) in front of anything within a backquoted expres
 With backquote we can make the definition of when more readable.
 
 (mac when (test . body)
-  `(if ,test (do ,@body)))
+  `(if ,test (begin ,@body)))
 
 In fact, this is the definition of when in the Paren source.
 
@@ -644,19 +551,19 @@ For example, consider this definition of repeat:
 
 Looks like it works, right?
 
-) (repeat 3 (pr "blub ")) 
+) (repeat 3 (print "blub "))
 blub blub blub nil
 
 But if you use it in certain contexts, strange things happen.
 
-) (let x "blub "  
-       (repeat 3 (pr x)))
+) (let x "blub "
+       (repeat 3 (print x)))
 123nil
 
 We can see what's going wrong if we look at the expansion. The code above is equivalent to
 
 (let x "blub "
-  (for x 1 3 (pr x)))
+  (for x 1 3 (print x)))
 
 Now the bug is obvious. The macro uses the variable x to hold the count while iterating, and that gets in the way of the x we're trying to print.
 
@@ -667,7 +574,7 @@ The way to fix repeat is to use a symbol that couldn't occur in source code inst
 (mac repeat (n . body)
   `(for ,(uniq) 1 ,n ,@body))
 
-If you need one or more uniqs for use in a macro, you can use w/uniq, which takes either a variable or list of variables you want bound to uniqs. Here's the definition of a variant of do called do1 that's like do but returns the value of its first argument instead of the last (useful if you want to print a message after something happens, but return the something, not the message):
+If you need one or more uniqs for use in a macro, you can use w/uniq, which takes either a variable or list of variables you want bound to uniqs. Here's the definition of a variant of begin called do1 that's like begin but returns the value of its first argument instead of the last (useful if you want to print a message after something happens, but return the something, not the message):
 
 (mac do1 args
   (w/uniq g
@@ -678,7 +585,7 @@ If you need one or more uniqs for use in a macro, you can use w/uniq, which take
 Sometimes you actually want to "capture" variables, as it's called, in macro definitions. The following variant of when, which binds the variable it to the value of the test, turns out to be very useful:
 
 (mac awhen (expr . body)
-  `(let it ,expr (if it (do ,@body))))
+  `(let it ,expr (if it (begin ,@body))))
 
 In a sense, you now know all about macros-- in the same sense that, if you know the axioms in Euclid, you know all the theorems. A lot follows from these simple ideas, and it can take years to explore the territory they define. At least, it took me years. But it's a path worth following. Because macro calls can expand into further macro calls, you can generate massively complex expressions with them-- code you would have had to write by hand otherwise. And yet programs built up out of layers of macros turn out to be very manageable. I wouldn't be surprised if some parts of my code go through 10 or 20 levels of macroexpansion before the compiler sees them, but I don't know, because I've never had to look.
 
@@ -686,27 +593,27 @@ One of the things you'll discover as you learn more about macros is how much day
 
 Now that you've learned the basics of Paren programming, the best way to learn more about the language is to try writing some programs in it. Here's how to write the hello-world of web apps:
 
-) (defop hello req (pr "hello world"))
+) (defop hello req (print "hello world"))
 #<procedure:gs1430>
 ) (asv)
 ready to serve port 8080
 
-If you now go to http://localhost:8080/hello your new web app will be waiting for you. 
+If you now go to http://localhost:8080/hello your new web app will be waiting for you.
 
 Here are a couple slightly more complex hellos that hint at the convenience of macros that store closures on the server:
 
 (defop hello2 req
-  (w/link (pr "there") 
-    (pr "here")))
+  (w/link (print "there")
+    (print "here")))
 
 (defop hello3 req
-  (w/link (w/link (pr "end")
-            (pr "middle"))
-    (pr "start")))
+  (w/link (w/link (print "end")
+            (print "middle"))
+    (print "start")))
 
 (defop hello4 req
-  (aform [w/link (pr "you said: " (arg _ "foo"))
-           (pr "click here")]
+  (aform [w/link (print "you said: " (arg _ "foo"))
+           (print "click here")]
     (input "foo")
     (submit)))
 
@@ -714,16 +621,16 @@ See the sample application in blog.arc for ideas about how to make web apps that
 
 We now know enough Paren to read the definitions of some of the predefined functions. Here are a few of the simpler ones.
 
-(function cadr (xs) 
+(function cadr (xs)
   (car (cdr xs)))
 
-(function no (x) 
+(function no (x)
   (is x nil))
 
-(function list args 
+(function list args
   args)
 
-(function isa (x y) 
+(function isa (x y)
   (is (type x) y))
 
 (function firstn (n xs)
@@ -731,10 +638,10 @@ We now know enough Paren to read the definitions of some of the predefined funct
       (cons (car xs) (firstn (- n 1) (cdr xs)))
       nil))
 
-(function nthcdr (n xs)    
+(function nthcdr (n xs)
   (if (> n 0)
       (nthcdr (- n 1) (cdr xs))
-      xs))  
+      xs))
 
 (function tuples (xs (o n 2))
   (if (no xs)
@@ -742,11 +649,11 @@ We now know enough Paren to read the definitions of some of the predefined funct
       (cons (firstn n xs)
             (tuples (nthcdr n xs) n))))
 
-(function trues (f seq) 
-  (rem nil (map f seq)))
+(function keep (f seq)
+  (reject nil (map f seq)))
 
 (mac unless (test . body)
-  `(if (no ,test) (do ,@body)))
+  `(if (no ,test) (begin ,@body)))
 
 (mac n-of (n expr)
   (w/uniq ga
@@ -758,7 +665,7 @@ These definitions are taken from arc.arc. As its name suggests, reading that fil
 
 The definitions in arc.arc are also an experiment in another way. They are the language spec. The spec for isa isn't prose, like function specs in Common Lisp. This is the spec for isa:
 
-(function isa (x y) 
+(function isa (x y)
   (is (type x) y))
 
 It may sound rather dubious to say that the only spec for something is its implementation. It sounds like the sort of thing one might say about C++, or the Common Lisp loop macro. But that's also how math works. If the implementation is sufficiently abstract, it starts to be a good idea to make specification and implementation identical.
