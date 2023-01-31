@@ -336,9 +336,6 @@ There are a couple operators for building strings. The most general is `str`, wh
 
 Every argument will appear as it would look if printed out by `print`, except `nil`, which is ignored.
 
-## Array
-TODO
-
 ## Dictionary
 Lists can be used to represent a wide variety of data structures, but if you want to store key/value pairs efficiently, Paren also has dictionary.
 
