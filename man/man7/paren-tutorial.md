@@ -155,40 +155,40 @@ So far we've only had things printed out implicity as a result of evaluating the
     my arguments were: (100 200)
     150
 
-## Function2 TODO
-Functions can have as many optional parameters as you want, but they have to come at the end of the parameter list.
+Functions can have as many optional parameters as you want.
 
 If you put an expression after the name of an optional parameter, it will be evaluated if necessary to produce a default value. The expression can refer to preceding parameters.
 
-) (function greet (name (o punc (case name who #\? #\!)))
-       (string "hello " name punc))
-*** redefining greet
-#<procedure: greet>
-) (greet 'who)
-"hello who?"
+    ) (function greet (:opt name)
+        (str "hello " (|| name "Paul Graham")))
+    greet
+    ) (greet)
+    "hello Paul Graham"
+    ) (greet "Paren")
+    "hello Paren"
 
-To make a function that takes any number of arguments, put a period and a space before the last parameter, and it will get bound to a list of the values of all the remaining arguments:
+To make a function that takes any number of arguments, put a `:rest` before the last parameter, and it will get bound to a list of the values of all the remaining arguments:
 
-) (function foo (x y . z)
-       (list x y z))
-#<procedure: foo>
-) (foo (+ 1 2) (+ 3 4) (+ 5 6) (+ 7 8))
-(3 7 (11 15))
+    ) (function foo (x y :rest z)
+           (list x y z))
+    foo
+    ) (foo (+ 1 2) (+ 3 4) (+ 5 6) (+ 7 8))
+    (3 7 (11 15))
 
-This type of parameter is called a `rest parameter` because it gets the rest of the arguments. If you want all the arguments to a function to be collected in one parameter, just use it in place of the whole parameter list. (These conventions are not as random as they seem. The parameter list mirrors the form of the arguments, and a list terminated by something other than nil is represented as e.g. (a b . c).)
+This type of parameter is called a "rest parameter" because it gets the rest of the arguments. If you want all the arguments to a function to be collected in one parameter, just use it in place of the whole parameter list.
 
 To supply a list of arguments to a function, use apply:
 
-) (apply + '(1 2 3))
-6
+    ) (apply + '(1 2 3))
+    6
 
 Now that we have rest parameters and apply, we can write a version of average that takes any number of arguments.
 
-) (function average args
-       (/ (apply + args) (len args)))
-#<procedure: average>
-) (average 1 2 3)
-2
+    ) (function average3 (:rest args)
+        (/ (apply + args) (len args)))
+    average3
+    ) (average3 1 2 3)
+    2
 
 ## Conditional operators
 The standard conditional operator is `if`. Like `<-` and `function`, it doesn't evaluate all its arguments. When given three arguments, it evaluates the first, and if that returns true, it returns the value of the second, otherwise the value of the third:
@@ -336,7 +336,8 @@ There are a couple operators for building strings. The most general is `str`, wh
 
 Every argument will appear as it would look if printed out by `print`, except `nil`, which is ignored.
 
-## Array TODO
+## Array
+TODO
 
 ## Dictionary
 Lists can be used to represent a wide variety of data structures, but if you want to store key/value pairs efficiently, Paren also has dictionary.
@@ -429,153 +430,84 @@ except that if you put a comma before an expression within the list, evaluation 
 
 A backquoted expression is like a quoted expression with holes in it.
 
-You can also put a comma-at (,@) in front of anything within a backquoted expression, and in that case its value (which must be a list) will get spliced into whatever list you're currently in.
+You can also put a comma-at `,@` in front of anything within a backquoted expression, and in that case its value (which must be a list) will get spliced into whatever list you're currently in.
 
-) (let x '(1 2)
-       `(a ,@x c))
-(a 1 2 c)
+    ) (let (x '(1 2))
+        `(a ,@x c))
+    (a 1 2 c)
 
 With backquote we can make the definition of when more readable.
 
-(macro when (test . body)
-  `(if ,test (begin ,@body)))
-
-In fact, this is the definition of when in the Paren source.
+    (macro when (test :rest body)
+      `(if ,test (begin ,@body)))
 
 One of the keys to understanding macros is to remember that macro calls aren't function calls. Macro calls look like function calls. Macro definitions even look a lot like function definitions. But something fundamentally different is happening. You're transforming code, not evaluating it. Macros live in the land of the names, not the land of the things they refer to.
 
-For example, consider this definition of repeat:
+For example, consider this definition of `repeat`:
 
-) (macro repeat (n . body)
-       `(for x 1 ,n ,@body))
-#3(tagged macro #<procedure>)
+    ) (macro repeat (n :rest body)
+        `(dotimes (x ,n)
+            ,@body))
+    repeat
 
 Looks like it works, right?
 
-) (repeat 3 (print "blub "))
-blub blub blub nil
+    ) (repeat 3 (print "blub "))
+    blub blub blub nil
 
 But if you use it in certain contexts, strange things happen.
 
-) (let x "blub "
-       (repeat 3 (print x)))
-123nil
+    ) (let (x "blub ")
+        (repeat 3 (print x)))
+    012nil
 
 We can see what's going wrong if we look at the expansion. The code above is equivalent to
 
-(let x "blub "
-  (for x 1 3 (print x)))
+    (let (x "blub ")
+      (dotimes (x 3)
+        (print x))
 
-Now the bug is obvious. The macro uses the variable x to hold the count while iterating, and that gets in the way of the x we're trying to print.
+Now the bug is obvious. The macro uses the variable `x` to hold the count while iterating, and that gets in the way of the `x` we're trying to print.
 
 Some people worry unduly about this kind of bug. It caused the Scheme committee to adopt a plan for "hygienic" macros that was probably a mistake. It seems to me that the solution is not to encourage the noob illusion that macro calls are function calls. People writing macros need to remember that macros live in the land of names. Naturally in the land of names you have to worry about using the wrong names, just as in the land of values you have to remember not to use the wrong values-- for example, not to use zero as a divisor.
 
-The way to fix repeat is to use a symbol that couldn't occur in source code instead of x. In Paren you can get one by calling the function uniq. So the correct definition of repeat (and in fact the one in the Paren source) is
+The way to fix `repeat` is to use a symbol that couldn't occur in source code instead of `x`. In Paren you can get one by calling the function `symbol`. So the correct definition of `repeat` is
 
-(macro repeat (n . body)
-  `(for ,(uniq) 1 ,n ,@body))
-
-If you need one or more uniqs for use in a macro, you can use w/uniq, which takes either a variable or list of variables you want bound to uniqs. Here's the definition of a variant of begin called do1 that's like begin but returns the value of its first argument instead of the last (useful if you want to print a message after something happens, but return the something, not the message):
-
-(macro do1 args
-  (w/uniq g
-    `(let ,g ,(car args)
-       ,@(cdr args)
-       ,g)))
+    (macro repeat (n :rest body)
+      `(dotimes (,(symbol) ,n)
+        ,@body))
 
 Sometimes you actually want to "capture" variables, as it's called, in macro definitions. The following variant of when, which binds the variable it to the value of the test, turns out to be very useful:
 
-(macro awhen (expr . body)
-  `(let it ,expr (if it (begin ,@body))))
+    (macro awhen (expr :rest body)
+      `(let (it ,expr) (if it (begin ,@body))))
 
-In a sense, you now know all about macros-- in the same sense that, if you know the axioms in Euclid, you know all the theorems. A lot follows from these simple ideas, and it can take years to explore the territory they define. At least, it took me years. But it's a path worth following. Because macro calls can expand into further macro calls, you can generate massively complex expressions with them-- code you would have had to write by hand otherwise. And yet programs built up out of layers of macros turn out to be very manageable. I wouldn't be surprised if some parts of my code go through 10 or 20 levels of macroexpansion before the compiler sees them, but I don't know, because I've never had to look.
+In a sense, you now know all about macros -- in the same sense that, if you know the axioms in Euclid, you know all the theorems. A lot follows from these simple ideas, and it can take years to explore the territory they define. At least, it took me years. But it's a path worth following. Because macro calls can expand into further macro calls, you can generate massively complex expressions with them -- code you would have had to write by hand otherwise. And yet programs built up out of layers of macros turn out to be very manageable. I wouldn't be surprised if some parts of my code go through 10 or 20 levels of macroexpansion before the compiler sees them, but I don't know, because I've never had to look.
+
+    ) (<- foo 30) 
+    30
+    ) (awhen nil (print it))
+    nil
+    ) (awhen foo (print it))
+    30nil
 
 One of the things you'll discover as you learn more about macros is how much day-to-day coding in other languages consists of manually generating macroexpansions. Conversely, one of the most important elements of learning to think like a Lisp programmer is to cultivate a dissatisfaction with repetitive code. When there are patterns in source code, the response should not be to enshrine them in a list of "best practices," or to find an IDE that can generate them. Patterns in your code mean you're doing something wrong. You should write the macro that will generate them and call that instead.
 
-Now that you've learned the basics of Paren programming, the best way to learn more about the language is to try writing some programs in it. Here's how to write the hello-world of web apps:
+## Conclution
+We now know enough Paren to read the definitions of some of the built-in functions. Reading `$paren-home/modules/core.p` is a good way to learn more about both Paren and Paren programming techniques.
 
-) (defop hello req (print "hello world"))
-#<procedure:gs1430>
-) (asv)
-ready to serve port 8080
-
-If you now go to http://localhost:8080/hello your new web app will be waiting for you.
-
-Here are a couple slightly more complex hellos that hint at the convenience of macros that store closures on the server:
-
-(defop hello2 req
-  (w/link (print "there")
-    (print "here")))
-
-(defop hello3 req
-  (w/link (w/link (print "end")
-            (print "middle"))
-    (print "start")))
-
-(defop hello4 req
-  (aform [w/link (print "you said: " (arg _ "foo"))
-           (print "click here")]
-    (input "foo")
-    (submit)))
-
-See the sample application in blog.arc for ideas about how to make web apps that do more.
-
-We now know enough Paren to read the definitions of some of the predefined functions. Here are a few of the simpler ones.
-
-(function cadr (xs)
-  (car (cdr xs)))
-
-(function no (x)
-  (is x nil))
-
-(function list args
-  args)
-
-(function isa (x y)
-  (is (type x) y))
-
-(function firstn (n xs)
-  (if (and (> n 0) xs)
-      (cons (car xs) (firstn (- n 1) (cdr xs)))
-      nil))
-
-(function nthcdr (n xs)
-  (if (> n 0)
-      (nthcdr (- n 1) (cdr xs))
-      xs))
-
-(function tuples (xs (o n 2))
-  (if (no xs)
-      nil
-      (cons (firstn n xs)
-            (tuples (nthcdr n xs) n))))
-
-(function keep (f seq)
-  (reject nil (map f seq)))
-
-(macro unless (test . body)
-  `(if (no ,test) (begin ,@body)))
-
-(macro n-of (n expr)
-  (w/uniq ga
-    `(let ,ga nil
-       (repeat ,n (push ,expr ,ga))
-       (rev ,ga))))
-
-These definitions are taken from arc.arc. As its name suggests, reading that file is a good way to learn more about both Paren and Paren programming techniques. Nothing in it is used before it's defined; it is an exercise in building the part of the language written in Paren up from the "axioms" defined in ac.scm. I hoped this would yield a simple language. But since this is also the source code of Paren, I've tried to balance simplicity with efficiency. The definitions aren't mathematically minimal if that would be insanely inefficient; I tried that once, and they were.
-
-The definitions in arc.arc are also an experiment in another way. They are the language spec. The spec for isa isn't prose, like function specs in Common Lisp. This is the spec for isa:
-
-(function isa (x y)
-  (is (type x) y))
-
-It may sound rather dubious to say that the only spec for something is its implementation. It sounds like the sort of thing one might say about C++, or the Common Lisp loop macro. But that's also how math works. If the implementation is sufficiently abstract, it starts to be a good idea to make specification and implementation identical.
+Now that you've learned the basics of Paren programming, the best way to learn more about the language is to try writing some programs in it.
 
 I agree with Abelson and Sussman that programs should be written primarily for people to read rather than machines to execute. The Lisp defined as a model of computation in McCarthy's original paper was. It seems worth trying to preserve this as you grow Lisp into a language for everyday use.
 
 # NOTES
-This tutorial is based on [Paul Graham's tutorial](http://www.arclanguage.org/tut.txt) on the Arc programming language.
+This tutorial is based on [Paul Graham's great tutorial](http://www.arclanguage.org/tut.txt) on the Arc programming language.
+
+This tutorial conforms to the license of the original version:
 
 > This software is copyright (c) Paul Graham and Robert Morris. Permission
 > to use it is granted under the Perl Foundations's Artistic License 2.0.
-> http://www.arclanguage.org/tut.txt
+
+# SEE ALSO
+- lang(7)
+- data-types(7)
