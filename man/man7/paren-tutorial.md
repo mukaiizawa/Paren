@@ -155,7 +155,7 @@ So far we've only had things printed out implicity as a result of evaluating the
     my arguments were: (100 200)
     150
 
-## Function2 TOOD
+## Function2 TODO
 Functions can have as many optional parameters as you want, but they have to come at the end of the parameter list.
 
 If you put an expression after the name of an optional parameter, it will be evaluated if necessary to produce a default value. The expression can refer to preceding parameters.
@@ -328,6 +328,16 @@ Others include `reject`, which does the opposite of `select`; `every?`, which re
             '(1 2 3 4 5))
     (11 13 15)
 
+## String
+There are a couple operators for building strings. The most general is `str`, which takes any number of arguments and mushes them into a string:
+
+    ) (str 99 " bottles of " nil 'beer)
+    "99 bottles of beer"
+
+Every argument will appear as it would look if printed out by `print`, except `nil`, which is ignored.
+
+## Array TODO
+
 ## Dictionary
 Lists can be used to represent a wide variety of data structures, but if you want to store key/value pairs efficiently, Paren also has dictionary.
 
@@ -347,88 +357,75 @@ The function `keys` returns the keys in a dictionary, and `vals` returns the val
     ) (vals airports)
     (bos)
 
-## String
-There are a couple operators for building strings. The most general is `str`, which takes any number of arguments and mushes them into a string:
-
-    ) (str 99 " bottles of " nil 'beer)
-    "99 bottles of beer"
-
-Every argument will appear as it would look if printed out by `print`, except `nil`, which is ignored.
-
 ## Macros
 We know enough now to start writing macros. Macros are basically functions that generate code. Of course, generating code is easy; just call list.
 
-) (list '+ 1 2)
-(+ 1 2)
+    ) (list '+ 1 2)
+    (+ 1 2)
 
 What macros offer is a way of getting code generated this way into your programs. Here's a (rather stupid) macro definition:
 
-) (mac foo ()
-       (list '+ 1 2))
-*** redefining foo
-#3(tagged mac #<procedure>)
+    ) (macro foo ()
+        (list '+ 1 2))
+    (macro nil (list '+ 1 2))
 
-Notice that a macro definition looks exactly like a function definition, but with function replaced by mac.
+Notice that a macro definition looks exactly like a function definition, but with function replaced by macro.
 
-What this macro says is that whenever the expression (foo) occurs in your code, it shouldn't be evaluated in the normal way like a function call. Instead it should be replaced by the result of evaluating the body of the macro definition, (list '+ 1 2). This is called the "expansion" of the macro call.
+What this macro says is that whenever the expression `(foo)` occurs in your code, it shouldn't be evaluated in the normal way like a function call. Instead it should be replaced by the result of evaluating the body of the macro definition, `(list '+ 1 2)`. This is called the "expansion" of the macro call.
 
-In other words, if you've defined foo as above, putting (foo) anywhere in your code is equivalent to putting (+ 1 2) there.
+In other words, if you've defined `foo` as above, putting `(foo)` anywhere in your code is equivalent to putting `(+ 1 2)` there.
 
-) (+ 10 (foo))
-13
+    ) (+ 10 (foo))
+    13
 
 This is a rather useless macro, because it doesn't take any arguments. Here's a more useful one:
 
-) (mac when (test . body)
-       (list 'if test (cons 'begin body)))
-*** redefining when
-#3(tagged mac #<procedure>)
+    (macro when (test :rest body)
+      (list 'if test (cons 'begin body)))
 
 We've just redefined the built-in when operator. That would ordinarily be an alarming idea, but fortunately the definition we supplied is the same as the one it already had.
 
-) (when 1
-       (print "hello ")
-       2)
-hello 2
+    ) (when (odd? 1)
+         (print "hello ")
+         2)
+    hello 2
 
-What the definition above says is that when you have to evaluate an expression whose first element is when, replace it by the result of applying
+What the definition above says is that when you have to evaluate an expression whose first element is `when`, replace it by the result of applying
 
-(f (test . body)
-  (list 'if test (cons 'begin body)))
+    (f (test :rest body)
+      (list 'if test (cons 'begin body)))
 
 to the arguments. Let's try it by hand and see what we get.
 
-) (apply (f (test . body)
-              (list 'if test (cons 'begin body)))
-            '(1 (print "hello ") 2))
-(if 1 (begin (print "hello ") 2))
+    ) (apply (f (test :rest body)
+               (list 'if test (cons 'begin body)))
+             '((odd? 1) (print "hello ") 2))
+    (if (odd? 1) (begin (print "hello ") 2))
 
 So when Paren has to evaluate
 
-(when 1
-  (print "hello ")
-  2)
+    (when (odd? 1)
+      (print "hello ")
+      2)
 
 the macro we defined transforms that into
 
-(if 1
-    (begin (print "hello ")
-        2))
+    (if (odd? 1) (begin (print "hello ") 2))
 
 first, and when that in turn is evaluated, it produces the behavior we saw above.
 
 Building up expressions using calls to list and cons can get unwieldy, so most Lisp dialects have an abbreviation called backquote that makes generating lists easier.
 
-If you put a single open-quote character (`) before an expression, it turns off evaluation just like the ordinary quote (') does,
+If you put a single open-quote character before an expression, it turns off evaluation just like the ordinary quote does,
 
-) `(a b c)
-(a b c)
+    ) `(a b c)
+    (a b c)
 
 except that if you put a comma before an expression within the list, evaluation gets turned back on for that expression.
 
-) (let x 2
-       `(a ,x c))
-(a 2 c)
+    ) (let (x 2)
+        `(a ,x c))
+    (a 2 c)
 
 A backquoted expression is like a quoted expression with holes in it.
 
@@ -440,7 +437,7 @@ You can also put a comma-at (,@) in front of anything within a backquoted expres
 
 With backquote we can make the definition of when more readable.
 
-(mac when (test . body)
+(macro when (test . body)
   `(if ,test (begin ,@body)))
 
 In fact, this is the definition of when in the Paren source.
@@ -449,9 +446,9 @@ One of the keys to understanding macros is to remember that macro calls aren't f
 
 For example, consider this definition of repeat:
 
-) (mac repeat (n . body)
+) (macro repeat (n . body)
        `(for x 1 ,n ,@body))
-#3(tagged mac #<procedure>)
+#3(tagged macro #<procedure>)
 
 Looks like it works, right?
 
@@ -475,12 +472,12 @@ Some people worry unduly about this kind of bug. It caused the Scheme committee 
 
 The way to fix repeat is to use a symbol that couldn't occur in source code instead of x. In Paren you can get one by calling the function uniq. So the correct definition of repeat (and in fact the one in the Paren source) is
 
-(mac repeat (n . body)
+(macro repeat (n . body)
   `(for ,(uniq) 1 ,n ,@body))
 
 If you need one or more uniqs for use in a macro, you can use w/uniq, which takes either a variable or list of variables you want bound to uniqs. Here's the definition of a variant of begin called do1 that's like begin but returns the value of its first argument instead of the last (useful if you want to print a message after something happens, but return the something, not the message):
 
-(mac do1 args
+(macro do1 args
   (w/uniq g
     `(let ,g ,(car args)
        ,@(cdr args)
@@ -488,7 +485,7 @@ If you need one or more uniqs for use in a macro, you can use w/uniq, which take
 
 Sometimes you actually want to "capture" variables, as it's called, in macro definitions. The following variant of when, which binds the variable it to the value of the test, turns out to be very useful:
 
-(mac awhen (expr . body)
+(macro awhen (expr . body)
   `(let it ,expr (if it (begin ,@body))))
 
 In a sense, you now know all about macros-- in the same sense that, if you know the axioms in Euclid, you know all the theorems. A lot follows from these simple ideas, and it can take years to explore the territory they define. At least, it took me years. But it's a path worth following. Because macro calls can expand into further macro calls, you can generate massively complex expressions with them-- code you would have had to write by hand otherwise. And yet programs built up out of layers of macros turn out to be very manageable. I wouldn't be surprised if some parts of my code go through 10 or 20 levels of macroexpansion before the compiler sees them, but I don't know, because I've never had to look.
@@ -556,10 +553,10 @@ We now know enough Paren to read the definitions of some of the predefined funct
 (function keep (f seq)
   (reject nil (map f seq)))
 
-(mac unless (test . body)
+(macro unless (test . body)
   `(if (no ,test) (begin ,@body)))
 
-(mac n-of (n expr)
+(macro n-of (n expr)
   (w/uniq ga
     `(let ,ga nil
        (repeat ,n (push ,expr ,ga))
