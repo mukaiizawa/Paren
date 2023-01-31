@@ -155,6 +155,41 @@ So far we've only had things printed out implicity as a result of evaluating the
     my arguments were: (100 200)
     150
 
+## Function2 TOOD
+Functions can have as many optional parameters as you want, but they have to come at the end of the parameter list.
+
+If you put an expression after the name of an optional parameter, it will be evaluated if necessary to produce a default value. The expression can refer to preceding parameters.
+
+) (function greet (name (o punc (case name who #\? #\!)))
+       (string "hello " name punc))
+*** redefining greet
+#<procedure: greet>
+) (greet 'who)
+"hello who?"
+
+To make a function that takes any number of arguments, put a period and a space before the last parameter, and it will get bound to a list of the values of all the remaining arguments:
+
+) (function foo (x y . z)
+       (list x y z))
+#<procedure: foo>
+) (foo (+ 1 2) (+ 3 4) (+ 5 6) (+ 7 8))
+(3 7 (11 15))
+
+This type of parameter is called a `rest parameter` because it gets the rest of the arguments. If you want all the arguments to a function to be collected in one parameter, just use it in place of the whole parameter list. (These conventions are not as random as they seem. The parameter list mirrors the form of the arguments, and a list terminated by something other than nil is represented as e.g. (a b . c).)
+
+To supply a list of arguments to a function, use apply:
+
+) (apply + '(1 2 3))
+6
+
+Now that we have rest parameters and apply, we can write a version of average that takes any number of arguments.
+
+) (function average args
+       (/ (apply + args) (len args)))
+#<procedure: average>
+) (average 1 2 3)
+2
+
 ## Conditional operators
 The standard conditional operator is `if`. Like `<-` and `function`, it doesn't evaluate all its arguments. When given three arguments, it evaluates the first, and if that returns true, it returns the value of the second, otherwise the value of the third:
 
@@ -315,143 +350,12 @@ The function `keys` returns the keys in a dictionary, and `vals` returns the val
 ## String
 There are a couple operators for building strings. The most general is `str`, which takes any number of arguments and mushes them into a string:
 
-    ) (str 99 " bottles of " 'beer)
+    ) (str 99 " bottles of " nil 'beer)
     "99 bottles of beer"
 
-Every argument will appear as it would look if printed out by print, except nil, which is ignored.
+Every argument will appear as it would look if printed out by `print`, except `nil`, which is ignored.
 
-There's also tostring, which is like begin except any output generated during the evaluation of its body is sent to a string, which is returned as the value of the whole expression.
-
-) (tostring
-       (println "domesday")
-       (println "book"))
-"domesday\nbook\n"
-
-You can find the types of things using type, and convert them to new types using coerce.
-
-) (map type (list 'foo 23 23.5 '(a) nil car "foo" #\a))
-(sym int num cons sym fn string char)
-) (coerce #\A 'int)
-65
-) (coerce "foo" 'cons)
-(#\f #\o #\o)
-) (coerce "99" 'int)
-99
-) (coerce "99" 'int 16)
-153
-
-The push and pop operators treat list as stacks, pushing a new element on the front and popping one off respectively.
-
-) (<- x '(c a b))
-(c a b)
-) (pop x)
-c
-) x
-(a b)
-) (push 'f x)
-(f a b)
-) x
-(f a b)
-
-Like `<-` they work within structures, not just on variables.
-
-) (push 'l (cdr x))
-(l a b)
-) x
-(f l a b)
-
-To increment or decrement use ++ or --:
-
-) (let x '(1 2 3)
-       (++ (car x))
-       x)
-(2 2 3)
-
-T(here's also a more general operator called zap that changes something to the result any function returns when applied to it. I.e. (++ x) is equivalent to (zap [+ _ 1] x).
-
-The sort function returns a copy of a sequence sorted according to the function given as the first argument.
-
-) (sort < '(2 9 3 7 5 1))
-(1 2 3 5 7 9)
-
-It doesn't change the original, so if you want to sort the value of a particular variable (or place within a structure), use zap:
-
-) (<- x '(2 9 3 7 5 1))
-(2 9 3 7 5 1)
-) (zap [sort < _] x)
-(1 2 3 5 7 9)
-) x
-(1 2 3 5 7 9)
-
-If you want to modify a sorted list by inserting a new element at the right place, use insort:
-
-) (insort < 4 x)
-(1 2 3 4 5 7 9)
-) x
-(1 2 3 4 5 7 9)
-
-In practice the things one needs to sort are rarely just lists of numbers. More often you'll need to sort things according to some property other than their value, e.g.
-
-) (sort (f (x y) (< (len x) (len y)))
-           '("orange" "pea" "apricot" "apple"))
-("pea" "apple" "orange" "apricot")
-
-Paren's sort is stable, meaning the relative positions of elements judged equal by the comparison function won't change:
-
-) (sort (f (x y) (< (len x) (len y)))
-           '("aa" "bb" "cc"))
-("aa" "bb" "cc")
-
-Since comparison functions other than > or < are so often needed, Paren has a compare function to build them:
-
-) (sort (compare < len)
-           '("orange" "pea" "apricot" "apple"))
-("pea" "apple" "orange" "apricot")
-
-We've seen several functions so far that take optional arguments or varying numbers of arguments. To make a parameter optional, just say (o x) instead of x. Optional parameters default to nil.
-
-) (function greet (name (o punc))
-       (string "hello " name punc))
-#<procedure: greet>
-) (greet 'joe)
-"hello joe"
-) (greet 'joe #\!)
-"hello joe!"
-
-Functions can have as many optional parameters as you want, but they have to come at the end of the parameter list.
-
-If you put an expression after the name of an optional parameter, it will be evaluated if necessary to produce a default value. The expression can refer to preceding parameters.
-
-) (function greet (name (o punc (case name who #\? #\!)))
-       (string "hello " name punc))
-*** redefining greet
-#<procedure: greet>
-) (greet 'who)
-"hello who?"
-
-To make a function that takes any number of arguments, put a period and a space before the last parameter, and it will get bound to a list of the values of all the remaining arguments:
-
-) (function foo (x y . z)
-       (list x y z))
-#<procedure: foo>
-) (foo (+ 1 2) (+ 3 4) (+ 5 6) (+ 7 8))
-(3 7 (11 15))
-
-This type of parameter is called a "rest parameter" because it gets the rest of the arguments. If you want all the arguments to a function to be collected in one parameter, just use it in place of the whole parameter list. (These conventions are not as random as they seem. The parameter list mirrors the form of the arguments, and a list terminated by something other than nil is represented as e.g. (a b . c).)
-
-To supply a list of arguments to a function, use apply:
-
-) (apply + '(1 2 3))
-6
-
-Now that we have rest parameters and apply, we can write a version of average that takes any number of arguments.
-
-) (function average args
-       (/ (apply + args) (len args)))
-#<procedure: average>
-) (average 1 2 3)
-2
-
+## Macros
 We know enough now to start writing macros. Macros are basically functions that generate code. Of course, generating code is easy; just call list.
 
 ) (list '+ 1 2)
