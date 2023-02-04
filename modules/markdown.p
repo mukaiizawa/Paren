@@ -90,7 +90,7 @@
     (.skip self)
     (while (!= (.peek-char self->stream) "\n")
       (while (!= (<- ch (.peek-char self->stream)) "|")
-        (if (nil? ch) (raise SyntaxError "missing table columns")
+        (if (nil? ch) (raise SyntaxError "missing table columns, around: %s" (.to-s text))
             (.write-bytes text (.read-char self->stream))))
       (.skip self)
       (push! `(,td () ,(.to-s text)) td-list)
