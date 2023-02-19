@@ -1,4 +1,4 @@
-; prevent sleep.
+; jazz hands.
 
 (import :mouse)
 (import :rand)
