@@ -46,7 +46,7 @@ Reads attendance information from the file `attendance.p` and display only the h
 
 Reads attendance information from the file `attendance.p` and displays a summary of 160 hours per month of target working hours.
 
-    $ paren ams -l160 attendance.p
+    $ paren ams -h160 attendance.p
 
 Read attendance information from the file `attendance.p` and display data from `2020` to `2022` and `2024`.
 
