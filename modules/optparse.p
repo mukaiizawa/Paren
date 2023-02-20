@@ -31,11 +31,11 @@
             (let (record (.lookup self ([] arg i))
                          (opt optarg? optval) record
                          put (f (record val) (car! (cddr record) val)))
-              (if optval (raise SyntaxError "duplicate option `%v`" opt)
+              (if optval (raise SyntaxError "duplicate option `%s`" opt)
                   (nil? optarg?) (begin (put record true) (continue))
                   (< (++ i) end) (begin (put record (slice arg (++ i))) (break))
                   (<- args (cdr args)) (begin (put record (car args)) (break))
-                  (raise SyntaxError "required option argument of `%v`" opt)))))
+                  (raise SyntaxError "required option argument of `%s`" opt)))))
       (<- args (cdr args))))
   (list self args))
 
