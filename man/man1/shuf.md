@@ -9,4 +9,5 @@ shuf - generate random permutations.
 Write a random permutation of the input lines to standard output.
 
 # SEE ALSO
+- `rpg(1)`
 - `sort(1)`
