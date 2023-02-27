@@ -24,7 +24,7 @@
                                    (&& only-digit? $digit)
                                    (&& only-symbol? $symbol)))))
     (rand.seed (time))
-    (dotimes (i (int (|| (car args) 8)))
+    (dotimes (i (.get-int op "l" 8))
       (print (rand.choice chars))
       (<- chars (rand.shuffle! chars)))
     (println)))
