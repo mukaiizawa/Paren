@@ -744,9 +744,9 @@
         (slice s i))))
 
 (function rtrim (s :opt fn)
-  (let (a (array s) i (len a) fn (|| fn space?))
-    (while (&& (>= i 0) (fn ([] a (-- i)))) (<- i (-- i)))
-    (slice s 0 i)))
+  (let (a (array s) i (-- (len a)) fn (|| fn space?))
+    (while (&& (>= i 0) (fn ([] a i))) (<- i (-- i)))
+    (slice s 0 (++ i))))
 
 ;; bytes
 
