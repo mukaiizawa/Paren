@@ -21,6 +21,9 @@ If function `FN` is ommited, `space?` is assumed to be specified.
 
 # EXAMPLES
 
+    ) (trim "")
+    ""
+    
     ) (trim "   foo   ")
     "foo"
     
