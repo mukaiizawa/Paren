@@ -1,21 +1,19 @@
 ; deflate.
 
-(class DeflateError (Error))
-
 ;; Reader
 
-(class Deflate.Reader ()
+(class DeflateReader ()
   ;; Bit stream reader
   pos curr-byte)
 
-(method Deflate.Reader .init ()
+(method DeflateReader .init ()
   (.align self))
 
-(method Deflate.Reader .align ()
+(method DeflateReader .align ()
   (<- self->pos 0)
   self)
 
-(method Deflate.Reader .read-bit ()
+(method DeflateReader .read-bit ()
   (let (byte self->curr-byte pos self->pos)
     (if (= pos 0) (<- self->curr-byte (<- byte (read-byte))))
     (if (< byte 0) -1
@@ -23,7 +21,7 @@
           (<- self->pos (% (++ pos) 8))
           (& (>> byte pos) 1)))))
 
-(method Deflate.Reader .read (size)
+(method DeflateReader .read (size)
   (let (val 0)
     (dotimes (i size)
       (let (bit (.read-bit self))
@@ -33,16 +31,16 @@
 
 ;; Writer
 
-(class Deflate.Writer (MemoryStream))
+(class DeflateWriter (MemoryStream))
 
-(method Deflate.Writer .copy (length distance)
-  (if (|| (nil? distance) (< distance 1) (> distance 32768)) (raise DeflateError "invalid distance")
-      (|| (nil? length) (< length 0)) (raise DeflateError "invalid length")
+(method DeflateWriter .copy (length distance)
+  (if (|| (nil? distance) (< distance 1) (> distance 32768)) (raise ArgumentError "invalid distance")
+      (|| (nil? length) (< length 0)) (raise ArgumentError "invalid length")
       (let (pos (- self->wrpos distance))
         (dotimes (i length)
           (.write-byte self ([] self->buf (+ pos i)))))))
 
-(method Deflate.Writer .flush ()
+(method DeflateWriter .flush ()
   (slice self->buf 0 self->wrpos))
 
 ;; Haffman code
@@ -75,15 +73,14 @@
 
 ;; inflate
 
-(<- $deflate.fixed-huffman-literal-codes
-    (deflate.parse-code-lengths
-      (reduce (f (a args) (apply fill! (cons a args)))
-              (cons (array 288) '((8 0 144)
-                                  (9 144 256)
-                                  (7 256 280)
-                                  (8 280 288)))))
-    $deflate.fixed-huffman-distance-codes
-    (deflate.parse-code-lengths (fill! (array 32) 5)))
+(<- $deflate.fixed-huffman-literal-codes (deflate.parse-code-lengths
+                                           (reduce (f (a args) (apply fill! (cons a args)))
+                                                   (cons (array 288) '((8 0 144)
+                                                                       (9 144 256)
+                                                                       (7 256 280)
+                                                                       (8 280 288)))))
+    $deflate.fixed-huffman-distance-codes (deflate.parse-code-lengths (fill! (array 32) 5))
+    $deflate-code-lengths-order '(16 17 18 0 8 7 9 6 10 5 11 4 12 3 13 2 14 1 15))
 
 (function deflate.decode-length (rd sym)
   (if (<= sym 256) nil    ; invalid
@@ -106,18 +103,16 @@
           (< sym 286) (.copy wr
                              (deflate.decode-length rd sym)
                              (deflate.decode-distance rd (deflate.decode-huffman-code rd distance-codes)))
-          (raise DeflateError "invalid Huffman block")))))
+          (raise ArgumentError "invalid Huffman block")))))
 
 (function deflate.no-compression-block (rd wr)
   (.align rd)    ; Any bits of input up to the next byte boundary are ignored.
   (let (len (.read rd 16))
-    (if (!= (^ len 0xffff) (.read rd 16)) (raise DeflateError "invalid Non-compressed block")
+    (if (!= (^ len 0xffff) (.read rd 16)) (raise ArgumentError "invalid Non-compressed block")
         (dotimes (i len) (.write-byte wr (.read rd 8))))))
 
 (function deflate.fixed-huffman-block (rd wr)
   (deflate.decode-huffman-block rd wr $deflate.fixed-huffman-literal-codes $deflate.fixed-huffman-distance-codes))
-
-(<- $deflate-code-lengths-order '(16 17 18 0 8 7 9 6 10 5 11 4 12 3 13 2 14 1 15))
 
 (function deflate.dynamic-huffman-block (rd wr)
   (let (HLIT (.read rd 5) HDIST (.read rd 5) HCLEN (.read rd 4)
@@ -133,20 +128,20 @@
                                    (= sym 17) (<- len (+ (.read rd 3) 3))
                                    (<- len (+ (.read rd 7) 11)))
                                (fill! lit/dis-codes val i (<- i  (+ i len))))
-              (raise DeflateError)))))
+              (raise StateError "invalid symbol %d" sym)))))
     (deflate.decode-huffman-block rd wr
                                   (deflate.parse-code-lengths (slice lit/dis-codes 0 (+ HLIT 257)))
                                   (deflate.parse-code-lengths (slice lit/dis-codes (+ HLIT 257))))))
 
 (function deflate.uncompress (data)
   (with-memory-stream ($in data)
-    (let (rd (.new Deflate.Reader) wr (.new Deflate.Writer) last-block? nil type nil)
+    (let (rd (.new DeflateReader) wr (.new DeflateWriter) last-block? nil type nil)
       (while (nil? last-block?)
         (<- last-block? (= (.read rd 1) 1) type (.read rd 2))
         (if (= type 0) (deflate.no-compression-block rd wr)
             (= type 1) (deflate.fixed-huffman-block rd wr)
             (= type 2) (deflate.dynamic-huffman-block rd wr)
-            (raise DeflateError "unsupported type")))
+            (raise ArgumentError "unsupported type")))
       (.flush wr))))
 
 (function! main (args)
