@@ -56,12 +56,14 @@
     `(pre () (code () ,(.to-s text)))))
 
 (method MarkdownReader .read-fenced-code-block ()
-  (let (text (.new MemoryStream))
-    (.read-line self)
+  (let (text (.new MemoryStream) attrs nil lang nil)
+    (while (= (.peek-char self->stream) "`")
+      (.skip self))
+    (if (! (empty? (<- lang (trim (.read-line self))))) (<- attrs (list 'class lang)))
     (while (! (.match? self "```"))
       (.write-line text (.read-line self)))
     (.read-line self)
-    `(pre () (code () ,(.to-s text)))))
+    `(pre () (code ,attrs ,(.to-s text)))))
 
 (method MarkdownReader .read-html ()
   (let ($in self->stream rd (.new HTML.Reader) dom (.read rd))
@@ -216,11 +218,13 @@
       (assert (= (.read rd) '(h1 () "header1")))
       (assert (= (.read rd) '(h6 () "header6")))))
   ;; code-block
-  (with-memory-stream ($in "    foo\n    bar\n----\n```\nfoo\nbar\n```\n")
+  (with-memory-stream ($in "    foo\n    bar\n----\n```\nfoo\nbar\n```\n---\n``` paren\nnil\n```")
     (let (rd (.new MarkdownReader))
       (assert (= (.read rd) '(pre () (code () "foo\nbar\n"))))
       (assert (= (.read rd) '(hr ())))
-      (assert (= (.read rd) '(pre () (code () "foo\nbar\n"))))))
+      (assert (= (.read rd) '(pre () (code () "foo\nbar\n"))))
+      (assert (= (.read rd) '(hr ())))
+      (assert (= (.read rd) '(pre () (code (class "paren") "nil\n"))))))
   ;; table
   (with-memory-stream ($in "|x|y|z|\n||||\n|a|b|c|\n|vv|ww|xx|\n")
     (let (rd (.new MarkdownReader))
