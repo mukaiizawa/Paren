@@ -26,5 +26,9 @@ Convert uppercase to lowercase.
 
     paren tr A-Z a-z
 
+Convert full-width number to half-width number.
+
+    paren tr ０-９ 0-9
+
 # SEE ALSO
 - `grep(1)`
