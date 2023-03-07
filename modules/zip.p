@@ -13,13 +13,7 @@
     $zip.zip64-end-of-central-dir-signature         0x06064b50
     $zip.zip64-end-of-central-dir-locator-signature 0x07064b50
     $zip.end-of-central-dir-signature               0x06054b50
-    $zip.headers (list $zip.local-file-header-signature
-                       $zip.archive-extra-data-signature
-                       $zip.central-file-header-signature
-                       $zip.digital-header-signature
-                       $zip.zip64-end-of-central-dir-signature
-                       $zip.zip64-end-of-central-dir-locator-signature
-                       $zip.end-of-central-dir-signature)
+    $zip64.end-of-central-dir-signature             0x06064b50    ; not yet supported.
     $zip.compression-method.no-compression 0
     $zip.compression-method.deflated 8
     $zip.version-need-to-extract 20
@@ -31,6 +25,7 @@
 ;; Entry
 
 (class ZipEntry ()
+  version-made-by
   version-needed-to-extract
   general-purpose-bit-flag
   compression-method
@@ -41,6 +36,7 @@
   uncompressed-size
   file-name-length
   extra-field-length
+  file-comment-length
   file-name
   extra-field
   file-data
@@ -79,16 +75,28 @@
 
 ;; Reader
 
-(class ZipReader (ZipStream))
+(class ZipReader (ZipStream)
+  entry-count)
 
 (method ZipReader .init ()
-  (<- self->pos 0
-      self->buf (read-bytes))
+  (<- self->buf (read-bytes)
+      self->pos (- (len self->buf) 22))
+  ;; scan end of central directory record
+  (loop
+    (let (u32 (.peek-u32 self))
+      (if (= u32 $zip.end-of-central-dir-signature) (begin (.parse-end-of-central-directory self) (break))
+          (= u32 $zip64.end-of-central-dir-signature) (raise ArgumentError "zip64 format not supported yet")
+          (< (<- self->pos (- self->pos 8)) 0) (raise ArgumentError "missing end of central directory"))))
   self)
 
-(method ZipReader .skip-data-descriptor ()
-  (while (! (in? (.peek-u32 self) $zip.headers)) (.skip self 4))    ; 4 or 8
-  self)
+(method ZipReader .parse-end-of-central-directory ()
+  (.skip self 4)    ; end of central dir signature
+  (.skip self 2)    ; number of this disk
+  (.skip self 2)    ; number of the disk with the start of the central directory
+  (<- self->entry-count (.read-u16 self))    ; total number of entries in the central directory on this disk
+  (.skip self 2)    ; total number of entries in the central directory
+  (.skip self 4)    ; size of the central directory
+  (<- self->pos (.read-u32 self))) ; offset of start of central directory with respect to the starting disk number        4 bytes
 
 (method ZipReader .read-u16 ()
   (begin0
@@ -108,30 +116,42 @@
     (bytes self->buf self->pos (+ self->pos len))
     (.skip self len)))
 
-(method ZipReader .read1 ()
-  (let (entry (.new ZipEntry))
-    (.read-u32 self)
-    (<- entry->version-needed-to-extract (.read-u16 self)
-        entry->general-purpose-bit-flag (.read-u16 self)
-        entry->compression-method (.read-u16 self)
-        entry->last-mod-file-time (.read-u16 self)
-        entry->last-mod-file-date (.read-u16 self)
-        entry->crc-32 (.read-u32 self)
-        entry->compressed-size (.read-u32 self)
-        entry->uncompressed-size (.read-u32 self)
-        entry->file-name-length (.read-u16 self)
-        entry->extra-field-length (.read-u16 self)
-        entry->file-name (.read-size self entry->file-name-length)
-        entry->extra-field (.read-size self entry->extra-field-length)
-        entry->file-data (.read-size self entry->compressed-size))
-    entry))
-
 (method ZipReader .read ()
-  (let (signature (.peek-u32 self))
-    (if (= signature $zip.local-file-header-signature) (.read1 self)
-        (= signature $zip.data-descriptor-signature) (.read (.skip-data-descriptor self))
-        (in? signature $zip.headers) nil
-        (raise ZipError "bad zip"))))
+  (if (< (<- self->entry-count (-- self->entry-count)) 0) nil
+      (let (entry (.new ZipEntry) pos nil)
+        ;; central directory header
+        (if (!= (.read-u32 self) $zip.central-file-header-signature) (raise StateError "expected central directory header"))
+        (<- entry->version-made-by (.read-u16 self)
+            entry->version-needed-to-extract (.read-u16 self)
+            entry->general-purpose-bit-flag (.read-u16 self)
+            entry->compression-method (.read-u16 self)
+            entry->last-mod-file-time (.read-u16 self)
+            entry->last-mod-file-date (.read-u16 self)
+            entry->crc-32 (.read-u32 self)
+            entry->compressed-size (.read-u32 self)
+            entry->uncompressed-size (.read-u32 self)
+            entry->file-name-length (.read-u16 self)
+            entry->extra-field-length (.read-u16 self)
+            entry->file-comment-length (.read-u16 self))
+        (.skip self 2)    ; disk number start
+        (.skip self 2)    ; internal file attributes
+        (.skip self 4)    ; external file attributes
+        (<- entry->relative-offset-of-local-header (.read-u32 self))
+        (.skip self entry->file-name-length)
+        (.skip self entry->extra-field-length)
+        (.skip self entry->file-comment-length)
+        (<- pos self->pos
+            self->pos entry->relative-offset-of-local-header)
+        ;; local file header
+        (if (!= (.read-u32 self) $zip.local-file-header-signature) (raise StateError "expected local file header"))
+        (.skip self 22)
+        (<- entry->file-name-length (.read-u16 self)
+            entry->extra-field-length (.read-u16 self)
+            entry->file-name (.read-size self entry->file-name-length)
+            entry->extra-field (.read-size self entry->extra-field-length)
+            entry->file-data (.read-size self entry->compressed-size)
+            self->pos pos)
+        entry)))
 
 ;; Writer
 
