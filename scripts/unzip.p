@@ -3,6 +3,6 @@
 (import :zip)
 
 (function! main (args)
-  (if (nil? args) (raise ArgumentError "missing zipfile")
-      (let (zipfile (path (car args)))
-        (zip.uncompress zipfile (|| (cadr args) (.base-name zipfile))))))
+  (let (zipfile (car args) dst (|| (cadr args) (.but-suffix (path zipfile))))
+    (if (nil? args) (raise ArgumentError "missing zipfile")
+        (zip.uncompress zipfile dst))))
