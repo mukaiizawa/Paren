@@ -4,7 +4,7 @@
 (import :zip)
 
 (function zipinfo ()
-  (dolist (entry (collect (partial .read (.new ZipReader))))
+  (dolist (entry (.entries (.read (.new Zip))))
     (let (usize (.uncompressed-size entry)
                 csize (.compressed-size entry)
                 name (.file-name entry)
