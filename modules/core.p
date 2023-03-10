@@ -978,7 +978,7 @@
   (let ($out $stderr)
     (println (.to-s self))
     (dolist (x (.stack-trace self))
-      (printf "  at: %-.80v\n" x))))
+      (printf "  at: %-.120v\n" x))))
 
 (class SystemExit (Exception)
   ; Dispatched to shut down the Paren system.
