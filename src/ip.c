@@ -403,9 +403,7 @@ static void pop_bind_handler_frame(void)
   expr = get_frame_var(fp, 0);
   pop_frame();
   if (!bi_argv(BI_FUNC, dr, &handler)) {
-    gen_trace(om_new_cons(om_new_mem_from(SYMBOL, "catch", 5)
-          , om_new_cons(expr
-            , om_new_cons(handler, om_nil))));
+    gen_trace(om_new_cons(om_new_mem_from_cstr(SYMBOL, "catch"), om_new_cons(expr, om_new_cons(handler, om_nil))));
     return;
   }
   gen1(CATCH_FRAME, handler);
@@ -618,7 +616,8 @@ static void pop_throw_frame(void)
       case CATCH_FRAME:
         handler = get_frame_var(fp, 0);
         pop_frame();
-        gen1(APPLY_FRAME, handler);
+        if (handler->proc.param_count == 0) gen_eval_sequential_frame(handler->proc.body);
+        else gen1(APPLY_FRAME, handler);
         dr = om_new_cons(dr, om_nil);
         return;
       default:
