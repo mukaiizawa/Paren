@@ -72,7 +72,7 @@
   (catch
     (while (!= (.read-u32 self) $zip.end-of-central-dir-signature)
       (.seek-cur self -5))
-    (f (e)
+    (f ()
       (raise ArgumentError "failed to read end of central directory")))
   (.parse-end-of-central-directory self)
   self)

@@ -10,7 +10,9 @@
       (let (val (int (read-line)))
         (if (<= 1 val 9) val
             (raise ArgumentError))))
-    (f (e) (input))))
+    (f (e)
+      (if (! (is-a? e Error)) (throw e)
+          (input)))))
 
 (function! main (args)
   (let (n 0 numbers (rand.shuffle! (.. 1 10)))

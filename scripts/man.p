@@ -121,4 +121,4 @@
       (if (nil? (man indexes section page)) (fuzzy-man indexes section page)))
     (f (e)
       (if (is-a? e OSError) nil
-          (is-a? e Error) (throw e)))))
+          (throw e)))))

@@ -333,7 +333,8 @@
   (catch
     (if (basic-string-var? var) (str val)
         (float val))
-    (f (e) (basic-default-value var))))
+    (f ()
+      (basic-default-value var))))
 
 (function basic-get-var (var)
   (let (val ([] $vars var))

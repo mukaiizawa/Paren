@@ -61,29 +61,31 @@
 
 (function handle (stream)
   (unwind-protect
-    (let (req (.new HTTPRequest) res (.new HTTPResponse) dt (datetime.from-unix-time (time)))
-      (catch
-        (let (file (uri->local-path (.uri (.parse req stream))))
-          (if (! (in? (.method req) '("GET" "HEAD"))) (throw (list 501 (format "Unsupported method '%s'" (.method req))))
-              (.dir? file) (handle-dir req res file)
-              (.file? file) (handle-file req res file)
-              (throw '(404))))
-        (f (e)
-          (if (is-a? e Error) (throw e)
-              (let ((code :opt message) (if (cons? e) e '(500)))
-                (handle-error req res code message)))))
-      ;; Set response headers.
-      (.version! res "HTTP/1.0")
-      (.set-header res "Server" "Paren HTTP server.")
-      (.set-date-header res dt)
-      (.set-header res "Content-Length" (byte-len (.body res)))
-      (.write-start-line stream res)
-      (.write-headers stream res)
-      (if (= (.method req) "GET") (.write-body stream res))
-      ;; Common Log Format.
-      (printf "- - - [%02d/%3.3s/%04d:%02d:%02d:%02d +0000] %s %d %d\n"
-              (.day dt) (.to-s.month dt) (.year dt) (.hour dt) (.minute dt) (.second dt)
-              (.request-line req) (.status-code res) (.header res "Content-Length")))
+    (catch
+      (let (req (.new HTTPRequest) res (.new HTTPResponse) dt (datetime.from-unix-time (time)))
+        (catch
+          (let (file (uri->local-path (.uri (.parse req stream))))
+            (if (! (in? (.method req) '("GET" "HEAD"))) (throw (list 501 (format "Unsupported method '%s'" (.method req))))
+                (.dir? file) (handle-dir req res file)
+                (.file? file) (handle-file req res file)
+                (throw '(404))))
+          (f (e)
+            (if (is-a? e Error) (throw e)
+                (let ((code :opt message) (if (cons? e) e '(500)))
+                  (handle-error req res code message)))))
+        ;; Set response headers.
+        (.version! res "HTTP/1.0")
+        (.set-header res "Server" "Paren HTTP server.")
+        (.set-date-header res dt)
+        (.set-header res "Content-Length" (byte-len (.body res)))
+        (.write-start-line stream res)
+        (.write-headers stream res)
+        (if (= (.method req) "GET") (.write-body stream res))
+        ;; Common Log Format.
+        (printf "- - - [%02d/%3.3s/%04d:%02d:%02d:%02d +0000] %s %d %d\n"
+                (.day dt) (.to-s.month dt) (.year dt) (.hour dt) (.minute dt) (.second dt)
+                (.request-line req) (.status-code res) (.header res "Content-Length")))
+      (f (e) (.print-stack-trace e)))
     (.close stream)))
 
 (function! main (args)
