@@ -291,7 +291,7 @@
 (function! main (args)
   (let (dir (path "../modules") wk (path "../wk/zip/") zipfile (.resolve wk "modules.zip"))
     (assert (= (map (f (x) (str "./" (.name x))) (.children dir))
-               (map .file-name (zip.entries (zip.compress dir zipfile)))))
+               (map .file-name (with-open ($in (zip.compress dir zipfile) :read) (.entries (.read (.new Zip)))))))
     (assert (= (zip.uncompress zipfile wk) wk))
     (assert (.none? (.remove zipfile)))
     (assert (= (map .name (.children dir))
