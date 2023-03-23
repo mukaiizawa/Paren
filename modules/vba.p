@@ -95,11 +95,11 @@
   ; Returns vba that sets the value val to the specified range.
   ; If val is a list, treat each element as a row.
   (let (lines (->list val))
-    (with-vba-vars (var)
-                   var " = \"" (car lines) "\"\n"
-                   (join (map (f (x) (str var " = " var " & vblf & \"" x "\"\n"))
-                              (cdr lines)))
-                   (.to-vbastr self) "." (.to-vbastr r) ".Value = " var "\n")))
+    (with-vba-vars (v)
+       v " = \"" (car lines) "\"\n"
+       (join (map (f (x) (str v " = " v " & vblf & \"" x "\"\n"))
+                  (cdr lines)))
+       (.to-vbastr self) "." (.to-vbastr r) ".Value = " v "\n")))
 
 (method VBASheet .copy-range (src-range dest-sheet dest-range)
   ; Returns vba that copies the value of the specified range to the specified range.
