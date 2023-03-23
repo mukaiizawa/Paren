@@ -27,6 +27,9 @@
 (macro function! (name args :rest body)
   (list '<- name (cons 'f (cons args body))))
 
+(macro var (syms :rest args)
+  (cons 'let (cons (apply concat (map (f (x) (list x nil)) syms)) args)))
+
 (macro with-gensyms ((:rest syms) :rest body)
   (let (rec (f (syms) (if syms (cons (car syms) (cons '(symbol) (rec (cdr syms)))))))
     (cons 'let (cons (rec syms) body))))
