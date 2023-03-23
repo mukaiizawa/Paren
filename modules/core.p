@@ -813,9 +813,7 @@
   ; Same as `(&& (dict? x) ([] x :class))`.
   (&& (dict? x) ([] x :class)))
 
-(built-in-function is-a? (o cls)
-  ; Returns whether the specified object o regarded as the specified class cls's instance.
-  )
+(built-in-function is-a?)
 
 (built-in-function find-class (cls-sym)
   ; Returns the class corresponding to the specified symbol cls-sym.
