@@ -68,7 +68,7 @@
            (collect read1)))
 
 (function show-table ()
-  (let (lo 100 hi 180 dh 10)
+  (let (lo 120 hi 200 dh 10)
     ;; header
     (for (h lo) (<= h hi) (h (+ h dh))
       (if (= h lo) (print "  "))
