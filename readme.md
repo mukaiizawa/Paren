@@ -17,12 +17,26 @@ Paren is a dialect of the Lisp programming languages:
 - concise syntax
 
 # Compiling
+For windows, MSYS2+MinGW-w64 environment or Docker described below is recommended.
 
-    $ git clone https://github.com/mukaiizawa/Paren
-    $ cd Paren/src & make os=unix # or os=windows
+    $ git clone https://github.com/mukaiizawa/Paren && cd ./Paren/src
+    $ make os=unix # or os=windows
     $ ../paren
     ) "hello world"
     "hello world"
+
+# Docker
+Only the first time, you will create an image with the following command.
+
+    $ git clone https://github.com/mukaiizawa/Paren && cd ./Paren
+    $ docker image build --no-cache --tag paren .
+
+Run a Docker container based on this image.
+
+    $ docker container run -it --rm --name paren paren
+    root@29e9c4143be0:/~# paren
+    ) "hello-world"
+    "hello-world"
 
 # Structure
 The main project structures are shown below.
