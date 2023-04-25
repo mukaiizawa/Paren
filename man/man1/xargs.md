@@ -23,7 +23,7 @@ In addition, since the arguments are passed to the shell as is, appropriate esca
 # EXAMPLES
 Display only the first line of all files in the current directory.
 
-    $ paren -f ls | paren xargs head -n1
+    $ paren ls -f | paren xargs head -n1
 
 Perform name resolution for valid addresses with the CIDR notation `192.168.30.0/24`.
 
