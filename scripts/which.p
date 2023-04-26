@@ -7,7 +7,7 @@
         (split (getenv "PATH") (if (== $hostname :windows) ";" ":"))))
 
 (function which (cmd :opt all? strict?)
-  (let (name (if strict? .name .base-name))
+  (let (name (if strict? .name .basename))
     (dolist (dir (select .readable? (get-path)))
       (dolist (file (.children dir))
         (when (&& (! (.dir? file)) (= (name file) cmd))

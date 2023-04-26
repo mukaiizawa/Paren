@@ -15,7 +15,7 @@
   (write-line "# following rules are generated automatically.")
   (foreach write-line
            (map (f (cfile)
-                  (join (cons (str (.but-suffix cfile) ".o:")
+                  (join (cons (str (.butsuffix cfile) ".o:")
                               (cons (.name cfile) (parse-cfile cfile)))
                         " "))
                 (select (f (x) (= (.suffix x) "c"))

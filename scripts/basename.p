@@ -4,7 +4,7 @@
 
 (function basename (remove-suffix?)
   (dolist (file (map path (collect read-line)))
-    (write-line (if (! remove-suffix?) (.name file) (.base-name file)))))
+    (write-line (if (! remove-suffix?) (.name file) (.basename file)))))
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "s") args))
