@@ -1035,12 +1035,46 @@
   ; It should not be construct by new.
   ; The corresponding file does not have to exist.
   ; You can read and write files to the corresponding path as needed.
-  path)
+  files)
 
-(method Path .init (path)
-  (assert path)
-  (<- self->path path)
-  self)
+(method Path .parse (absolute? path-name)
+  (let (files (&& (! absolute?) '(".")) s 0 e (len path-name)
+              next-file (f (x s e)
+                          (when (< s e)
+                            (let (file (slice x s e))
+                              (if (= file "..") (begin
+                                                  (if (= files '(".")) (pop! files))
+                                                  (if (|| (nil? files) (= (car files) "..")) (push! file files)
+                                                      (pop! files)))
+                                  (!= file ".") (push! file files))))))
+    (for (i 0) (< i e) (i (++ i))
+      (when (in? ([] path-name i) (.separators self))
+        (next-file path-name s i)
+        (<- s (++ i))))
+    (next-file path-name s e)
+    (reverse files)))
+
+(class PosixPath (Path))
+(method PosixPath .separators () '("/"))
+
+(method PosixPath .init (path-name)
+  (if (prefix? path-name "~/") (.init self (concat (getenv "HOME") (slice path-name 1)))
+      (let (absolute? (prefix? path-name "/") files (.parse self absolute? path-name))
+        (if (&& absolute? (= (car files) "..")) nil    ; /../foo/bar -> nil
+            (begin
+              (<- self->files files)
+              self)))))
+
+(class WindowsPath (Path))
+(method WindowsPath .separators () '("/" "\\"))
+
+(method WindowsPath .init (path-name)
+  (if (prefix? path-name "~/") (.init self (concat (getenv "HOMEDRIVE") (getenv "HOMEPATH") (slice path-name 1)))
+      (let (absolute? (&& (> (len path-name) 1) (= ([] path-name 1) ":")) files (.parse self absolute? path-name))
+        (if (|| (nil? files) (&& absolute? (= (car files) ".."))) nil
+            (begin
+              (<- self->files files)
+              self)))))
 
 (function path (path-name)
   ; Constructs and returns the path object corresponding to path-name.
@@ -1052,48 +1086,54 @@
   ; Path class places the highest priority on keeping the implementation simple, and assumes that these features are implemente where necessary.
   ;     (path "foo/bar/../buzz") <=> ("." "foo" "buzz")
   ; Two or more consecutive `/`s or trailing `/`s are ignored.
-  ;     (path "foo//bar/") <=> ("." "foo" "bar")
+  ;     (path "./foo//bar/") <=> ("." "foo" "bar")
   (if (is-a? path-name Path) path-name
-      (let (files nil windows? (== $hostname :windows)
-                  home (if windows? (concat (getenv "HOMEDRIVE") (getenv "HOMEPATH")) (getenv "HOME"))
-                  sepr? (if windows? (f (x) (in? x '("/" "\\"))) (f (x) (= x "/")))
-                  next-file (f (x s e)
-                              (when (< s e)
-                                (let (file (slice x s e))
-                                  (if (= file "..") (begin
-                                                      (if (= files '(".")) (pop! files))
-                                                      (if (|| (nil? files) (= (car files) "..")) (push! file files)
-                                                          (pop! files)))
-                                      (!= file ".") (push! file files))))))
-        (if (prefix? path-name "~") (<- path-name (concat home (slice path-name 1)))
-            (! (|| (&& windows? (> (len path-name) 1) (= ([] path-name 1) ":"))
-                   (&& (! windows?) (prefix? path-name "/")))) (push! "." files))
-        (let (s 0 e (len path-name))
-          (for (i 0) (< i e) (i (++ i))
-            (when (sepr? ([] path-name i))
-              (next-file path-name s i)
-              (<- s (++ i))))
-          (next-file path-name s e)
-          (if files (.init (.new Path) (reverse! files)))))))
+      (== $hostname :windows) (.init (.new WindowsPath) path-name)
+      (.init (.new PosixPath) path-name)))
+
+; (function path (path-name)
+;   (if (is-a? path-name Path) path-name
+;       (let (files nil windows? (== $hostname :windows)
+;                   home (if windows? (concat (getenv "HOMEDRIVE") (getenv "HOMEPATH")) (getenv "HOME"))
+;                   separator? (if windows? (f (x) (in? x '("/" "\\"))) (f (x) (= x "/")))
+;                   absolute? (if windows? (&& (> (len path-name) 1) (= ([] path-name 1) ":")) (prefix? path-name "/"))
+;                   next-file (f (x s e)
+;                               (when (< s e)
+;                                 (let (file (slice x s e))
+;                                   (if (= file "..") (begin
+;                                                       (if (= files '(".")) (pop! files))
+;                                                       (if (|| (nil? files) (= (car files) "..")) (push! file files)
+;                                                           (pop! files)))
+;                                       (!= file ".") (push! file files))))))
+;         (if (! absolute?) (push! "." files)
+;             (prefix? path-name "~") (<- path-name (concat home (slice path-name 1))))
+;         (let (s 0 e (len path-name))
+;           (for (i 0) (< i e) (i (++ i))
+;             (when (separator? ([] path-name i))
+;               (next-file path-name s i)
+;               (<- s (++ i))))
+;           (next-file path-name s e)
+;           (<- files (reverse! files))
+;           (if (&& absolute? (= (car files) "..")) nil    ; /../foo/bar
+;               (.init (.new (if windows? WindowsPath PosixPath)) files))))))
 
 (method Path .name ()
   ; Returns file name.
-  (last self->path))
+  (last self->files))
 
-(method Path .base-name ()
+(method Path .basename ()
   ; Returns base name (the string up to the first dot).
   ; If not including dot, returns the entire name.
   (car (split (.name self) ".")))
 
 (method Path .suffix (:opt new-suffix)
   ; Returns the suffix (the string after the last dot).
-  ; If not including dot, returns empty string.
+  ; If not including dot, returns nil.
   (if (nil? new-suffix) (let (name (.name self) pos (last-index "." name))
-                          (if (nil? pos) ""
-                              (slice name (++ pos))))
-      (.resolve self (concat "../" (.but-suffix self) "." new-suffix))))
+                          (if pos (slice name (++ pos))))
+      (.resolve self (concat "../" (.butsuffix self) "." new-suffix))))
 
-(method Path .but-suffix ()
+(method Path .butsuffix ()
   ; Returns the name without the suffix.
   (let (name (.name self) pos (last-index "." name))
     (if (nil? pos) name
@@ -1116,7 +1156,7 @@
 (method Path .relativize (p)
   ; Returns a relative path between the receiver and a given path.
   (if (!== (.relative? self) (.relative? (<- p (path p)))) (raise ArgumentError "different type of Path")
-      (let (relative nil src self->path dst p->path)
+      (let (relative nil src self->files dst p->files)
         (while src
           (if (= (car src) (car dst)) (begin (pop! src) (pop! dst))
               (= (car src) ".") (begin (pop! src) (assert (= (car dst) "..")))
@@ -1131,7 +1171,7 @@
 
 (method Path .relative? ()
   ; Same as `(! (.absolute? self))`.
-  (in? (car self->path) '("." "..")))
+  (in? (car self->files) '("." "..")))
 
 (method Path .contents ()
   ; Returns file contents of the receiver.
@@ -1144,11 +1184,14 @@
   (with-open ($in self :read)
     (collect read-line)))
 
-(method Path .to-s ()
+(method WindowsPath .to-s ()
   ; Returns a string representation of the receiver.
-  (join (if (&& (!= $hostname :windows) (.absolute? self)) (cons "" self->path)
-            self->path)
-        "/"))
+  (join self->files "/"))
+
+(method PosixPath .to-s ()
+  ; Returns a string representation of the receiver.
+  (if (.absolute? self) (concat "/" (join self->files "/"))
+      (join self->files "/")))
 
 (method Path .open (mode)
   ; Returns a stream that reads the contents of the receiver.
