@@ -1,7 +1,7 @@
 ; Rock paper scissors Object-oriented version.
 
 (import :rand)
-(import :rcp "./")
+(import :rsp "./")
 
 (class Player () name)
 
@@ -57,14 +57,14 @@
           (println "illegal choice")
           (choice-player message)))))
 
-(function! rcp (p1 p2)
+(function! rsp (p1 p2)
   (let (choice1 (.choice p1) choice2 (.choice p2))
     (if (= choice1 choice2) (println "draw")
         (= (% (++ choice1) 3) choice2) (println "Player2 win")
         (println "Player1 win"))
     (println "press enter") (read-line)
-    (rcp p1 p2)))
+    (rsp p1 p2)))
 
 (function! main (args)
-  (rcp (choice-player "Player1")
+  (rsp (choice-player "Player1")
        (choice-player "Player2")))

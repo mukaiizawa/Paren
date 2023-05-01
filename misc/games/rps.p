@@ -18,13 +18,13 @@
 (function computer-choice ()
   (rand.int 3))
 
-(function rcp ()
+(function rsp ()
   (let (user-choice (user-choice) computer-choice (computer-choice))
     (println "computer: " ([] $choices computer-choice))
     (if (= user-choice computer-choice) (println "draw")
         (= (% (++ user-choice) 3) computer-choice) (println "lose")
         (println "win"))
-    (rcp)))
+    (rsp)))
 
 (function! main (args)
-  (rcp))
+  (rsp))
