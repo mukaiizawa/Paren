@@ -3,7 +3,7 @@
 (<- $iconv.encodings '(:sjis :utf8))
 
 (function! startup ()
-  (if (! (in? $hostname '(:windows))) (raise StateError "Unsopport OS")))
+  (if (! (in? $hostname '(:windows))) (raise StateError "Unsupported OS")))
 
 (built-in-function iconv.encode (string enc0 :opt enc1))
 

@@ -1,7 +1,7 @@
 ; keyboard module.
 
 (function! startup ()
-  (if (! (in? $hostname '(:windows))) (raise StateError "Unsopport OS")
+  (if (! (in? $hostname '(:windows))) (raise StateError "Unsupported OS")
       (! (bound? 'keyboard.send)) (raise StateError "Requires keyboard option at compile time")))
 
 (built-in-function keyboard.send (keycode dir)
