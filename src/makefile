@@ -2,8 +2,8 @@
 # Usage: make os={unix|windows} [cc=gcc] [debug={off|on}]
 # 	[sock=off|on] [clip=off|on] [mouse=off|on] [keyboard=off|on]
 
-supportos=unix windows
-ifeq ($(filter $(supportos),$(os)),)
+supportedos=unix windows
+ifeq ($(filter $(supportedos),$(os)),)
 $(error illegal os)
 endif
 
