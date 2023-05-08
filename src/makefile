@@ -4,10 +4,11 @@
 
 supportedos=unix windows
 ifeq ($(filter $(supportedos),$(os)),)
-$(error illegal os)
+$(error unsupported os)
 endif
 
-ifeq ($(os), unix)
+# unix
+ifeq ($(os),unix)
 cc?=gcc
 sock?=on
 clip?=off
@@ -29,6 +30,7 @@ endif
 lib+=-lm
 endif
 
+# windows
 ifeq ($(os), windows)
 cc?=x86_64-w64-mingw32-gcc
 sock?=on
@@ -40,6 +42,10 @@ exe=.exe
 ifeq ($(sock),on)
 obj+=sock.o
 dl_ws?=-lws2_32
+endif
+
+ifeq ($(sock),on)
+flags+=-DSOCK_P
 endif
 ifeq ($(clip),on)
 obj+=clip.o
@@ -61,22 +67,20 @@ lib+=$(dl_ws)
 endif
 
 obj+=std.o xarray.o xbarray.o heap.o om.o lex.o ip.o bi.o xiconv.o paren.o
-uflags=-Wall -Werror
-cflags=$(uflags) -c
-lflags=$(uflags)
-link=$(cc) $(lflags) -o $@ $+ $(lib)
+flags+=-Wall -Werror
+link=$(cc) $(flags) -o $@ $+ $(lib)
 
 debug?=off
 ifeq ($(debug),on)
-uflags+=-g
+flags+=-g
 else
-cflags+=-O3 -DNDEBUG
+flags+=-O3 -DNDEBUG
 link+=; strip -s $@
 endif
 
 .SUFFIXES: .c .o
 .c.o:
-	$(cc) $(cflags) $<
+	$(cc) $(flags) -c $<
 
 paren=../paren$(exe)
 all: $(paren)

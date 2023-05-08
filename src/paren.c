@@ -8,6 +8,10 @@
 #include "ip.h"
 #include "bi.h"
 
+#ifdef SOCK_P
+#include "sock.h"
+#endif
+
 static char *core_fn;
 
 // parser
@@ -186,8 +190,9 @@ static void make_initial_objects(int argc, char *argv[])
   make_built_in();
 }
 
-static void init_console()
+static void startup()
 {
+  // console
 #if WINDOWS_P
   DWORD mode;
   _setmode(_fileno(stdin), _O_BINARY);
@@ -198,20 +203,33 @@ static void init_console()
   SetConsoleMode(h, mode);
 #endif
   setbuf(stdout, NULL);
+  // libs
+  xiconv_init();
+  om_init();
+#if SOCK_P
+  sock_startup();
+#endif
+}
+
+static void cleanup()
+{
+#if SOCK_P
+  sock_cleanup();
+#endif
 }
 
 int main(int argc, char *argv[])
 {
   char buf[MAX_STR_LEN];
-  init_console();
-  xiconv_init();
+  startup();
   pf_exepath(argv[0], buf);
 #if !UNIX_P
   *strrchr(buf, '.') = '\0';
 #endif
   buf[strlen(buf) - strlen("paren")] = '\0';
   core_fn = strcat(buf, "modules/core.p");
-  om_init();
   make_initial_objects(argc, argv);
-  return ip_start(load());
+  int ret = ip_start(load());
+  cleanup();
+  return ret;
 }

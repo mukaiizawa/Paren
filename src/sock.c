@@ -5,6 +5,7 @@
 #include "bi.h"
 #include "pf.h"
 #include "ip.h"
+#include "sock.h"
 
 #if WINDOWS_P
 #define SHUT_RD SD_RECEIVE
@@ -14,22 +15,20 @@
 #define close(x) closesocket(x)
 #endif
 
-DEFUN(sock_2e__5f_startup)
+void sock_startup(void)
 {
 #if WINDOWS_P
   int st;
   WSADATA data;
-  if ((st = WSAStartup(MAKEWORD(2, 0), &data)) != 0) return ip_sigerr(OSError, "WSAStartup failed");
+  if ((st = WSAStartup(MAKEWORD(2, 0), &data)) != 0) xerror("WSAStartup failed");
 #endif
-  return TRUE;
 }
 
-DEFUN(sock_2e__5f_cleanup)
+void sock_cleanup(void)
 {
 #if WINDOWS_P
   WSACleanup();
 #endif
-  return TRUE;
 }
 
 DEFUN(gethostname)
