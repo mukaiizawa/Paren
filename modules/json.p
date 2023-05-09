@@ -68,8 +68,9 @@
   ; Output json corresponding to the argument.
   ; Returns the argument.
   (if (dict? x) (let (i 0)
+                  (write-bytes "{")
                   (dolist (key (keys x))
-                    (write-bytes (if (= i 0) "{" ","))
+                    (if (> i 0) (write-bytes ","))
                     (if (! (symbol? key)) (raise ArgumentError "invalid object property: %v" key)
                         (json.write (string key)))
                     (write-bytes ":")
@@ -77,8 +78,9 @@
                     (<- i (++ i)))
                   (write-bytes "}"))
       (array? x) (begin
+                   (write-bytes "[")
                    (for (i 0) (< i (len x)) (i (++ i))
-                     (write-bytes (if (= i 0) "[" ","))
+                     (if (> i 0) (write-bytes ","))
                      (json.write ([] x i)))
                    (write-bytes "]"))
       (nil? x) (write-bytes "null")
@@ -89,10 +91,10 @@
 
 (function! main (args)
   (let (json #{
-             nodes #[
+                 nodes #[
                      #{ id 1 name "foo" time 0.1 }
                      #{ id 2 name "bar" time 0.22 }
-                     ]
-             literal #[ true false nil 3.14 "string" ]
+                 ]
+                 literal #[ true false nil 3.14 "string" ]
              })
     (assert (= (with-memory-stream ($in (with-memory-stream ($out) (json.write json))) (json.read)) json))))
