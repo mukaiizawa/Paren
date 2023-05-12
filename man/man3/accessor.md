@@ -35,49 +35,36 @@ If `X` is a string data type and `VAL` is specified.
 
     ) (<- l (.. 3))
     (0 1 2)
-    
     ) ([] l 5)
     nil
-    
     ) ([] l 1)
     1
-    
     ) ([] l 1 10)
     10
-    
     ) l
     (0 10 2)
 
     ) (<- a (array (.. 3)))
     #[ 0 1 2 ]
-    
     ) ([] a 1)
     1
-    
     ) ([] a 1 10)
     10
-    
     ) a
     #[ 0 10 2 ]
-
     ) ([] "foo" 1)
     "o"
 
     ) (<- d #{ :foo 0 :bar 1 })
     #{ :bar 1 :foo 0 }
-    
     ) ([] d :buzz)
     nil
-    
     ) ([] d :foo)
     0
-    
     ) ([] d :bar 10)
     10
-    
     ) ([] d :buzz 2)
     2
-    
     ) d
     #{ :buzz 2 :bar 10 :foo 0 }
 
