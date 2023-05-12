@@ -92,9 +92,9 @@
 (function! main (args)
   (let (json #{
                  nodes #[
-                     #{ 'id 1 'name "foo" time 0.1 }
-                     #{ 'id 2 'name "bar" time 0.22 }
+                     #{ id 1 name "foo" time 0.1 }
+                     #{ id 2 name "bar" time 0.22 }
                  ]
-                 literal #[ 'true 'false 'nil 3.14 "string" ]
+                 literal #[ true 'false nil 3.14 "string" ]
              })
     (assert (= (with-memory-stream ($in (with-memory-stream ($out) (json.write json))) (json.read)) json))))

@@ -1875,7 +1875,7 @@
         (= next ",") (begin (.skip self) (if (= self->next "@") (begin (.skip self) '(:unquote-splicing)) '(:unquote)))
         (= next "\"") (list :atom (.lex-string self))
         (= next ";") (begin (.skip-line self) (.lex self))
-        (= next "#") (begin (.skip self) (list :reader-macro (symbol (.skip self))))
+        (= next "#") (begin (.skip self) (list :reader-macro (.skip self)))
         (in? next "+-") (list :atom (.lex-sign self))
         (digit? next) (list :atom (.skip-number self))
         (list :atom (.lex-symbol self)))))
@@ -1910,8 +1910,8 @@
         (== type :backquote) (list 'quasiquote (.parse (.scan self)))
         (== type :unquote) (list 'unquote (.parse (.scan self)))
         (== type :unquote-splicing) (list 'unquote-splicing (.parse (.scan self)))
-        (== type :reader-macro) (apply (|| ([] $read-table self->token) (raise ArgumentError "undefined reader macro")) (list self))
-        (raise SyntaxError))))
+        (== type :reader-macro) (apply (|| ([] $read-table self->token) (raise ArgumentError "undefined reader macro `%s`" self->token)) (list self))
+        (raise SyntaxError "unexpected token type `%v`" type))))
 
 (macro unquote (expr)
   (list 'raise 'SyntaxError "unexpected unquote -- ,%v" expr))
@@ -1950,7 +1950,7 @@
   ; next must be a single character string.
   ; When the reserved character string is read, the processing moves to the specified function f and the evaluation result is expanded.
   ; Returns nil.
-  (list '[] '$read-table (list 'quote (symbol next)) (cons 'f (cons params body))))
+  (list '[] '$read-table next (cons 'f (cons params body))))
 
 (function read-byte ()
   (.read-byte (dynamic $in)))
@@ -2122,10 +2122,10 @@
     $runtime-path (map (f (p) (.resolve $paren-home p)) '("scripts"))
     $on-quit nil)
 
-(reader-macro "<" (reader)
+(reader-macro "<" (rd)
   ; Define bytes literal reader.
   (let ($G-val nil $G-pos 0 $G-buf (bytes 8))
-    (while (!= (<- $G-val (.read reader)) '>)
+    (while (!= (<- $G-val (.read rd)) '>)
       (when (= $G-pos (len $G-buf))
         (let ($G-newbuf (bytes (* (len $G-buf) 2)))
           (memcpy $G-buf 0 $G-newbuf 0 $G-pos)
@@ -2134,31 +2134,27 @@
       (<- $G-pos (++ $G-pos)))
     (slice $G-buf 0 $G-pos)))
 
-(reader-macro "[" (reader)
+(reader-macro "[" (rd)
   ; Define array literal reader.
-  (list 'array
-        (cons 'list
-              (collect (f ()
-                         (let (expr (.read reader))
-                           (if (!== expr ']) expr)))))))
+  (var (expr exprs)
+    (while (!== (<- expr (.read rd)) ']) (push! (eval expr) exprs))
+    (array (reverse! exprs))))
 
-(reader-macro "{" (reader)
+(reader-macro "{" (rd)
   ; Define dictionary literal reader.
-  (let ($G-d (dict) $G-k nil)
-    (while (!= (<- $G-k (.read reader)) '}) ([] $G-d $G-k (.read reader)))
-    $G-d))
+  (let (o (dict))
+    (var (key val exprs)
+      (while (!== (<- key (.read rd)) '})
+        (if (== (<- val (.read rd)) '}) (raise "missing value of %v in dictionary literal" key)
+            ([] o key (eval val)))))
+    o))
 
-(reader-macro "p" (reader)
+(reader-macro "p" (rd)
   ; Define print reader macro.
-  (list 'write (.read reader)))
+  (list 'write (.read rd)))
 
-(reader-macro "." (reader)
+(reader-macro "." (rd)
   ; Define eval reader.
-  (eval (.read reader)))
-
-(reader-macro ";" (reader)
-  ; Define comment reader.
-  (.read reader)    ; skip
-  (.read reader))
+  (eval (.read rd)))
 
 (boot $args)
