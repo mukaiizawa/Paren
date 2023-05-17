@@ -23,8 +23,8 @@
   ;; Comparison with read-evaluated expressions does not work as a unit test because print expressions of array or byts type contain reader-macro.
   `(function! main (args)
      ,@(map (f (x)
-              `(assert (= (with-memory-stream ($out) (write ,(car x)))    ; eval-print
-                          (concat (slice ,(cadr x) 4) "\n"))))    ; evaluated expression
+              `(assert (= (with-memory-stream ($out) (write ,(car x) :end ""))    ; eval-print
+                          (slice ,(cadr x) 4))))    ; evaluated expression
             exprs)))
 
 (function parse-example ()
