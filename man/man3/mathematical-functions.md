@@ -85,15 +85,15 @@ These functions error if result is not finite.
     ) (= (tanh 1) (/ (sinh 1) (cosh 1)))
     true
 
-    ) (= (log (exp 10)) 10))
+    ) (= (log (exp 10)) 10)
     true
     ) (= (log (pow 2 10)) (* 10 (log 2)))
     true
-    ) (= (log 10 100) (/ (log 100) (log 10))))
+    ) (= (log 10 100) (/ (log 100) (log 10)))
     true
-    ) (= (// (pow 2 10)) 1024))
+    ) (= (// (pow 2 10)) 1024)
     true
-    ) (= (sqrt (pow 25 2)) 25))
+    ) (= (sqrt (pow 25 2)) 25)
     true
 
 # SEE ALSO
