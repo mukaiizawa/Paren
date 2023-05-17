@@ -2139,17 +2139,17 @@
 (reader-macro "[" (rd)
   ; Define array literal reader.
   (var (expr exprs)
-    (while (!== (<- expr (.read rd)) ']) (push! (eval expr) exprs))
-    (array (reverse! exprs))))
+    (while (!== (<- expr (.read rd)) ']) (push! expr exprs))
+    (list 'array (cons 'list (reverse! exprs)))))
 
 (reader-macro "{" (rd)
   ; Define dictionary literal reader.
-  (let (o (dict))
+  (with-gensyms (o)
     (var (key val exprs)
       (while (!== (<- key (.read rd)) '})
         (if (== (<- val (.read rd)) '}) (raise "missing value of %v in dictionary literal" key)
-            ([] o key (eval val)))))
-    o))
+            (push! (list '[] o (list 'quote key) val) exprs)))
+      (cons 'let (cons (list o '(dict)) (reverse! (cons o exprs)))))))
 
 (reader-macro "p" (rd)
   ; Define print reader macro.
