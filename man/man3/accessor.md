@@ -4,13 +4,14 @@
 # SYNOPSIS
 
     ([] LIST INDEX)
-    ([] LIST INDEX VAL)
     ([] ARRAY INDEX)
-    ([] ARRAY INDEX VAL)
     ([] BYTES INDEX)
-    ([] BYTES INDEX VAL)
     ([] STRING INDEX)
     ([] DICTIONARY KEY)
+    
+    ([] LIST INDEX VAL)
+    ([] ARRAY INDEX VAL)
+    ([] BYTES INDEX VAL)
     ([] DICTIONARY KEY VAL)
 
 # DESCRIPTION
