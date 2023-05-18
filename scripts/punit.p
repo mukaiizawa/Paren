@@ -33,5 +33,6 @@
 
 (function! main (args)
   (let ((op args) (.parse (.init (.new OptionParser) "r") args))
-    (punit (path (|| (car args) ".")) :recur? (.get op "r"))
+    (dolist (dir (|| args '(".")))
+      (punit (path dir) :recur? (.get op "r")))
     (exit $status-cd)))
