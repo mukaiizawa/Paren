@@ -71,7 +71,7 @@
                   (write-bytes "{")
                   (dolist (key (keys x))
                     (if (> i 0) (write-bytes ","))
-                    (if (! (symbol? key)) (raise ArgumentError "invalid object property: %v" key)
+                    (if (! (|| (symbol? key) (string? key))) (raise ArgumentError "invalid object property: %v" key)
                         (json.write (string key)))
                     (write-bytes ":")
                     (json.write ([] x key))

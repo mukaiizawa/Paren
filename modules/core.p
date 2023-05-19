@@ -2066,14 +2066,10 @@
   (exit 0))
 
 (function load (file)
-  (var (startup cleanup expr)
-    (<- main nil)
-    (with-open ($in file :read)
-      (while (<- expr (read))
-        (if expr (eval expr))))
-    (if startup (apply startup nil))
-    (if cleanup (push! cleanup $on-quit))
-    main))
+  (<- main nil)
+  (with-open ($in file :read)
+    (foreach eval (collect read)))
+  main)
 
 (function import (key :opt dir)
   (if (! (keyword? key)) (raise ArgumentError "%v is not a keyword" key)
@@ -2090,30 +2086,24 @@
   ; Invoke repl if there are no command line arguments that bound to the symbol $args.
   ; If command line arguments are specified, read the first argument as the script file name and execute main.
   ; Can be omitted if the script file has a `p` extension.
-  (let (status-cd 0 on-error (f (e)
-                               (if (is-a? e SystemExit) (<- status-cd (.status-cd e))
-                                   (is-a? e Exception) (begin (<- status-cd 1) (.print-stack-trace e))
-                                   (begin
-                                     (<- status-cd 1)
-                                     (.write-bytes $stderr "uncaught error:")
-                                     (.write $stderr e)))))
-    (unwind-protect
-      (catch
-        (begin
-          (if (.file? $parenrc) (load $parenrc))
-          (if (nil? args) (repl)
-              (let (name (path (car args)) script (select1 .file?
-                                                           (map (f (x) (apply .resolve x))
-                                                                (product (cons (path (getcwd)) $runtime-path)
-                                                                         (list name (.suffix name "p"))))))
-                (if (nil? script) (raise ArgumentError "unreadable file `%s`" (.to-s name))
-                    (load script) (main (cdr args))))))
-        on-error)
-      (catch
-        (foreach (f (x) (apply x nil))
-                 $on-quit)
-        on-error))
-    status-cd))
+  (catch
+    (begin
+      (if (.file? $parenrc) (load $parenrc))
+      (if (nil? args) (repl)
+          (let (name (path (car args)) script (select1 .file?
+                                                       (map (f (x) (apply .resolve x))
+                                                            (product (cons (path (getcwd)) $runtime-path)
+                                                                     (list name (.suffix name "p"))))))
+            (if (nil? script) (raise ArgumentError "unreadable file `%s`" (.to-s name))
+                (load script) (main (cdr args)))))
+      (return 0))
+    (f (e)
+      (if (is-a? e SystemExit) (return 0)
+          (is-a? e Exception) (begin (.print-stack-trace e) (return 1))
+          (begin
+            (.write-bytes $stderr "uncaught error:")
+            (.write $stderr e)
+            (return 1))))))
 
 (<- $import '(:core)
     $read-table (dict)

@@ -1,8 +1,7 @@
 ; mouse module.
 
-(function! startup ()
-  (if (! (in? $hostname '(:windows))) (raise StateError "Unsupported OS")
-      (! (bound? 'mouse.position)) (raise StateError "Requires mouse option at compile time")))
+(if (! (in? $hostname '(:windows))) (raise StateError "Unsupported OS")
+    (! (bound? 'mouse.position)) (raise StateError "Requires mouse option at compile time"))
 
 (built-in-function mouse.position ())
 (built-in-function mouse.move (p))

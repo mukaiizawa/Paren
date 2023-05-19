@@ -1,9 +1,8 @@
 ; iconv module.
 
-(<- $iconv.encodings '(:sjis :utf8))
+(if (! (in? $hostname '(:windows))) (raise StateError "Unsupported OS"))
 
-(function! startup ()
-  (if (! (in? $hostname '(:windows))) (raise StateError "Unsupported OS")))
+(<- $iconv.encodings '(:sjis :utf8))
 
 (built-in-function iconv.encode (string enc0 :opt enc1))
 
