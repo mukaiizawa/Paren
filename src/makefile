@@ -96,7 +96,7 @@ $(paren): $(obj)
 
 punit: $(paren)
 	$(paren) manunit
-	$(paren) punit -r ./wk ../modules
+	$(paren) punit -riclip,iconv,keyboard,mouse,sock ./wk ../modules
 
 mandb: $(paren)
 	$(paren) mandb

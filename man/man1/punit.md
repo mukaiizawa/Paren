@@ -10,6 +10,8 @@ Run unit tests for the specified `DIRs` (the current directory by default).
 
 # OPTIONS
 
+    -i FILE [, FILE]...
+        Ignore files.
     -r
         Test subdirectories recursively.
 
