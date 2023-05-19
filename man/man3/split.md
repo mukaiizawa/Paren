@@ -11,7 +11,7 @@ The function `split` creates a list of words that are split using delimiters.
 # RETURN VALUE
 Returns a list of the words in the `STRING`, using `SEPARATOR` as the delimiter string.
 
-If `STRING` is empty string, returns `nil`.
+If `STRING` is empty string or `nil`, returns `nil`.
 
 If `SEPARATOR` is omitted, returns a list of characters.
 
@@ -20,9 +20,12 @@ If you want to split using a regular expression, refer to the `re(3)` module.
 
 # EXAMPLES
 
-    ) (split "")
+    ) (split nil)
     nil
     
+    ) (split "")
+    nil
+
     ) (split "foo")
     ("f" "o" "o")
     
