@@ -96,7 +96,7 @@ $(paren): $(obj)
 
 punit: $(paren)
 	$(paren) manunit
-	$(paren) punit -r ./wk
+	$(paren) punit -r ./wk ../modules
 
 mandb: $(paren)
 	$(paren) mandb
