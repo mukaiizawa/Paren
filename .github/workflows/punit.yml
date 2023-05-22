@@ -4,7 +4,7 @@ jobs:
   unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: make os=unix mandb
         working-directory: ./src
       - run: make os=unix debug=on punit
