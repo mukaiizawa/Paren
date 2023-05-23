@@ -2111,8 +2111,7 @@
     ($in $out) (list $stdin $stdout)
     $paren-home (.parent (.parent (.resolve (path (getcwd)) core.p)))    ; only the runtime knows if the `core.p` is a relative or absolute path.
     $parenrc (path "~/.parenrc")
-    $runtime-path (map (f (p) (.resolve $paren-home p)) '("scripts"))
-    $on-quit nil)
+    $runtime-path (map (f (p) (.resolve $paren-home p)) '("scripts")))
 
 (reader-macro "<" (rd)
   ; Define bytes literal reader.
