@@ -506,5 +506,5 @@ This tutorial conforms to the license of the original version:
 > to use it is granted under the Perl Foundations's Artistic License 2.0.
 
 # SEE ALSO
-- lang(7)
-- data-types(7)
+- `lang(7)`
+- `data-types(7)`

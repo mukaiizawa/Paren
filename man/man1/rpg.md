@@ -34,4 +34,4 @@ Generate an 8-digit password consisting of alphanumeric characters.
     paren rpg -aAnl8
 
 # SEE ALSO
-- shuf(1)
+- `shuf(1)`
