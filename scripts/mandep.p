@@ -7,14 +7,17 @@
 
 (function parse-see-also (file)
   ;; Returns the list like a `(page dst ...)`.
-  (with-open ($in file :read)
-    (read-line)
-    (let (line (read-line) (pages one-line-desc) (man-parse-name line))
-      (while (<- line (read-line))
-        (if (= line "# SEE ALSO") (break)))
-      (cons (car pages)    ; representative page
-            (map (f (x) (slice x (++ (index "`" x)) (last-index "`" x)))
-                 (collect read-line))))))
+  (catch
+    (with-open ($in file :read)
+      (read-line)
+      (let (line (read-line) (pages one-line-desc) (man-parse-name line))
+        (while (<- line (read-line))
+          (if (= line "# SEE ALSO") (break)))
+        (cons (car pages)    ; representative page
+              (map (f (x) (slice x (++ (index "`" x)) (last-index "`" x)))
+                   (collect read-line)))))
+    (f ()
+      (raise StateError "failed to parse the SEE ALSO section of manual `%s`" (.to-s file)))))
 
 (function collect-dependencies (root)
   ;; Returns the list like a `(src dst ...) ...`.
