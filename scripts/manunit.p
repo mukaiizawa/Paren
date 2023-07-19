@@ -3,21 +3,21 @@
 (import :man (.resolve $paren-home "scripts"))
 
 (<- $root (.mkdir (path "./wk"))
-    $ignore-pages (map string
-                       '(exit
-                          f
-                          fgetc fgets
-                          fopen fclose
-                          getenv putenv
-                          load
-                          macroexpand
-                          popen pclose
-                          quit
-                          raise
-                          read read-byte read-bytes read-char read-line write write-byte write-bytes write-line
-                          symbol
-                          system
-                          timeit)))
+    ; Processes that are not idempotent or have side effects should be excluded from unit testing.
+    $ignore-pages '("exit-quit.md"
+                    "fgetc-fgets.md"
+                    "fopen-fclose.md"
+                    "foreach.md"
+                    "getenv-putenv.md"
+                    "load.md"
+                    "macroexpand.md"
+                    "popen-pclose.md"
+                    "raise.md"
+                    "read-write.md"
+                    "sp-f.md"
+                    "symbol.md"
+                    "system.md"
+                    "timeit.md"))
 
 (function xmain (exprs)
   ;; Comparison with read-evaluated expressions does not work as a unit test because print expressions of array or byts type contain reader-macro.
@@ -49,7 +49,7 @@
 
 (function! main (args)
   (man-walk (f (section pages one-line-desc file-name)
-              (when (&& (= section "3") (nil? (intersection pages $ignore-pages)))
+              (when (&& (= section "3") (none? (f (x) (suffix? file-name x)) $ignore-pages))
                 (write (list (parse-man file-name) file-name))
                 nil))    ; traverse all manual.
             (man-indexes)))
