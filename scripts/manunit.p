@@ -4,20 +4,20 @@
 
 (<- $root (.mkdir (path "./wk"))
     $ignore-pages (map string
-                       '(f
-                          exit quit
+                       '(exit
+                          f
                           fgetc fgets
                           fopen fclose
-                          foreach
                           getenv putenv
                           load
                           macroexpand
                           popen pclose
-                          read read-byte read-bytes read-char read-line
+                          quit
+                          raise
+                          read read-byte read-bytes read-char read-line write write-byte write-bytes write-line
                           symbol
                           system
-                          timeit
-                          write write-byte write-bytes write-line)))
+                          timeit)))
 
 (function xmain (exprs)
   ;; Comparison with read-evaluated expressions does not work as a unit test because print expressions of array or byts type contain reader-macro.
