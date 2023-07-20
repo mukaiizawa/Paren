@@ -812,8 +812,6 @@
 ;; Paren object system.
 
 (function object? (x)
-  ; Returns whether x is an object in the Paren object system.
-  ; Same as `(&& (dict? x) ([] x :class))`.
   (&& (dict? x) ([] x :class)))
 
 (built-in-function is-a?)

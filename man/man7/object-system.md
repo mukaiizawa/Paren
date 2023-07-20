@@ -162,4 +162,5 @@ The evaluation results are as follows.
 - `catch(3)`
 - `class(3)`
 - `method(3)`
-- `throw(3)`
+- `object?(3)`
+- `raise(3)`
