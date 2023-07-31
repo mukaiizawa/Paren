@@ -626,9 +626,9 @@ char *om_describe(object o, char *buf)
   return buf;
 }
 
-object om_bool(int b)
+object om_bool(int x)
 {
-  if (b) return om_true;
+  if (x) return om_true;
   return om_nil;
 }
 
@@ -636,7 +636,7 @@ static int double_eq_p(double x, object p)
 {
   double y;
   if (!bi_may_cdouble(p, &y)) return FALSE;
-  return fabs(x - y) < DBL_EPSILON;
+  return fabs(x - y) <= ((fabs(x) < fabs(y)? fabs(y): fabs(x)) * DBL_EPSILON);    // https://stackoverflow.com/questions/17333/what-is-the-most-effective-way-for-float-and-double-comparison
 }
 
 static int int64_eq_p(int64_t x, object p)
