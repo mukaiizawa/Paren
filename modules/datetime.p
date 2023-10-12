@@ -189,7 +189,7 @@
 
 (function datetime.now ()
   ; Returns a DateTime instance corresponding to the current time of the time zone set in the host system.
-  (datetime.from-unix-time (+ (time) (utcoffset))))
+  (datetime.from-unix-time (time)))
 
 (function! main (args)
   (assert (= (.ordinal (datetime 1 1 1)) 1))
