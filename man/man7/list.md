@@ -11,6 +11,7 @@ Thus, Paren programs can manipulate source code as a data structure, giving rise
 # SEE ALSO
 - `->list(3)`
 - `..(3)`
+- `[](3)`
 - `assoc(3)`
 - `atom?(3)`
 - `butlast(3)`
