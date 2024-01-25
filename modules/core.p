@@ -1217,11 +1217,8 @@
 
 (method Path .copy (dst)
   (if (.dir? self) (dolist (child (.children self))
-                     (.copy child (.resolve dst (.name child))))
-      (begin
-        (.mkdir (.parent dst))
-        (.contents dst (.contents self))
-        self)))
+                     (.copy child (.resolve (.mkdir dst) (.name child))))
+      (.contents dst (.contents self))))
 
 (method Path .rename (to)
   (if (.none? self) (raise ArgumentError "missing file `%s`" (.to-s self))
