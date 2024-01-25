@@ -1171,10 +1171,14 @@
   ; Same as `(! (.absolute? self))`.
   (in? (car self->files) '("." "..")))
 
-(method Path .contents ()
-  ; Returns file contents of the receiver.
-  (with-open ($in self :read)
-    (read-bytes)))
+(method Path .contents (:opt contents)
+  ; Writes content to the file and returns the receiver.
+  ; If the contents are omitted, the contents are read from the receiver and returned.
+  (if (nil? contents) (with-open ($in self :read)
+                        (read-bytes))
+      (with-open ($out self :write)
+        (write-bytes contents)
+        self)))
 
 (method Path .to-l ()
   ; Reads the contents of the file corresponding to the receiver.
@@ -1210,6 +1214,14 @@
   (if (.dir? self) (foreach .remove (.children self)))
   (if (! (.none? self)) (remove (.to-s self)))
   self)
+
+(method Path .copy (dst)
+  (if (.dir? self) (dolist (child (.children self))
+                     (.copy child (.resolve dst (.name child))))
+      (begin
+        (.mkdir (.parent dst))
+        (.contents dst (.contents self))
+        self)))
 
 (method Path .rename (to)
   (if (.none? self) (raise ArgumentError "missing file `%s`" (.to-s self))
