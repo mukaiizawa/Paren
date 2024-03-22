@@ -17,7 +17,8 @@
                     "sp-f.md"
                     "symbol.md"
                     "system.md"
-                    "timeit.md"))
+                    "timeit.md"
+                    "var.md"))
 
 (function xmain (exprs)
   ;; Comparison with read-evaluated expressions does not work as a unit test because print expressions of array or byts type contain reader-macro.
