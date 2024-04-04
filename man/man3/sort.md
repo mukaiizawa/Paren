@@ -23,6 +23,9 @@ Returns sorted argument.
 # NOTES
 The argument is modified. If you want to keep the original argument, copy it like `(sort! (slice x))`.
 
+# BUGS
+If a sorter is given that returns true for the same object, a stack overflow will occur.
+
 # EXAMPLES
 
     ) (sort! '(2 0 1))
