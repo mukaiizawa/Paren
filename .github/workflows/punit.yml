@@ -1,5 +1,8 @@
 name: punit
-on: [push]
+on:
+  push:
+    branches:
+      - master
 jobs:
   unit-test:
     runs-on: ubuntu-latest
