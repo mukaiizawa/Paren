@@ -8,11 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: make os=unix mandb
-        working-directory: ./src
-      - run: make os=unix debug=on punit
-        working-directory: ./src
+      - working-directory: ./src
+        run: |
+          make os=unix debug=on punit
+          make os=unix clean
+          make os=unix mandb
       - run: |
           git config --local user.email "shintaro@mukai.systems"
           git config --local user.name "Shintaro Mukai"
-          git diff --quiet && git diff --staged --quiet || (git commit -am "Update by GitHub Action" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -am "Update manuals by GitHub Action" && git push)
