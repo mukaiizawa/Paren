@@ -30,11 +30,15 @@
 (method YAML.Reader .parse-token ()
   nil)
 
-  (method YAML.Reader .parse-block-sequece ()
-    (let (lis nil)
-      (while (= (.next (.skip-space self)) "-")
-        (.skip self)
-        (push! (.read self) lis))))
+(method YAML.Reader .parse-block-scaler ()
+  (let (indicator (.skip self))
+    ))
+
+(method YAML.Reader .parse-block-sequece ()
+  (let (lis nil)
+    (while (= (.next (.skip-space self)) "-")
+      (.skip self)
+      (push! (.read self) lis))))
 
 (method YAML.Reader .parse-flow-sequece ()
   nil)
@@ -45,6 +49,9 @@
 (method YAML.Reader .parse-flow-mapping ()
   nil)
 
+(method YAML.Reader .parse-identifier ()
+  nil)
+
 (method YAML.Reader .read ()
   (let (next (.next (.skip-space self)))
     (if (nil? next) nil
@@ -53,8 +60,14 @@
         (= next "[") (.parse-flow-sequece self)
         (= next "{") (.parse-flow-mapping self)
         (= next "\"") (.parse-string self)
-        (= next "?") (raise SyntaxError "complex mapping key is not supported")
-        (.parse-token self))))
+        (in? next '("|" ">")) (.parse-block-scaler self)
+        (= next "?") (raise NotImplementedError "complex mapping key is not supported")
+        (= next "&") (raise NotImplementedError "node's anchor property is not supported")
+        (= next "*") (raise NotImplementedError "alias node is not supported")
+        (= next "!") (raise NotImplementedError "node tag is not supported")
+        (in? next '("@" "`")) (raise SyntaxError "reserved indicator")
+        (let (sym (.parse-identifier self))
+          ))))
 
 (function yaml.read ()
   (.read (.new YAML.Reader)))
@@ -64,22 +77,25 @@
 
 (function! main (args)
   ;; comment
-  (assert (nil? (with-memory-stream ($in "
-                                         # foo
-                                         # bar
-                                         ")
-                                         (yaml.read))))
+  (assert (nil? (with-memory-stream ($in "# foo\n# bar") (yaml.read))))
   ;; scalar
   ;;; string
   (assert (= (with-memory-stream ($in "\"foo\"") (yaml.read)) "foo"))
   (assert (= (with-memory-stream ($in "foo") (yaml.read)) "foo"))
+  ;;; literal block scalar
+  (assert (= (with-memory-stream ($in "literal: |\n some\n text\n folded: >\n some\n text\n")
+               ;; literal: |
+               ;;   some
+               ;;   text
+               ;; folded: >
+               ;;   some
+               ;;   text
+               (yaml.read))
+             #{ literal "some\ntext\n" folded "some text\n" }))
   ;; sequence
-  (assert (= (with-memory-stream ($in "
-                                      - Mark McGwire
-                                      - Sammy Sosa
-                                      - Ken Griffey
-                                      ")
-                                      (yaml.read))
+  (assert (= (with-memory-stream ($in "- Mark McGwire\n- Sammy Sosa\n- Ken Griffey")
+               (yaml.read))
              (list "Mark McGwire"
                    "Sammy Sosa"
                    "Ken Griffey"))))
+
