@@ -4,7 +4,7 @@
 
 ; In contrast to yaml, which places human readability as most important and ease of implementation as not a priority, the yaml module places ease of implementation as the highest priority and is designed for computers, not for people.
 ;
-; The most important goal is to output the data from the Paren as yaml, and reading the data from yaml as Paren data is a secondary goal.
+; The goal is to convert Paren data to yaml and to convert yaml to Paren data that is simple enough to be expressed in json.
 ;
 ; These functions are not supported.
 ;
@@ -13,10 +13,6 @@
 ; - Documents and Streams
 
 (class YAML.Reader (AheadReader))
-
-(method YAML.Reader .skip-indent (n)
-  (dotimes (_ (* 2 n))
-    (.skip self " ")))
 
 (method YAML.Reader .parse-string ()
   (.skip self)
@@ -27,12 +23,20 @@
 (method YAML.Reader .parse-scalar ()
   nil)
 
-(method YAML.Reader .parse-token ()
-  nil)
-
 (method YAML.Reader .parse-block-scaler ()
-  (let (indicator (.skip self))
-    ))
+  (let (indicator (.skip self) separator (if (= indicator "<") " " "\n") indent 0)
+    (with-memory-stream ($out)
+      (.skip self "\n")
+      (while (= (.next self) " ")
+        (.skip self)
+        (<- indent (++ indent)))
+      (write-line (.skip-line self))
+      (while (= (.next self) " ")
+        (dotimes (_ indent)
+          (.skip self " "))
+        (write-bytes separator)
+        (write-bytes (.skip-line self)))
+      (write-bytes "\n"))))
 
 (method YAML.Reader .parse-block-sequece ()
   (let (lis nil)
@@ -83,7 +87,7 @@
   (assert (= (with-memory-stream ($in "\"foo\"") (yaml.read)) "foo"))
   (assert (= (with-memory-stream ($in "foo") (yaml.read)) "foo"))
   ;;; literal block scalar
-  (assert (= (with-memory-stream ($in "literal: |\n some\n text\n folded: >\n some\n text\n")
+  (assert (= (with-memory-stream ($in "literal: |\n  some\n  text\n folded: >\n  some\n  text\n")
                ;; literal: |
                ;;   some
                ;;   text
