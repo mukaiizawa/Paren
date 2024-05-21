@@ -12,6 +12,25 @@
 ; - Anchors and Aliases
 ; - Documents and Streams
 
+(<- $yaml.indicator-chars'("-"    ; c-sequence-entry
+                           "?"    ; c-mapping-key
+                           ":"    ; c-mapping-value
+                           ","    ; c-collect-entry
+                           "["    ; c-sequence-start
+                           "]"    ; c-sequence-end
+                           "{"    ; c-mapping-start
+                           "}"    ; c-mapping-end
+                           "#"    ; c-comment
+                           "&"    ; c-anchor
+                           "*"    ; c-alias
+                           "!"    ; c-tag
+                           "|"    ; c-literal
+                           ">"    ; c-folded
+                           "'"    ; c-single-quote
+                           "\""    ; c-double-quote
+                           "%"    ; c-directive
+                           "@" "`"))    ; c-reserved
+
 (class YAML.Reader (AheadReader))
 
 (method YAML.Reader .parse-string ()
@@ -47,14 +66,17 @@
 (method YAML.Reader .parse-flow-sequece ()
   nil)
 
-(method YAML.Reader .parse-block-mapping ()
-  nil)
+(method YAML.Reader .parse-block-mapping (key)
+  (let (d (dict) val nil)
+    d))
 
 (method YAML.Reader .parse-flow-mapping ()
   nil)
 
 (method YAML.Reader .parse-identifier ()
-  nil)
+  (while (.next? self (f (x) (! (in? x $yaml.indicator-chars))))
+    (.get self))
+  (.token self))
 
 (method YAML.Reader .read ()
   (let (next (.next (.skip-space self)))
@@ -70,8 +92,9 @@
         (= next "*") (raise NotImplementedError "alias node is not supported")
         (= next "!") (raise NotImplementedError "node tag is not supported")
         (in? next '("@" "`")) (raise SyntaxError "reserved indicator")
-        (let (sym (.parse-identifier self))
-          ))))
+        (let (sym (.parse-identifier self) next (.next self))
+          (if (= next ":") (.parse-block-mapping self sym)
+              sym)))))    ; string.
 
 (function yaml.read ()
   (.read (.new YAML.Reader)))
@@ -102,4 +125,3 @@
              (list "Mark McGwire"
                    "Sammy Sosa"
                    "Ken Griffey"))))
-
