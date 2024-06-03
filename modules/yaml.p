@@ -29,7 +29,8 @@
                            "'"    ; c-single-quote
                            "\""    ; c-double-quote
                            "%"    ; c-directive
-                           "@" "`"))    ; c-reserved
+                           "@" "`")    ; c-reserved
+    $yaml.white-space-chars '("\t" "\n" " "))
 
 (class YAML.Reader (AheadReader))
 
@@ -61,12 +62,13 @@
   (let (lis nil)
     (while (= (.next (.skip-space self)) "-")
       (.skip self)
-      (push! (.read self) lis))))
+      (push! (.read self) lis))
+    (reverse! lis)))
 
 (method YAML.Reader .parse-flow-sequece ()
   nil)
 
-(method YAML.Reader .parse-block-mapping (key)
+(method YAML.Reader .parse-block-mapping (key depth)
   (let (d (dict) val nil)
     d))
 
@@ -74,7 +76,7 @@
   nil)
 
 (method YAML.Reader .parse-identifier ()
-  (while (.next? self (f (x) (! (in? x $yaml.indicator-chars))))
+  (while (.next? self (f (x) (! (in? x (concat $yaml.white-space-chars $yaml.indicator-chars)))))
     (.get self))
   (.token self))
 
