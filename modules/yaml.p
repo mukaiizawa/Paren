@@ -8,6 +8,7 @@
 ;
 ; These functions are not supported.
 ;
+; - YAML directive
 ; - Complex mapping key
 ; - Anchors and Aliases
 ; - Documents and Streams
@@ -87,7 +88,7 @@
         (= next "-") (.parse-block-sequece self)
         (= next "[") (.parse-flow-sequece self)
         (= next "{") (.parse-flow-mapping self)
-        (= next "\"") (.parse-string self)
+        (in? next '("\"" "'")) (.parse-string self)
         (in? next '("|" ">")) (.parse-block-scaler self)
         (= next "?") (raise NotImplementedError "complex mapping key is not supported")
         (= next "&") (raise NotImplementedError "node's anchor property is not supported")
