@@ -12,6 +12,9 @@
 ; - Complex mapping key
 ; - Anchors and Aliases
 ; - Documents and Streams
+;
+; > For a data format, yaml is extremely complicated. It aims to be a human-friendly format, but in striving for that it introduces so much complexity, that I would argue it achieves the opposite result. Yaml is full of footguns and its friendliness is deceptive. 
+; > -- [The yaml document from hell](https://ruudvanasseldonk.com/2023/01/11/the-yaml-document-from-hell)
 
 (<- $yaml.indicator-chars'("-"    ; c-sequence-entry
                            "?"    ; c-mapping-key
