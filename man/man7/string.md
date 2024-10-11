@@ -30,6 +30,7 @@ The string data type can use the functions listed in `SEE ALSO` section, and can
 - `format(3)`
 - `hex(3)`
 - `index(3)`
+- `join(3)`
 - `last-index(3)`
 - `lower(3)`
 - `lower?(3)`
@@ -40,6 +41,7 @@ The string data type can use the functions listed in `SEE ALSO` section, and can
 - `print?(3)`
 - `rtrim(3)`
 - `space?(3)`
+- `split(3)`
 - `str(3)`
 - `string!(3)`
 - `string(3)`
