@@ -25,6 +25,10 @@ If `LIST` is not a list.
 # NOTES
 The function `reverse!` generally faster than `reverse`.
 
+The reverse function accepts only list. If you want to reverse a string, you need to make it a list once as shown below.
+
+    (join (revere! (split s)))
+
 # EXAMPLES
 
     ) (<- l1 (.. 3) l2 (slice l1))
