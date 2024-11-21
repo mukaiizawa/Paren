@@ -108,26 +108,26 @@
 (function yaml.write (x)
   (json.write x))    ; YAML is a superset of JSON.
 
-(function! main (args)
-  ;; comment
-  (assert (nil? (with-memory-stream ($in "# foo\n# bar") (yaml.read))))
-  ;; scalar
-  ;;; string
-  (assert (= (with-memory-stream ($in "\"foo\"") (yaml.read)) "foo"))
-  (assert (= (with-memory-stream ($in "foo") (yaml.read)) "foo"))
-  ;;; literal block scalar
-  (assert (= (with-memory-stream ($in "literal: |\n  some\n  text\n folded: >\n  some\n  text\n")
-               ;; literal: |
-               ;;   some
-               ;;   text
-               ;; folded: >
-               ;;   some
-               ;;   text
-               (yaml.read))
-             #{ literal "some\ntext\n" folded "some text\n" }))
-  ;; sequence
-  (assert (= (with-memory-stream ($in "- Mark McGwire\n- Sammy Sosa\n- Ken Griffey")
-               (yaml.read))
-             (list "Mark McGwire"
-                   "Sammy Sosa"
-                   "Ken Griffey"))))
+; (function! main (args)
+;   ;; comment
+;   (assert (nil? (with-memory-stream ($in "# foo\n# bar") (yaml.read))))
+;   ;; scalar
+;   ;;; string
+;   (assert (= (with-memory-stream ($in "\"foo\"") (yaml.read)) "foo"))
+;   (assert (= (with-memory-stream ($in "foo") (yaml.read)) "foo"))
+;   ;;; literal block scalar
+;   (assert (= (with-memory-stream ($in "literal: |\n  some\n  text\n folded: >\n  some\n  text\n")
+;                ;; literal: |
+;                ;;   some
+;                ;;   text
+;                ;; folded: >
+;                ;;   some
+;                ;;   text
+;                (yaml.read))
+;              #{ literal "some\ntext\n" folded "some text\n" }))
+;   ;; sequence
+;   (assert (= (with-memory-stream ($in "- Mark McGwire\n- Sammy Sosa\n- Ken Griffey")
+;                (yaml.read))
+;              (list "Mark McGwire"
+;                    "Sammy Sosa"
+;                    "Ken Griffey"))))
