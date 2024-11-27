@@ -1,7 +1,6 @@
 ; Bulls and cows.
 
 (import :rand)
-(import :optparse)
 (import :console)
 
 (<- $digit-count 4
