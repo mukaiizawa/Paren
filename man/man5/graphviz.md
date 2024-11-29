@@ -53,5 +53,31 @@ A "Hello World" example.
     (graphviz.dot :options '((T png) (o hello-world.png))
                   :edges '((hello world)))
 
+This small example illustrates dot's feature to draw nodes and edges in clusters or separate rectangular layout regions.
+> https://graphviz.org/Gallery/directed/cluster.html
+
+    (graphviz.dot :options '((T svg) (o "clusters.svg"))
+                  :nodes '((graph (fontname "Helvetica,Arial,sans-serif"))
+                           (node (fontname "Helvetica,Arial,sans-serif"))
+                           (edge (fontname "Helvetica,Arial,sans-serif"))
+                           (start (shape Mdiamond))
+                           (end (shape Msquare)))
+                  :edges '((start a0)
+                           (start b0)
+                           (a1 b3)
+                           (b2 a3)
+                           (a3 a0)
+                           (a3 end)
+                           (b3 end))
+                  :subgraphs '((:id cluster_0
+                                    :nodes ((graph (label "process #1") (style filled) (color lightgrey))
+                                            (node (style filled) (color white)))
+                                    :edges (((a0 a1 a2 a3))))
+                               (:id cluster_1
+                                    :nodes ((graph (label "process #2") (color blue))
+                                            (node (style filled)))
+                                    :edges (((b0 b1 b2 b3))))))
+
+
 # SEE ALSO
 - `graphviz(3)`
