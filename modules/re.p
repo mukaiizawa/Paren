@@ -209,14 +209,14 @@
                       (reverse! acc)))))
     (split (re.compile expr) 0 max-split nil)))
 
-(function re.replace (expr src dest :opt max-replace)
+(function re.replace (expr src dst :opt max-replace)
   ; Returns the string that matches the regular expression is replaced with the specified string.
   ; If max-replace is specified, the upper limit of the number of replacements is max-replace.
   (let (replace (f (re start max-replace mem)
                   (if (&& (!= max-replace 0) (.match? re src start))
                       (begin
                         (.write-bytes mem (.subtext re start (.match-start re)))
-                        (.write-bytes mem dest)
+                        (.write-bytes mem dst)
                         (replace re (.match-end re) (&& (number? max-replace) (-- max-replace)) mem))
                       (begin
                         (.write-bytes mem (.subtext re start))
