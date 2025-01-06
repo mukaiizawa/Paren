@@ -45,9 +45,10 @@
           (foreach graphviz.write-subgraph subgraphs)
           (write-line "}")))))
 
-(function graphviz.dot (:key id configures nodes edges subgraphs options)
+(function graphviz.dot (:key id configures nodes edges subgraphs options dry-run?)
   (let (dot (with-memory-stream ($out)
               (graphviz.write-graph 'digraph (list :id id :nodes nodes :edges edges :subgraphs subgraphs))))
     (write-bytes dot)
-    (with-process ($out (str "dot " (graphviz.parse-opt options)) :write)
-      (write-bytes dot))))
+    (when (nil? dry-run?)
+      (with-process ($out (str "dot " (graphviz.parse-opt options)) :write)
+        (write-bytes dot)))))
