@@ -45,6 +45,8 @@ DNS language for DOT language.
     option = option-name [option-value]
     option-name -- command line option for dot.
 
+# NOTES
+The `rank` attribute is not supported.
 
 # EXAMPLES
 A "Hello World" example.
@@ -62,12 +64,10 @@ This small example illustrates dot's feature to draw nodes and edges in clusters
                            (edge (fontname "Helvetica,Arial,sans-serif"))
                            (start (shape Mdiamond))
                            (end (shape Msquare)))
-                  :edges '((start a0)
-                           (start b0)
+                  :edges '((start (a0 b0))
                            (a1 b3)
                            (b2 a3)
-                           (a3 a0)
-                           (a3 end)
+                           (a3 (a0 end))
                            (b3 end))
                   :subgraphs '((:id cluster_0
                                     :nodes ((graph (label "process #1") (style filled) (color lightgrey))
