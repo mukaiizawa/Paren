@@ -153,6 +153,10 @@
   ; Returns vba that sets the font size of the specified range to the specified size.
   (str (.to-vbastr self) "."(.to-vbastr r) ".Font.Size = " n "\n"))
 
+(method VBASheet .hyper-link (r to)
+  ; Returns vba that set a link to A1 of the specified sheet for the specified range object.
+  (str (.to-vbastr self) ".Hyperlinks.Add Anchor:=" (.to-vbastr r) ", Address:=\"\", SubAddress:=" (.name to) " & \"!\" & " (.to-vbastr to) ".Range(\"A1\").Address\n"))
+
 ; api
 
 (macro with-vba-vars ((:rest vars) :rest exprs)
