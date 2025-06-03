@@ -2,13 +2,13 @@
 
 #define PF_ERROR 0
 #define PF_NONE 1
-#define PF_REGF 2
+#define PF_FILE 2
 #define PF_DIR 4
 #define PF_OTHER 8
 #define PF_READABLE 16
 #define PF_WRITABLE 32
 
-#define PF_READABLEFILE (PF_REGF | PF_READABLE)
+#define PF_READABLEFILE (PF_FILE | PF_READABLE)
 
 struct pf_stat {
   int64_t mtime;

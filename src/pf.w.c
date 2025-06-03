@@ -35,7 +35,7 @@ int pf_stat(char *fn, struct pf_stat *statbuf)
   }
   mode = PF_READABLE;
   if (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) mode |= PF_DIR;
-  else mode |= PF_REGF;
+  else mode |= PF_FILE;
   if (!(attr.dwFileAttributes & FILE_ATTRIBUTE_READONLY)) mode |= PF_WRITABLE;
   if (statbuf != NULL) {
     statbuf->size = int64(attr.nFileSizeHigh, attr.nFileSizeLow);
