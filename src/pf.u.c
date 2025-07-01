@@ -11,7 +11,10 @@ static int group_member_p(gid_t gid)
   int i, size;
   gid_t *gids;
   size = getgroups(0, NULL);
-  if (size == -1) xerror("getgroups/failed");
+  if (size == -1) {
+    xerror("getgroups/failed");
+    return FALSE;    // Unreachable code for compilation error suppression.
+  }
   gids = xmalloc(size * sizeof(gid_t));
   if (getgroups(size, gids) == -1) xerror("getgroups/failed");
   for (i = 0; i < size; i++) {
@@ -31,7 +34,7 @@ int pf_stat(char *fn, struct pf_stat *pf_statbuf)
   }
   result = 0;
   type = statbuf.st_mode & S_IFMT;
-  if (type == S_IFREG) result = PF_FILE;
+  if (type == S_IFREG) result = PF_REGFILE;
   else if (type == S_IFDIR) result = PF_DIR;
   else result = PF_OTHER;
   if (statbuf.st_uid == getuid()) {
