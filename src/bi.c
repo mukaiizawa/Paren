@@ -491,7 +491,7 @@ DEFUN(list_2e__2e__2e_)
 {
   object o;
   if (!bi_argc_range(argc, 1, 1)) return FALSE;
-  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY | BI_DICT, argv->cons.car, &o)) return FALSE;
+  if (!bi_argv(BI_LIST | BI_BYTES | BI_STR | BI_ARRAY, argv->cons.car, &o)) return FALSE;
   switch (om_type(o)) {
     case SYMBOL: *result = om_nil; return TRUE;
     case CONS: *result = om_copy_cons(o, 0); return TRUE;
