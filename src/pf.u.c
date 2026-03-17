@@ -85,7 +85,9 @@ char *pf_exepath(char *argv0, char *path)
   if (p != NULL) return path;
   strcpy(fn, path);
   xbarray_init(&paths);
-  xbarray_adds(&paths, getenv("PATH"));
+  p = getenv("PATH");
+  if (p == NULL) xerror("pf_exepath/PATH is not set");
+  xbarray_adds(&paths, p);
   xbarray_add(&paths, '\0');
   result = find_paths(paths.elt, fn, path);
   xbarray_free(&paths);
